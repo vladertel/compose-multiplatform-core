@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.support.testutils;
+package androidx.testutils;
 
 import static org.junit.Assert.assertTrue;
 
@@ -91,5 +91,8 @@ public class AppCompatActivityUtils {
 
         RecreatedAppCompatActivity.clearState();
         return newActivity;
+    }
+
+    private AppCompatActivityUtils() {
     }
 }
