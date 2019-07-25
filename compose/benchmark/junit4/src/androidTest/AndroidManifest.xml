@@ -16,8 +16,10 @@
   -->
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
-    package="androidx.benchmark.test">
+    package="androidx.benchmark.junit4.test">
 
     <application
-        android:name="androidx.benchmark.ArgumentInjectingApplication"/>
+        android:name="androidx.benchmark.junit4.ArgumentInjectingApplication">
+        <activity android:name="android.app.Activity"/>
+    </application>
 </manifest>
