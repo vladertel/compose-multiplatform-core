@@ -46,8 +46,7 @@ import androidx.ui.text.font.Font
 import androidx.ui.text.font.FontFamily
 import androidx.ui.text.font.FontMatcher
 import androidx.ui.text.font.asFontFamily
-import androidx.ui.text.matchers.equalToBitmap
-import androidx.ui.text.matchers.isTypefaceOf
+import androidx.ui.text.matchers.assertThat
 import com.google.common.truth.Truth.assertThat
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.eq
@@ -55,8 +54,6 @@ import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.whenever
-import org.hamcrest.CoreMatchers.not
-import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
@@ -64,8 +61,8 @@ import org.mockito.junit.MockitoJUnitRunner
 @RunWith(MockitoJUnitRunner::class)
 @SmallTest
 class TypefaceAdapterTest {
-    // TODO(Migration/siyamed): These native calls should be removed after the
-    // counterparts are implemented in crane.
+    // TODO(siyamed): These native calls should be removed after the
+    // counterparts are implemented in compose.
     private val context = InstrumentationRegistry.getInstrumentation().context
     private val resourceLoader = TestFontResourceLoader(context)
 
@@ -117,7 +114,7 @@ class TypefaceAdapterTest {
 
         assertThat(typefaceSans).isNotNull()
         assertThat(typefaceSans).isNotNull()
-        Assert.assertThat(typefaceSans.bitmap(), not(equalToBitmap(typefaceSerif.bitmap())))
+        assertThat(typefaceSans.bitmap()).isNotEqualToBitmap(typefaceSerif.bitmap())
     }
 
     @Test
@@ -246,8 +243,7 @@ class TypefaceAdapterTest {
         val typeface = TypefaceAdapter().create(fontFamily = fontFamily)
 
         assertThat(typeface).isNotNull()
-        Assert.assertThat(typeface.bitmap(), not(equalToBitmap(defaultTypeface.bitmap())))
-
+        assertThat(typeface.bitmap()).isNotEqualToBitmap(defaultTypeface.bitmap())
         assertThat(typeface.isItalic).isFalse()
         assertThat(typeface.isBold).isFalse()
     }
@@ -265,7 +261,7 @@ class TypefaceAdapterTest {
         )
 
         assertThat(typeface).isNotNull()
-        Assert.assertThat(typeface.bitmap(), not(equalToBitmap(defaultTypeface.bitmap())))
+        assertThat(typeface.bitmap()).isNotEqualToBitmap(defaultTypeface.bitmap())
         assertThat(typeface.isItalic).isTrue()
         assertThat(typeface.isBold).isTrue()
     }
@@ -302,10 +298,7 @@ class TypefaceAdapterTest {
                 )
 
                 assertThat(typeface).isNotNull()
-                Assert.assertThat(
-                    typeface,
-                    isTypefaceOf(fontWeight = fontWeight, fontStyle = fontStyle)
-                )
+                assertThat(typeface).isTypefaceOf(fontWeight = fontWeight, fontStyle = fontStyle)
             }
         }
     }
@@ -489,7 +482,7 @@ class TypefaceAdapterTest {
         )
         assertThat(typeface.isItalic).isFalse()
 
-        // TODO((Migration/siyamed)) ask this to Nona.
+        // TODO(siyamed) ask this to Nona.
         if (Build.VERSION.SDK_INT < 23) {
             assertThat(typeface.isBold).isFalse()
         } else if (Build.VERSION.SDK_INT < 28) {

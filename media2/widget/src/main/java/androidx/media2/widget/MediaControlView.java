@@ -25,6 +25,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.Resources;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -126,13 +127,13 @@ import java.util.Locale;
  * If values for these keys are not set, the following default values will be shown, respectively:
  * {@link androidx.media2.widget.R.string#mcv2_music_title_unknown_text}
  * {@link androidx.media2.widget.R.string#mcv2_music_artist_unknown_text}
- * {@link androidx.media2.widget.R.drawable#ic_default_album_image}
+ * {@link androidx.media2.widget.R.drawable#media2_widget_ic_default_album_image}
  *
  * For non-music, only {@link MediaMetadata#METADATA_KEY_TITLE} metadata is supported.
  * If the value is not set, the following default value will be shown:
  * {@link androidx.media2.widget.R.string#mcv2_non_music_title_unknown_text}
  */
-public class MediaControlView extends ViewGroup {
+public class MediaControlView extends MediaViewGroup {
     private static final String TAG = "MediaControlView";
     static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
 
@@ -146,6 +147,10 @@ public class MediaControlView extends ViewGroup {
     private static final int SIZE_TYPE_EMBEDDED = 0;
     private static final int SIZE_TYPE_FULL = 1;
     private static final int SIZE_TYPE_MINIMAL = 2;
+
+    private static final int PLAY_BUTTON_PAUSE = 0;
+    private static final int PLAY_BUTTON_PLAY = 1;
+    private static final int PLAY_BUTTON_REPLAY = 2;
 
     // Int for defining the UX state where all the views (TitleBar, ProgressBar, BottomBar) are
     // all visible.
@@ -280,7 +285,7 @@ public class MediaControlView extends ViewGroup {
         super(context, attrs, defStyleAttr);
 
         mResources = context.getResources();
-        inflate(context, R.layout.media_controller, this);
+        inflate(context, R.layout.media2_widget_media_controller, this);
         initControllerView();
         mDelayedAnimationIntervalMs = DEFAULT_DELAYED_ANIMATION_INTERVAL_MS;
         mAccessibilityManager = (AccessibilityManager) context.getSystemService(
@@ -580,7 +585,7 @@ public class MediaControlView extends ViewGroup {
                         ? childBottom - mProgressBar.getMeasuredHeight()
                         : childBottom - mProgressBar.getMeasuredHeight()
                                 - mResources.getDimensionPixelSize(
-                                        R.dimen.mcv2_custom_progress_margin_bottom));
+                                        R.dimen.media2_widget_custom_progress_margin_bottom));
         layoutChild(mMinimalFullScreenView,
                 childLeft,
                 childBottom - mMinimalFullScreenView.getMeasuredHeight());
@@ -591,9 +596,8 @@ public class MediaControlView extends ViewGroup {
     }
 
     @Override
-    public void onVisibilityAggregated(boolean isVisible) {
-        super.onVisibilityAggregated(isVisible);
-
+    void onVisibilityAggregatedCompat(boolean isVisible) {
+        super.onVisibilityAggregatedCompat(isVisible);
         if (mPlayer == null) return;
         if (isVisible) {
             removeCallbacks(mUpdateProgress);
@@ -694,7 +698,8 @@ public class MediaControlView extends ViewGroup {
 
         // Relating to Settings List View
         initializeSettingsLists();
-        mSettingsListView = (ListView) inflateLayout(getContext(), R.layout.settings_list);
+        mSettingsListView = (ListView) inflateLayout(getContext(),
+                R.layout.media2_widget_settings_list);
         mSettingsAdapter = new SettingsAdapter(mSettingsMainTextsList, mSettingsSubTextsList,
                 mSettingsIconIdsList);
         mSubSettingsAdapter = new SubSettingsAdapter(null, 0);
@@ -708,20 +713,22 @@ public class MediaControlView extends ViewGroup {
         mTransportControlsMap.append(SIZE_TYPE_MINIMAL, mMinimalTransportControls);
 
         mEmbeddedSettingsItemWidth = mResources.getDimensionPixelSize(
-                R.dimen.mcv2_embedded_settings_width);
-        mFullSettingsItemWidth = mResources.getDimensionPixelSize(R.dimen.mcv2_full_settings_width);
+                R.dimen.media2_widget_embedded_settings_width);
+        mFullSettingsItemWidth = mResources.getDimensionPixelSize(
+                R.dimen.media2_widget_full_settings_width);
         mSettingsItemHeight = mResources.getDimensionPixelSize(
-                R.dimen.mcv2_settings_height);
+                R.dimen.media2_widget_settings_height);
         mSettingsWindowMargin = (-1) * mResources.getDimensionPixelSize(
-                R.dimen.mcv2_settings_offset);
+                R.dimen.media2_widget_settings_offset);
         mSettingsWindow = new PopupWindow(mSettingsListView, mEmbeddedSettingsItemWidth,
                 LayoutParams.WRAP_CONTENT, true);
         mSettingsWindow.setBackgroundDrawable(new ColorDrawable());
         mSettingsWindow.setOnDismissListener(mSettingsDismissListener);
 
-        float titleBarHeight = mResources.getDimension(R.dimen.mcv2_title_bar_height);
-        float progressBarHeight = mResources.getDimension(R.dimen.mcv2_custom_progress_thumb_size);
-        float bottomBarHeight = mResources.getDimension(R.dimen.mcv2_bottom_bar_height);
+        float titleBarHeight = mResources.getDimension(R.dimen.media2_widget_title_bar_height);
+        float progressBarHeight = mResources.getDimension(
+                R.dimen.media2_widget_custom_progress_thumb_size);
+        float bottomBarHeight = mResources.getDimension(R.dimen.media2_widget_bottom_bar_height);
 
         View[] bottomBarGroup = { mBottomBarBackground, mBottomBarLeft, mTimeView, mBasicControls,
                 mExtraControls, mProgressBar };
@@ -883,7 +890,7 @@ public class MediaControlView extends ViewGroup {
             public void onAnimationEnd(Animator animation) {
                 mBasicControls.setVisibility(View.INVISIBLE);
 
-                findControlButton(SIZE_TYPE_FULL, R.id.ffwd).setVisibility(
+                findFullSizedControlButton(R.id.ffwd).setVisibility(
                         mPlayer != null && mPlayer.canSeekForward() ? View.INVISIBLE : View.GONE);
             }
         });
@@ -901,7 +908,7 @@ public class MediaControlView extends ViewGroup {
             public void onAnimationStart(Animator animation) {
                 mBasicControls.setVisibility(View.VISIBLE);
 
-                findControlButton(SIZE_TYPE_FULL, R.id.ffwd).setVisibility(
+                findFullSizedControlButton(R.id.ffwd).setVisibility(
                         mPlayer != null && mPlayer.canSeekForward() ? View.VISIBLE : View.GONE);
             }
 
@@ -983,8 +990,8 @@ public class MediaControlView extends ViewGroup {
                 } else {
                     if (mAdSkipView.getVisibility() == View.VISIBLE) {
                         mAdSkipView.setVisibility(View.GONE);
-                        findControlButton(SIZE_TYPE_FULL, R.id.next).setEnabled(true);
-                        findControlButton(SIZE_TYPE_FULL, R.id.next).clearColorFilter();
+                        findFullSizedControlButton(R.id.next).setEnabled(true);
+                        findFullSizedControlButton(R.id.next).clearColorFilter();
                     }
                 }
             }
@@ -1004,22 +1011,15 @@ public class MediaControlView extends ViewGroup {
     void togglePausePlayState() {
         ensurePlayerIsNotNull();
 
-        ImageButton playPauseButton = findControlButton(mSizeType, R.id.pause);
         if (mPlayer.isPlaying()) {
             mPlayer.pause();
-            playPauseButton.setImageDrawable(
-                    mResources.getDrawable(R.drawable.ic_play_circle_filled));
-            playPauseButton.setContentDescription(
-                    mResources.getString(R.string.mcv2_play_button_desc));
+            updatePlayButton(PLAY_BUTTON_PLAY);
         } else {
             if (mIsShowingReplayButton) {
                 mPlayer.seekTo(0);
             }
             mPlayer.play();
-            playPauseButton.setImageDrawable(
-                    mResources.getDrawable(R.drawable.ic_pause_circle_filled));
-            playPauseButton.setContentDescription(
-                    mResources.getString(R.string.mcv2_pause_button_desc));
+            updatePlayButton(PLAY_BUTTON_PAUSE);
         }
     }
 
@@ -1264,14 +1264,14 @@ public class MediaControlView extends ViewGroup {
             final boolean isEnteringFullScreen = !mIsFullScreen;
             if (isEnteringFullScreen) {
                 mFullScreenButton.setImageDrawable(
-                        mResources.getDrawable(R.drawable.ic_fullscreen_exit));
+                        mResources.getDrawable(R.drawable.media2_widget_ic_fullscreen_exit));
                 mMinimalFullScreenButton.setImageDrawable(
-                        mResources.getDrawable(R.drawable.ic_fullscreen_exit));
+                        mResources.getDrawable(R.drawable.media2_widget_ic_fullscreen_exit));
             } else {
                 mFullScreenButton.setImageDrawable(
-                        mResources.getDrawable(R.drawable.ic_fullscreen));
+                        mResources.getDrawable(R.drawable.media2_widget_ic_fullscreen));
                 mMinimalFullScreenButton.setImageDrawable(
-                        mResources.getDrawable(R.drawable.ic_fullscreen));
+                        mResources.getDrawable(R.drawable.media2_widget_ic_fullscreen));
             }
             mIsFullScreen = isEnteringFullScreen;
             mOnFullScreenListener.onFullScreen(MediaControlView.this,
@@ -1417,13 +1417,13 @@ public class MediaControlView extends ViewGroup {
         ensurePlayerIsNotNull();
 
         if (mIsAdvertisement) {
-            findControlButton(SIZE_TYPE_FULL, R.id.rew).setVisibility(View.GONE);
-            findControlButton(SIZE_TYPE_FULL, R.id.ffwd).setVisibility(View.GONE);
-            findControlButton(SIZE_TYPE_FULL, R.id.prev).setVisibility(View.GONE);
+            findFullSizedControlButton(R.id.rew).setVisibility(View.GONE);
+            findFullSizedControlButton(R.id.ffwd).setVisibility(View.GONE);
+            findFullSizedControlButton(R.id.prev).setVisibility(View.GONE);
 
-            findControlButton(SIZE_TYPE_FULL, R.id.next).setVisibility(View.VISIBLE);
-            findControlButton(SIZE_TYPE_FULL, R.id.next).setEnabled(false);
-            findControlButton(SIZE_TYPE_FULL, R.id.next).setColorFilter(R.color.gray);
+            findFullSizedControlButton(R.id.next).setVisibility(View.VISIBLE);
+            findFullSizedControlButton(R.id.next).setEnabled(false);
+            findFullSizedControlButton(R.id.next).setColorFilter(R.color.media2_widget_gray);
 
             mTimeView.setVisibility(View.GONE);
             mAdSkipView.setVisibility(View.VISIBLE);
@@ -1432,17 +1432,17 @@ public class MediaControlView extends ViewGroup {
 
             mProgress.setEnabled(false);
         } else {
-            findControlButton(SIZE_TYPE_FULL, R.id.rew).setVisibility(
+            findFullSizedControlButton(R.id.rew).setVisibility(
                     mPlayer.canSeekBackward() ? View.VISIBLE : View.GONE);
-            findControlButton(SIZE_TYPE_FULL, R.id.ffwd).setVisibility(
+            findFullSizedControlButton(R.id.ffwd).setVisibility(
                     mPlayer.canSeekForward() ? View.VISIBLE : View.GONE);
-            findControlButton(SIZE_TYPE_FULL, R.id.prev).setVisibility(
+            findFullSizedControlButton(R.id.prev).setVisibility(
                     mPlayer.canSkipToPrevious() ? View.VISIBLE : View.GONE);
 
-            findControlButton(SIZE_TYPE_FULL, R.id.next).setVisibility(
+            findFullSizedControlButton(R.id.next).setVisibility(
                     mPlayer.canSkipToNext() ? View.VISIBLE : View.GONE);
-            findControlButton(SIZE_TYPE_FULL, R.id.next).setEnabled(true);
-            findControlButton(SIZE_TYPE_FULL, R.id.next).clearColorFilter();
+            findFullSizedControlButton(R.id.next).setEnabled(true);
+            findFullSizedControlButton(R.id.next).clearColorFilter();
 
             mTimeView.setVisibility(View.VISIBLE);
             mAdSkipView.setVisibility(View.GONE);
@@ -1511,8 +1511,8 @@ public class MediaControlView extends ViewGroup {
         mSettingsSubTextsList.add(RESOURCE_EMPTY);
 
         mSettingsIconIdsList = new ArrayList<Integer>();
-        mSettingsIconIdsList.add(R.drawable.ic_audiotrack);
-        mSettingsIconIdsList.add(R.drawable.ic_speed);
+        mSettingsIconIdsList.add(R.drawable.media2_widget_ic_audiotrack);
+        mSettingsIconIdsList.add(R.drawable.media2_widget_ic_speed);
 
         mAudioTrackDescriptionList = new ArrayList<String>();
         mAudioTrackDescriptionList.add(
@@ -1525,15 +1525,29 @@ public class MediaControlView extends ViewGroup {
         mSelectedSpeedIndex = PLAYBACK_SPEED_1x_INDEX;
 
         mPlaybackSpeedMultBy100List = new ArrayList<Integer>();
-        int[] speeds = mResources.getIntArray(R.array.speed_multiplied_by_100);
+        int[] speeds = mResources.getIntArray(R.array.media2_widget_speed_multiplied_by_100);
         for (int i = 0; i < speeds.length; i++) {
             mPlaybackSpeedMultBy100List.add(speeds[i]);
         }
         mCustomPlaybackSpeedIndex = -1;
     }
 
+    @Nullable
     ImageButton findControlButton(int sizeType, @IdRes int id) {
-        return mTransportControlsMap.get(sizeType).findViewById(id);
+        View transportControl = mTransportControlsMap.get(sizeType);
+        if (transportControl == null) {
+            return null;
+        }
+        return transportControl.findViewById(id);
+    }
+
+    @NonNull
+    ImageButton findFullSizedControlButton(@IdRes int id) {
+        ImageButton button = findControlButton(SIZE_TYPE_FULL, id);
+        if (button == null) {
+            throw new IllegalArgumentException("Couldn't find a view that has the given id");
+        }
+        return button;
     }
 
     /**
@@ -1591,10 +1605,10 @@ public class MediaControlView extends ViewGroup {
         mTimeView.setAlpha(1 - animatedValue);
         mBasicControls.setAlpha(1 - animatedValue);
 
-        int transportControlLeftWidth = findControlButton(SIZE_TYPE_FULL, R.id.pause).getLeft();
+        int transportControlLeftWidth = findFullSizedControlButton(R.id.pause).getLeft();
         int transportControlTranslationX = (-1) * (int) (transportControlLeftWidth * animatedValue);
         mFullTransportControls.setTranslationX(transportControlTranslationX);
-        findControlButton(SIZE_TYPE_FULL, R.id.ffwd).setAlpha(1 - animatedValue);
+        findFullSizedControlButton(R.id.ffwd).setAlpha(1 - animatedValue);
     }
 
     void resetHideCallbacks() {
@@ -1645,6 +1659,33 @@ public class MediaControlView extends ViewGroup {
             mSubtitleButton.setVisibility(View.VISIBLE);
         } else {
             mSubtitleButton.setVisibility(View.GONE);
+        }
+    }
+
+    void updatePrevNextButtons(int prevIndex, int nextIndex) {
+        int n = mTransportControlsMap.size();
+        for (int i = 0; i < n; i++) {
+            int sizeType = mTransportControlsMap.keyAt(i);
+            View prevButton = findControlButton(sizeType, R.id.prev);
+            if (prevButton != null) {
+                if (prevIndex > SessionPlayer.INVALID_ITEM_INDEX) {
+                    prevButton.setAlpha(1.0f);
+                    prevButton.setEnabled(true);
+                } else {
+                    prevButton.setAlpha(0.5f);
+                    prevButton.setEnabled(false);
+                }
+            }
+            View nextButton = findControlButton(sizeType, R.id.next);
+            if (nextButton != null) {
+                if (nextIndex > SessionPlayer.INVALID_ITEM_INDEX) {
+                    nextButton.setAlpha(1.0f);
+                    nextButton.setEnabled(true);
+                } else {
+                    nextButton.setAlpha(0.5f);
+                    nextButton.setEnabled(false);
+                }
+            }
         }
     }
 
@@ -1701,40 +1742,49 @@ public class MediaControlView extends ViewGroup {
     }
 
     void updateReplayButton(boolean toBeShown) {
-        ImageButton playPauseButton = findControlButton(mSizeType, R.id.pause);
         ImageButton ffwdButton = findControlButton(mSizeType, R.id.ffwd);
         if (toBeShown) {
             mIsShowingReplayButton = true;
-            if (playPauseButton != null) {
-                playPauseButton.setImageDrawable(
-                        mResources.getDrawable(R.drawable.ic_replay_circle_filled));
-                playPauseButton.setContentDescription(
-                        mResources.getString(R.string.mcv2_replay_button_desc));
-            }
+            updatePlayButton(PLAY_BUTTON_REPLAY);
             if (ffwdButton != null) {
                 ffwdButton.setAlpha(0.5f);
                 ffwdButton.setEnabled(false);
             }
         } else {
             mIsShowingReplayButton = false;
-            if (playPauseButton != null) {
-                if (mPlayer != null && mPlayer.isPlaying()) {
-                    playPauseButton.setImageDrawable(
-                            mResources.getDrawable(R.drawable.ic_pause_circle_filled));
-                    playPauseButton.setContentDescription(
-                            mResources.getString(R.string.mcv2_pause_button_desc));
-                } else {
-                    playPauseButton.setImageDrawable(
-                            mResources.getDrawable(R.drawable.ic_play_circle_filled));
-                    playPauseButton.setContentDescription(
-                            mResources.getString(R.string.mcv2_play_button_desc));
-                }
+            if (mPlayer != null && mPlayer.isPlaying()) {
+                updatePlayButton(PLAY_BUTTON_PAUSE);
+            } else {
+                updatePlayButton(PLAY_BUTTON_PLAY);
             }
             if (ffwdButton != null) {
                 ffwdButton.setAlpha(1.0f);
                 ffwdButton.setEnabled(true);
             }
         }
+    }
+
+    void updatePlayButton(int type) {
+        ImageButton playButton = findControlButton(mSizeType, R.id.pause);
+        if (playButton == null) {
+            return;
+        }
+        Drawable drawable;
+        String description;
+        if (type == PLAY_BUTTON_PAUSE) {
+            drawable = mResources.getDrawable(R.drawable.media2_widget_ic_pause_circle_filled);
+            description = mResources.getString(R.string.mcv2_pause_button_desc);
+        } else if (type == PLAY_BUTTON_PLAY) {
+            drawable = mResources.getDrawable(R.drawable.media2_widget_ic_play_circle_filled);
+            description = mResources.getString(R.string.mcv2_play_button_desc);
+        } else if (type == PLAY_BUTTON_REPLAY) {
+            drawable = mResources.getDrawable(R.drawable.media2_widget_ic_replay_circle_filled);
+            description = mResources.getString(R.string.mcv2_replay_button_desc);
+        } else {
+            throw new IllegalArgumentException("unknown type " + type);
+        }
+        playButton.setImageDrawable(drawable);
+        playButton.setContentDescription(description);
     }
 
     void postDelayedRunnable(Runnable runnable, long interval) {
@@ -1873,7 +1923,7 @@ public class MediaControlView extends ViewGroup {
 
         @Override
         public View getView(int position, View convertView, ViewGroup container) {
-            View row = inflateLayout(getContext(), R.layout.settings_list_item);
+            View row = inflateLayout(getContext(), R.layout.media2_widget_settings_list_item);
             TextView mainTextView = (TextView) row.findViewById(R.id.main_text);
             TextView subTextView = (TextView) row.findViewById(R.id.sub_text);
             ImageView iconView = (ImageView) row.findViewById(R.id.icon);
@@ -1943,7 +1993,7 @@ public class MediaControlView extends ViewGroup {
 
         @Override
         public View getView(int position, View convertView, ViewGroup container) {
-            View row = inflateLayout(getContext(), R.layout.sub_settings_list_item);
+            View row = inflateLayout(getContext(), R.layout.media2_widget_sub_settings_list_item);
             TextView textView = (TextView) row.findViewById(R.id.text);
             ImageView checkView = (ImageView) row.findViewById(R.id.check);
 
@@ -1979,7 +2029,6 @@ public class MediaControlView extends ViewGroup {
             //   1) Need to handle case where app customizes playback state behavior when app
             //      activity is resumed.
             //   2) Need to handle case where the media file reaches end of duration.
-            ImageButton playPauseButton = findControlButton(mSizeType, R.id.pause);
             switch (state) {
                 case SessionPlayer.PLAYER_STATE_PLAYING:
                     removeCallbacks(mUpdateProgress);
@@ -1988,20 +2037,14 @@ public class MediaControlView extends ViewGroup {
                     updateReplayButton(false);
                     break;
                 case SessionPlayer.PLAYER_STATE_PAUSED:
-                    playPauseButton.setImageDrawable(
-                            mResources.getDrawable(R.drawable.ic_play_circle_filled));
-                    playPauseButton.setContentDescription(
-                            mResources.getString(R.string.mcv2_play_button_desc));
+                    updatePlayButton(PLAY_BUTTON_PLAY);
                     removeCallbacks(mUpdateProgress);
                     removeCallbacks(mHideMainBars);
                     removeCallbacks(mHideProgressBar);
                     post(mShowAllBars);
                     break;
                 case SessionPlayer.PLAYER_STATE_ERROR:
-                    playPauseButton.setImageDrawable(
-                            mResources.getDrawable(R.drawable.ic_play_circle_filled));
-                    playPauseButton.setContentDescription(
-                            mResources.getString(R.string.mcv2_play_button_desc));
+                    updatePlayButton(PLAY_BUTTON_PLAY);
                     removeCallbacks(mUpdateProgress);
                     if (getWindowToken() != null) {
                         new AlertDialog.Builder(getContext())
@@ -2065,6 +2108,20 @@ public class MediaControlView extends ViewGroup {
             }
             updateTimeViews(mediaItem);
             updateTitleView(mediaItem);
+            updatePrevNextButtons(player.getPreviousMediaItemIndex(),
+                    player.getNextMediaItemIndex());
+        }
+
+        @Override
+        void onPlaylistChanged(@NonNull PlayerWrapper player, @Nullable List<MediaItem> list,
+                @Nullable MediaMetadata metadata) {
+            if (player != mPlayer) return;
+
+            if (DEBUG) {
+                Log.d(TAG, "onPlaylistChanged(): list: " + list + ", metadata: " + metadata);
+            }
+            updatePrevNextButtons(player.getPreviousMediaItemIndex(),
+                    player.getNextMediaItemIndex());
         }
 
         @Override
@@ -2134,15 +2191,14 @@ public class MediaControlView extends ViewGroup {
         }
 
         @Override
-        void onTrackInfoChanged(@NonNull PlayerWrapper player,
-                @NonNull List<TrackInfo> trackInfos) {
+        void onTracksChanged(@NonNull PlayerWrapper player, @NonNull List<TrackInfo> tracks) {
             if (player != mPlayer) return;
 
             if (DEBUG) {
-                Log.d(TAG, "onTrackInfoChanged(): " + trackInfos);
+                Log.d(TAG, "onTrackInfoChanged(): " + tracks);
             }
 
-            updateTracks(player, trackInfos);
+            updateTracks(player, tracks);
             updateTimeViews(player.getCurrentMediaItem());
             updateTitleView(player.getCurrentMediaItem());
         }
@@ -2163,7 +2219,7 @@ public class MediaControlView extends ViewGroup {
                             mSubSettingsAdapter.setCheckPosition(mSelectedSubtitleTrackIndex + 1);
                         }
                         mSubtitleButton.setImageDrawable(
-                                mResources.getDrawable(R.drawable.ic_subtitle_on));
+                                mResources.getDrawable(R.drawable.media2_widget_ic_subtitle_on));
                         mSubtitleButton.setContentDescription(
                                 mResources.getString(R.string.mcv2_cc_is_on));
                         break;
@@ -2198,7 +2254,7 @@ public class MediaControlView extends ViewGroup {
                             mSubSettingsAdapter.setCheckPosition(mSelectedSubtitleTrackIndex + 1);
                         }
                         mSubtitleButton.setImageDrawable(
-                                mResources.getDrawable(R.drawable.ic_subtitle_off));
+                                mResources.getDrawable(R.drawable.media2_widget_ic_subtitle_off));
                         mSubtitleButton.setContentDescription(
                                 mResources.getString(R.string.mcv2_cc_is_off));
                         break;
@@ -2208,15 +2264,14 @@ public class MediaControlView extends ViewGroup {
         }
 
         @Override
-        void onVideoSizeChanged(@NonNull PlayerWrapper player, @NonNull MediaItem item,
-                @NonNull VideoSize videoSize) {
+        void onVideoSizeChanged(@NonNull PlayerWrapper player, @NonNull VideoSize videoSize) {
             if (player != mPlayer) return;
 
             if (DEBUG) {
                 Log.d(TAG, "onVideoSizeChanged(): " + videoSize);
             }
             if (mVideoTrackCount == 0 && videoSize.getHeight() > 0 && videoSize.getWidth() > 0) {
-                List<TrackInfo> tracks = player.getTrackInfo();
+                List<TrackInfo> tracks = player.getTracks();
                 if (tracks != null) {
                     updateTracks(player, tracks);
                 }

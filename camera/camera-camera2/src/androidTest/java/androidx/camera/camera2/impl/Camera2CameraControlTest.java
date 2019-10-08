@@ -20,31 +20,49 @@ import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_OFF;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON_ALWAYS_FLASH;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH;
+import static android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_AUTO;
+import static android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE;
+import static android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_OFF;
+import static android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO;
+import static android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_OFF;
 import static android.hardware.camera2.CameraMetadata.FLASH_MODE_OFF;
 import static android.hardware.camera2.CameraMetadata.FLASH_MODE_TORCH;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.junit.Assume.assumeTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import android.content.Context;
 import android.graphics.Rect;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.params.MeteringRectangle;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 
 import androidx.camera.camera2.Camera2Config;
 import androidx.camera.core.CameraControlInternal;
+import androidx.camera.core.CameraInfoUnavailableException;
+import androidx.camera.core.CameraX;
 import androidx.camera.core.CaptureConfig;
 import androidx.camera.core.FlashMode;
+import androidx.camera.core.FocusMeteringAction;
+import androidx.camera.core.FocusMeteringAction.MeteringMode;
+import androidx.camera.core.SensorOrientedMeteringPointFactory;
 import androidx.camera.core.SessionConfig;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
+import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.HandlerUtil;
 import androidx.core.os.HandlerCompat;
+import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
 
@@ -53,16 +71,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 
 @SmallTest
 @RunWith(AndroidJUnit4.class)
 public final class Camera2CameraControlTest {
-
-    private static final long NO_TIMEOUT = 0;
     private Camera2CameraControl mCamera2CameraControl;
     private CameraControlInternal.ControlUpdateListener mControlUpdateListener;
     private ArgumentCaptor<SessionConfig> mSessionConfigArgumentCaptor =
@@ -72,17 +88,26 @@ public final class Camera2CameraControlTest {
             ArgumentCaptor.forClass(List.class);
     private HandlerThread mHandlerThread;
     private Handler mHandler;
+    private CameraCharacteristics mCameraCharacteristics;
 
     @Before
-    public void setUp() throws InterruptedException {
+    public void setUp() throws InterruptedException, CameraAccessException,
+            CameraInfoUnavailableException {
+        assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraX.LensFacing.BACK));
+
+        Context context = ApplicationProvider.getApplicationContext();
+        CameraManager cameraManager = (CameraManager) context.getSystemService(
+                Context.CAMERA_SERVICE);
+        mCameraCharacteristics = cameraManager.getCameraCharacteristics(
+                CameraX.getCameraWithLensFacing(CameraX.LensFacing.BACK));
         mControlUpdateListener = mock(CameraControlInternal.ControlUpdateListener.class);
         mHandlerThread = new HandlerThread("ControlThread");
         mHandlerThread.start();
         mHandler = HandlerCompat.createAsync(mHandlerThread.getLooper());
 
         ScheduledExecutorService executorService = CameraXExecutors.newHandlerExecutor(mHandler);
-        mCamera2CameraControl = new Camera2CameraControl(mControlUpdateListener, NO_TIMEOUT,
-                executorService, executorService);
+        mCamera2CameraControl = new Camera2CameraControl(mCameraCharacteristics,
+                mControlUpdateListener, executorService, executorService);
 
         HandlerUtil.waitForLooperToIdle(mHandler);
 
@@ -93,7 +118,9 @@ public final class Camera2CameraControlTest {
 
     @After
     public void tearDown() {
-        mHandlerThread.quitSafely();
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+        }
     }
 
     @Test
@@ -111,189 +138,21 @@ public final class Camera2CameraControlTest {
         assertThat(repeatingConfig.getCaptureRequestOption(CaptureRequest.SCALER_CROP_REGION, null))
                 .isEqualTo(rect);
 
-        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSharedOptions());
+        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSessionOptions());
         assertThat(singleConfig.getCaptureRequestOption(CaptureRequest.SCALER_CROP_REGION, null))
                 .isEqualTo(rect);
     }
 
     @Test
-    public void focus_focusRectSetAndRequestsExecuted() throws InterruptedException {
-        Rect focusRect = new Rect(0, 0, 10, 10);
-        Rect meteringRect = new Rect(20, 20, 30, 30);
-
-        mCamera2CameraControl.focus(focusRect, meteringRect);
-
-        HandlerUtil.waitForLooperToIdle(mHandler);
-
-        verify(mControlUpdateListener, times(1)).onCameraControlUpdateSessionConfig(
-                mSessionConfigArgumentCaptor.capture());
-        SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getValue();
-        Camera2Config repeatingConfig = new Camera2Config(sessionConfig.getImplementationOptions());
-
-        assertThat(
-                repeatingConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AF_REGIONS, null))
-                .isEqualTo(
-                        new MeteringRectangle[]{
-                                new MeteringRectangle(focusRect,
-                                        MeteringRectangle.METERING_WEIGHT_MAX)
-                        });
-
-        assertThat(
-                repeatingConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_REGIONS, null))
-                .isEqualTo(
-                        new MeteringRectangle[]{
-                                new MeteringRectangle(
-                                        meteringRect, MeteringRectangle.METERING_WEIGHT_MAX)
-                        });
-
-        assertThat(
-                repeatingConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AWB_REGIONS, null))
-                .isEqualTo(
-                        new MeteringRectangle[]{
-                                new MeteringRectangle(
-                                        meteringRect, MeteringRectangle.METERING_WEIGHT_MAX)
-                        });
-
-        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSharedOptions());
-        assertThat(
-                singleConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AF_REGIONS, null))
-                .isEqualTo(
-                        new MeteringRectangle[]{
-                                new MeteringRectangle(focusRect,
-                                        MeteringRectangle.METERING_WEIGHT_MAX)
-                        });
-
-        assertThat(
-                singleConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_REGIONS, null))
-                .isEqualTo(
-                        new MeteringRectangle[]{
-                                new MeteringRectangle(
-                                        meteringRect, MeteringRectangle.METERING_WEIGHT_MAX)
-                        });
-
-        assertThat(
-                singleConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AWB_REGIONS, null))
-                .isEqualTo(
-                        new MeteringRectangle[]{
-                                new MeteringRectangle(
-                                        meteringRect, MeteringRectangle.METERING_WEIGHT_MAX)
-                        });
-
-        assertThat(mCamera2CameraControl.isFocusLocked()).isTrue();
-
-        verify(mControlUpdateListener).onCameraControlCaptureRequests(
-                mCaptureConfigArgumentCaptor.capture());
-        CaptureConfig captureConfig = mCaptureConfigArgumentCaptor.getValue().get(0);
-        Camera2Config resultCaptureConfig =
-                new Camera2Config(captureConfig.getImplementationOptions());
-
-        assertThat(resultCaptureConfig.getCaptureRequestOption(CaptureRequest.CONTROL_AF_TRIGGER,
-                null)).isEqualTo(CaptureRequest.CONTROL_AF_TRIGGER_START);
-    }
-
-    @Test
-    public void cancelFocus_regionRestored() throws InterruptedException {
-        Rect focusRect = new Rect(0, 0, 10, 10);
-        Rect meteringRect = new Rect(20, 20, 30, 30);
-
-        mCamera2CameraControl.focus(focusRect, meteringRect);
-        mCamera2CameraControl.cancelFocus();
-
-        HandlerUtil.waitForLooperToIdle(mHandler);
-
-        verify(mControlUpdateListener, times(2)).onCameraControlUpdateSessionConfig(
-                mSessionConfigArgumentCaptor.capture());
-        SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getAllValues().get(1);
-        Camera2Config repeatingConfig = new Camera2Config(sessionConfig.getImplementationOptions());
-        MeteringRectangle zeroRegion =
-                new MeteringRectangle(new Rect(), MeteringRectangle.METERING_WEIGHT_DONT_CARE);
-
-        assertThat(
-                repeatingConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AF_REGIONS, null))
-                .isEqualTo(new MeteringRectangle[]{zeroRegion});
-        assertThat(
-                repeatingConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_REGIONS, null))
-                .isEqualTo(new MeteringRectangle[]{zeroRegion});
-        assertThat(
-                repeatingConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AWB_REGIONS, null))
-                .isEqualTo(new MeteringRectangle[]{zeroRegion});
-
-        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSharedOptions());
-        assertThat(
-                singleConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AF_REGIONS, null))
-                .isEqualTo(new MeteringRectangle[]{zeroRegion});
-        assertThat(
-                singleConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_REGIONS, null))
-                .isEqualTo(new MeteringRectangle[]{zeroRegion});
-        assertThat(
-                singleConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AWB_REGIONS, null))
-                .isEqualTo(new MeteringRectangle[]{zeroRegion});
-
-        assertThat(mCamera2CameraControl.isFocusLocked()).isFalse();
-
-        verify(mControlUpdateListener, times(2)).onCameraControlCaptureRequests(
-                mCaptureConfigArgumentCaptor.capture());
-        CaptureConfig captureConfig = mCaptureConfigArgumentCaptor.getAllValues().get(1).get(0);
-        Camera2Config resultCaptureConfig =
-                new Camera2Config(captureConfig.getImplementationOptions());
-
-        assertThat(resultCaptureConfig.getCaptureRequestOption(CaptureRequest.CONTROL_AF_TRIGGER,
-                null)).isEqualTo(CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
-    }
-
-    @Test
     public void defaultAFAWBMode_ShouldBeCAFWhenNotFocusLocked() {
-        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSharedOptions());
+        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSessionOptions());
         assertThat(
                 singleConfig.getCaptureRequestOption(
                         CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF))
                 .isEqualTo(CaptureRequest.CONTROL_MODE_AUTO);
-        assertThat(
-                singleConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF))
-                .isEqualTo(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-        assertThat(
-                singleConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AWB_MODE,
-                        CaptureRequest.CONTROL_AWB_MODE_OFF))
-                .isEqualTo(CaptureRequest.CONTROL_AWB_MODE_AUTO);
-    }
 
-    @Test
-    public void focus_afModeSetToAuto() throws InterruptedException {
-        Rect focusRect = new Rect(0, 0, 10, 10);
-        mCamera2CameraControl.focus(focusRect, focusRect);
-
-        HandlerUtil.waitForLooperToIdle(mHandler);
-
-        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSharedOptions());
-
-        mCamera2CameraControl.cancelFocus();
-
-        HandlerUtil.waitForLooperToIdle(mHandler);
-
-        Camera2Config singleConfig2 = new Camera2Config(mCamera2CameraControl.getSharedOptions());
-
-        assertThat(
-                singleConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF))
-                .isEqualTo(CaptureRequest.CONTROL_AF_MODE_AUTO);
-        assertThat(
-                singleConfig2.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF))
-                .isEqualTo(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+        assertAfMode(singleConfig, CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+        assertAwbMode(singleConfig, CONTROL_AWB_MODE_AUTO);
     }
 
     @Test
@@ -306,10 +165,8 @@ public final class Camera2CameraControlTest {
                 mSessionConfigArgumentCaptor.capture());
         SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getValue();
         Camera2Config camera2Config = new Camera2Config(sessionConfig.getImplementationOptions());
-        assertThat(
-                camera2Config.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_MODE, CONTROL_AE_MODE_OFF))
-                .isEqualTo(CONTROL_AE_MODE_ON_AUTO_FLASH);
+
+        assertAeMode(camera2Config, CONTROL_AE_MODE_ON_AUTO_FLASH);
         assertThat(mCamera2CameraControl.getFlashMode()).isEqualTo(FlashMode.AUTO);
     }
 
@@ -323,10 +180,9 @@ public final class Camera2CameraControlTest {
                 mSessionConfigArgumentCaptor.capture());
         SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getValue();
         Camera2Config camera2Config = new Camera2Config(sessionConfig.getImplementationOptions());
-        assertThat(
-                camera2Config.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_MODE, CONTROL_AE_MODE_OFF))
-                .isEqualTo(CaptureRequest.CONTROL_AE_MODE_ON);
+
+        assertAeMode(camera2Config, CONTROL_AE_MODE_ON);
+
         assertThat(mCamera2CameraControl.getFlashMode()).isEqualTo(FlashMode.OFF);
     }
 
@@ -340,10 +196,9 @@ public final class Camera2CameraControlTest {
                 mSessionConfigArgumentCaptor.capture());
         SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getValue();
         Camera2Config camera2Config = new Camera2Config(sessionConfig.getImplementationOptions());
-        assertThat(
-                camera2Config.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_MODE, CONTROL_AE_MODE_OFF))
-                .isEqualTo(CONTROL_AE_MODE_ON_ALWAYS_FLASH);
+
+        assertAeMode(camera2Config, CONTROL_AE_MODE_ON_ALWAYS_FLASH);
+
         assertThat(mCamera2CameraControl.getFlashMode()).isEqualTo(FlashMode.ON);
     }
 
@@ -357,10 +212,9 @@ public final class Camera2CameraControlTest {
                 mSessionConfigArgumentCaptor.capture());
         SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getValue();
         Camera2Config camera2Config = new Camera2Config(sessionConfig.getImplementationOptions());
-        assertThat(
-                camera2Config.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_MODE, CONTROL_AE_MODE_OFF))
-                .isEqualTo(CONTROL_AE_MODE_ON);
+
+        assertAeMode(camera2Config, CONTROL_AE_MODE_ON);
+
         assertThat(
                 camera2Config.getCaptureRequestOption(
                         CaptureRequest.FLASH_MODE, FLASH_MODE_OFF))
@@ -379,10 +233,9 @@ public final class Camera2CameraControlTest {
                 mSessionConfigArgumentCaptor.capture());
         SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getAllValues().get(0);
         Camera2Config camera2Config = new Camera2Config(sessionConfig.getImplementationOptions());
-        assertThat(
-                camera2Config.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_MODE, CONTROL_AE_MODE_OFF))
-                .isEqualTo(CONTROL_AE_MODE_ON_AUTO_FLASH);
+
+        assertAeMode(camera2Config, CONTROL_AE_MODE_ON_AUTO_FLASH);
+
         assertThat(camera2Config.getCaptureRequestOption(CaptureRequest.FLASH_MODE, -1))
                 .isEqualTo(-1);
         assertThat(mCamera2CameraControl.isTorchOn()).isFalse();
@@ -392,10 +245,9 @@ public final class Camera2CameraControlTest {
         CaptureConfig captureConfig = mCaptureConfigArgumentCaptor.getValue().get(0);
         Camera2Config resultCaptureConfig =
                 new Camera2Config(captureConfig.getImplementationOptions());
-        assertThat(
-                resultCaptureConfig.getCaptureRequestOption(
-                        CaptureRequest.CONTROL_AE_MODE, null))
-                .isEqualTo(CaptureRequest.CONTROL_AE_MODE_ON);
+
+        assertAeMode(resultCaptureConfig, CONTROL_AE_MODE_ON);
+
     }
 
     @Test
@@ -503,27 +355,274 @@ public final class Camera2CameraControlTest {
     }
 
     @Test
-    public void submitCaptureRequest_overrideBySharedOptions() throws InterruptedException {
-        CaptureConfig.Builder builder = new CaptureConfig.Builder();
-        Camera2Config.Builder configBuilder = new Camera2Config.Builder();
-        configBuilder.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE,
-                CaptureRequest.CONTROL_AF_MODE_MACRO);
-        builder.setImplementationOptions(configBuilder.build());
-        mCamera2CameraControl.submitCaptureRequests(Collections.singletonList(builder.build()));
+    public void startFocusAndMetering_3ARegionsUpdatedInSessionAndSessionOptions()
+            throws InterruptedException {
+        SensorOrientedMeteringPointFactory factory = new SensorOrientedMeteringPointFactory(1.0f,
+                1.0f);
+        FocusMeteringAction action = FocusMeteringAction.Builder.from(factory.createPoint(0, 0))
+                .build();
+        mCamera2CameraControl.startFocusAndMetering(action);
 
         HandlerUtil.waitForLooperToIdle(mHandler);
 
+        verify(mControlUpdateListener, times(1)).onCameraControlUpdateSessionConfig(
+                mSessionConfigArgumentCaptor.capture());
+        SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getValue();
+        Camera2Config repeatingConfig = new Camera2Config(sessionConfig.getImplementationOptions());
+
+        // Here we verify only 3A region count is correct.  Values correctness are left to
+        // FocusMeteringControlTest.
+        assertThat(
+                repeatingConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AF_REGIONS, null)).hasLength(1);
+        assertThat(
+                repeatingConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AE_REGIONS, null)).hasLength(1);
+        assertThat(
+                repeatingConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AWB_REGIONS, null)).hasLength(1);
+
+
+        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSessionOptions());
+        assertThat(
+                singleConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AF_REGIONS, null)).hasLength(1);
+        assertThat(
+                singleConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AE_REGIONS, null)).hasLength(1);
+        assertThat(
+                singleConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AWB_REGIONS, null)).hasLength(1);
+    }
+
+    @Test
+    public void startFocusAndMetering_AfIsTriggeredProperly() throws InterruptedException {
+        SensorOrientedMeteringPointFactory factory = new SensorOrientedMeteringPointFactory(1.0f,
+                1.0f);
+        FocusMeteringAction action = FocusMeteringAction.Builder.from(factory.createPoint(0, 0))
+                .build();
+        mCamera2CameraControl.startFocusAndMetering(action);
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        verifyAfMode(CaptureRequest.CONTROL_AF_MODE_AUTO);
+
         verify(mControlUpdateListener).onCameraControlCaptureRequests(
                 mCaptureConfigArgumentCaptor.capture());
+
         CaptureConfig captureConfig = mCaptureConfigArgumentCaptor.getValue().get(0);
         Camera2Config resultCaptureConfig =
                 new Camera2Config(captureConfig.getImplementationOptions());
 
-        Camera2Config sharedOptions =
-                new Camera2Config(mCamera2CameraControl.getSharedOptions());
+        // Trigger AF
+        assertThat(resultCaptureConfig.getCaptureRequestOption(CaptureRequest.CONTROL_AF_TRIGGER,
+                null)).isEqualTo(CaptureRequest.CONTROL_AF_TRIGGER_START);
+    }
 
-        assertThat(resultCaptureConfig.getCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE,
-                null)).isEqualTo(
-                sharedOptions.getCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, null));
+    @Test
+    public void startFocusAndMetering_AFNotInvolved_AfIsNotTriggered() throws InterruptedException {
+        SensorOrientedMeteringPointFactory factory = new SensorOrientedMeteringPointFactory(1.0f,
+                1.0f);
+        FocusMeteringAction action = FocusMeteringAction.Builder.from(factory.createPoint(0, 0),
+                MeteringMode.AE_AWB)
+                .build();
+        mCamera2CameraControl.startFocusAndMetering(action);
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        verifyAfMode(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+        verify(mControlUpdateListener, never()).onCameraControlCaptureRequests(any());
+    }
+
+    @Test
+    public void cancelFocusAndMetering_3ARegionsReset() throws InterruptedException {
+        SensorOrientedMeteringPointFactory factory = new SensorOrientedMeteringPointFactory(1.0f,
+                1.0f);
+        FocusMeteringAction action = FocusMeteringAction.Builder.from(factory.createPoint(0, 0))
+                .build();
+        mCamera2CameraControl.startFocusAndMetering(action);
+        HandlerUtil.waitForLooperToIdle(mHandler);
+        Mockito.reset(mControlUpdateListener);
+
+        mCamera2CameraControl.cancelFocusAndMetering();
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        verify(mControlUpdateListener, times(1)).onCameraControlUpdateSessionConfig(
+                mSessionConfigArgumentCaptor.capture());
+        SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getValue();
+        Camera2Config repeatingConfig = new Camera2Config(sessionConfig.getImplementationOptions());
+
+        assertThat(
+                repeatingConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AF_REGIONS, null)).isNull();
+        assertThat(
+                repeatingConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AE_REGIONS, null)).isNull();
+        assertThat(
+                repeatingConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AWB_REGIONS, null)).isNull();
+
+
+        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSessionOptions());
+        assertThat(
+                singleConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AF_REGIONS, null)).isNull();
+        assertThat(
+                singleConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AE_REGIONS, null)).isNull();
+        assertThat(
+                singleConfig.getCaptureRequestOption(
+                        CaptureRequest.CONTROL_AWB_REGIONS, null)).isNull();
+    }
+
+    @Test
+    public void cancelFocusAndMetering_cancelAfProperly() throws InterruptedException {
+        SensorOrientedMeteringPointFactory factory = new SensorOrientedMeteringPointFactory(1.0f,
+                1.0f);
+        FocusMeteringAction action = FocusMeteringAction.Builder.from(factory.createPoint(0, 0))
+                .build();
+        mCamera2CameraControl.startFocusAndMetering(action);
+        HandlerUtil.waitForLooperToIdle(mHandler);
+        Mockito.reset(mControlUpdateListener);
+        mCamera2CameraControl.cancelFocusAndMetering();
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        verifyAfMode(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+        verify(mControlUpdateListener).onCameraControlCaptureRequests(
+                mCaptureConfigArgumentCaptor.capture());
+
+        CaptureConfig captureConfig = mCaptureConfigArgumentCaptor.getValue().get(0);
+        Camera2Config resultCaptureConfig =
+                new Camera2Config(captureConfig.getImplementationOptions());
+
+        // Trigger AF
+        assertThat(resultCaptureConfig.getCaptureRequestOption(CaptureRequest.CONTROL_AF_TRIGGER,
+                null)).isEqualTo(CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+    }
+
+    private void verifyAfMode(int expectAfMode) {
+        verify(mControlUpdateListener, times(1)).onCameraControlUpdateSessionConfig(
+                mSessionConfigArgumentCaptor.capture());
+        SessionConfig sessionConfig = mSessionConfigArgumentCaptor.getValue();
+        Camera2Config repeatingConfig = new Camera2Config(sessionConfig.getImplementationOptions());
+        assertAfMode(repeatingConfig, expectAfMode);
+    }
+
+    @Test
+    public void cancelFocusAndMetering_AFNotInvolved_notCancelAF() throws InterruptedException {
+        SensorOrientedMeteringPointFactory factory = new SensorOrientedMeteringPointFactory(1.0f,
+                1.0f);
+        FocusMeteringAction action = FocusMeteringAction.Builder.from(factory.createPoint(0, 0),
+                MeteringMode.AE_ONLY)
+                .build();
+        mCamera2CameraControl.startFocusAndMetering(action);
+        HandlerUtil.waitForLooperToIdle(mHandler);
+        Mockito.reset(mControlUpdateListener);
+        mCamera2CameraControl.cancelFocusAndMetering();
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        verify(mControlUpdateListener, never()).onCameraControlCaptureRequests(any());
+
+        verifyAfMode(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+    }
+
+    @Test
+    public void startFocus_afModeIsSetToAuto() throws InterruptedException {
+        SensorOrientedMeteringPointFactory factory = new SensorOrientedMeteringPointFactory(1.0f,
+                1.0f);
+        FocusMeteringAction action = FocusMeteringAction.Builder.from(factory.createPoint(0, 0))
+                .build();
+        mCamera2CameraControl.startFocusAndMetering(action);
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        Camera2Config singleConfig = new Camera2Config(mCamera2CameraControl.getSessionOptions());
+        assertAfMode(singleConfig, CaptureRequest.CONTROL_AF_MODE_AUTO);
+
+        mCamera2CameraControl.cancelFocusAndMetering();
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        Camera2Config singleConfig2 = new Camera2Config(mCamera2CameraControl.getSessionOptions());
+        assertAfMode(singleConfig2, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+    }
+
+    private boolean isAfModeSupported(int afMode) {
+        int[] modes = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES);
+        return isModeInList(afMode, modes);
+    }
+
+    private boolean isAeModeSupported(int aeMode) {
+        int[] modes = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES);
+        return isModeInList(aeMode, modes);
+    }
+
+    private boolean isAwbModeSupported(int awbMode) {
+        int[] modes = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES);
+        return isModeInList(awbMode, modes);
+    }
+
+
+    private boolean isModeInList(int mode, int[] modeList) {
+        if (modeList == null) {
+            return false;
+        }
+        for (int m : modeList) {
+            if (mode == m) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void assertAfMode(Camera2Config config, int afMode) {
+        if (isAfModeSupported(afMode)) {
+            assertThat(config.getCaptureRequestOption(
+                    CaptureRequest.CONTROL_AF_MODE, null)).isEqualTo(afMode);
+        } else {
+            int fallbackMode;
+            if (isAfModeSupported(CONTROL_AF_MODE_CONTINUOUS_PICTURE)) {
+                fallbackMode = CONTROL_AF_MODE_CONTINUOUS_PICTURE;
+            } else if (isAfModeSupported(CONTROL_AF_MODE_AUTO)) {
+                fallbackMode = CONTROL_AF_MODE_AUTO;
+            } else {
+                fallbackMode = CONTROL_AF_MODE_OFF;
+            }
+
+            assertThat(config.getCaptureRequestOption(
+                    CaptureRequest.CONTROL_AF_MODE, null)).isEqualTo(fallbackMode);
+        }
+    }
+
+    private void assertAeMode(Camera2Config config, int aeMode) {
+        if (isAeModeSupported(aeMode)) {
+            assertThat(config.getCaptureRequestOption(
+                    CaptureRequest.CONTROL_AE_MODE, null)).isEqualTo(aeMode);
+        } else {
+            int fallbackMode;
+            if (isAeModeSupported(CONTROL_AE_MODE_ON)) {
+                fallbackMode = CONTROL_AE_MODE_ON;
+            } else {
+                fallbackMode = CONTROL_AE_MODE_OFF;
+            }
+
+            assertThat(config.getCaptureRequestOption(
+                    CaptureRequest.CONTROL_AE_MODE, null)).isEqualTo(fallbackMode);
+        }
+    }
+
+    private void assertAwbMode(Camera2Config config, int awbMode) {
+        if (isAwbModeSupported(awbMode)) {
+            assertThat(config.getCaptureRequestOption(
+                    CaptureRequest.CONTROL_AWB_MODE, null)).isEqualTo(awbMode);
+        } else {
+            int fallbackMode;
+            if (isAwbModeSupported(CONTROL_AWB_MODE_AUTO)) {
+                fallbackMode = CONTROL_AWB_MODE_AUTO;
+            } else {
+                fallbackMode = CONTROL_AWB_MODE_OFF;
+            }
+
+            assertThat(config.getCaptureRequestOption(
+                    CaptureRequest.CONTROL_AWB_MODE, null)).isEqualTo(fallbackMode);
+        }
     }
 }

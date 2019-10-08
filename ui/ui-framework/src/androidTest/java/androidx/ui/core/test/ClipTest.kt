@@ -21,16 +21,15 @@ import android.os.Build
 import androidx.compose.Composable
 import androidx.compose.Model
 import androidx.compose.composer
-import androidx.compose.setContent
 import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import androidx.test.rule.ActivityTestRule
 import androidx.ui.core.Clip
-import androidx.ui.core.CraneWrapper
 import androidx.ui.core.Density
 import androidx.ui.core.Draw
 import androidx.ui.core.PxSize
 import androidx.ui.core.ipx
+import androidx.ui.core.setContent
 import androidx.ui.core.toRect
 import androidx.ui.engine.geometry.Outline
 import androidx.ui.engine.geometry.RRect
@@ -39,8 +38,10 @@ import androidx.ui.engine.geometry.Rect
 import androidx.ui.engine.geometry.Shape
 import androidx.ui.framework.test.TestActivity
 import androidx.ui.graphics.Color
-import androidx.ui.painting.Paint
-import androidx.ui.painting.Path
+import androidx.ui.graphics.toArgb
+import androidx.ui.graphics.Paint
+import androidx.ui.graphics.Path
+import androidx.ui.graphics.PathOperation
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
@@ -88,14 +89,32 @@ class ClipTest {
     fun simpleRectClip() {
         rule.runOnUiThreadIR {
             activity.setContent {
-                CraneWrapper {
-                    FillColor(Color.Green)
-                    Padding(size = 10.ipx) {
-                        AtLeastSize(size = 10.ipx) {
-                            Clip(rectShape) {
-                                FillColor(Color.Cyan)
-                            }
+                FillColor(Color.Green)
+                Padding(size = 10.ipx) {
+                    AtLeastSize(size = 10.ipx) {
+                        Clip(rectShape) {
+                            FillColor(Color.Cyan)
                         }
+                    }
+                }
+            }
+        }
+
+        takeScreenShot(30).apply {
+            assertRect(Color.Cyan, size = 10)
+            assertRect(Color.Green, holeSize = 10)
+        }
+    }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
+    fun simpleRectClipWithModifiers() {
+        rule.runOnUiThreadIR {
+            activity.setContentInFrameLayout {
+                FillColor(Color.Green)
+                AtLeastSize(size = 10.ipx, modifier = PaddingModifier(10.ipx)) {
+                    Clip(rectShape) {
+                        FillColor(Color.Cyan)
                     }
                 }
             }
@@ -116,12 +135,10 @@ class ClipTest {
         }
         rule.runOnUiThreadIR {
             activity.setContent {
-                CraneWrapper {
-                    AtLeastSize(size = 30.ipx) {
-                        FillColor(Color.Green)
-                        Clip(shape) {
-                            FillColor(Color.Cyan)
-                        }
+                AtLeastSize(size = 30.ipx) {
+                    FillColor(Color.Green)
+                    Clip(shape) {
+                        FillColor(Color.Cyan)
                     }
                 }
             }
@@ -158,12 +175,10 @@ class ClipTest {
         }
         rule.runOnUiThreadIR {
             activity.setContent {
-                CraneWrapper {
-                    AtLeastSize(size = 30.ipx) {
-                        FillColor(Color.Green)
-                        Clip(shape) {
-                            FillColor(Color.Cyan)
-                        }
+                AtLeastSize(size = 30.ipx) {
+                    FillColor(Color.Green)
+                    Clip(shape) {
+                        FillColor(Color.Cyan)
                     }
                 }
             }
@@ -185,12 +200,10 @@ class ClipTest {
     fun triangleClip() {
         rule.runOnUiThreadIR {
             activity.setContent {
-                CraneWrapper {
-                    AtLeastSize(size = 30.ipx) {
-                        FillColor(Color.Green)
-                        Clip(triangleShape) {
-                            FillColor(Color.Cyan)
-                        }
+                AtLeastSize(size = 30.ipx) {
+                    FillColor(Color.Green)
+                    Clip(triangleShape) {
+                        FillColor(Color.Cyan)
                     }
                 }
             }
@@ -203,17 +216,48 @@ class ClipTest {
 
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Test
+    fun concaveClip() {
+        // 30 pixels rect with a rect hole of 10 pixels in the middle
+        val concaveShape = object : Shape {
+            override fun createOutline(size: PxSize, density: Density): Outline =
+                Outline.Generic(
+                    Path().apply {
+                        op(
+                            Path().apply { addRect(Rect(0f, 0f, 30f, 30f)) },
+                            Path().apply { addRect(Rect(10f, 10f, 20f, 20f)) },
+                            PathOperation.difference
+                        )
+                    }
+                )
+        }
+        rule.runOnUiThreadIR {
+            activity.setContent {
+                AtLeastSize(size = 30.ipx) {
+                    FillColor(Color.Green)
+                    Clip(concaveShape) {
+                        FillColor(Color.Cyan)
+                    }
+                }
+            }
+        }
+
+        takeScreenShot(30).apply {
+            assertRect(color = Color.Green, size = 10)
+            assertRect(color = Color.Cyan, size = 30, holeSize = 10)
+        }
+    }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
     fun switchFromRectToRounded() {
         val model = ShapeModel(rectShape)
 
         rule.runOnUiThreadIR {
             activity.setContent {
-                CraneWrapper {
-                    AtLeastSize(size = 30.ipx) {
-                        FillColor(Color.Green)
-                        Clip(model.shape) {
-                            FillColor(Color.Cyan)
-                        }
+                AtLeastSize(size = 30.ipx) {
+                    FillColor(Color.Green)
+                    Clip(model.shape) {
+                        FillColor(Color.Cyan)
                     }
                 }
             }
@@ -246,12 +290,10 @@ class ClipTest {
 
         rule.runOnUiThreadIR {
             activity.setContent {
-                CraneWrapper {
-                    FillColor(Color.Green)
-                    AtLeastSize(size = 30.ipx) {
-                        Clip(model.shape) {
-                            FillColor(Color.Cyan)
-                        }
+                FillColor(Color.Green)
+                AtLeastSize(size = 30.ipx) {
+                    Clip(model.shape) {
+                        FillColor(Color.Cyan)
                     }
                 }
             }
@@ -276,12 +318,10 @@ class ClipTest {
 
         rule.runOnUiThreadIR {
             activity.setContent {
-                CraneWrapper {
-                    FillColor(Color.Green)
-                    AtLeastSize(size = 30.ipx) {
-                        Clip(model.shape) {
-                            FillColor(Color.Cyan)
-                        }
+                FillColor(Color.Green)
+                AtLeastSize(size = 30.ipx) {
+                    Clip(model.shape) {
+                        FillColor(Color.Cyan)
                     }
                 }
             }
@@ -296,6 +336,38 @@ class ClipTest {
 
         takeScreenShot(30).apply {
             assertRect(Color.Cyan, size = 30)
+        }
+    }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
+    fun emitClipLater() {
+        val model = DoDraw(false)
+
+        rule.runOnUiThreadIR {
+            activity.setContent {
+                FillColor(Color.Green)
+                Padding(size = 10.ipx) {
+                    AtLeastSize(size = 10.ipx) {
+                        if (model.value) {
+                            Clip(rectShape) {
+                                FillColor(Color.Cyan)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Assert.assertTrue(drawLatch.await(1, TimeUnit.SECONDS))
+
+        drawLatch = CountDownLatch(1)
+        rule.runOnUiThreadIR {
+            model.value = true
+        }
+
+        takeScreenShot(30).apply {
+            assertRect(Color.Cyan, size = 10)
+            assertRect(Color.Green, holeSize = 10)
         }
     }
 

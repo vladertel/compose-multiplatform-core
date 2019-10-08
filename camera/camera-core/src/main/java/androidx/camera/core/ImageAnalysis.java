@@ -17,22 +17,23 @@
 package androidx.camera.core;
 
 import android.media.ImageReader;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.util.Size;
 import android.view.Display;
 import android.view.Surface;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.annotation.UiThread;
 import androidx.camera.core.CameraX.LensFacing;
 import androidx.camera.core.ImageOutputConfig.RotationValue;
+import androidx.camera.core.impl.utils.Threads;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -45,7 +46,6 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <p>After the analyzer function returns, the {@link ImageProxy} will be closed and the
  * corresponding {@link android.media.Image} is released back to the {@link ImageReader}.
- *
  */
 public final class ImageAnalysis extends UseCase {
     /**
@@ -56,10 +56,17 @@ public final class ImageAnalysis extends UseCase {
     @RestrictTo(Scope.LIBRARY_GROUP)
     public static final Defaults DEFAULT_CONFIG = new Defaults();
     private static final String TAG = "ImageAnalysis";
+    // ImageReader depth for non-blocking mode.
+    private static final int NON_BLOCKING_IMAGE_DEPTH = 4;
+
     final AtomicReference<Analyzer> mSubscribedAnalyzer;
+    final AtomicReference<Executor> mAnalyzerExecutor;
     final AtomicInteger mRelativeRotation = new AtomicInteger();
-    private final Handler mHandler;
     private final ImageAnalysisConfig.Builder mUseCaseConfigBuilder;
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    final ImageAnalysisBlockingAnalyzer mImageAnalysisBlockingAnalyzer;
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    final ImageAnalysisNonBlockingAnalyzer mImageAnalysisNonBlockingAnalyzer;
     @Nullable
     ImageReaderProxy mImageReader;
     @Nullable
@@ -70,29 +77,119 @@ public final class ImageAnalysis extends UseCase {
      *
      * @param config for this use case instance
      */
-    public ImageAnalysis(ImageAnalysisConfig config) {
+    public ImageAnalysis(@NonNull ImageAnalysisConfig config) {
         super(config);
         mUseCaseConfigBuilder = ImageAnalysisConfig.Builder.fromConfig(config);
 
         // Get the combined configuration with defaults
         ImageAnalysisConfig combinedConfig = (ImageAnalysisConfig) getUseCaseConfig();
         mSubscribedAnalyzer = new AtomicReference<>();
-        mHandler = combinedConfig.getCallbackHandler(null);
-        if (mHandler == null) {
-            throw new IllegalStateException("No default mHandler specified.");
-        }
+        mAnalyzerExecutor = new AtomicReference<>();
         setImageFormat(ImageReaderFormatRecommender.chooseCombo().imageAnalysisFormat());
+        // Init both instead of lazy loading to void synchronization.
+        mImageAnalysisBlockingAnalyzer = new ImageAnalysisBlockingAnalyzer(mSubscribedAnalyzer,
+                mRelativeRotation,
+                mAnalyzerExecutor);
+        mImageAnalysisNonBlockingAnalyzer = new ImageAnalysisNonBlockingAnalyzer(
+                mSubscribedAnalyzer, mRelativeRotation,
+                mAnalyzerExecutor, config.getBackgroundExecutor(
+                CameraXExecutors.highPriorityExecutor()));
+    }
+
+    @SuppressWarnings("WeakerAccess") /* synthetic accessor */
+    SessionConfig.Builder createPipeline(ImageAnalysisConfig config, Size resolution) {
+        Threads.checkMainThread();
+        String cameraId = getCameraIdUnchecked(config);
+
+        Executor backgroundExecutor = config.getBackgroundExecutor(
+                CameraXExecutors.highPriorityExecutor());
+
+        int imageQueueDepth = config.getImageReaderMode() == ImageReaderMode.ACQUIRE_NEXT_IMAGE
+                ? config.getImageQueueDepth() : NON_BLOCKING_IMAGE_DEPTH;
+
+        mImageReader =
+                ImageReaderProxys.createCompatibleReader(
+                        cameraId,
+                        resolution.getWidth(),
+                        resolution.getHeight(),
+                        getImageFormat(),
+                        imageQueueDepth,
+                        backgroundExecutor);
+
+        tryUpdateRelativeRotation(cameraId);
+
+        ImageReaderProxy.OnImageAvailableListener onImageAvailableListener;
+
+        if (config.getImageReaderMode() == ImageReaderMode.ACQUIRE_NEXT_IMAGE) {
+            onImageAvailableListener = mImageAnalysisBlockingAnalyzer;
+            mImageAnalysisBlockingAnalyzer.open();
+        } else {
+            onImageAvailableListener = mImageAnalysisNonBlockingAnalyzer;
+            mImageAnalysisNonBlockingAnalyzer.open();
+        }
+        mImageReader.setOnImageAvailableListener(onImageAvailableListener, backgroundExecutor);
+
+        SessionConfig.Builder sessionConfigBuilder = SessionConfig.Builder.createFrom(config);
+
+        mDeferrableSurface = new ImmediateSurface(mImageReader.getSurface());
+
+        sessionConfigBuilder.addSurface(mDeferrableSurface);
+
+        sessionConfigBuilder.addErrorListener(new SessionConfig.ErrorListener() {
+            @Override
+            public void onError(@NonNull SessionConfig sessionConfig,
+                    @NonNull SessionConfig.SessionError error) {
+                clearPipeline();
+                SessionConfig.Builder sessionConfigBuilder = createPipeline(config, resolution);
+                attachToCamera(cameraId, sessionConfigBuilder.build());
+
+                notifyReset();
+            }
+        });
+
+        return sessionConfigBuilder;
+    }
+
+    /**
+     * Clear the internal pipeline so that the pipeline can be set up again.
+     */
+    void clearPipeline() {
+        Threads.checkMainThread();
+        mImageAnalysisNonBlockingAnalyzer.close();
+        mImageAnalysisBlockingAnalyzer.close();
+
+        final DeferrableSurface deferrableSurface = mDeferrableSurface;
+        mDeferrableSurface = null;
+        final ImageReaderProxy imageReaderProxy = mImageReader;
+        mImageReader = null;
+        if (deferrableSurface != null) {
+            deferrableSurface.setOnSurfaceDetachedListener(
+                    CameraXExecutors.mainThreadExecutor(),
+                    new DeferrableSurface.OnSurfaceDetachedListener() {
+                        @Override
+                        public void onSurfaceDetached() {
+                            if (imageReaderProxy != null) {
+                                imageReaderProxy.close();
+                            }
+                        }
+                    });
+        }
     }
 
     /**
      * Removes a previously set analyzer.
      *
-     * <p>This is equivalent to calling {@code setAnalyzer(null)}.  This will stop data from
-     * streaming to the {@link ImageAnalysis}.
+     * <p>This will stop data from streaming to the {@link ImageAnalysis}.
+     *
+     * @throws IllegalStateException If not called on main thread.
      */
     @UiThread
     public void removeAnalyzer() {
-        setAnalyzer(null);
+        Threads.checkMainThread();
+        mAnalyzerExecutor.set(null);
+        if (mSubscribedAnalyzer.getAndSet(null) != null) {
+            notifyInactive();
+        }
     }
 
     /**
@@ -136,7 +233,7 @@ public final class ImageAnalysis extends UseCase {
             // Old
             // configuration lens facing should match new configuration.
             try {
-                String cameraId = CameraX.getCameraWithLensFacing(oldConfig.getLensFacing());
+                String cameraId = CameraX.getCameraWithCameraDeviceConfig(oldConfig);
                 tryUpdateRelativeRotation(cameraId);
             } catch (CameraInfoUnavailableException e) {
                 // Likely don't yet have permissions. This is expected if this method is called
@@ -144,6 +241,7 @@ public final class ImageAnalysis extends UseCase {
                 // this use case becomes active. That's OK though since we've updated the use case
                 // configuration. We'll try to update relative rotation again in
                 // onSuggestedResolutionUpdated().
+                Log.w(TAG, "Unable to get camera id for the camera device config.");
             }
         }
     }
@@ -152,10 +250,12 @@ public final class ImageAnalysis extends UseCase {
      * Retrieves a previously set analyzer.
      *
      * @return The last set analyzer or {@code null} if no analyzer is set.
+     * @throws IllegalStateException If not called on main thread.
      */
     @UiThread
     @Nullable
     public Analyzer getAnalyzer() {
+        Threads.checkMainThread();
         return mSubscribedAnalyzer.get();
     }
 
@@ -163,8 +263,7 @@ public final class ImageAnalysis extends UseCase {
      * Sets an analyzer to receive and analyze images.
      *
      * <p>Setting an analyzer will signal to the camera that it should begin sending data. The
-     * stream of data can be stopped by setting the analyzer to {@code null} or by calling {@link
-     * #removeAnalyzer()}.
+     * stream of data can be stopped by calling {@link #removeAnalyzer()}.
      *
      * <p>Applications can process or copy the image by implementing the {@link Analyzer}.  If
      * frames should be skipped (no analysis), the analyzer function should return, instead of
@@ -173,16 +272,18 @@ public final class ImageAnalysis extends UseCase {
      * <p>Setting an analyzer function replaces any previous analyzer.  Only one analyzer can be
      * set at any time.
      *
-     * @param analyzer of the images or {@code null} to stop data streaming to
-     *                 {@link ImageAnalysis}.
+     * @param executor The executor in which the
+     * {@link ImageAnalysis.Analyzer#analyze(ImageProxy, int)} will be run.
+     * @param analyzer of the images.
+     * @throws IllegalStateException If not called on main thread.
      */
     @UiThread
-    public void setAnalyzer(@Nullable Analyzer analyzer) {
+    public void setAnalyzer(@NonNull Executor executor, @NonNull Analyzer analyzer) {
+        Threads.checkMainThread();
+        mAnalyzerExecutor.set(executor);
         Analyzer previousAnalyzer = mSubscribedAnalyzer.getAndSet(analyzer);
         if (previousAnalyzer == null && analyzer != null) {
             notifyActive();
-        } else if (previousAnalyzer != null && analyzer == null) {
-            notifyInactive();
         }
     }
 
@@ -199,19 +300,7 @@ public final class ImageAnalysis extends UseCase {
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
     public void clear() {
-        if (mDeferrableSurface != null) {
-            mDeferrableSurface.setOnSurfaceDetachedListener(
-                    CameraXExecutors.mainThreadExecutor(),
-                    new DeferrableSurface.OnSurfaceDetachedListener() {
-                        @Override
-                        public void onSurfaceDetached() {
-                            if (mImageReader != null) {
-                                mImageReader.close();
-                                mImageReader = null;
-                            }
-                        }
-                    });
-        }
+        clearPipeline();
         super.clear();
     }
 
@@ -244,14 +333,7 @@ public final class ImageAnalysis extends UseCase {
             Map<String, Size> suggestedResolutionMap) {
         final ImageAnalysisConfig config = (ImageAnalysisConfig) getUseCaseConfig();
 
-        String cameraId;
-        LensFacing lensFacing = config.getLensFacing();
-        try {
-            cameraId = CameraX.getCameraWithLensFacing(lensFacing);
-        } catch (CameraInfoUnavailableException e) {
-            throw new IllegalArgumentException(
-                    "Unable to find camera with LensFacing " + lensFacing, e);
-        }
+        String cameraId = getCameraIdUnchecked(config);
 
         Size resolution = suggestedResolutionMap.get(cameraId);
         if (resolution == null) {
@@ -263,46 +345,7 @@ public final class ImageAnalysis extends UseCase {
             mImageReader.close();
         }
 
-        mImageReader =
-                ImageReaderProxys.createCompatibleReader(
-                        cameraId,
-                        resolution.getWidth(),
-                        resolution.getHeight(),
-                        getImageFormat(),
-                        config.getImageQueueDepth(),
-                        mHandler);
-
-        tryUpdateRelativeRotation(cameraId);
-        mImageReader.setOnImageAvailableListener(
-                new ImageReaderProxy.OnImageAvailableListener() {
-                    @Override
-                    public void onImageAvailable(ImageReaderProxy imageReader) {
-                        Analyzer analyzer = mSubscribedAnalyzer.get();
-                        try (ImageProxy image =
-                                     config
-                                             .getImageReaderMode(config.getImageReaderMode())
-                                             .equals(ImageReaderMode.ACQUIRE_NEXT_IMAGE)
-                                             ? imageReader.acquireNextImage()
-                                             : imageReader.acquireLatestImage()) {
-                            // Do not analyze if unable to acquire an ImageProxy
-                            if (image == null) {
-                                return;
-                            }
-
-                            if (analyzer != null) {
-                                analyzer.analyze(image, mRelativeRotation.get());
-                            }
-                        }
-                    }
-                },
-                mHandler);
-
-        SessionConfig.Builder sessionConfigBuilder = SessionConfig.Builder.createFrom(config);
-
-        mDeferrableSurface = new ImmediateSurface(mImageReader.getSurface());
-
-        sessionConfigBuilder.addSurface(mDeferrableSurface);
-
+        SessionConfig.Builder sessionConfigBuilder = createPipeline(config, resolution);
         attachToCamera(cameraId, sessionConfigBuilder.build());
 
         return suggestedResolutionMap;
@@ -312,9 +355,9 @@ public final class ImageAnalysis extends UseCase {
         ImageOutputConfig config = (ImageOutputConfig) getUseCaseConfig();
         // Get the relative rotation or default to 0 if the camera info is unavailable
         try {
-            CameraInfo cameraInfo = CameraX.getCameraInfo(cameraId);
+            CameraInfoInternal cameraInfoInternal = CameraX.getCameraInfo(cameraId);
             mRelativeRotation.set(
-                    cameraInfo.getSensorRotationDegrees(
+                    cameraInfoInternal.getSensorRotationDegrees(
                             config.getTargetRotation(Surface.ROTATION_0)));
         } catch (CameraInfoUnavailableException e) {
             Log.e(TAG, "Unable to retrieve camera sensor orientation.", e);
@@ -335,12 +378,12 @@ public final class ImageAnalysis extends UseCase {
         ACQUIRE_NEXT_IMAGE,
     }
 
-    /** Interface for analyzing images.
+    /**
+     * Interface for analyzing images.
      *
-     * <p>Implement Analyzer and pass it to {@link ImageAnalysis#setAnalyzer(Analyzer)} to receive
-     * images and perform custom processing by implementing the
+     * <p>Implement Analyzer and pass it to {@link ImageAnalysis#setAnalyzer(Executor, Analyzer)}
+     * to receive images and perform custom processing by implementing the
      * {@link ImageAnalysis.Analyzer#analyze(ImageProxy, int)} function.
-     *
      */
     public interface Analyzer {
         /**
@@ -365,7 +408,6 @@ public final class ImageAnalysis extends UseCase {
          * @param rotationDegrees The rotation which if applied to the image would make it match
          *                        the current target rotation of {@link ImageAnalysis}, expressed in
          *                        degrees in the range {@code [0..360)}.
-         *
          */
         void analyze(ImageProxy image, int rotationDegrees);
     }
@@ -381,8 +423,7 @@ public final class ImageAnalysis extends UseCase {
     @RestrictTo(Scope.LIBRARY_GROUP)
     public static final class Defaults implements ConfigProvider<ImageAnalysisConfig> {
         private static final ImageReaderMode DEFAULT_IMAGE_READER_MODE =
-                ImageReaderMode.ACQUIRE_NEXT_IMAGE;
-        private static final Handler DEFAULT_HANDLER = new Handler(Looper.getMainLooper());
+                ImageReaderMode.ACQUIRE_LATEST_IMAGE;
         private static final int DEFAULT_IMAGE_QUEUE_DEPTH = 6;
         private static final Size DEFAULT_TARGET_RESOLUTION = new Size(640, 480);
         private static final Size DEFAULT_MAX_RESOLUTION = new Size(1920, 1080);
@@ -394,9 +435,8 @@ public final class ImageAnalysis extends UseCase {
             ImageAnalysisConfig.Builder builder =
                     new ImageAnalysisConfig.Builder()
                             .setImageReaderMode(DEFAULT_IMAGE_READER_MODE)
-                            .setCallbackHandler(DEFAULT_HANDLER)
                             .setImageQueueDepth(DEFAULT_IMAGE_QUEUE_DEPTH)
-                            .setTargetResolution(DEFAULT_TARGET_RESOLUTION)
+                            .setDefaultResolution(DEFAULT_TARGET_RESOLUTION)
                             .setMaxResolution(DEFAULT_MAX_RESOLUTION)
                             .setSurfaceOccupancyPriority(DEFAULT_SURFACE_OCCUPANCY_PRIORITY);
 

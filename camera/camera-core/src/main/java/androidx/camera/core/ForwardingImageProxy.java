@@ -50,8 +50,9 @@ abstract class ForwardingImageProxy implements ImageProxy {
         mImage = image;
     }
 
+    @SuppressWarnings("GuardedBy") // TODO(b/141958189): Suppressed during upgrade to AGP 3.6.
     @Override
-    public synchronized void close() {
+    public void close() {
         mImage.close();
         notifyOnImageCloseListeners();
     }
@@ -116,8 +117,15 @@ abstract class ForwardingImageProxy implements ImageProxy {
     }
 
     /** Notifies the listeners that this image has been closed. */
-    protected synchronized void notifyOnImageCloseListeners() {
-        for (OnImageCloseListener listener : mOnImageCloseListeners) {
+    protected void notifyOnImageCloseListeners() {
+        Set<OnImageCloseListener> onImageCloseListeners;
+        synchronized (this) {
+            // Make a copy for thread safety. We want to synchronize the access for member variables
+            // but not the actual callbacks to avoid a deadlock between ForwardingImageProxy and
+            // QueuedImageReaderProxy. go/deadlock-in-sharedimagereaderproxy
+            onImageCloseListeners = new HashSet<>(mOnImageCloseListeners);
+        }
+        for (OnImageCloseListener listener : onImageCloseListeners) {
             listener.onImageClose(this);
         }
     }

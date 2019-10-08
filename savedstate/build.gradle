@@ -21,10 +21,11 @@ android {
 
 dependencies {
     api("androidx.annotation:annotation:1.1.0")
-    implementation(ARCH_CORE_COMMON)
-    implementation(ARCH_LIFECYCLE_COMMON, libs.exclude_annotations_transitive)
+    implementation("androidx.arch.core:core-common:2.0.1")
+    implementation("androidx.lifecycle:lifecycle-common:2.0.0")
+
     androidTestImplementation(KOTLIN_STDLIB)
-    androidTestImplementation(ARCH_LIFECYCLE_RUNTIME, libs.exclude_annotations_transitive)
+    androidTestImplementation("androidx.lifecycle:lifecycle-runtime:2.0.0")
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
     androidTestImplementation(ANDROIDX_TEST_CORE)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)

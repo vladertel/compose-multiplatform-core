@@ -23,8 +23,6 @@ import android.graphics.SurfaceTexture;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.StrictMode;
 import android.util.Log;
 import android.view.TextureView;
@@ -34,6 +32,7 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraX;
@@ -43,6 +42,9 @@ import androidx.camera.core.ImageCaptureConfig;
 import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
 import androidx.camera.core.UseCase;
+import androidx.camera.core.impl.utils.executor.CameraXExecutors;
+import androidx.camera.core.impl.utils.futures.FutureCallback;
+import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.camera.extensions.AutoImageCaptureExtender;
 import androidx.camera.extensions.AutoPreviewExtender;
 import androidx.camera.extensions.BeautyImageCaptureExtender;
@@ -58,6 +60,8 @@ import androidx.camera.extensions.NightPreviewExtender;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.test.espresso.idling.CountingIdlingResource;
+
+import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
 import java.text.Format;
@@ -87,8 +91,6 @@ public class CameraExtensionsActivity extends AppCompatActivity
     private Preview mPreview;
     private ImageCapture mImageCapture;
     private ImageCaptureType mCurrentImageCaptureType = ImageCaptureType.IMAGE_CAPTURE_TYPE_HDR;
-
-    private HandlerThread mHandlerThread = new HandlerThread("CameraExtensionsActivityHandler");
 
     // Espresso testing variables
     @VisibleForTesting
@@ -160,7 +162,7 @@ public class CameraExtensionsActivity extends AppCompatActivity
         mPreview.setOnPreviewOutputUpdateListener(
                 new Preview.OnPreviewOutputUpdateListener() {
                     @Override
-                    public void onUpdated(Preview.PreviewOutput output) {
+                    public void onUpdated(@NonNull Preview.PreviewOutput output) {
                         // If TextureView was already created, need to re-add it to change the
                         // SurfaceTexture.
                         ViewGroup viewGroup = (ViewGroup) textureView.getParent();
@@ -248,7 +250,6 @@ public class CameraExtensionsActivity extends AppCompatActivity
                         builder);
                 if (hdrImageCaptureExtender.isExtensionAvailable()) {
                     hdrImageCaptureExtender.enableExtension();
-                    builder.setCallbackHandler(new Handler(mHandlerThread.getLooper()));
                 }
                 break;
             case IMAGE_CAPTURE_TYPE_BOKEH:
@@ -308,9 +309,10 @@ public class CameraExtensionsActivity extends AppCompatActivity
                                         formatter.format(Calendar.getInstance().getTime())
                                                 + mCurrentImageCaptureType.name()
                                                 + ".jpg"),
+                                CameraXExecutors.mainThreadExecutor(),
                                 new ImageCapture.OnImageSavedListener() {
                                     @Override
-                                    public void onImageSaved(File file) {
+                                    public void onImageSaved(@NonNull File file) {
                                         Log.d(TAG, "Saved image to " + file);
 
                                         if (!mTakePictureIdlingResource.isIdleNow()) {
@@ -330,8 +332,8 @@ public class CameraExtensionsActivity extends AppCompatActivity
 
                                     @Override
                                     public void onError(
-                                            ImageCapture.UseCaseError useCaseError,
-                                            String message,
+                                            @NonNull ImageCapture.ImageCaptureError error,
+                                            @NonNull String message,
                                             Throwable cause) {
                                         Log.e(TAG, "Failed to save image - " + message, cause);
                                     }
@@ -392,8 +394,6 @@ public class CameraExtensionsActivity extends AppCompatActivity
                 new StrictMode.VmPolicy.Builder().detectAll().penaltyLog().build();
         StrictMode.setVmPolicy(policy);
 
-        mHandlerThread.start();
-
         // Get params from adb extra string
         Bundle bundle = getIntent().getExtras();
         if (bundle != null) {
@@ -412,12 +412,6 @@ public class CameraExtensionsActivity extends AppCompatActivity
                 })
                 .start();
         setupPermissions();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        mHandlerThread.quitSafely();
     }
 
     private void setupCamera() {
@@ -448,14 +442,25 @@ public class CameraExtensionsActivity extends AppCompatActivity
 
         Log.d(TAG, "Using cameraId: " + mCurrentCameraId);
 
-        // Run this on the UI thread to manipulate the Textures & Views.
-        CameraExtensionsActivity.this.runOnUiThread(
-                new Runnable() {
+        ListenableFuture<ExtensionsManager.ExtensionsAvailability> availability =
+                ExtensionsManager.init();
+
+        Futures.addCallback(availability,
+                new FutureCallback<ExtensionsManager.ExtensionsAvailability>() {
                     @Override
-                    public void run() {
-                        createUseCases();
+                    public void onSuccess(
+                            @Nullable ExtensionsManager.ExtensionsAvailability availability) {
+                        // Run this on the UI thread to manipulate the Textures & Views.
+                        CameraExtensionsActivity.this.runOnUiThread(() -> createUseCases());
                     }
-                });
+
+                    @Override
+                    public void onFailure(Throwable throwable) {
+
+                    }
+                },
+                CameraXExecutors.mainThreadExecutor()
+        );
     }
 
     private void setupPermissions() {
@@ -514,7 +519,7 @@ public class CameraExtensionsActivity extends AppCompatActivity
 
     @Override
     public void onRequestPermissionsResult(
-            int requestCode, String[] permissions, int[] grantResults) {
+            int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
             case PERMISSIONS_REQUEST_CODE: {
                 // If request is cancelled, the result arrays are empty.

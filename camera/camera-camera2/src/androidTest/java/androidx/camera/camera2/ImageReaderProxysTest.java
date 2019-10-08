@@ -25,24 +25,25 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Size;
 
-import androidx.camera.core.AppConfig;
+import androidx.camera.camera2.impl.Camera2CameraFactory;
 import androidx.camera.core.BaseCamera;
 import androidx.camera.core.CameraFactory;
-import androidx.camera.core.CameraX;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.ImageReaderProxy;
 import androidx.camera.core.ImageReaderProxys;
 import androidx.camera.core.ImmediateSurface;
 import androidx.camera.core.SessionConfig;
+import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.fakes.FakeUseCase;
 import androidx.camera.testing.fakes.FakeUseCaseConfig;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.test.filters.MediumTest;
+import androidx.test.filters.LargeTest;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -50,16 +51,23 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 
-@MediumTest
+/**
+ * Instrument test for {@link ImageReaderProxy}.
+ */
+@LargeTest
 @RunWith(AndroidJUnit4.class)
 public final class ImageReaderProxysTest {
     private static final String CAMERA_ID = "0";
 
+    private static CameraFactory sCameraFactory;
+
     private BaseCamera mCamera;
     private HandlerThread mHandlerThread;
     private Handler mHandler;
+    private List<ImageReaderProxy> mReaders = new ArrayList<>();
 
     private static ImageReaderProxy.OnImageAvailableListener createSemaphoreReleasingListener(
             final Semaphore semaphore) {
@@ -75,45 +83,58 @@ public final class ImageReaderProxysTest {
         };
     }
 
-    @Before
-    public void setUp()  {
-        assumeTrue(CameraUtil.deviceHasCamera());
+    @BeforeClass
+    public static void initializeFactory() {
         Context context = ApplicationProvider.getApplicationContext();
-        AppConfig appConfig = Camera2AppConfig.create(context);
-        CameraFactory cameraFactory = appConfig.getCameraFactory(null);
-        CameraX.init(context, appConfig);
-        mCamera = cameraFactory.getCamera(CAMERA_ID);
+        sCameraFactory = new Camera2CameraFactory(context);
+    }
+
+    @Before
+    public void setUp() {
+        assumeTrue(CameraUtil.deviceHasCamera());
+
         mHandlerThread = new HandlerThread("Background");
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
+        mReaders = new ArrayList<>();
+
+        // Grab the camera so we can wait for release in tearDown()
+
+        mCamera = sCameraFactory.getCamera(CAMERA_ID);
     }
 
     @After
-    public void tearDown() {
-        if (mCamera !=  null && mHandlerThread != null) {
-            mCamera.release();
+    public void tearDown() throws ExecutionException, InterruptedException {
+        for (ImageReaderProxy reader : mReaders) {
+            reader.close();
+        }
+
+        if (mCamera != null) {
+            mCamera.release().get();
+        }
+
+        if (mHandlerThread != null) {
             mHandlerThread.quitSafely();
         }
     }
 
-    @MediumTest
     @Test
     public void sharedReadersGetFramesFromCamera() throws InterruptedException {
-        List<ImageReaderProxy> readers = new ArrayList<>();
         List<Semaphore> semaphores = new ArrayList<>();
         for (int i = 0; i < 2; ++i) {
             ImageReaderProxy reader =
                     ImageReaderProxys.createSharedReader(
-                            CAMERA_ID, 640, 480, ImageFormat.YUV_420_888, 2, mHandler);
+                            CAMERA_ID, 640, 480, ImageFormat.YUV_420_888, 2,
+                            CameraXExecutors.newHandlerExecutor(mHandler));
             Semaphore semaphore = new Semaphore(/*permits=*/ 0);
             reader.setOnImageAvailableListener(
                     createSemaphoreReleasingListener(semaphore), mHandler);
-            readers.add(reader);
+            mReaders.add(reader);
             semaphores.add(semaphore);
         }
 
         FakeUseCaseConfig config = new FakeUseCaseConfig.Builder().setTargetName("UseCase").build();
-        UseCase useCase = new UseCase(config, readers);
+        UseCase useCase = new UseCase(config, mReaders);
         CameraUtil.openCameraWithUseCase(CAMERA_ID, mCamera, useCase);
 
         // Wait for a few frames to be observed.
@@ -122,24 +143,22 @@ public final class ImageReaderProxysTest {
         }
     }
 
-    @MediumTest
     @Test
     public void isolatedReadersGetFramesFromCamera() throws InterruptedException {
-        List<ImageReaderProxy> readers = new ArrayList<>();
         List<Semaphore> semaphores = new ArrayList<>();
         for (int i = 0; i < 2; ++i) {
             ImageReaderProxy reader =
                     ImageReaderProxys.createIsolatedReader(
-                            640, 480, ImageFormat.YUV_420_888, 2, mHandler);
+                            640, 480, ImageFormat.YUV_420_888, 2);
             Semaphore semaphore = new Semaphore(/*permits=*/ 0);
             reader.setOnImageAvailableListener(
                     createSemaphoreReleasingListener(semaphore), mHandler);
-            readers.add(reader);
+            mReaders.add(reader);
             semaphores.add(semaphore);
         }
 
         FakeUseCaseConfig config = new FakeUseCaseConfig.Builder().setTargetName("UseCase").build();
-        UseCase useCase = new UseCase(config, readers);
+        UseCase useCase = new UseCase(config, mReaders);
         CameraUtil.openCameraWithUseCase(CAMERA_ID, mCamera, useCase);
 
         // Wait for a few frames to be observed.

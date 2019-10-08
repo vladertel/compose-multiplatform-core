@@ -17,15 +17,14 @@
 package androidx.media2.common;
 
 import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP;
-import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
 
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
+import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
-import androidx.annotation.VisibleForTesting;
 import androidx.core.util.Preconditions;
 import androidx.versionedparcelable.NonParcelField;
 import androidx.versionedparcelable.ParcelUtils;
@@ -62,10 +61,17 @@ public class FileMediaItem extends MediaItem {
     @NonParcelField
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     long mFDLength = FD_LENGTH_UNKNOWN;
+
     @NonParcelField
-    Integer mRefCount = new Integer(0);
+    private final Object mLock = new Object();
+
     @NonParcelField
-    boolean mClosed;
+    @GuardedBy("mLock")
+    private int mRefCount;
+
+    @NonParcelField
+    @GuardedBy("mLock")
+    private boolean mClosed;
 
     /**
      * Used for VersionedParcelable
@@ -112,9 +118,9 @@ public class FileMediaItem extends MediaItem {
      * Increases reference count for underlying ParcelFileDescriptor.
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY_GROUP)
     public void increaseRefCount() {
-        synchronized (mRefCount) {
+        synchronized (mLock) {
             if (mClosed) {
                 Log.w(TAG, "ParcelFileDescriptorClient is already closed.");
                 return;
@@ -128,9 +134,9 @@ public class FileMediaItem extends MediaItem {
      * be closed when the count becomes zero.
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY_GROUP)
     public void decreaseRefCount() {
-        synchronized (mRefCount) {
+        synchronized (mLock) {
             if (mClosed) {
                 Log.w(TAG, "ParcelFileDescriptorClient is already closed.");
                 return;
@@ -155,7 +161,7 @@ public class FileMediaItem extends MediaItem {
      */
     @RestrictTo(LIBRARY_GROUP)
     public boolean isClosed() {
-        synchronized (mRefCount) {
+        synchronized (mLock) {
             return mClosed;
         }
     }
@@ -164,10 +170,9 @@ public class FileMediaItem extends MediaItem {
      * Close the {@link ParcelFileDescriptor} of this {@link FileMediaItem}.
      * @hide
      */
-    @VisibleForTesting
     @RestrictTo(LIBRARY_GROUP)
     public void close() throws IOException {
-        synchronized (mRefCount) {
+        synchronized (mLock) {
             if (mPFD != null) {
                 mPFD.close();
             }

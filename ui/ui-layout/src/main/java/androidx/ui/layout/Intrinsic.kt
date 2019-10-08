@@ -16,7 +16,6 @@
 
 package androidx.ui.layout
 
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.ui.core.ComplexLayout
@@ -42,15 +41,15 @@ import androidx.ui.core.ipx
  * the [ConstrainedBox]s to use the same width.
  */
 @Composable
-fun MinIntrinsicWidth(@Children children: @Composable() () -> Unit) {
+fun MinIntrinsicWidth(children: @Composable() () -> Unit) {
     ComplexLayout(children) {
-        layout { measurables, constraints ->
+        measure { measurables, constraints ->
             val measurable = measurables.firstOrNull()
             val width = measurable?.minIntrinsicWidth(constraints.maxHeight) ?: 0.ipx
             val placeable = measurable?.measure(
                 Constraints.tightConstraintsForWidth(width).enforce(constraints)
             )
-            layoutResult(placeable?.width ?: 0.ipx, placeable?.height ?: 0.ipx) {
+            layout(placeable?.width ?: 0.ipx, placeable?.height ?: 0.ipx) {
                 placeable?.place(0.ipx, 0.ipx)
             }
         }
@@ -87,15 +86,15 @@ fun MinIntrinsicWidth(@Children children: @Composable() () -> Unit) {
  * the divider to use the same height.
  */
 @Composable
-fun MinIntrinsicHeight(@Children children: @Composable() () -> Unit) {
+fun MinIntrinsicHeight(children: @Composable() () -> Unit) {
     ComplexLayout(children) {
-        layout { measurables, constraints ->
+        measure { measurables, constraints ->
             val measurable = measurables.firstOrNull()
             val height = measurable?.minIntrinsicHeight(constraints.maxWidth) ?: 0.ipx
             val placeable = measurable?.measure(
                 Constraints.tightConstraintsForHeight(height).enforce(constraints)
             )
-            layoutResult(placeable?.width ?: 0.ipx, placeable?.height ?: 0.ipx) {
+            layout(placeable?.width ?: 0.ipx, placeable?.height ?: 0.ipx) {
                 placeable?.place(0.ipx, 0.ipx)
             }
         }
@@ -132,15 +131,15 @@ fun MinIntrinsicHeight(@Children children: @Composable() () -> Unit) {
  * The sample is a layout containing three widgets having the same width as the widest one.
  */
 @Composable
-fun MaxIntrinsicWidth(@Children children: @Composable() () -> Unit) {
+fun MaxIntrinsicWidth(children: @Composable() () -> Unit) {
     ComplexLayout(children) {
-        layout { measurables, constraints ->
+        measure { measurables, constraints ->
             val measurable = measurables.firstOrNull()
             val width = measurable?.maxIntrinsicWidth(constraints.maxHeight) ?: 0.ipx
             val placeable = measurable?.measure(
                 Constraints.tightConstraintsForWidth(width).enforce(constraints)
             )
-            layoutResult(placeable?.width ?: 0.ipx, placeable?.height ?: 0.ipx) {
+            layout(placeable?.width ?: 0.ipx, placeable?.height ?: 0.ipx) {
                 placeable?.place(0.ipx, 0.ipx)
             }
         }
@@ -177,15 +176,15 @@ fun MaxIntrinsicWidth(@Children children: @Composable() () -> Unit) {
  * and the divider to use the same height.
  */
 @Composable
-fun MaxIntrinsicHeight(@Children children: @Composable() () -> Unit) {
+fun MaxIntrinsicHeight(children: @Composable() () -> Unit) {
     ComplexLayout(children) {
-        layout { measurables, constraints ->
+        measure { measurables, constraints ->
             val measurable = measurables.firstOrNull()
             val height = measurable?.maxIntrinsicHeight(constraints.maxWidth) ?: 0.ipx
             val placeable = measurable?.measure(
                 Constraints.tightConstraintsForHeight(height).enforce(constraints)
             )
-            layoutResult(placeable?.width ?: 0.ipx, placeable?.height ?: 0.ipx) {
+            layout(placeable?.width ?: 0.ipx, placeable?.height ?: 0.ipx) {
                 placeable?.place(0.ipx, 0.ipx)
             }
         }

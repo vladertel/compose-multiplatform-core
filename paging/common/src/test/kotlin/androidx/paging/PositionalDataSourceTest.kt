@@ -16,7 +16,6 @@
 
 package androidx.paging
 
-import androidx.paging.futures.DirectExecutor
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -177,8 +176,6 @@ class PositionalDataSourceTest {
             .setEnablePlaceholders(enablePlaceholders)
             .build()
 
-        dataSource.initExecutor(DirectExecutor)
-
         val params = PositionalDataSource.LoadInitialParams(
             0,
             config.initialLoadSizeHint,
@@ -287,10 +284,6 @@ class PositionalDataSourceTest {
                 override fun onResult(data: List<A>, position: Int) {
                     callback.onResult(convert(data), position)
                 }
-
-                override fun onError(error: Throwable) {
-                    callback.onError(error)
-                }
             })
         }
 
@@ -298,10 +291,6 @@ class PositionalDataSourceTest {
             source.loadRange(params, object : LoadRangeCallback<A>() {
                 override fun onResult(data: List<A>) {
                     callback.onResult(convert(data))
-                }
-
-                override fun onError(error: Throwable) {
-                    callback.onError(error)
                 }
             })
         }
@@ -321,7 +310,6 @@ class PositionalDataSourceTest {
 
         override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<T>) {
             if (error) {
-                callback.onError(ERROR)
                 error = false
                 return
             }
@@ -338,7 +326,6 @@ class PositionalDataSourceTest {
 
         override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<T>) {
             if (error) {
-                callback.onError(ERROR)
                 error = false
                 return
             }
@@ -368,7 +355,6 @@ class PositionalDataSourceTest {
         // load initial - error
         orig.enqueueError()
         wrapper.loadInitial(initParams, loadInitialCallback)
-        verify(loadInitialCallback).onError(ERROR)
         verifyNoMoreInteractions(loadInitialCallback)
 
         // load range
@@ -380,7 +366,6 @@ class PositionalDataSourceTest {
         // load range - error
         orig.enqueueError()
         wrapper.loadRange(PositionalDataSource.LoadRangeParams(2, 3), loadRangeCallback)
-        verify(loadRangeCallback).onError(ERROR)
         verifyNoMoreInteractions(loadRangeCallback)
 
         // check invalidation behavior

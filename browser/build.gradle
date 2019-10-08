@@ -12,15 +12,18 @@ android {
     defaultConfig {
         minSdkVersion 16
     }
+
+    testOptions.unitTests.includeAndroidResources = true
 }
 
 dependencies {
-    api("androidx.core:core:1.1.0-rc01")
+    api("androidx.core:core:1.1.0")
     api("androidx.annotation:annotation:1.1.0")
-    api(project(":interpolator"))
-    implementation("androidx.collection:collection:1.1.0")
+    api(GUAVA_LISTENABLE_FUTURE)
 
-    implementation(project(":concurrent:concurrent-futures"))
+    implementation("androidx.collection:collection:1.1.0")
+    implementation("androidx.concurrent:concurrent-futures:1.0.0")
+    implementation("androidx.interpolator:interpolator:1.0.0")
 
     annotationProcessor(NULLAWAY)
 
@@ -30,6 +33,7 @@ dependencies {
     testImplementation(ROBOLECTRIC)
     testImplementation(MOCKITO_CORE)
 
+    androidTestImplementation("androidx.appcompat:appcompat:1.0.0")
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
     androidTestImplementation(ANDROIDX_TEST_CORE)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
@@ -37,7 +41,7 @@ dependencies {
     androidTestImplementation(ESPRESSO_CORE, libs.exclude_for_espresso)
     androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
     androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
-    androidTestImplementation(project(":internal-testutils"))
+    androidTestImplementation(project(":internal-testutils-runtime"))
 }
 
 androidx {

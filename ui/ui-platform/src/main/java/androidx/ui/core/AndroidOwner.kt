@@ -17,16 +17,20 @@ package androidx.ui.core
 
 import android.annotation.TargetApi
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.RenderNode
 import android.os.Build
 import android.os.Looper
-import android.view.Choreographer
+import android.util.SparseArray
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import android.view.ViewStructure
+import android.view.autofill.AutofillValue
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 import androidx.compose.ObserverMap
 import androidx.ui.core.input.TextInputServiceAndroid
@@ -34,8 +38,8 @@ import androidx.ui.core.pointerinput.PointerInputEventProcessor
 import androidx.ui.core.pointerinput.toPointerInputEvent
 import androidx.ui.engine.geometry.Outline
 import androidx.ui.input.TextInputService
-import androidx.ui.painting.Canvas
-import androidx.ui.painting.Path
+import androidx.ui.graphics.Canvas
+import androidx.ui.graphics.Path
 import androidx.compose.frames.FrameCommitObserver
 import androidx.compose.frames.FrameReadObserver
 import androidx.compose.frames.currentFrame
@@ -46,12 +50,24 @@ import androidx.ui.engine.geometry.Shape
 import kotlin.math.roundToInt
 import java.util.TreeSet
 import androidx.compose.trace
+import androidx.ui.autofill.AndroidAutofill
+import androidx.ui.autofill.Autofill
+import androidx.ui.autofill.AutofillTree
+import androidx.ui.autofill.performAutofill
+import androidx.ui.autofill.populateViewStructure
+import androidx.ui.autofill.registerCallback
+import androidx.ui.autofill.unregisterCallback
 
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-class AndroidCraneView constructor(context: Context)
-    : ViewGroup(context), Owner, SemanticsTreeProvider {
+class AndroidComposeView constructor(context: Context)
+    : ViewGroup(context), Owner, SemanticsTreeProvider, DensityScope {
+    override var density: Density = Density(context)
+        private set
 
-    val root = LayoutNode()
+    val root = LayoutNode().also {
+        it.measureBlock = RootMeasureBlock
+    }
+
     // LayoutNodes that need measure and layout, the value is true when measure is needed
     private val relayoutNodes = TreeSet<LayoutNode>(DepthComparator)
 
@@ -64,12 +80,18 @@ class AndroidCraneView constructor(context: Context)
     // Map from model to LayoutNodes that *only* need layout and not measure
     private val relayoutOnly = ObserverMap<Any, LayoutNode>()
 
+    // Used by components that want to provide autofill semantic information.
+    // TODO: Replace with SemanticsTree: Temporary hack until we have a semantics tree implemented.
+    // TODO: Replace with SemanticsTree.
+    //  This is a temporary hack until we have a semantics tree implemented.
+    val autofillTree = AutofillTree()
+
     // RepaintBoundaryNodes that have had their boundary changed. When using Views,
     // the size/position of a View should change during layout, so this list
     // is kept separate from dirtyRepaintBoundaryNodes.
     private val repaintBoundaryChanges = TreeSet<RepaintBoundaryNode>(DepthComparator)
 
-    var ref: Ref<AndroidCraneView>? = null
+    var ref: Ref<AndroidComposeView>? = null
         set(value) {
             field = value
             if (value != null) {
@@ -80,10 +102,20 @@ class AndroidCraneView constructor(context: Context)
 
     var constraints = Constraints.tightConstraints(width = IntPx.Zero, height = IntPx.Zero)
     // TODO(mount): reinstate when coroutines are supported by IR compiler
-//    private val ownerScope = CoroutineScope(Dispatchers.Main.immediate + Job())
+    // private val ownerScope = CoroutineScope(Dispatchers.Main.immediate + Job())
 
     // Used for tracking which nodes a frame read is applied to
     internal var currentNode: ComponentNode? = null
+
+    // Used for updating the ConfigurationAmbient when configuration changes - consume the
+    // configuration ambient instead of changing this observer if you are writing a component that
+    // adapts to configuration changes.
+    var configurationChangeObserver: () -> Unit = {}
+
+    private val _autofill = if (autofillSupported()) AndroidAutofill(this, autofillTree) else null
+
+    // Used as an ambient for performing autofill.
+    val autofill: Autofill? get() = _autofill
 
     override var measureIteration: Long = 1L
         private set
@@ -96,7 +128,7 @@ class AndroidCraneView constructor(context: Context)
         if (node != null) {
             nodeToModels.add(node, readValue)
             if (node is LayoutNode) {
-                if (node.isInMeasure) {
+                if (node.isMeasuring) {
                     relayoutOnly.remove(readValue, node)
                     modelToNodes.add(readValue, node)
                 } else if (!modelToNodes.contains(readValue, node)) {
@@ -123,6 +155,21 @@ class AndroidCraneView constructor(context: Context)
 
     var commitUnsubscribe: (() -> Unit)? = null
 
+    private val elevationHandler =
+        if (Build.VERSION.SDK_INT >= 29) {
+            ElevationHandler29()
+        } else {
+            ElevationHandlerCompat(this) { canvas ->
+                super.dispatchDraw(canvas)
+            }
+        }
+
+    /**
+     * Flag to indicate that we're measuring and we shouldn't be requesting
+     * measure/layout.
+     */
+    private var duringMeasureLayout = false
+
     init {
         setWillNotDraw(false)
         isFocusable = true
@@ -137,7 +184,7 @@ class AndroidCraneView constructor(context: Context)
         modelToNodes[models].forEach { node ->
             when (node) {
                 is DrawNode -> node.invalidate()
-                is LayoutNode -> node.requestRemeasure()
+                is LayoutNode -> requestMeasure(node, false)
             }
         }
         relayoutOnly[models].forEach { node ->
@@ -147,17 +194,17 @@ class AndroidCraneView constructor(context: Context)
 
     override fun onInvalidate(drawNode: DrawNode) {
         // TODO(mount): use ownerScope. This isn't supported by IR compiler yet
-//        ownerScope.launch {
+        // ownerScope.launch {
         invalidateRepaintBoundary(drawNode)
-//        }
+        // }
     }
 
     override fun onSizeChange(layoutNode: LayoutNode) {
         // TODO(mount): use ownerScope. This isn't supported by IR compiler yet
-//        ownerScope.launch {
+        // ownerScope.launch {
         layoutNode.visitChildren(::collectChildrenRepaintBoundaries)
         invalidateRepaintBoundary(layoutNode)
-//        }
+        // }
     }
 
     /**
@@ -181,9 +228,9 @@ class AndroidCraneView constructor(context: Context)
 
     override fun onPositionChange(layoutNode: LayoutNode) {
         // TODO(mount): use ownerScope. This isn't supported by IR compiler yet
-//        ownerScope.launch {
+        // ownerScope.launch {
         invalidateRepaintBoundary(layoutNode)
-//        }
+        // }
     }
 
     override fun onRepaintBoundaryParamsChange(repaintBoundaryNode: RepaintBoundaryNode) {
@@ -205,17 +252,21 @@ class AndroidCraneView constructor(context: Context)
     }
 
     override fun onRequestMeasure(layoutNode: LayoutNode) {
+        requestMeasure(layoutNode, isNodeChange = true)
+    }
+
+    private fun requestMeasure(layoutNode: LayoutNode, isNodeChange: Boolean) {
         trace("AndroidOwner:onRequestMeasure") {
-            // find root of layout request:
             if (layoutNode.needsRemeasure) {
-                // don't need to do anything because it already needs to be remeasured
+                // requestMeasure has already been called for this node
                 return
             }
             layoutNode.needsRemeasure = true
 
+            // find root of layout request:
             var layout = layoutNode
             while (layout.parentLayoutNode != null && layout.parentLayoutNode != root &&
-                layout.affectsParentSize
+                layout.affectsParentSize && !layout.isMeasuring
             ) {
                 layout = layout.parentLayoutNode!!
                 if (layout.needsRemeasure) {
@@ -226,7 +277,14 @@ class AndroidCraneView constructor(context: Context)
             }
 
             val parent = layout.parentLayoutNode
-            if (parent == null) {
+
+            // If we're doing this during the measure/layout
+            // then we shouldn't affect the relayoutNodes. This can happen in rare
+            // cases when using subcomposition, where the measure lambda is set during
+            // measurement.
+            if (duringMeasureLayout) {
+                check(isNodeChange) { "onRequest called during measure/layout" }
+            } else if (parent == null) {
                 requestRelayout(layout)
             } else {
                 requestRelayout(parent)
@@ -237,26 +295,50 @@ class AndroidCraneView constructor(context: Context)
     private fun requestRelayout(layoutNode: LayoutNode) {
         if (layoutNode == root || constraints.isZero) {
             requestLayout()
+            layoutNode.needsRemeasure = true
         } else if (relayoutNodes.isEmpty()) {
-            Choreographer.getInstance().postFrameCallback {
-                measureAndLayout()
-            }
+            // Invalidate and catch measureAndLayout() in the dispatchDraw()
+            invalidateRepaintBoundary(layoutNode)
         }
-        layoutNode.needsRelayout = true
-        relayoutNodes += layoutNode
+
+        if (!layoutNode.alignmentLinesRequired) {
+            layoutNode.needsRelayout = true
+            relayoutNodes += layoutNode
+            // Mark parents alignment lines as dirty, for cases when we needed alignment lines
+            // at some point, but currently they are not queried anymore. If they are actively
+            // queried, they will be made dirty below in this method.
+            var layout: LayoutNode? = layoutNode
+            while (layout != null && !layout.dirtyAlignmentLines) {
+                layout.dirtyAlignmentLines = true
+                layout = layout.parentLayoutNode
+            }
+            return
+        }
+
+        var layout = layoutNode
+        while (layout != layoutNode.alignmentLinesQueryOwner && !layout.needsRelayout) {
+            layout.needsRelayout = true
+            layout.dirtyAlignmentLines = true
+            if (layout.parentLayoutNode == null) break
+            layout = layout.parentLayoutNode!!
+        }
+        layout.needsRelayout = true
+        layout.dirtyAlignmentLines = true
+        relayoutNodes += layout
     }
 
     override fun onAttach(node: ComponentNode) {
         if (node.ownerData != null) throw IllegalStateException()
 
         if (node is RepaintBoundaryNode) {
-            val ownerData = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-                RepaintBoundaryView(this, node)
+            val ownerData = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P || isInEditMode()) {
+                RepaintBoundaryView(this, elevationHandler, node)
             } else {
-                RepaintBoundaryRenderNode(this, node)
+                RepaintBoundaryRenderNode(this, elevationHandler, node)
             }
             node.ownerData = ownerData
             ownerData.attach(node.parent?.repaintBoundary?.container)
+            repaintBoundaryChanges += node
         }
     }
 
@@ -270,33 +352,43 @@ class AndroidCraneView constructor(context: Context)
     /**
      * Iterates through all LayoutNodes that have requested layout and measures and lays them out
      */
-    private fun measureAndLayout() {
+    internal fun measureAndLayout() {
+        if (relayoutNodes.isEmpty() && repaintBoundaryChanges.isEmpty()) {
+            return
+        }
         trace("AndroidOwner:measureAndLayout") {
-            measureIteration++
-            val frame = currentFrame()
-            frame.observeReads(frameReadObserver) {
-                relayoutNodes.forEach { layoutNode ->
-                    if (layoutNode.needsRemeasure) {
-                        val parent = layoutNode.parentLayoutNode
-                        if (parent != null && parent.layout != null) {
-                            // This should call measure and layout on the child
-                            val parentLayout = parent.layout!!
-                            parent.needsRelayout = true
-                            parentLayout.callLayout()
-                        } else {
-                            layoutNode.layout?.callMeasure(layoutNode.constraints)
-                            layoutNode.layout?.callLayout()
+            try {
+                duringMeasureLayout = true
+                measureIteration++
+                val frame = currentFrame()
+                val topNode = relayoutNodes.firstOrNull()
+                frame.observeReads(frameReadObserver) {
+                    relayoutNodes.forEach { layoutNode ->
+                        if (layoutNode.needsRemeasure) {
+                            val parent = layoutNode.parentLayoutNode
+                            if (parent != null) {
+                                // This should call measure and layout on the child
+                                val parentLayout = parent
+                                parent.needsRelayout = true
+                                parentLayout.placeChildren()
+                            } else {
+                                layoutNode.measure(layoutNode.constraints)
+                                layoutNode.placeChildren()
+                            }
+                        } else if (layoutNode.needsRelayout) {
+                            layoutNode.placeChildren()
                         }
-                    } else if (layoutNode.needsRelayout) {
-                        layoutNode.layout?.callLayout()
                     }
                 }
+                topNode?.dispatchOnPositionedCallbacks()
                 repaintBoundaryChanges.forEach { node ->
-                    val parent = node.parentLayoutNode!!
-                    node.container.setSize(parent.width.value, parent.height.value)
+                    val parentSize = node.parentLayoutNode!!.contentSize
+                    node.container.setSize(parentSize.width.value, parentSize.height.value)
                 }
                 relayoutNodes.clear()
                 repaintBoundaryChanges.clear()
+            } finally {
+                duringMeasureLayout = false
             }
         }
     }
@@ -317,7 +409,7 @@ class AndroidCraneView constructor(context: Context)
             val frame = currentFrame()
             measureIteration++
             frame.observeReads(frameReadObserver) {
-                callMeasure(constraints)
+                root.measure(constraints)
             }
             setMeasuredDimension(root.width.value, root.height.value)
         }
@@ -341,18 +433,7 @@ class AndroidCraneView constructor(context: Context)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        trace("AndroidOwner:onLayout") {
-            val frame = currentFrame()
-            root.startLayout()
-            frame.observeReads(frameReadObserver) {
-                root.visitLayoutChildren { child ->
-                    child.moveTo(0.ipx, 0.ipx)
-                    child.layout?.callLayout()
-                }
-            }
-            root.moveTo(0.ipx, 0.ipx)
-            root.endLayout()
-        }
+        relayoutNodes.add(root)
         measureAndLayout()
     }
 
@@ -362,8 +443,7 @@ class AndroidCraneView constructor(context: Context)
     fun callDraw(
         canvas: Canvas,
         node: ComponentNode,
-        parentSize: PxSize,
-        densityReceiver: DensityReceiver
+        parentSize: PxSize
     ) {
         trace("AndroidOwner:callDraw") {
             when (node) {
@@ -377,14 +457,14 @@ class AndroidCraneView constructor(context: Context)
                         val receiver: DrawReceiverImpl
                         if (ownerData == null) {
                             receiver =
-                                DrawReceiverImpl(node, canvas, parentSize, densityReceiver.density)
+                                DrawReceiverImpl(node, canvas, parentSize, density)
                             node.ownerData = receiver
                         } else {
                             receiver = ownerData as DrawReceiverImpl
                             receiver.childDrawn = false
                             receiver.canvas = canvas
                             receiver.parentSize = parentSize
-                            receiver.density = densityReceiver.density
+                            receiver.density = density
                         }
                         onPaintWithChildren(receiver, canvas, parentSize)
                         if (!receiver.childDrawn) {
@@ -392,24 +472,31 @@ class AndroidCraneView constructor(context: Context)
                         }
                     } else {
                         val onPaint = node.onPaint!!
-                        densityReceiver.onPaint(canvas, parentSize)
+                        this.onPaint(canvas, parentSize)
                     }
                     node.needsPaint = false
                     currentNode = previousNode
                 }
                 is RepaintBoundaryNode -> {
-                    node.container.callDraw(canvas)
+                    val container = node.container
+                    if (node.elevation > 0.dp) {
+                        container.parentElevationHandler.callDrawWithEnabledZ(canvas, container)
+                    } else {
+                        container.callDraw(canvas)
+                    }
                 }
                 is LayoutNode -> {
-                    if (node.visible) {
-                        val doTranslate = node.x != 0.ipx || node.y != 0.ipx
+                    if (node.isPlaced) {
+                        val contentPos = node.contentPosition
+                        val doTranslate = contentPos.x != 0.ipx || contentPos.y != 0.ipx
                         if (doTranslate) {
                             canvas.save()
-                            canvas.translate(node.x.value.toFloat(), node.y.value.toFloat())
+                            canvas.translate(contentPos.x.value.toFloat(),
+                                contentPos.y.value.toFloat())
                         }
-                        val size = PxSize(node.width, node.height)
+                        val contentSize = node.contentSize.toPxSize()
                         node.visitChildren { child ->
-                            callDraw(canvas, child, size, densityReceiver)
+                            callDraw(canvas, child, contentSize)
                         }
                         if (doTranslate) {
                             canvas.restore()
@@ -417,10 +504,21 @@ class AndroidCraneView constructor(context: Context)
                     }
                 }
                 else -> node.visitChildren {
-                    callDraw(canvas, it, parentSize, densityReceiver)
+                    callDraw(canvas, it, parentSize)
                 }
             }
         }
+    }
+
+    override fun drawChild(
+        canvas: android.graphics.Canvas,
+        child: View,
+        drawingTime: Long
+    ): Boolean {
+        if (elevationHandler.handleDrawChild(canvas, child)) {
+            return false
+        }
+        return super.drawChild(canvas, child, drawingTime)
     }
 
     internal fun drawChild(canvas: Canvas, view: View, drawingTime: Long) {
@@ -428,6 +526,7 @@ class AndroidCraneView constructor(context: Context)
     }
 
     override fun dispatchDraw(canvas: android.graphics.Canvas) {
+        measureAndLayout()
         watchDraw(canvas, root)
     }
 
@@ -437,18 +536,17 @@ class AndroidCraneView constructor(context: Context)
      */
     internal fun callChildDraw(canvas: android.graphics.Canvas, node: ComponentNode) {
         val layoutNode = node as? LayoutNode ?: node.parentLayoutNode!!
-        val parentSize = PxSize(layoutNode.width, layoutNode.height)
+        val parentSize = layoutNode.contentSize.toPxSize()
         val uiCanvas = Canvas(canvas)
-        val densityReceiver = DensityReceiverImpl(density = Density(context))
         node.visitChildren { child ->
-            callDraw(uiCanvas, child, parentSize, densityReceiver)
+            callDraw(uiCanvas, child, parentSize)
         }
     }
 
     /**
      * Called to draw the root or a repaint boundary node and observe all model reads during
      * the draw calls. Note that this takes a framework Canvas, so it is called only from
-     * [AndroidCraneView] or [RepaintBoundaryView].
+     * [AndroidComposeView] or [RepaintBoundaryView].
      */
     internal fun watchDraw(canvas: android.graphics.Canvas, node: ComponentNode) {
         trace("AndroidOwner:draw") {
@@ -465,13 +563,23 @@ class AndroidCraneView constructor(context: Context)
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         commitUnsubscribe = registerCommitObserver(commitObserver)
+        ifDebug { if (autofillSupported()) _autofill?.registerCallback() }
         root.attach(this)
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         commitUnsubscribe?.invoke()
+        ifDebug { if (autofillSupported()) _autofill?.unregisterCallback() }
         root.detach()
+    }
+
+    override fun onProvideAutofillVirtualStructure(structure: ViewStructure?, flags: Int) {
+        if (autofillSupported() && structure != null) _autofill?.populateViewStructure(structure)
+    }
+
+    override fun autofill(values: SparseArray<AutofillValue>) {
+        if (autofillSupported()) _autofill?.performAutofill(values)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -501,17 +609,11 @@ class AndroidCraneView constructor(context: Context)
         onTouchEvent(event)
     }
 
-    /**
-     * @hide
-     */
-    val textInputService: TextInputService
-        /**
-         * @hide
-         */
-        @RestrictTo(RestrictTo.Scope.LIBRARY)
-        get() = textInputServiceAndroid
-
     private val textInputServiceAndroid = TextInputServiceAndroid(this)
+
+    /** @hide */
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    val textInputService = TextInputService(textInputServiceAndroid)
 
     override fun onCheckIsTextEditor(): Boolean = textInputServiceAndroid.isEditorFocused()
 
@@ -524,17 +626,10 @@ class AndroidCraneView constructor(context: Context)
         return PxPosition(positionArray[0].ipx, positionArray[1].ipx)
     }
 
-    private fun callMeasure(constraints: Constraints) {
-        var maxWidth = 0.ipx
-        var maxHeight = 0.ipx
-        root.startMeasure()
-        root.visitLayoutChildren { layoutNode ->
-            layoutNode.layout?.callMeasure(constraints)
-            maxWidth = max(maxWidth, layoutNode.width)
-            maxHeight = max(maxHeight, layoutNode.height)
-        }
-        root.resize(maxWidth, maxHeight)
-        root.endMeasure()
+    override fun onConfigurationChanged(newConfig: Configuration?) {
+        super.onConfigurationChanged(newConfig)
+        density = Density(context)
+        configurationChangeObserver()
     }
 
     private fun clearNodeModels(node: ComponentNode) {
@@ -548,7 +643,7 @@ class AndroidCraneView constructor(context: Context)
         var canvas: Canvas,
         var parentSize: PxSize,
         override var density: Density
-    ) : DensityReceiver, DrawReceiver {
+    ) : DensityScope, DrawReceiver {
         internal var childDrawn = false
 
         override fun drawChildren() {
@@ -557,7 +652,37 @@ class AndroidCraneView constructor(context: Context)
             }
             childDrawn = true
             drawNode.visitChildren { child ->
-                callDraw(canvas, child, parentSize, this)
+                callDraw(canvas, child, parentSize)
+            }
+        }
+    }
+
+    private fun autofillSupported() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+
+    internal companion object {
+        private val RootMeasureBlock: MeasureBlock = { measurables, constraints ->
+            when {
+                measurables.isEmpty() -> layout(IntPx.Zero, IntPx.Zero) {}
+                measurables.size == 1 -> {
+                    val placeable = measurables[0].measure(constraints)
+                    layout(placeable.width, placeable.height) {
+                        placeable.place(IntPx.Zero, IntPx.Zero)
+                    }
+                }
+                else -> {
+                    val placeables = measurables.map { it.measure(constraints) }
+                    var maxWidth = IntPx.Zero
+                    var maxHeight = IntPx.Zero
+                    placeables.forEach { placeable ->
+                        maxWidth = max(placeable.width, maxWidth)
+                        maxHeight = max(placeable.height, maxHeight)
+                    }
+                    layout(maxWidth, maxHeight) {
+                        placeables.forEach { placeable ->
+                            placeable.place(IntPx.Zero, IntPx.Zero)
+                        }
+                    }
+                }
             }
         }
     }
@@ -599,16 +724,23 @@ private interface RepaintBoundary {
 
     /**
      * `true` indicates that the RepaintBoundary must be redrawn and `false` indicates
-     * that no change has occured since the previous [callDraw] or [updateDisplayList] call.
+     * that no change has occured since the previous [callDraw] call.
      */
     var dirty: Boolean
+
+    /**
+     * The ElevationHandler of a parent for this RepaintBoundary. this can be or
+     * an owner view ElevationHandler or the parent RepaintBoundary's one.
+     */
+    val parentElevationHandler: ElevationHandler
 }
 
 /**
  * View implementation of RepaintBoundary.
  */
 private class RepaintBoundaryView(
-    val ownerView: AndroidCraneView,
+    val ownerView: AndroidComposeView,
+    val ownerElevationHandler: ElevationHandler,
     val repaintBoundaryNode: RepaintBoundaryNode
 ) : ViewGroup(ownerView.context), RepaintBoundary {
     init {
@@ -617,20 +749,41 @@ private class RepaintBoundaryView(
         // We can do that once the size of draw functions are well understood.
         clipChildren = false
         setWillNotDraw(false) // we WILL draw
+        id = View.generateViewId()
     }
-    private val outlineResolver = OutlineResolver(Density(context))
+    private val density = Density(context)
+    private val outlineResolver = OutlineResolver(density)
     private val outlineProviderImpl = object : ViewOutlineProvider() {
         override fun getOutline(view: View, outline: android.graphics.Outline) {
             outlineResolver.applyTo(outline)
         }
     }
     private var clipPath: android.graphics.Path? = null
+    private var hasSize = false
     override var dirty: Boolean = true
         set(value) {
             if (value && !field) {
                 invalidate()
             }
             field = value
+        }
+    private val elevationHandler =
+        if (Build.VERSION.SDK_INT >= 29) {
+            ElevationHandler29()
+        } else {
+            ElevationHandlerCompat(this) { canvas ->
+                super.dispatchDraw(canvas)
+            }
+        }
+
+    override val parentElevationHandler: ElevationHandler
+        get() {
+            val parentView = parent
+            return if (parentView is RepaintBoundaryView) {
+                parentView.elevationHandler
+            } else {
+                ownerElevationHandler
+            }
         }
 
     override fun setSize(width: Int, height: Int) {
@@ -640,7 +793,11 @@ private class RepaintBoundaryView(
             measure(widthSpec, heightSpec)
             layout(0, 0, width, height)
             onParamsChange()
+        } else if (!hasSize) {
+            // we need to update params after attaching even if size has not been changed
+            onParamsChange()
         }
+        hasSize = true
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
@@ -658,15 +815,27 @@ private class RepaintBoundaryView(
     }
 
     override fun detach() {
-        val parent = parent as ViewGroup
-        parent.removeView(this)
+        (parent as? ViewGroup)?.removeView(this)
     }
 
     fun drawChild(canvas: Canvas, child: View, drawingTime: Long) {
-        drawChild(canvas.nativeCanvas, child, drawingTime)
+        super.drawChild(canvas.nativeCanvas, child, drawingTime)
+    }
+
+    override fun drawChild(
+        canvas: android.graphics.Canvas,
+        child: View,
+        drawingTime: Long
+    ): Boolean {
+        if (elevationHandler.handleDrawChild(canvas, child)) {
+            return false
+        }
+        return super.drawChild(canvas, child, drawingTime)
     }
 
     override fun dispatchDraw(canvas: android.graphics.Canvas) {
+        ownerView.measureAndLayout()
+        check(hasSize) { "setSize() should be called before drawing the RepaintBoundary" }
         val clipPath = clipPath
         if (clipPath != null) {
             canvas.save()
@@ -692,17 +861,19 @@ private class RepaintBoundaryView(
         } else {
             ownerView.addView(this)
         }
+        hasSize = false
     }
 
     override fun onParamsChange() {
         outlineResolver.update(repaintBoundaryNode, PxSize(width.px, height.px))
         clipToOutline = outlineResolver.clipToOutline
-        this.outlineProvider = if (outlineResolver.hasShape) outlineProviderImpl else null
+        this.outlineProvider = if (outlineResolver.hasOutline) outlineProviderImpl else null
         if (outlineResolver.manualClipPath !== clipPath) {
             clipPath = outlineResolver.manualClipPath
             dirty = true
         }
         alpha = repaintBoundaryNode.opacity
+        elevation = withDensity(density) { repaintBoundaryNode.elevation.toPx().value }
     }
 }
 
@@ -711,7 +882,8 @@ private class RepaintBoundaryView(
  */
 @TargetApi(29)
 private class RepaintBoundaryRenderNode(
-    val ownerView: AndroidCraneView,
+    val ownerView: AndroidComposeView,
+    override val parentElevationHandler: ElevationHandler,
     val repaintBoundaryNode: RepaintBoundaryNode
 ) : RepaintBoundary {
     override var dirty = true
@@ -721,20 +893,28 @@ private class RepaintBoundaryRenderNode(
             }
             field = value
         }
-    val renderNode = RenderNode(repaintBoundaryNode.name)
+    val renderNode = RenderNode(repaintBoundaryNode.name).apply {
+        setHasOverlappingRendering(true)
+    }
     private val outline = android.graphics.Outline()
-    private val outlineResolver = OutlineResolver(Density(ownerView.context))
+    private val density = Density(ownerView.context)
+    private val outlineResolver = OutlineResolver(density)
     private var clipPath: android.graphics.Path? = null
+    private var hasSize = false
 
     override fun setSize(width: Int, height: Int) {
         if (width != renderNode.width || height != renderNode.height) {
             renderNode.setPosition(0, 0, width, height)
             onParamsChange()
+        } else if (!hasSize) {
+            // we need to update params after attaching even if size has not been changed
+            onParamsChange()
         }
+        hasSize = true
     }
 
     override fun attach(parent: RepaintBoundary?) {
-        // nothing needs to be done
+        hasSize = false
     }
 
     override fun detach() {
@@ -742,6 +922,7 @@ private class RepaintBoundaryRenderNode(
     }
 
     override fun callDraw(canvas: Canvas) {
+        check(hasSize) { "setSize() should be called before drawing the RepaintBoundary" }
         if (renderNode.alpha > 0f) {
             val androidCanvas = canvas.nativeCanvas
             if (androidCanvas.isHardwareAccelerated) {
@@ -767,8 +948,8 @@ private class RepaintBoundaryRenderNode(
     override fun onParamsChange() {
         val size = PxSize(renderNode.width.px, renderNode.height.px)
         outlineResolver.update(repaintBoundaryNode, size)
-        renderNode.clipToOutline = outlineResolver.clipToOutline
-        if (outlineResolver.hasShape) {
+        renderNode.clipToOutline = outlineResolver.clipToOutline && outlineResolver.hasOutline
+        if (outlineResolver.hasOutline) {
             renderNode.setOutline(outline.apply { outlineResolver.applyTo(this) })
         } else {
             renderNode.setOutline(null)
@@ -778,6 +959,7 @@ private class RepaintBoundaryRenderNode(
             dirty = true
         }
         renderNode.alpha = repaintBoundaryNode.opacity
+        renderNode.elevation = withDensity(density) { repaintBoundaryNode.elevation.toPx().value }
         ownerView.invalidate()
     }
 }
@@ -803,11 +985,12 @@ private class OutlineResolver(private val density: Density) {
     private val cachedOutline = android.graphics.Outline().apply { alpha = 1f }
     private var size: PxSize = PxSize.Zero
     private var shape: Shape? = null
-    var manualClipPath: android.graphics.Path? = null
-        private set
-    var clipToOutline: Boolean = false
-        private set
-    val hasShape: Boolean get() = shape != null
+    private var clipToShape: Boolean = false
+    private var hasElevation: Boolean = false
+    private var outlinePath: android.graphics.Path? = null
+    val hasOutline: Boolean get() = !cachedOutline.isEmpty
+    val clipToOutline: Boolean get() = clipToShape && manualClipPath == null
+    val manualClipPath: android.graphics.Path? get() = if (clipToShape) outlinePath else null
 
     fun update(node: RepaintBoundaryNode, size: PxSize) {
         var cacheIsDirty = false
@@ -819,9 +1002,10 @@ private class OutlineResolver(private val density: Density) {
             this.size = size
             cacheIsDirty = true
         }
-        clipToOutline = (shape != null && node.clipToShape)
+        hasElevation = node.elevation > 0.dp
+        clipToShape = (shape != null && node.clipToShape)
         if (cacheIsDirty) {
-            manualClipPath = null
+            outlinePath = null
             shape?.let { updateCache(it) }
         }
     }
@@ -879,9 +1063,82 @@ private class OutlineResolver(private val density: Density) {
 
     private fun updateCacheWithPath(composePath: Path) {
         val path = composePath.toFrameworkPath()
-        cachedOutline.setConvexPath(path)
-        if (clipToOutline) {
-            manualClipPath = path
+        if (hasElevation) {
+            if (path.isConvex) {
+                cachedOutline.setConvexPath(path)
+            } else {
+                throw IllegalStateException("Only convex paths can be used for drawing the shadow!")
+            }
+        } else {
+            cachedOutline.setEmpty()
+        }
+        outlinePath = path
+    }
+}
+
+private interface ElevationHandler {
+    fun callDrawWithEnabledZ(canvas: Canvas, boundary: RepaintBoundary)
+    fun handleDrawChild(canvas: android.graphics.Canvas, child: View): Boolean
+}
+
+@RequiresApi(29)
+private class ElevationHandler29 : ElevationHandler {
+
+    override fun callDrawWithEnabledZ(canvas: Canvas, boundary: RepaintBoundary) {
+        val nativeCanvas = canvas.nativeCanvas
+        nativeCanvas.enableZ()
+        boundary.callDraw(canvas)
+        nativeCanvas.disableZ()
+    }
+
+    override fun handleDrawChild(canvas: android.graphics.Canvas, child: View) = false
+}
+
+/**
+ * Compatible version of Canvas.enableZ()/disableZ().
+ *
+ * On API 29 we can just do:
+ * canvas.enableZ()
+ * node.container.callDraw(canvas)
+ * canvas.disableZ()
+ *
+ * But on older versions there is no such methods, but ViewGroup will call
+ * them internally inside dispatchDraw before calling the drawChild method.
+ * We can use this mechanism for our need just to have Canvas with Z enabled.
+ *
+ * So if we add a fake view, then call dispatchDraw manually, remember that
+ * if wasn't called by system(fakeDrawPass) and then when we handle next
+ * drawChild callback we would have a Canvas with z enabled. As we check for
+ * the fakeDrawPass we wouldn't draw other children Views ViewGroup can have.
+ * Then instead of drawing our fake view we draw our stored RepaintBoundary.
+ */
+private class ElevationHandlerCompat(
+    private val viewGroup: ViewGroup,
+    private val superDispatchDraw: (android.graphics.Canvas) -> Unit
+) : ElevationHandler {
+    private val fakeChild: View = View(viewGroup.context).apply {
+        setWillNotDraw(true)
+        viewGroup.addView(this)
+    }
+    private var fakeDrawPass: Boolean = false
+    private var boundary: RepaintBoundary? = null
+
+    override fun callDrawWithEnabledZ(canvas: Canvas, boundary: RepaintBoundary) {
+        this.boundary = boundary
+        fakeDrawPass = true
+        superDispatchDraw(canvas.nativeCanvas)
+        fakeDrawPass = false
+    }
+
+    override fun handleDrawChild(canvas: android.graphics.Canvas, child: View): Boolean {
+        return if (fakeDrawPass) {
+            if (child === fakeChild) {
+                boundary?.callDraw(Canvas(canvas))
+                boundary = null
+            }
+            true
+        } else {
+            false
         }
     }
 }

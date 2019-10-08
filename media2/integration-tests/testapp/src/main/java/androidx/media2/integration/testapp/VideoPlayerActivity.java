@@ -47,6 +47,7 @@ import androidx.media2.session.SessionToken;
 import androidx.media2.widget.MediaControlView;
 import androidx.media2.widget.VideoView;
 
+import java.util.Locale;
 import java.util.concurrent.Executor;
 
 /**
@@ -59,14 +60,16 @@ public class VideoPlayerActivity extends FragmentActivity {
             "com.example.androidx.media.VideoPlayerActivity.MediaTypeAdvertisement";
     private static final String TAG = "VideoPlayerActivity";
 
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
     MyVideoView mVideoView;
-    View mResizeHandle;
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
     MediaController mMediaController;
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
     Uri mUri;
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    float mSpeed = 1.0f;
 
-    private float mSpeed = 1.0f;
-
-    private MediaControlView mMediaControlView = null;
+    private View mResizeHandle;
 
     private int mVideoViewDX;
     private int mVideoViewDY;
@@ -89,7 +92,6 @@ public class VideoPlayerActivity extends FragmentActivity {
                 return onTouchVideoView(event);
             }
         });
-
         SessionToken token = new SessionToken(this,
                 new ComponentName(this, VideoSessionService.class));
         Executor executor = ContextCompat.getMainExecutor(this);
@@ -143,9 +145,9 @@ public class VideoPlayerActivity extends FragmentActivity {
         if (intent == null || (videoUri = intent.getData()) == null || !videoUri.isAbsolute()) {
             errorString = "Invalid intent";
         } else {
-            mMediaControlView = new MediaControlView(this);
-            mVideoView.setMediaControlView(mMediaControlView, 2000);
-            mMediaControlView.setOnFullScreenListener(new FullScreenListener());
+            MediaControlView mediaControlView = new MediaControlView(this);
+            mVideoView.setMediaControlView(mediaControlView, 2000);
+            mediaControlView.setOnFullScreenListener(new FullScreenListener());
 
             mUri = videoUri;
         }
@@ -172,8 +174,9 @@ public class VideoPlayerActivity extends FragmentActivity {
                 mSpeed += 0.1f;
             }
             mMediaController.setPlaybackSpeed(mSpeed);
-            Toast.makeText(this, "speed rate: " + String.format("%.2f", mSpeed), Toast.LENGTH_SHORT)
-                    .show();
+            Toast.makeText(this,
+                    "speed rate: " + String.format(Locale.US, "%.2f", mSpeed),
+                    Toast.LENGTH_SHORT).show();
         }
         return super.onTouchEvent(ev);
     }
@@ -273,7 +276,7 @@ public class VideoPlayerActivity extends FragmentActivity {
             super(context, attrs, defStyle);
         }
 
-        public void setTransformable(boolean transformable) {
+        void setTransformable(boolean transformable) {
             mTransformable = transformable;
         }
 
@@ -291,6 +294,7 @@ public class VideoPlayerActivity extends FragmentActivity {
         super.onConfigurationChanged(newConfig);
     }
 
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
     boolean onTouchVideoView(MotionEvent ev) {
         int rawX = (int) ev.getRawX();
         int rawY = (int) ev.getRawY();
@@ -328,6 +332,7 @@ public class VideoPlayerActivity extends FragmentActivity {
         return true;
     }
 
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
     boolean onTouchResizeHandle(MotionEvent ev) {
         int rawX = (int) ev.getRawX();
         int rawY = (int) ev.getRawY();
@@ -365,11 +370,13 @@ public class VideoPlayerActivity extends FragmentActivity {
         return true;
     }
 
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
     void applyTransformability(boolean transformable) {
         mVideoView.setTransformable(transformable);
         mResizeHandle.setVisibility(transformable ? View.VISIBLE : View.GONE);
     }
 
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
     String getViewTypeString(int viewType) {
         if (viewType == VideoView.VIEW_TYPE_SURFACEVIEW) {
             return "SurfaceView";

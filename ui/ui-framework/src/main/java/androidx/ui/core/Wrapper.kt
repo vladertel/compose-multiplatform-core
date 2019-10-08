@@ -17,34 +17,44 @@ package androidx.ui.core
 
 import android.app.Activity
 import android.content.Context
+import android.content.res.Configuration
+import android.view.ViewGroup
 import androidx.annotation.CheckResult
+import androidx.annotation.RestrictTo
 import androidx.ui.core.input.FocusManager
 import androidx.ui.input.TextInputService
 import androidx.compose.Ambient
-import androidx.compose.Children
+import androidx.compose.composer
 import androidx.compose.Composable
 import androidx.compose.Compose
 import androidx.compose.CompositionContext
 import androidx.compose.CompositionReference
 import androidx.compose.Observe
 import androidx.compose.ambient
-import androidx.compose.composer
 import androidx.compose.compositionReference
 import androidx.compose.effectOf
 import androidx.compose.memo
+import androidx.compose.onPreCommit
+import androidx.compose.state
 import androidx.compose.unaryPlus
+import androidx.ui.autofill.Autofill
+import androidx.ui.autofill.AutofillTree
 import androidx.ui.core.text.AndroidFontResourceLoader
 import androidx.ui.text.font.Font
+import kotlinx.coroutines.Dispatchers
+import kotlin.coroutines.CoroutineContext
 
+/**
+ * Composes a view containing ui composables into a view composition.
+ * <p>
+ * This is supposed to be used only in view compositions. If compose ui is supposed to be the root of composition use
+ * [Activity.setContent] or [ViewGroup.setContent] extensions.
+ */
 @Composable
-fun CraneWrapper(@Children children: @Composable() () -> Unit) {
-    val rootRef = +memo { Ref<AndroidCraneView>() }
+fun ComposeView(children: @Composable() () -> Unit) {
+    val rootRef = +memo { Ref<AndroidComposeView>() }
 
-    // TODO(nona): Tie the focus manger lifecycle to Window, otherwise FocusManager won't work with
-    //             nested AndroidCraneView case
-    val focusManager = +memo { FocusManager() }
-
-    <AndroidCraneView ref=rootRef>
+    <AndroidComposeView ref=rootRef>
         var reference: CompositionReference? = null
         var cc: CompositionContext? = null
 
@@ -56,75 +66,188 @@ fun CraneWrapper(@Children children: @Composable() () -> Unit) {
         // the child. The Observe is put in place here to ensure that the scope around the
         // reference we are using is as small as possible, and, in particular, does not include
         // the composition of `children()`. This means that we are using the nullability of `cc`
-        // to determine if the CraneWrapper in general is getting recomposed, or if its just
+        // to determine if the ComposeWrapper in general is getting recomposed, or if its just
         // the invalidation scope of the Observe. If it's the latter, we just want to call
         // `cc.recomposeSync()` which will only recompose the invalidations in the child context,
         // which means it *will not* call `children()` again if it doesn't have to.
         Observe {
             reference = +compositionReference()
             cc?.recomposeSync()
-        }
-        val rootLayoutNode = rootRef.value?.root ?: error("Failed to create root platform view")
-        val context = rootRef.value?.context ?: composer.composer.context
-        cc = Compose.composeInto(container = rootLayoutNode, context = context, parent = reference) {
-            ContextAmbient.Provider(value = context) {
-                DensityAmbient.Provider(value = Density(context)) {
-                    FocusManagerAmbient.Provider(value = focusManager) {
-                        TextInputServiceAmbient.Provider(value = rootRef.value?.textInputService) {
-                            FontLoaderAmbient.Provider(value = AndroidFontResourceLoader(context)) {
-                                children()
-                            }
-                        }
+            +onPreCommit(true) {
+                onDispose {
+                    rootRef.value?.let {
+                        val layoutRootNode = it.root
+                        val context = it.context
+                        Compose.disposeComposition(layoutRootNode, context)
                     }
                 }
             }
         }
-    </AndroidCraneView>
+        val rootLayoutNode = rootRef.value?.root ?: error("Failed to create root platform view")
+        val context = rootRef.value?.context ?: composer.composer.context
+
+        // If this value is inlined where it is used, an error that includes 'Precise Reference:
+        // kotlinx.coroutines.Dispatchers' not instance of 'Precise Reference: androidx.compose.Ambient'.
+        val coroutineContext = Dispatchers.Main
+        cc = Compose.composeInto(container = rootLayoutNode, context = context, parent = reference) {
+            WrapWithAmbients(rootRef.value!!, context, coroutineContext) {
+                children()
+            }
+        }
+    </AndroidComposeView>
 }
 
 /**
  * Composes the given composable into the given activity. The composable will become the root view
  * of the given activity.
  *
- * @param activity Activity that will host the given content.
- * @param children Composable that will be the content of the activity.
+ * @param content Composable that will be the content of the activity.
  */
-fun composeIntoActivity(
-    activity: Activity,
-    @Children children: @Composable() () -> Unit
+fun Activity.setContent(
+    content: @Composable() () -> Unit
 ): CompositionContext? {
-    val craneView = AndroidCraneView(activity)
-    activity.setContentView(craneView)
+    val composeView = window.decorView
+        .findViewById<ViewGroup>(android.R.id.content)
+        .getChildAt(0) as? AndroidComposeView
+        ?: AndroidComposeView(this).also { setContentView(it) }
 
-    return Compose.composeInto(craneView.root, activity) {
-        // TODO(nona): Tie the focus manger lifecycle to Window, otherwise FocusManager won't work
-        //             with nested AndroidCraneView case
-        val focusManager = +memo { FocusManager() }
-
-        val context = craneView.context ?: composer.composer.context
-        ContextAmbient.Provider(value = context) {
-            DensityAmbient.Provider(value = Density(context)) {
-                FocusManagerAmbient.Provider(value = focusManager) {
-                    TextInputServiceAmbient.Provider(value = craneView.textInputService) {
-                        FontLoaderAmbient.Provider(value = AndroidFontResourceLoader(context)) {
-                            children()
-                        }
-                    }
-                }
-            }
+    // If this value is inlined where it is used, an error that includes 'Precise Reference:
+    // kotlinx.coroutines.Dispatchers' not instance of 'Precise Reference: androidx.compose.Ambient'.
+    val coroutineContext = Dispatchers.Main
+    return Compose.composeInto(composeView.root, this) {
+        WrapWithAmbients(composeView, this, coroutineContext) {
+            content()
         }
     }
+}
+
+/**
+ * Composes the given composable into the given view.
+ *
+ * @param content Composable that will be the content of the view.
+ */
+fun ViewGroup.setContent(
+    content: @Composable() () -> Unit
+): CompositionContext? {
+    val composeView =
+        if (childCount > 0) { getChildAt(0) as? AndroidComposeView } else { removeAllViews(); null }
+        ?: AndroidComposeView(context).also { addView(it) }
+
+    // If this value is inlined where it is used, an error that includes 'Precise Reference:
+    // kotlinx.coroutines.Dispatchers' not instance of 'Precise Reference: androidx.compose.Ambient'.
+    val coroutineContext = Dispatchers.Main
+    return Compose.composeInto(composeView.root, context) {
+        WrapWithAmbients(composeView, context, coroutineContext) {
+            content()
+        }
+    }
+}
+
+private typealias AmbientProvider = @Composable() (@Composable() () -> Unit) -> Unit
+
+@Composable
+private fun WrapWithAmbients(
+    composeView: AndroidComposeView,
+    context: Context,
+    coroutineContext: CoroutineContext,
+    content: @Composable() () -> Unit
+) {
+    // TODO(nona): Tie the focus manger lifecycle to Window, otherwise FocusManager won't work
+    //             with nested AndroidComposeView case
+    val focusManager = +memo { FocusManager() }
+    val configuration = +state { context.applicationContext.resources.configuration }
+
+    // We don't use the attached View's layout direction here since that layout direction may not
+    // be resolved since the widgets may be composed without attaching to the RootViewImpl.
+    // In Jetpack Compose, use the locale layout direction (i.e. layoutDirection came from
+    // configuration) as a default layout direction.
+    val layoutDirection = when(configuration.value.layoutDirection) {
+        android.util.LayoutDirection.LTR -> LayoutDirection.Ltr
+        android.util.LayoutDirection.RTL -> LayoutDirection.Rtl
+        // API doc says Configuration#getLayoutDirection only returns LTR or RTL.
+        // Fallback to LTR for unexpected return value.
+        else -> LayoutDirection.Ltr
+    }
+    +memo {
+        composeView.configurationChangeObserver = {
+            // onConfigurationChange is the correct hook to update configuration, however it is
+            // possible that the configuration object itself may come from a wrapped
+            // context / themed activity, and may not actually reflect the system. So instead we
+            // use this hook to grab the applicationContext's configuration, which accurately
+            // reflects the state of the application / system.
+            configuration.value = context.applicationContext.resources.configuration
+        }
+    }
+
+    // Fold all the nested function in order to provide the desired ambient properties
+    // Having a lot of methods nested one inside the other will cause a Compile error. The name of
+    // the file generated will be unsupported by the compiler because it is too large.
+    listOf<AmbientProvider>(
+        { children ->
+            ContextAmbient.Provider(value = context, children = children)
+        },
+        { children ->
+            CoroutineContextAmbient.Provider(value = coroutineContext, children = children)
+        },
+        { children ->
+            DensityAmbient.Provider(value = Density(context), children = children)
+        },
+        { children ->
+            FocusManagerAmbient.Provider(value = focusManager, children = children)
+        },
+        { children ->
+            TextInputServiceAmbient.Provider(value = composeView.textInputService, children = children)
+        },
+        { children ->
+            FontLoaderAmbient.Provider(value = AndroidFontResourceLoader(context), children = children)
+        },
+        { children ->
+            AutofillTreeAmbient.Provider(value = composeView.autofillTree, children = children)
+        },
+        { children ->
+            AutofillAmbient.Provider(value = composeView.autofill, children = children)
+        },
+        { children ->
+            ConfigurationAmbient.Provider(value = configuration.value, children = children)
+        },
+        { children ->
+            AndroidComposeViewAmbient.Provider(value = composeView, children = children)
+        },
+        { children ->
+            LayoutDirectionAmbient.Provider(value = layoutDirection, children = children)
+        }
+    ).fold(content, { current, ambient ->
+        { ambient(current) }
+    }).invoke()
 }
 
 val ContextAmbient = Ambient.of<Context>()
 
 val DensityAmbient = Ambient.of<Density>()
 
-internal val FocusManagerAmbient = Ambient.of<FocusManager>()
+val CoroutineContextAmbient = Ambient.of<CoroutineContext>()
+
+val ConfigurationAmbient = Ambient.of<Configuration>()
+
+// TODO(b/139866476): The AndroidComposeView should not be exposed via ambient
+val AndroidComposeViewAmbient = Ambient.of<AndroidComposeView>()
+
+val AutofillAmbient = Ambient.of<Autofill?>()
+
+// This will ultimately be replaced by Autofill Semantics (b/138604305).
+val AutofillTreeAmbient = Ambient.of<AutofillTree>()
+
+val LayoutDirectionAmbient = Ambient.of<LayoutDirection>()
+
+val FocusManagerAmbient = Ambient.of<FocusManager>()
 
 internal val TextInputServiceAmbient = Ambient.of<TextInputService?>()
 
-internal val FontLoaderAmbient = Ambient.of<Font.ResourceLoader>()
+/**
+ * @hide
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+val FontLoaderAmbient = Ambient.of<Font.ResourceLoader>()
 
 /**
  * [ambient] to get a [Density] object from an internal [DensityAmbient].
@@ -152,10 +275,10 @@ fun ambientDensity() =
  */
 @CheckResult(suggest = "+")
 // can't make this inline as tests are failing with "DensityKt.$jacocoInit()' is inaccessible"
-/*inline*/ fun <R> withDensity(/*crossinline*/ block: DensityReceiver.() -> R) =
+/*inline*/ fun <R> withDensity(/*crossinline*/ block: DensityScope.() -> R) =
     effectOf<R> {
         @Suppress("USELESS_CAST")
-        withDensity(+ambientDensity(), block as DensityReceiver.() -> R)
+        withDensity(+ambientDensity(), block as DensityScope.() -> R)
     }
 
 /**
@@ -170,6 +293,6 @@ fun ambientDensity() =
  *   }
  */
 @Composable
-fun WithDensity(block: @Composable DensityReceiver.() -> Unit) {
-    DensityReceiverImpl(+ambientDensity()).block()
+fun WithDensity(block: @Composable DensityScope.() -> Unit) {
+    DensityScope(+ambientDensity()).block()
 }

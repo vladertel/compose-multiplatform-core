@@ -24,6 +24,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.CompletionInfo
 import android.view.inputmethod.CorrectionInfo
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
@@ -36,7 +37,9 @@ import androidx.ui.input.DeleteSurroundingTextEditOp
 import androidx.ui.input.DeleteSurroundingTextInCodePointsEditOp
 import androidx.ui.input.EditOperation
 import androidx.ui.input.FinishComposingTextEditOp
+import androidx.ui.input.ImeAction
 import androidx.ui.input.InputEventListener
+import androidx.ui.input.InputState
 import androidx.ui.input.MoveCursorEditOp
 import androidx.ui.input.SetComposingRegionEditOp
 import androidx.ui.input.SetComposingTextEditOp
@@ -64,7 +67,7 @@ internal class RecordingInputConnection(
     @VisibleForTesting
     internal var inputState: InputState = initState
         set(value) {
-            if (DEBUG) { Log.d(TAG, "New InputState has set: $inputState") }
+            if (DEBUG) { Log.d(TAG, "New InputState has set: $value -> $inputState") }
             field = value
         }
 
@@ -104,9 +107,14 @@ internal class RecordingInputConnection(
 
         // The candidateStart and candidateEnd is composition start and composition end in
         // updateSelection API. Need to pass -1 if there is no composition.
-        val candidateStart = next.composition?.start ?: -1
-        val candidateEnd = next.composition?.end ?: -1
-        imm.updateSelection(view, next.selection.start, next.selection.end,
+        val candidateStart = next.composition?.min ?: -1
+        val candidateEnd = next.composition?.max ?: -1
+        if (DEBUG) {
+            Log.d(TAG, "updateSelection(" +
+                        "selection = (${next.selection.min},${next.selection.max}), " +
+                        "compoairion = ($candidateStart, $candidateEnd)")
+        }
+        imm.updateSelection(view, next.selection.min, next.selection.max,
             candidateStart, candidateEnd)
     }
 
@@ -136,7 +144,7 @@ internal class RecordingInputConnection(
     override fun endBatchEdit(): Boolean {
         if (DEBUG) { Log.d(TAG, "endBatchEdit()") }
         batchDepth--
-        if (batchDepth == 0) {
+        if (batchDepth == 0 && editOps.isNotEmpty()) {
             eventListener.onEditOperations(editOps.toList())
             editOps.clear()
         }
@@ -154,7 +162,7 @@ internal class RecordingInputConnection(
     // /////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
-        if (DEBUG) { Log.d(TAG, "commitText($text, $newCursorPosition)") }
+        if (DEBUG) { Log.d(TAG, "commitText(\"$text\", $newCursorPosition)") }
         addEditOpWithBatch(CommitTextEditOp(text.toString(), newCursorPosition))
         return true
     }
@@ -166,7 +174,7 @@ internal class RecordingInputConnection(
     }
 
     override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean {
-        if (DEBUG) { Log.d(TAG, "setComposingText($text, $newCursorPosition)") }
+        if (DEBUG) { Log.d(TAG, "setComposingText(\"$text\", $newCursorPosition)") }
         addEditOpWithBatch(SetComposingTextEditOp(text.toString(), newCursorPosition))
         return true
     }
@@ -205,10 +213,10 @@ internal class RecordingInputConnection(
             KeyEvent.KEYCODE_DEL -> BackspaceKeyEditOp()
             KeyEvent.KEYCODE_DPAD_LEFT -> MoveCursorEditOp(-1)
             KeyEvent.KEYCODE_DPAD_RIGHT -> MoveCursorEditOp(1)
-            else -> null
+            else -> CommitTextEditOp(String(Character.toChars(event.getUnicodeChar())), 1)
         }
 
-        op?.let { addEditOpWithBatch(it) }
+        addEditOpWithBatch(op)
         return true
     }
 
@@ -256,7 +264,21 @@ internal class RecordingInputConnection(
 
     override fun performEditorAction(editorAction: Int): Boolean {
         if (DEBUG) { Log.d(TAG, "performEditorAction($editorAction)") }
-        TODO("not implemented")
+        val imeAction = when (editorAction) {
+            EditorInfo.IME_ACTION_UNSPECIFIED -> ImeAction.Unspecified
+            EditorInfo.IME_ACTION_DONE -> ImeAction.Done
+            EditorInfo.IME_ACTION_SEND -> ImeAction.Send
+            EditorInfo.IME_ACTION_SEARCH -> ImeAction.Search
+            EditorInfo.IME_ACTION_PREVIOUS -> ImeAction.Previous
+            EditorInfo.IME_ACTION_NEXT -> ImeAction.Next
+            EditorInfo.IME_ACTION_GO -> ImeAction.Go
+            else -> {
+                Log.w(TAG, "IME sends unsupported Editor Action: $editorAction")
+                ImeAction.Unspecified
+            }
+        }
+        eventListener.onImeAction(imeAction)
+        return true
     }
 
     // /////////////////////////////////////////////////////////////////////////////////////////////
@@ -305,7 +327,7 @@ internal class RecordingInputConnection(
 
     override fun getCursorCapsMode(reqModes: Int): Int {
         if (DEBUG) { Log.d(TAG, "getCursorCapsMode($reqModes)") }
-        return TextUtils.getCapsMode(inputState.text, inputState.selection.start, reqModes)
+        return TextUtils.getCapsMode(inputState.text, inputState.selection.min, reqModes)
     }
 
     override fun performPrivateCommand(action: String?, data: Bundle?): Boolean {

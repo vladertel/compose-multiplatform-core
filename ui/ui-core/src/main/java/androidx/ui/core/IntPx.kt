@@ -17,6 +17,7 @@
 
 package androidx.ui.core
 
+import androidx.compose.Immutable
 import androidx.ui.core.IntPx.Companion.Infinity
 import androidx.ui.lerp
 import kotlin.math.max
@@ -28,6 +29,7 @@ import kotlin.math.roundToInt
  * pixels. Operations with an [Infinity] IntPx result in [Infinity].
  */
 @Suppress("EXPERIMENTAL_FEATURE_WARNING")
+@Immutable
 data /*inline*/ class IntPx(val value: Int) {
     /**
      * Add two [IntPx]s together. Any operation on an
@@ -90,9 +92,17 @@ data /*inline*/ class IntPx(val value: Int) {
         keepInfinity(IntPx(value = value * other))
 
     /**
+     * Returns the remainder of the IntPx when dividing by an integer.
+     */
+    inline operator fun rem(other: Int): IntPx =
+        IntPx(value = value % other)
+
+    /**
      * Support comparing Dimensions with comparison operators.
      */
     inline operator fun compareTo(other: IntPx) = value.compareTo(other.value)
+
+    override fun toString() = "$value.ipx"
 
     companion object {
         /**
@@ -115,11 +125,13 @@ data /*inline*/ class IntPx(val value: Int) {
  */
 inline fun IntPx.isFinite(): Boolean = value != Int.MAX_VALUE
 
-private inline fun IntPx.keepInfinity(other: IntPx, noInfinityValue: IntPx): IntPx {
+@PublishedApi
+internal inline fun IntPx.keepInfinity(other: IntPx, noInfinityValue: IntPx): IntPx {
     return if (!isFinite() || !other.isFinite()) Infinity else noInfinityValue
 }
 
-private inline fun IntPx.keepInfinity(noInfinityValue: IntPx): IntPx {
+@PublishedApi
+internal inline fun IntPx.keepInfinity(noInfinityValue: IntPx): IntPx {
     return if (!isFinite()) this else noInfinityValue
 }
 
@@ -136,21 +148,21 @@ inline val Int.ipx: IntPx get() = IntPx(value = this)
  * Multiply an IntPx by a Float and round the result to an IntPx. Any operation on an
  * [IntPx.Infinity] results in [IntPx.Infinity]
  */
-operator fun Float.times(other: IntPx): IntPx =
+inline operator fun Float.times(other: IntPx): IntPx =
     other.keepInfinity(IntPx(value = (other.value.toFloat() * this).roundToInt()))
 
 /**
  * Multiply an IntPx by a Double and round the result to an IntPx. Any operation on an
  * [IntPx.Infinity] results in [IntPx.Infinity]
  */
-operator fun Double.times(other: IntPx): IntPx =
+inline operator fun Double.times(other: IntPx): IntPx =
     other.keepInfinity(IntPx(value = (other.value.toDouble() * this).roundToInt()))
 
 /**
  * Multiply an IntPx by a Double to result in an IntPx. Any operation on an
  * [IntPx.Infinity] results in [IntPx.Infinity]
  */
-operator fun Int.times(other: IntPx): IntPx =
+inline operator fun Int.times(other: IntPx): IntPx =
     other.keepInfinity(IntPx(value = other.value * this))
 
 /**
@@ -196,25 +208,25 @@ inline fun IntPx.coerceAtMost(maximumValue: IntPx): IntPx =
 /**
  * Linearly interpolate between two [IntPx]s.
  *
- * The `t` argument represents position on the timeline, with 0.0 meaning
- * that the interpolation has not started, returning `a` (or something
- * equivalent to `a`), 1.0 meaning that the interpolation has finished,
- * returning `b` (or something equivalent to `b`), and values in between
+ * The [fraction] argument represents position on the timeline, with 0.0 meaning
+ * that the interpolation has not started, returning [start] (or something
+ * equivalent to [start]), 1.0 meaning that the interpolation has finished,
+ * returning [stop] (or something equivalent to [stop]), and values in between
  * meaning that the interpolation is at the relevant point on the timeline
- * between `a` and `b`. The interpolation can be extrapolated beyond 0.0 and
+ * between [start] and [stop]. The interpolation can be extrapolated beyond 0.0 and
  * 1.0, so negative values and values greater than 1.0 are valid.
  *
- * If [a] or [b] is [IntPx.Infinity], then [IntPx.Infinity] is returned.
+ * If [start] or [stop] is [IntPx.Infinity], then [IntPx.Infinity] is returned.
  */
-fun lerp(a: IntPx, b: IntPx, t: Float): IntPx {
-    return a.keepInfinity(b, IntPx(lerp(a.value, b.value, t).roundToInt()))
+fun lerp(start: IntPx, stop: IntPx, fraction: Float): IntPx {
+    return start.keepInfinity(stop, IntPx(lerp(start.value, stop.value, fraction)))
 }
 
 /**
  * Rounds a [Px] size to the nearest Int pixel value.
  */
 inline fun Px.round(): IntPx =
-    if (value.isInfinite()) IntPx.Infinity else IntPx(value.roundToInt())
+    if (value.isInfinite()) Infinity else IntPx(value.roundToInt())
 
 inline fun IntPx.toPx(): Px = value.px
 
@@ -225,7 +237,46 @@ inline fun IntPx.toPx(): Px = value.px
 /**
  * A two dimensional size using [IntPx] for units
  */
-/*inline*/ data class IntPxSize(val width: IntPx, val height: IntPx)
+@UseExperimental(ExperimentalUnsignedTypes::class)
+@Immutable
+data class IntPxSize @PublishedApi internal constructor(@PublishedApi internal val value: Long) {
+    /**
+     * The horizontal aspect of the size in [IntPx].
+     */
+    inline val width: IntPx
+        get() = unpackInt1(value).ipx
+
+    /**
+     * The vertical aspect of the size in [IntPx].
+     */
+    inline val height: IntPx
+        get() = unpackInt2(value).ipx
+
+    /**
+     * Returns an IntPxSize scaled by multiplying [width] and [height] by [other]
+     */
+    inline operator fun times(other: Int): IntPxSize =
+        IntPxSize(width = width * other, height = height * other)
+
+    /**
+     * Returns an IntPxSize scaled by dividing [width] and [height] by [other]
+     */
+    inline operator fun div(other: Int): IntPxSize =
+        IntPxSize(width = width / other, height = height / other)
+}
+
+/**
+ * Constructs an [IntPxSize] from width and height [IntPx] values.
+ */
+@UseExperimental(ExperimentalUnsignedTypes::class)
+inline fun IntPxSize(width: IntPx, height: IntPx): IntPxSize =
+    IntPxSize(packInts(width.value, height.value))
+
+/**
+ * Returns an [IntPxSize] with [size]'s [IntPxSize.width] and [IntPxSize.height]
+ * multiplied by [this]
+ */
+inline operator fun Int.times(size: IntPxSize) = size * this
 
 /**
  * Returns the [IntPxPosition] of the center of the rect from the point of [0, 0]
@@ -238,7 +289,23 @@ fun IntPxSize.center(): IntPxPosition {
 /**
  * A two-dimensional position using [IntPx] for units
  */
-/*inline*/ data class IntPxPosition(val x: IntPx, val y: IntPx) {
+@UseExperimental(ExperimentalUnsignedTypes::class)
+@Immutable
+data class IntPxPosition @PublishedApi internal constructor(
+    @PublishedApi internal val value: Long
+) {
+    /**
+     * The horizontal aspect of the position in [IntPx]
+     */
+    inline val x: IntPx
+        get() = unpackInt1(value).ipx
+
+    /**
+     * The vertical aspect of the position in [IntPx]
+     */
+    inline val y: IntPx
+        get() = unpackInt2(value).ipx
+
     /**
      * Subtract a [IntPxPosition] from another one.
      */
@@ -253,18 +320,25 @@ fun IntPxSize.center(): IntPxPosition {
 }
 
 /**
+ * Constructs a [IntPxPosition] from [x] and [y] position [IntPx] values.
+ */
+@UseExperimental(ExperimentalUnsignedTypes::class)
+inline fun IntPxPosition(x: IntPx, y: IntPx): IntPxPosition =
+    IntPxPosition(packInts(x.value, y.value))
+
+/**
  * Linearly interpolate between two [IntPxPosition]s.
  *
- * The `t` argument represents position on the timeline, with 0.0 meaning
- * that the interpolation has not started, returning `a` (or something
- * equivalent to `a`), 1.0 meaning that the interpolation has finished,
- * returning `b` (or something equivalent to `b`), and values in between
+ * The [fraction] argument represents position on the timeline, with 0.0 meaning
+ * that the interpolation has not started, returning [start] (or something
+ * equivalent to [start]), 1.0 meaning that the interpolation has finished,
+ * returning [stop] (or something equivalent to [stop]), and values in between
  * meaning that the interpolation is at the relevant point on the timeline
- * between `a` and `b`. The interpolation can be extrapolated beyond 0.0 and
+ * between [start] and [stop]. The interpolation can be extrapolated beyond 0.0 and
  * 1.0, so negative values and values greater than 1.0 are valid.
  */
-fun lerp(a: IntPxPosition, b: IntPxPosition, t: Float): IntPxPosition =
-    IntPxPosition(lerp(a.x, b.x, t), lerp(a.y, b.y, t))
+fun lerp(start: IntPxPosition, stop: IntPxPosition, fraction: Float): IntPxPosition =
+    IntPxPosition(lerp(start.x, stop.x, fraction), lerp(start.y, stop.y, fraction))
 
 /**
  * A four dimensional bounds using [IntPx] for units
@@ -303,3 +377,13 @@ inline fun PxSize(width: IntPx, height: IntPx): PxSize =
  * Create a [PxPosition] from [IntPx] values.
  */
 inline fun PxPosition(x: IntPx, y: IntPx): PxPosition = PxPosition(x = x.toPx(), y = y.toPx())
+
+/**
+ * Convert a [IntPxPosition] to a [PxPosition]
+ */
+inline fun IntPxPosition.toPxPosition(): PxPosition = PxPosition(this.x, this.y)
+
+/**
+ * Convert a [IntPxSize] to a [PxSize]
+ */
+inline fun IntPxSize.toPxSize(): PxSize = PxSize(this.width, this.height)

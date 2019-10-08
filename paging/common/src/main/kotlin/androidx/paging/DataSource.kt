@@ -21,8 +21,9 @@ import androidx.annotation.RestrictTo
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.WorkerThread
 import androidx.arch.core.util.Function
+import androidx.paging.PagedSource.LoadResult.Page
+import androidx.paging.PagedSource.LoadResult.Page.Companion.COUNT_UNDEFINED
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 
 typealias OnInvalidated = () -> Unit
@@ -113,26 +114,6 @@ internal constructor(internal val type: KeyType) {
         @WorkerThread
         get() = _invalid.get()
 
-    private var _executor: Executor? = null
-    /**
-     * `null` until `loadInitial` is called by [PagedList] construction.
-     *
-     * This backing variable is necessary for back-compatibility with paging-common:2.1.0 Java API,
-     * while still providing synthetic accessors for Kotlin API.
-     */
-    protected val executor: Executor
-        get() = _executor ?: throw IllegalStateException(
-            "This DataSource has not been passed to a PagedList, has no executor yet."
-        )
-
-    /**
-     * @hide
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    fun initExecutor(executor: Executor) {
-        _executor = executor
-    }
-
     /**
      * Factory for DataSources.
      *
@@ -169,6 +150,7 @@ internal constructor(internal val type: KeyType) {
          *
          * @return the new DataSource.
          */
+        @Suppress("KDocUnresolvedReference")
         abstract fun create(): DataSource<Key, Value>
 
         /**
@@ -178,7 +160,7 @@ internal constructor(internal val type: KeyType) {
          *
          * @param function Function that runs on each loaded item, returning items of a potentially
          * new type.
-         * @param ToValue Type of items produced by the new DataSource, from the passed function.
+         * @param ToValue Type of items produced by the new [DataSource], from the passed function.
          * @return A new [DataSource.Factory], which transforms items using the given function.
          *
          * @see mapByPage
@@ -197,7 +179,7 @@ internal constructor(internal val type: KeyType) {
          *
          * @param function Function that runs on each loaded item, returning items of a potentially
          * new type.
-         * @param ToValue Type of items produced by the new DataSource, from the passed function.
+         * @param ToValue Type of items produced by the new [DataSource], from the passed function.
          * @return A new [DataSource.Factory], which transforms items using the given function.
          *
          * @see mapByPage
@@ -214,7 +196,7 @@ internal constructor(internal val type: KeyType) {
          *
          * @param function Function that runs on each loaded page, returning items of a potentially
          * new type.
-         * @param ToValue Type of items produced by the new DataSource, from the passed function.
+         * @param ToValue Type of items produced by the new [DataSource], from the passed function.
          * @return A new [DataSource.Factory], which transforms items using the given function.
          *
          * @see map
@@ -237,7 +219,7 @@ internal constructor(internal val type: KeyType) {
          *
          * @param function Function that runs on each loaded page, returning items of a potentially
          * new type.
-         * @param ToValue Type of items produced by the new DataSource, from the passed function.
+         * @param ToValue Type of items produced by the new [DataSource], from the passed function.
          * @return A new [DataSource.Factory], which transforms items using the given function.
          *
          * @see map
@@ -247,6 +229,14 @@ internal constructor(internal val type: KeyType) {
         open fun <ToValue : Any> mapByPage(
             function: (List<Value>) -> List<ToValue>
         ): Factory<Key, ToValue> = mapByPage(Function { function(it) })
+
+        /**
+         * @hide
+         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        fun asPagedSourceFactory(): PagedSourceFactory<Key, Value> = {
+            LegacyPagedSource(create())
+        }
     }
 
     /**
@@ -277,7 +267,7 @@ internal constructor(internal val type: KeyType) {
      * @param function Function that runs on each loaded page, returning items of a potentially
      * new type.
      * @param ToValue Type of items produced by the new DataSource, from the passed function.
-     * @return A new DataSource, which transforms items using the given function.
+     * @return A new [DataSource], which transforms items using the given function.
      *
      * @see map
      * @see DataSource.Factory.map
@@ -430,86 +420,76 @@ internal constructor(internal val type: KeyType) {
     }
 
     /**
-     * @hide
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
-    enum class LoadType {
-        INITIAL,
-        START,
-        END
-    }
-
-    /**
      * @param K Type of the key used to query the [DataSource].
      * @property key Can be `null` for init, otherwise non-null
      */
-    class Params<K : Any> internal constructor(
+    internal class Params<K : Any> internal constructor(
         internal val type: LoadType,
         val key: K?,
         val initialLoadSize: Int,
         val placeholdersEnabled: Boolean,
         val pageSize: Int
-    )
+    ) {
+        init {
+            if (type != LoadType.REFRESH && key == null) {
+                throw IllegalArgumentException("Key must be non-null for prepend/append")
+            }
+        }
+    }
 
     /**
      * @param Value Type of the data produced by a [DataSource].
-     * @property counted Set to true if the result is an initial load that is passed totalCount
      */
-    open class BaseResult<Value : Any> internal constructor(
+    internal class BaseResult<Value : Any> internal constructor(
         @JvmField
         val data: List<Value>,
         val prevKey: Any?,
         val nextKey: Any?,
-        val leadingNulls: Int,
-        val trailingNulls: Int,
-        val offset: Int,
-        val counted: Boolean
+        val itemsBefore: Int = COUNT_UNDEFINED,
+        val itemsAfter: Int = COUNT_UNDEFINED
     ) {
         init {
-            if (leadingNulls < 0 || offset < 0) {
+            if (itemsBefore < 0 && itemsBefore != COUNT_UNDEFINED) {
                 throw IllegalArgumentException("Position must be non-negative")
             }
-            if (data.isEmpty() && (leadingNulls != 0 || trailingNulls != 0)) {
+            if (data.isEmpty() && (itemsBefore > 0 || itemsAfter > 0)) {
+                // If non-initial, itemsBefore, itemsAfter are COUNT_UNDEFINED
                 throw IllegalArgumentException(
-                    "Initial result cannot be empty if items are" + " present in data set."
+                    "Initial result cannot be empty if items are present in data set."
                 )
             }
-            if (trailingNulls < 0) {
+            if (itemsAfter < 0 && itemsAfter != COUNT_UNDEFINED) {
                 throw IllegalArgumentException(
                     "List size + position too large, last item in list beyond totalCount."
                 )
             }
         }
 
-        // only one of leadingNulls / offset may be used
-        private fun position() = leadingNulls + offset
-
-        internal fun totalCount() = when {
-            // only one of leadingNulls / offset may be used
-            counted -> position() + data.size + trailingNulls
-            else -> TOTAL_COUNT_UNKNOWN
-        }
-
-        // TODO: Delete now that tiling is gone?
+        /**
+         * While it may seem unnecessary to do this validation now that tiling is gone, we do
+         * this to ensure consistency with 2.1, and to ensure all loadRanges have the same page
+         * size.
+         */
         internal fun validateForInitialTiling(pageSize: Int) {
-            if (!counted) {
+            if (itemsBefore == COUNT_UNDEFINED || itemsAfter == COUNT_UNDEFINED) {
                 throw IllegalStateException(
                     "Placeholders requested, but totalCount not provided. Please call the" +
                             " three-parameter onResult method, or disable placeholders in the" +
                             " PagedList.Config"
                 )
             }
-            if (trailingNulls != 0 && data.size % pageSize != 0) {
-                val totalCount = leadingNulls + data.size + trailingNulls
+
+            if (itemsAfter > 0 && data.size % pageSize != 0) {
+                val totalCount = itemsBefore + data.size + itemsAfter
                 throw IllegalArgumentException(
                     "PositionalDataSource requires initial load size to be a multiple of page" +
                             " size to support internal tiling. loadSize ${data.size}, position" +
-                            " $leadingNulls, totalCount $totalCount, pageSize $pageSize"
+                            " $itemsBefore, totalCount $totalCount, pageSize $pageSize"
                 )
             }
-            if (position() % pageSize != 0) {
+            if (itemsBefore % pageSize != 0) {
                 throw IllegalArgumentException(
-                    "Initial load must be pageSize aligned.Position = ${position()}, pageSize =" +
+                    "Initial load must be pageSize aligned.Position = $itemsBefore, pageSize =" +
                             " $pageSize"
                 )
             }
@@ -520,31 +500,25 @@ internal constructor(internal val type: KeyType) {
          * in [PagedSource.LoadResult].
          */
         @Suppress("UNCHECKED_CAST") // Guaranteed to be the correct Key type.
-        internal fun <Key : Any> toLoadResult() = PagedSource.LoadResult(
-            leadingNulls,
-            trailingNulls,
-            nextKey as Key?,
-            prevKey as Key?,
+        internal fun <Key : Any> toLoadResult(): Page<Key, Value> = Page(
             data,
-            offset,
-            counted
+            prevKey as Key?,
+            nextKey as Key?,
+            itemsBefore,
+            itemsAfter
         )
 
         override fun equals(other: Any?) = when (other) {
             is BaseResult<*> -> data == other.data &&
                     prevKey == other.prevKey &&
                     nextKey == other.nextKey &&
-                    leadingNulls == other.leadingNulls &&
-                    trailingNulls == other.trailingNulls &&
-                    offset == other.offset &&
-                    counted == other.counted
+                    itemsBefore == other.itemsBefore &&
+                    itemsAfter == other.itemsAfter
             else -> false
         }
 
         internal companion object {
-            internal fun <T : Any> empty() = BaseResult(emptyList<T>(), null, null, 0, 0, 0, true)
-
-            internal const val TOTAL_COUNT_UNKNOWN = -1
+            internal fun <T : Any> empty() = BaseResult(emptyList<T>(), null, null, 0, 0)
 
             internal fun <ToValue : Any, Value : Any> convert(
                 result: BaseResult<ToValue>,
@@ -553,10 +527,8 @@ internal constructor(internal val type: KeyType) {
                 data = convert(function, result.data),
                 prevKey = result.prevKey,
                 nextKey = result.nextKey,
-                leadingNulls = result.leadingNulls,
-                trailingNulls = result.trailingNulls,
-                offset = result.offset,
-                counted = result.counted
+                itemsBefore = result.itemsBefore,
+                itemsAfter = result.itemsAfter
             )
         }
     }
@@ -570,14 +542,6 @@ internal constructor(internal val type: KeyType) {
     internal abstract suspend fun load(params: Params<Key>): BaseResult<Value>
 
     internal abstract fun getKeyInternal(item: Value): Key
-
-    /**
-     * Determine whether an error passed to a loading method is retryable.
-     *
-     * @param error Throwable returned from an attempted load from this DataSource.
-     * @return `true` if the error is retryable, otherwise false.
-     */
-    open fun isRetryableError(error: Throwable) = false
 
     internal companion object {
         internal fun <A, B> convert(

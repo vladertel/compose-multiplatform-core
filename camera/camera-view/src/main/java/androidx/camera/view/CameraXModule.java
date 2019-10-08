@@ -30,9 +30,11 @@ import android.util.Log;
 import android.util.Rational;
 import android.util.Size;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresPermission;
 import androidx.annotation.UiThread;
+import androidx.camera.core.AspectRatio;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraOrientationUtil;
@@ -58,6 +60,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** CameraX use case operation built on @{link androidx.camera.core}. */
@@ -180,7 +183,6 @@ final class CameraXModule {
 
         final int cameraOrientation;
         try {
-            String cameraId;
             Set<LensFacing> available = getAvailableCameraLensFacing();
 
             if (available.isEmpty()) {
@@ -205,35 +207,28 @@ final class CameraXModule {
             if (mCameraLensFacing == null) {
                 return;
             }
-
-            cameraId = CameraX.getCameraWithLensFacing(mCameraLensFacing);
-            if (cameraId == null) {
-                return;
-            }
-            CameraInfo cameraInfo = CameraX.getCameraInfo(cameraId);
+            CameraInfo cameraInfo = CameraX.getCameraInfo(getLensFacing());
             cameraOrientation = cameraInfo.getSensorRotationDegrees();
+        } catch (CameraInfoUnavailableException e) {
+            throw new IllegalStateException("Unable to get Camera Info.", e);
         } catch (Exception e) {
             throw new IllegalStateException("Unable to bind to lifecycle.", e);
         }
 
         // Set the preferred aspect ratio as 4:3 if it is IMAGE only mode. Set the preferred aspect
         // ratio as 16:9 if it is VIDEO or MIXED mode. Then, it will be WYSIWYG when the view finder
-        // is
-        // in CENTER_INSIDE mode.
+        // is in CENTER_INSIDE mode.
 
         boolean isDisplayPortrait = getDisplayRotationDegrees() == 0
                 || getDisplayRotationDegrees() == 180;
 
+        Rational targetAspectRatio;
         if (getCaptureMode() == CaptureMode.IMAGE) {
-            mImageCaptureConfigBuilder.setTargetAspectRatio(
-                    isDisplayPortrait ? ASPECT_RATIO_3_4 : ASPECT_RATIO_4_3);
-            mPreviewConfigBuilder.setTargetAspectRatio(
-                    isDisplayPortrait ? ASPECT_RATIO_3_4 : ASPECT_RATIO_4_3);
+            mImageCaptureConfigBuilder.setTargetAspectRatio(AspectRatio.RATIO_4_3);
+            targetAspectRatio = isDisplayPortrait ? ASPECT_RATIO_3_4 : ASPECT_RATIO_4_3;
         } else {
-            mImageCaptureConfigBuilder.setTargetAspectRatio(
-                    isDisplayPortrait ? ASPECT_RATIO_9_16 : ASPECT_RATIO_16_9);
-            mPreviewConfigBuilder.setTargetAspectRatio(
-                    isDisplayPortrait ? ASPECT_RATIO_9_16 : ASPECT_RATIO_16_9);
+            mImageCaptureConfigBuilder.setTargetAspectRatio(AspectRatio.RATIO_16_9);
+            targetAspectRatio = isDisplayPortrait ? ASPECT_RATIO_9_16 : ASPECT_RATIO_16_9;
         }
 
         mImageCaptureConfigBuilder.setTargetRotation(getDisplaySurfaceRotation());
@@ -245,21 +240,15 @@ final class CameraXModule {
         mVideoCapture = new VideoCapture(mVideoCaptureConfigBuilder.build());
         mPreviewConfigBuilder.setLensFacing(mCameraLensFacing);
 
-        int relativeCameraOrientation = getRelativeCameraOrientation(false);
-
-        if (relativeCameraOrientation == 90 || relativeCameraOrientation == 270) {
-            mPreviewConfigBuilder.setTargetResolution(
-                    new Size(getMeasuredHeight(), getMeasuredWidth()));
-        } else {
-            mPreviewConfigBuilder.setTargetResolution(
-                    new Size(getMeasuredWidth(), getMeasuredHeight()));
-        }
+        // Adjusts the preview resolution according to the view size and the target aspect ratio.
+        int height = (int) (getMeasuredWidth() / targetAspectRatio.floatValue());
+        mPreviewConfigBuilder.setTargetResolution(new Size(getMeasuredWidth(), height));
 
         mPreview = new Preview(mPreviewConfigBuilder.build());
         mPreview.setOnPreviewOutputUpdateListener(
                 new Preview.OnPreviewOutputUpdateListener() {
                     @Override
-                    public void onUpdated(Preview.PreviewOutput output) {
+                    public void onUpdated(@NonNull Preview.PreviewOutput output) {
                         boolean needReverse = cameraOrientation != 0 && cameraOrientation != 180;
                         int textureWidth =
                                 needReverse
@@ -298,7 +287,7 @@ final class CameraXModule {
                 "Explicit open/close of camera not yet supported. Use bindtoLifecycle() instead.");
     }
 
-    public void takePicture(OnImageCapturedListener listener) {
+    public void takePicture(Executor executor, OnImageCapturedListener listener) {
         if (mImageCapture == null) {
             return;
         }
@@ -311,10 +300,10 @@ final class CameraXModule {
             throw new IllegalArgumentException("OnImageCapturedListener should not be empty");
         }
 
-        mImageCapture.takePicture(listener);
+        mImageCapture.takePicture(executor, listener);
     }
 
-    public void takePicture(File saveLocation, OnImageSavedListener listener) {
+    public void takePicture(File saveLocation, Executor executor, OnImageSavedListener listener) {
         if (mImageCapture == null) {
             return;
         }
@@ -329,10 +318,10 @@ final class CameraXModule {
 
         ImageCapture.Metadata metadata = new ImageCapture.Metadata();
         metadata.isReversedHorizontal = mCameraLensFacing == LensFacing.FRONT;
-        mImageCapture.takePicture(saveLocation, listener, metadata);
+        mImageCapture.takePicture(saveLocation, metadata, executor, listener);
     }
 
-    public void startRecording(File file, final OnVideoSavedListener listener) {
+    public void startRecording(File file, Executor executor, final OnVideoSavedListener listener) {
         if (mVideoCapture == null) {
             return;
         }
@@ -348,21 +337,22 @@ final class CameraXModule {
         mVideoIsRecording.set(true);
         mVideoCapture.startRecording(
                 file,
+                executor,
                 new VideoCapture.OnVideoSavedListener() {
                     @Override
-                    public void onVideoSaved(File savedFile) {
+                    public void onVideoSaved(@NonNull File savedFile) {
                         mVideoIsRecording.set(false);
                         listener.onVideoSaved(savedFile);
                     }
 
                     @Override
                     public void onError(
-                            VideoCapture.UseCaseError useCaseError,
-                            String message,
+                            @NonNull VideoCapture.VideoCaptureError videoCaptureError,
+                            @NonNull String message,
                             @Nullable Throwable cause) {
                         mVideoIsRecording.set(false);
                         Log.e(TAG, message, cause);
-                        listener.onError(useCaseError, message, cause);
+                        listener.onError(videoCaptureError, message, cause);
                     }
                 });
     }
@@ -437,31 +427,6 @@ final class CameraXModule {
             setCameraLensFacing(LensFacing.BACK);
             return;
         }
-    }
-
-    public void focus(Rect focus, Rect metering) {
-        if (mPreview == null) {
-            // Nothing to focus on since we don't yet have a preview
-            return;
-        }
-
-        Rect rescaledFocus;
-        Rect rescaledMetering;
-        try {
-            Rect sensorRegion;
-            if (mCropRegion != null) {
-                sensorRegion = mCropRegion;
-            } else {
-                sensorRegion = getSensorSize(getActiveCamera());
-            }
-            rescaledFocus = rescaleViewRectToSensorRect(focus, sensorRegion);
-            rescaledMetering = rescaleViewRectToSensorRect(metering, sensorRegion);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to rescale the focus and metering rectangles.", e);
-            return;
-        }
-
-        mPreview.focus(rescaledFocus, rescaledMetering);
     }
 
     public float getZoomLevel() {
@@ -562,17 +527,17 @@ final class CameraXModule {
     }
 
     int getRelativeCameraOrientation(boolean compensateForMirroring) {
-        int rotationDegrees;
+        int rotationDegrees = 0;
         try {
-            String cameraId = CameraX.getCameraWithLensFacing(getLensFacing());
-            CameraInfo cameraInfo = CameraX.getCameraInfo(cameraId);
+            CameraInfo cameraInfo = CameraX.getCameraInfo(getLensFacing());
             rotationDegrees = cameraInfo.getSensorRotationDegrees(getDisplaySurfaceRotation());
             if (compensateForMirroring) {
                 rotationDegrees = (360 - rotationDegrees) % 360;
             }
+        } catch (CameraInfoUnavailableException e) {
+            Log.e(TAG, "Failed to get CameraInfo", e);
         } catch (Exception e) {
             Log.e(TAG, "Failed to query camera", e);
-            rotationDegrees = 0;
         }
 
         return rotationDegrees;
@@ -631,7 +596,7 @@ final class CameraXModule {
     // Update view related information used in use cases
     private void updateViewInfo() {
         if (mImageCapture != null) {
-            mImageCapture.setTargetAspectRatio(new Rational(getWidth(), getHeight()));
+            mImageCapture.setTargetAspectRatioCustom(new Rational(getWidth(), getHeight()));
             mImageCapture.setTargetRotation(getDisplaySurfaceRotation());
         }
 

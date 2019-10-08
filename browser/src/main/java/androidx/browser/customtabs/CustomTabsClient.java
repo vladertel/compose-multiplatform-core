@@ -215,6 +215,8 @@ public class CustomTabsClient {
      * @return The session object that was created as a result of the transaction. The client can
      *         use this to relay session specific calls.
      *         Null if the service failed to respond (threw a RemoteException).
+     *         If {@code null} is returned, attempt using {@link #newSession(CustomTabsCallback)}
+     *         which is supported with older browsers.
      */
     public @Nullable CustomTabsSession newSession(@Nullable final CustomTabsCallback callback,
             int id) {
@@ -236,13 +238,22 @@ public class CustomTabsClient {
         return new CustomTabsSession.PendingSession(callback, sessionId);
     }
 
-    private @Nullable CustomTabsSession newSessionInternal(final CustomTabsCallback callback,
-                @Nullable PendingIntent sessionId) {
+    private @Nullable CustomTabsSession newSessionInternal(
+            @Nullable final CustomTabsCallback callback, @Nullable PendingIntent sessionId) {
         ICustomTabsCallback.Stub wrapper = createCallbackWrapper(callback);
-        Bundle extras = new Bundle();
-        if (sessionId != null) extras.putParcelable(CustomTabsIntent.EXTRA_SESSION_ID, sessionId);
+
         try {
-            if (!mService.newSessionWithExtras(wrapper, extras)) return null;
+            boolean success;
+
+            if (sessionId != null) {
+                Bundle extras = new Bundle();
+                extras.putParcelable(CustomTabsIntent.EXTRA_SESSION_ID, sessionId);
+                success = mService.newSessionWithExtras(wrapper, extras);
+            } else {
+                success = mService.newSession(wrapper);
+            }
+
+            if (!success) return null;
         } catch (RemoteException e) {
             return null;
         }
@@ -253,6 +264,7 @@ public class CustomTabsClient {
      * Can be used as a channel between the Custom Tabs client and the provider to do something that
      * is not part of the API yet.
      */
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     public @Nullable Bundle extraCommand(@NonNull String commandName, @Nullable Bundle args) {
         try {
             return mService.extraCommand(commandName, args);
@@ -261,7 +273,8 @@ public class CustomTabsClient {
         }
     }
 
-    private ICustomTabsCallback.Stub createCallbackWrapper(final CustomTabsCallback callback) {
+    private ICustomTabsCallback.Stub createCallbackWrapper(
+            @Nullable final CustomTabsCallback callback) {
         return new ICustomTabsCallback.Stub() {
             private Handler mHandler = new Handler(Looper.getMainLooper());
 
@@ -286,6 +299,15 @@ public class CustomTabsClient {
                         callback.extraCallback(callbackName, args);
                     }
                 });
+            }
+
+            @Override
+            @SuppressWarnings("NullAway") // TODO: b/141869399
+            public Bundle extraCallbackWithResult(@NonNull String callbackName,
+                    @Nullable Bundle args)
+                    throws RemoteException {
+                if (callback == null) return null;
+                return callback.extraCallbackWithResult(callbackName, args);
             }
 
             @Override
@@ -335,6 +357,7 @@ public class CustomTabsClient {
      * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     public CustomTabsSession attachSession(CustomTabsSession.PendingSession session) {
         return newSessionInternal(session.getCallback(), session.getId());
     }

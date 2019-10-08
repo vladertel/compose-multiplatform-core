@@ -16,6 +16,9 @@
 
 package androidx.autofill;
 
+import androidx.annotation.NonNull;
+import androidx.core.util.Preconditions;
+
 /**
  * Contains all the officially supported autofill hint constants.
  *
@@ -542,4 +545,39 @@ public final class HintConstants {
      * hints.
      */
     public static final String AUTOFILL_HINT_BIRTH_DATE_YEAR = "birthDateYear";
+
+    /**
+     * Hint indicating that this view can be autofilled with a SMS One Time Password (OTP).
+     *
+     * <p>Can be used with either {@link android.view.View#setAutofillHints(String[])} or <a
+     * href="#attr_android:autofillHint">{@code android:autofillHint}</a> (in which case the value
+     * should be <code>{@value #AUTOFILL_HINT_SMS_OTP}</code>).
+     *
+     * <p>When annotating OTP code fields which map to a single digit of the code consider using
+     * <code>{@link #generateSmsOtpHintForCharacterPosition}</code>
+     *
+     * <p>See {@link android.view.View#setAutofillHints(String...)} for more info about autofill
+     * hints.
+     */
+    public static final String AUTOFILL_HINT_SMS_OTP = "smsOTPCode";
+
+    /**
+     * Generates the corresponding hint that indicates that this view can be autofilled with the
+     * {@code characterPosition}'th character/digit of a SMS One Time Password (OTP).
+     *
+     * <p>Can be used with either {@link android.view.View#setAutofillHints(String[])} or <a
+     * href="#attr_android:autofillHint">{@code android:autofillHint}</a> (in which case the value
+     * should be <code>smsOTPCode{characterPosition}</code>).
+     *
+     * <p>See {@link android.view.View#setAutofillHints(String...)} for more info about autofill
+     * hints.
+     *
+     * @param characterPosition value between 1 and 8 representing the character position of the OTP
+     *     code that the service should autofill in the associated view.
+     */
+    @NonNull
+    public static String generateSmsOtpHintForCharacterPosition(int characterPosition) {
+        Preconditions.checkArgumentInRange(characterPosition, 1, 8, "characterPosition");
+        return ("smsOTPCode" + characterPosition).intern();
+    }
 }

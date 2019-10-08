@@ -26,7 +26,7 @@ plugins {
 }
 
 dependencies {
-    api(SUPPORT_ANNOTATIONS)
+    api("androidx.annotation:annotation:1.0.0")
     testImplementation(JUNIT)
     testImplementation(MOCKITO_CORE)
 }
@@ -45,8 +45,8 @@ android.libraryVariants.all { variant ->
 androidx {
     name = "Android DB"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.PERSISTENCE
-    mavenGroup = LibraryGroups.PERSISTENCE
+    mavenVersion = LibraryVersions.SQLITE
+    mavenGroup = LibraryGroups.SQLITE
     inceptionYear = "2017"
     description = "Android DB"
     url = AndroidXExtension.ARCHITECTURE_URL

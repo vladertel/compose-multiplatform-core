@@ -24,17 +24,18 @@ import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import androidx.ui.engine.geometry.Rect
 import androidx.ui.input.EditOperation
-import androidx.ui.input.EditorState
+import androidx.ui.input.ImeAction
 import androidx.ui.input.InputEventListener
+import androidx.ui.input.InputState
 import androidx.ui.input.KeyboardType
-import androidx.ui.input.TextInputService
+import androidx.ui.input.PlatformTextInputService
 import androidx.ui.text.TextRange
 import kotlin.math.roundToInt
 
 /**
  * Provide Android specific input service with the Operating System.
  */
-internal class TextInputServiceAndroid(val view: View) : TextInputService {
+internal class TextInputServiceAndroid(val view: View) : PlatformTextInputService {
     /** True if the currently editable widget has connected */
     private var editorHasFocus = false
 
@@ -43,17 +44,17 @@ internal class TextInputServiceAndroid(val view: View) : TextInputService {
      *  session
      */
     private var onEditCommand: (List<EditOperation>) -> Unit = {}
-    private var onEditorActionPerformed: (Any) -> Unit = {}
+    private var onImeActionPerformed: (ImeAction) -> Unit = {}
 
     private var state = InputState(text = "", selection = TextRange(0, 0))
     private var keyboardType = KeyboardType.Text
+    private var imeAction = ImeAction.Unspecified
     private var ic: RecordingInputConnection? = null
 
     /**
      * The editable buffer used for BaseInputConnection.
      */
-    private val imm =
-        view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+    private lateinit var imm: InputMethodManager
 
     /**
      * Creates new input connection.
@@ -62,13 +63,17 @@ internal class TextInputServiceAndroid(val view: View) : TextInputService {
         if (!editorHasFocus) {
             return null
         }
-        fillEditorInfo(keyboardType, outAttrs)
+        fillEditorInfo(keyboardType, imeAction, outAttrs)
 
         return RecordingInputConnection(
             initState = state,
             eventListener = object : InputEventListener {
                 override fun onEditOperations(editOps: List<EditOperation>) {
                     onEditCommand(editOps)
+                }
+
+                override fun onImeAction(imeAction: ImeAction) {
+                    onImeActionPerformed(imeAction)
                 }
             }
         ).also { ic = it }
@@ -80,16 +85,19 @@ internal class TextInputServiceAndroid(val view: View) : TextInputService {
     fun isEditorFocused(): Boolean = editorHasFocus
 
     override fun startInput(
-        initState: EditorState,
+        initModel: InputState,
         keyboardType: KeyboardType,
+        imeAction: ImeAction,
         onEditCommand: (List<EditOperation>) -> Unit,
-        onEditorActionPerformed: (Any) -> Unit
+        onImeActionPerformed: (ImeAction) -> Unit
     ) {
+        imm = view.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         editorHasFocus = true
-        state = initState.toInputState()
+        state = initModel
         this.keyboardType = keyboardType
+        this.imeAction = imeAction
         this.onEditCommand = onEditCommand
-        this.onEditorActionPerformed = onEditorActionPerformed
+        this.onImeActionPerformed = onImeActionPerformed
 
         view.requestFocus()
         view.post {
@@ -101,7 +109,7 @@ internal class TextInputServiceAndroid(val view: View) : TextInputService {
     override fun stopInput() {
         editorHasFocus = false
         onEditCommand = {}
-        onEditorActionPerformed = {}
+        onImeActionPerformed = {}
 
         imm.restartInput(view)
     }
@@ -110,8 +118,8 @@ internal class TextInputServiceAndroid(val view: View) : TextInputService {
         imm.showSoftInput(view, 0)
     }
 
-    override fun onStateUpdated(state: EditorState) {
-        this.state = state.toInputState()
+    override fun onStateUpdated(model: InputState) {
+        this.state = model
         ic?.updateInputState(this.state, imm, view)
     }
 
@@ -126,12 +134,27 @@ internal class TextInputServiceAndroid(val view: View) : TextInputService {
     /**
      * Fills necessary info of EditorInfo.
      */
-    private fun fillEditorInfo(keyboardType: KeyboardType, outInfo: EditorInfo) {
+    private fun fillEditorInfo(
+        keyboardType: KeyboardType,
+        imeAction: ImeAction,
+        outInfo: EditorInfo
+    ) {
+        outInfo.imeOptions = when (imeAction) {
+            ImeAction.Unspecified -> EditorInfo.IME_ACTION_UNSPECIFIED
+            ImeAction.NoAction -> EditorInfo.IME_ACTION_NONE
+            ImeAction.Go -> EditorInfo.IME_ACTION_GO
+            ImeAction.Next -> EditorInfo.IME_ACTION_NEXT
+            ImeAction.Previous -> EditorInfo.IME_ACTION_PREVIOUS
+            ImeAction.Search -> EditorInfo.IME_ACTION_SEARCH
+            ImeAction.Send -> EditorInfo.IME_ACTION_SEND
+            ImeAction.Done -> EditorInfo.IME_ACTION_DONE
+            else -> throw IllegalArgumentException("Unknown ImeAction: $imeAction")
+        }
         when (keyboardType) {
             KeyboardType.Text -> outInfo.inputType = InputType.TYPE_CLASS_TEXT
             KeyboardType.Ascii -> {
                 outInfo.inputType = InputType.TYPE_CLASS_TEXT
-                outInfo.imeOptions = EditorInfo.IME_FLAG_FORCE_ASCII
+                outInfo.imeOptions = outInfo.imeOptions or EditorInfo.IME_FLAG_FORCE_ASCII
             }
             KeyboardType.Number -> outInfo.inputType = InputType.TYPE_CLASS_NUMBER
             KeyboardType.Phone -> outInfo.inputType = InputType.TYPE_CLASS_PHONE
@@ -140,14 +163,17 @@ internal class TextInputServiceAndroid(val view: View) : TextInputService {
             KeyboardType.Email ->
                 outInfo.inputType =
                     InputType.TYPE_CLASS_TEXT or EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            KeyboardType.Password -> {
+                outInfo.inputType =
+                    InputType.TYPE_CLASS_TEXT or EditorInfo.TYPE_TEXT_VARIATION_PASSWORD
+            }
+            KeyboardType.NumberPassword -> {
+                outInfo.inputType =
+                        InputType.TYPE_CLASS_NUMBER or EditorInfo.TYPE_NUMBER_VARIATION_PASSWORD
+            }
             else -> throw IllegalArgumentException("Unknown KeyboardType: $keyboardType")
         }
-        outInfo.imeOptions = outInfo.imeOptions or EditorInfo.IME_FLAG_NO_FULLSCREEN
+        outInfo.imeOptions =
+            outInfo.imeOptions or outInfo.imeOptions or EditorInfo.IME_FLAG_NO_FULLSCREEN
     }
 }
-
-private fun EditorState.toInputState(): InputState =
-    InputState(
-        text = text, // TODO(nona): call toString once AnnotatedString is in use.
-        selection = selection,
-        composition = composition)

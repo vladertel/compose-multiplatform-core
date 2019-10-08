@@ -17,6 +17,7 @@
 
 package androidx.ui.core
 
+import androidx.compose.Immutable
 import androidx.ui.core.Dp.Companion.Hairline
 import androidx.ui.lerp
 import kotlin.math.max
@@ -37,6 +38,7 @@ import kotlin.math.sqrt
  * [toPx] is normally needed only for painting operations.
  */
 @Suppress("EXPERIMENTAL_FEATURE_WARNING")
+@Immutable
 data /*inline*/ class Dp(val value: Float) {
     /**
      * Add two [Dp]s together.
@@ -100,6 +102,8 @@ data /*inline*/ class Dp(val value: Float) {
      * Support comparing Dimensions with comparison operators.
      */
     inline operator fun compareTo(other: Dp) = value.compareTo(other.value)
+
+    override fun toString() = "$value.dp"
 
     companion object {
         /**
@@ -200,16 +204,16 @@ inline fun Dp.isFinite(): Boolean = value != Float.POSITIVE_INFINITY
 /**
  * Linearly interpolate between two [Dp]s.
  *
- * The `t` argument represents position on the timeline, with 0.0 meaning
- * that the interpolation has not started, returning `a` (or something
- * equivalent to `a`), 1.0 meaning that the interpolation has finished,
- * returning `b` (or something equivalent to `b`), and values in between
+ * The [fraction] argument represents position on the timeline, with 0.0 meaning
+ * that the interpolation has not started, returning [start] (or something
+ * equivalent to [start]), 1.0 meaning that the interpolation has finished,
+ * returning [stop] (or something equivalent to [stop]), and values in between
  * meaning that the interpolation is at the relevant point on the timeline
- * between `a` and `b`. The interpolation can be extrapolated beyond 0.0 and
+ * between [start] and [stop]. The interpolation can be extrapolated beyond 0.0 and
  * 1.0, so negative values and values greater than 1.0 are valid.
  */
-fun lerp(a: Dp, b: Dp, t: Float): Dp {
-    return Dp(lerp(a.value, b.value, t))
+fun lerp(start: Dp, stop: Dp, fraction: Float): Dp {
+    return Dp(lerp(start.value, stop.value, fraction))
 }
 
 /**
@@ -222,6 +226,7 @@ fun lerp(a: Dp, b: Dp, t: Float): Dp {
  *     val width = oldWidth * newTotalWidth / oldTotalWidth
  */
 @Suppress("EXPERIMENTAL_FEATURE_WARNING")
+@Immutable
 inline class DpSquared(val value: Float) {
     /**
      * Add two DimensionSquares together.
@@ -287,6 +292,7 @@ inline class DpSquared(val value: Float) {
  *     val width = oldWidth * newTotalWidth / oldTotalWidth
  */
 @Suppress("EXPERIMENTAL_FEATURE_WARNING")
+@Immutable
 inline class DpCubed(val value: Float) {
 
     /**
@@ -345,6 +351,7 @@ inline class DpCubed(val value: Float) {
  *     val width = oldWidth * newTotalWidth / oldTotalWidth
  */
 @Suppress("EXPERIMENTAL_FEATURE_WARNING")
+@Immutable
 inline class DpInverse(val value: Float) {
     /**
      * Add two DpInverse together.
@@ -401,7 +408,77 @@ inline class DpInverse(val value: Float) {
 /**
  * A two dimensional size using [Dp] for units
  */
-data class Size(val width: Dp, val height: Dp)
+@UseExperimental(ExperimentalUnsignedTypes::class)
+@Immutable
+data class Size @PublishedApi internal constructor(@PublishedApi internal val value: Long) {
+    /**
+     * The horizontal aspect of the size in [Dp].
+     */
+    inline val width: Dp
+        get() = unpackFloat1(value).dp
+
+    /**
+     * The vertical aspect of the size in [Dp].
+     */
+    inline val height: Dp
+        get() = unpackFloat2(value).dp
+
+    /**
+     * Scales the Size by multiplying [width] and [height] by [other]
+     */
+    inline operator fun times(other: Int): Size =
+        Size(width = width * other, height = height * other)
+
+    /**
+     * Scales the Size by multiplying [width] and [height] by [other]
+     */
+    inline operator fun times(other: Float): Size =
+        Size(width = width * other, height = height * other)
+
+    /**
+     * Scales the Size by multiplying [width] and [height] by [other]
+     */
+    inline operator fun times(other: Double): Size = times(other.toFloat())
+
+    /**
+     * Scales the Size by dividing [width] and [height] by [other]
+     */
+    inline operator fun div(other: Int): Size =
+        Size(width = width / other, height = height / other)
+
+    /**
+
+     * Scales the Size by dividing [width] and [height] by [other]
+     */
+    inline operator fun div(other: Float): Size =
+        Size(width = width / other, height = height / other)
+
+    /**
+     * Scales the Size by dividing [width] and [height] by [other]
+     */
+    inline operator fun div(other: Double): Size = div(other.toFloat())
+}
+
+/**
+ * Constructs a [Size] from width and height [Dp] values.
+ */
+@UseExperimental(ExperimentalUnsignedTypes::class)
+inline fun Size(width: Dp, height: Dp): Size = Size(packFloats(width.value, height.value))
+
+/**
+ * Returns a [Size] with [size]'s [Size.width] and [Size.height] multiplied by [this]
+ */
+inline operator fun Int.times(size: Size) = size * this
+
+/**
+ * Returns a [Size] with [size]'s [Size.width] and [Size.height] multiplied by [this]
+ */
+inline operator fun Float.times(size: Size) = size * this
+
+/**
+ * Returns a [Size] with [size]'s [Size.width] and [Size.height] multiplied by [this]
+ */
+inline operator fun Double.times(size: Size) = size * this
 
 /**
  * Returns the [Position] of the center of the rect from the point of [0, 0]
@@ -414,7 +491,21 @@ fun Size.center(): Position {
 /**
  * A two-dimensional position using [Dp] for units
  */
-data class Position(val x: Dp, val y: Dp) {
+@UseExperimental(ExperimentalUnsignedTypes::class)
+@Immutable
+data class Position @PublishedApi internal constructor(@PublishedApi internal val value: Long) {
+    /**
+     * The horizontal aspect of the position in [Dp]
+     */
+    inline val x: Dp
+        get() = unpackFloat1(value).dp
+
+    /**
+     * The vertical aspect of the position in [Dp]
+     */
+    inline val y: Dp
+        get() = unpackFloat2(value).dp
+
     /**
      * Subtract a [Position] from another one.
      */
@@ -429,6 +520,12 @@ data class Position(val x: Dp, val y: Dp) {
 }
 
 /**
+ * Constructs a [Position] from [x] and [y] position [Dp] values.
+ */
+@UseExperimental(ExperimentalUnsignedTypes::class)
+inline fun Position(x: Dp, y: Dp): Position = Position(packFloats(x.value, y.value))
+
+/**
  * The magnitude of the offset represented by this [Position].
  */
 fun Position.getDistance(): Dp {
@@ -438,20 +535,21 @@ fun Position.getDistance(): Dp {
 /**
  * Linearly interpolate between two [Position]s.
  *
- * The `t` argument represents position on the timeline, with 0.0 meaning
- * that the interpolation has not started, returning `a` (or something
- * equivalent to `a`), 1.0 meaning that the interpolation has finished,
- * returning `b` (or something equivalent to `b`), and values in between
+ * The [fraction] argument represents position on the timeline, with 0.0 meaning
+ * that the interpolation has not started, returning [start] (or something
+ * equivalent to [start]), 1.0 meaning that the interpolation has finished,
+ * returning [stop] (or something equivalent to [stop]), and values in between
  * meaning that the interpolation is at the relevant point on the timeline
- * between `a` and `b`. The interpolation can be extrapolated beyond 0.0 and
+ * between [start] and [stop]. The interpolation can be extrapolated beyond 0.0 and
  * 1.0, so negative values and values greater than 1.0 are valid.
  */
-fun lerp(a: Position, b: Position, t: Float): Position =
-    Position(lerp(a.x, b.x, t), lerp(a.y, b.y, t))
+fun lerp(start: Position, stop: Position, fraction: Float): Position =
+    Position(lerp(start.x, stop.x, fraction), lerp(start.y, stop.y, fraction))
 
 /**
  * A four dimensional bounds using [Dp] for units
  */
+@Immutable
 data class Bounds(
     val left: Dp,
     val top: Dp,

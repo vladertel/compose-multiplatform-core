@@ -492,13 +492,12 @@ class MediaLibraryServiceLegacyStub extends MediaSessionServiceLegacyStub {
         }
 
         @Override
-        final void onVideoSizeChanged(int seq, @NonNull MediaItem item,
-                @NonNull VideoSize videoSize) {
+        void onVideoSizeChanged(int seq, @NonNull VideoSize videoSize) throws RemoteException {
             // No-op. BrowserCompat doesn't understand Controller features.
         }
 
         @Override
-        void onTrackInfoChanged(int seq, List<TrackInfo> trackInfos,
+        void onTracksChanged(int seq, List<TrackInfo> tracks,
                 TrackInfo selectedVideoTrack, TrackInfo selectedAudioTrack,
                 TrackInfo selectedSubtitleTrack, TrackInfo selectedMetadataTrack)
                 throws RemoteException {

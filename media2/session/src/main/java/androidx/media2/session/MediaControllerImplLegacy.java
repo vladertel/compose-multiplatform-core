@@ -77,6 +77,7 @@ import androidx.media2.session.MediaSession.CommandButton;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -93,13 +94,6 @@ class MediaControllerImplLegacy implements MediaController.MediaControllerImpl {
     static final String SESSION_COMMAND_ON_CAPTIONING_ENABLED_CHANGED =
             "android.media.session.command.ON_CAPTIONING_ENALBED_CHANGED";
 
-    // Note: Using {@code null} doesn't helpful here because MediaBrowserServiceCompat always wraps
-    //       the rootHints so it becomes non-null.
-    static final Bundle sDefaultRootExtras = new Bundle();
-    static {
-        sDefaultRootExtras.putBoolean(MediaConstants.ROOT_EXTRA_DEFAULT, true);
-    }
-
     final Context mContext;
 
     @SuppressWarnings("WeakerAccess") /* synthetic access */
@@ -113,7 +107,7 @@ class MediaControllerImplLegacy implements MediaController.MediaControllerImpl {
     final Object mLock = new Object();
 
     @SuppressWarnings("WeakerAccess") /* synthetic access */
-            MediaController mInstance;
+    MediaController mInstance;
 
     @GuardedBy("mLock")
     @SuppressWarnings("WeakerAccess") /* synthetic access */
@@ -128,7 +122,7 @@ class MediaControllerImplLegacy implements MediaController.MediaControllerImpl {
     List<QueueItem> mQueue;
     @GuardedBy("mLock")
     @SuppressWarnings("WeakerAccess") /* synthetic access */
-            MediaMetadata mPlaylistMetadata;
+    MediaMetadata mPlaylistMetadata;
     @GuardedBy("mLock")
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     @RepeatMode int mRepeatMode;
@@ -140,7 +134,7 @@ class MediaControllerImplLegacy implements MediaController.MediaControllerImpl {
     int mPlayerState;
     @GuardedBy("mLock")
     @SuppressWarnings("WeakerAccess") /* synthetic access */
-            MediaItem mCurrentMediaItem;
+    MediaItem mCurrentMediaItem;
     @GuardedBy("mLock")
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     int mBufferingState;
@@ -610,7 +604,7 @@ class MediaControllerImplLegacy implements MediaController.MediaControllerImpl {
                 Log.w(TAG, "Session isn't active", new IllegalStateException());
                 return null;
             }
-            return (mPlaylist == null || mPlaylist.size() == 0) ? null : mPlaylist;
+            return (mPlaylist == null || mPlaylist.size() == 0) ? null : new ArrayList<>(mPlaylist);
         }
     }
 
@@ -672,20 +666,24 @@ class MediaControllerImplLegacy implements MediaController.MediaControllerImpl {
     }
 
     @Override
-    public ListenableFuture<SessionResult> replacePlaylistItem(int index,
-            @NonNull String mediaId) {
+    public ListenableFuture<SessionResult> replacePlaylistItem(int index, @NonNull String mediaId) {
         synchronized (mLock) {
             if (!mConnected) {
                 Log.w(TAG, "Session isn't active", new IllegalStateException());
                 return createFutureWithResult(RESULT_ERROR_SESSION_DISCONNECTED);
             }
-            if (mPlaylist == null || index < 0 || mPlaylist.size() <= index) {
-                return createFutureWithResult(RESULT_ERROR_SESSION_DISCONNECTED);
+            if (mQueue == null || index < 0 || index >= mQueue.size()) {
+                return createFutureWithResult(RESULT_ERROR_BAD_VALUE);
             }
-            removePlaylistItem(index);
-            addPlaylistItem(index, mediaId);
+            mControllerCompat.removeQueueItem(mQueue.get(index).getDescription());
+            mControllerCompat.addQueueItem(MediaUtils.createMediaDescriptionCompat(mediaId), index);
         }
         return createFutureWithResult(RESULT_SUCCESS);
+    }
+
+    @Override
+    public ListenableFuture<SessionResult> movePlaylistItem(int fromIndex, int toIndex) {
+        return createFutureWithResult(RESULT_ERROR_NOT_SUPPORTED);
     }
 
     @Override
@@ -819,7 +817,7 @@ class MediaControllerImplLegacy implements MediaController.MediaControllerImpl {
 
     @Override
     @NonNull
-    public List<TrackInfo> getTrackInfo() {
+    public List<TrackInfo> getTracks() {
         Log.w(TAG, "Session doesn't support getting TrackInfo");
         return Collections.emptyList();
     }
@@ -948,7 +946,7 @@ class MediaControllerImplLegacy implements MediaController.MediaControllerImpl {
             public void run() {
                 synchronized (mLock) {
                     mBrowserCompat = new MediaBrowserCompat(mContext, mToken.getComponentName(),
-                            new ConnectionCallback(), sDefaultRootExtras);
+                            new ConnectionCallback(), null);
                     mBrowserCompat.connect();
                 }
             }

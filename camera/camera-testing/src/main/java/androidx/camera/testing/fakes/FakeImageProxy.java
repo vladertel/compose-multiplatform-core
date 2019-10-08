@@ -21,6 +21,7 @@ import android.media.Image;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.camera.core.ImageInfo;
 import androidx.camera.core.ImageProxy;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
@@ -105,6 +106,7 @@ public final class FakeImageProxy implements ImageProxy {
     }
 
     @Override
+    @Nullable
     public Image getImage() {
         return mImage;
     }
@@ -129,6 +131,10 @@ public final class FakeImageProxy implements ImageProxy {
         mImageInfo = imageInfo;
     }
 
+    public void setImage(@Nullable Image image) {
+        mImage = image;
+    }
+
     /**
      * Returns ListenableFuture that completes when the {@link FakeImageProxy} has closed.
      */
@@ -138,6 +144,8 @@ public final class FakeImageProxy implements ImageProxy {
             if (mReleaseFuture == null) {
                 mReleaseFuture = CallbackToFutureAdapter.getFuture(
                         new CallbackToFutureAdapter.Resolver<Void>() {
+                            // TODO(b/141957748): Suppressed during upgrade to AGP 3.6.
+                            @SuppressWarnings("GuardedBy")
                             @Override
                             public Object attachCompleter(@NonNull
                                     CallbackToFutureAdapter.Completer<Void> completer) {

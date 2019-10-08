@@ -16,8 +16,18 @@
 package androidx.camera.extensions.impl;
 
 import android.content.Context;
+import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.StreamConfigurationMap;
+import android.util.Pair;
+import android.util.Size;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Implementation for beauty preview use case.
@@ -28,17 +38,19 @@ import android.hardware.camera2.CaptureRequest;
 public final class BeautyPreviewExtenderImpl implements PreviewExtenderImpl {
     private static final int DEFAULT_STAGE_ID = 0;
     private static final int SESSION_STAGE_ID = 101;
+    private CameraCharacteristics mCameraCharacteristics;
 
     public BeautyPreviewExtenderImpl() {
     }
 
     @Override
     public void init(String cameraId, CameraCharacteristics cameraCharacteristics) {
+        mCameraCharacteristics = cameraCharacteristics;
     }
 
     @Override
-    public boolean isExtensionAvailable(String cameraId,
-            CameraCharacteristics cameraCharacteristics) {
+    public boolean isExtensionAvailable(@NonNull String cameraId,
+            @Nullable CameraCharacteristics cameraCharacteristics) {
         // Implement the logic to check whether the extension function is supported or not.
         return true;
     }
@@ -62,6 +74,26 @@ public final class BeautyPreviewExtenderImpl implements PreviewExtenderImpl {
     @Override
     public ProcessorImpl getProcessor() {
         return RequestUpdateProcessorImpls.noUpdateProcessor();
+    }
+
+    @Override
+    public List<Pair<Integer, Size[]>> getSupportedResolutions() {
+        List<Pair<Integer, Size[]>> formatResolutionsPairList = new ArrayList<>();
+
+        StreamConfigurationMap map =
+                mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+        if (map != null) {
+            // The sample implementation only retrieves originally supported resolutions from
+            // CameraCharacteristics for PRIVATE format to return.
+            Size[] outputSizes = map.getOutputSizes(ImageFormat.PRIVATE);
+
+            if (outputSizes != null) {
+                formatResolutionsPairList.add(Pair.create(ImageFormat.PRIVATE, outputSizes));
+            }
+        }
+
+        return formatResolutionsPairList;
     }
 
     @Override

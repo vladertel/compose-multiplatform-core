@@ -17,9 +17,7 @@
 package com.example.android.biometric;
 
 import android.content.Context;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.RadioGroup;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.biometric.BiometricPrompt;
@@ -35,21 +33,9 @@ class BiometricPromptDemoActivityController extends BiometricPromptDemoControlle
 
     BiometricPromptDemoActivityController(
             @NonNull FragmentActivity activity,
-            @NonNull Button createKeysButton,
-            @NonNull Button authenticateButton,
-            @NonNull Button canAuthenticateButton,
-            @NonNull CheckBox useCryptoCheckbox,
-            @NonNull CheckBox confirmationRequiredCheckbox,
-            @NonNull CheckBox deviceCredentialAllowedCheckbox,
-            @NonNull RadioGroup radioGroup) {
+            @NonNull View inflatedRootView) {
+        super(inflatedRootView);
         mActivity = activity;
-        mCreateKeysButton = createKeysButton;
-        mAuthenticateButton = authenticateButton;
-        mCanAuthenticateButton = canAuthenticateButton;
-        mUseCryptoCheckbox = useCryptoCheckbox;
-        mConfirmationRequiredCheckbox = confirmationRequiredCheckbox;
-        mDeviceCredentialAllowedCheckbox = deviceCredentialAllowedCheckbox;
-        mRadioGroup = radioGroup;
     }
 
     @Override
@@ -58,11 +44,7 @@ class BiometricPromptDemoActivityController extends BiometricPromptDemoControlle
     }
 
     @Override
-    void onResume() {
-        // Developers should (re)create the BiometricPrompt every time the application is resumed.
-        // This is necessary because it is possible for the executor and callback to be GC'd.
-        // Instantiating the prompt here allows the library to handle things such as configuration
-        // changes.
-        mBiometricPrompt = new BiometricPrompt(mActivity, mAuthenticationCallback, mExecutor);
+    void reconnect() {
+        mBiometricPrompt = new BiometricPrompt(mActivity, mExecutor, mAuthenticationCallback);
     }
 }

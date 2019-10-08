@@ -33,10 +33,12 @@ import android.util.Size;
 import androidx.camera.core.BaseCamera;
 import androidx.camera.core.CameraDeviceConfig;
 import androidx.camera.core.CameraFactory;
+import androidx.camera.core.CameraX;
 import androidx.camera.core.CameraX.LensFacing;
 import androidx.camera.core.ImmediateSurface;
 import androidx.camera.core.SessionConfig;
 import androidx.camera.core.UseCase;
+import androidx.camera.core.UseCaseConfig;
 import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.fakes.FakeUseCase;
 import androidx.camera.testing.fakes.FakeUseCaseConfig;
@@ -54,6 +56,7 @@ import org.mockito.Mockito;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 @LargeTest
 @RunWith(AndroidJUnit4.class)
@@ -82,39 +85,33 @@ public final class CameraTest {
     }
 
     @Before
-    public void setup()  {
+    public void setup() {
         assumeTrue(CameraUtil.deviceHasCamera());
         mMockOnImageAvailableListener = Mockito.mock(ImageReader.OnImageAvailableListener.class);
-        FakeUseCaseConfig config =
+
+        mCameraId = getCameraIdForLensFacingUnchecked(DEFAULT_LENS_FACING);
+        mCamera = sCameraFactory.getCamera(mCameraId);
+
+        FakeUseCaseConfig.Builder configBuilder =
                 new FakeUseCaseConfig.Builder()
                         .setTargetName("UseCase")
-                        .setLensFacing(DEFAULT_LENS_FACING)
-                        .build();
-        mCameraId = getCameraIdForLensFacingUnchecked(DEFAULT_LENS_FACING);
-        mFakeUseCase = new TestUseCase(config, mMockOnImageAvailableListener);
-        Map<String, Size> suggestedResolutionMap = new HashMap<>();
-        suggestedResolutionMap.put(mCameraId, new Size(640, 480));
-        mFakeUseCase.updateSuggestedResolution(suggestedResolutionMap);
-
-        mCamera = sCameraFactory.getCamera(mCameraId);
+                        .setLensFacing(DEFAULT_LENS_FACING);
+        mFakeUseCase = new TestUseCase(configBuilder.build(), mMockOnImageAvailableListener);
     }
 
     @After
-    public void teardown() throws InterruptedException {
+    public void teardown() throws InterruptedException, ExecutionException {
         // Need to release the camera no matter what is done, otherwise the CameraDevice is not
         // closed.
         // When the CameraDevice is not closed, then it can cause problems with interferes with
-        // other
-        // test cases.
+        // other test cases.
         if (mCamera != null) {
-            mCamera.release();
+            // Wait for camera release to complete
+            mCamera.release().get();
             mCamera = null;
         }
 
-        // Wait a little bit for the camera device to close.
-        // TODO(b/111991758): Listen for the close signal when it becomes available.
-        Thread.sleep(2000);
-
+        // Wait camera to be closed.
         if (mFakeUseCase != null) {
             mFakeUseCase.close();
             mFakeUseCase = null;
@@ -135,7 +132,6 @@ public final class CameraTest {
     @Test
     public void activeUseCase() {
         mCamera.open();
-
         mCamera.onUseCaseActive(mFakeUseCase);
 
         verify(mMockOnImageAvailableListener, never()).onImageAvailable(any(ImageReader.class));
@@ -144,9 +140,7 @@ public final class CameraTest {
     }
 
     @Test
-    public void onlineAndActiveUseCase() throws InterruptedException {
-        mCamera.open();
-
+    public void onlineAndActiveUseCase() {
         mCamera.addOnlineUseCase(Collections.<UseCase>singletonList(mFakeUseCase));
         mCamera.onUseCaseActive(mFakeUseCase);
 
@@ -156,9 +150,8 @@ public final class CameraTest {
 
     @Test
     public void removeOnlineUseCase() {
-        mCamera.open();
-
         mCamera.addOnlineUseCase(Collections.<UseCase>singletonList(mFakeUseCase));
+
         mCamera.removeOnlineUseCase(Collections.<UseCase>singletonList(mFakeUseCase));
         mCamera.onUseCaseActive(mFakeUseCase);
 
@@ -175,9 +168,6 @@ public final class CameraTest {
 
     @Test
     public void closedCamera() {
-        mCamera.open();
-
-        mCamera.close();
         mCamera.addOnlineUseCase(Collections.<UseCase>singletonList(mFakeUseCase));
         mCamera.removeOnlineUseCase(Collections.<UseCase>singletonList(mFakeUseCase));
 
@@ -186,6 +176,7 @@ public final class CameraTest {
 
     @Test
     public void releaseUnopenedCamera() {
+        // Checks that if a camera has been released then calling open() will no longer open it.
         mCamera.release();
         mCamera.open();
 
@@ -197,8 +188,8 @@ public final class CameraTest {
 
     @Test
     public void releasedOpenedCamera() {
-        mCamera.release();
         mCamera.open();
+        mCamera.release();
 
         mCamera.addOnlineUseCase(Collections.<UseCase>singletonList(mFakeUseCase));
         mCamera.onUseCaseActive(mFakeUseCase);
@@ -211,11 +202,15 @@ public final class CameraTest {
         HandlerThread mHandlerThread = new HandlerThread("HandlerThread");
         Handler mHandler;
         ImageReader mImageReader;
+        FakeUseCaseConfig mConfig;
 
         TestUseCase(
                 FakeUseCaseConfig config,
                 ImageReader.OnImageAvailableListener listener) {
             super(config);
+            // Ensure we're using the combined configuration (user config + defaults)
+            mConfig = (FakeUseCaseConfig) getUseCaseConfig();
+
             mImageAvailableListener = listener;
             mHandlerThread.start();
             mHandler = new Handler(mHandlerThread.getLooper());
@@ -223,6 +218,14 @@ public final class CameraTest {
             String cameraId = getCameraIdForLensFacingUnchecked(config.getLensFacing());
             suggestedResolutionMap.put(cameraId, new Size(640, 480));
             updateSuggestedResolution(suggestedResolutionMap);
+        }
+
+        // we need to set Camera2OptionUnpacker to the Config to enable the camera2 callback hookup.
+        @Override
+        protected UseCaseConfig.Builder<?, ?, ?> getDefaultBuilder(CameraX.LensFacing lensFacing) {
+            return new FakeUseCaseConfig.Builder()
+                    .setLensFacing(lensFacing)
+                    .setSessionOptionUnpacker(new Camera2SessionOptionUnpacker());
         }
 
         void close() {
@@ -239,7 +242,8 @@ public final class CameraTest {
             LensFacing lensFacing = ((CameraDeviceConfig) getUseCaseConfig()).getLensFacing();
             String cameraId = getCameraIdForLensFacingUnchecked(lensFacing);
             Size resolution = suggestedResolutionMap.get(cameraId);
-            SessionConfig.Builder builder = new SessionConfig.Builder();
+            SessionConfig.Builder builder = SessionConfig.Builder.createFrom(mConfig);
+
             builder.setTemplateType(CameraDevice.TEMPLATE_PREVIEW);
             mImageReader =
                     ImageReader.newInstance(

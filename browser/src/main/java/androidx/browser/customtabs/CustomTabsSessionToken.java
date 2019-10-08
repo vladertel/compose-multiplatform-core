@@ -58,6 +58,12 @@ public class CustomTabsSessionToken {
         public void extraCallback(String callbackName, Bundle args) {}
 
         @Override
+        @SuppressWarnings("NullAway") // TODO: b/141869399
+        public Bundle extraCallbackWithResult(String callbackName, Bundle args) {
+            return null;
+        }
+
+        @Override
         public void onMessageChannelReady(Bundle extras) {}
 
         @Override
@@ -80,6 +86,7 @@ public class CustomTabsSessionToken {
      *               {@link CustomTabsIntent#EXTRA_SESSION}.
      * @return The token that was generated.
      */
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     public static @Nullable CustomTabsSessionToken getSessionTokenFromIntent(
             @NonNull Intent intent) {
         Bundle b = intent.getExtras();
@@ -97,17 +104,24 @@ public class CustomTabsSessionToken {
      * @return A mock token with no functionality.
      */
     @NonNull
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     public static CustomTabsSessionToken createMockSessionTokenForTesting() {
         return new CustomTabsSessionToken(new MockCallback(), null);
     }
 
     CustomTabsSessionToken(@Nullable ICustomTabsCallback callbackBinder,
             @Nullable PendingIntent sessionId) {
+        if (callbackBinder == null && sessionId == null) {
+            throw new IllegalStateException("CustomTabsSessionToken must have either a session id "
+                    + "or a callback (or both).");
+        }
+
         mCallbackBinder = callbackBinder;
         mSessionId = sessionId;
 
         mCallback = callbackBinder == null ? null : new CustomTabsCallback() {
             @Override
+            @SuppressWarnings("NullAway") // TODO: b/141869399
             public void onNavigationEvent(int navigationEvent, Bundle extras) {
                 try {
                     mCallbackBinder.onNavigationEvent(navigationEvent, extras);
@@ -117,6 +131,7 @@ public class CustomTabsSessionToken {
             }
 
             @Override
+            @SuppressWarnings("NullAway") // TODO: b/141869399
             public void extraCallback(String callbackName, Bundle args) {
                 try {
                     mCallbackBinder.extraCallback(callbackName, args);
@@ -126,6 +141,19 @@ public class CustomTabsSessionToken {
             }
 
             @Override
+            @SuppressWarnings("NullAway") // TODO: b/141869399
+            public Bundle extraCallbackWithResult(@NonNull String callbackName,
+                    @Nullable Bundle args) {
+                try {
+                    return mCallbackBinder.extraCallbackWithResult(callbackName, args);
+                } catch (RemoteException e) {
+                    Log.e(TAG, "RemoteException during ICustomTabsCallback transaction");
+                    return null;
+                }
+            }
+
+            @Override
+            @SuppressWarnings("NullAway") // TODO: b/141869399
             public void onMessageChannelReady(Bundle extras) {
                 try {
                     mCallbackBinder.onMessageChannelReady(extras);
@@ -135,6 +163,7 @@ public class CustomTabsSessionToken {
             }
 
             @Override
+            @SuppressWarnings("NullAway") // TODO: b/141869399
             public void onPostMessage(String message, Bundle extras) {
                 try {
                     mCallbackBinder.onPostMessage(message, extras);
@@ -144,6 +173,7 @@ public class CustomTabsSessionToken {
             }
 
             @Override
+            @SuppressWarnings("NullAway") // TODO: b/141869399
             public void onRelationshipValidationResult(@CustomTabsService.Relation int relation,
                     Uri origin, boolean result, Bundle extras) {
                 try {
@@ -162,6 +192,7 @@ public class CustomTabsSessionToken {
         return mCallbackBinder.asBinder();
     }
 
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     PendingIntent getId() {
         return mSessionId;
     }
@@ -183,6 +214,7 @@ public class CustomTabsSessionToken {
     }
 
     @Override
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     public int hashCode() {
         if (mSessionId != null) return mSessionId.hashCode();
 
@@ -190,13 +222,20 @@ public class CustomTabsSessionToken {
     }
 
     @Override
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     public boolean equals(Object o) {
         if (!(o instanceof CustomTabsSessionToken)) return false;
         CustomTabsSessionToken other = (CustomTabsSessionToken) o;
-        if (mSessionId != null && other.getId() != null) return mSessionId.equals(other.getId());
 
-        return other.getCallbackBinder() != null
-                && other.getCallbackBinder().equals(mCallbackBinder.asBinder());
+        PendingIntent otherSessionId = other.getId();
+        // If one object has a session id and the other one doesn't, they're not equal.
+        if ((mSessionId == null) != (otherSessionId == null)) return false;
+
+        // If both objects have an id, check that they are equal.
+        if (mSessionId != null) return mSessionId.equals(otherSessionId);
+
+        // Otherwise check for binder equality.
+        return getCallbackBinder().equals(other.getCallbackBinder());
     }
 
     /**

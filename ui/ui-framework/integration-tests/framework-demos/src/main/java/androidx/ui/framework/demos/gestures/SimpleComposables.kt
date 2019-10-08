@@ -16,7 +16,6 @@
 
 package androidx.ui.framework.demos.gestures
 
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.memo
 import androidx.compose.unaryPlus
@@ -27,24 +26,24 @@ import androidx.ui.core.Px
 import androidx.ui.core.dp
 import androidx.ui.core.ipx
 import androidx.ui.graphics.Color
-import androidx.ui.painting.Paint
+import androidx.ui.graphics.Paint
 import androidx.compose.composer
 import androidx.ui.core.Draw
+import androidx.ui.core.IntPx
+import androidx.ui.graphics.PaintingStyle
 
 /**
  * A simple layout composable that matches the size of it's parent layout.
  */
 @Composable
-internal fun MatchParent(@Children children: @Composable() () -> Unit) {
-    Layout({
-        children()
-    }, { _, constraints ->
+internal fun MatchParent(children: @Composable() () -> Unit) {
+    Layout(children) { _, constraints ->
         layout(constraints.maxWidth, constraints.maxHeight) {}
-    })
+    }
 }
 
 @Composable
-internal fun Center(@Children children: @Composable() () -> Unit) {
+internal fun Center(children: @Composable() () -> Unit) {
     Layout(children) { measurables, constraints ->
         val placeable = measurables.first().measure(constraints)
         layout(constraints.maxWidth, constraints.maxHeight) {
@@ -59,12 +58,26 @@ internal fun Center(@Children children: @Composable() () -> Unit) {
  * A simple composable that pads items by [padding].
  */
 @Composable
-private fun Padding(padding: Dp?, @Children children: @Composable() () -> Unit) {
+private fun Padding(padding: Dp, children: @Composable() () -> Unit) {
+    Padding(padding, padding, padding, padding, children)
+}
+
+@Composable
+internal fun Padding(
+    paddingLeft: Dp? = null,
+    paddingTop: Dp? = null,
+    paddingRight: Dp? = null,
+    paddingBottom: Dp? = null,
+    children: @Composable() () -> Unit
+) {
     Layout(children) { measurables, constraints ->
-        val paddingPx = padding?.toIntPx() ?: 0.ipx
-        val doublePadding = paddingPx * 2
-        val maxWidth = constraints.maxWidth - doublePadding
-        val maxHeight = constraints.maxHeight - doublePadding
+        println(constraints)
+        val paddingLeftIpx = paddingLeft?.toIntPx() ?: IntPx.Zero
+        val paddingTopIpx = paddingTop?.toIntPx() ?: IntPx.Zero
+        val paddingRightIpx = paddingRight?.toIntPx() ?: IntPx.Zero
+        val paddingBottomIpx = paddingBottom?.toIntPx() ?: IntPx.Zero
+        val maxWidth = constraints.maxWidth - paddingLeftIpx - paddingRightIpx
+        val maxHeight = constraints.maxHeight - paddingTopIpx - paddingBottomIpx
         val minWidth =
             if (constraints.minWidth > maxWidth) {
                 maxWidth
@@ -77,20 +90,21 @@ private fun Padding(padding: Dp?, @Children children: @Composable() () -> Unit) 
             } else {
                 constraints.minHeight
             }
-        val placeable = measurables.first().measure(
-            Constraints(minWidth, maxWidth, minHeight, maxHeight)
-        )
+
+        val placeable = if (measurables.isNotEmpty()) {
+            measurables.first().measure(Constraints(minWidth, maxWidth, minHeight, maxHeight))
+        } else {
+            null
+        }
+
         layout(constraints.maxWidth, constraints.maxHeight) {
-            placeable.place(paddingPx, paddingPx)
+            placeable?.place(paddingLeftIpx, paddingTopIpx)
         }
     }
 }
 
-/**
- * A simple composable that draws a border around it's children.
- */
 @Composable
-private fun Border(color: Color, width: Dp, @Children children: @Composable() () -> Unit) {
+internal fun Border(color: Color, width: Dp, children: @Composable() () -> Unit) {
     Layout(
         children = {
             children()
@@ -100,7 +114,7 @@ private fun Border(color: Color, width: Dp, @Children children: @Composable() ()
 
                 val backgroundPaint = Paint().apply {
                     this.color = color
-                    style = androidx.ui.painting.PaintingStyle.stroke
+                    style = PaintingStyle.stroke
                     strokeWidth = floatWidth
                 }
                 canvas.drawRect(
@@ -114,7 +128,7 @@ private fun Border(color: Color, width: Dp, @Children children: @Composable() ()
                 )
             }
         },
-        layoutBlock = { measurables, constraints ->
+        measureBlock = { measurables, constraints ->
             val placeable =
                 if (measurables.isNotEmpty()) measurables.first().measure(constraints) else null
             val layoutWidth = placeable?.width ?: constraints.maxWidth
@@ -125,26 +139,16 @@ private fun Border(color: Color, width: Dp, @Children children: @Composable() ()
         })
 }
 
-/**
- * A simple composable that contains items within optional [width] and [height] dimensions, wraps
- * the contents in a border (with [borderColor] and [borderWidth]), and optionally pads everything
- * with [padding],
- *
- * If [width] or [height] are not set, the parent's min and max constraints are passed through for
- * the given dimension.  If [padding] is not set, no padding will be applied. If
- * [borderColor] is not set, a reasonable default will be used, and if [borderWidth] is not set,
- * no border will be drawn.
- */
 @Composable
 internal fun SimpleContainer(
     width: Dp,
     height: Dp,
     padding: Dp,
-    @Children children: @Composable() () -> Unit
+    children: @Composable() () -> Unit
 ) {
 
     val borderWidth: Dp = 2.dp
-    val borderColor: Color = Color(0f, 0f, 0f, .12f)
+    val borderColor = BorderColor
 
     Layout({
         Padding(padding) {
@@ -155,7 +159,7 @@ internal fun SimpleContainer(
                 children()
             }
         }
-    }, { measurables, constraints ->
+    }) { measurables, constraints ->
         val newConstraints =
             constraints.copy(
                 maxWidth = if (width.value >= 0) width.toIntPx() else constraints.maxWidth,
@@ -168,15 +172,15 @@ internal fun SimpleContainer(
         layout(newConstraints.maxWidth, newConstraints.maxHeight) {
             placeable.place(0.ipx, 0.ipx)
         }
-    })
+    }
 }
 
 @Composable
 internal fun DrawBox(
     xOffset: Px,
     yOffset: Px,
-    width: Px,
-    height: Px,
+    width: Dp,
+    height: Dp,
     color: Color
 ) {
     val paint = +memo { Paint() }
@@ -184,8 +188,10 @@ internal fun DrawBox(
         paint.color = color
         val centerX = parentSize.width.value / 2 + xOffset.value
         val centerY = parentSize.height.value / 2 + yOffset.value
-        val widthValue = if (width.value < 0) parentSize.width.value else width.value
-        val heightValue = if (height.value < 0) parentSize.height.value else height.value
+        val widthPx = width.toPx()
+        val heightPx = height.toPx()
+        val widthValue = if (widthPx.value < 0) parentSize.width.value else widthPx.value
+        val heightValue = if (heightPx.value < 0) parentSize.height.value else heightPx.value
         canvas.drawRect(
             androidx.ui.engine.geometry.Rect(
                 centerX - widthValue / 2,

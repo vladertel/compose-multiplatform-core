@@ -29,6 +29,7 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.media2.common.BaseResult;
 import androidx.media2.common.MediaItem;
 import androidx.media2.common.MediaMetadata;
 import androidx.media2.common.SessionPlayer;
@@ -39,13 +40,17 @@ import androidx.media2.session.MediaController;
 import androidx.media2.session.MediaSession;
 import androidx.palette.graphics.Palette;
 
+import com.google.common.util.concurrent.ListenableFuture;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * A high level view for media playbacks that can be integrated with either a {@link SessionPlayer}
@@ -100,7 +105,7 @@ import java.util.concurrent.Executor;
  * If values for these keys are not set, the following default values will be shown, respectively:
  * {@link androidx.media2.widget.R.string#mcv2_music_title_unknown_text}
  * {@link androidx.media2.widget.R.string#mcv2_music_artist_unknown_text}
- * {@link androidx.media2.widget.R.drawable#ic_default_album_image}
+ * {@link androidx.media2.widget.R.drawable#media2_widget_ic_default_album_image}
  *
  * <p>
  * Note: VideoView does not retain its full state when going into the background. In particular, it
@@ -144,7 +149,6 @@ public class VideoView extends SelectiveLayout {
 
     PlayerWrapper mPlayer;
     MediaControlView mMediaControlView;
-    Executor mCallbackExecutor;
 
     MusicView mMusicView;
 
@@ -169,8 +173,8 @@ public class VideoView extends SelectiveLayout {
                         + ", width/height: " + width + "/" + height
                         + ", " + view.toString());
             }
-            if (view == mTargetView) {
-                ((VideoViewInterface) view).takeOver();
+            if (view == mTargetView && VideoView.this.isAggregatedVisible()) {
+                mTargetView.assignSurfaceToPlayerWrapper(mPlayer);
             }
         }
 
@@ -192,9 +196,7 @@ public class VideoView extends SelectiveLayout {
         @Override
         public void onSurfaceTakeOverDone(@NonNull VideoViewInterface view) {
             if (view != mTargetView) {
-                if (DEBUG) {
-                    Log.d(TAG, "onSurfaceTakeOverDone(). view is not targetView. ignore.: " + view);
-                }
+                Log.w(TAG, "onSurfaceTakeOverDone(). view is not targetView. ignore.: " + view);
                 return;
             }
             if (DEBUG) {
@@ -225,8 +227,6 @@ public class VideoView extends SelectiveLayout {
 
     private void initialize(Context context, @Nullable AttributeSet attrs) {
         mSelectedSubtitleTrackInfo = null;
-
-        mCallbackExecutor = ContextCompat.getMainExecutor(context);
 
         setFocusable(true);
         setFocusableInTouchMode(true);
@@ -336,11 +336,10 @@ public class VideoView extends SelectiveLayout {
         if (isAttachedToWindow()) {
             mPlayer.attachCallback();
         }
-
-        mSurfaceView.setPlayerWrapper(mPlayer);
-        mTextureView.setPlayerWrapper(mPlayer);
-        if (!mCurrentView.assignSurfaceToPlayerWrapper(mPlayer)) {
-            Log.w(TAG, "failed to assign surface");
+        if (this.isAggregatedVisible()) {
+            mTargetView.assignSurfaceToPlayerWrapper(mPlayer);
+        } else {
+            resetPlayerSurfaceWithNullAsync();
         }
 
         if (mMediaControlView != null) {
@@ -373,11 +372,10 @@ public class VideoView extends SelectiveLayout {
         if (isAttachedToWindow()) {
             mPlayer.attachCallback();
         }
-
-        mSurfaceView.setPlayerWrapper(mPlayer);
-        mTextureView.setPlayerWrapper(mPlayer);
-        if (!mCurrentView.assignSurfaceToPlayerWrapper(mPlayer)) {
-            Log.w(TAG, "failed to assign surface");
+        if (this.isAggregatedVisible()) {
+            mTargetView.assignSurfaceToPlayerWrapper(mPlayer);
+        } else {
+            resetPlayerSurfaceWithNullAsync();
         }
 
         if (mMediaControlView != null) {
@@ -459,8 +457,10 @@ public class VideoView extends SelectiveLayout {
         }
 
         mTargetView = targetView;
+        if (this.isAggregatedVisible()) {
+            targetView.assignSurfaceToPlayerWrapper(mPlayer);
+        }
         ((View) targetView).setVisibility(View.VISIBLE);
-        targetView.takeOver();
         requestLayout();
     }
 
@@ -489,19 +489,33 @@ public class VideoView extends SelectiveLayout {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-
         if (mPlayer != null) {
             mPlayer.attachCallback();
-            if (!mCurrentView.assignSurfaceToPlayerWrapper(mPlayer)) {
-                Log.w(TAG, "failed to assign surface");
+        }
+    }
+
+    @Override
+    void onVisibilityAggregatedCompat(boolean isVisible) {
+        super.onVisibilityAggregatedCompat(isVisible);
+        if (mPlayer == null) {
+            return;
+        }
+
+        if (isVisible) {
+            mTargetView.assignSurfaceToPlayerWrapper(mPlayer);
+        } else {
+            if (mPlayer == null || mPlayer.hasDisconnectedController()) {
+                Log.w(TAG, "Surface is being destroyed, but player will not be informed "
+                        + "as the associated media controller is disconnected.");
+                return;
             }
+            resetPlayerSurfaceWithNull();
         }
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-
         if (mPlayer != null) {
             mPlayer.detachCallback();
         }
@@ -569,7 +583,7 @@ public class VideoView extends SelectiveLayout {
             Resources resources = getResources();
 
             Drawable albumDrawable = getAlbumArt(metadata,
-                    resources.getDrawable(R.drawable.ic_default_album_image));
+                    resources.getDrawable(R.drawable.media2_widget_ic_default_album_image));
             String title = getString(metadata, MediaMetadata.METADATA_KEY_TITLE,
                     resources.getString(R.string.mcv2_music_title_unknown_text));
             String artist = getString(metadata, MediaMetadata.METADATA_KEY_ARTIST,
@@ -584,6 +598,40 @@ public class VideoView extends SelectiveLayout {
             mMusicView.setTitleText(null);
             mMusicView.setArtistText(null);
         }
+    }
+
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    void resetPlayerSurfaceWithNull() {
+        try {
+            int resultCode = mPlayer.setSurface(null).get(100, TimeUnit.MILLISECONDS)
+                    .getResultCode();
+            if (resultCode != BaseResult.RESULT_SUCCESS) {
+                Log.e(TAG, "calling setSurface(null) was not "
+                        + "successful. ResultCode: " + resultCode);
+            }
+        } catch (ExecutionException | InterruptedException | TimeoutException e) {
+            Log.e(TAG, "calling setSurface(null) was not successful.", e);
+        }
+    }
+
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    void resetPlayerSurfaceWithNullAsync() {
+        ListenableFuture<? extends BaseResult> future = mPlayer.setSurface(null);
+        future.addListener(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            int resultCode = future.get().getResultCode();
+                            if (resultCode != BaseResult.RESULT_SUCCESS) {
+                                Log.e(TAG, "calling setSurface(null) was not "
+                                        + "successful. ResultCode: " + resultCode);
+                            }
+                        } catch (ExecutionException | InterruptedException e) {
+                            Log.e(TAG, "calling setSurface(null) was not successful.", e);
+                        }
+                    }
+                }, ContextCompat.getMainExecutor(getContext()));
     }
 
     private Drawable getAlbumArt(@NonNull MediaMetadata metadata, Drawable defaultDrawable) {
@@ -605,7 +653,7 @@ public class VideoView extends SelectiveLayout {
             drawable = new BitmapDrawable(getResources(), bitmap);
         } else {
             mMusicView.setBackgroundColor(
-                    getResources().getColor(R.color.music_view_default_background));
+                    getResources().getColor(R.color.media2_widget_music_view_default_background));
         }
         return drawable;
     }
@@ -623,21 +671,20 @@ public class VideoView extends SelectiveLayout {
                 Log.d(TAG, "onConnected()");
             }
             if (shouldIgnoreCallback(player)) return;
-            if (!mCurrentView.assignSurfaceToPlayerWrapper(mPlayer)) {
-                Log.w(TAG, "failed to assign surface");
+            if (VideoView.this.isAggregatedVisible()) {
+                mTargetView.assignSurfaceToPlayerWrapper(mPlayer);
             }
         }
 
         @Override
-        void onVideoSizeChanged(@NonNull PlayerWrapper player, @NonNull MediaItem item,
-                @NonNull VideoSize videoSize) {
+        void onVideoSizeChanged(@NonNull PlayerWrapper player, @NonNull VideoSize videoSize) {
             if (DEBUG) {
                 Log.d(TAG, "onVideoSizeChanged(): size: " + videoSize);
             }
             if (shouldIgnoreCallback(player)) return;
             if (mVideoTrackCount == 0 && videoSize.getHeight() > 0 && videoSize.getWidth() > 0) {
                 if (isMediaPrepared()) {
-                    List<TrackInfo> trackInfos = player.getTrackInfo();
+                    List<TrackInfo> trackInfos = player.getTracks();
                     if (trackInfos != null) {
                         updateTracks(player, trackInfos);
                     }
@@ -692,13 +739,12 @@ public class VideoView extends SelectiveLayout {
         }
 
         @Override
-        void onTrackInfoChanged(@NonNull PlayerWrapper player,
-                @NonNull List<TrackInfo> trackInfos) {
+        void onTracksChanged(@NonNull PlayerWrapper player, @NonNull List<TrackInfo> tracks) {
             if (DEBUG) {
-                Log.d(TAG, "onTrackInfoChanged(): tracks: " + trackInfos);
+                Log.d(TAG, "onTrackInfoChanged(): tracks: " + tracks);
             }
             if (shouldIgnoreCallback(player)) return;
-            updateTracks(player, trackInfos);
+            updateTracks(player, tracks);
             updateMusicView(player.getCurrentMediaItem());
         }
 

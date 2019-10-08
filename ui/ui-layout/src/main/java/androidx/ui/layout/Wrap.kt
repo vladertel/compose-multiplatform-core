@@ -21,9 +21,9 @@ import androidx.ui.core.Layout
 import androidx.ui.core.ipx
 import androidx.ui.core.looseMin
 import androidx.ui.core.max
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
+import androidx.ui.core.Alignment
 
 /**
  * A layout that expects a child and places it within itself. The child will be measured
@@ -35,8 +35,8 @@ import androidx.compose.composer
  * For a widget that does alignment and tries to be as large as possible, see [Align].
  */
 @Composable
-fun Wrap(alignment: Alignment = Alignment.TopLeft, @Children children: @Composable() () -> Unit) {
-    Layout(layoutBlock = { measurables, constraints ->
+fun Wrap(alignment: Alignment = Alignment.TopLeft, children: @Composable() () -> Unit) {
+    Layout(children) { measurables, constraints ->
         val measurable = measurables.firstOrNull()
         // The child cannot be larger than our max constraints, but we ignore min constraints.
         val placeable = measurable?.measure(constraints.looseMin())
@@ -53,5 +53,5 @@ fun Wrap(alignment: Alignment = Alignment.TopLeft, @Children children: @Composab
                 placeable.place(position.x, position.y)
             }
         }
-    }, children=children)
+    }
 }

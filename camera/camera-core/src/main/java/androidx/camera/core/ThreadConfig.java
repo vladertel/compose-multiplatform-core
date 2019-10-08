@@ -16,12 +16,13 @@
 
 package androidx.camera.core;
 
-import android.os.Handler;
-
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.camera.core.Config.Option;
+
+import java.util.concurrent.Executor;
 
 /**
  * Configuration containing options pertaining to threads used by the configured object.
@@ -35,33 +36,35 @@ interface ThreadConfig {
     // *********************************************************************************************
 
     /**
-     * Option: camerax.core.thread.callbackHandler
+     * Option: camerax.core.thread.backgroundExecutor
      *
      * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
-    Option<Handler> OPTION_CALLBACK_HANDLER =
-            Option.create("camerax.core.thread.callbackHandler", Handler.class);
+    Option<Executor> OPTION_BACKGROUND_EXECUTOR =
+            Option.create("camerax.core.thread.backgroundExecutor", Executor.class);
 
     // *********************************************************************************************
 
     /**
-     * Returns the default handler that will be used for callbacks.
+     * Returns the executor that will be used for background tasks.
      *
      * @param valueIfMissing The value to return if this configuration option has not been set.
      * @return The stored value or <code>valueIfMissing</code> if the value does not exist in this
      * configuration.
      */
     @Nullable
-    Handler getCallbackHandler(@Nullable Handler valueIfMissing);
+    Executor getBackgroundExecutor(@Nullable Executor valueIfMissing);
+
 
     /**
-     * Returns the default handler that will be used for callbacks.
+     * Returns the executor that will be used for background tasks.
      *
      * @return The stored value, if it exists in this configuration.
      * @throws IllegalArgumentException if the option does not exist in this configuration.
      */
-    Handler getCallbackHandler();
+    @NonNull
+    Executor getBackgroundExecutor();
 
     /**
      * Builder for a {@link ThreadConfig}.
@@ -74,11 +77,12 @@ interface ThreadConfig {
     interface Builder<B> {
 
         /**
-         * Sets the default handler that will be used for callbacks.
+         * Sets the default executor that will be used for background tasks.
          *
-         * @param handler The handler which will be used to post callbacks.
+         * @param executor The executor which will be used for background tasks.
          * @return the current Builder.
          */
-        B setCallbackHandler(Handler handler);
+        @NonNull
+        B setBackgroundExecutor(@NonNull Executor executor);
     }
 }

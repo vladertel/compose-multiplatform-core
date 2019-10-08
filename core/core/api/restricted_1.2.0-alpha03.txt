@@ -138,15 +138,16 @@ package androidx.core.app {
     method public static void putBinder(android.os.Bundle, String?, android.os.IBinder?);
   }
 
-  @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public class ComponentActivity extends android.app.Activity implements androidx.core.view.KeyEventDispatcher.Component {
+  @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public class ComponentActivity extends android.app.Activity implements androidx.core.view.KeyEventDispatcher.Component androidx.lifecycle.LifecycleOwner {
     ctor public ComponentActivity();
-    method @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public <T extends androidx.core.app.ComponentActivity.ExtraData> T! getExtraData(Class<T!>!);
-    method @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public void putExtraData(androidx.core.app.ComponentActivity.ExtraData!);
+    method @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public <T extends androidx.core.app.ComponentActivity.ExtraData> T! getExtraData(Class<T!>!);
+    method public androidx.lifecycle.Lifecycle getLifecycle();
+    method @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public void putExtraData(androidx.core.app.ComponentActivity.ExtraData!);
     method @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public boolean superDispatchKeyEvent(android.view.KeyEvent!);
   }
 
-  @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public static class ComponentActivity.ExtraData {
-    ctor public ComponentActivity.ExtraData();
+  @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public static class ComponentActivity.ExtraData {
+    ctor @Deprecated public ComponentActivity.ExtraData();
   }
 
   @RequiresApi(api=28) @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public class CoreComponentFactory extends android.app.AppComponentFactory {
@@ -817,10 +818,10 @@ package androidx.core.app {
   }
 
   public final class ShareCompat {
-    method public static void configureMenuItem(android.view.MenuItem!, androidx.core.app.ShareCompat.IntentBuilder!);
-    method public static void configureMenuItem(android.view.Menu!, int, androidx.core.app.ShareCompat.IntentBuilder!);
-    method public static android.content.ComponentName! getCallingActivity(android.app.Activity!);
-    method public static String! getCallingPackage(android.app.Activity!);
+    method public static void configureMenuItem(android.view.MenuItem, androidx.core.app.ShareCompat.IntentBuilder);
+    method public static void configureMenuItem(android.view.Menu, @IdRes int, androidx.core.app.ShareCompat.IntentBuilder);
+    method public static android.content.ComponentName? getCallingActivity(android.app.Activity);
+    method public static String? getCallingPackage(android.app.Activity);
     field public static final String EXTRA_CALLING_ACTIVITY = "androidx.core.app.EXTRA_CALLING_ACTIVITY";
     field public static final String EXTRA_CALLING_ACTIVITY_INTEROP = "android.support.v4.app.EXTRA_CALLING_ACTIVITY";
     field public static final String EXTRA_CALLING_PACKAGE = "androidx.core.app.EXTRA_CALLING_PACKAGE";
@@ -828,46 +829,46 @@ package androidx.core.app {
   }
 
   public static class ShareCompat.IntentBuilder {
-    method public androidx.core.app.ShareCompat.IntentBuilder! addEmailBcc(String!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! addEmailBcc(String![]!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! addEmailCc(String!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! addEmailCc(String![]!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! addEmailTo(String!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! addEmailTo(String![]!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! addStream(android.net.Uri!);
-    method public android.content.Intent! createChooserIntent();
-    method public static androidx.core.app.ShareCompat.IntentBuilder! from(android.app.Activity!);
-    method public android.content.Intent! getIntent();
-    method public androidx.core.app.ShareCompat.IntentBuilder! setChooserTitle(CharSequence!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! setChooserTitle(@StringRes int);
-    method public androidx.core.app.ShareCompat.IntentBuilder! setEmailBcc(String![]!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! setEmailCc(String![]!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! setEmailTo(String![]!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! setHtmlText(String!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! setStream(android.net.Uri!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! setSubject(String!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! setText(CharSequence!);
-    method public androidx.core.app.ShareCompat.IntentBuilder! setType(String!);
+    method public androidx.core.app.ShareCompat.IntentBuilder addEmailBcc(String);
+    method public androidx.core.app.ShareCompat.IntentBuilder addEmailBcc(String![]);
+    method public androidx.core.app.ShareCompat.IntentBuilder addEmailCc(String);
+    method public androidx.core.app.ShareCompat.IntentBuilder addEmailCc(String![]);
+    method public androidx.core.app.ShareCompat.IntentBuilder addEmailTo(String);
+    method public androidx.core.app.ShareCompat.IntentBuilder addEmailTo(String![]);
+    method public androidx.core.app.ShareCompat.IntentBuilder addStream(android.net.Uri);
+    method public android.content.Intent createChooserIntent();
+    method public static androidx.core.app.ShareCompat.IntentBuilder from(android.app.Activity);
+    method public android.content.Intent getIntent();
+    method public androidx.core.app.ShareCompat.IntentBuilder setChooserTitle(CharSequence?);
+    method public androidx.core.app.ShareCompat.IntentBuilder setChooserTitle(@StringRes int);
+    method public androidx.core.app.ShareCompat.IntentBuilder setEmailBcc(String![]?);
+    method public androidx.core.app.ShareCompat.IntentBuilder setEmailCc(String![]?);
+    method public androidx.core.app.ShareCompat.IntentBuilder setEmailTo(String![]?);
+    method public androidx.core.app.ShareCompat.IntentBuilder setHtmlText(String?);
+    method public androidx.core.app.ShareCompat.IntentBuilder setStream(android.net.Uri?);
+    method public androidx.core.app.ShareCompat.IntentBuilder setSubject(String?);
+    method public androidx.core.app.ShareCompat.IntentBuilder setText(CharSequence?);
+    method public androidx.core.app.ShareCompat.IntentBuilder setType(String?);
     method public void startChooser();
   }
 
   public static class ShareCompat.IntentReader {
-    method public static androidx.core.app.ShareCompat.IntentReader! from(android.app.Activity!);
-    method public android.content.ComponentName! getCallingActivity();
-    method public android.graphics.drawable.Drawable! getCallingActivityIcon();
-    method public android.graphics.drawable.Drawable! getCallingApplicationIcon();
-    method public CharSequence! getCallingApplicationLabel();
-    method public String! getCallingPackage();
-    method public String![]! getEmailBcc();
-    method public String![]! getEmailCc();
-    method public String![]! getEmailTo();
-    method public String! getHtmlText();
-    method public android.net.Uri! getStream();
-    method public android.net.Uri! getStream(int);
+    method public static androidx.core.app.ShareCompat.IntentReader from(android.app.Activity);
+    method public android.content.ComponentName? getCallingActivity();
+    method public android.graphics.drawable.Drawable? getCallingActivityIcon();
+    method public android.graphics.drawable.Drawable? getCallingApplicationIcon();
+    method public CharSequence? getCallingApplicationLabel();
+    method public String? getCallingPackage();
+    method public String![]? getEmailBcc();
+    method public String![]? getEmailCc();
+    method public String![]? getEmailTo();
+    method public String? getHtmlText();
+    method public android.net.Uri? getStream();
+    method public android.net.Uri? getStream(int);
     method public int getStreamCount();
-    method public String! getSubject();
-    method public CharSequence! getText();
-    method public String! getType();
+    method public String? getSubject();
+    method public CharSequence? getText();
+    method public String? getType();
     method public boolean isMultipleShare();
     method public boolean isShareIntent();
     method public boolean isSingleShare();
@@ -1968,7 +1969,7 @@ package androidx.core.util {
   }
 
   public interface Predicate<T> {
-    method public boolean test(T);
+    method public boolean test(T!);
   }
 
   public interface Supplier<T> {

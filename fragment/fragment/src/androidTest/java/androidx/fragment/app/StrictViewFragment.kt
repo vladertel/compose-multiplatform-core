@@ -39,6 +39,8 @@ open class StrictViewFragment(
     ): View? {
         checkGetActivity()
         checkState("onCreateView", State.CREATED)
+        assertWithMessage("Fragment should not have a view when calling onCreateView")
+            .that(mView).isNull()
         return super.onCreateView(inflater, container, savedInstanceState).also {
             onCreateViewCalled = true
         }
@@ -58,5 +60,14 @@ open class StrictViewFragment(
         checkGetActivity()
         checkState("onDestroyView", State.CREATED)
         onDestroyViewCalled = true
+    }
+
+    override fun onDestroy() {
+        if (onCreateViewCalled) {
+            assertWithMessage("onDestroyView should be called before on Destroy")
+                .that(onDestroyViewCalled)
+                .isTrue()
+        }
+        super.onDestroy()
     }
 }

@@ -242,23 +242,18 @@ class MediaControllerStub extends IMediaController.Stub {
 
     @Override
     public void onVideoSizeChanged(int seq, final ParcelImpl item, final ParcelImpl videoSize) {
-        if (item == null || videoSize == null) {
+        if (videoSize == null) {
             return;
         }
         dispatchControllerTask(new ControllerTask() {
             @Override
             public void run(MediaControllerImplBase controller) {
-                MediaItem itemObj = MediaParcelUtils.fromParcelable(item);
-                if (itemObj == null) {
-                    Log.w(TAG, "onVideoSizeChanged(): Ignoring null MediaItem");
-                    return;
-                }
                 VideoSize size = MediaParcelUtils.fromParcelable(videoSize);
                 if (size == null) {
                     Log.w(TAG, "onVideoSizeChanged(): Ignoring null VideoSize");
                     return;
                 }
-                controller.notifyVideoSizeChanged(itemObj, size);
+                controller.notifyVideoSizeChanged(size);
             }
         });
     }
@@ -318,7 +313,7 @@ class MediaControllerStub extends IMediaController.Stub {
                     result.getRepeatMode(), result.getShuffleMode(), itemList,
                     result.getSessionActivity(), result.getCurrentMediaItemIndex(),
                     result.getPreviousMediaItemIndex(), result.getNextMediaItemIndex(),
-                    result.getTokenExtras(), result.getVideoSize(), result.getTrackInfo(),
+                    result.getTokenExtras(), result.getVideoSize(), result.getTracks(),
                     result.getSelectedVideoTrack(), result.getSelectedAudioTrack(),
                     result.getSelectedSubtitleTrack(), result.getSelectedMetadataTrack());
         } finally {
@@ -418,7 +413,7 @@ class MediaControllerStub extends IMediaController.Stub {
                         MediaParcelUtils.fromParcelable(selectedSubtitleParcel);
                 TrackInfo selectedMetadataTrack =
                         MediaParcelUtils.fromParcelable(selectedMetadataParcel);
-                controller.notifyTrackInfoChanged(seq, trackInfos, selectedVideoTrack,
+                controller.notifyTracksChanged(seq, trackInfos, selectedVideoTrack,
                         selectedAudioTrack, selectedSubtitleTrack, selectedMetadataTrack);
             }
         });

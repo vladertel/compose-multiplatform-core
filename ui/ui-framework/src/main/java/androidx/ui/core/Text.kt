@@ -17,9 +17,8 @@ package androidx.ui.core
 
 import android.annotation.SuppressLint
 import androidx.compose.Ambient
-import androidx.compose.Children
-import androidx.compose.Composable
 import androidx.compose.ambient
+import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.compositionReference
 import androidx.compose.effectOf
@@ -31,18 +30,20 @@ import androidx.compose.unaryPlus
 import androidx.ui.core.selection.Selection
 import androidx.ui.core.selection.SelectionMode
 import androidx.ui.core.selection.SelectionRegistrarAmbient
-import androidx.ui.engine.geometry.Offset
-import androidx.ui.graphics.Color
-import androidx.ui.text.AnnotatedString
-import androidx.ui.text.ParagraphStyle
 import androidx.ui.core.selection.TextSelectionHandler
 import androidx.ui.core.selection.TextSelectionProcessor
-import androidx.ui.text.TextSelection
-import androidx.ui.text.TextPainter
+import androidx.ui.graphics.Color
+import androidx.ui.semantics.Semantics
+import androidx.ui.semantics.accessibilityLabel
+import androidx.ui.text.AnnotatedString
+import androidx.ui.text.ParagraphStyle
+import androidx.ui.text.TextDelegate
+import androidx.ui.text.TextRange
 import androidx.ui.text.TextSpan
 import androidx.ui.text.TextStyle
-import androidx.ui.text.toAnnotatedString
+import androidx.ui.text.style.TextAlign
 import androidx.ui.text.style.TextOverflow
+import androidx.ui.text.toAnnotatedString
 
 private val DefaultSoftWrap: Boolean = true
 private val DefaultOverflow: TextOverflow = TextOverflow.Clip
@@ -59,6 +60,7 @@ private val DefaultSelectionColor = Color(0x6633B5E5)
  */
 @Composable
 fun Text(
+    modifier: Modifier = Modifier.None,
     /**
      * Text to render in this widget. If there are also [Span]s in this widget, they will be append
      * after the given [text].
@@ -77,7 +79,7 @@ fun Text(
      *  Whether the text should break at soft line breaks.
      *  If false, the glyphs in the text will be positioned as if there was unlimited horizontal
      *  space.
-     *  If [softWrap] is false, [overflow] and [textAlign] may have unexpected effects.
+     *  If [softWrap] is false, [overflow] and [TextAlign] may have unexpected effects.
      */
     softWrap: Boolean = DefaultSoftWrap,
     /** How visual overflow should be handled. */
@@ -98,7 +100,7 @@ fun Text(
     /**
      * Composable TextSpan attached after [text].
      */
-    @Children child: @Composable TextSpanScope.() -> Unit
+    child: @Composable TextSpanScope.() -> Unit
 ) {
     val rootTextSpan = +memo(text) { TextSpan(text = text) }
     val ref = +compositionReference()
@@ -107,6 +109,7 @@ fun Text(
 
     Text(
         text = rootTextSpan.toAnnotatedString(),
+        modifier = modifier,
         style = style,
         paragraphStyle = paragraphStyle,
         softWrap = softWrap,
@@ -125,6 +128,7 @@ fun Text(
 @Composable
 fun Text(
     text: String,
+    modifier: Modifier = Modifier.None,
     style: TextStyle? = null,
     paragraphStyle: ParagraphStyle? = null,
     softWrap: Boolean = DefaultSoftWrap,
@@ -136,6 +140,7 @@ fun Text(
 ) {
     Text(
         text = AnnotatedString(text),
+        modifier = modifier,
         style = style,
         paragraphStyle = paragraphStyle,
         softWrap = softWrap,
@@ -149,16 +154,17 @@ fun Text(
  * The Text widget displays text that uses multiple different styles. The text to display is
  * described using a [AnnotatedString].
  *
- * TODO(popam): fix this
- * @throws UnsupportedOperationException
  */
-// TODO(migration/qqd): Add tests when text widget system is mature and testable.
 @Composable
 fun Text(
     /**
      * AnnotatedString encoding a styled text.
      */
     text: AnnotatedString,
+    /**
+     * Modifier to apply to this layout node
+     */
+    modifier: Modifier = Modifier.None,
     /** The default text style applied to all text in this widget. */
     style: TextStyle? = null,
     /**
@@ -170,7 +176,7 @@ fun Text(
      *  Whether the text should break at soft line breaks.
      *  If false, the glyphs in the text will be positioned as if there was unlimited horizontal
      *  space.
-     *  If [softWrap] is false, [overflow] and [textAlign] may have unexpected effects.
+     *  If [softWrap] is false, [overflow] and [TextAlign] may have unexpected effects.
      */
     softWrap: Boolean = DefaultSoftWrap,
     /** How visual overflow should be handled. */
@@ -189,7 +195,7 @@ fun Text(
      */
     selectionColor: Color = DefaultSelectionColor
 ) {
-    val internalSelection = +state<TextSelection?> { null }
+    val internalSelection = +state<TextRange?> { null }
     val registrar = +ambient(SelectionRegistrarAmbient)
     val layoutCoordinates = +state<LayoutCoordinates?> { null }
 
@@ -198,9 +204,14 @@ fun Text(
 
     val density = +ambientDensity()
     val resourceLoader = +ambient(FontLoaderAmbient)
+    val layoutDirection = +ambient(LayoutDirectionAmbient)
 
-    Semantics(label = text.text) {
-        val textPainter = +memo(
+    Semantics(
+        properties = {
+            accessibilityLabel = text.text
+        }
+    ) {
+        val textDelegate = +memo(
             text,
             mergedStyle,
             paragraphStyle,
@@ -209,7 +220,7 @@ fun Text(
             maxLines,
             density
         ) {
-            TextPainter(
+            TextDelegate(
                 text = text,
                 style = mergedStyle,
                 paragraphStyle = paragraphStyle,
@@ -217,6 +228,7 @@ fun Text(
                 overflow = overflow,
                 maxLines = maxLines,
                 density = density,
+                layoutDirection = layoutDirection,
                 resourceLoader = resourceLoader
             )
         }
@@ -227,34 +239,42 @@ fun Text(
             OnPositioned(onPositioned = { layoutCoordinates.value = it })
             Draw { canvas, _ ->
                 internalSelection.value?.let {
-                    textPainter.paintBackground(
-                        it.start, it.end, selectionColor, canvas, Offset.zero)
+                    textDelegate.paintBackground(
+                        it.min, it.max, selectionColor, canvas
+                    )
                 }
-                textPainter.paint(canvas, Offset.zero)
+                textDelegate.paint(canvas)
             }
         }
-        ComplexLayout(children) {
-            layout { _, constraints ->
-                textPainter.layout(constraints)
-                layoutResult(textPainter.width.px.round(), textPainter.height.px.round()) {}
+        ComplexLayout(children, modifier) {
+            measure { _, constraints ->
+                textDelegate.layout(constraints)
+                layout(
+                    textDelegate.width.px.round(),
+                    textDelegate.height.px.round(),
+                    // Provide values for the alignment lines defined by text - the first
+                    // and last baselines of the text. These can be used by parent layouts
+                    // to position this text or align this and other texts by baseline.
+                    FirstBaseline to textDelegate.firstBaseline.px.round(),
+                    LastBaseline to textDelegate.lastBaseline.px.round()
+                ) {}
             }
             minIntrinsicWidth { _, _ ->
-                // TODO(popam): discuss with the Text team about this
-                throw UnsupportedOperationException()
-                // textPainter.layout(Constraints(0.ipx, IntPx.Infinity, 0.ipx, h))
-                // textPainter.minIntrinsicWidth.px.round()
+                textDelegate.layoutIntrinsics()
+                textDelegate.minIntrinsicWidth.px.round()
             }
-            minIntrinsicHeight { _, w ->
-                textPainter.layout(Constraints(0.ipx, w, 0.ipx, IntPx.Infinity))
-                textPainter.height.px.round()
+            minIntrinsicHeight { _, width ->
+                // given the width constraint, determine the min height
+                textDelegate.layout(Constraints(0.ipx, width, 0.ipx, IntPx.Infinity))
+                textDelegate.height.px.round()
             }
-            maxIntrinsicWidth { _, h ->
-                textPainter.layout(Constraints(0.ipx, IntPx.Infinity, 0.ipx, h))
-                textPainter.maxIntrinsicWidth.px.round()
+            maxIntrinsicWidth { _, _ ->
+                textDelegate.layoutIntrinsics()
+                textDelegate.maxIntrinsicWidth.px.round()
             }
-            maxIntrinsicHeight { _, w ->
-                textPainter.layout(Constraints(0.ipx, w, 0.ipx, IntPx.Infinity))
-                textPainter.height.px.round()
+            maxIntrinsicHeight { _, width ->
+                textDelegate.layout(Constraints(0.ipx, width, 0.ipx, IntPx.Infinity))
+                textDelegate.height.px.round()
             }
         }
 
@@ -284,15 +304,17 @@ fun Text(
                             selectionCoordinates = Pair(startPx, endPx),
                             mode = mode,
                             onSelectionChange = { internalSelection.value = it },
-                            textPainter = textPainter
+                            textDelegate = textDelegate
                         )
-
                         if (!textSelectionProcessor.isSelected) return null
 
-                        // TODO(qqd): Determine a set of coordinates around a character that we need.
+                        // TODO(qqd): Determine a set of coordinates around a character that we
+                        //  need.
                         return Selection(
-                            startOffset = textSelectionProcessor.startOffset,
-                            endOffset = textSelectionProcessor.endOffset,
+                            startCoordinates = textSelectionProcessor.startCoordinates,
+                            endCoordinates = textSelectionProcessor.endCoordinates,
+                            startDirection = textSelectionProcessor.startDirection,
+                            endDirection = textSelectionProcessor.endDirection,
                             startLayoutCoordinates =
                             if (textSelectionProcessor.containsWholeSelectionStart) {
                                 layoutCoordinates.value!!
@@ -312,6 +334,16 @@ fun Text(
     }
 }
 
+/**
+ * [AlignmentLine] defined by the baseline of a first line of a [Text].
+ */
+val FirstBaseline = HorizontalAlignmentLine(::min)
+
+/**
+ * [AlignmentLine] defined by the baseline of the last line of a [Text].
+ */
+val LastBaseline = HorizontalAlignmentLine(::max)
+
 internal val CurrentTextStyleAmbient = Ambient.of<TextStyle>("current text style") {
     TextStyle()
 }
@@ -323,7 +355,7 @@ internal val CurrentTextStyleAmbient = Ambient.of<TextStyle>("current text style
  * styled explicitly.
  */
 @Composable
-fun CurrentTextStyleProvider(value: TextStyle, @Children children: @Composable() () -> Unit) {
+fun CurrentTextStyleProvider(value: TextStyle, children: @Composable() () -> Unit) {
     val style = +ambient(CurrentTextStyleAmbient)
     val mergedStyle = style.merge(value)
     CurrentTextStyleAmbient.Provider(value = mergedStyle) {

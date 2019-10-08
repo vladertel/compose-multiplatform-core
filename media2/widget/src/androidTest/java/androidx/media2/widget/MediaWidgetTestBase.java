@@ -34,6 +34,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.media2.common.MediaItem;
+import androidx.media2.common.MediaMetadata;
 import androidx.media2.common.SessionPlayer;
 import androidx.media2.common.UriMediaItem;
 import androidx.media2.player.MediaPlayer;
@@ -51,6 +52,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MediaWidgetTestBase extends MediaTestBase {
@@ -70,11 +72,13 @@ public class MediaWidgetTestBase extends MediaTestBase {
 
     Context mContext;
     Executor mMainHandlerExecutor;
+    Executor mSessionCallbackExecutor;
 
     @Before
     public void setupWidgetTest() {
         mContext = ApplicationProvider.getApplicationContext();
         mMainHandlerExecutor = ContextCompat.getMainExecutor(mContext);
+        mSessionCallbackExecutor = Executors.newFixedThreadPool(1);
     }
 
     static <T extends Activity> void setKeepScreenOn(ActivityTestRule<T> activityRule)
@@ -127,16 +131,39 @@ public class MediaWidgetTestBase extends MediaTestBase {
     }
 
     MediaItem createTestMediaItem(Uri uri) {
-        return new UriMediaItem.Builder(uri).build();
+        return createTestMediaItem(uri, "defaultMediaId");
     }
 
+    MediaItem createTestMediaItem(Uri uri, String mediaId) {
+        MediaMetadata metadata = new MediaMetadata.Builder()
+                .putText(MediaMetadata.METADATA_KEY_MEDIA_ID, mediaId)
+                .build();
+        return new UriMediaItem.Builder(uri)
+                .setMetadata(metadata)
+                .build();
+    }
+
+    List<MediaItem> createTestPlaylist() {
+        List<MediaItem> list = new ArrayList<>();
+        list.add(createTestMediaItem(Uri.parse("android.resource://" + mContext.getPackageName()
+                + "/" + R.raw.test_file_scheme_video)));
+        list.add(createTestMediaItem(Uri.parse("android.resource://" + mContext.getPackageName()
+                + "/" + R.raw.test_music)));
+        list.add(createTestMediaItem(Uri.parse("android.resource://" + mContext.getPackageName()
+                + "/" + R.raw.testvideo_with_2_subtitle_tracks)));
+        return list;
+    }
+
+    // TODO(b/138091975) Do not ignore returned Futures if feasible.
+    @SuppressWarnings("FutureReturnValueIgnored")
     PlayerWrapper createPlayerWrapperOfController(@NonNull PlayerWrapper.PlayerCallback callback,
-            @Nullable MediaItem item) {
+            @Nullable MediaItem item, @Nullable List<MediaItem> playlist) {
         prepareLooper();
 
         SessionPlayer player = new MediaPlayer(mContext);
         MediaSession session = new MediaSession.Builder(mContext, player)
                 .setId(UUID.randomUUID().toString())
+                .setSessionCallback(mSessionCallbackExecutor, new MediaSession.SessionCallback() {})
                 .build();
         MediaController controller = new MediaController.Builder(mContext)
                 .setSessionToken(session.getToken())
@@ -151,12 +178,17 @@ public class MediaWidgetTestBase extends MediaTestBase {
         if (item != null) {
             player.setMediaItem(item);
             player.prepare();
+        } else if (playlist != null) {
+            player.setPlaylist(playlist, null);
+            player.prepare();
         }
         return wrapper;
     }
 
+    // TODO(b/138091975) Do not ignore returned Futures if feasible.
+    @SuppressWarnings("FutureReturnValueIgnored")
     PlayerWrapper createPlayerWrapperOfPlayer(@NonNull PlayerWrapper.PlayerCallback callback,
-            @Nullable MediaItem item) {
+            @Nullable MediaItem item, @Nullable List<MediaItem> playlist) {
         SessionPlayer player = new MediaPlayer(mContext);
         synchronized (mLock) {
             mPlayers.add(player);
@@ -166,17 +198,20 @@ public class MediaWidgetTestBase extends MediaTestBase {
         if (item != null) {
             player.setMediaItem(item);
             player.prepare();
+        } else if (playlist != null) {
+            player.setPlaylist(playlist, null);
+            player.prepare();
         }
         return wrapper;
     }
 
     PlayerWrapper createPlayerWrapperOfType(@NonNull PlayerWrapper.PlayerCallback callback,
-            @Nullable MediaItem item,
+            @Nullable MediaItem item, @Nullable List<MediaItem> playlist,
             @NonNull String playerType) {
         if (PLAYER_TYPE_MEDIA_CONTROLLER.equals(playerType)) {
-            return createPlayerWrapperOfController(callback, item);
+            return createPlayerWrapperOfController(callback, item, playlist);
         } else if (PLAYER_TYPE_MEDIA_PLAYER.equals(playerType)) {
-            return createPlayerWrapperOfPlayer(callback, item);
+            return createPlayerWrapperOfPlayer(callback, item, playlist);
         } else {
             throw new IllegalArgumentException("unknown playerType " + playerType);
         }
@@ -204,7 +239,7 @@ public class MediaWidgetTestBase extends MediaTestBase {
     }
 
     class DefaultPlayerCallback extends PlayerWrapper.PlayerCallback {
-        CountDownLatch mItemLatch = new CountDownLatch(1);
+        volatile CountDownLatch mItemLatch = new CountDownLatch(1);
         CountDownLatch mPausedLatch = new CountDownLatch(1);
         CountDownLatch mPlayingLatch = new CountDownLatch(1);
 

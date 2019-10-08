@@ -45,9 +45,9 @@ import androidx.recyclerview.widget.RecyclerView;
  *   }
  *
  *   public ItemDetails<Uri> getItemDetails(MotionEvent e) {
- *       View view = mRecView.findChildViewUnder(e.getX(), e.getY());
+ *       View view = mRecyclerView.findChildViewUnder(e.getX(), e.getY());
  *       if (view != null) {
- *           ViewHolder holder = mRecView.getChildViewHolder(view);
+ *           ViewHolder holder = mRecyclerView.getChildViewHolder(view);
  *           if (holder instanceof MyHolder) {
  *               return ((MyHolder) holder).getItemDetails();
  *           }
@@ -241,10 +241,10 @@ public abstract class ItemDetailsLookup<K> {
         @Override
         public boolean equals(@Nullable Object obj) {
             return (obj instanceof ItemDetails)
-                    && isEqualTo((ItemDetails) obj);
+                    && isEqualTo((ItemDetails<?>) obj);
         }
 
-        private boolean isEqualTo(@NonNull ItemDetails other) {
+        private boolean isEqualTo(@NonNull ItemDetails<?> other) {
             K key = getSelectionKey();
             boolean sameKeys = false;
             if (key == null) {

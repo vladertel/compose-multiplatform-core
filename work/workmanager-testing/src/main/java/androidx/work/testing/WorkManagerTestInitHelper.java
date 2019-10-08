@@ -37,6 +37,7 @@ public final class WorkManagerTestInitHelper {
         SynchronousExecutor synchronousExecutor = new SynchronousExecutor();
         Configuration configuration = new Configuration.Builder()
                 .setExecutor(synchronousExecutor)
+                .setTaskExecutor(synchronousExecutor)
                 .build();
         initializeTestWorkManager(context, configuration);
     }
@@ -51,6 +52,15 @@ public final class WorkManagerTestInitHelper {
     public static void initializeTestWorkManager(
             @NonNull Context context,
             @NonNull Configuration configuration) {
+
+        // Check if the configuration being used has overridden the task executor. If not,
+        // swap to SynchronousExecutor. This is to preserve existing behavior.
+        if (configuration.isUsingDefaultTaskExecutor()) {
+            Configuration.Builder builder = new Configuration.Builder(configuration)
+                    .setTaskExecutor(new SynchronousExecutor());
+            configuration = builder.build();
+        }
+
         WorkManagerImpl.setDelegate(new TestWorkManagerImpl(context, configuration));
     }
 

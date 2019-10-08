@@ -22,6 +22,7 @@ import static androidx.media2.common.SessionPlayer.UNKNOWN_TIME;
 import static androidx.media2.session.SessionCommand.COMMAND_CODE_CUSTOM;
 import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_ADD_PLAYLIST_ITEM;
 import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_DESELECT_TRACK;
+import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_MOVE_PLAYLIST_ITEM;
 import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_PAUSE;
 import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_PLAY;
 import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_PREPARE;
@@ -96,6 +97,7 @@ import androidx.media2.session.MediaController.VolumeFlags;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -161,7 +163,7 @@ class MediaControllerImplBase implements MediaControllerImpl {
     @GuardedBy("mLock")
     private VideoSize mVideoSize = new VideoSize(0, 0);
     @GuardedBy("mLock")
-    private List<TrackInfo> mTrackInfos = Collections.emptyList();
+    private List<TrackInfo> mTracks = Collections.emptyList();
     @GuardedBy("mLock")
     private SparseArray<TrackInfo> mSelectedTracks = new SparseArray<>();
 
@@ -597,7 +599,7 @@ class MediaControllerImplBase implements MediaControllerImpl {
     @Override
     public List<MediaItem> getPlaylist() {
         synchronized (mLock) {
-            return mPlaylist;
+            return new ArrayList<>(mPlaylist);
         }
     }
 
@@ -675,6 +677,18 @@ class MediaControllerImplBase implements MediaControllerImpl {
                     @Override
                     public void run(IMediaSession iSession, int seq) throws RemoteException {
                         iSession.replacePlaylistItem(mControllerStub, seq, index, mediaId);
+                    }
+                });
+    }
+
+    @Override
+    public ListenableFuture<SessionResult> movePlaylistItem(
+            final int fromIndex, final int toIndex) {
+        return dispatchRemoteSessionTask(COMMAND_CODE_PLAYER_MOVE_PLAYLIST_ITEM,
+                new RemoteSessionTask() {
+                    @Override
+                    public void run(IMediaSession iSession, int seq) throws RemoteException {
+                        iSession.movePlaylistItem(mControllerStub, seq, fromIndex, toIndex);
                     }
                 });
     }
@@ -780,9 +794,9 @@ class MediaControllerImplBase implements MediaControllerImpl {
 
     @Override
     @NonNull
-    public List<SessionPlayer.TrackInfo> getTrackInfo() {
+    public List<SessionPlayer.TrackInfo> getTracks() {
         synchronized (mLock) {
-            return mTrackInfos;
+            return mTracks;
         }
     }
 
@@ -1131,9 +1145,11 @@ class MediaControllerImplBase implements MediaControllerImpl {
         });
     }
 
-    void notifyVideoSizeChanged(final MediaItem item, final VideoSize videoSize) {
+    void notifyVideoSizeChanged(final VideoSize videoSize) {
+        final MediaItem currentItem;
         synchronized (mLock) {
             mVideoSize = videoSize;
+            currentItem = mCurrentMediaItem;
         }
         mInstance.notifyControllerCallback(new ControllerCallbackRunnable() {
             @Override
@@ -1141,16 +1157,20 @@ class MediaControllerImplBase implements MediaControllerImpl {
                 if (!mInstance.isConnected()) {
                     return;
                 }
-                callback.onVideoSizeChanged(mInstance, item, videoSize);
+
+                if (currentItem != null) {
+                    callback.onVideoSizeChanged(mInstance, currentItem, videoSize);
+                }
+                callback.onVideoSizeChanged(mInstance, videoSize);
             }
         });
     }
 
-    void notifyTrackInfoChanged(final int seq, final List<TrackInfo> trackInfos,
+    void notifyTracksChanged(final int seq, final List<TrackInfo> tracks,
             TrackInfo selectedVideoTrack, TrackInfo selectedAudioTrack,
             TrackInfo selectedSubtitleTrack, TrackInfo selectedMetadataTrack) {
         synchronized (mLock) {
-            mTrackInfos = trackInfos;
+            mTracks = tracks;
             // Update selected tracks
             mSelectedTracks.put(TrackInfo.MEDIA_TRACK_TYPE_VIDEO, selectedVideoTrack);
             mSelectedTracks.put(TrackInfo.MEDIA_TRACK_TYPE_AUDIO, selectedAudioTrack);
@@ -1164,7 +1184,7 @@ class MediaControllerImplBase implements MediaControllerImpl {
                 if (!mInstance.isConnected()) {
                     return;
                 }
-                callback.onTrackInfoChanged(mInstance, trackInfos);
+                callback.onTracksChanged(mInstance, tracks);
             }
         });
     }
@@ -1274,7 +1294,7 @@ class MediaControllerImplBase implements MediaControllerImpl {
                 mPreviousMediaItemIndex = previousMediaItemIndex;
                 mNextMediaItemIndex = nextMediaItemIndex;
                 mVideoSize = videoSize;
-                mTrackInfos = trackInfos;
+                mTracks = trackInfos;
                 mSelectedTracks.put(TrackInfo.MEDIA_TRACK_TYPE_VIDEO, selectedVideoTrack);
                 mSelectedTracks.put(TrackInfo.MEDIA_TRACK_TYPE_AUDIO, selectedAudioTrack);
                 mSelectedTracks.put(TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE, selectedSubtitleTrack);

@@ -25,14 +25,19 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
+import androidx.camera.core.impl.utils.Threads;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
+import com.google.common.util.concurrent.ListenableFuture;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -110,7 +115,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @MainThread
 public final class CameraX {
-
     private static final CameraX INSTANCE = new CameraX();
     final CameraRepository mCameraRepository = new CameraRepository();
     private final AtomicBoolean mInitialized = new AtomicBoolean(false);
@@ -161,9 +165,11 @@ public final class CameraX {
      * @param lifecycleOwner The lifecycleOwner which controls the lifecycle transitions of the use
      *                       cases.
      * @param useCases       The use cases to bind to a lifecycle.
-     * @throws IllegalStateException If the use case has already been bound to another lifecycle.
+     * @throws IllegalStateException If the use case has already been bound to another lifecycle
+     *                               or method is not called on main thread.
      */
     public static void bindToLifecycle(LifecycleOwner lifecycleOwner, UseCase... useCases) {
+        Threads.checkMainThread();
         UseCaseGroupLifecycleController useCaseGroupLifecycleController =
                 INSTANCE.getOrCreateUseCaseGroup(lifecycleOwner);
         UseCaseGroup useCaseGroupToBind = useCaseGroupLifecycleController.getUseCaseGroup();
@@ -231,8 +237,10 @@ public final class CameraX {
      * however listeners and settings should be reset by the application.
      *
      * @param useCases The collection of use cases to remove.
+     * @throws IllegalStateException If not called on main thread.
      */
     public static void unbind(UseCase... useCases) {
+        Threads.checkMainThread();
         Collection<UseCaseGroupLifecycleController> useCaseGroups =
                 INSTANCE.mUseCaseGroupRepository.getUseCaseGroups();
 
@@ -268,8 +276,11 @@ public final class CameraX {
      * Unbinds all use cases from the lifecycle and removes them from CameraX.
      *
      * <p>This will initiate a close of every currently open camera.
+     *
+     * @throws IllegalStateException If not called on main thread.
      */
     public static void unbindAll() {
+        Threads.checkMainThread();
         Collection<UseCaseGroupLifecycleController> useCaseGroups =
                 INSTANCE.mUseCaseGroupRepository.getUseCaseGroups();
 
@@ -280,6 +291,20 @@ public final class CameraX {
         }
 
         unbind(useCases.toArray(new UseCase[0]));
+    }
+
+    /**
+     * Checks if the device supports specified lens facing.
+     *
+     * @param lensFacing the lens facing
+     * @return true if the device has at least one camera with the specified lens facing,
+     * otherwise false.
+     * @throws CameraInfoUnavailableException if unable to access cameras, perhaps due to
+     *                                        insufficient permissions
+     */
+    public static boolean hasCameraWithLensFacing(LensFacing lensFacing)
+            throws CameraInfoUnavailableException {
+        return getCameraFactory().cameraIdForLensFacing(lensFacing) != null;
     }
 
     /**
@@ -298,7 +323,72 @@ public final class CameraX {
     @Nullable
     public static String getCameraWithLensFacing(LensFacing lensFacing)
             throws CameraInfoUnavailableException {
-        return INSTANCE.getCameraFactory().cameraIdForLensFacing(lensFacing);
+        return getCameraFactory().cameraIdForLensFacing(lensFacing);
+    }
+
+    /**
+     * Returns the camera id for a camera defined by the CameraDeviceConfig.
+     *
+     * <p>This will first selects the cameras with lens facing specified in the config. Then
+     * filter those with camera id filters if there's any.
+     *
+     * @param config the config of the camera device
+     * @return the cameraId if camera exists or {@code null} if no camera found with the config
+     * @throws CameraInfoUnavailableException if unable to access cameras, perhaps due to
+     *                                        insufficient permissions.
+     * @throws IllegalArgumentException       if there's no lens facing set in the config.
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Nullable
+    public static String getCameraWithCameraDeviceConfig(CameraDeviceConfig config)
+            throws CameraInfoUnavailableException {
+        Set<String> availableCameraIds = getCameraFactory().getAvailableCameraIds();
+        LensFacing lensFacing = config.getLensFacing(null);
+        if (lensFacing != null) {
+            // Filters camera ids with lens facing.
+            availableCameraIds =
+                    LensFacingCameraIdFilter.createLensFacingCameraIdFilter(lensFacing)
+                            .filter(availableCameraIds);
+        } else {
+            throw new IllegalArgumentException("Lens facing isn't set in the config.");
+        }
+
+        CameraIdFilter cameraIdFilter = config.getCameraIdFilter(null);
+        if (cameraIdFilter != null) {
+            // Filters camera ids with other filters.
+            availableCameraIds = cameraIdFilter.filter(availableCameraIds);
+        }
+
+        if (!availableCameraIds.isEmpty()) {
+            return availableCameraIds.iterator().next();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Gets the default lens facing or {@code null} if there is no available camera.
+     *
+     * @return The default lens facing or {@code null}.
+     * @throws CameraInfoUnavailableException if unable to access cameras, perhaps due to
+     *                                        insufficient permissions.
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Nullable
+    public static LensFacing getDefaultLensFacing()
+            throws CameraInfoUnavailableException {
+        LensFacing lensFacingCandidate = null;
+        List<LensFacing> lensFacingList = Arrays.asList(LensFacing.BACK, LensFacing.FRONT);
+        for (LensFacing lensFacing : lensFacingList) {
+            String cameraId = INSTANCE.getCameraFactory().cameraIdForLensFacing(lensFacing);
+            if (cameraId != null) {
+                lensFacingCandidate = lensFacing;
+                break;
+            }
+        }
+        return lensFacingCandidate;
     }
 
     /**
@@ -311,11 +401,31 @@ public final class CameraX {
      * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
-    @Nullable
-    public static CameraInfo getCameraInfo(String cameraId) throws CameraInfoUnavailableException {
-        return INSTANCE.getCameraRepository().getCamera(cameraId).getCameraInfo();
+    @NonNull
+    public static CameraInfoInternal getCameraInfo(String cameraId)
+            throws CameraInfoUnavailableException {
+        return INSTANCE.getCameraRepository().getCamera(cameraId).getCameraInfoInternal();
     }
 
+    /**
+     * Returns the camera info for the camera with the given lens facing.
+     *
+     * @param lensFacing the lens facing of the camera
+     * @return the camera info if it can be retrieved for the given lens facing.
+     * @throws CameraInfoUnavailableException if unable to access cameras, perhaps due to
+     *                                        insufficient permissions.
+     */
+    @NonNull
+    public static CameraInfo getCameraInfo(@NonNull LensFacing lensFacing)
+            throws CameraInfoUnavailableException {
+        try {
+            String cameraId = getCameraWithLensFacing(lensFacing);
+            return INSTANCE.getCameraRepository().getCamera(cameraId).getCameraInfoInternal();
+        } catch (IllegalArgumentException e) {
+            throw new CameraInfoUnavailableException("Unable to retrieve info for camera with "
+                    + "lens facing: " + lensFacing, e);
+        }
+    }
 
     /**
      * Returns the camera control for the camera with the given lens facing.
@@ -324,9 +434,7 @@ public final class CameraX {
      * @return the {@link CameraControl}.
      * @throws CameraInfoUnavailableException if unable to access cameras, perhaps due to
      *                                        insufficient permissions.
-     * @hide
      */
-    @RestrictTo(Scope.LIBRARY_GROUP)
     public static CameraControl getCameraControl(LensFacing lensFacing)
             throws CameraInfoUnavailableException {
 
@@ -402,8 +510,21 @@ public final class CameraX {
      * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
-    public static void init(Context context, AppConfig appConfig) {
+    public static void init(Context context, @NonNull AppConfig appConfig) {
         INSTANCE.initInternal(context, appConfig);
+    }
+
+    /**
+     * Deinitializes CameraX so that it can be initialized again.
+     *
+     * <p>Note: This is only for testing purpose for now.
+     *
+     * @hide
+     */
+    @RestrictTo(Scope.TESTS)
+    @NonNull
+    public static ListenableFuture<Void> deinit() {
+        return INSTANCE.deinitInternal();
     }
 
     /**
@@ -412,6 +533,7 @@ public final class CameraX {
      * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
     public static Context getContext() {
         return INSTANCE.mContext;
     }
@@ -450,6 +572,23 @@ public final class CameraX {
         }
 
         return activeUseCases;
+    }
+
+    /**
+     * Returns the {@link CameraFactory} instance.
+     *
+     * @throws IllegalStateException if the {@link CameraFactory} has not been set, due to being
+     *                               uninitialized.
+     * @hide
+     */
+    @NonNull
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static CameraFactory getCameraFactory() {
+        if (INSTANCE.mCameraFactory == null) {
+            throw new IllegalStateException("CameraX not initialized yet.");
+        }
+
+        return INSTANCE.mCameraFactory;
     }
 
     /**
@@ -513,13 +652,12 @@ public final class CameraX {
         // Collect new use cases for different camera devices
         for (UseCase useCase : useCases) {
             String cameraId = null;
-            LensFacing lensFacing =
-                    useCase.getUseCaseConfig()
-                            .retrieveOption(CameraDeviceConfig.OPTION_LENS_FACING);
             try {
-                cameraId = getCameraWithLensFacing(lensFacing);
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Invalid camera lens facing: " + lensFacing, e);
+                cameraId = getCameraWithCameraDeviceConfig(
+                        (CameraDeviceConfig) useCase.getUseCaseConfig());
+            } catch (CameraInfoUnavailableException e) {
+                throw new IllegalArgumentException(
+                        "Unable to get camera id for the camera device config.", e);
             }
 
             List<UseCase> useCaseList = newCameraIdUseCaseMap.get(cameraId);
@@ -539,27 +677,13 @@ public final class CameraX {
                                     originalCameraIdUseCaseMap.get(cameraId),
                                     newCameraIdUseCaseMap.get(cameraId));
 
-            for (UseCase useCase : useCases) {
+            for (UseCase useCase : newCameraIdUseCaseMap.get(cameraId)) {
                 Size resolution = suggestResolutionsMap.get(useCase);
                 Map<String, Size> suggestedCameraSurfaceResolutionMap = new HashMap<>();
                 suggestedCameraSurfaceResolutionMap.put(cameraId, resolution);
                 useCase.updateSuggestedResolution(suggestedCameraSurfaceResolutionMap);
             }
         }
-    }
-
-    /**
-     * Returns the {@link CameraFactory} instance.
-     *
-     * @throws IllegalStateException if the {@link CameraFactory} has not been set, due to being
-     *                               uninitialized.
-     */
-    private CameraFactory getCameraFactory() {
-        if (mCameraFactory == null) {
-            throw new IllegalStateException("CameraX not initialized yet.");
-        }
-
-        return mCameraFactory;
     }
 
     /**
@@ -609,6 +733,12 @@ public final class CameraX {
         }
 
         mCameraRepository.init(mCameraFactory);
+    }
+
+    private ListenableFuture<Void> deinitInternal() {
+        mInitialized.set(false);
+
+        return mCameraRepository.deinit();
     }
 
     private UseCaseGroupLifecycleController getOrCreateUseCaseGroup(LifecycleOwner lifecycleOwner) {

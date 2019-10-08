@@ -23,14 +23,14 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.ui.text.font.Font
 import kotlin.math.ceil
 
-// TODO(Migration/siyamed): This should return platform independent bitmap but we dont have it yet
+// TODO(siyamed): This should return platform independent bitmap but we dont have it yet
 fun Paragraph.bitmap(): Bitmap {
     val bitmap = Bitmap.createBitmap(
         ceil(this.width).toInt(),
         ceil(this.height).toInt(),
         Bitmap.Config.ARGB_8888
     )
-    this.paint(androidx.ui.painting.Canvas(Canvas(bitmap)), 0.0f, 0.0f)
+    this.paint(androidx.ui.graphics.Canvas(Canvas(bitmap)))
     return bitmap
 }
 

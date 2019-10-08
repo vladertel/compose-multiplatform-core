@@ -16,6 +16,8 @@
 
 package androidx.compose.plugins.kotlin
 
+import androidx.compose.plugins.kotlin.analysis.ComposeWritableSlices
+import androidx.compose.plugins.kotlin.analysis.ComposeWritableSlices.IGNORE_COMPOSABLE_INTERCEPTION
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
@@ -34,6 +36,7 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFunction
 import org.jetbrains.kotlin.psi.KtLambdaArgument
+import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.CandidateResolver
 import org.jetbrains.kotlin.resolve.calls.context.BasicCallResolutionContext
@@ -68,8 +71,30 @@ class ComposeCallResolutionInterceptorExtension : CallResolutionInterceptorExten
         name: Name,
         location: LookupLocation
     ): Collection<FunctionDescriptor> {
+        if (ComposeFlags.NEW_CALL_RESOLUTION_INTERCEPTION) {
+            val callResolver = (scopeTower as NewResolutionOldInference.ImplicitScopeTowerImpl).callResolver
+            val element = resolutionContext.call.callElement as KtExpression
+            val project = element.project
+            val psiFactory = KtPsiFactory(project, markGenerated = false)
+
+            return ComposeCallResolver(
+                callResolver,
+                project,
+                psiFactory
+            ).interceptCandidates(
+                candidates,
+                scopeTower,
+                resolutionContext,
+                resolutionScope,
+                name,
+                location
+            )
+        }
         if (candidates.isEmpty()) return candidates
-        if (KtxCallResolver.resolving.get().get()) return candidates
+        val bindingContext = resolutionContext.trace.bindingContext
+        val call = resolutionContext.call
+        val shouldIgnore = bindingContext[IGNORE_COMPOSABLE_INTERCEPTION, call] ?: false
+        if (shouldIgnore) return candidates
 
         for (arg in resolutionContext.call.valueArguments) {
             if (arg is KtLambdaArgument) continue
@@ -100,7 +125,7 @@ class ComposeCallResolutionInterceptorExtension : CallResolutionInterceptorExten
         // Ensure we are in a composable context
         var walker: PsiElement? = element
         var isComposableContext = false
-        val facade = CallResolutionInterceptorExtension.facade.get().peek()
+        var composableDescriptor: SimpleFunctionDescriptor? = null
         while (walker != null) {
             val descriptor = try {
                 resolutionContext.trace[BindingContext.FUNCTION, walker]
@@ -114,6 +139,7 @@ class ComposeCallResolutionInterceptorExtension : CallResolutionInterceptorExten
                 )
                 isComposableContext =
                         composability != ComposableAnnotationChecker.Composability.NOT_COMPOSABLE
+                if (isComposableContext) composableDescriptor = descriptor
 
                 // If the descriptor is for an inlined lambda, infer composability from the
                 // outer scope
@@ -132,12 +158,10 @@ class ComposeCallResolutionInterceptorExtension : CallResolutionInterceptorExten
             (scopeTower as NewResolutionOldInference.ImplicitScopeTowerImpl).callResolver
         val ktxCallResolver = KtxCallResolver(
             callResolver,
-            facade,
+            null,
             element.project,
             composableAnnotationChecker
         )
-
-        val call = resolutionContext.call
 
         val resolvedKtxElementCall = try {
 
@@ -231,6 +255,43 @@ class ComposeCallResolutionInterceptorExtension : CallResolutionInterceptorExten
                     SourceElement.NO_SOURCE
                 )
             )
+        }
+
+        // Once we know we have a valid binding to a composable function call see if the scope need
+        // the startRestartGroup and endRestartGroup information
+        val trace = temporaryTraceForKtxCall.trace
+        if (trace.get(
+                ComposeWritableSlices.RESTART_CALLS_NEEDED,
+                composableDescriptor!!
+            ) != false) {
+            val recordingContext = TemporaryTraceAndCache.create(
+                context,
+                "trace to resolve ktx call", element
+            )
+            val recordingTrace = recordingContext.trace
+            recordingTrace.record(
+                ComposeWritableSlices.RESTART_CALLS_NEEDED,
+                composableDescriptor,
+                false
+            )
+
+            val startRestartGroup = ktxCallResolver.resolveStartRestartGroup(
+                call,
+                temporaryForKtxCall
+            )
+            val endRestartGroup = ktxCallResolver.resolveEndRestartGroup(call, temporaryForKtxCall)
+            val composerCall = ktxCallResolver.resolveComposerCall()
+            if (startRestartGroup != null && endRestartGroup != null && composerCall != null) {
+                recordingTrace.record(
+                    ComposeWritableSlices.RESTART_CALLS, composableDescriptor,
+                    ResolvedRestartCalls(
+                        startRestartGroup = startRestartGroup,
+                        endRestartGroup = endRestartGroup,
+                        composer = composerCall
+                    )
+                )
+            }
+            recordingTrace.commit()
         }
 
         descriptor.initialize(

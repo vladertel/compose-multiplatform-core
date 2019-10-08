@@ -29,7 +29,6 @@ plugins {
 }
 
 dependencies {
-    implementation(KOTLIN_COMPOSE_COROUTINES)
     implementation(KOTLIN_COMPOSE_STDLIB)
 
     implementation "androidx.annotation:annotation:1.1.0"
@@ -58,6 +57,8 @@ androidx {
 
 tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
-        freeCompilerArgs += ["-Werror", "-Xuse-experimental=kotlin.Experimental"]
+        freeCompilerArgs += ["-Xuse-experimental=kotlin.Experimental", "-XXLanguage:+InlineClasses"]
+        useIR = true
     }
 }
+

@@ -35,11 +35,11 @@ plugins {
 }
 
 dependencies {
-    api(KOTLIN_STDLIB)
-    api("org.jetbrains.kotlin:kotlin-compiler")
-    api("org.jetbrains.kotlin:kotlin-plugin")
-    api("org.jetbrains.kotlin:kotlin-intellij-core")
-    api("org.jetbrains.kotlin:kotlin-platform-api")
+    compileOnly(KOTLIN_COMPOSE_STDLIB)
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler:$COMPOSE_VERSION")
+    compileOnly("org.jetbrains.kotlin:kotlin-plugin:$COMPOSE_VERSION")
+    compileOnly("org.jetbrains.kotlin:kotlin-intellij-core:$COMPOSE_VERSION")
+    compileOnly("org.jetbrains.kotlin:kotlin-platform-api:$COMPOSE_VERSION")
 }
 
 tasks.withType(KotlinCompile).configureEach {
@@ -50,7 +50,8 @@ tasks.withType(KotlinCompile).configureEach {
 
 androidx {
     name = "AndroidX Compose Hosted Compiler Plugin"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    // Nobody should ever get this artifact from maven; just from studio or from source
+    publish = Publish.NONE
     toolingProject = true
     mavenVersion = LibraryVersions.COMPOSE
     mavenGroup = LibraryGroups.COMPOSE

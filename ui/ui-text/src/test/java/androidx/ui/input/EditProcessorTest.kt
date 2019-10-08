@@ -20,6 +20,7 @@ import androidx.test.filters.SmallTest
 import androidx.ui.text.TextRange
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.never
 import com.nhaarman.mockitokotlin2.reset
@@ -38,14 +39,17 @@ class EditProcessorTest {
     fun test_new_state_and_edit_commands() {
         val proc = EditProcessor()
         val tis: TextInputService = mock()
+        val dummyInputSessionToken = 10 // We are not using this value in this test. Just dummy.
 
-        proc.onNewState(EditorState("ABCDE", TextRange(0, 0)), tis)
-        val captor = argumentCaptor<EditorState>()
-        verify(tis, times(1)).onStateUpdated(captor.capture())
+        val model = InputState("ABCDE", TextRange(0, 0))
+        proc.onNewState(model, tis, dummyInputSessionToken)
+        assertEquals(model, proc.mPreviousState)
+        val captor = argumentCaptor<InputState>()
+        verify(tis, times(1)).onStateUpdated(eq(dummyInputSessionToken), captor.capture())
         assertEquals(1, captor.allValues.size)
         assertEquals("ABCDE", captor.firstValue.text)
-        assertEquals(0, captor.firstValue.selection.start)
-        assertEquals(0, captor.firstValue.selection.end)
+        assertEquals(0, captor.firstValue.selection.min)
+        assertEquals(0, captor.firstValue.selection.max)
 
         reset(tis)
         val newState = proc.onEditCommands(listOf(
@@ -53,9 +57,9 @@ class EditProcessorTest {
         ))
 
         assertEquals("XABCDE", newState.text)
-        assertEquals(1, newState.selection.start)
-        assertEquals(1, newState.selection.end)
+        assertEquals(1, newState.selection.min)
+        assertEquals(1, newState.selection.max)
         // onEditCommands should not fire onStateUpdated since need to pass it to developer first.
-        verify(tis, never()).onStateUpdated(any())
+        verify(tis, never()).onStateUpdated(any(), any())
     }
 }

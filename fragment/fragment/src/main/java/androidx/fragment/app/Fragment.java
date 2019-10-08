@@ -57,14 +57,16 @@ import androidx.annotation.RestrictTo;
 import androidx.annotation.StringRes;
 import androidx.annotation.UiThread;
 import androidx.core.app.SharedElementCallback;
-import androidx.core.util.DebugUtils;
 import androidx.core.view.LayoutInflaterCompat;
+import androidx.lifecycle.HasDefaultViewModelProviderFactory;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.SavedStateViewModelFactory;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelStore;
 import androidx.lifecycle.ViewModelStoreOwner;
 import androidx.loader.app.LoaderManager;
@@ -94,11 +96,12 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener, LifecycleOwner,
-        ViewModelStoreOwner, SavedStateRegistryOwner {
+        ViewModelStoreOwner, HasDefaultViewModelProviderFactory, SavedStateRegistryOwner {
 
     static final Object USE_DEFAULT_TRANSITION = new Object();
 
-    static final int INITIALIZING = 0;     // Not yet created.
+    static final int INITIALIZING = -1;    // Not yet attached.
+    static final int ATTACHED = 0;         // Attached to the host.
     static final int CREATED = 1;          // Created.
     static final int ACTIVITY_CREATED = 2; // Fully created, not started.
     static final int STARTED = 3;          // Created and started, not resumed.
@@ -211,9 +214,6 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     // The View generated for this fragment.
     View mView;
 
-    // The real inner view that will save/restore state.
-    View mInnerView;
-
     // Whether this fragment should defer starting until after other fragments
     // have been started and their loaders are finished.
     boolean mDeferStart;
@@ -225,6 +225,15 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     // unless the elements are explicitly accessed and should remain null for Fragments
     // without Views.
     AnimationInfo mAnimationInfo;
+
+    // Runnable that is used to indicate if the Fragment has a postponed transition that is on a
+    // timeout.
+    Runnable mPostponedDurationRunnable = new Runnable() {
+        @Override
+        public void run() {
+            startPostponedEnterTransition();
+        }
+    };
 
     // True if the View was added, and its animation has yet to be run. This could
     // also indicate that the fragment view hasn't been made visible, even if there is no
@@ -257,6 +266,8 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     // onCreateView/onDestroyView lifecycle
     @Nullable FragmentViewLifecycleOwner mViewLifecycleOwner;
     MutableLiveData<LifecycleOwner> mViewLifecycleOwnerLiveData = new MutableLiveData<>();
+
+    private ViewModelProvider.Factory mDefaultFactory;
 
     SavedStateRegistryController mSavedStateRegistryController;
 
@@ -354,6 +365,28 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             throw new IllegalStateException("Can't access ViewModels from detached fragment");
         }
         return mFragmentManager.getViewModelStore(this);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The {@link #getArguments() Fragment's arguments} when this is first called will be used
+     * as the defaults to any {@link androidx.lifecycle.SavedStateHandle} passed to a view model
+     * created using this factory.</p>
+     */
+    @NonNull
+    @Override
+    public ViewModelProvider.Factory getDefaultViewModelProviderFactory() {
+        if (mFragmentManager == null) {
+            throw new IllegalStateException("Can't access ViewModels from detached fragment");
+        }
+        if (mDefaultFactory == null) {
+            mDefaultFactory = new SavedStateViewModelFactory(
+                    requireActivity().getApplication(),
+                    this,
+                    getArguments());
+        }
+        return mDefaultFactory;
     }
 
     @NonNull
@@ -537,7 +570,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
 
     final void restoreViewState(Bundle savedInstanceState) {
         if (mSavedViewState != null) {
-            mInnerView.restoreHierarchyState(mSavedViewState);
+            mView.restoreHierarchyState(mSavedViewState);
             mSavedViewState = null;
         }
         mCalled = false;
@@ -573,7 +606,11 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(128);
-        DebugUtils.buildShortClassTag(this, sb);
+        Class<?> cls = getClass();
+        sb.append(cls.getSimpleName());
+        sb.append("{");
+        sb.append(Integer.toHexString(System.identityHashCode(this)));
+        sb.append("}");
         sb.append(" (");
         sb.append(mWho);
         sb.append(")");
@@ -692,8 +729,9 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         // but there's a snag: people do set target fragments before fragments get added.
         // We'll have the FragmentManager check that for validity when we move
         // the fragments to a valid state.
-        final FragmentManager mine = getFragmentManager();
-        final FragmentManager theirs = fragment != null ? fragment.getFragmentManager() : null;
+        final FragmentManager mine = mFragmentManager;
+        final FragmentManager theirs = fragment != null ? fragment.mFragmentManager :
+                null;
         if (mine != null && theirs != null && mine != theirs) {
             throw new IllegalArgumentException("Fragment " + fragment
                     + " must share the same FragmentManager to be set as a target fragment");
@@ -732,7 +770,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             return mTarget;
         } else if (mFragmentManager != null && mTargetWho != null) {
             // Look up the target Fragment from the FragmentManager
-            return mFragmentManager.mActive.get(mTargetWho);
+            return mFragmentManager.findActiveFragment(mTargetWho);
         }
         return null;
     }
@@ -876,9 +914,14 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      * <p>If this Fragment is a child of another Fragment, the FragmentManager
      * returned here will be the parent's {@link #getChildFragmentManager()}.
      *
-     * @see #requireFragmentManager()
+     * @see #getParentFragmentManager()
+     * @deprecated This has been removed in favor of <code>getParentFragmentManager()</code> which
+     * throws an {@link IllegalStateException} if the FragmentManager is null. Check if
+     * {@link #isAdded()} returns <code>false</code> to determine if the FragmentManager is
+     * <code>null</code>.
      */
     @Nullable
+    @Deprecated
     final public FragmentManager getFragmentManager() {
         return mFragmentManager;
     }
@@ -894,16 +937,37 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      * returned here will be the parent's {@link #getChildFragmentManager()}.
      *
      * @throws IllegalStateException if not associated with a transaction or host.
-     * @see #getFragmentManager()
      */
     @NonNull
-    public final FragmentManager requireFragmentManager() {
-        FragmentManager fragmentManager = getFragmentManager();
+    public final FragmentManager getParentFragmentManager() {
+        FragmentManager fragmentManager = mFragmentManager;
         if (fragmentManager == null) {
             throw new IllegalStateException(
                     "Fragment " + this + " not associated with a fragment manager.");
         }
         return fragmentManager;
+    }
+
+    /**
+     * Return the FragmentManager for interacting with fragments associated
+     * with this fragment's activity.  Note that this will available slightly
+     * before {@link #getActivity()}, during the time from when the fragment is
+     * placed in a {@link FragmentTransaction} until it is committed and
+     * attached to its activity.
+     *
+     * <p>If this Fragment is a child of another Fragment, the FragmentManager
+     * returned here will be the parent's {@link #getChildFragmentManager()}.
+     *
+     * @throws IllegalStateException if not associated with a transaction or host.
+     * @see #getParentFragmentManager()
+     * @deprecated This has been renamed to <code>getParentFragmentManager()</code> to make it
+     * clear that you are accessing the FragmentManager that contains this Fragment and not the
+     * FragmentManager associated with child Fragments.
+     */
+    @NonNull
+    @Deprecated
+    public final FragmentManager requireFragmentManager() {
+        return getParentFragmentManager();
     }
 
     /**
@@ -1027,6 +1091,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
 
     /** @hide */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @SuppressLint("KotlinPropertyAccess")
     final public boolean hasOptionsMenu() {
         return mHasMenu;
     }
@@ -1825,7 +1890,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
 
     /**
      * Callback for when the primary navigation state of this Fragment has changed. This can be
-     * the result of the {@link #getFragmentManager() containing FragmentManager} having its
+     * the result of the {@link #getParentFragmentManager()}  containing FragmentManager} having its
      * primary navigation fragment changed via
      * {@link androidx.fragment.app.FragmentTransaction#setPrimaryNavigationFragment} or due to
      * the primary navigation fragment changing in a parent FragmentManager.
@@ -2446,12 +2511,8 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         } else {
             handler = new Handler(Looper.getMainLooper());
         }
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                startPostponedEnterTransition();
-            }
-        }, timeUnit.toMillis(duration));
+        handler.removeCallbacks(mPostponedDurationRunnable);
+        handler.postDelayed(mPostponedDurationRunnable, timeUnit.toMillis(duration));
     }
 
     /**
@@ -2564,9 +2625,6 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         if (mView != null) {
             writer.print(prefix); writer.print("mView="); writer.println(mView);
         }
-        if (mInnerView != null) {
-            writer.print(prefix); writer.print("mInnerView="); writer.println(mView);
-        }
         if (getAnimatingAway() != null) {
             writer.print(prefix);
             writer.print("mAnimatingAway=");
@@ -2607,6 +2665,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
                 return (mView != null);
             }
         }, this);
+        mState = ATTACHED;
         mCalled = false;
         onAttach(mHost.getContext());
         if (!mCalled) {
@@ -2663,7 +2722,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
 
     void performStart() {
         mChildFragmentManager.noteStateNotSaved();
-        mChildFragmentManager.execPendingActions();
+        mChildFragmentManager.execPendingActions(true);
         mState = STARTED;
         mCalled = false;
         onStart();
@@ -2680,7 +2739,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
 
     void performResume() {
         mChildFragmentManager.noteStateNotSaved();
-        mChildFragmentManager.execPendingActions();
+        mChildFragmentManager.execPendingActions(true);
         mState = RESUMED;
         mCalled = false;
         onResume();
@@ -2693,7 +2752,6 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             mViewLifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME);
         }
         mChildFragmentManager.dispatchResume();
-        mChildFragmentManager.execPendingActions();
     }
 
     void noteStateNotSaved() {
@@ -2861,7 +2919,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     void performDestroy() {
         mChildFragmentManager.dispatchDestroy();
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
-        mState = INITIALIZING;
+        mState = ATTACHED;
         mCalled = false;
         mIsCreated = false;
         onDestroy();
@@ -2872,6 +2930,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     }
 
     void performDetach() {
+        mState = INITIALIZING;
         mCalled = false;
         onDetach();
         mLayoutInflater = null;

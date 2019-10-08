@@ -35,13 +35,14 @@ dependencies {
 
     implementation "androidx.annotation:annotation:1.1.0"
 
-    implementation project(":compose:compose-runtime")
-    implementation project(":ui:ui-core")
+    api project(":compose:compose-runtime")
+    api project(":ui:ui-core")
     implementation project(":ui:ui-framework")
     implementation project(":ui:ui-layout")
-    implementation project(":ui:ui-text")
+    api project(":ui:ui-text")
     implementation project(":ui:ui-animation")
     implementation project(":ui:ui-foundation")
+    implementation project(":ui:ui-vector")
 
     testImplementation(ANDROIDX_TEST_RULES)
     testImplementation(ANDROIDX_TEST_RUNNER)
@@ -53,6 +54,7 @@ dependencies {
     }
 
     androidTestImplementation project(":ui:ui-material:integration-tests:samples")
+    androidTestImplementation project(":ui:ui-platform")
     androidTestImplementation project(":ui:ui-test")
 
     androidTestImplementation(ANDROIDX_TEST_RULES)

@@ -16,44 +16,35 @@
 
 package androidx.ui.material.surface
 
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.unaryPlus
 import androidx.ui.core.Dp
 import androidx.ui.core.dp
 import androidx.ui.engine.geometry.Shape
-import androidx.ui.foundation.shape.RectangleShape
 import androidx.ui.foundation.shape.border.Border
 import androidx.ui.graphics.Color
-import androidx.ui.material.MaterialColors
 import androidx.ui.material.themeColor
+import androidx.ui.material.themeShape
 
 /**
  * Cards are [Surface]s that display content and actions on a single topic.
  *
- * By default it uses the [MaterialColors.surface] as a background color.
- *
  * @param shape Defines the surface's shape as well its shadow. A shadow is only
  *  displayed if the [elevation] is greater than zero.
- * @param color The background color. [MaterialColors.surface] is used when null
- *  is provided. Use [TransparentSurface] to have no color.
+ * @param color The background color.
  * @param border Optional border to draw on top of the shape.
  * @param elevation The z-coordinate at which to place this surface. This controls
  *  the size of the shadow below the surface.
- *
  */
 @Composable
 fun Card(
-    shape: Shape = RectangleShape, // TODO (Andrey: Take the default shape from the theme)
+    shape: Shape = +themeShape { card },
     color: Color = +themeColor { surface },
     border: Border? = null,
-    elevation: Dp = 0.dp,
-    @Children children: @Composable() () -> Unit
+    elevation: Dp = 1.dp,
+    children: @Composable() () -> Unit
 ) {
-    // TODO(Andrey: This currently adds no logic on top of Surface, I just reserve the name
-    // for now. We will see what will be the additional Card specific logic later.
-    // It will add the default shape with rounded corners, default 1px elevation, elevate on hover.
     Surface(
         shape = shape,
         color = color,

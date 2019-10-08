@@ -32,16 +32,16 @@ import androidx.ui.engine.geometry.RRect
 import androidx.ui.engine.geometry.Radius
 import androidx.ui.engine.geometry.shrink
 import androidx.ui.engine.geometry.withRadius
-import androidx.ui.foundation.selection.Toggleable
 import androidx.ui.foundation.selection.ToggleableState
+import androidx.ui.foundation.selection.TriStateToggleable
 import androidx.ui.graphics.Color
 import androidx.ui.layout.Container
 import androidx.ui.layout.Padding
 import androidx.ui.layout.Wrap
 import androidx.ui.material.ripple.Ripple
-import androidx.ui.painting.Paint
-import androidx.ui.painting.PaintingStyle
-import androidx.ui.painting.StrokeCap
+import androidx.ui.graphics.Paint
+import androidx.ui.graphics.PaintingStyle
+import androidx.ui.graphics.StrokeCap
 
 /**
  * A TriStateCheckbox is a toggleable component that provides
@@ -92,7 +92,7 @@ fun TriStateCheckbox(
 ) {
     Wrap {
         Ripple(bounded = false) {
-            Toggleable(value = value, onToggle = onClick) {
+            TriStateToggleable(value = value, onToggle = onClick) {
                 Padding(padding = CheckboxDefaultPadding) {
                     Container(width = CheckboxSize, height = CheckboxSize) {
                         DrawCheckbox(value = value, activeColor = color)
@@ -137,7 +137,7 @@ fun Checkbox(
 
 @Composable
 private fun DrawCheckbox(value: ToggleableState, activeColor: Color) {
-    val unselectedColor = (+themeColor { onSurface }).copy(alpha = UncheckedBoxOppacity)
+    val unselectedColor = (+themeColor { onSurface }).copy(alpha = UncheckedBoxOpacity)
     val definition = +memo(activeColor, unselectedColor) {
         generateTransitionDefinition(activeColor, unselectedColor)
     }
@@ -182,7 +182,7 @@ private fun DrawBox(color: Color, innerRadiusFraction: Float) {
         // TODO(malkov): this radius formula is not in material spec
         val inner = innerSquared
             .withRadius(Radius.circular(innerSquared.width * squareMultiplier))
-        canvas.drawDRRect(outer, inner, paint)
+        canvas.drawDoubleRoundRect(outer, inner, paint)
     }
 }
 
@@ -272,12 +272,8 @@ private fun generateTransitionDefinition(color: Color, unselectedColor: Color) =
                 duration = CheckStrokeAnimationDuration
             }
         }
-        transition(fromState = ToggleableState.Checked, toState = ToggleableState.Indeterminate) {
-            CenterGravitationForCheck using tween {
-                duration = CheckStrokeAnimationDuration
-            }
-        }
-        transition(fromState = ToggleableState.Indeterminate, toState = ToggleableState.Checked) {
+        transition(ToggleableState.Checked to ToggleableState.Indeterminate,
+            ToggleableState.Indeterminate to ToggleableState.Checked) {
             CenterGravitationForCheck using tween {
                 duration = CheckStrokeAnimationDuration
             }
@@ -317,5 +313,5 @@ private val CheckboxSize = 20.dp
 private val StrokeWidth = 2.dp
 private val RadiusSize = 2.dp
 
-private val UncheckedBoxOppacity = 0.6f
-private val CheckStrokeDefaultColor = Color(0xFFFFFFFF.toInt())
+private val UncheckedBoxOpacity = 0.6f
+private val CheckStrokeDefaultColor = Color.White

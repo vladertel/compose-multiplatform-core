@@ -23,18 +23,34 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/label_choose_host_type" />
+        android:text="@string/label_choose_mode" />
 
     <Button
         android:id="@+id/host_in_activity_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/button_host_in_activity" />
+        android:text="@string/button_host_in_activity"
+        android:textSize="12sp" />
 
     <Button
         android:id="@+id/host_in_fragment_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/button_host_in_fragment" />
+        android:text="@string/button_host_in_fragment"
+        android:textSize="12sp" />
+
+    <Button
+        android:id="@+id/button_biometric_bound_key_demo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/button_biometric_bound_demo"
+        android:textSize="12sp" />
+
+    <Button
+        android:id="@+id/button_credential_bound_key_demo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/button_credential_bound_demo"
+        android:textSize="12sp" />
 
 </LinearLayout>

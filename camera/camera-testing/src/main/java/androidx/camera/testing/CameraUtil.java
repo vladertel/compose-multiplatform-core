@@ -20,26 +20,42 @@ import android.Manifest;
 import android.content.Context;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CameraDevice.StateCallback;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
+import androidx.annotation.GuardedBy;
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresPermission;
 import androidx.camera.core.BaseCamera;
+import androidx.camera.core.CameraX;
 import androidx.camera.core.UseCase;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
+import androidx.core.util.Preconditions;
 import androidx.test.core.app.ApplicationProvider;
 
+import com.google.common.util.concurrent.ListenableFuture;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.TimeoutException;
 
 /** Utility functions for obtaining instances of camera2 classes. */
 public final class CameraUtil {
+    private CameraUtil() {
+    }
+
     /** Amount of time to wait before timing out when trying to open a {@link CameraDevice}. */
     private static final int CAMERA_OPEN_TIMEOUT_SECONDS = 2;
 
@@ -49,21 +65,18 @@ public final class CameraUtil {
      * <p>This method attempts to open up a new camera. Since the camera api is asynchronous it
      * needs to wait for camera open
      *
-     * <p>After the camera is no longer needed {@link #releaseCameraDevice(CameraDevice)} should be
-     * called to clean up resources.
+     * <p>After the camera is no longer needed {@link #releaseCameraDevice(CameraDeviceHolder)}
+     * should be called to clean up resources.
      *
      * @throws CameraAccessException if the device is unable to access the camera
      * @throws InterruptedException  if a {@link CameraDevice} can not be retrieved within a set
      *                               time
      */
     @RequiresPermission(Manifest.permission.CAMERA)
-    public static CameraDevice getCameraDevice()
-            throws CameraAccessException, InterruptedException {
-        // Setup threading required for callback on openCamera()
-        final HandlerThread handlerThread = new HandlerThread("handler thread");
-        handlerThread.start();
-        Handler handler = new Handler(handlerThread.getLooper());
-
+    @NonNull
+    public static CameraDeviceHolder getCameraDevice()
+            throws CameraAccessException, InterruptedException, TimeoutException,
+            ExecutionException {
         CameraManager cameraManager = getCameraManager();
 
         // Use the first camera available.
@@ -74,50 +87,134 @@ public final class CameraUtil {
         }
         String cameraName = cameraIds[0];
 
-        // Use an AtomicReference to store the CameraDevice because it is initialized in a lambda.
-        // This way the AtomicReference itself is effectively final.
-        final AtomicReference<CameraDevice> cameraDeviceHolder = new AtomicReference<>();
+        return new CameraDeviceHolder(cameraManager, cameraName);
+    }
 
-        // Open the camera using the CameraManager which returns a valid and open CameraDevice only
-        // when onOpened() is called.
-        final CountDownLatch latch = new CountDownLatch(1);
-        cameraManager.openCamera(
-                cameraName,
-                new StateCallback() {
-                    @Override
-                    public void onOpened(CameraDevice camera) {
-                        cameraDeviceHolder.set(camera);
-                        latch.countDown();
-                    }
+    /**
+     * A container class used to hold a {@link CameraDevice}.
+     *
+     * <p>This class should contain a valid {@link CameraDevice} that can be retrieved with
+     * {@link #get()}, unless the device has been closed.
+     *
+     * <p>The camera device should always be closed with
+     * {@link CameraUtil#releaseCameraDevice(CameraDeviceHolder)} once finished with the device.
+     */
+    public static class CameraDeviceHolder {
 
-                    @Override
-                    public void onClosed(CameraDevice cameraDevice) {
-                        handlerThread.quit();
-                    }
+        final Object mLock = new Object();
 
-                    @Override
-                    public void onDisconnected(CameraDevice camera) {
-                    }
+        @GuardedBy("mLock")
+        CameraDevice mCameraDevice;
+        final HandlerThread mHandlerThread;
+        private ListenableFuture<Void> mCloseFuture;
 
-                    @Override
-                    public void onError(CameraDevice camera, int error) {
-                    }
-                },
-                handler);
+        @RequiresPermission(Manifest.permission.CAMERA)
+        CameraDeviceHolder(@NonNull CameraManager cameraManager, @NonNull String cameraId)
+                throws InterruptedException, ExecutionException, TimeoutException {
+            mHandlerThread = new HandlerThread(String.format("CameraThread-%s", cameraId));
+            mHandlerThread.start();
 
-        // Wait for the callback to initialize the CameraDevice
-        latch.await(CAMERA_OPEN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            ListenableFuture<Void> cameraOpenFuture = openCamera(cameraManager, cameraId);
 
-        return cameraDeviceHolder.get();
+            // Wait for the open future to complete before continuing.
+            cameraOpenFuture.get(CAMERA_OPEN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        }
+
+        @RequiresPermission(Manifest.permission.CAMERA)
+        // Should only be called once during initialization.
+        private ListenableFuture<Void> openCamera(@NonNull CameraManager cameraManager,
+                @NonNull String cameraId) {
+            return CallbackToFutureAdapter.getFuture(openCompleter -> {
+                mCloseFuture = CallbackToFutureAdapter.getFuture(closeCompleter -> {
+                    cameraManager.openCamera(cameraId, new CameraDevice.StateCallback() {
+
+                        @Override
+                        public void onOpened(@NonNull CameraDevice cameraDevice) {
+                            synchronized (mLock) {
+                                Preconditions.checkState(mCameraDevice == null, "CameraDevice "
+                                        + "should not have been opened yet.");
+                                mCameraDevice = cameraDevice;
+                            }
+                            openCompleter.set(null);
+                        }
+
+                        @Override
+                        public void onClosed(@NonNull CameraDevice cameraDevice) {
+                            closeCompleter.set(null);
+                            mHandlerThread.quitSafely();
+                        }
+
+                        @Override
+                        public void onDisconnected(@NonNull CameraDevice cameraDevice) {
+                            synchronized (mLock) {
+                                mCameraDevice = null;
+                            }
+                            cameraDevice.close();
+                        }
+
+                        @Override
+                        public void onError(@NonNull CameraDevice cameraDevice, int i) {
+                            boolean notifyOpenFailed = false;
+                            synchronized (mLock) {
+                                if (mCameraDevice == null) {
+                                    notifyOpenFailed = true;
+                                } else {
+                                    mCameraDevice = null;
+                                }
+                            }
+
+                            if (notifyOpenFailed) {
+                                openCompleter.setException(new RuntimeException("Failed to "
+                                        + "open camera device due to error code: " + i));
+                            }
+                            cameraDevice.close();
+
+                        }
+                    }, new Handler(mHandlerThread.getLooper()));
+
+                    return "Close[cameraId=" + cameraId + "]";
+                });
+
+                return "Open[cameraId=" + cameraId + "]";
+            });
+        }
+
+        /**
+         * Blocks until the camera device has been closed.
+         */
+        void close() throws ExecutionException, InterruptedException {
+            CameraDevice cameraDevice;
+            synchronized (mLock) {
+                cameraDevice = mCameraDevice;
+                mCameraDevice = null;
+            }
+
+            if (cameraDevice != null) {
+                cameraDevice.close();
+            }
+
+            mCloseFuture.get();
+        }
+
+        /**
+         * Returns the camera device if it opened successfully and has not been closed.
+         */
+        @Nullable
+        public CameraDevice get() {
+            synchronized (mLock) {
+                return mCameraDevice;
+            }
+        }
     }
 
     /**
      * Cleans up resources that need to be kept around while the camera device is active.
      *
-     * @param cameraDevice camera that was obtained via {@link #getCameraDevice()}
+     * @param cameraDeviceHolder camera that was obtained via {@link #getCameraDevice()}
      */
-    public static void releaseCameraDevice(CameraDevice cameraDevice) {
-        cameraDevice.close();
+    public static void releaseCameraDevice(@NonNull CameraDeviceHolder cameraDeviceHolder)
+            throws ExecutionException, InterruptedException {
+        cameraDeviceHolder.close();
     }
 
     public static CameraManager getCameraManager() {
@@ -190,5 +287,86 @@ public final class CameraUtil {
         }
 
         return numberOfCamera > 0;
+    }
+
+    /**
+     * Check if the specified lensFacing is supported by the device.
+     *
+     * @param lensFacing The desired camera lensFacing.
+     * @return True if the device supports the lensFacing.
+     * @throws IllegalStateException if the CAMERA permission is not currently granted.
+     */
+    public static boolean hasCameraWithLensFacing(@NonNull CameraX.LensFacing lensFacing) {
+
+        CameraManager cameraManager = getCameraManager();
+
+        List<String> camerasList = null;
+        try {
+            camerasList = Arrays.asList(cameraManager.getCameraIdList());
+        } catch (CameraAccessException e) {
+            throw new IllegalStateException(
+                    "Unable to retrieve list of cameras on device.", e);
+        }
+
+        // Convert to from CameraX enum to Camera2 CameraMetadata
+        Integer lensFacingInteger = -1;
+        switch (lensFacing) {
+            case BACK:
+                lensFacingInteger = CameraMetadata.LENS_FACING_BACK;
+                break;
+            case FRONT:
+                lensFacingInteger = CameraMetadata.LENS_FACING_FRONT;
+                break;
+        }
+
+        for (String cameraId : camerasList) {
+            CameraCharacteristics characteristics = null;
+            try {
+                characteristics = cameraManager.getCameraCharacteristics(cameraId);
+            } catch (CameraAccessException e) {
+                throw new IllegalStateException(
+                        "Unable to retrieve info for camera with id " + cameraId + ".", e);
+            }
+            Integer cameraLensFacing = characteristics.get(CameraCharacteristics.LENS_FACING);
+            if (cameraLensFacing == null) {
+                continue;
+            }
+            if (cameraLensFacing.equals(lensFacingInteger)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The current lens facing directions supported by CameraX, as defined the
+     * {@link CameraMetadata}.
+     */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({CameraMetadata.LENS_FACING_FRONT, CameraMetadata.LENS_FACING_BACK})
+    @interface SupportedLensFacingInt {
+    }
+
+
+    /**
+     * Converts a lens facing direction from a {@link CameraMetadata} integer to a
+     * {@link CameraX.LensFacing}.
+     *
+     * @param lensFacingInteger The lens facing integer, as defined in {@link CameraMetadata}.
+     * @return The lens facing enum.
+     */
+    @NonNull
+    public static CameraX.LensFacing getLensFacingEnumFromInt(
+            @SupportedLensFacingInt int lensFacingInteger) {
+        switch (lensFacingInteger) {
+            case CameraMetadata.LENS_FACING_BACK:
+                return CameraX.LensFacing.BACK;
+            case CameraMetadata.LENS_FACING_FRONT:
+                return CameraX.LensFacing.FRONT;
+            default:
+                throw new IllegalArgumentException(
+                        "Unsupported lens facing integer: " + lensFacingInteger);
+        }
     }
 }

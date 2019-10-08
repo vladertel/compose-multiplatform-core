@@ -24,6 +24,7 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
@@ -39,6 +40,7 @@ abstract class UpdateApiTask : DefaultTask() {
     abstract val inputApiLocation: Property<ApiLocation>
 
     /** Text files to which API signatures will be written. */
+    @get:Internal // outputs are declared in getTaskOutputs()
     abstract val outputApiLocations: ListProperty<ApiLocation>
 
     /** Whether to update restricted API files too */
@@ -55,7 +57,7 @@ abstract class UpdateApiTask : DefaultTask() {
         if (updateRestrictedAPIs) {
             return outputApiLocations.get().flatMap { it.files() }
         }
-        return outputApiLocations.get().map { it.publicApiFile }
+        return outputApiLocations.get().flatMap { it.nonRestrictedFiles() }
     }
 
     @TaskAction
@@ -70,15 +72,22 @@ abstract class UpdateApiTask : DefaultTask() {
             }
         }
         for (outputApi in outputApiLocations.get()) {
+            val inputApi = inputApiLocation.get()
             copy(
-                inputApiLocation.get().publicApiFile,
+                inputApi.publicApiFile,
                 outputApi.publicApiFile,
                 permitOverwriting,
                 project.logger
             )
+            copy(
+                inputApi.experimentalApiFile,
+                outputApi.experimentalApiFile,
+                true,
+                project.logger
+            )
             if (updateRestrictedAPIs) {
                 copy(
-                    inputApiLocation.get().restrictedApiFile,
+                    inputApi.restrictedApiFile,
                     outputApi.restrictedApiFile,
                     permitOverwriting,
                     project.logger

@@ -21,10 +21,10 @@ import androidx.annotation.VisibleForTesting
 import androidx.annotation.WorkerThread
 import androidx.arch.core.util.Function
 import androidx.paging.DataSource.KeyType.POSITIONAL
+import androidx.paging.PagedSource.LoadResult.Page.Companion.COUNT_UNDEFINED
 import androidx.paging.PositionalDataSource.LoadInitialCallback
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
  * Position-based data loader for a fixed-size, countable data set, supporting fixed-size loads at
@@ -48,6 +48,7 @@ import kotlin.coroutines.resumeWithException
  * @param T Type of items being loaded by the [PositionalDataSource].
  */
 abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
+
     /**
      * Holder object for inputs to [loadInitial].
      */
@@ -103,38 +104,6 @@ abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
     )
 
     /**
-     * Type produced by [loadInitial] to represent initially loaded data.
-     *
-     * @param V The type of the data loaded.
-     */
-    internal class InitialResult<V : Any> : BaseResult<V> {
-        constructor(data: List<V>, position: Int, totalCount: Int) :
-                super(data, null, null, position, totalCount - data.size - position, 0, true) {
-            if (data.isEmpty() && position != 0) {
-                throw IllegalArgumentException(
-                    "Initial result cannot be empty if items are present in data set."
-                )
-            }
-        }
-
-        constructor(data: List<V>, position: Int) : super(data, null, null, 0, 0, position, false) {
-            if (data.isEmpty() && position != 0) {
-                throw IllegalArgumentException(
-                    "Initial result cannot be empty if items are present in data set."
-                )
-            }
-        }
-    }
-
-    /**
-     * Type produced by [loadRange] to represent a page of loaded data.
-     *
-     * @param V The type of the data loaded.
-     */
-    internal class RangeResult<V : Any>(data: List<V>) :
-        BaseResult<V>(data, null, null, 0, 0, 0, false)
-
-    /**
      * Callback for [loadInitial] to return data, position, and count.
      *
      * A callback should be called only once, and may throw if called again.
@@ -182,20 +151,6 @@ abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
          * before the items in data that can be provided by this [DataSource], pass N.
          */
         abstract fun onResult(data: List<T>, position: Int)
-
-        /**
-         * Called to report an error from a DataSource.
-         *
-         * Call this method to report an error from [loadInitial].
-         *
-         * @param error The error that occurred during loading.
-         */
-        open fun onError(error: Throwable) {
-            // TODO: remove default implementation in 3.0
-            throw IllegalStateException(
-                "You must implement onError if implementing your own load callback"
-            )
-        }
     }
 
     /**
@@ -217,20 +172,6 @@ abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
          * unless at end of list.
          */
         abstract fun onResult(data: List<T>)
-
-        /**
-         * Called to report an error from a [DataSource].
-         *
-         * Call this method to report an error from [loadRange].
-         *
-         * @param error The error that occurred during loading.
-         */
-        open fun onError(error: Throwable) {
-            // TODO: remove default implementation in 3.0
-            throw IllegalStateException(
-                "You must implement onError if implementing your own load callback"
-            )
-        }
     }
 
     /**
@@ -352,7 +293,7 @@ abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
 
     @Suppress("RedundantVisibilityModifier") // Metalava doesn't inherit visibility properly.
     internal final override suspend fun load(params: Params<Int>): BaseResult<T> {
-        if (params.type == LoadType.INITIAL) {
+        if (params.type == LoadType.REFRESH) {
             var initialPosition = 0
             var initialLoadSize = params.initialLoadSize
             if (params.key != null) {
@@ -382,8 +323,9 @@ abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
             var startIndex = params.key!!
             var loadSize = params.pageSize
             if (params.type == LoadType.START) {
-                loadSize = minOf(loadSize, startIndex + 1)
-                startIndex = startIndex - loadSize + 1
+                // clamp load size to positive indices only, and shift start index by load size
+                loadSize = minOf(loadSize, startIndex)
+                startIndex -= loadSize
             }
             return loadRange(LoadRangeParams(startIndex, loadSize))
         }
@@ -394,23 +336,25 @@ abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
      *
      * This method is called to load the initial page(s) from the DataSource.
      *
-     * Result list must be a multiple of pageSize to enable efficient tiling.
-     *
-     * @param params Parameters for initial load, including requested start position, load size, and
-     * page size.
-     * @return [InitialResult] The loaded data.
+     * LoadResult list must be a multiple of pageSize to enable efficient tiling.
      */
     @VisibleForTesting
     internal suspend fun loadInitial(params: LoadInitialParams) =
-        suspendCancellableCoroutine<InitialResult<T>> { cont ->
+        suspendCancellableCoroutine<BaseResult<T>> { cont ->
             loadInitial(params, object : LoadInitialCallback<T>() {
                 override fun onResult(data: List<T>, position: Int, totalCount: Int) {
                     if (isInvalid) {
                         // NOTE: this isInvalid check works around
                         // https://issuetracker.google.com/issues/124511903
-                        cont.resume(InitialResult(emptyList(), 0, 0))
+                        cont.resume(BaseResult.empty())
                     } else {
-                        resume(params, InitialResult(data, position, totalCount))
+                        resume(params, BaseResult(
+                            data = data,
+                            prevKey = position,
+                            nextKey = position + data.size,
+                            itemsBefore = position,
+                            itemsAfter = totalCount - data.size - position
+                        ))
                     }
                 }
 
@@ -418,17 +362,20 @@ abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
                     if (isInvalid) {
                         // NOTE: this isInvalid check works around
                         // https://issuetracker.google.com/issues/124511903
-                        cont.resume(InitialResult(emptyList(), 0))
+                        cont.resume(BaseResult.empty())
                     } else {
-                        resume(params, InitialResult(data, position))
+                        // always pass prevKey/nextKey, since we let position
+                        resume(params, BaseResult(
+                            data = data,
+                            prevKey = position,
+                            nextKey = position + data.size,
+                            itemsBefore = position,
+                            itemsAfter = COUNT_UNDEFINED
+                        ))
                     }
                 }
 
-                override fun onError(error: Throwable) {
-                    cont.resumeWithException(error)
-                }
-
-                private fun resume(params: LoadInitialParams, result: InitialResult<T>) {
+                private fun resume(params: LoadInitialParams, result: BaseResult<T>) {
                     if (params.placeholdersEnabled) {
                         result.validateForInitialTiling(params.pageSize)
                     }
@@ -446,22 +393,19 @@ abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
      *
      * Unlike [ItemKeyedDataSource.loadInitial], this method must return the number of items
      * requested, at the position requested.
-     *
-     * @param params Parameters for load, including start position and load size.
-     * @return [RangeResult] The loaded data.
      */
     private suspend fun loadRange(params: LoadRangeParams) =
-        suspendCancellableCoroutine<RangeResult<T>> { cont ->
+        suspendCancellableCoroutine<BaseResult<T>> { cont ->
             loadRange(params, object : LoadRangeCallback<T>() {
                 override fun onResult(data: List<T>) {
                     when {
-                        isInvalid -> cont.resume(RangeResult(emptyList()))
-                        else -> cont.resume(RangeResult(data))
+                        isInvalid -> cont.resume(BaseResult.empty())
+                        else -> cont.resume(BaseResult(
+                            data = data,
+                            prevKey = params.startPosition,
+                            nextKey = params.startPosition + data.size
+                        ))
                     }
-                }
-
-                override fun onError(error: Throwable) {
-                    cont.resumeWithException(error)
                 }
             })
         }
@@ -471,7 +415,7 @@ abstract class PositionalDataSource<T : Any> : DataSource<Int, T>(POSITIONAL) {
      *
      * This method is called to load the initial page(s) from the [DataSource].
      *
-     * Result list must be a multiple of pageSize to enable efficient tiling.
+     * LoadResult list must be a multiple of pageSize to enable efficient tiling.
      *
      * @param params Parameters for initial load, including requested start position, load size, and
      * page size.

@@ -19,9 +19,7 @@ package androidx.paging
 import androidx.annotation.VisibleForTesting
 import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.lifecycle.LiveData
-import androidx.paging.PagedList.LoadState
 import androidx.paging.PagedList.LoadStateManager
-import androidx.paging.PagedList.LoadType
 import androidx.recyclerview.widget.AdapterListUpdateCallback
 import androidx.recyclerview.widget.AsyncDifferConfig
 import androidx.recyclerview.widget.DiffUtil
@@ -68,7 +66,7 @@ typealias OnCurrentListChanged<T> =
  *     @Override
  *     public void onCreate(Bundle savedState) {
  *         super.onCreate(savedState);
- *         MyViewModel viewModel = ViewModelProviders.of(this).get(MyViewModel.class);
+ *         MyViewModel viewModel = new ViewModelProvider(this).get(MyViewModel.class);
  *         RecyclerView recyclerView = findViewById(R.id.user_list);
  *         final UserAdapter adapter = new UserAdapter();
  *         viewModel.usersList.observe(this, pagedList -> adapter.submitList(pagedList));
@@ -131,7 +129,6 @@ open class AsyncPagedListDiffer<T : Any> {
 
     @VisibleForTesting
     internal val listeners = CopyOnWriteArrayList<PagedListListener<T>>()
-    private var isContiguous: Boolean = false
     private var pagedList: PagedList<T>? = null
     private var snapshot: PagedList<T>? = null
 
@@ -142,9 +139,9 @@ open class AsyncPagedListDiffer<T : Any> {
     internal var maxScheduledGeneration: Int = 0
 
     private val loadStateManager: LoadStateManager = object : LoadStateManager() {
-        override fun onStateChanged(type: LoadType, state: LoadState, error: Throwable?) {
+        override fun onStateChanged(type: LoadType, state: LoadState) {
             // Don't need to post - PagedList will already have done that
-            loadStateListeners.forEach { it(type, state, error) }
+            loadStateListeners.forEach { it(type, state) }
         }
     }
 
@@ -207,7 +204,7 @@ open class AsyncPagedListDiffer<T : Any> {
      *
      * @param T Type of items in [PagedList]
      */
-    private class OnCurrentListChangedWrappper<T : Any>(
+    private class OnCurrentListChangedWrapper<T : Any>(
         val callback: OnCurrentListChanged<T>
     ) : PagedListListener<T> {
         override fun onCurrentListChanged(previousList: PagedList<T>?, currentList: PagedList<T>?) {
@@ -279,19 +276,9 @@ open class AsyncPagedListDiffer<T : Any> {
      *
      * @param pagedList The new [PagedList].
      * @param commitCallback Optional runnable that is executed when the PagedList is committed, if
-     *                       it is committed.
+     * it is committed.
      */
     open fun submitList(pagedList: PagedList<T>?, commitCallback: Runnable?) {
-        if (pagedList != null) {
-            if (currentList == null) {
-                isContiguous = pagedList.isContiguous
-            } else if (pagedList.isContiguous != isContiguous) {
-                throw IllegalArgumentException(
-                    "AsyncPagedListDiffer cannot handle both contiguous and non-contiguous lists."
-                )
-            }
-        }
-
         // incrementing generation means any currently-running diffs are discarded when they finish
         val runGeneration = ++maxScheduledGeneration
 
@@ -323,7 +310,7 @@ open class AsyncPagedListDiffer<T : Any> {
             // fast simple first insert
             this.pagedList = pagedList
             pagedList.addWeakLoadStateListener(loadStateListener)
-            pagedList.addWeakCallback(null, pagedListCallback)
+            pagedList.addWeakCallback(pagedListCallback)
 
             // dispatch update callback after updating pagedList/snapshot
             updateCallback.onInserted(0, pagedList.size)
@@ -348,9 +335,11 @@ open class AsyncPagedListDiffer<T : Any> {
         }
 
         val newSnapshot = pagedList.snapshot() as PagedList<T>
+        val recordingCallback = RecordingCallback()
+        pagedList.addWeakCallback(recordingCallback)
         config.backgroundThreadExecutor.execute {
-            val result = oldSnapshot.getStorage().computeDiff(
-                newSnapshot.getStorage(),
+            val result = oldSnapshot.getNullPaddedList().computeDiff(
+                newSnapshot.getNullPaddedList(),
                 config.diffCallback
             )
 
@@ -360,7 +349,8 @@ open class AsyncPagedListDiffer<T : Any> {
                         pagedList,
                         newSnapshot,
                         result,
-                        oldSnapshot.lastLoad,
+                        recordingCallback,
+                        oldSnapshot.lastLoad(),
                         commitCallback
                     )
                 }
@@ -373,6 +363,7 @@ open class AsyncPagedListDiffer<T : Any> {
         newList: PagedList<T>,
         diffSnapshot: PagedList<T>,
         diffResult: DiffUtil.DiffResult,
+        recordingCallback: RecordingCallback,
         lastAccessIndex: Int,
         commitCallback: Runnable?
     ) {
@@ -385,15 +376,19 @@ open class AsyncPagedListDiffer<T : Any> {
         newList.addWeakLoadStateListener(loadStateListener)
         snapshot = null
 
-        // dispatch update callback after updating pagedList/snapshot
-
-        previousSnapshot.getStorage().dispatchDiff(
+        // dispatch updates to UI from previousSnapshot -> newSnapshot
+        previousSnapshot.getNullPaddedList().dispatchDiff(
             updateCallback,
-            newList.getStorage(),
+            previousSnapshot.getNullPaddedList(),
             diffResult
         )
 
-        newList.addWeakCallback(diffSnapshot, pagedListCallback)
+        // dispatch updates to UI from newSnapshot -> currentList
+        // after this, the callback will be up to date with current pagedList...
+        recordingCallback.dispatchRecordingTo(pagedListCallback)
+
+        // ...and can simply start observing further updates
+        newList.addWeakCallback(pagedListCallback)
 
         if (!newList.isEmpty()) {
             // Transform the last loadAround() index from the old list to the new list by passing it
@@ -402,9 +397,9 @@ open class AsyncPagedListDiffer<T : Any> {
             // Note: we don't take into account loads between new list snapshot and new list, but
             // this is only a problem in rare cases when placeholders are disabled, and a load
             // starts (for some reason) and finishes before diff completes.
-            val newPosition = previousSnapshot.getStorage().transformAnchorIndex(
+            val newPosition = previousSnapshot.getNullPaddedList().transformAnchorIndex(
                 diffResult,
-                diffSnapshot.getStorage(),
+                diffSnapshot.getNullPaddedList(),
                 lastAccessIndex
             )
 
@@ -412,7 +407,7 @@ open class AsyncPagedListDiffer<T : Any> {
             // This is a load, not just an update of last load position, since the new list may be
             // incomplete. If new list is subset of old list, but doesn't fill the viewport, this
             // will likely trigger a load of new data.
-            newList.loadAround(Math.max(0, Math.min(newList.size - 1, newPosition)))
+            newList.loadAround(newPosition.coerceIn(0, newList.size - 1))
         }
 
         onCurrentListChanged(previousSnapshot, pagedList, commitCallback)
@@ -449,7 +444,7 @@ open class AsyncPagedListDiffer<T : Any> {
      * @see removePagedListListener
      */
     fun addPagedListListener(callback: OnCurrentListChanged<T>) {
-        listeners.add(OnCurrentListChangedWrappper(callback))
+        listeners.add(OnCurrentListChangedWrapper(callback))
     }
 
     /**
@@ -473,7 +468,7 @@ open class AsyncPagedListDiffer<T : Any> {
      * @see addPagedListListener
      */
     fun removePagedListListener(callback: OnCurrentListChanged<T>) {
-        listeners.removeAll { it is OnCurrentListChangedWrappper<T> && it.callback === callback }
+        listeners.removeAll { it is OnCurrentListChangedWrapper<T> && it.callback === callback }
     }
 
     /**

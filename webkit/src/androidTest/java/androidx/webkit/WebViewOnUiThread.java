@@ -37,6 +37,7 @@ import androidx.annotation.Nullable;
 import androidx.concurrent.futures.ResolvableFuture;
 import androidx.test.core.app.ApplicationProvider;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 
@@ -210,6 +211,19 @@ public class WebViewOnUiThread {
         });
     }
 
+    public void addWebMessageListener(String jsObjectName, List<String> allowedOriginRules,
+            final WebViewCompat.WebMessageListener listener) {
+        WebkitUtils.onMainThreadSync(() -> {
+            WebViewCompat.addWebMessageListener(
+                    mWebView, jsObjectName, allowedOriginRules, listener);
+        });
+    }
+
+    public void removeWebMessageListener(final String jsObjectName) {
+        WebkitUtils.onMainThreadSync(
+                () -> WebViewCompat.removeWebMessageListener(mWebView, jsObjectName));
+    }
+
     public void addJavascriptInterface(final Object object, final String name) {
         WebkitUtils.onMainThreadSync(() -> mWebView.addJavascriptInterface(object, name));
     }
@@ -287,8 +301,17 @@ public class WebViewOnUiThread {
         });
     }
 
-    void evaluateJavascript(final String script, final ValueCallback<String> result) {
-        WebkitUtils.onMainThreadSync(() -> mWebView.evaluateJavascript(script, result));
+    /**
+     * Execute javascript synchronously, returning the result.
+     */
+    public String evaluateJavascriptSync(final String script) {
+        final ResolvableFuture<String> future = ResolvableFuture.create();
+        evaluateJavascript(script, result -> future.set(result));
+        return WebkitUtils.waitForFuture(future);
+    }
+
+    public void evaluateJavascript(final String script, final ValueCallback<String> result) {
+        WebkitUtils.onMainThread(() -> mWebView.evaluateJavascript(script, result));
     }
 
     public WebViewClient getWebViewClient() {

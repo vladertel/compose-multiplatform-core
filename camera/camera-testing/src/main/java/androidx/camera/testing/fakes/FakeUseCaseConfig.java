@@ -16,8 +16,10 @@
 
 package androidx.camera.testing.fakes;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.camera.core.CameraDeviceConfig;
+import androidx.camera.core.CameraIdFilter;
 import androidx.camera.core.CameraX;
 import androidx.camera.core.CaptureConfig;
 import androidx.camera.core.Config;
@@ -47,28 +49,30 @@ public class FakeUseCaseConfig
     // Implementations of Config.Reader default methods
 
     @Override
-    public boolean containsOption(Option<?> id) {
+    public boolean containsOption(@NonNull Option<?> id) {
         return mConfig.containsOption(id);
     }
 
     @Override
     @Nullable
-    public <ValueT> ValueT retrieveOption(Option<ValueT> id) {
+    public <ValueT> ValueT retrieveOption(@NonNull Option<ValueT> id) {
         return mConfig.retrieveOption(id);
     }
 
     @Override
     @Nullable
-    public <ValueT> ValueT retrieveOption(Option<ValueT> id, @Nullable ValueT valueIfMissing) {
+    public <ValueT> ValueT retrieveOption(@NonNull Option<ValueT> id,
+            @Nullable ValueT valueIfMissing) {
         return mConfig.retrieveOption(id, valueIfMissing);
     }
 
     @Override
-    public void findOptions(String idStem, OptionMatcher matcher) {
+    public void findOptions(@NonNull String idStem, @NonNull OptionMatcher matcher) {
         mConfig.findOptions(idStem, matcher);
     }
 
     @Override
+    @NonNull
     public Set<Option<?>> listOptions() {
         return mConfig.listOptions();
     }
@@ -87,6 +91,7 @@ public class FakeUseCaseConfig
     }
 
     @Override
+    @NonNull
     public Class<FakeUseCase> getTargetClass() {
         @SuppressWarnings("unchecked") // Value should only be added via Builder#setTargetClass()
                 Class<FakeUseCase> storedClass = (Class<FakeUseCase>) retrieveOption(
@@ -101,6 +106,7 @@ public class FakeUseCaseConfig
     }
 
     @Override
+    @NonNull
     public String getTargetName() {
         return retrieveOption(OPTION_TARGET_NAME);
     }
@@ -114,8 +120,21 @@ public class FakeUseCaseConfig
     }
 
     @Override
+    @NonNull
     public CameraX.LensFacing getLensFacing() {
         return retrieveOption(OPTION_LENS_FACING);
+    }
+
+    @Override
+    @Nullable
+    public CameraIdFilter getCameraIdFilter(@Nullable CameraIdFilter valueIfMissing) {
+        return retrieveOption(OPTION_CAMERA_ID_FILTER, valueIfMissing);
+    }
+
+    @Override
+    @NonNull
+    public CameraIdFilter getCameraIdFilter() {
+        return retrieveOption(OPTION_CAMERA_ID_FILTER);
     }
 
     // Implementations of UseCaseConfig default methods
@@ -127,6 +146,7 @@ public class FakeUseCaseConfig
     }
 
     @Override
+    @NonNull
     public SessionConfig getDefaultSessionConfig() {
         return retrieveOption(OPTION_DEFAULT_SESSION_CONFIG);
     }
@@ -138,6 +158,7 @@ public class FakeUseCaseConfig
     }
 
     @Override
+    @NonNull
     public CaptureConfig getDefaultCaptureConfig() {
         return retrieveOption(OPTION_DEFAULT_CAPTURE_CONFIG);
     }
@@ -150,6 +171,7 @@ public class FakeUseCaseConfig
     }
 
     @Override
+    @NonNull
     public SessionConfig.OptionUnpacker getSessionOptionUnpacker() {
         return retrieveOption(OPTION_SESSION_CONFIG_UNPACKER);
     }
@@ -162,6 +184,7 @@ public class FakeUseCaseConfig
     }
 
     @Override
+    @NonNull
     public CaptureConfig.OptionUnpacker getCaptureOptionUnpacker() {
         return retrieveOption(OPTION_CAPTURE_CONFIG_UNPACKER);
     }
@@ -176,15 +199,15 @@ public class FakeUseCaseConfig
         return retrieveOption(OPTION_SURFACE_OCCUPANCY_PRIORITY);
     }
 
-    @Nullable
     @Override
+    @Nullable
     public UseCase.EventListener getUseCaseEventListener(
             @Nullable UseCase.EventListener valueIfMissing) {
         return retrieveOption(OPTION_USE_CASE_EVENT_LISTENER, valueIfMissing);
     }
 
-    @Nullable
     @Override
+    @NonNull
     public UseCase.EventListener getUseCaseEventListener() {
         return retrieveOption(OPTION_USE_CASE_EVENT_LISTENER);
     }
@@ -207,11 +230,13 @@ public class FakeUseCaseConfig
         }
 
         @Override
+        @NonNull
         public MutableConfig getMutableConfig() {
             return mOptionsBundle;
         }
 
         @Override
+        @NonNull
         public FakeUseCaseConfig build() {
             return new FakeUseCaseConfig(OptionsBundle.from(mOptionsBundle));
         }
@@ -219,7 +244,8 @@ public class FakeUseCaseConfig
         // Implementations of TargetConfig.Builder default methods
 
         @Override
-        public Builder setTargetClass(Class<FakeUseCase> targetClass) {
+        @NonNull
+        public Builder setTargetClass(@NonNull Class<FakeUseCase> targetClass) {
             getMutableConfig().insertOption(OPTION_TARGET_CLASS, targetClass);
 
             // If no name is set yet, then generate a unique name
@@ -232,7 +258,8 @@ public class FakeUseCaseConfig
         }
 
         @Override
-        public Builder setTargetName(String targetName) {
+        @NonNull
+        public Builder setTargetName(@NonNull String targetName) {
             getMutableConfig().insertOption(OPTION_TARGET_NAME, targetName);
             return this;
         }
@@ -240,45 +267,61 @@ public class FakeUseCaseConfig
         // Implementations of CameraDeviceConfig.Builder default methods
 
         @Override
-        public Builder setLensFacing(CameraX.LensFacing lensFacing) {
+        @NonNull
+        public Builder setLensFacing(@NonNull CameraX.LensFacing lensFacing) {
             getMutableConfig().insertOption(OPTION_LENS_FACING, lensFacing);
+            return this;
+        }
+
+        @Override
+        @NonNull
+        public Builder setCameraIdFilter(@NonNull CameraIdFilter cameraIdFilter) {
+            getMutableConfig().insertOption(OPTION_CAMERA_ID_FILTER, cameraIdFilter);
             return this;
         }
 
         // Implementations of UseCaseConfig.Builder default methods
 
         @Override
-        public Builder setDefaultSessionConfig(SessionConfig sessionConfig) {
+        @NonNull
+        public Builder setDefaultSessionConfig(@NonNull SessionConfig sessionConfig) {
             getMutableConfig().insertOption(OPTION_DEFAULT_SESSION_CONFIG, sessionConfig);
             return this;
         }
 
         @Override
-        public Builder setDefaultCaptureConfig(CaptureConfig captureConfig) {
+        @NonNull
+        public Builder setDefaultCaptureConfig(@NonNull CaptureConfig captureConfig) {
             getMutableConfig().insertOption(OPTION_DEFAULT_CAPTURE_CONFIG, captureConfig);
             return this;
         }
 
         @Override
-        public Builder setSessionOptionUnpacker(SessionConfig.OptionUnpacker optionUnpacker) {
+        @NonNull
+        public Builder setSessionOptionUnpacker(
+                @NonNull SessionConfig.OptionUnpacker optionUnpacker) {
             getMutableConfig().insertOption(OPTION_SESSION_CONFIG_UNPACKER, optionUnpacker);
             return this;
         }
 
         @Override
-        public Builder setCaptureOptionUnpacker(CaptureConfig.OptionUnpacker optionUnpacker) {
+        @NonNull
+        public Builder setCaptureOptionUnpacker(
+                @NonNull CaptureConfig.OptionUnpacker optionUnpacker) {
             getMutableConfig().insertOption(OPTION_CAPTURE_CONFIG_UNPACKER, optionUnpacker);
             return this;
         }
 
         @Override
+        @NonNull
         public Builder setSurfaceOccupancyPriority(int priority) {
             getMutableConfig().insertOption(OPTION_SURFACE_OCCUPANCY_PRIORITY, priority);
             return this;
         }
 
         @Override
-        public Builder setUseCaseEventListener(UseCase.EventListener eventListener) {
+        @NonNull
+        public Builder setUseCaseEventListener(@NonNull UseCase.EventListener eventListener) {
             getMutableConfig().insertOption(OPTION_USE_CASE_EVENT_LISTENER, eventListener);
             return this;
         }

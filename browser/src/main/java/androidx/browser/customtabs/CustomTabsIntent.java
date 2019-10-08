@@ -344,8 +344,11 @@ public final class CustomTabsIntent {
         private final Intent mIntent = new Intent(Intent.ACTION_VIEW);
         private final CustomTabColorSchemeParams.Builder mDefaultColorSchemeBuilder =
                 new CustomTabColorSchemeParams.Builder();
+        @SuppressWarnings("NullAway") // TODO: b/141869399
         private ArrayList<Bundle> mMenuItems = null;
+        @SuppressWarnings("NullAway") // TODO: b/141869399
         private Bundle mStartAnimationBundle = null;
+        @SuppressWarnings("NullAway") // TODO: b/141869399
         private ArrayList<Bundle> mActionButtons = null;
         private boolean mInstantAppsEnabled = true;
         @Nullable
@@ -355,21 +358,7 @@ public final class CustomTabsIntent {
          * Creates a {@link CustomTabsIntent.Builder} object associated with no
          * {@link CustomTabsSession}.
          */
-        public Builder() {
-            initialize(null, null);
-        }
-
-        /**
-         * Creates a {@link CustomTabsIntent.Builder} object associated with a given
-         * {@link CustomTabsSession.PendingSession}.
-         *
-         * {@see Builder(CustomTabsSession)}
-         * @hide
-         */
-        @RestrictTo(RestrictTo.Scope.LIBRARY)
-        public Builder(@Nullable CustomTabsSession.PendingSession session) {
-            initialize(null, session.getId());
-        }
+        public Builder() {}
 
         /**
          * Creates a {@link CustomTabsIntent.Builder} object associated with a given
@@ -382,16 +371,40 @@ public final class CustomTabsIntent {
          */
         public Builder(@Nullable CustomTabsSession session) {
             if (session != null) {
-                mIntent.setPackage(session.getComponentName().getPackageName());
-                initialize(session.getBinder(), session.getId());
-            } else {
-                initialize(null, null);
+                setSession(session);
             }
         }
 
-        private void initialize(@Nullable IBinder session, @Nullable PendingIntent sessionId) {
+        /**
+         * Associates the {@link Intent} with the given {@link CustomTabsSession}.
+         *
+         * Guarantees that the {@link Intent} will be sent to the same component as the one the
+         * session is associated with.
+         */
+        @NonNull
+        public Builder setSession(@NonNull CustomTabsSession session) {
+            mIntent.setPackage(session.getComponentName().getPackageName());
+            setSessionParameters(session.getBinder(), session.getId());
+            return this;
+        }
+
+        /**
+         * Associates the {@link Intent} with the given {@link CustomTabsSession.PendingSession}.
+         * Overrides the effect of {@link #setSession}.
+         *
+         * @hide
+         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY)
+        @NonNull
+        public Builder setPendingSession(@NonNull CustomTabsSession.PendingSession session) {
+            setSessionParameters(null, session.getId());
+            return this;
+        }
+
+        private void setSessionParameters(@Nullable IBinder binder,
+                @Nullable PendingIntent sessionId) {
             Bundle bundle = new Bundle();
-            BundleCompat.putBinder(bundle, EXTRA_SESSION, session);
+            BundleCompat.putBinder(bundle, EXTRA_SESSION, binder);
             if (sessionId != null) {
                 bundle.putParcelable(EXTRA_SESSION_ID, sessionId);
             }
@@ -623,6 +636,7 @@ public final class CustomTabsIntent {
          * @param exitResId Resource ID of the "exit" animation for the application.
          */
         @NonNull
+        @SuppressWarnings("NullAway") // TODO: b/141869399
         public Builder setStartAnimations(
                 @NonNull Context context, @AnimRes int enterResId, @AnimRes int exitResId) {
             mStartAnimationBundle = ActivityOptionsCompat.makeCustomAnimation(
@@ -718,6 +732,10 @@ public final class CustomTabsIntent {
          */
         @NonNull
         public CustomTabsIntent build() {
+            if (!mIntent.hasExtra(EXTRA_SESSION)) {
+                // The intent must have EXTRA_SESSION, even if it is null.
+                setSessionParameters(null, null);
+            }
             if (mMenuItems != null) {
                 mIntent.putParcelableArrayListExtra(CustomTabsIntent.EXTRA_MENU_ITEMS, mMenuItems);
             }

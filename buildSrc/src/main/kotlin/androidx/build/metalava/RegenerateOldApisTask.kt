@@ -18,7 +18,6 @@ package androidx.build.metalava
 
 import androidx.build.SupportConfig
 import androidx.build.Version
-import androidx.build.docsDir
 import androidx.build.checkapi.getApiLocation
 import androidx.build.checkapi.isValidApiVersion
 import androidx.build.java.JavaCompileInputs
@@ -32,8 +31,6 @@ import java.io.File
 
 /** Generate API signature text files using previously built .jar/.aar artifacts. */
 abstract class RegenerateOldApisTask : DefaultTask() {
-    var generateRestrictedAPIs = false
-
     @TaskAction
     fun exec() {
         val groupId = project.group.toString()
@@ -73,7 +70,6 @@ abstract class RegenerateOldApisTask : DefaultTask() {
             runnerProject.logger.info("Skipping illegal version $version from $mavenId")
             return
         }
-        project.logger.lifecycle("Regenerating $mavenId")
         val inputs: JavaCompileInputs?
         try {
             inputs = getFiles(runnerProject, mavenId)
@@ -83,8 +79,9 @@ abstract class RegenerateOldApisTask : DefaultTask() {
         }
 
         val outputApiLocation = project.getApiLocation(version)
-        val tempDir = File(project.docsDir(), "release/${project.name}")
+        val tempDir = File(project.buildDir, "api")
         if (outputApiLocation.publicApiFile.exists()) {
+            project.logger.lifecycle("Regenerating $mavenId")
             val generateRestrictedAPIs = outputApiLocation.restrictedApiFile.exists()
             project.generateApi(
                 inputs, outputApiLocation, tempDir, ApiLintMode.Skip, generateRestrictedAPIs)

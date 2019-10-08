@@ -125,16 +125,12 @@ public class MediaSessionCompat {
     private final MediaControllerCompat mController;
     private final ArrayList<OnActiveChangeListener> mActiveListeners = new ArrayList<>();
 
-    /**
-     * @hide
-     */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
     @IntDef(flag=true, value={
             FLAG_HANDLES_MEDIA_BUTTONS,
             FLAG_HANDLES_TRANSPORT_CONTROLS,
             FLAG_HANDLES_QUEUE_COMMANDS })
     @Retention(RetentionPolicy.SOURCE)
-    public @interface SessionFlags {}
+    private @interface SessionFlags {}
 
     /**
      * Sets this flag on the session to indicate that it can handle media button
@@ -422,7 +418,7 @@ public class MediaSessionCompat {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY)
     public static final String KEY_TOKEN = "android.support.v4.media.session.TOKEN";
 
     /**
@@ -435,7 +431,7 @@ public class MediaSessionCompat {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY)
     public static final String KEY_SESSION2_TOKEN =
             "android.support.v4.media.session.SESSION_TOKEN2";
 
@@ -533,7 +529,7 @@ public class MediaSessionCompat {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY_GROUP_PREFIX) // accessed by media2-session
     public MediaSessionCompat(@NonNull Context context, @NonNull String tag,
             @Nullable ComponentName mbrComponent, @Nullable PendingIntent mbrIntent,
             @Nullable Bundle sessionInfo, @Nullable VersionedParcelable session2Token) {
@@ -558,11 +554,6 @@ public class MediaSessionCompat {
             mediaButtonIntent.setComponent(mbrComponent);
             mbrIntent = PendingIntent.getBroadcast(context,
                     0/* requestCode, ignored */, mediaButtonIntent, 0/* flags */);
-        }
-
-        if (doesBundleHaveCustomParcelable(sessionInfo)) {
-            throw new IllegalArgumentException("sessionInfo shouldn't contain any custom "
-                    + "parcelables");
         }
 
         if (android.os.Build.VERSION.SDK_INT >= 21) {
@@ -964,7 +955,7 @@ public class MediaSessionCompat {
      *
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY)
     public String getCallingPackage() {
         return mImpl.getCallingPackage();
     }
@@ -1028,48 +1019,39 @@ public class MediaSessionCompat {
         return new MediaSessionCompat(context, impl);
     }
 
-
     /**
-     * Returns whether the given bundle includes non-framework Parcelables.
+     * A helper method for setting the application class loader to the given {@link Bundle}.
      *
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
-    public static boolean doesBundleHaveCustomParcelable(@Nullable Bundle bundle) {
-        if (bundle == null) {
-            return false;
-        }
-
-        // Try writing the bundle to parcel, and read it with framework classloader.
-        Parcel parcel = null;
-        try {
-            parcel = Parcel.obtain();
-            parcel.writeBundle(bundle);
-            parcel.setDataPosition(0);
-            Bundle out = parcel.readBundle(null);
-
-            // Calling Bundle#isEmpty() will trigger Bundle#unparcel().
-            out.isEmpty();
-        } catch (BadParcelableException e) {
-            Log.d(TAG, "Custom parcelable in sessionInfo.", e);
-            return true;
-        } finally {
-            if (parcel != null) {
-                parcel.recycle();
-            }
-        }
-        return false;
-    }
-
-    /**
-     * A helper method for setting the class loader to {@link Bundle} objects.
-     *
-     * @hide
-     */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY)
     public static void ensureClassLoader(@Nullable Bundle bundle) {
         if (bundle != null) {
             bundle.setClassLoader(MediaSessionCompat.class.getClassLoader());
+        }
+    }
+
+    /**
+     * Tries to unparcel the given {@link Bundle} with the application class loader and
+     * returns {@code null} if a {@link BadParcelableException} is thrown while unparcelling,
+     * otherwise the given bundle in which the application class loader is set.
+     *
+     * @hide
+     */
+    @RestrictTo(LIBRARY)
+    @Nullable
+    public static Bundle unparcelWithClassLoader(@Nullable Bundle bundle) {
+        if (bundle == null) {
+            return null;
+        }
+        ensureClassLoader(bundle);
+        try {
+            bundle.isEmpty(); // to call unparcel()
+            return bundle;
+        } catch (BadParcelableException e) {
+            // The exception details will be logged by Parcel class.
+            Log.e(TAG, "Could not unparcel the data.");
+            return null;
         }
     }
 
@@ -1670,40 +1652,53 @@ public class MediaSessionCompat {
             public void onCustomAction(String action, Bundle extras) {
                 ensureClassLoader(extras);
                 setCurrentControllerInfo();
-                Bundle bundle = extras.getBundle(ACTION_ARGUMENT_EXTRAS);
-                ensureClassLoader(bundle);
 
-                if (action.equals(ACTION_PLAY_FROM_URI)) {
-                    Uri uri = extras.getParcelable(ACTION_ARGUMENT_URI);
-                    Callback.this.onPlayFromUri(uri, bundle);
-                } else if (action.equals(ACTION_PREPARE)) {
-                    Callback.this.onPrepare();
-                } else if (action.equals(ACTION_PREPARE_FROM_MEDIA_ID)) {
-                    String mediaId = extras.getString(ACTION_ARGUMENT_MEDIA_ID);
-                    Callback.this.onPrepareFromMediaId(mediaId, bundle);
-                } else if (action.equals(ACTION_PREPARE_FROM_SEARCH)) {
-                    String query = extras.getString(ACTION_ARGUMENT_QUERY);
-                    Callback.this.onPrepareFromSearch(query, bundle);
-                } else if (action.equals(ACTION_PREPARE_FROM_URI)) {
-                    Uri uri = extras.getParcelable(ACTION_ARGUMENT_URI);
-                    Callback.this.onPrepareFromUri(uri, bundle);
-                } else if (action.equals(ACTION_SET_CAPTIONING_ENABLED)) {
-                    boolean enabled = extras.getBoolean(ACTION_ARGUMENT_CAPTIONING_ENABLED);
-                    Callback.this.onSetCaptioningEnabled(enabled);
-                } else if (action.equals(ACTION_SET_REPEAT_MODE)) {
-                    int repeatMode = extras.getInt(ACTION_ARGUMENT_REPEAT_MODE);
-                    Callback.this.onSetRepeatMode(repeatMode);
-                } else if (action.equals(ACTION_SET_SHUFFLE_MODE)) {
-                    int shuffleMode = extras.getInt(ACTION_ARGUMENT_SHUFFLE_MODE);
-                    Callback.this.onSetShuffleMode(shuffleMode);
-                } else if (action.equals(ACTION_SET_RATING)) {
-                    RatingCompat rating = extras.getParcelable(ACTION_ARGUMENT_RATING);
-                    Callback.this.onSetRating(rating, bundle);
-                } else if (action.equals(ACTION_SET_PLAYBACK_SPEED)) {
-                    float speed = extras.getFloat(ACTION_ARGUMENT_PLAYBACK_SPEED, 1.0f);
-                    Callback.this.onSetPlaybackSpeed(speed);
-                } else {
-                    Callback.this.onCustomAction(action, extras);
+                try {
+                    if (action.equals(ACTION_PLAY_FROM_URI)) {
+                        Uri uri = extras.getParcelable(ACTION_ARGUMENT_URI);
+                        Bundle bundle = extras.getBundle(ACTION_ARGUMENT_EXTRAS);
+                        ensureClassLoader(bundle);
+                        Callback.this.onPlayFromUri(uri, bundle);
+                    } else if (action.equals(ACTION_PREPARE)) {
+                        Callback.this.onPrepare();
+                    } else if (action.equals(ACTION_PREPARE_FROM_MEDIA_ID)) {
+                        String mediaId = extras.getString(ACTION_ARGUMENT_MEDIA_ID);
+                        Bundle bundle = extras.getBundle(ACTION_ARGUMENT_EXTRAS);
+                        ensureClassLoader(bundle);
+                        Callback.this.onPrepareFromMediaId(mediaId, bundle);
+                    } else if (action.equals(ACTION_PREPARE_FROM_SEARCH)) {
+                        String query = extras.getString(ACTION_ARGUMENT_QUERY);
+                        Bundle bundle = extras.getBundle(ACTION_ARGUMENT_EXTRAS);
+                        ensureClassLoader(bundle);
+                        Callback.this.onPrepareFromSearch(query, bundle);
+                    } else if (action.equals(ACTION_PREPARE_FROM_URI)) {
+                        Uri uri = extras.getParcelable(ACTION_ARGUMENT_URI);
+                        Bundle bundle = extras.getBundle(ACTION_ARGUMENT_EXTRAS);
+                        ensureClassLoader(bundle);
+                        Callback.this.onPrepareFromUri(uri, bundle);
+                    } else if (action.equals(ACTION_SET_CAPTIONING_ENABLED)) {
+                        boolean enabled = extras.getBoolean(ACTION_ARGUMENT_CAPTIONING_ENABLED);
+                        Callback.this.onSetCaptioningEnabled(enabled);
+                    } else if (action.equals(ACTION_SET_REPEAT_MODE)) {
+                        int repeatMode = extras.getInt(ACTION_ARGUMENT_REPEAT_MODE);
+                        Callback.this.onSetRepeatMode(repeatMode);
+                    } else if (action.equals(ACTION_SET_SHUFFLE_MODE)) {
+                        int shuffleMode = extras.getInt(ACTION_ARGUMENT_SHUFFLE_MODE);
+                        Callback.this.onSetShuffleMode(shuffleMode);
+                    } else if (action.equals(ACTION_SET_RATING)) {
+                        RatingCompat rating = extras.getParcelable(ACTION_ARGUMENT_RATING);
+                        Bundle bundle = extras.getBundle(ACTION_ARGUMENT_EXTRAS);
+                        ensureClassLoader(bundle);
+                        Callback.this.onSetRating(rating, bundle);
+                    } else if (action.equals(ACTION_SET_PLAYBACK_SPEED)) {
+                        float speed = extras.getFloat(ACTION_ARGUMENT_PLAYBACK_SPEED, 1.0f);
+                        Callback.this.onSetPlaybackSpeed(speed);
+                    } else {
+                        Callback.this.onCustomAction(action, extras);
+                    }
+                } catch (BadParcelableException e) {
+                    // The exception details will be logged by Parcel class.
+                    Log.e(TAG, "Could not unparcel the data.");
                 }
                 clearCurrentControllerInfo();
             }
@@ -1832,7 +1827,7 @@ public class MediaSessionCompat {
          * @return A compat Token for use with {@link MediaControllerCompat}.
          * @hide
          */
-        @RestrictTo(LIBRARY_GROUP_PREFIX)
+        @RestrictTo(LIBRARY)
         public static Token fromToken(Object token, IMediaSession extraBinder) {
             if (token != null && android.os.Build.VERSION.SDK_INT >= 21) {
                 if (!(token instanceof MediaSession.Token)) {
@@ -1901,7 +1896,7 @@ public class MediaSessionCompat {
         /**
          * @hide
          */
-        @RestrictTo(LIBRARY_GROUP_PREFIX)
+        @RestrictTo(LIBRARY)
         public IMediaSession getExtraBinder() {
             return mExtraBinder;
         }
@@ -1909,7 +1904,7 @@ public class MediaSessionCompat {
         /**
          * @hide
          */
-        @RestrictTo(LIBRARY_GROUP_PREFIX)
+        @RestrictTo(LIBRARY)
         public void setExtraBinder(IMediaSession extraBinder) {
             mExtraBinder = extraBinder;
         }
@@ -1917,7 +1912,7 @@ public class MediaSessionCompat {
         /**
          * @hide
          */
-        @RestrictTo(LIBRARY_GROUP_PREFIX)
+        @RestrictTo(LIBRARY_GROUP_PREFIX) // accessed by media2-session
         public VersionedParcelable getSession2Token() {
             return mSession2Token;
         }
@@ -1925,7 +1920,7 @@ public class MediaSessionCompat {
         /**
          * @hide
          */
-        @RestrictTo(LIBRARY_GROUP_PREFIX)
+        @RestrictTo(LIBRARY_GROUP_PREFIX) // accessed by media2-session
         public void setSession2Token(VersionedParcelable session2Token) {
             mSession2Token = session2Token;
         }
@@ -1933,7 +1928,7 @@ public class MediaSessionCompat {
         /**
          * @hide
          */
-        @RestrictTo(LIBRARY_GROUP_PREFIX)
+        @RestrictTo(LIBRARY_GROUP_PREFIX) // accessed by media2-session
         public Bundle toBundle() {
             Bundle bundle = new Bundle();
             bundle.putParcelable(KEY_TOKEN, this);
@@ -1953,7 +1948,7 @@ public class MediaSessionCompat {
          * @return A compat Token for use with {@link MediaControllerCompat}.
          * @hide
          */
-        @RestrictTo(LIBRARY_GROUP_PREFIX)
+        @RestrictTo(LIBRARY_GROUP_PREFIX) // accessed by media2-session
         public static Token fromBundle(Bundle tokenBundle) {
             if (tokenBundle == null) {
                 return null;
@@ -2147,12 +2142,9 @@ public class MediaSessionCompat {
      * This is a wrapper for {@link ResultReceiver} for sending over aidl
      * interfaces. The framework version was not exposed to aidls until
      * {@link android.os.Build.VERSION_CODES#LOLLIPOP}.
-     *
-     * @hide
      */
-    @RestrictTo(LIBRARY)
     @SuppressLint("BanParcelableUsage")
-    public static final class ResultReceiverWrapper implements Parcelable {
+    /* package */ static final class ResultReceiverWrapper implements Parcelable {
         ResultReceiver mResultReceiver;
 
         public ResultReceiverWrapper(@NonNull ResultReceiver resultReceiver) {
@@ -3716,6 +3708,7 @@ public class MediaSessionCompat {
         @Override
         public void release() {
             mDestroyed = true;
+            mExtraControllerCallbacks.kill();
             mSessionFwk.release();
         }
 

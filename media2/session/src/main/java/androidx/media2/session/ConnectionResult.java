@@ -54,8 +54,10 @@ class ConnectionResult extends CustomVersionedParcelable {
     PendingIntent mSessionActivity;
     @ParcelField(3)
     int mPlayerState;
-    @ParcelField(4)
+    @NonParcelField
     MediaItem mCurrentMediaItem;
+    @ParcelField(4)
+    MediaItem mParcelableCurrentMediaItem;
     @ParcelField(5)
     long mPositionEventTimeMs;
     @ParcelField(6)
@@ -85,7 +87,7 @@ class ConnectionResult extends CustomVersionedParcelable {
     @ParcelField(18)
     VideoSize mVideoSize;
     @ParcelField(19)
-    List<TrackInfo> mTrackInfos;
+    List<TrackInfo> mTracks;
     // TODO: Reduce parceling / un-parceling cost by using track id. (b/131873726)
     @ParcelField(20)
     TrackInfo mSelectedVideoTrack;
@@ -119,7 +121,7 @@ class ConnectionResult extends CustomVersionedParcelable {
         mNextMediaItemIndex = sessionImpl.getNextMediaItemIndex();
         mTokenExtras = sessionImpl.getToken().getExtras();
         mVideoSize = sessionImpl.getVideoSize();
-        mTrackInfos = sessionImpl.getTrackInfo();
+        mTracks = sessionImpl.getTracks();
         mSelectedVideoTrack = sessionImpl.getSelectedTrack(TrackInfo.MEDIA_TRACK_TYPE_VIDEO);
         mSelectedAudioTrack = sessionImpl.getSelectedTrack(TrackInfo.MEDIA_TRACK_TYPE_AUDIO);
         mSelectedSubtitleTrack = sessionImpl.getSelectedTrack(TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE);
@@ -212,8 +214,8 @@ class ConnectionResult extends CustomVersionedParcelable {
     }
 
     @NonNull
-    public List<TrackInfo> getTrackInfo() {
-        return (mTrackInfos == null) ? Collections.emptyList() : mTrackInfos;
+    public List<TrackInfo> getTracks() {
+        return (mTracks == null) ? Collections.emptyList() : mTracks;
     }
 
     public TrackInfo getSelectedVideoTrack() {
@@ -235,11 +237,14 @@ class ConnectionResult extends CustomVersionedParcelable {
     @Override
     public void onPreParceling(boolean isStream) {
         mSessionBinder = (IBinder) mSessionStub;
+        mParcelableCurrentMediaItem = MediaUtils.upcastForPreparceling(mCurrentMediaItem);
     }
 
     @Override
     public void onPostParceling() {
         mSessionStub = IMediaSession.Stub.asInterface(mSessionBinder);
         mSessionBinder = null;
+        mCurrentMediaItem = mParcelableCurrentMediaItem;
+        mParcelableCurrentMediaItem = null;
     }
 }

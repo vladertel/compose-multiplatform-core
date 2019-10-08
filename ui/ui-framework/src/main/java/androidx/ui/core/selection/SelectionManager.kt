@@ -21,9 +21,11 @@ import androidx.ui.core.LayoutCoordinates
 import androidx.ui.core.PxPosition
 import androidx.ui.core.gesture.DragObserver
 import androidx.ui.core.px
-import androidx.ui.engine.geometry.Rect
 
-internal class SelectionManager : SelectionRegistrar {
+/**
+ * A bridge class between user interaction to the text widgets for text selection.
+ */
+class SelectionManager : SelectionRegistrar {
     /**
      * The current selection.
      */
@@ -65,6 +67,14 @@ internal class SelectionManager : SelectionRegistrar {
     private var dragTotalDistance = PxPosition.Origin
 
     /**
+     * A flag to check if the selection start or end handle is being dragged.
+     * If this value is true, then onPress will not select any text.
+     * This value will be set to true when either handle is being dragged, and be reset to false
+     * when the dragging is stopped.
+     */
+    private var draggingHandle = false
+
+    /**
      * Allow a Text composable to "register" itself with the manager
      */
     override fun subscribe(handler: TextSelectionHandler): Any {
@@ -80,6 +90,7 @@ internal class SelectionManager : SelectionRegistrar {
     }
 
     fun onPress(position: PxPosition) {
+        if (draggingHandle) return
         var result: Selection? = null
         for (handler in handlers) {
             result += handler.getSelection(
@@ -90,16 +101,20 @@ internal class SelectionManager : SelectionRegistrar {
         onSelectionChange(result)
     }
 
-    // Get the coordinates of a character. Currently, it's the middle point of the left edge of the
-    // bounding box of the character. This is a temporary solution.
-    // TODO(qqd): Read how Android solve this problem.
-    fun getCoordinatesForCharacter(box: Rect): PxPosition {
-        return PxPosition(box.left.px, box.top.px + (box.bottom.px - box.top.px) / 2)
+    /**
+     * Adjust coordinates for given text offset.
+     *
+     * Currently [android.text.Layout.getLineBottom] returns y coordinates of the next
+     * line's top offset, which is not included in current line's hit area. To be able to
+     * hit current line, move up this y coordinates by 1 pixel.
+     */
+    fun getAdjustedCoordinates(p: PxPosition): PxPosition {
+        return PxPosition(p.x, p.y - 1.px)
     }
 
     fun handleDragObserver(dragStartHandle: Boolean): DragObserver {
         return object : DragObserver {
-            override fun onStart() {
+            override fun onStart(downPosition: PxPosition) {
                 // The LayoutCoordinates of the widget where the drag gesture should begin. This
                 // is used to convert the position of the beginning of the drag gesture from the
                 // widget coordinates to selection container coordinates.
@@ -112,11 +127,11 @@ internal class SelectionManager : SelectionRegistrar {
                 // The position of the character where the drag gesture should begin. This is in
                 // the widget coordinates.
                 val beginCoordinates =
-                    getCoordinatesForCharacter(
+                    getAdjustedCoordinates(
                         if (dragStartHandle) {
-                            selection!!.startOffset
+                            selection!!.startCoordinates
                         } else {
-                            selection!!.endOffset
+                            selection!!.endCoordinates
                         }
                     )
                 // Convert the position where drag gesture begins from widget coordinates to
@@ -128,6 +143,7 @@ internal class SelectionManager : SelectionRegistrar {
 
                 // Zero out the total distance that being dragged.
                 dragTotalDistance = PxPosition.Origin
+                draggingHandle = true
             }
 
             override fun onDrag(dragDistance: PxPosition): PxPosition {
@@ -140,7 +156,7 @@ internal class SelectionManager : SelectionRegistrar {
                     } else {
                         containerLayoutCoordinates.childToLocal(
                             selection!!.startLayoutCoordinates!!,
-                            getCoordinatesForCharacter(selection!!.startOffset)
+                            getAdjustedCoordinates(selection!!.startCoordinates)
                         )
                     }
 
@@ -148,7 +164,7 @@ internal class SelectionManager : SelectionRegistrar {
                     if (dragStartHandle) {
                         containerLayoutCoordinates.childToLocal(
                             selection!!.endLayoutCoordinates!!,
-                            getCoordinatesForCharacter(selection!!.endOffset)
+                            getAdjustedCoordinates(selection!!.endCoordinates)
                         )
                     } else {
                         dragBeginPosition + dragTotalDistance
@@ -163,9 +179,16 @@ internal class SelectionManager : SelectionRegistrar {
                 onSelectionChange(result)
                 return dragDistance
             }
+
+            override fun onStop(velocity: PxPosition) {
+                super.onStop(velocity)
+                draggingHandle = false
+            }
         }
     }
 }
 
-/** Ambient of SelectionRegistrar for SelectionManager. */
-internal val SelectionRegistrarAmbient = Ambient.of<SelectionRegistrar> { SelectionManager() }
+/**
+ * Ambient of SelectionRegistrar for SelectionManager.
+ */
+val SelectionRegistrarAmbient = Ambient.of<SelectionRegistrar> { SelectionManager() }

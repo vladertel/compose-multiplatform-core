@@ -29,7 +29,7 @@ package androidx.ui.text.font
  * </code>
  */
 data class FontFamily private constructor(val genericFamily: String?, val fonts: List<Font>) :
-// TODO(migration/siyamed): ADD COMMON GENERIC FONT FAMILY NAMES ENUMS
+// TODO(siyamed): ADD COMMON GENERIC FONT FAMILY NAMES ENUMS
     List<Font> by fonts {
 
     /**
@@ -68,5 +68,43 @@ data class FontFamily private constructor(val genericFamily: String?, val fonts:
             "There cannot be two fonts with the same FontWeight and FontStyle in the same " +
                     "FontFamily"
         }
+    }
+
+    companion object {
+        /**
+         * Font family with low contrast and plain stroke endings.
+         *
+         * @sample androidx.ui.text.samples.FontFamilySansSerifSample
+         *
+         * @see [CSS sans-serif](https://www.w3.org/TR/css-fonts-3/#sans-serif)
+         */
+        val SansSerif = FontFamily("sans-serif")
+        /**
+         * The formal text style for scripts.
+         *
+         * @sample androidx.ui.text.samples.FontFamilySerifSample
+         *
+         * @see [CSS serif](https://www.w3.org/TR/css-fonts-3/#serif)
+         */
+        val Serif = FontFamily("serif")
+        /**
+         * Font family where glyphs have the same fixed width.
+         *
+         * @sample androidx.ui.text.samples.FontFamilyMonospaceSample
+         *
+         * @see [CSS monospace](https://www.w3.org/TR/css-fonts-3/#monospace)
+         */
+        val Monospace = FontFamily("monospace")
+        /**
+         * Cursive, hand-written like font family.
+         *
+         * If the device doesn't support this font family, the system will fallback to the
+         * default font.
+         *
+         * @sample androidx.ui.text.samples.FontFamilyCursiveSample
+         *
+         * @see [CSS cursive](https://www.w3.org/TR/css-fonts-3/#cursive)
+         */
+        val Cursive = FontFamily("cursive")
     }
 }

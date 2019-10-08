@@ -24,12 +24,16 @@ plugins {
     id("com.android.library")
     id("AndroidXUiPlugin")
     id("org.jetbrains.kotlin.android")
+    id("androidx.benchmark")
 }
 
 dependencies {
     kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
-    androidTestImplementation(project(":ui:integration-tests:test"))
-    androidTestImplementation(project(":benchmark"))
+    implementation(project(":ui:integration-tests:test"))
+    implementation(project(":benchmark:benchmark-junit4"))
+    implementation(project(":compose:compose-runtime"))
+    implementation(KOTLIN_COMPOSE_STDLIB)
+    implementation(JUNIT)
     androidTestImplementation(project(":ui:ui-core"))
     androidTestImplementation(project(":ui:ui-test"))
     androidTestImplementation(project(":ui:ui-material"))
@@ -37,10 +41,9 @@ dependencies {
     androidTestImplementation(project(":ui:ui-framework"))
     androidTestImplementation(project(":compose:compose-runtime"))
     androidTestImplementation 'androidx.test.ext:junit:1.1.0'
-    androidTestImplementation(KOTLIN_COMPOSE_STDLIB)
     androidTestImplementation(TRUTH)
-    androidTestImplementation(JUNIT)
     androidTestImplementation(ANDROIDX_TEST_RULES)
+    androidTestCompile project(path: ':ui:ui-layout')
 }
 
 androidx {
@@ -52,9 +55,10 @@ androidx {
     description = "UI Benchmarks"
 }
 
+android.defaultConfig.minSdkVersion 21
+
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
         useIR = true
     }
 }
-

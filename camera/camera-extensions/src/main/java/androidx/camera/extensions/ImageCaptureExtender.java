@@ -19,11 +19,18 @@ package androidx.camera.extensions;
 import android.hardware.camera2.CameraCharacteristics;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+import android.util.Pair;
+import android.util.Size;
 
 import androidx.annotation.GuardedBy;
+import androidx.annotation.NonNull;
 import androidx.camera.camera2.Camera2Config;
 import androidx.camera.camera2.impl.CameraEventCallback;
 import androidx.camera.camera2.impl.CameraEventCallbacks;
+import androidx.camera.core.CameraIdFilter;
+import androidx.camera.core.CameraIdFilterSet;
+import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraX;
 import androidx.camera.core.CaptureBundle;
 import androidx.camera.core.CaptureConfig;
@@ -40,12 +47,14 @@ import androidx.camera.extensions.impl.ImageCaptureExtenderImpl;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Class for using an OEM provided extension on image capture.
  */
-abstract class ImageCaptureExtender {
+public abstract class ImageCaptureExtender {
+    private static final String TAG = "ImageCaptureExtender";
     static final Config.Option<EffectMode> OPTION_IMAGE_CAPTURE_EXTENDER_MODE =
             Config.Option.create("camerax.extensions.imageCaptureExtender.mode", EffectMode.class);
 
@@ -67,9 +76,17 @@ abstract class ImageCaptureExtender {
      */
     public boolean isExtensionAvailable() {
         CameraX.LensFacing lensFacing = mBuilder.build().getLensFacing();
-        String cameraId = CameraUtil.getCameraId(lensFacing);
-        CameraCharacteristics cameraCharacteristics = CameraUtil.getCameraCharacteristics(cameraId);
-        return mImpl.isExtensionAvailable(cameraId, cameraCharacteristics);
+        Set<String> availableCameraIds = null;
+        try {
+            availableCameraIds = CameraUtil.getCameraIdSetWithLensFacing(lensFacing);
+        } catch (CameraInfoUnavailableException e) {
+            // Returns false if camera info is unavailable.
+            return false;
+        }
+        ExtensionCameraIdFilter extensionCameraIdFilter = new ExtensionCameraIdFilter(mImpl);
+        availableCameraIds = extensionCameraIdFilter.filter(availableCameraIds);
+
+        return !availableCameraIds.isEmpty();
     }
 
     /**
@@ -80,8 +97,25 @@ abstract class ImageCaptureExtender {
      * enabled together.
      */
     public void enableExtension() {
-        CameraX.LensFacing lensFacing = mBuilder.build().getLensFacing();
-        String cameraId = CameraUtil.getCameraId(lensFacing);
+        // Add extension camera id filter to config.
+        ExtensionCameraIdFilter extensionCameraIdFilter = new ExtensionCameraIdFilter(mImpl);
+        CameraIdFilter currentCameraIdFilter = mBuilder.build().getCameraIdFilter(null);
+        if (currentCameraIdFilter == null) {
+            mBuilder.setCameraIdFilter(extensionCameraIdFilter);
+        } else {
+            CameraIdFilterSet cameraIdFilterSet = new CameraIdFilterSet();
+            cameraIdFilterSet.addCameraIdFilter(currentCameraIdFilter);
+            cameraIdFilterSet.addCameraIdFilter(extensionCameraIdFilter);
+            mBuilder.setCameraIdFilter(cameraIdFilterSet);
+        }
+
+        String cameraId = CameraUtil.getCameraId(mBuilder.build());
+        if (cameraId == null) {
+            // If there's no available camera id for the extender to function, just return here
+            // and it will be no-ops.
+            return;
+        }
+
         CameraCharacteristics cameraCharacteristics = CameraUtil.getCameraCharacteristics(cameraId);
         mImpl.init(cameraId, cameraCharacteristics);
 
@@ -100,11 +134,35 @@ abstract class ImageCaptureExtender {
         mBuilder.setUseCaseEventListener(imageCaptureAdapter);
         mBuilder.setCaptureBundle(imageCaptureAdapter);
         mBuilder.getMutableConfig().insertOption(OPTION_IMAGE_CAPTURE_EXTENDER_MODE, mEffectMode);
+        setSupportedResolutions();
+    }
+
+    private void setSupportedResolutions() {
+        if (ExtensionVersion.getRuntimeVersion().compareTo(Version.VERSION_1_1) < 0) {
+            return;
+        }
+
+        List<Pair<Integer, Size[]>> supportedResolutions = null;
+
+        try {
+            supportedResolutions = mImpl.getSupportedResolutions();
+        } catch (NoSuchMethodError e) {
+            Log.e(TAG, "getSupportedResolution interface is not implemented in vendor library.");
+        }
+
+        if (supportedResolutions != null) {
+            mBuilder.setSupportedResolutions(supportedResolutions);
+        }
     }
 
     static void checkPreviewEnabled(EffectMode effectMode, Collection<UseCase> activeUseCases) {
         boolean isPreviewExtenderEnabled = false;
         boolean isMismatched = false;
+
+        // In case all use cases are unbound when doing the check.
+        if (activeUseCases == null || activeUseCases.isEmpty()) {
+            return;
+        }
 
         for (UseCase useCase : activeUseCases) {
             EffectMode previewExtenderMode = useCase.getUseCaseConfig().retrieveOption(
@@ -146,7 +204,7 @@ abstract class ImageCaptureExtender {
         }
 
         @Override
-        public void onBind(String cameraId) {
+        public void onBind(@NonNull String cameraId) {
             if (mActive.get()) {
                 CameraCharacteristics cameraCharacteristics = CameraUtil.getCameraCharacteristics(
                         cameraId);
@@ -176,6 +234,7 @@ abstract class ImageCaptureExtender {
             if (mActive.get()) {
                 Handler handler = new Handler(Looper.getMainLooper());
                 handler.post(new Runnable() {
+                    @Override
                     public void run() {
                         checkPreviewEnabled(mEffectMode, CameraX.getActiveUseCases());
                     }

@@ -10,7 +10,7 @@ plugins {
 
 dependencies {
     api("androidx.annotation:annotation:1.1.0")
-    api("androidx.core:core:1.1.0-rc01")
+    api("androidx.core:core:1.1.0")
     api("androidx.interpolator:interpolator:1.0.0")
 
     androidTestImplementation(JUNIT)
@@ -22,10 +22,11 @@ dependencies {
     androidTestImplementation(ESPRESSO_CONTRIB, libs.exclude_for_espresso)
     androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
     androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
-    androidTestImplementation project(':internal-testutils'), {
+    androidTestImplementation(project(":internal-testutils-espresso"))
+    androidTestImplementation project(':internal-testutils-runtime'), {
         exclude group: 'androidx.swiperefreshlayout', module: 'swiperefreshlayout'
     }
-    androidTestImplementation(ANDROIDX_RECYCLERVIEW) {
+    androidTestImplementation(project(':recyclerview:recyclerview')) {
         exclude group: 'androidx.swiperefreshlayout', module: 'swiperefreshlayout'
     }
 }

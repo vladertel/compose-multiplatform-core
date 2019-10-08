@@ -25,11 +25,9 @@ import androidx.animation.fling
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.memo
-import androidx.compose.setContent
 import androidx.compose.state
 import androidx.compose.unaryPlus
 import androidx.ui.animation.animatedFloat
-import androidx.ui.core.CraneWrapper
 import androidx.ui.core.Draw
 import androidx.ui.core.IntPx
 import androidx.ui.core.Layout
@@ -37,15 +35,17 @@ import androidx.ui.core.PxPosition
 import androidx.ui.core.PxSize
 import androidx.ui.core.Text
 import androidx.ui.core.dp
-import androidx.ui.core.gesture.DragGestureDetector
+import androidx.ui.core.gesture.RawDragGestureDetector
 import androidx.ui.core.gesture.DragObserver
+import androidx.ui.core.setContent
 import androidx.ui.core.sp
 import androidx.ui.engine.geometry.Rect
 import androidx.ui.graphics.Color
 import androidx.ui.layout.Column
+import androidx.ui.layout.LayoutSize
 import androidx.ui.layout.Padding
-import androidx.ui.painting.Canvas
-import androidx.ui.painting.Paint
+import androidx.ui.graphics.Canvas
+import androidx.ui.graphics.Paint
 import androidx.ui.text.TextStyle
 import kotlin.math.roundToInt
 
@@ -54,29 +54,29 @@ class SpringBackScrolling : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CraneWrapper {
-                SpringBackExample()
-            }
+            SpringBackExample()
         }
     }
 
     @Composable
     fun SpringBackExample() {
-        Column {
+        Column(mainAxisSize = LayoutSize.Expand) {
             Padding(40.dp) {
-                Text("<== Scroll horizontally ==>", style = TextStyle(fontSize = 80.sp))
+                Text("<== Scroll horizontally ==>", style = TextStyle(fontSize = 20.sp))
             }
             val animScroll = +animatedFloat(0f)
             val itemWidth = +state { 0f }
             var isFlinging = +state { false }
-            DragGestureDetector(canDrag = { true }, dragObserver = object : DragObserver {
+            RawDragGestureDetector(dragObserver = object : DragObserver {
                 override fun onDrag(dragDistance: PxPosition): PxPosition {
                     animScroll.snapTo(animScroll.targetValue + dragDistance.x.value)
                     return dragDistance
                 }
                 override fun onStop(velocity: PxPosition) {
                     isFlinging.value = true
-                    animScroll.fling(velocity.x.value, onFinished = { isFlinging.value = false })
+                    animScroll.fling(velocity.x.value, onEnd = { _, _, _ ->
+                        isFlinging.value = false
+                    })
                 }
             }) {
                 val children = @Composable {
@@ -113,9 +113,9 @@ class SpringBackScrolling : Activity() {
                         drawRects(canvas, parentSize, paint, animScroll.value)
                     }
                 }
-                Layout(children = children, layoutBlock = { _, constraints ->
+                Layout(children) { _, constraints ->
                     layout(constraints.maxWidth, IntPx(1200)) {}
-                })
+                }
             }
         }
     }
@@ -143,12 +143,12 @@ class SpringBackScrolling : Activity() {
     }
 
     private val colors = listOf(
-            Color(0xFFdaf8e3.toInt()),
-            Color(0xFF97ebdb.toInt()),
-            Color(0xFF00c2c7.toInt()),
-            Color(0xFF0086ad.toInt()),
-            Color(0xFF005582.toInt()),
-            Color(0xFF0086ad.toInt()),
-            Color(0xFF00c2c7.toInt()),
-            Color(0xFF97ebdb.toInt()))
+            Color(0xFFdaf8e3),
+            Color(0xFF97ebdb),
+            Color(0xFF00c2c7),
+            Color(0xFF0086ad),
+            Color(0xFF005582),
+            Color(0xFF0086ad),
+            Color(0xFF00c2c7),
+            Color(0xFF97ebdb))
 }

@@ -36,7 +36,9 @@ fun setSdkInLocalPropertiesFile(supportRoot: File, propertiesFile: File) {
         // gradle always deliminate directories with '/' regardless of the OS.
         // So convert deliminator here.
         val gradlePath = sdkPath.absolutePath.replace(File.separator, "/")
-        val expectedContents = "sdk.dir=$gradlePath"
+        var expectedContents = "sdk.dir=$gradlePath"
+        expectedContents += "\ncmake.dir=$gradlePath/cmake"
+        expectedContents += "\nndk.dir=$gradlePath/ndk"
         if (!props.exists() || props.readText(Charsets.UTF_8).trim() != expectedContents) {
             props.printWriter().use { out ->
                 out.println(expectedContents)

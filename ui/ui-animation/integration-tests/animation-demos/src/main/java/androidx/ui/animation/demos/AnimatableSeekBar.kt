@@ -22,25 +22,25 @@ import androidx.animation.PhysicsBuilder
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.memo
-import androidx.compose.setContent
 import androidx.compose.unaryPlus
 import androidx.ui.animation.animatedFloat
-import androidx.ui.core.CraneWrapper
 import androidx.ui.core.Draw
 import androidx.ui.core.PxPosition
 import androidx.ui.core.Text
 import androidx.ui.core.dp
-import androidx.ui.core.gesture.DragGestureDetector
+import androidx.ui.core.gesture.RawDragGestureDetector
 import androidx.ui.core.gesture.DragObserver
 import androidx.ui.core.gesture.PressGestureDetector
+import androidx.ui.core.setContent
 import androidx.ui.core.sp
 import androidx.ui.engine.geometry.Offset
 import androidx.ui.engine.geometry.Rect
 import androidx.ui.graphics.Color
 import androidx.ui.layout.Column
 import androidx.ui.layout.Container
+import androidx.ui.layout.LayoutSize
 import androidx.ui.layout.Padding
-import androidx.ui.painting.Paint
+import androidx.ui.graphics.Paint
 import androidx.ui.text.TextStyle
 
 class AnimatableSeekBar : Activity() {
@@ -48,15 +48,13 @@ class AnimatableSeekBar : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CraneWrapper {
-                Column {
-                    Padding(40.dp) {
-                        Text("Drag or tap on the seek bar", style = TextStyle(fontSize = 8.sp))
-                    }
+            Column(mainAxisSize = LayoutSize.Expand) {
+                Padding(40.dp) {
+                    Text("Drag or tap on the seek bar", style = TextStyle(fontSize = 8.sp))
+                }
 
-                    Padding(left = 10.dp, right = 10.dp, bottom = 30.dp) {
-                        MovingTargetExample()
-                    }
+                Padding(left = 10.dp, right = 10.dp, bottom = 30.dp) {
+                    MovingTargetExample()
                 }
             }
         }
@@ -65,7 +63,7 @@ class AnimatableSeekBar : Activity() {
     @Composable
     fun MovingTargetExample() {
             val animValue = +animatedFloat(0f)
-            DragGestureDetector(canDrag = { true }, dragObserver = object : DragObserver {
+            RawDragGestureDetector(dragObserver = object : DragObserver {
                 override fun onDrag(dragDistance: PxPosition): PxPosition {
                     animValue.snapTo(animValue.targetValue + dragDistance.x.value)
                     return dragDistance
@@ -86,23 +84,25 @@ class AnimatableSeekBar : Activity() {
 
     @Composable
     fun DrawSeekBar(x: Float) {
-        var paint = +memo { Paint() }
+        val paint = +memo { Paint() }
         Draw { canvas, parentSize ->
             val centerY = parentSize.height.value / 2
+            val xConstraint = x.coerceIn(0f, parentSize.width.value)
             // draw bar
             paint.color = Color.Gray
             canvas.drawRect(
                 Rect(0f, centerY - 5, parentSize.width.value, centerY + 5),
                 paint
             )
-            paint.color = Color.Fuchsia
+            paint.color = Color.Magenta
             canvas.drawRect(
-                Rect(0f, centerY - 5, x, centerY + 5),
+                Rect(0f, centerY - 5, xConstraint, centerY + 5),
                 paint
             )
+
             // draw ticker
             canvas.drawCircle(
-                Offset(x, centerY), 40f, paint
+                Offset(xConstraint, centerY), 40f, paint
             )
         }
     }

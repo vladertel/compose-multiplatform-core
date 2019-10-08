@@ -18,10 +18,9 @@ package androidx.ui.core.selection
 
 import androidx.ui.core.PxPosition
 import androidx.ui.core.px
-import androidx.ui.engine.geometry.Offset
-import androidx.ui.engine.geometry.Rect
-import androidx.ui.text.TextSelection
-import androidx.ui.text.TextPainter
+import androidx.ui.text.TextDelegate
+import androidx.ui.text.TextRange
+import androidx.ui.text.style.TextDirection
 import kotlin.math.max
 
 /**
@@ -35,23 +34,30 @@ internal class TextSelectionProcessor(
     val mode: SelectionMode,
     /** The lambda contains certain behavior when selection changes. Currently this is for changing
      * the selection used for drawing in Text widget. */
-    var onSelectionChange: (TextSelection?) -> Unit = {},
-    /** The TextPainter object from Text widget. */
-    val textPainter: TextPainter
+    var onSelectionChange: (TextRange?) -> Unit = {},
+    /** The TextDelegate object from Text widget. */
+    val textDelegate: TextDelegate
 ) {
-    // TODO(qqd): Determine a set of coordinates around a character that we need.
     /**
-     * The bounding box of the character at the start offset as Rect. The bounding box includes the
-     * top, bottom, left, and right of the character. Note: It is temporary to use Rect.
+     * The coordinates of the graphical position for selection start character offset.
+     *
+     * This graphical position is the point at the left bottom corner for LTR
+     * character, or right bottom corner for RTL character.
+     *
+     * This coordinates is in child widget coordinates system.
      */
-    // TODO(qqd): After solving the problem of getting the coordinates of a character, figure out
-    // what should the startOffset and endOffset should be.
-    internal var startOffset = Rect.zero
+    internal var startCoordinates: PxPosition = PxPosition.Origin
     /**
-     * The bounding box of the character at the end offset as Rect. The bounding box includes the
-     * top, bottom, left, and right of the character. Note: It is temporary to use Rect.
+     * The coordinates of the graphical position for selection end character offset.
+     *
+     * This graphical position is the point at the left bottom corner for LTR
+     * character, or right bottom corner for RTL character.
+     *
+     * This coordinates is in child widget coordinates system.
      */
-    internal var endOffset = Rect.zero
+    internal var endCoordinates: PxPosition = PxPosition.Origin
+    internal var startDirection = TextDirection.Ltr
+    internal var endDirection = TextDirection.Ltr
     /**
      * A flag to check if the text widget contains the whole selection's start.
      */
@@ -66,7 +72,7 @@ internal class TextSelectionProcessor(
     internal var isSelected = false
 
     /** The length of the text in text widget. */
-    private val length = textPainter.text?.let { it.text.length } ?: 0
+    private val length = textDelegate.text.text.length
 
     init {
         processTextSelection()
@@ -79,37 +85,30 @@ internal class TextSelectionProcessor(
         val startPx = selectionCoordinates.first
         val endPx = selectionCoordinates.second
 
-        if (!mode.isSelected(textPainter, start = startPx, end = endPx)) {
+        if (!mode.isSelected(textDelegate, start = startPx, end = endPx)) {
             onSelectionChange(null)
             return
         }
 
         isSelected = true
         var (textSelectionStart, containsWholeSelectionStart) =
-            getSelectionBorder(textPainter, startPx, true)
+            getSelectionBorder(textDelegate, startPx, true)
         var (textSelectionEnd, containsWholeSelectionEnd) =
-            getSelectionBorder(textPainter, endPx, false)
+            getSelectionBorder(textDelegate, endPx, false)
 
         if (textSelectionStart == textSelectionEnd) {
-            val wordBoundary = textPainter.getWordBoundary(textSelectionStart)
+            val wordBoundary = textDelegate.getWordBoundary(textSelectionStart)
             textSelectionStart = wordBoundary.start
             textSelectionEnd = wordBoundary.end
-        } else {
-            // Currently the implementation of selection is inclusive-inclusive which is a temporary
-            // workaround, but inclusive-exclusive in Android. Thus before calling drawing selection
-            // background, make the selection matches Android behaviour.
-            textSelectionEnd = textSelectionEnd + 1
         }
 
-        onSelectionChange(TextSelection(textSelectionStart, textSelectionEnd))
+        onSelectionChange(TextRange(textSelectionStart, textSelectionEnd))
 
-        // Currently the implementation of selection is inclusive-inclusive which is a temporary
-        // workaround, but inclusive-exclusive in Android. Thus make the selection end matches Crane
-        // behaviour.
-        textSelectionEnd = textSelectionEnd - 1
+        startCoordinates = getSelectionHandleCoordinates(textSelectionStart, true)
+        endCoordinates = getSelectionHandleCoordinates(textSelectionEnd, false)
 
-        startOffset = textPainter.getBoundingBox(textSelectionStart)
-        endOffset = textPainter.getBoundingBox(textSelectionEnd)
+        startDirection = textDelegate.getBidiRunDirection(textSelectionStart)
+        endDirection = textDelegate.getBidiRunDirection(Math.max(textSelectionEnd - 1, 0))
 
         this.containsWholeSelectionStart = containsWholeSelectionStart
         this.containsWholeSelectionEnd = containsWholeSelectionEnd
@@ -120,39 +119,52 @@ internal class TextSelectionProcessor(
      * selection.
      */
     private fun getSelectionBorder(
-        textPainter: TextPainter,
+        textDelegate: TextDelegate,
         // This position is in Text widget coordinate system.
         position: PxPosition,
         isStart: Boolean
     ): Pair<Int, Boolean> {
-        // The text position of the border of selection. The default value is set to the beginning
-        // of the text widget for the start border, and the very last position of the text widget
-        // for the end border. If the widget contains the whole selection's border, this value will
-        // be reset.
+        // The character offset of the border of selection. The default value is set to the
+        // beginning of the text widget for the start border, and the very last character offset
+        // of the text widget for the end border. If the widget contains the whole selection's
+        // border, this value will be reset.
         var selectionBorder = if (isStart) 0 else max(length - 1, 0)
         // Flag to check if the widget contains the whole selection's border.
         var containsWholeSelectionBorder = false
 
         val top = 0.px
-        val bottom = textPainter.height.px
+        val bottom = textDelegate.height.px
         val left = 0.px
-        val right = textPainter.width.px
+        val right = textDelegate.width.px
         // If the current text widget contains the whole selection's border, then find the exact
-        // text position of the border, and the flag checking  if the widget contains the whole
+        // character offset of the border, and the flag checking if the widget contains the whole
         // selection's border will be set to true.
         if (position.x >= left &&
             position.x < right &&
             position.y >= top &&
             position.y < bottom
         ) {
-            val offset = Offset(position.x.value, position.y.value)
-            // Constrain the position of the selection border to be within the text range of the
-            // current widget.
-            val constrainedSelectionBorderPosition =
-                textPainter.getPositionForOffset(offset).coerceIn(0, length - 1)
-            selectionBorder = constrainedSelectionBorderPosition
+            // Constrain the character offset of the selection border to be within the text range
+            // of the current widget.
+            val constrainedSelectionBorderOffset =
+                textDelegate.getOffsetForPosition(position).coerceIn(0, length - 1)
+            selectionBorder = constrainedSelectionBorderOffset
             containsWholeSelectionBorder = true
         }
         return Pair(selectionBorder, containsWholeSelectionBorder)
+    }
+
+    private fun getSelectionHandleCoordinates(offset: Int, isStart: Boolean): PxPosition {
+        val line = textDelegate.getLineForOffset(offset)
+        val offsetToCheck = if (isStart) offset else Math.max(offset - 1, 0)
+        val bidiRunDirection = textDelegate.getBidiRunDirection(offsetToCheck)
+        val paragraphDirection = textDelegate.getParagraphDirection(offset)
+
+        val x =
+            if (bidiRunDirection == paragraphDirection) textDelegate.getPrimaryHorizontal(offset)
+            else textDelegate.getSecondaryHorizontal(offset)
+        val y = textDelegate.getLineBottom(line)
+
+        return PxPosition(x.px, y.px)
     }
 }

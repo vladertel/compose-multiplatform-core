@@ -1,19 +1,3 @@
-/*
- * Copyright 2018 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package a.b;
 
 import android.content.pm.ActivityInfo;
@@ -61,21 +45,29 @@ public class MainFragmentArgs implements NavArgs {
             int optional;
             optional = bundle.getInt("optional");
             __result.arguments.put("optional", optional);
+        } else {
+            __result.arguments.put("optional", -1);
         }
         if (bundle.containsKey("reference")) {
             int reference;
             reference = bundle.getInt("reference");
             __result.arguments.put("reference", reference);
+        } else {
+            __result.arguments.put("reference", R.drawable.background);
         }
         if (bundle.containsKey("referenceZeroDefaultValue")) {
             int referenceZeroDefaultValue;
             referenceZeroDefaultValue = bundle.getInt("referenceZeroDefaultValue");
             __result.arguments.put("referenceZeroDefaultValue", referenceZeroDefaultValue);
+        } else {
+            __result.arguments.put("referenceZeroDefaultValue", 0);
         }
         if (bundle.containsKey("floatArg")) {
             float floatArg;
             floatArg = bundle.getFloat("floatArg");
             __result.arguments.put("floatArg", floatArg);
+        } else {
+            __result.arguments.put("floatArg", 1F);
         }
         if (bundle.containsKey("floatArrayArg")) {
             float[] floatArrayArg;
@@ -107,6 +99,8 @@ public class MainFragmentArgs implements NavArgs {
             boolean boolArg;
             boolArg = bundle.getBoolean("boolArg");
             __result.arguments.put("boolArg", boolArg);
+        } else {
+            __result.arguments.put("boolArg", true);
         }
         if (bundle.containsKey("optionalParcelable")) {
             ActivityInfo optionalParcelable;
@@ -116,6 +110,8 @@ public class MainFragmentArgs implements NavArgs {
                 throw new UnsupportedOperationException(ActivityInfo.class.getName() + " must implement Parcelable or Serializable or must be an Enum.");
             }
             __result.arguments.put("optionalParcelable", optionalParcelable);
+        } else {
+            __result.arguments.put("optionalParcelable", null);
         }
         if (bundle.containsKey("enumArg")) {
             AccessMode enumArg;
@@ -128,6 +124,8 @@ public class MainFragmentArgs implements NavArgs {
                 throw new IllegalArgumentException("Argument \"enumArg\" is marked as non-null but was passed a null value.");
             }
             __result.arguments.put("enumArg", enumArg);
+        } else {
+            __result.arguments.put("enumArg", AccessMode.READ);
         }
         return __result;
     }
@@ -198,18 +196,26 @@ public class MainFragmentArgs implements NavArgs {
         if (arguments.containsKey("optional")) {
             int optional = (int) arguments.get("optional");
             __result.putInt("optional", optional);
+        } else {
+            __result.putInt("optional", -1);
         }
         if (arguments.containsKey("reference")) {
             int reference = (int) arguments.get("reference");
             __result.putInt("reference", reference);
+        } else {
+            __result.putInt("reference", R.drawable.background);
         }
         if (arguments.containsKey("referenceZeroDefaultValue")) {
             int referenceZeroDefaultValue = (int) arguments.get("referenceZeroDefaultValue");
             __result.putInt("referenceZeroDefaultValue", referenceZeroDefaultValue);
+        } else {
+            __result.putInt("referenceZeroDefaultValue", 0);
         }
         if (arguments.containsKey("floatArg")) {
             float floatArg = (float) arguments.get("floatArg");
             __result.putFloat("floatArg", floatArg);
+        } else {
+            __result.putFloat("floatArg", 1F);
         }
         if (arguments.containsKey("floatArrayArg")) {
             float[] floatArrayArg = (float[]) arguments.get("floatArrayArg");
@@ -222,6 +228,8 @@ public class MainFragmentArgs implements NavArgs {
         if (arguments.containsKey("boolArg")) {
             boolean boolArg = (boolean) arguments.get("boolArg");
             __result.putBoolean("boolArg", boolArg);
+        } else {
+            __result.putBoolean("boolArg", true);
         }
         if (arguments.containsKey("optionalParcelable")) {
             ActivityInfo optionalParcelable = (ActivityInfo) arguments.get("optionalParcelable");
@@ -232,6 +240,8 @@ public class MainFragmentArgs implements NavArgs {
             } else {
                 throw new UnsupportedOperationException(ActivityInfo.class.getName() + " must implement Parcelable or Serializable or must be an Enum.");
             }
+        } else {
+            __result.putSerializable("optionalParcelable", null);
         }
         if (arguments.containsKey("enumArg")) {
             AccessMode enumArg = (AccessMode) arguments.get("enumArg");
@@ -242,6 +252,8 @@ public class MainFragmentArgs implements NavArgs {
             } else {
                 throw new UnsupportedOperationException(AccessMode.class.getName() + " must implement Parcelable or Serializable or must be an Enum.");
             }
+        } else {
+            __result.putSerializable("enumArg", AccessMode.READ);
         }
         return __result;
     }

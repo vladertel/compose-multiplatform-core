@@ -16,17 +16,33 @@
 
 package androidx.ui.material.demos
 
-import android.app.Activity
-import android.os.Bundle
-import androidx.ui.painting.imageFromResource
-import androidx.compose.setContent
+import android.util.Log
+import androidx.compose.Composable
+import androidx.ui.graphics.imageFromResource
 import androidx.compose.composer
+import androidx.ui.layout.Center
+import androidx.ui.layout.Column
+import androidx.ui.layout.CrossAxisAlignment
+import androidx.ui.layout.LayoutSize
+import androidx.ui.layout.MainAxisAlignment
+import androidx.ui.material.FloatingActionButton
 
-class FloatingActionButtonActivity : Activity() {
+class FloatingActionButtonActivity : MaterialDemoActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    @Composable
+    override fun materialContent() {
         val icon = imageFromResource(resources, R.drawable.ic_favorite)
-        setContent { FloatingActionButtonDemo(icon = icon) }
+        Center {
+            val onClick: () -> Unit = { Log.e("FABDemo", "onClick") }
+            Column(
+                mainAxisSize = LayoutSize.Expand,
+                mainAxisAlignment = MainAxisAlignment.SpaceEvenly,
+                crossAxisAlignment = CrossAxisAlignment.Center
+            ) {
+                FloatingActionButton(icon = icon, onClick = onClick)
+                FloatingActionButton(text = "EXTENDED", onClick = onClick)
+                FloatingActionButton(icon = icon, text = "ADD TO FAVS", onClick = onClick)
+            }
+        }
     }
 }

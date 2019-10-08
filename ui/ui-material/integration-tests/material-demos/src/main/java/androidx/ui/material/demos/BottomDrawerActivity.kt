@@ -16,24 +16,14 @@
 
 package androidx.ui.material.demos
 
-import android.app.Activity
-import android.os.Bundle
-import androidx.compose.setContent
+import androidx.compose.Composable
 import androidx.compose.composer
-import androidx.ui.core.CraneWrapper
-import androidx.ui.material.MaterialTheme
 import androidx.ui.material.samples.BottomDrawerSample
 
-class BottomDrawerActivity : Activity() {
+class BottomDrawerActivity : MaterialDemoActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            CraneWrapper {
-                MaterialTheme {
-                    BottomDrawerSample()
-                }
-            }
-        }
+    @Composable
+    override fun materialContent() {
+        BottomDrawerSample()
     }
 }

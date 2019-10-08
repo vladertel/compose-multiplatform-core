@@ -222,11 +222,19 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
                         arg.sanitizedName
                     )
                 }
-                if (!arg.isOptional()) {
+                if (arg.defaultValue == null) {
                     nextControlFlow("else")
                     addStatement("throw new $T($S)", IllegalArgumentException::class.java,
                         "Required argument \"${arg.name}\" is missing and does " +
                                 "not have an android:defaultValue")
+                } else {
+                    nextControlFlow("else")
+                    addStatement(
+                        "$result.$N.put($S, $L)",
+                        specs.hashMapFieldSpec,
+                        arg.name,
+                        arg.defaultValue.write()
+                    )
                 }
                 endControlFlow()
             }
@@ -367,6 +375,11 @@ private class ClassWithArgsSpecs(
                     arg.name
                 )
                 arg.type.addBundlePutStatement(this, arg, result, arg.sanitizedName)
+            }
+            if (arg.defaultValue != null) {
+                nextControlFlow("else").apply {
+                    arg.type.addBundlePutStatement(this, arg, result, arg.defaultValue.write())
+                }
             }
             endControlFlow()
         }

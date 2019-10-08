@@ -18,6 +18,7 @@ package androidx.camera.core;
 
 import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -35,7 +36,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 /**
  * A {@link DeferrableSurface} that does processing and outputs a {@link SurfaceTexture}.
  */
-final class ProcessingSurfaceTexture extends DeferrableSurface {
+final class ProcessingSurfaceTexture extends DeferrableSurface implements SurfaceTextureHolder {
     private static final String TAG = "ProcessingSurfaceTextur";
 
     private final Object mLock = new Object();
@@ -43,6 +44,8 @@ final class ProcessingSurfaceTexture extends DeferrableSurface {
     // Callback when Image is ready from InputImageReader.
     private final ImageReaderProxy.OnImageAvailableListener mTransformedListener =
             new ImageReaderProxy.OnImageAvailableListener() {
+                // TODO(b/141958189): Suppressed during upgrade to AGP 3.6.
+                @SuppressWarnings("GuardedBy")
                 @Override
                 public void onImageAvailable(ImageReaderProxy reader) {
                     imageIncoming(reader);
@@ -51,7 +54,7 @@ final class ProcessingSurfaceTexture extends DeferrableSurface {
 
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
     @GuardedBy("mLock")
-    boolean mClosed = false;
+    boolean mReleased = false;
 
     @NonNull
     private final Size mResolution;
@@ -144,31 +147,26 @@ final class ProcessingSurfaceTexture extends DeferrableSurface {
         mCaptureStage = captureStage;
     }
 
+    @SuppressWarnings("GuardedBy") // TODO(b/141958189): Suppressed during upgrade to AGP 3.6.
     @Override
-    @Nullable
-    public ListenableFuture<Surface> getSurface() {
-        synchronized (mLock) {
-            if (mClosed) {
-                return Futures.immediateFailedFuture(
-                        new SurfaceClosedException("ProcessingSurfaceTexture already closed!"));
-            }
-            return Futures.immediateFuture(mInputSurface);
-        }
+    @NonNull
+    public ListenableFuture<Surface> provideSurface() {
+        return Futures.immediateFuture(mInputSurface);
     }
 
     /**
      * Returns the SurfaceTexture that the result of the processing gets written to.
      *
-     * <p> Whenever {@link #resetSurfaceTexture()} is called the previous output becomes invalidated
-     * so this method should be called again to retrieve a new output SurfaceTexture. This should
-     * only be called by the consumer thread.
+     * <p> This should only be called by the consumer thread.
      *
-     * @throws IllegalStateException if {@link #close()} has already been called
+     * @throws IllegalStateException if {@link #release()} ()} has already been called
      */
-    SurfaceTexture getSurfaceTexture() {
+    @Override
+    @NonNull
+    public SurfaceTexture getSurfaceTexture() {
         synchronized (mLock) {
-            if (mClosed) {
-                throw new IllegalStateException("ProcessingSurfaceTexture already closed!");
+            if (mReleased) {
+                throw new IllegalStateException("ProcessingSurfaceTexture already released!");
             }
 
             return mSurfaceTexture;
@@ -176,35 +174,15 @@ final class ProcessingSurfaceTexture extends DeferrableSurface {
     }
 
     /**
-     * Resets the output {@link SurfaceTexture}.
-     *
-     * <p> This should only be called by the consumer thread.
-     *
-     * @throws IllegalStateException if {@link #close()} has already been called
-     */
-    void resetSurfaceTexture() {
-        if (mClosed) {
-            throw new IllegalStateException("ProcessingSurfaceTexture already closed!");
-        }
-
-        mSurfaceTexture.release();
-        mSurfaceTextureSurface.release();
-
-        mSurfaceTexture = FixedSizeSurfaceTextures.createDetachedSurfaceTexture(mResolution);
-        mSurfaceTextureSurface = new Surface(mSurfaceTexture);
-        mCaptureProcessor.onOutputSurface(mSurfaceTextureSurface, PixelFormat.RGBA_8888);
-    }
-
-    /**
      * Returns necessary camera callbacks to retrieve metadata from camera result.
      *
-     * @throws IllegalStateException if {@link #close()} has already been called
+     * @throws IllegalStateException if {@link #release()} has already been called
      */
     @Nullable
     CameraCaptureCallback getCameraCaptureCallback() {
         synchronized (mLock) {
-            if (mClosed) {
-                throw new IllegalStateException("ProcessingSurfaceTexture already closed!");
+            if (mReleased) {
+                throw new IllegalStateException("ProcessingSurfaceTexture already released!");
             }
 
             return mCameraCaptureCallback;
@@ -217,9 +195,10 @@ final class ProcessingSurfaceTexture extends DeferrableSurface {
      * <p> After closing the ProcessingSurfaceTexture it should not be used again. A new instance
      * should be created. This should only be called by the consumer thread.
      */
-    public void close() {
+    @Override
+    public void release() {
         synchronized (mLock) {
-            if (mClosed) {
+            if (mReleased) {
                 return;
             }
 
@@ -228,7 +207,7 @@ final class ProcessingSurfaceTexture extends DeferrableSurface {
             mSurfaceTextureSurface.release();
             mSurfaceTextureSurface = null;
 
-            mClosed = true;
+            mReleased = true;
 
             // Remove the previous listener so that if an image is queued it will not be processed
             mInputImageReader.setOnImageAvailableListener(
@@ -244,7 +223,7 @@ final class ProcessingSurfaceTexture extends DeferrableSurface {
                             }
                         }
                     },
-                    mImageReaderHandler
+                    AsyncTask.THREAD_POOL_EXECUTOR
             );
 
             // Need to wait for Surface has been detached before closing it
@@ -271,7 +250,7 @@ final class ProcessingSurfaceTexture extends DeferrableSurface {
     @SuppressWarnings("WeakerAccess")
     @GuardedBy("mLock")
     void imageIncoming(ImageReaderProxy imageReader) {
-        if (mClosed) {
+        if (mReleased) {
             return;
         }
 

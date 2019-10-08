@@ -30,16 +30,17 @@ plugins {
 
 dependencies {
     kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
-
+    implementation(KOTLIN_COMPOSE_COROUTINES)
     implementation(KOTLIN_COMPOSE_STDLIB)
 
     // TODO: Non-Kotlin dependency, move to Android-specific code
     implementation "androidx.core:core:1.0.2"
 
-    implementation project(":compose:compose-runtime")
-    implementation project(":ui:ui-core")
+    api project(":compose:compose-runtime")
+    api project(":ui:ui-core")
     implementation project(":ui:ui-platform")
-    implementation project(":ui:ui-text")
+    api project(":ui:ui-text")
+    implementation project(":ui:ui-vector")
 
     testImplementation(ANDROIDX_TEST_RULES)
     testImplementation(ANDROIDX_TEST_RUNNER)
@@ -50,9 +51,17 @@ dependencies {
         exclude group: 'org.mockito' // to keep control on the mockito version
     }
 
+    androidTestImplementation project(":ui:ui-test")
+
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
     androidTestImplementation(JUNIT)
+    androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
+    androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
+    androidTestImplementation(TRUTH)
+    androidTestImplementation MOCKITO_KOTLIN, {
+        exclude group: 'org.mockito' // to keep control on the mockito version
+    }
 }
 
 androidx {

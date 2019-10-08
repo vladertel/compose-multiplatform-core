@@ -485,6 +485,37 @@ class FragmentLifecycleTest {
         assertThat(fragmentA.calledOnDestroy).isTrue()
     }
 
+    /**
+     * Test that onDestroyView gets called for childFragment with Animation even when there is a
+     * config change.
+     */
+    @Test
+    @UiThreadTest
+    fun childFragmentViewDestroyedWithParent() {
+        val viewModelStore = ViewModelStore()
+        val fc = activityRule.startupFragmentController(viewModelStore)
+        val fm = fc.supportFragmentManager
+
+        val fragment = StrictViewFragment(R.layout.simple_container)
+        fm.beginTransaction()
+            .add(android.R.id.content, fragment)
+            .commitNow()
+
+        val childFragment = StrictViewFragment()
+
+        fragment.childFragmentManager.beginTransaction()
+            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+            .add(R.id.fragmentContainer, childFragment, "child")
+            .commitNow()
+
+        val viewLifecycleOwner = childFragment.viewLifecycleOwner
+
+        fc.restart(activityRule, viewModelStore, false)
+
+        assertWithMessage("ChildFragment viewLifecycle was not destroyed")
+            .that(viewLifecycleOwner.lifecycle.currentState).isEqualTo(Lifecycle.State.DESTROYED)
+    }
+
     @Test
     @UiThreadTest
     fun testSetArgumentsLifecycle() {
@@ -602,6 +633,190 @@ class FragmentLifecycleTest {
             .isSameInstanceAs(fragment1)
         assertThat(fm.findFragmentByTag("2"))
             .isNull()
+    }
+
+    @Test
+    @UiThreadTest
+    fun popBackStackImmediateAfterSaveState() {
+        val viewModelStore = ViewModelStore()
+        val fc = activityRule.startupFragmentController(viewModelStore)
+        val fm = fc.supportFragmentManager
+
+        val fragment1 = StrictFragment()
+        fragment1.retainInstance = true
+        fm.beginTransaction()
+            .add(fragment1, "1")
+            .commitNow()
+
+        // Now save the state of the FragmentManager
+        fc.dispatchPause()
+        fc.saveAllState()
+
+        val fragment2 = StrictFragment()
+        fragment2.retainInstance = true
+        fm.beginTransaction()
+            .add(fragment2, "2")
+            .commitNowAllowingStateLoss()
+
+        try {
+            fm.popBackStackImmediate()
+            fail("PopBackStackImmediate after saveState should throw IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertWithMessage("popBackStackImmediate should throw an IllegalStateException")
+                .that(e)
+                .hasMessageThat()
+                .contains("Can not perform this action after onSaveInstanceState")
+        }
+    }
+
+    @Test
+    @UiThreadTest
+    fun popBackStackAfterSaveState() {
+        val viewModelStore = ViewModelStore()
+        val fc = activityRule.startupFragmentController(viewModelStore)
+        val fm = fc.supportFragmentManager
+
+        val fragment1 = StrictFragment()
+        fragment1.retainInstance = true
+        fm.beginTransaction()
+            .add(fragment1, "1")
+            .commitNow()
+
+        // Now save the state of the FragmentManager
+        fc.dispatchPause()
+        fc.saveAllState()
+
+        val fragment2 = StrictFragment()
+        fragment2.retainInstance = true
+        fm.beginTransaction()
+            .add(fragment2, "2")
+            .commitNowAllowingStateLoss()
+
+        try {
+            fm.popBackStack()
+            fail("PopBackStack after saveState should throw IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertWithMessage("popBackStack should throw an IllegalStateException")
+                .that(e)
+                .hasMessageThat()
+                .contains("Can not perform this action after onSaveInstanceState")
+        }
+    }
+
+    @Test
+    @UiThreadTest
+    fun popBackStackAfterManagerDestroyed() {
+        val viewModelStore = ViewModelStore()
+        val fc = activityRule.startupFragmentController(viewModelStore)
+        val fm = fc.supportFragmentManager
+
+        val fragment1 = StrictFragment()
+        fragment1.retainInstance = true
+        fm.beginTransaction()
+            .add(fragment1, "1")
+            .commitNow()
+
+        // Now destroy the Fragment Manager
+        fc.dispatchPause()
+        fc.dispatchStop()
+        fc.dispatchDestroy()
+
+        try {
+            fm.popBackStack()
+            fail("PopBackStack after FragmentManager destroyed should throw IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertWithMessage("popBackStack should throw an IllegalStateException")
+                .that(e)
+                .hasMessageThat()
+                .contains("FragmentManager has been destroyed")
+        }
+    }
+
+    @Test
+    @UiThreadTest
+    fun commitWhenFragmentManagerNeverAttached() {
+        val viewModelStore = ViewModelStore()
+        val fc = FragmentController.createController(
+            ControllerHostCallbacks(activityRule.activity, viewModelStore)
+        )
+        val fm = fc.supportFragmentManager
+
+        val fragment1 = StrictFragment()
+        fragment1.retainInstance = true
+
+        try {
+            fm.beginTransaction()
+                .add(fragment1, "1")
+                .commit()
+            fail("Commit when FragmentManager never attached should throw " +
+                    "IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertWithMessage("Commit when FragmentManager never attached should throw an " +
+                    "IllegalStateException")
+                .that(e)
+                .hasMessageThat()
+                .contains("FragmentManager has not been attached to a host.")
+        }
+    }
+
+    @Test
+    @UiThreadTest
+    fun popBackStackAndFragmentHostDestroyed() {
+        val viewModelStore = ViewModelStore()
+        val fc = activityRule.startupFragmentController(viewModelStore)
+        val fm = fc.supportFragmentManager
+
+        val fragment1 = StrictFragment()
+        fragment1.retainInstance = true
+        fm.beginTransaction()
+            .add(fragment1, "1")
+            .commitNow()
+
+        // Now save the state of the FragmentManager
+        fc.dispatchPause()
+
+        val fragment2 = StrictFragment()
+        fragment2.retainInstance = true
+        fm.beginTransaction()
+            .add(fragment2, "2")
+            .commitNowAllowingStateLoss()
+
+        fc.dispatchStop()
+        fc.dispatchDestroy()
+
+        try {
+            fm.popBackStack()
+            fail("PopBackStack after host destroyed should throw IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertWithMessage("popBackStack should throw an IllegalStateException")
+                .that(e)
+                .hasMessageThat()
+                .contains("FragmentManager has been destroyed")
+        }
+    }
+
+    @Test
+    @UiThreadTest
+    fun commitNowWhenFragmentHostNeverAttached() {
+        val viewModelStore = ViewModelStore()
+        val fc = FragmentController.createController(
+            ControllerHostCallbacks(activityRule.activity, viewModelStore)
+        )
+        val fm = fc.supportFragmentManager
+
+        val fragment1 = StrictFragment()
+        fragment1.retainInstance = true
+        try {
+            fm.beginTransaction()
+                .add(fragment1, "1")
+                .commitNow()
+            fail("CommitNow when host never attached should throw an IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertWithMessage("CommitNow should throw an IllegalStateException")
+                .that(e)
+                .hasMessageThat()
+                .contains("FragmentManager has not been attached to a host.")
+        }
     }
 
     /**
@@ -891,9 +1106,9 @@ class FragmentLifecycleTest {
     class RemoveHelloInOnResume : Fragment() {
         override fun onResume() {
             super.onResume()
-            val fragment = fragmentManager!!.findFragmentByTag("Hello")
+            val fragment = parentFragmentManager.findFragmentByTag("Hello")
             if (fragment != null) {
-                fragmentManager!!.beginTransaction().remove(fragment).commit()
+                parentFragmentManager.beginTransaction().remove(fragment).commit()
             }
         }
     }

@@ -17,24 +17,42 @@
 package androidx.ui.core.selection
 
 import androidx.ui.core.LayoutCoordinates
-import androidx.ui.engine.geometry.Rect
+import androidx.ui.core.PxPosition
+import androidx.ui.text.style.TextDirection
 
 /**
  * Data class of Selection.
  */
 data class Selection(
     /**
-     * A box around the character at the start offset as Rect. This box' height is the line height,
-     * and the width is the advance. Note: It is temporary to use Rect.
+     * The coordinates of the graphical position for selection start character offset.
+     *
+     * This graphical position is the point at the left bottom corner for LTR
+     * character, or right bottom corner for RTL character.
+     *
+     * This coordinates is in child widget coordinates system.
      */
-    // TODO(qqd): After solving the problem of getting the coordinates of a character, figure out
-    // what should the startOffset and endOffset should be.
-    val startOffset: Rect,
+    val startCoordinates: PxPosition,
     /**
-     * A box around the character at the end offset as Rect. This box' height is the line height,
-     * and the width is the advance. Note: It is temporary to use Rect.
+     * The coordinates of the graphical position for selection end character offset.
+     *
+     * This graphical position is the point at the left bottom corner for LTR
+     * character, or right bottom corner for RTL character.
+     *
+     * This coordinates is in child widget coordinates system.
      */
-    val endOffset: Rect,
+    val endCoordinates: PxPosition,
+    /**
+     * Text direction of the starting character in selection.
+     */
+    val startDirection: TextDirection,
+    /**
+     * Text direction of the last character in selection.
+     *
+     * Note: The selection is inclusive-exclusive. But this is the text direction of the last
+     * character of the selection.
+     */
+    val endDirection: TextDirection,
     /**
      * The layout coordinates of the child which contains the start of the selection. If the child
      * does not contain the start of the selection, this should be null.
@@ -51,14 +69,16 @@ data class Selection(
         var currentSelection = this.copy()
         if (other.startLayoutCoordinates != null) {
             currentSelection = currentSelection.copy(
-                startOffset = other.startOffset,
-                startLayoutCoordinates = other.startLayoutCoordinates
+                startCoordinates = other.startCoordinates,
+                startLayoutCoordinates = other.startLayoutCoordinates,
+                startDirection = other.startDirection
             )
         }
         if (other.endLayoutCoordinates != null) {
             currentSelection = currentSelection.copy(
-                endOffset = other.endOffset,
-                endLayoutCoordinates = other.endLayoutCoordinates
+                endCoordinates = other.endCoordinates,
+                endLayoutCoordinates = other.endLayoutCoordinates,
+                endDirection = other.endDirection
             )
         }
         return currentSelection

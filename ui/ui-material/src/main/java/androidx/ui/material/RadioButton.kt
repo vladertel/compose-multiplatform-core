@@ -19,13 +19,12 @@ package androidx.ui.material
 import androidx.animation.ColorPropKey
 import androidx.animation.DpPropKey
 import androidx.animation.transitionDefinition
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.memo
 import androidx.compose.unaryPlus
 import androidx.ui.animation.Transition
-import androidx.ui.core.DensityReceiver
+import androidx.ui.core.DensityScope
 import androidx.ui.core.Dp
 import androidx.ui.core.Draw
 import androidx.ui.core.PxSize
@@ -37,20 +36,18 @@ import androidx.ui.engine.geometry.Radius
 import androidx.ui.engine.geometry.shift
 import androidx.ui.engine.geometry.shrink
 import androidx.ui.foundation.selection.MutuallyExclusiveSetItem
-import androidx.ui.foundation.selection.Toggleable
-import androidx.ui.foundation.selection.ToggleableState
 import androidx.ui.graphics.Color
 import androidx.ui.layout.Column
 import androidx.ui.layout.Container
-import androidx.ui.layout.FlexSize
+import androidx.ui.layout.LayoutSize
 import androidx.ui.layout.MainAxisAlignment
 import androidx.ui.layout.Padding
 import androidx.ui.layout.Row
 import androidx.ui.layout.Wrap
 import androidx.ui.material.ripple.Ripple
-import androidx.ui.painting.Canvas
-import androidx.ui.painting.Paint
-import androidx.ui.painting.PaintingStyle
+import androidx.ui.graphics.Canvas
+import androidx.ui.graphics.Paint
+import androidx.ui.graphics.PaintingStyle
 import androidx.ui.text.TextStyle
 
 /**
@@ -76,7 +73,7 @@ import androidx.ui.text.TextStyle
  *         onOptionSelected = { ... })
  */
 @Composable
-fun RadioGroup(@Children children: @Composable RadioGroupScope.() -> Unit) {
+fun RadioGroup(children: @Composable RadioGroupScope.() -> Unit) {
     val scope = +memo { RadioGroupScope() }
     children(p1 = scope)
 }
@@ -109,7 +106,7 @@ fun RadioGroup(
     textStyle: TextStyle? = null
 ) {
     RadioGroup {
-        Column(mainAxisSize = FlexSize.Min) {
+        Column {
             options.forEach { text ->
                 RadioGroupTextItem(
                     selected = (text == selectedOption),
@@ -142,7 +139,7 @@ class RadioGroupScope internal constructor() {
     fun RadioGroupItem(
         selected: Boolean,
         onSelect: () -> Unit,
-        @Children children: @Composable() () -> Unit
+        children: @Composable() () -> Unit
     ) {
         Container {
             Ripple(bounded = true) {
@@ -181,7 +178,7 @@ class RadioGroupScope internal constructor() {
     ) {
         RadioGroupItem(selected = selected, onSelect = onSelect) {
             Padding(padding = DefaultRadioItemPadding) {
-                Row(mainAxisSize = FlexSize.Max, mainAxisAlignment = MainAxisAlignment.Start) {
+                Row(mainAxisSize = LayoutSize.Expand, mainAxisAlignment = MainAxisAlignment.Start) {
                     RadioButton(selected = selected, onSelect = onSelect, color = radioColor)
                     Padding(left = DefaultRadioLabelOffset) {
                         Text(text = text, style = +themeTextStyle { body1.merge(textStyle) })
@@ -212,9 +209,8 @@ fun RadioButton(
 ) {
     Wrap {
         Ripple(bounded = false) {
-            Toggleable(
-                value = if (selected) ToggleableState.Checked else ToggleableState.Unchecked,
-                onToggle = onSelect
+            MutuallyExclusiveSetItem(
+                selected = selected, onClick = { if (!selected) onSelect?.invoke() }
             ) {
                 Padding(padding = RadioButtonPadding) {
                     Container(width = RadioButtonSize, height = RadioButtonSize) {
@@ -245,7 +241,7 @@ private fun DrawRadioButton(color: Color, outerRadius: Dp, innerRadius: Dp, gap:
     }
 }
 
-private fun DensityReceiver.drawRadio(
+private fun DensityScope.drawRadio(
     canvas: Canvas,
     parentSize: PxSize,
     color: Color,
@@ -275,13 +271,13 @@ private fun DensityReceiver.drawRadio(
 
     if (gap == 0.dp) {
         val inner = outer.shrink(outerPx - innerPx)
-        canvas.drawDRRect(outer, inner, p)
+        canvas.drawDoubleRoundRect(outer, inner, p)
     } else {
         val inner = outer.shrink(RadioStrokeWidth.toPx().value)
-        canvas.drawDRRect(outer, inner, p)
+        canvas.drawDoubleRoundRect(outer, inner, p)
         val radioOuter = inner.shrink(gap.toPx().value)
         val radioInner = outer.shrink(outerPx - innerPx)
-        canvas.drawDRRect(radioOuter, radioInner, p)
+        canvas.drawDoubleRoundRect(radioOuter, radioInner, p)
     }
 }
 

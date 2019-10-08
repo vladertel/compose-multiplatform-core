@@ -20,17 +20,24 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Surface;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.camera.core.BaseCamera;
 import androidx.camera.core.CameraControlInternal;
-import androidx.camera.core.CameraInfo;
+import androidx.camera.core.CameraInfoInternal;
 import androidx.camera.core.CaptureConfig;
 import androidx.camera.core.DeferrableSurface;
 import androidx.camera.core.DeferrableSurfaces;
+import androidx.camera.core.Observable;
 import androidx.camera.core.SessionConfig;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.UseCaseAttachState;
+import androidx.camera.core.impl.LiveDataObservable;
+import androidx.camera.core.impl.utils.futures.Futures;
+import androidx.core.util.Preconditions;
+
+import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,11 +50,14 @@ import java.util.List;
 public class FakeCamera implements BaseCamera {
     private static final String TAG = "FakeCamera";
     private static final String DEFAULT_CAMERA_ID = "0";
+    private final LiveDataObservable<BaseCamera.State> mObservableState =
+            new LiveDataObservable<>();
     private final CameraControlInternal mCameraControlInternal;
-    private final CameraInfo mCameraInfo;
+    private final CameraInfoInternal mCameraInfoInternal;
     private String mCameraId;
     private UseCaseAttachState mUseCaseAttachState;
-    private State mState = State.INITIALIZED;
+    private State mState = State.CLOSED;
+    private int mAvailableCameraCount = 1;
 
     @Nullable
     private SessionConfig mSessionConfig;
@@ -57,57 +67,109 @@ public class FakeCamera implements BaseCamera {
     private List<DeferrableSurface> mConfiguredDeferrableSurfaces = Collections.emptyList();
 
     public FakeCamera() {
-        this(DEFAULT_CAMERA_ID, new FakeCameraInfo(), /*cameraControl=*/null);
+        this(DEFAULT_CAMERA_ID, /*cameraControl=*/null, new FakeCameraInfoInternal());
     }
 
-    public FakeCamera(String cameraId) {
-        this(cameraId, new FakeCameraInfo(), /*cameraControl=*/null);
+    public FakeCamera(@NonNull String cameraId) {
+        this(cameraId, /*cameraControl=*/null, new FakeCameraInfoInternal());
     }
 
-    public FakeCamera(CameraInfo cameraInfo, @Nullable CameraControlInternal cameraControl) {
-        this(DEFAULT_CAMERA_ID, cameraInfo, cameraControl);
+    public FakeCamera(@Nullable CameraControlInternal cameraControl,
+            @NonNull CameraInfoInternal cameraInfo) {
+        this(DEFAULT_CAMERA_ID, cameraControl, cameraInfo);
     }
 
-    public FakeCamera(String cameraId,
-            CameraInfo cameraInfo,
-            @Nullable CameraControlInternal cameraControl) {
-        mCameraInfo = cameraInfo;
+    public FakeCamera(@NonNull String cameraId, @Nullable CameraControlInternal cameraControl,
+            @NonNull CameraInfoInternal cameraInfo) {
+        mCameraInfoInternal = (CameraInfoInternal) cameraInfo;
         mCameraId = cameraId;
         mUseCaseAttachState = new UseCaseAttachState(cameraId);
         mCameraControlInternal = cameraControl == null ? new FakeCameraControl(this)
                 : cameraControl;
+        mObservableState.postValue(State.CLOSED);
+    }
+
+    /**
+     * Sets the number of cameras that are available to open.
+     *
+     * <p>If this number is set to 0, then calling {@link #open()} will wait in a {@code
+     * PENDING_OPEN} state until the number is set to a value greater than 0 before entering an
+     * {@code OPEN} state.
+     *
+     * @param count An integer number greater than 0 representing the number of available cameras
+     *              to open on this device.
+     */
+    public void setAvailableCameraCount(@IntRange(from = 0) int count) {
+        Preconditions.checkArgumentNonnegative(count);
+        mAvailableCameraCount = count;
+        if (mAvailableCameraCount > 0 && mState == State.PENDING_OPEN) {
+            open();
+        }
+    }
+
+    /**
+     * Retrieves the number of cameras available to open on this device, as seen by this camera.
+     *
+     * @return An integer number greater than 0 representing the number of available cameras to
+     * open on this device.
+     */
+    @IntRange(from = 0)
+    public int getAvailableCameraCount() {
+        return mAvailableCameraCount;
     }
 
     @Override
     public void open() {
         checkNotReleased();
-        if (mState == State.INITIALIZED) {
-            mState = State.OPENED;
+        if (mState == State.CLOSED || mState == State.PENDING_OPEN) {
+            if (mAvailableCameraCount > 0) {
+                mState = State.OPEN;
+                mObservableState.postValue(State.OPEN);
+            } else {
+                mState = State.PENDING_OPEN;
+                mObservableState.postValue(State.PENDING_OPEN);
+            }
         }
     }
 
     @Override
     public void close() {
         checkNotReleased();
-        if (mState == State.OPENED) {
-            mSessionConfig = null;
-            reconfigure();
-            mState = State.INITIALIZED;
+        switch (mState) {
+            case OPEN:
+                mSessionConfig = null;
+                reconfigure();
+                // fall through
+            case PENDING_OPEN:
+                mState = State.CLOSED;
+                mObservableState.postValue(State.CLOSED);
+                break;
+            default:
+                break;
         }
     }
 
     @Override
-    public void release() {
+    @NonNull
+    public ListenableFuture<Void> release() {
         checkNotReleased();
-        if (mState == State.OPENED) {
+        if (mState == State.OPEN) {
             close();
         }
 
         mState = State.RELEASED;
+        mObservableState.postValue(State.RELEASED);
+        return Futures.immediateFuture(null);
+    }
+
+    @NonNull
+    @Override
+    public Observable<BaseCamera.State> getCameraState() {
+        return mObservableState;
     }
 
     @Override
-    public void onUseCaseActive(final UseCase useCase) {
+    public void onUseCaseActive(@NonNull UseCase useCase) {
         Log.d(TAG, "Use case " + useCase + " ACTIVE for camera " + mCameraId);
 
         mUseCaseAttachState.setUseCaseActive(useCase);
@@ -116,7 +178,7 @@ public class FakeCamera implements BaseCamera {
 
     /** Removes the use case from a state of issuing capture requests. */
     @Override
-    public void onUseCaseInactive(final UseCase useCase) {
+    public void onUseCaseInactive(@NonNull UseCase useCase) {
         Log.d(TAG, "Use case " + useCase + " INACTIVE for camera " + mCameraId);
 
         mUseCaseAttachState.setUseCaseInactive(useCase);
@@ -125,7 +187,7 @@ public class FakeCamera implements BaseCamera {
 
     /** Updates the capture requests based on the latest settings. */
     @Override
-    public void onUseCaseUpdated(final UseCase useCase) {
+    public void onUseCaseUpdated(@NonNull UseCase useCase) {
         Log.d(TAG, "Use case " + useCase + " UPDATED for camera " + mCameraId);
 
         mUseCaseAttachState.updateUseCase(useCase);
@@ -133,7 +195,7 @@ public class FakeCamera implements BaseCamera {
     }
 
     @Override
-    public void onUseCaseReset(final UseCase useCase) {
+    public void onUseCaseReset(@NonNull UseCase useCase) {
         Log.d(TAG, "Use case " + useCase + " RESET for camera " + mCameraId);
 
         mUseCaseAttachState.updateUseCase(useCase);
@@ -146,7 +208,7 @@ public class FakeCamera implements BaseCamera {
      * capture requests from the use case.
      */
     @Override
-    public void addOnlineUseCase(final Collection<UseCase> useCases) {
+    public void addOnlineUseCase(@NonNull final Collection<UseCase> useCases) {
         if (useCases.isEmpty()) {
             return;
         }
@@ -166,7 +228,7 @@ public class FakeCamera implements BaseCamera {
      * handle capture requests from the use case.
      */
     @Override
-    public void removeOnlineUseCase(final Collection<UseCase> useCases) {
+    public void removeOnlineUseCase(@NonNull final Collection<UseCase> useCases) {
         if (useCases.isEmpty()) {
             return;
         }
@@ -187,14 +249,16 @@ public class FakeCamera implements BaseCamera {
 
     // Returns fixed CameraControlInternal instance in order to verify the instance is correctly
     // attached.
+    @NonNull
     @Override
     public CameraControlInternal getCameraControlInternal() {
         return mCameraControlInternal;
     }
 
+    @NonNull
     @Override
-    public CameraInfo getCameraInfo() {
-        return mCameraInfo;
+    public CameraInfoInternal getCameraInfoInternal() {
+        return mCameraInfoInternal;
     }
 
     @Override
@@ -222,7 +286,7 @@ public class FakeCamera implements BaseCamera {
             return;
         }
 
-        if (mState != State.OPENED) {
+        if (mState != State.OPEN) {
             Log.d(TAG, "CameraDevice is not opened");
             return;
         }
@@ -238,7 +302,9 @@ public class FakeCamera implements BaseCamera {
         if (validatingBuilder.isValid()) {
             // Apply CameraControlInternal's SessionConfig to let CameraControlInternal be able
             // to control Repeating Request and process results.
-            validatingBuilder.add(mCameraControlSessionConfig);
+            if (mCameraControlSessionConfig != null) {
+                validatingBuilder.add(mCameraControlSessionConfig);
+            }
 
             mSessionConfig = validatingBuilder.build();
         }
@@ -249,9 +315,6 @@ public class FakeCamera implements BaseCamera {
 
         if (mSessionConfig != null) {
             List<DeferrableSurface> surfaces = mSessionConfig.getSurfaces();
-
-            // Before creating capture session, some surfaces may need to refresh.
-            DeferrableSurfaces.refresh(surfaces);
 
             mConfiguredDeferrableSurfaces = new ArrayList<>(surfaces);
 
@@ -283,20 +346,4 @@ public class FakeCamera implements BaseCamera {
         // notifySurfaceDetached calls.
         mConfiguredDeferrableSurfaces.clear();
     }
-
-    enum State {
-        /**
-         * Stable state once the camera has been constructed.
-         */
-        INITIALIZED,
-        /**
-         * A stable state where the camera has been opened.
-         */
-        OPENED,
-        /**
-         * A stable state where the camera has been permanently closed.
-         */
-        RELEASED
-    }
-
 }

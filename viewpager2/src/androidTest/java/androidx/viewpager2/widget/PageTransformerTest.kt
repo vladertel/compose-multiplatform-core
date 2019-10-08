@@ -17,7 +17,6 @@
 package androidx.viewpager2.widget
 
 import android.view.View
-import androidx.annotation.FloatRange
 import androidx.annotation.NonNull
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.test.filters.LargeTest
@@ -181,8 +180,7 @@ class PageTransformerTest(private val config: TestConfig) : BaseTest() {
     }
 
     private fun ViewPager2.addNewRecordingCallback(): RecordingCallback {
-        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-        return RecordingCallback(layoutManager).also {
+        return RecordingCallback(linearLayoutManager).also {
             setPageTransformer(it)
             registerOnPageChangeCallback(it)
         }
@@ -234,10 +232,7 @@ class PageTransformerTest(private val config: TestConfig) : BaseTest() {
 
         /* interface implementations */
 
-        override fun transformPage(
-            @NonNull page: View,
-            @FloatRange(from = -1.0, to = 1.0) position: Float
-        ) {
+        override fun transformPage(@NonNull page: View, position: Float) {
             events.add(TransformPageEvent(layoutManager.getPosition(page), position))
         }
 
@@ -270,7 +265,7 @@ class PageTransformerTest(private val config: TestConfig) : BaseTest() {
         map { it as TransformPageEvent }.forEach {
             assertThat("transformPage() call must be snapped at page $snappedPage",
                 // event.page - event.offset resolves to the currently visible page index
-                it.page - it.offset, equalTo(snappedPage.toFloat())
+                it.page - it.offset.toDouble(), equalTo(snappedPage.toDouble())
             )
         }
     }

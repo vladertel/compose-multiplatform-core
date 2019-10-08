@@ -57,6 +57,12 @@ public class MainActivity extends AppCompatActivity {
                 new MenuListView.MenuItem(
                         getResources().getString(R.string.multi_process_enabled_activity_title),
                         new Intent(activityContext, MultiProcessEnabledActivity.class)),
+                new MenuListView.MenuItem(
+                        getResources().getString(R.string.tracing_controller_activity_title),
+                        new Intent(activityContext, TracingControllerActivity.class)),
+                new MenuListView.MenuItem(
+                        getResources().getString(R.string.renderer_termination_activity_title),
+                        new Intent(activityContext, RendererTerminationActivity.class)),
         };
         listView.setItems(menuItems);
     }

@@ -13,19 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package androidx.ui.material
 
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
+import androidx.compose.state
 import androidx.compose.unaryPlus
+import androidx.ui.core.Alignment
 import androidx.ui.core.CurrentTextStyleProvider
+import androidx.ui.core.Density
 import androidx.ui.core.Dp
-import androidx.ui.core.Semantics
+import androidx.ui.core.IntPx
+import androidx.ui.core.IntPxSize
+import androidx.ui.core.Layout
+import androidx.ui.core.OnChildPositioned
+import androidx.ui.core.PxPosition
+import androidx.ui.core.PxSize
 import androidx.ui.core.Text
 import androidx.ui.core.dp
-import androidx.ui.foundation.ColoredRect
+import androidx.ui.core.sp
+import androidx.ui.core.withDensity
+import androidx.ui.engine.geometry.Offset
+import androidx.ui.engine.geometry.Outline
+import androidx.ui.engine.geometry.Rect
+import androidx.ui.engine.geometry.Shape
+import androidx.ui.engine.geometry.addOutline
+import androidx.ui.foundation.Clickable
+import androidx.ui.foundation.SimpleImage
+import androidx.ui.foundation.shape.RectangleShape
+import androidx.ui.foundation.shape.corner.CircleShape
 import androidx.ui.layout.Container
 import androidx.ui.layout.FlexRow
 import androidx.ui.layout.MainAxisAlignment
@@ -34,85 +50,586 @@ import androidx.ui.layout.WidthSpacer
 import androidx.ui.material.surface.Surface
 import androidx.ui.graphics.Color
 import androidx.ui.layout.EdgeInsets
-import androidx.ui.layout.FlexSize
+import androidx.ui.layout.LayoutSize
+import androidx.ui.layout.Wrap
+import androidx.ui.material.BottomAppBar.FabConfiguration
+import androidx.ui.material.BottomAppBar.FabPosition
+import androidx.ui.material.ripple.Ripple
+import androidx.ui.graphics.Image
+import androidx.ui.graphics.Path
+import androidx.ui.graphics.PathOperation
+import androidx.ui.semantics.Semantics
+import androidx.ui.text.TextStyle
+import kotlin.math.sqrt
 
 /**
- * A Top App Bar displays information and actions relating to the current screen and is placed at
- * the top of the screen.
- * This version of the TopAppBar will produce a default bar with a navigation leading icon, an
- * optional title and a set of menu icons.
+ * A TopAppBar displays information and actions relating to the current screen and is placed at the
+ * top of the screen.
  *
- * Example usage:
- *     TopAppBar(
- *         title = "Title",
- *         color = +themeColor{ secondary }
- *     )
+ * @sample androidx.ui.material.samples.SimpleTopAppBarNavIcon
  *
- * @param title An optional title to display
- * @param color An optional color for the App Bar. By default [MaterialColors.primary] will be used.
- * @param icons An optional list of icons to display on the App Bar.
+ * @param title The title to be displayed in the center of the TopAppBar
+ * @param color An optional color for the TopAppBar. By default [MaterialColors.primary] will be
+ * used.
+ * @param navigationIcon The navigation icon displayed at the start of the TopAppBar
+ * @param contextualActions A list representing the contextual actions to be displayed at the end of
+ * the TopAppBar. Any remaining actions that do not fit on the TopAppBar should typically be
+ * displayed in an overflow menu at the end.
+ * @param action A specific item action to be displayed at the end of the TopAppBar - this will be
+ * called for items in [contextualActions] up to the maximum number of icons that can be displayed.
+ * @param T the type of item in [contextualActions]
  */
+// TODO: b/137311217 - type inference for nullable lambdas currently doesn't work
+@Suppress("USELESS_CAST")
 @Composable
-fun TopAppBar(
-    title: String? = null,
+fun <T> TopAppBar(
+    title: @Composable() () -> Unit = {},
     color: Color = +themeColor { primary },
-    // TODO: work on menus
-    icons: List<Dp> = emptyList()
+    navigationIcon: @Composable() (() -> Unit)? = null as @Composable() (() -> Unit)?,
+    contextualActions: List<T>? = null,
+    action: @Composable() (T) -> Unit = {}
+    // TODO: support overflow menu here with the remainder of the list
 ) {
-    TopAppBar(
+    BaseTopAppBar(
         color = color,
-        leadingIcon = { AppBarLeadingIcon() },
-        titleTextLabel = {
-            if (title != null) {
-                TopAppBarTitleTextLabel(title)
+        startContent = navigationIcon,
+        title = {
+            // Text color comes from the underlying Surface
+            CurrentTextStyleProvider(value = +themeTextStyle { h6 }) {
+                title()
             }
         },
-        trailingIcons = { TopAppBarTrailingIcons(icons) }
+        endContent = {
+            if (contextualActions != null) {
+                AppBarActions(MaxIconsInTopAppBar, contextualActions, action)
+            }
+        }
     )
 }
 
+@Composable
+private fun BaseTopAppBar(
+    color: Color = +themeColor { primary },
+    startContent: @Composable() (() -> Unit)?,
+    title: @Composable() () -> Unit,
+    endContent: @Composable() () -> Unit
+) {
+    BaseAppBar(color, TopAppBarElevation, RectangleShape) {
+        FlexRow(mainAxisAlignment = MainAxisAlignment.SpaceBetween) {
+            // We only want to reserve space here if we have some start content
+            if (startContent != null) {
+                inflexible {
+                    Container(width = AppBarTitleStartPadding, alignment = Alignment.CenterLeft) {
+                        startContent()
+                    }
+                }
+            }
+            expanded(1f) {
+                title()
+            }
+            inflexible {
+                Wrap {
+                    endContent()
+                }
+            }
+        }
+    }
+}
+
+object BottomAppBar {
+    /**
+     * Configuration for a [FloatingActionButton] in a [BottomAppBar]
+     *
+     * When [cutoutShape] is provided, a cutout / notch will be 'carved' into the BottomAppBar, with
+     * some extra space on all sides.
+     *
+     * A typical cutout FAB may look like:
+     * @sample androidx.ui.material.samples.SimpleBottomAppBarCutoutFab
+     *
+     * This also works with an extended FAB:
+     * @sample androidx.ui.material.samples.SimpleBottomAppBarExtendedCutoutFab
+     *
+     * A more complex example with a fancy animating FAB that switches between cut corners and
+     * rounded corners:
+     * @sample androidx.ui.material.samples.SimpleBottomAppBarFancyAnimatingCutoutFab
+     *
+     * @param fabPosition the position of the [FloatingActionButton] attached to the BottomAppBar
+     * @param cutoutShape the shape of the cutout that will be added to the BottomAppBar - this
+     * should typically be the same shape used inside the [fab]. This shape will be drawn with an
+     * offset around all sides. If `null` no cutout will be drawn, and the [fab] will be placed on
+     * top of the BottomAppBar.
+     * @param fab the [FloatingActionButton] that will be attached to the BottomAppBar
+     */
+    data class FabConfiguration(
+        internal val fabPosition: FabPosition = FabPosition.Center,
+        internal val cutoutShape: Shape? = null,
+        internal val fab: @Composable() () -> Unit
+    )
+
+    /**
+     * The possible positions for a [FloatingActionButton] attached to a [BottomAppBar].
+     */
+    enum class FabPosition {
+        /**
+         * Positioned in the center of the [BottomAppBar]
+         */
+        Center,
+        /**
+         * Positioned at the end of the [BottomAppBar]
+         */
+        End
+    }
+}
+
 /**
- * A Top App Bar displays information and actions relating to the current screen and is placed at
- * the top of the screen.
+ * A BottomAppBar displays actions relating to the current screen and is placed at the bottom of
+ * the screen. It can also optionally display a [FloatingActionButton], which is either overlaid
+ * on top of the BottomAppBar, or inset, carving a cutout in the BottomAppBar.
  *
- * Example usage:
- *     TopAppBar(
- *         color = +themeColor{ secondary },
- *         leadingIcon = { MyNavIcon() },
- *         titleTextLabel = { Text(text = "Title") },
- *         trailingIcons = { TopAppBarTrailingIcons(icons) }
- *     )
+ * The location of the actions displayed by the BottomAppBar depends on the position / existence
+ * of a [FloatingActionButton], configured with [fabConfiguration]. When [fabConfiguration] is:
  *
- * @param color An optional color for the App Bar. By default [MaterialColors.primary] will be used.
- * @param leadingIcon A composable lambda to be inserted in the Leading Icon space. This is usually
- * a navigation icon. A standard implementation is provided by [AppBarLeadingIcon].
- * @param titleTextLabel A composable lambda to be inserted in the title space. This is usually a
- * [Text] element. A standard implementation is provided by [TopAppBarTitleTextLabel]. Default text
- * styling [MaterialTypography.h6] will be used.
- * @param trailingIcons A composable lambda to be inserted at the end of the bar, usually containing
- * a collection of menu icons. A standard implementation is provided by [TopAppBarTrailingIcons].
+ * - `null`: the [navigationIcon] is displayed at the start, and the [contextualActions] are
+ * displayed at the end
+ *
+ * @sample androidx.ui.material.samples.SimpleBottomAppBarNoFab
+ *
+ * - [FabPosition.Center] aligned: the [navigationIcon] is displayed at the start, and the
+ * [contextualActions] are displayed at the end
+ *
+ * @sample androidx.ui.material.samples.SimpleBottomAppBarCenterFab
+ *
+ * - [FabPosition.End] aligned: the [contextualActions] are displayed at the start, and no
+ * navigation icon is supported - setting a navigation icon here will throw an exception.
+ *
+ * @sample androidx.ui.material.samples.SimpleBottomAppBarEndFab
+ *
+ * For examples using a cutout FAB, see [FabConfiguration], which controls the shape of the cutout.
+ *
+ * @param color An optional color for the BottomAppBar. By default [MaterialColors.primary]
+ * will be used.
+ * @param navigationIcon The navigation icon displayed in the BottomAppBar. Note that if
+ * [fabConfiguration] is [FabPosition.End] aligned, this parameter must be null / not set.
+ * @param fabConfiguration The [FabConfiguration] that controls how / where
+ * the [FloatingActionButton] is placed inside the BottomAppBar.
+ * @param contextualActions A list representing the contextual actions to be displayed in the
+ * BottomAppBar. Any remaining actions that do not fit on the BottomAppBar should typically be
+ * displayed in an overflow menu.
+ * @param action A specific item action to be displayed in the BottomAppBar - this will be called
+ * for items in [contextualActions] up to the maximum number of icons that can be displayed.
+ * @param T the type of item in [contextualActions]
+ */
+// TODO: b/137311217 - type inference for nullable lambdas currently doesn't work
+@Suppress("USELESS_CAST")
+@Composable
+fun <T> BottomAppBar(
+    color: Color = +themeColor { primary },
+    navigationIcon: (@Composable() () -> Unit)? = null as @Composable() (() -> Unit)?,
+    fabConfiguration: FabConfiguration? = null,
+    contextualActions: List<T>? = null,
+    action: @Composable() (T) -> Unit = {}
+    // TODO: support overflow menu here with the remainder of the list
+) {
+    require(navigationIcon == null || fabConfiguration?.fabPosition != FabPosition.End) {
+        "Using a navigation icon with an end-aligned FloatingActionButton is not supported"
+    }
+
+    val actions = { maxIcons: Int ->
+        @Composable {
+            if (contextualActions != null) {
+                AppBarActions(maxIcons, contextualActions, action)
+            }
+        }
+    }
+
+    val navigationIconComposable = @Composable {
+        if (navigationIcon != null) {
+            navigationIcon()
+        }
+    }
+
+    if (fabConfiguration == null) {
+        BaseBottomAppBar(
+            color = color,
+            startContent = navigationIconComposable,
+            fabContainer = null as @Composable() (() -> Unit)?,
+            endContent = actions(MaxIconsInBottomAppBarNoFab)
+        )
+        return
+    }
+
+    // TODO: this causes an unfortunate frame lag as we need to position the fab before we can
+    // know where to draw the cutout - when we have a better way of doing this synchronously we
+    // should fix this.
+    val bottomAppBarCutoutShape = +state<BottomAppBarCutoutShape?> { null }
+
+    val fab = if (fabConfiguration.cutoutShape == null) {
+        fabConfiguration.fab
+    } else {
+        @Composable {
+            OnChildPositioned(onPositioned = { coords ->
+                val shape = BottomAppBarCutoutShape(
+                    fabConfiguration.cutoutShape,
+                    coords.position,
+                    coords.size
+                )
+                if (bottomAppBarCutoutShape.value != shape) {
+                    bottomAppBarCutoutShape.value = shape
+                }
+            }) { fabConfiguration.fab() }
+        }
+    }
+
+    val shape = bottomAppBarCutoutShape.value ?: RectangleShape
+
+    when (fabConfiguration.fabPosition) {
+        FabPosition.End -> BaseBottomAppBar(
+            color = color,
+            startContent = actions(MaxIconsInBottomAppBarEndFab),
+            fabContainer = { FabContainerLayout(Alignment.CenterRight, fab) },
+            endContent = {},
+            shape = shape
+        )
+        FabPosition.Center -> BaseBottomAppBar(
+            color = color,
+            startContent = navigationIconComposable,
+            fabContainer = { FabContainerLayout(Alignment.Center, fab) },
+            endContent = actions(MaxIconsInBottomAppBarCenterFab),
+            shape = shape
+        )
+    }
+}
+
+// TODO: cleanup when expanded width layouts are supported natively b/140408477
+/**
+ * Helper layout that takes up the full width of the app bar, with height equal to the [fab] height.
+ * This allows us to use [OnChildPositioned] to get the fab position relative to the app bar, so
+ * we can position the cutout in the correct place.
  */
 @Composable
-fun TopAppBar(
+private fun FabContainerLayout(alignment: Alignment, fab: @Composable() () -> Unit) {
+    Layout(fab) { measurables, constraints ->
+        check(measurables.size == 1) { "Only one child is supported in the FAB container." }
+        val fabPlaceable = measurables.first().measure(constraints)
+        val width = constraints.maxWidth
+        val height = fabPlaceable.height
+
+        // FAB should be offset from the start / end of the app bar
+        val padding = AppBarPadding.toIntPx()
+
+        val fabAlignmentSpace = IntPxSize(
+            width = width - fabPlaceable.width - padding - padding,
+            height = height - fabPlaceable.height
+        )
+
+        val fabPosition = alignment.align(fabAlignmentSpace)
+        layout(width, height) {
+            // Adjust for the padding we added
+            val xPosition = fabPosition.x + padding
+            fabPlaceable.place(xPosition, fabPosition.y)
+        }
+    }
+}
+
+// TODO: consider exposing this in the shape package, for a generic cutout shape - might be useful
+// for custom components.
+/**
+ * A [Shape] that represents a bottom app bar with a cutout. The cutout drawn will be [cutoutShape]
+ * increased in size by [BottomAppBarCutoutOffset] on all sides.
+ */
+private data class BottomAppBarCutoutShape(
+    val cutoutShape: Shape,
+    val fabPosition: PxPosition,
+    val fabSize: PxSize
+) : Shape {
+
+    override fun createOutline(size: PxSize, density: Density): Outline {
+        val boundingRectangle = Path().apply {
+            addRect(Rect.fromLTRB(0f, 0f, size.width.value, size.height.value))
+        }
+        val path = Path().apply {
+            addCutoutShape(density)
+            // Subtract this path from the bounding rectangle
+            op(boundingRectangle, this, PathOperation.difference)
+        }
+        return Outline.Generic(path)
+    }
+
+    /**
+     * Adds the filled [cutoutShape] to the [Path]. The path can the be subtracted from the main
+     * rectangle path used for the app bar, to create the resulting cutout shape.
+     */
+    private fun Path.addCutoutShape(density: Density) {
+        // The gap on all sides between the FAB and the cutout
+        val cutoutOffset = withDensity(density) { BottomAppBarCutoutOffset.toPx() }
+
+        val cutoutSize = PxSize(
+            width = fabSize.width + (cutoutOffset * 2),
+            height = fabSize.height + (cutoutOffset * 2)
+        )
+
+        val cutoutStartX = fabPosition.x.value - cutoutOffset.value
+        val cutoutEndX = cutoutStartX + cutoutSize.width.value
+
+        val cutoutRadius = cutoutSize.height.value / 2f
+        // Shift the cutout up by half its height, so only the bottom half of the cutout is actually
+        // cut into the app bar
+        val cutoutStartY = -cutoutRadius
+
+        addOutline(cutoutShape.createOutline(cutoutSize, density))
+        shift(Offset(cutoutStartX, cutoutStartY))
+
+        // TODO: consider exposing the custom cutout shape instead of just replacing circle shapes?
+        if (cutoutShape == CircleShape) {
+            val edgeRadius = withDensity(density) { BottomAppBarRoundedEdgeRadius.toPx().value }
+            // TODO: possibly support providing a custom vertical offset?
+            addRoundedEdges(cutoutStartX, cutoutEndX, cutoutRadius, edgeRadius, 0f)
+        }
+    }
+
+    /**
+     * Adds rounded edges to the [Path] representing a circular cutout in a BottomAppBar.
+     *
+     * Adds a curve for the left and right edges, with a straight line drawn between them - this
+     * combined with the cutout shape results in the overall cutout path that can be subtracted
+     * from the bounding rect of the app bar.
+     *
+     * @param cutoutStartPosition the absolute start position of the cutout
+     * @param cutoutEndPosition the absolute end position of the cutout
+     * @param cutoutRadius the radius of the cutout's circular edge - for a typical circular FAB
+     * this will just be the radius of the circular cutout, but in the case of an extended FAB, we
+     * can model this as two circles on either side attached to a rectangle.
+     * @param roundedEdgeRadius how far from the points where the cutout intersects with the app bar
+     * should the rounded edges be drawn to.
+     * @param verticalOffset how far the app bar is from the center of the cutout circle
+     */
+    private fun Path.addRoundedEdges(
+        cutoutStartPosition: Float,
+        cutoutEndPosition: Float,
+        cutoutRadius: Float,
+        roundedEdgeRadius: Float,
+        verticalOffset: Float
+    ) {
+        // Where the cutout intersects with the app bar, as if the cutout is not vertically aligned
+        // with the app bar, the intersect will not be equal to the radius of the circle.
+        val appBarInterceptOffset = calculateCutoutCircleYIntercept(cutoutRadius, verticalOffset)
+        val appBarInterceptStartX = cutoutStartPosition + (cutoutRadius + appBarInterceptOffset)
+        val appBarInterceptEndX = cutoutEndPosition - (cutoutRadius + appBarInterceptOffset)
+
+        // How far the control point is away from the cutout intercept. We set this to be as small
+        // as possible so that we have the most 'rounded' curve.
+        val controlPointOffset = 1f
+
+        // How far the control point is away from the center of the radius of the cutout
+        val controlPointRadiusOffset = appBarInterceptOffset - controlPointOffset
+
+        // The coordinates offset from the center of the radius of the cutout, where we should
+        // draw the curve to
+        val (curveInterceptXOffset, curveInterceptYOffset) = calculateRoundedEdgeIntercept(
+            controlPointRadiusOffset,
+            verticalOffset,
+            cutoutRadius
+        )
+
+        // Convert the offset relative to the center of the cutout circle into an absolute
+        // coordinate, by adding the radius of the shape to get a pure relative offset from the
+        // leftmost edge, and then positioning it next to the cutout
+        val curveInterceptStartX = cutoutStartPosition + (curveInterceptXOffset + cutoutRadius)
+        val curveInterceptEndX = cutoutEndPosition - (curveInterceptXOffset + cutoutRadius)
+
+        // Convert the curveInterceptYOffset which is relative to the center of the cutout, to an
+        // absolute position
+        val curveInterceptY = curveInterceptYOffset - verticalOffset
+
+        // Where the rounded edge starts
+        val roundedEdgeStartX = appBarInterceptStartX - roundedEdgeRadius
+        val roundedEdgeEndX = appBarInterceptEndX + roundedEdgeRadius
+
+        moveTo(roundedEdgeStartX, 0f)
+        quadraticBezierTo(
+            appBarInterceptStartX - controlPointOffset,
+            0f,
+            curveInterceptStartX,
+            curveInterceptY
+        )
+        lineTo(curveInterceptEndX, curveInterceptY)
+        quadraticBezierTo(appBarInterceptEndX + controlPointOffset, 0f, roundedEdgeEndX, 0f)
+        close()
+    }
+}
+
+/**
+ * Helper to make the following equations easier to read
+ */
+@Suppress("NOTHING_TO_INLINE")
+private inline fun square(x: Float) = x * x
+
+/**
+ * Returns the relative y intercept for a circle with the given [cutoutRadius] and [verticalOffset]
+ *
+ * Returns the leftmost intercept, so this will be a negative number that when added to the circle's
+ * absolute origin will give the absolute position of the left intercept, where the circle meets
+ * the app bar.
+ *
+ * Explanation:
+ * First construct the equation for a circle with given radius and vertical offset:
+ * x^2 + (y-verticalOffset)^2 = radius^2
+ *
+ * We want to find the y intercept where the cutout hits the top edge of the bottom app bar, so
+ * rearrange and set y to 0:
+ *
+ * x^2 = radius^2 - (0-verticalOffset)^2
+ *
+ * We are only interested in the left most (negative x) solution as we mirror this for the right
+ * edge later.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun calculateCutoutCircleYIntercept(
+    cutoutRadius: Float,
+    verticalOffset: Float
+): Float {
+    return -sqrt(square(cutoutRadius) - square(verticalOffset))
+}
+
+// TODO: Consider extracting this into the shape package / similar, might be useful for cutouts in
+// general.
+/**
+ * For a given control point on a quadratic bezier curve, calculates the required intercept
+ * point to create a smooth curve between the rounded edges near the cutout, and the actual curve
+ * that is part of the cutout.
+ *
+ * This returns the relative offset from the center of a circle with radius that is half the
+ * height of the cutout.
+ *
+ * Explanation and derivation comes from the Flutter team: https://goo.gl/Ufzrqn
+ *
+ * @param controlPointX the horizontal offset of the control point from the center of the circle
+ * @param verticalOffset the vertical offset of the top edge of the app bar from the center of the
+ * circle. I.e, if this is 2f, then the top edge of the app bar is 2f below the center. If 0f, the
+ * top edge of the app bar is in centered inside the circle.
+ * @param radius the radius of the circle - essentially the 'depth' of the cutout
+ */
+@Suppress("UnnecessaryVariable")
+internal fun calculateRoundedEdgeIntercept(
+    controlPointX: Float,
+    verticalOffset: Float,
+    radius: Float
+): Pair<Float, Float> {
+    val a = controlPointX
+    val b = verticalOffset
+    val r = radius
+
+    // expands to a2b2r2 + b4r2 - b2r4
+    val discriminant = square(b) * square(r) * (square(a) + square(b) - square(r))
+    val divisor = square(a) + square(b)
+    // the '-b' part of the quadratic solution
+    val bCoefficient = a * square(r)
+
+    // Two solutions for the x coordinate relative to the midpoint of the circle
+    val xSolutionA = (bCoefficient - sqrt(discriminant)) / divisor
+    val xSolutionB = (bCoefficient + sqrt(discriminant)) / divisor
+
+    // Get y coordinate from r2 = x2 + y2 -> y2 = r2 - x2
+    val ySolutionA = sqrt(square(r) - square(xSolutionA))
+    val ySolutionB = sqrt(square(r) - square(xSolutionB))
+
+    // If the vertical offset is 0, the vertical center of the circle lines up with the top edge of
+    // the bottom app bar, so both solutions are identical.
+    // If the vertical offset is not 0, there are two distinct solutions: one that will meet in the
+    // top half of the circle, and one that will meet in the bottom half of the circle. As the app
+    // bar is always on the bottom edge of the circle, we are always interested in the bottom half
+    // solution. To calculate which is which, it depends on whether the vertical offset is positive
+    // or negative.
+    val (xSolution, ySolution) = if (b > 0) {
+        // When the offset is positive, the top edge of the app bar is below the center of the
+        // circle. The largest solution will be the one closest to the bottom of the circle, so we
+        // pick that.
+        if (ySolutionA > ySolutionB) xSolutionA to ySolutionA else xSolutionB to ySolutionB
+    } else {
+        // When the offset is negative, the top edge of the app bar is above the center of the
+        // circle. The smallest solution will be the one closest to the top of the circle, so we
+        // pick that.
+        if (ySolutionA < ySolutionB) xSolutionA to ySolutionA else xSolutionB to ySolutionB
+    }
+
+    // If the calculated x coordinate is further away from the origin than the control point, the
+    // curve will fold back on itself. In this scenario, we actually join the circle above the
+    // center, so invert the y coordinate.
+    val adjustedYSolution = if (xSolution < controlPointX) -ySolution else ySolution
+    return xSolution to adjustedYSolution
+}
+
+@Composable
+private fun BaseBottomAppBar(
     color: Color = +themeColor { primary },
-    leadingIcon: @Composable() () -> Unit,
-    titleTextLabel: @Composable() () -> Unit,
-    trailingIcons: @Composable() () -> Unit
+    startContent: @Composable() () -> Unit,
+    fabContainer: @Composable() (() -> Unit)?,
+    shape: Shape = RectangleShape,
+    endContent: @Composable() () -> Unit
 ) {
-    AppBar(color) {
+    val appBar = @Composable {
+        BaseBottomAppBarWithoutFab(color, shape, startContent, endContent)
+    }
+
+    if (fabContainer == null) {
+        appBar()
+    } else {
+        BottomAppBarStack(appBar = appBar) {
+            fabContainer()
+        }
+    }
+}
+
+@Composable
+private fun BaseBottomAppBarWithoutFab(
+    color: Color,
+    shape: Shape,
+    startContent: @Composable() () -> Unit,
+    endContent: @Composable() () -> Unit
+) {
+    BaseAppBar(color, BottomAppBarElevation, shape) {
         FlexRow(mainAxisAlignment = MainAxisAlignment.SpaceBetween) {
             inflexible {
-                leadingIcon()
-                WidthSpacer(width = 32.dp)
-            }
-            expanded(flex = 1f) {
-                CurrentTextStyleProvider(value = +themeTextStyle { h6 }) {
-                    titleTextLabel()
+                // Using a wrap so that even if startContent() is empty, we will still force
+                // end content to be placed at the end of the row.
+                Wrap {
+                    startContent()
                 }
             }
             inflexible {
-                trailingIcons()
+                Wrap {
+                    endContent()
+                }
             }
+        }
+    }
+}
+
+/**
+ * Simple `Stack` implementation that places [fab] on top (z-axis) of [appBar], with the midpoint
+ * of the [fab] aligned to the top edge of the [appBar].
+ *
+ * This is needed as we want the total height of the BottomAppBar to be equal to the height of
+ * [appBar] + half the height of [fab], which is only possible with a custom layout.
+ */
+@Composable
+private fun BottomAppBarStack(appBar: @Composable() () -> Unit, fab: @Composable() () -> Unit) {
+    Layout(appBar, fab) { measurables, constraints ->
+        val (appBarPlaceable, fabPlaceable) = measurables.map { it.measure(constraints) }
+
+        val layoutWidth = appBarPlaceable.width
+        // Total height is the app bar height + half the fab height
+        val layoutHeight = appBarPlaceable.height + (fabPlaceable.height / 2)
+
+        val appBarVerticalOffset = layoutHeight - appBarPlaceable.height
+
+        // Position the children.
+        layout(layoutWidth, layoutHeight) {
+            // Place app bar in the bottom left
+            appBarPlaceable.place(IntPx.Zero, appBarVerticalOffset)
+
+            // Place fab in the top left
+            fabPlaceable.place(IntPx.Zero, IntPx.Zero)
         }
     }
 }
@@ -124,103 +641,91 @@ fun TopAppBar(
  * [TopAppBar].
  */
 @Composable
-fun AppBar(color: Color, @Children children: @Composable() () -> Unit) {
+private fun BaseAppBar(
+    color: Color,
+    elevation: Dp,
+    shape: Shape,
+    children: @Composable() () -> Unit
+) {
     Semantics(
         container = true
     ) {
-        Surface(color = color) {
-            Container(height = RegularHeight, expanded = true, padding = EdgeInsets(Padding)) {
+        Surface(color = color, elevation = elevation, shape = shape) {
+            Container(height = AppBarHeight, expanded = true, padding = EdgeInsets(AppBarPadding)) {
                 children()
             }
         }
     }
 }
 
-/**
- * A component that displays a leading icon for an App Bar following Material spec guidelines.
- *
- * @see [AppBar]
- * @see [TopAppBar]
- */
 @Composable
-fun AppBarLeadingIcon() {
-    // TODO: Replace with real icon button
-    Semantics(testTag = "Leading icon") {
-        FakeIcon(24.dp)
-    }
-}
-
-/**
- * A component that displays a title as a [Text] element for placement within a Top App Bar
- * following Material spec guidelines.
- *
- * @see [TopAppBar]
- *
- * @param title A title String to display
- */
-@Composable
-fun TopAppBarTitleTextLabel(title: String) {
-    Text(text = title)
-}
-
-/**
- * A component that displays a set of menu icons for placement within a Top App Bar following
- * Material spec guidelines.
- *
- * @see [TopAppBar]
- *
- * @param icons A list of icons to display
- */
-@Composable
-fun TopAppBarTrailingIcons(icons: List<Dp>) {
-    TrailingIcons(
-        numIcons = icons.size,
-        maxIcons = MaxIconsInTopAppBar,
-        icons = { index ->
-            Semantics(testTag = "Trailing icon") {
-                // TODO: Replace with real icon button
-                FakeIcon(icons[index])
-            }
-        },
-        overflowIcon = {
-            Semantics(testTag = "Overflow icon") {
-                FakeIcon(12.dp)
-            }
-        }
-    )
-}
-
-// TODO: make public
-@Composable
-internal fun TrailingIcons(
-    numIcons: Int,
-    maxIcons: Int,
-    icons: @Composable() (index: Int) -> Unit,
-    overflowIcon: @Composable() () -> Unit
+private fun <T> AppBarActions(
+    actionsToDisplay: Int,
+    contextualActions: List<T>,
+    action: @Composable() (T) -> Unit
 ) {
-    if (numIcons > 0) {
-        Row(mainAxisSize = FlexSize.Min) {
-            val needsOverflow = numIcons > maxIcons
-            val iconsToDisplay = if (needsOverflow) maxIcons else numIcons
-            for (index in 0 until iconsToDisplay) {
+    if (contextualActions.isEmpty()) {
+        return
+    }
+
+    // Split the list depending on how many actions we are displaying - if actionsToDisplay is
+    // greater than or equal to the number of actions provided, overflowActions will be empty.
+    val (shownActions, overflowActions) = contextualActions.withIndex().partition {
+        it.index < actionsToDisplay
+    }
+
+    Row(mainAxisSize = LayoutSize.Expand) {
+        shownActions.forEach { (index, shownAction) ->
+            action(shownAction)
+            if (index != shownActions.lastIndex) {
                 WidthSpacer(width = 24.dp)
-                icons(index)
             }
-            if (needsOverflow) {
-                WidthSpacer(width = 24.dp)
-                overflowIcon()
+        }
+        if (overflowActions.isNotEmpty()) {
+            WidthSpacer(width = 24.dp)
+            // TODO: use overflowActions to build menu here
+            Container(width = 12.dp) {
+                Text(text = "${overflowActions.size}", style = TextStyle(fontSize = 15.sp))
             }
         }
     }
 }
 
-// TODO: remove
+/**
+ * A correctly sized clickable icon that can be used inside [TopAppBar] and [BottomAppBar] for
+ * either the navigation icon or the actions.
+ *
+ * @param icon The icon to be displayed
+ * @param onClick the lambda to be invoked when this icon is pressed
+ */
 @Composable
-internal fun FakeIcon(size: Dp) {
-    ColoredRect(color = Color(0xFFFFFFFF.toInt()), width = size, height = 24.dp)
+fun AppBarIcon(icon: Image, onClick: () -> Unit) {
+    Container(width = ActionIconDiameter, height = ActionIconDiameter) {
+        Ripple(bounded = false) {
+            Clickable(onClick = onClick) {
+                SimpleImage(icon)
+            }
+        }
+    }
 }
 
-private val RegularHeight = 56.dp
-private val Padding = 16.dp
-// TODO: IR compiler bug avoids this being const
-private val MaxIconsInTopAppBar = 2
+private val ActionIconDiameter = 24.dp
+
+private val AppBarHeight = 56.dp
+private val AppBarPadding = 16.dp
+private val AppBarTitleStartPadding = 72.dp - AppBarPadding
+
+// TODO: should this have elevation? Spec says 8.dp but since shadows aren't shown on the top it
+//  isn't really visible
+private val BottomAppBarElevation = 0.dp
+private val TopAppBarElevation = 4.dp
+
+// The gap on all sides between the FAB and the cutout
+private val BottomAppBarCutoutOffset = 8.dp
+// How far from the notch the rounded edges start
+private val BottomAppBarRoundedEdgeRadius = 4.dp
+
+private const val MaxIconsInTopAppBar = 2
+private const val MaxIconsInBottomAppBarCenterFab = 2
+private const val MaxIconsInBottomAppBarEndFab = 4
+private const val MaxIconsInBottomAppBarNoFab = 4

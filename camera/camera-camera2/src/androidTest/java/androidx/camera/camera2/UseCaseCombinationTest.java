@@ -21,11 +21,11 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assume.assumeTrue;
 
 import android.Manifest;
+import android.app.Instrumentation;
 import android.content.Context;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Looper;
+import android.graphics.SurfaceTexture;
 
+import androidx.annotation.NonNull;
 import androidx.camera.core.AppConfig;
 import androidx.camera.core.CameraX;
 import androidx.camera.core.CameraX.LensFacing;
@@ -36,13 +36,16 @@ import androidx.camera.core.ImageCaptureConfig;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
+import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.testing.CameraUtil;
+import androidx.camera.testing.GLUtil;
 import androidx.camera.testing.fakes.FakeLifecycleOwner;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
+import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.rule.GrantPermissionRule;
 
 import org.junit.After;
@@ -51,6 +54,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -65,10 +69,9 @@ public final class UseCaseCombinationTest {
     @Rule
     public GrantPermissionRule mRuntimePermissionRule = GrantPermissionRule.grant(
             Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO);
+    private final Instrumentation mInstrumentation = InstrumentationRegistry.getInstrumentation();
     private Semaphore mSemaphore;
     private FakeLifecycleOwner mLifecycle;
-    private HandlerThread mHandlerThread;
-    private Handler mMainThreadHandler;
     private ImageCapture mImageCapture;
     private ImageAnalysis mImageAnalysis;
     private Preview mPreview;
@@ -93,36 +96,58 @@ public final class UseCaseCombinationTest {
         CameraX.init(context, config);
 
         mLifecycle = new FakeLifecycleOwner();
-        mHandlerThread = new HandlerThread("ErrorHandlerThread");
-        mHandlerThread.start();
-        mMainThreadHandler = new Handler(Looper.getMainLooper());
 
         mSemaphore = new Semaphore(0);
     }
 
     @After
-    public void tearDown() throws InterruptedException {
-        if (mHandlerThread != null) {
-            CameraX.unbindAll();
-            mHandlerThread.quitSafely();
+    public void tearDown() throws InterruptedException, ExecutionException {
+        mInstrumentation.runOnMainSync(new Runnable() {
+            @Override
+            public void run() {
+                CameraX.unbindAll();
+            }
+        });
 
-            // Wait some time for the cameras to close.
-            // We need the cameras to close to bring CameraX
-            // back to the initial state.
-            Thread.sleep(3000);
-        }
+        // Wait for deinit to finish.
+        CameraX.deinit().get();
     }
 
     /**
      * Test Combination: Preview + ImageCapture
      */
     @Test
-    public void previewCombinesImageCapture() {
+    public void previewCombinesImageCapture() throws InterruptedException {
         initPreview();
         initImageCapture();
 
-        CameraX.bindToLifecycle(mLifecycle, mPreview, mImageCapture);
-        mLifecycle.startAndResume();
+        mInstrumentation.runOnMainSync(new Runnable() {
+            @Override
+            public void run() {
+                CameraX.bindToLifecycle(mLifecycle, mPreview, mImageCapture);
+                mPreview.setOnPreviewOutputUpdateListener(
+                        new Preview.OnPreviewOutputUpdateListener() {
+                            @Override
+                            public void onUpdated(@NonNull Preview.PreviewOutput output) {
+                                output.getSurfaceTexture().attachToGLContext(
+                                        GLUtil.getTexIdFromGLContext());
+                                output.getSurfaceTexture().setOnFrameAvailableListener(
+                                        new SurfaceTexture.OnFrameAvailableListener() {
+                                            @Override
+                                            public void onFrameAvailable(
+                                                    SurfaceTexture surfaceTexture) {
+                                                surfaceTexture.updateTexImage();
+                                                mSemaphore.release();
+                                            }
+                                        });
+                            }
+                        });
+                mLifecycle.startAndResume();
+            }
+        });
+
+        // Wait for the frame available update.
+        mSemaphore.acquire(10);
 
         assertThat(mLifecycle.getObserverCount()).isEqualTo(2);
         assertThat(CameraX.isBound(mPreview)).isTrue();
@@ -137,11 +162,11 @@ public final class UseCaseCombinationTest {
         initImageAnalysis();
         initPreview();
 
-        mMainThreadHandler.post(new Runnable() {
+        mInstrumentation.runOnMainSync(new Runnable() {
             @Override
             public void run() {
                 CameraX.bindToLifecycle(mLifecycle, mPreview, mImageAnalysis);
-                mImageAnalysis.setAnalyzer(mImageAnalyzer);
+                mImageAnalysis.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
                 mAnalysisResult.observe(mLifecycle,
                         createCountIncrementingObserver());
                 mLifecycle.startAndResume();
@@ -164,11 +189,11 @@ public final class UseCaseCombinationTest {
         initImageAnalysis();
         initImageCapture();
 
-        mMainThreadHandler.post(new Runnable() {
+        mInstrumentation.runOnMainSync(new Runnable() {
             @Override
             public void run() {
                 CameraX.bindToLifecycle(mLifecycle, mPreview, mImageAnalysis, mImageCapture);
-                mImageAnalysis.setAnalyzer(mImageAnalyzer);
+                mImageAnalysis.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
                 mAnalysisResult.observe(mLifecycle,
                         createCountIncrementingObserver());
                 mLifecycle.startAndResume();
@@ -189,7 +214,6 @@ public final class UseCaseCombinationTest {
                 new ImageAnalysisConfig.Builder()
                         .setLensFacing(DEFAULT_LENS_FACING)
                         .setTargetName("ImageAnalysis")
-                        .setCallbackHandler(new Handler(Looper.getMainLooper()))
                         .build();
         mImageAnalyzer =
                 new ImageAnalysis.Analyzer() {
@@ -209,12 +233,10 @@ public final class UseCaseCombinationTest {
     }
 
     private void initPreview() {
-        PreviewConfig previewConfig =
+        PreviewConfig.Builder configBuilder =
                 new PreviewConfig.Builder()
-                        .setLensFacing(DEFAULT_LENS_FACING)
                         .setTargetName("Preview")
-                        .build();
-
-        mPreview = new Preview(previewConfig);
+                        .setLensFacing(DEFAULT_LENS_FACING);
+        mPreview = new Preview(configBuilder.build());
     }
 }

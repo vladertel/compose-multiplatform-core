@@ -18,6 +18,13 @@ package androidx.camera.extensions.impl;
 import android.content.Context;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CaptureRequest;
+import android.util.Pair;
+import android.util.Size;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.util.List;
 
 /**
  * Implementation for night preview use case.
@@ -37,8 +44,8 @@ public final class NightPreviewExtenderImpl implements PreviewExtenderImpl {
     }
 
     @Override
-    public boolean isExtensionAvailable(String cameraId,
-            CameraCharacteristics cameraCharacteristics) {
+    public boolean isExtensionAvailable(@NonNull String cameraId,
+            @Nullable CameraCharacteristics cameraCharacteristics) {
         // Implement the logic to check whether the extension function is supported or not.
         return true;
     }
@@ -62,6 +69,11 @@ public final class NightPreviewExtenderImpl implements PreviewExtenderImpl {
     @Override
     public ProcessorImpl getProcessor() {
         return RequestUpdateProcessorImpls.noUpdateProcessor();
+    }
+
+    @Override
+    public List<Pair<Integer, Size[]>> getSupportedResolutions() {
+        return null;
     }
 
     @Override

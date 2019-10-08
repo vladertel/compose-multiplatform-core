@@ -43,10 +43,10 @@ import androidx.ui.graphics.Color
 import androidx.ui.layout.Container
 import androidx.ui.layout.Padding
 import androidx.ui.layout.Wrap
-import androidx.ui.painting.Canvas
-import androidx.ui.painting.Paint
-import androidx.ui.painting.PaintingStyle
-import androidx.ui.painting.StrokeCap
+import androidx.ui.graphics.Canvas
+import androidx.ui.graphics.Paint
+import androidx.ui.graphics.PaintingStyle
+import androidx.ui.graphics.StrokeCap
 import androidx.ui.vectormath64.degrees
 import kotlin.math.abs
 import kotlin.math.max
@@ -282,7 +282,7 @@ private fun drawIndeterminateCircularIndicator(
 }
 
 @Composable
-private fun CircularIndicatorContainer(@Children children: @Composable() () -> Unit) {
+private fun CircularIndicatorContainer(children: @Composable() () -> Unit) {
     Wrap {
         Padding(CircularIndicatorPadding) {
             Container(width = CircularIndicatorDiameter, height = CircularIndicatorDiameter) {

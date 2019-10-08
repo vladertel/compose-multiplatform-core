@@ -84,7 +84,7 @@ class FragmentLayoutInflaterFactory implements LayoutInflater.Factory2 {
             fragment = mFragmentManager.findFragmentById(containerId);
         }
 
-        if (FragmentManager.DEBUG) {
+        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
             Log.v(TAG, "onCreateView: id=0x"
                     + Integer.toHexString(id) + " fname=" + fname
                     + " existing=" + fragment);
@@ -101,7 +101,8 @@ class FragmentLayoutInflaterFactory implements LayoutInflater.Factory2 {
             fragment.mHost = mFragmentManager.mHost;
             fragment.onInflate(mFragmentManager.mHost.getContext(), attrs,
                     fragment.mSavedFragmentState);
-            mFragmentManager.addFragment(fragment, true);
+            mFragmentManager.addFragment(fragment);
+            mFragmentManager.moveToState(fragment);
 
         } else if (fragment.mInLayout) {
             // A fragment already exists and it is not one we restored from
@@ -125,7 +126,7 @@ class FragmentLayoutInflaterFactory implements LayoutInflater.Factory2 {
         // at the right phase of the lifecycle so that we will have mView populated
         // for compliant fragments below.
         if (mFragmentManager.mCurState < Fragment.CREATED && fragment.mFromLayout) {
-            mFragmentManager.moveToState(fragment, Fragment.CREATED, 0, false);
+            mFragmentManager.moveToState(fragment, Fragment.CREATED);
         } else {
             mFragmentManager.moveToState(fragment);
         }

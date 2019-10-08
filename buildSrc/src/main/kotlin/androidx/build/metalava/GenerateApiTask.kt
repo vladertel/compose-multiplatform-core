@@ -48,22 +48,30 @@ abstract class GenerateApiTask : MetalavaTask() {
 
     @OutputFiles
     fun getTaskOutputs(): List<File>? {
-        if (generateRestrictedAPIs) {
-            return apiLocation.get().files()
-        }
-        return listOf(apiLocation.get().publicApiFile)
+        val prop = apiLocation.get()
+        return listOfNotNull(
+            prop.publicApiFile,
+            prop.experimentalApiFile,
+            if (generateRestrictedAPIs) prop.restrictedApiFile else null
+        )
     }
 
     @TaskAction
     fun exec() {
-        val dependencyClasspath = checkNotNull(
-                dependencyClasspath) { "Dependency classpath not set." }
         check(bootClasspath.isNotEmpty()) { "Android boot classpath not set." }
         check(sourcePaths.isNotEmpty()) { "Source paths not set." }
 
-        val inputs = JavaCompileInputs.fromSourcesAndDeps(sourcePaths, dependencyClasspath,
-            project)
-        project.generateApi(inputs, apiLocation.get(), apiLocation.get().publicApiFile.parentFile,
-            ApiLintMode.CheckBaseline(baselines.get().apiLintFile), generateRestrictedAPIs)
+        val inputs = JavaCompileInputs.fromSourcesAndDeps(
+            sourcePaths,
+            dependencyClasspath,
+            project
+        )
+        project.generateApi(
+            inputs,
+            apiLocation.get(),
+            apiLocation.get().publicApiFile.parentFile,
+            ApiLintMode.CheckBaseline(baselines.get().apiLintFile),
+            generateRestrictedAPIs
+        )
     }
 }

@@ -356,6 +356,27 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        findViewById(R.id.run_foreground_worker).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                OneTimeWorkRequest request =
+                        new OneTimeWorkRequest.Builder(ForegroundWorker.class)
+                                .setConstraints(new Constraints.Builder()
+                                        .setRequiredNetworkType(NetworkType.CONNECTED).build()
+                                ).build();
+
+                WorkManager.getInstance(MainActivity.this).enqueue(request);
+            }
+        });
+
+        findViewById(R.id.cancel_foreground_worker).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                WorkManager.getInstance(MainActivity.this)
+                        .cancelAllWorkByTag(ForegroundWorker.class.getName());
+            }
+        });
+
         findViewById(R.id.crash_app).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

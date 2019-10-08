@@ -20,20 +20,20 @@ import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.benchmark.BenchmarkRule
-import androidx.benchmark.measureRepeated
+import androidx.benchmark.junit4.BenchmarkRule
+import androidx.benchmark.junit4.measureRepeated
 import androidx.recyclerview.benchmark.test.R
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.annotation.UiThreadTest
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.filters.LargeTest
+import androidx.test.filters.MediumTest
 import androidx.test.rule.ActivityTestRule
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@LargeTest
+@MediumTest // label medium temporarily (b/140773023), to reorder in CI
 @RunWith(AndroidJUnit4::class)
 class ScrollBenchmark {
 

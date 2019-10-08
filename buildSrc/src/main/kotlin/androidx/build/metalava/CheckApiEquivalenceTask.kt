@@ -24,6 +24,7 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
@@ -52,36 +53,61 @@ abstract class CheckApiEquivalenceTask : DefaultTask() {
         if (checkRestrictedAPIs) {
             return checkedInApis.get().flatMap { it.files() }
         }
-        return checkedInApis.get().map { it.publicApiFile }
+        return checkedInApis.get().flatMap { it.nonRestrictedFiles() }
+    }
+
+    /**
+     * A dummy output file so that Gradle will consider this task up-to-date after it runs once
+     */
+    @OutputFile
+    fun getDummyOutput(): File {
+        return getTaskInputs().first()
+    }
+
+    private fun summarizeDiff(a: File, b: File): String {
+        if (!a.exists()) {
+            return "${a.toString()} does not exist"
+        }
+        if (!b.exists()) {
+            return "${b.toString()} does not exist"
+        }
+        val process = ProcessBuilder(listOf("diff", a.toString(), b.toString()))
+                .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                .start()
+        process.waitFor()
+        var diffLines = process.inputStream.bufferedReader().readLines().toMutableList()
+        val maxSummaryLines = 50
+        if (diffLines.size > maxSummaryLines) {
+            diffLines = diffLines.subList(0, maxSummaryLines)
+            diffLines.plusAssign("[long diff was truncated]")
+        }
+        return diffLines.joinToString("\n")
+    }
+
+    private fun checkEqual(expected: File, actual: File) {
+        if (!FileUtils.contentEquals(expected, actual)) {
+            val diff = summarizeDiff(expected, actual)
+            val message = """API definition has changed
+
+                    Declared definition is ${expected}
+                    True     definition is ${actual}
+
+                    Please run `./gradlew updateApi` to confirm these changes are
+                    intentional by updating the API definition.
+
+                    Difference between these files:
+                    $diff"""
+            throw GradleException(message)
+        }
     }
 
     @TaskAction
     fun exec() {
         for (checkedInApi in checkedInApis.get()) {
-            if (!FileUtils.contentEquals(
-                    checkedInApi.publicApiFile,
-                    builtApi.get().publicApiFile
-                )) {
-                val message = "Public API definition has changed.\n\n" +
-                        "Declared definition is ${checkedInApi.publicApiFile}\n" +
-                        "True     definition is ${builtApi.get().publicApiFile}\n\n" +
-                        "Please run `./gradlew updateApi` to confirm these changes are " +
-                        "intentional by updating the public API definition"
-                throw GradleException(message)
-            }
+            checkEqual(checkedInApi.publicApiFile, builtApi.get().publicApiFile)
+            checkEqual(checkedInApi.experimentalApiFile, builtApi.get().experimentalApiFile)
             if (checkRestrictedAPIs) {
-                if (!FileUtils.contentEquals(
-                        checkedInApi.restrictedApiFile,
-                        builtApi.get().restrictedApiFile
-                    )) {
-                    val message = "Restricted API definition (marked by the RestrictedTo " +
-                            "annotation) has changed.\n\n" +
-                            "Declared definition is ${checkedInApi.restrictedApiFile}\n" +
-                            "True     definition is ${builtApi.get().restrictedApiFile}\n" +
-                            "Please run `./gradlew updateApi` to confirm these changes are " +
-                            "intentional by updating the restricted API definition"
-                    throw GradleException(message)
-                }
+                checkEqual(checkedInApi.restrictedApiFile, builtApi.get().restrictedApiFile)
             }
         }
     }

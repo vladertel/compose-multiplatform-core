@@ -17,7 +17,9 @@
 package androidx.webkit;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.net.Uri;
+import android.util.Log;
 import android.webkit.WebResourceResponse;
 
 import androidx.annotation.NonNull;
@@ -26,16 +28,17 @@ import androidx.annotation.VisibleForTesting;
 import androidx.annotation.WorkerThread;
 import androidx.webkit.internal.AssetHelper;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Helper class to load files including application's static assets and resources using http(s)://
- * URLs inside a {@link android.webkit.WebView} class.
- * Loading assets and resources using web-like URLs is desirable as it is compatible with the
- * Same-Origin policy.
+ * Helper class to load local files including application's static assets and resources using
+ * http(s):// URLs inside a {@link android.webkit.WebView} class.
+ * Loading local files using web-like URLs instead of {@code "file://"} is desirable as it is
+ * compatible with the Same-Origin policy.
  *
  * <p>
  * For more context about application's assets and resources and how to normally access them please
@@ -55,24 +58,23 @@ import java.util.List;
  * <p>
  * A typical usage would be like:
  * <pre class="prettyprint">
- *     final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
- *              .register("/assets/", new AssetsPathHandler(this))
- *              .register("/res/", new ResourcesPathHandler(this))
- *              .build();
+ * final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
+ *          .addPathHandler("/assets/", new AssetsPathHandler(this))
+ *          .addPathHandler("/res/", new ResourcesPathHandler(this))
+ *          .build();
  *
- *     webView.setWebViewClient(new WebViewClient() {
- *         {@literal @}Override
- *         public WebResourceResponse shouldInterceptRequest(WebView view,
- *                                          WebResourceRequest request) {
- *             return assetLoader.shouldInterceptRequest(request.getUrl());
- *         }
- *     });
- *     // Assets are hosted under http(s)://appassets.androidplatform.net/assets/... .
- *     // If the application's assets are in the "main/assets" folder this will read the file
- *     // from "main/assets/www/index.html" and load it as if it were hosted on:
- *     // https://appassets.androidplatform.net/assets/www/index.html
- *     webview.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
- *
+ * webView.setWebViewClient(new WebViewClient() {
+ *     {@literal @}Override
+ *     public WebResourceResponse shouldInterceptRequest(WebView view,
+ *                                      WebResourceRequest request) {
+ *         return assetLoader.shouldInterceptRequest(request.getUrl());
+ *     }
+ * });
+ * // Assets are hosted under http(s)://appassets.androidplatform.net/assets/... .
+ * // If the application's assets are in the "main/assets" folder this will read the file
+ * // from "main/assets/www/index.html" and load it as if it were hosted on:
+ * // https://appassets.androidplatform.net/assets/www/index.html
+ * webview.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
  * </pre>
  */
 public final class WebViewAssetLoader {
@@ -107,6 +109,15 @@ public final class WebViewAssetLoader {
     public interface PathHandler {
         /**
          * Handles the requested URL by returning the appropriate response.
+         * <p>
+         * Returning a {@code null} value means that the handler decided not to handle this path.
+         * In this case, {@link WebViewAssetLoader} will try the next handler registered on this
+         * path or pass to WebView that will fall back to network to try to resolve the URL.
+         * <p>
+         * However, if the handler wants to save unnecessary processing either by another handler or
+         * by falling back to network, in cases like a file cannot be found, it may return a
+         * {@code new WebResourceResponse(null, null, null)} which is received as an
+         * HTTP response with status code {@code 404} and no body.
          *
          * @param path the suffix path to be handled.
          * @return {@link WebResourceResponse} for the requested path or {@code null} if it can't
@@ -144,6 +155,11 @@ public final class WebViewAssetLoader {
          * falling back to network and trying to resolve a path that doesn't exist. A
          * {@link WebResourceResponse} with {@code null} {@link InputStream} will be received as an
          * HTTP response with status code {@code 404} and no body.
+         * <p class="note">
+         * The MIME type for the file will be determined from the file's extension using
+         * {@link java.net.URLConnection#guessContentTypeFromName}. Developers should ensure that
+         * asset files are named using standard file extensions. If the file does not have a
+         * recognised extension, {@code "text/plain"} will be used by default.
          *
          * @param path the suffix path to be handled.
          * @return {@link WebResourceResponse} for the requested file.
@@ -152,13 +168,14 @@ public final class WebViewAssetLoader {
         @WorkerThread
         @Nullable
         public WebResourceResponse handle(@NonNull String path) {
-            Uri uri = new Uri.Builder()
-                    .path(path)
-                    .build();
-
-            InputStream is = mAssetHelper.openAsset(uri);
-            String mimeType = URLConnection.guessContentTypeFromName(path);
-            return new WebResourceResponse(mimeType, null, is);
+            try {
+                InputStream is = mAssetHelper.openAsset(path);
+                String mimeType = AssetHelper.guessMimeType(path);
+                return new WebResourceResponse(mimeType, null, is);
+            } catch (IOException e) {
+                Log.e(TAG, "Error opening asset path: " + path, e);
+                return new WebResourceResponse(null, null, null);
+            }
         }
     }
 
@@ -189,6 +206,11 @@ public final class WebViewAssetLoader {
          * falling back to network and trying to resolve a path that doesn't exist. A
          * {@link WebResourceResponse} with {@code null} {@link InputStream} will be received as an
          * HTTP response with status code {@code 404} and no body.
+         * <p class="note">
+         * The MIME type for the file will be determined from the file's extension using
+         * {@link java.net.URLConnection#guessContentTypeFromName}. Developers should ensure that
+         * resource files are named using standard file extensions. If the file does not have a
+         * recognised extension, {@code "text/plain"} will be used by default.
          *
          * @param path the suffix path to be handled.
          * @return {@link WebResourceResponse} for the requested file.
@@ -197,16 +219,149 @@ public final class WebViewAssetLoader {
         @WorkerThread
         @Nullable
         public WebResourceResponse handle(@NonNull String path) {
-            Uri uri = new Uri.Builder()
-                    .path(path)
-                    .build();
+            try {
+                InputStream is = mAssetHelper.openResource(path);
+                String mimeType = AssetHelper.guessMimeType(path);
+                return new WebResourceResponse(mimeType, null, is);
+            } catch (Resources.NotFoundException e) {
+                Log.e(TAG, "Resource not found from the path: " + path, e);
+            } catch (IOException e) {
+                Log.e(TAG, "Error opening resource from the path: " + path, e);
+            }
+            return new WebResourceResponse(null, null, null);
+        }
+    }
 
-            InputStream is = mAssetHelper.openResource(uri);
-            String mimeType = URLConnection.guessContentTypeFromName(path);
-            return new WebResourceResponse(mimeType, null, is);
+    /**
+     * Handler class to open files from application internal storage.
+     * For more information about android storage please refer to
+     * <a href="https://developer.android.com/guide/topics/data/data-storage">Android Developers
+     * Docs: Data and file storage overview</a>.
+     * <p class="note">
+     * To avoid leaking user or app data to the web, make sure to choose {@code directory}
+     * carefully, and assume any file under this directory could be accessed by any web page subject
+     * to same-origin rules.
+     * <p>
+     * A typical usage would be like:
+     * <pre class="prettyprint">
+     * File publicDir = new File(context.getFilesDir(), "public");
+     * // Host "files/public/" in app's data directory under:
+     * // http://appassets.androidplatform.net/public/...
+     * WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
+     *          .addPathHandler("/public/", new InternalStoragePathHandler(context, publicDir))
+     *          .build();
+     * </pre>
+     */
+    public static final class InternalStoragePathHandler implements PathHandler {
+        /**
+         * Forbidden subdirectories of {@link Context#getDataDir} that cannot be exposed by this
+         * handler. They are forbidden as they often contain sensitive information.
+         * <p class="note">
+         * Note: Any future addition to this list will be considered breaking changes to the API.
+         */
+        private static final String[] FORBIDDEN_DATA_DIRS =
+                new String[] {"app_webview/", "databases/", "lib/", "shared_prefs/", "code_cache/"};
+
+        @NonNull private final File mDirectory;
+
+        /**
+         * Creates PathHandler for app's internal storage.
+         * The directory to be exposed must be inside either the application's internal data
+         * directory {@link Context#getDataDir} or cache directory {@link Context#getCacheDir}.
+         * External storage is not supported for security reasons, as other apps with
+         * {@link android.Manifest.permission#WRITE_EXTERNAL_STORAGE} may be able to modify the
+         * files.
+         * <p>
+         * Exposing the entire data or cache directory is not permitted, to avoid accidentally
+         * exposing sensitive application files to the web. Certain existing subdirectories of
+         * {@link Context#getDataDir} are also not permitted as they are often sensitive.
+         * These files are ({@code "app_webview/"}, {@code "databases/"}, {@code "lib/"},
+         * {@code "shared_prefs/"} and {@code "code_cache/"}).
+         * <p>
+         * The application should typically use a dedicated subdirectory for the files it intends to
+         * expose and keep them separate from other files.
+         *
+         * @param context {@link Context} that is used to access app's internal storage.
+         * @param directory the absolute path of the exposed app internal storage directory from
+         *                  which files can be loaded.
+         * @throws IllegalArgumentException if the directory is not allowed.
+         */
+        public InternalStoragePathHandler(@NonNull Context context, @NonNull File directory) {
+            try {
+                mDirectory = new File(AssetHelper.getCanonicalDirPath(directory));
+                if (!isAllowedInternalStorageDir(context)) {
+                    throw new IllegalArgumentException("The given directory \"" + directory
+                            + "\" doesn't exist under an allowed app internal storage directory");
+                }
+            } catch (IOException e) {
+                throw new IllegalArgumentException(
+                        "Failed to resolve the canonical path for the given directory: "
+                        + directory.getPath(), e);
+            }
         }
 
+        private boolean isAllowedInternalStorageDir(@NonNull Context context) throws IOException {
+            String dir = AssetHelper.getCanonicalDirPath(mDirectory);
+            String cacheDir = AssetHelper.getCanonicalDirPath(context.getCacheDir());
+            String dataDir = AssetHelper.getCanonicalDirPath(AssetHelper.getDataDir(context));
+            // dir has to be a subdirectory of data or cache dir.
+            if (!dir.startsWith(cacheDir) && !dir.startsWith(dataDir)) {
+                return false;
+            }
+            // dir cannot be the entire cache or data dir.
+            if (dir.equals(cacheDir) || dir.equals(dataDir)) {
+                return false;
+            }
+            // dir cannot be a subdirectory of any forbidden data dir.
+            for (String forbiddenPath : FORBIDDEN_DATA_DIRS) {
+                if (dir.startsWith(dataDir + forbiddenPath)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /**
+         * Opens the requested file from the exposed data directory.
+         * <p>
+         * The matched prefix path used shouldn't be a prefix of a real web path. Thus, if the
+         * requested file cannot be found or is outside the mounted directory a
+         * {@link WebResourceResponse} object with a {@code null} {@link InputStream} will be
+         * returned instead of {@code null}. This saves the time of falling back to network and
+         * trying to resolve a path that doesn't exist. A {@link WebResourceResponse} with
+         * {@code null} {@link InputStream} will be received as an HTTP response with status code
+         * {@code 404} and no body.
+         * <p class="note">
+         * The MIME type for the file will be determined from the file's extension using
+         * {@link java.net.URLConnection#guessContentTypeFromName}. Developers should ensure that
+         * files are named using standard file extensions. If the file does not have a
+         * recognised extension, {@code "text/plain"} will be used by default.
+         *
+         * @param path the suffix path to be handled.
+         * @return {@link WebResourceResponse} for the requested file.
+         */
+        @Override
+        @WorkerThread
+        @NonNull
+        public WebResourceResponse handle(@NonNull String path) {
+            try {
+                File file = AssetHelper.getCanonicalFileIfChild(mDirectory, path);
+                if (file != null) {
+                    InputStream is = AssetHelper.openFile(file);
+                    String mimeType = AssetHelper.guessMimeType(path);
+                    return new WebResourceResponse(mimeType, null, is);
+                } else {
+                    Log.e(TAG, String.format(
+                            "The requested file: %s is outside the mounted directory: %s", path,
+                                    mDirectory));
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Error opening the requested path: " + path, e);
+            }
+            return new WebResourceResponse(null, null, null);
+        }
     }
+
 
     /**
      * Matches URIs on the form: {@code "http(s)://authority/path/**"}, HTTPS is always enabled.
@@ -304,12 +459,12 @@ public final class WebViewAssetLoader {
      * A builder class for constructing {@link WebViewAssetLoader} objects.
      */
     public static final class Builder {
-        private boolean mAllowHttp;
+        private boolean mHttpAllowed;
         private String mDomain;
         @NonNull private List<PathMatcher> mBuilderMatcherList;
 
         public Builder() {
-            mAllowHttp = false;
+            mHttpAllowed = false;
             mDomain = DEFAULT_DOMAIN;
             mBuilderMatcherList = new ArrayList<>();
         }
@@ -322,7 +477,7 @@ public final class WebViewAssetLoader {
          * @return {@link Builder} object.
          */
         @NonNull
-        public Builder onDomain(@NonNull String domain) {
+        public Builder setDomain(@NonNull String domain) {
             mDomain = domain;
             return this;
         }
@@ -334,8 +489,8 @@ public final class WebViewAssetLoader {
          * @return {@link Builder} object.
          */
         @NonNull
-        public Builder allowHttp(boolean allowHttp) {
-            mAllowHttp = allowHttp;
+        public Builder setHttpAllowed(boolean httpAllowed) {
+            mHttpAllowed = httpAllowed;
             return this;
         }
 
@@ -351,8 +506,8 @@ public final class WebViewAssetLoader {
          * @throws IllegalArgumentException if the path is invalid.
          */
         @NonNull
-        public Builder register(@NonNull String path, @NonNull PathHandler handler) {
-            mBuilderMatcherList.add(new PathMatcher(mDomain, path, mAllowHttp, handler));
+        public Builder addPathHandler(@NonNull String path, @NonNull PathHandler handler) {
+            mBuilderMatcherList.add(new PathMatcher(mDomain, path, mHttpAllowed, handler));
             return this;
         }
 

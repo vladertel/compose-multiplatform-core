@@ -22,9 +22,14 @@ import androidx.compose.unaryPlus
 import androidx.test.filters.MediumTest
 import androidx.ui.core.TestTag
 import androidx.ui.core.dp
+import androidx.ui.foundation.Strings
+import androidx.ui.foundation.selection.ToggleableState
+import androidx.ui.foundation.semantics.toggleableState
 import androidx.ui.layout.Column
+import androidx.ui.semantics.accessibilityValue
+import androidx.ui.test.assertHasNoClickAction
 import androidx.ui.test.assertIsChecked
-import androidx.ui.test.assertIsNotChecked
+import androidx.ui.test.assertIsUnchecked
 import androidx.ui.test.assertSemanticsIsEqualTo
 import androidx.ui.test.copyWith
 import androidx.ui.test.createComposeRule
@@ -45,10 +50,13 @@ class SwitchUiTest {
 
     private val defaultUncheckedSwitchSemantics = createFullSemantics(
         isEnabled = true,
-        isChecked = false
+        toggleableState = ToggleableState.Unchecked,
+        value = Strings.Unchecked // TODO(a11y): Do we still call this checked/unchecked?
     )
+
     private val defaultCheckedSwitchSemantics = defaultUncheckedSwitchSemantics.copyWith {
-        isChecked = true
+        toggleableState = ToggleableState.Checked
+        accessibilityValue = Strings.Checked
     }
     private val defaultSwitchTag = "switch"
 
@@ -57,10 +65,10 @@ class SwitchUiTest {
         composeTestRule.setMaterialContent {
             Column {
                 TestTag(tag = "checked") {
-                    Switch(checked = true, onCheckedChange = null)
+                    Switch(checked = true, onCheckedChange = {})
                 }
                 TestTag(tag = "unchecked") {
-                    Switch(checked = false, onCheckedChange = null)
+                    Switch(checked = false, onCheckedChange = {})
                 }
             }
         }
@@ -78,7 +86,7 @@ class SwitchUiTest {
             }
         }
         findByTag(defaultSwitchTag)
-            .assertIsNotChecked()
+            .assertIsUnchecked()
             .doClick()
             .assertIsChecked()
     }
@@ -93,11 +101,11 @@ class SwitchUiTest {
             }
         }
         findByTag(defaultSwitchTag)
-            .assertIsNotChecked()
+            .assertIsUnchecked()
             .doClick()
             .assertIsChecked()
             .doClick()
-            .assertIsNotChecked()
+            .assertIsUnchecked()
     }
 
     @Test
@@ -109,9 +117,7 @@ class SwitchUiTest {
             }
         }
         findByTag(defaultSwitchTag)
-            .assertIsNotChecked()
-            .doClick()
-            .assertIsNotChecked()
+            .assertHasNoClickAction()
     }
 
     @Test
@@ -126,7 +132,7 @@ class SwitchUiTest {
 
     private fun materialSizesTestForValue(checked: Boolean) {
         composeTestRule
-            .setMaterialContentAndTestSizes {
+            .setMaterialContentAndCollectSizes {
                 Switch(checked = checked, onCheckedChange = null)
             }
             .assertWidthEqualsTo { 34.dp.toIntPx() + 2.dp.toIntPx() * 2 }

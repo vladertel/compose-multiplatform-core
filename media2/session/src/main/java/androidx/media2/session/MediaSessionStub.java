@@ -245,7 +245,7 @@ class MediaSessionStub extends IMediaSession.Stub {
                                 }, DIRECT_EXECUTOR);
                             }
                         } else if (task instanceof SessionCallbackTask) {
-                            final Object result = ((SessionCallbackTask) task).run(controller);
+                            final Object result = ((SessionCallbackTask<?>) task).run(controller);
                             if (result == null) {
                                 throw new RuntimeException("SessionCallback has returned null,"
                                         + " commandCode=" + commandCode);
@@ -258,7 +258,7 @@ class MediaSessionStub extends IMediaSession.Stub {
                                         + ". Fix bug");
                             }
                         } else if (task instanceof LibrarySessionCallbackTask) {
-                            final Object result = ((LibrarySessionCallbackTask) task).run(
+                            final Object result = ((LibrarySessionCallbackTask<?>) task).run(
                                     controller);
                             if (result == null) {
                                 throw new RuntimeException("LibrarySessionCallback has returned"
@@ -308,7 +308,7 @@ class MediaSessionStub extends IMediaSession.Stub {
     }
 
     private void dispatchLibrarySessionTask(@NonNull IMediaController caller, int seq,
-            @CommandCode final int commandCode, @NonNull final LibrarySessionCallbackTask task) {
+            @CommandCode final int commandCode, @NonNull final LibrarySessionCallbackTask<?> task) {
         if (!(mSessionImpl instanceof MediaLibrarySessionImpl)) {
             throw new RuntimeException("MediaSession cannot handle MediaLibrarySession command");
         }
@@ -945,6 +945,21 @@ class MediaSessionStub extends IMediaSession.Stub {
     }
 
     @Override
+    public void movePlaylistItem(IMediaController caller, int seq, final int fromIndex,
+            final int toIndex) {
+        if (caller == null) {
+            return;
+        }
+        dispatchSessionTask(caller, seq, SessionCommand.COMMAND_CODE_PLAYER_MOVE_PLAYLIST_ITEM,
+                new SessionPlayerTask() {
+                    @Override
+                    public ListenableFuture<PlayerResult> run(ControllerInfo controller) {
+                        return mSessionImpl.movePlaylistItem(fromIndex, toIndex);
+                    }
+                });
+    }
+
+    @Override
     public void skipToPlaylistItem(IMediaController caller, int seq, final int index) {
         if (caller == null) {
             return;
@@ -1244,7 +1259,7 @@ class MediaSessionStub extends IMediaSession.Stub {
      *
      * @see #dispatchSessionTask
      */
-    private interface SessionTask<T> {
+    private interface SessionTask {
         // empty interface
     }
 
@@ -1417,19 +1432,21 @@ class MediaSessionStub extends IMediaSession.Stub {
         }
 
         @Override
-        void onVideoSizeChanged(int seq, @NonNull MediaItem item, @NonNull VideoSize videoSize)
-                throws RemoteException {
-            ParcelImpl itemParcel = MediaParcelUtils.toParcelable(item);
+        void onVideoSizeChanged(int seq, @NonNull VideoSize videoSize) throws RemoteException {
             ParcelImpl videoSizeParcel = MediaParcelUtils.toParcelable(videoSize);
-            mIControllerCallback.onVideoSizeChanged(seq, itemParcel, videoSizeParcel);
+            // dummyItem is used instead of 'null' to keep backward compatibility with 1.0.0.
+            // In 1.0.0, MediaControllerStub filters out the corresponding call if the item is null.
+            final MediaItem dummyItem = new MediaItem.Builder().build();
+            mIControllerCallback.onVideoSizeChanged(seq, MediaParcelUtils.toParcelable(dummyItem),
+                    videoSizeParcel);
         }
 
         @Override
-        void onTrackInfoChanged(int seq, List<TrackInfo> trackInfos,
+        void onTracksChanged(int seq, List<TrackInfo> tracks,
                 TrackInfo selectedVideoTrack, TrackInfo selectedAudioTrack,
                 TrackInfo selectedSubtitleTrack, TrackInfo selectedMetadataTrack)
                 throws RemoteException {
-            List<ParcelImpl> trackInfoList = MediaParcelUtils.toParcelableList(trackInfos);
+            List<ParcelImpl> trackInfoList = MediaParcelUtils.toParcelableList(tracks);
             mIControllerCallback.onTrackInfoChanged(seq, trackInfoList,
                     MediaParcelUtils.toParcelable(selectedVideoTrack),
                     MediaParcelUtils.toParcelable(selectedAudioTrack),
