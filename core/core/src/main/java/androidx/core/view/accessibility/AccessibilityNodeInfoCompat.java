@@ -16,6 +16,8 @@
 
 package androidx.core.view.accessibility;
 
+import static android.view.View.NO_ID;
+
 import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
 
 import android.graphics.Rect;
@@ -544,7 +546,6 @@ public class AccessibilityNodeInfoCompat {
 
         final Object mAction;
         private final int mId;
-        private final CharSequence mLabel;
         private final Class<? extends CommandArguments> mViewCommandArgumentClass;
 
         /**
@@ -590,7 +591,6 @@ public class AccessibilityNodeInfoCompat {
                 AccessibilityViewCommand command,
                 Class<? extends CommandArguments> viewCommandArgumentClass) {
             mId = id;
-            mLabel = label;
             mCommand = command;
             if (Build.VERSION.SDK_INT >= 21 && action == null) {
                 mAction = new AccessibilityNodeInfo.AccessibilityAction(id, label);
@@ -663,6 +663,31 @@ public class AccessibilityNodeInfoCompat {
                 AccessibilityViewCommand command) {
             return new AccessibilityActionCompat(null, mId, label, command,
                     mViewCommandArgumentClass);
+        }
+
+        @Override
+        public int hashCode() {
+            return mAction != null ? mAction.hashCode() : 0;
+        }
+
+        @Override
+        public boolean equals(@Nullable Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            AccessibilityNodeInfoCompat.AccessibilityActionCompat other =
+                    (AccessibilityNodeInfoCompat.AccessibilityActionCompat) obj;
+            if (mAction == null) {
+                if (other.mAction != null) {
+                    return false;
+                }
+            } else if (!mAction.equals(other.mAction)) {
+                return false;
+            }
+            return true;
         }
     }
 
@@ -923,6 +948,7 @@ public class AccessibilityNodeInfoCompat {
          * @return If the item is a heading.
          * @deprecated Use {@link AccessibilityNodeInfoCompat#isHeading()}
          */
+        @Deprecated
         public boolean isHeading() {
             if (Build.VERSION.SDK_INT >= 19) {
                 return ((AccessibilityNodeInfo.CollectionItemInfo) mInfo).isHeading();
@@ -1173,7 +1199,9 @@ public class AccessibilityNodeInfoCompat {
      *  @hide
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
-    public int mParentVirtualDescendantId = -1;
+    public int mParentVirtualDescendantId = NO_ID;
+
+    private int mVirtualDescendantId = NO_ID;
 
     // Actions introduced in IceCreamSandwich
 
@@ -1691,6 +1719,8 @@ public class AccessibilityNodeInfoCompat {
      * @param source The info source.
      */
     public void setSource(View source) {
+        mVirtualDescendantId = NO_ID;
+
         mInfo.setSource(source);
     }
 
@@ -1703,17 +1733,21 @@ public class AccessibilityNodeInfoCompat {
      * hierarchy for accessibility purposes. This enables custom views that draw complex
      * content to report themselves as a tree of virtual views, thus conveying their
      * logical structure.
-     * </p>
      * <p>
-     *   <strong>Note:</strong> Cannot be called from an
-     *   {@link android.accessibilityservice.AccessibilityService}.
-     *   This class is made immutable before being delivered to an AccessibilityService.
-     * </p>
+     * <strong>Note:</strong> Cannot be called from an
+     * {@link android.accessibilityservice.AccessibilityService}.
+     * This class is made immutable before being delivered to an AccessibilityService.
+     * <p>
+     * This method is not supported on devices running API level < 16 since the platform did
+     * not support virtual descendants of real views.
      *
      * @param root The root of the virtual subtree.
      * @param virtualDescendantId The id of the virtual descendant.
      */
     public void setSource(View root, int virtualDescendantId) {
+        // Store the ID anyway, since we may need it for equality checks.
+        mVirtualDescendantId = virtualDescendantId;
+
         if (Build.VERSION.SDK_INT >= 16) {
             mInfo.setSource(root, virtualDescendantId);
         }
@@ -2091,6 +2125,8 @@ public class AccessibilityNodeInfoCompat {
      * @throws IllegalStateException If called from an AccessibilityService.
      */
     public void setParent(View parent) {
+        mParentVirtualDescendantId = NO_ID;
+
         mInfo.setParent(parent);
     }
 
@@ -2103,18 +2139,21 @@ public class AccessibilityNodeInfoCompat {
      * hierarchy for accessibility purposes. This enables custom views that draw complex
      * content to report them selves as a tree of virtual views, thus conveying their
      * logical structure.
-     * </p>
      * <p>
-     *   <strong>Note:</strong> Cannot be called from an
-     *   {@link android.accessibilityservice.AccessibilityService}.
-     *   This class is made immutable before being delivered to an AccessibilityService.
-     * </p>
+     * <strong>Note:</strong> Cannot be called from an
+     * {@link android.accessibilityservice.AccessibilityService}.
+     * This class is made immutable before being delivered to an AccessibilityService.
+     * <p>
+     * This method is not supported on devices running API level < 16 since the platform did
+     * not support virtual descendants of real views.
      *
      * @param root The root of the virtual subtree.
      * @param virtualDescendantId The id of the virtual descendant.
      */
     public void setParent(View root, int virtualDescendantId) {
+        // Store the ID anyway, since we may need it for equality checks.
         mParentVirtualDescendantId = virtualDescendantId;
+
         if (Build.VERSION.SDK_INT >= 16) {
             mInfo.setParent(root, virtualDescendantId);
         }
@@ -3969,6 +4008,12 @@ public class AccessibilityNodeInfoCompat {
         } else if (!mInfo.equals(other.mInfo)) {
             return false;
         }
+        if (mVirtualDescendantId != other.mVirtualDescendantId) {
+            return false;
+        }
+        if (mParentVirtualDescendantId != other.mParentVirtualDescendantId) {
+            return false;
+        }
         return true;
     }
 
@@ -4004,12 +4049,27 @@ public class AccessibilityNodeInfoCompat {
         builder.append("; scrollable: " + isScrollable());
 
         builder.append("; [");
-        for (int actionBits = getActions(); actionBits != 0;) {
-            final int action = 1 << Integer.numberOfTrailingZeros(actionBits);
-            actionBits &= ~action;
-            builder.append(getActionSymbolicName(action));
-            if (actionBits != 0) {
-                builder.append(", ");
+        if (Build.VERSION.SDK_INT >= 21) {
+            List<AccessibilityActionCompat> actions = getActionList();
+            for (int i = 0; i < actions.size(); i++) {
+                AccessibilityActionCompat action = actions.get(i);
+                String actionName = getActionSymbolicName(action.getId());
+                if (actionName.equals("ACTION_UNKNOWN") && action.getLabel() != null) {
+                    actionName = action.getLabel().toString();
+                }
+                builder.append(actionName);
+                if (i != actions.size() - 1) {
+                    builder.append(", ");
+                }
+            }
+        } else {
+            for (int actionBits = getActions(); actionBits != 0;) {
+                final int action = 1 << Integer.numberOfTrailingZeros(actionBits);
+                actionBits &= ~action;
+                builder.append(getActionSymbolicName(action));
+                if (actionBits != 0) {
+                    builder.append(", ");
+                }
             }
         }
         builder.append("]");
@@ -4071,6 +4131,42 @@ public class AccessibilityNodeInfoCompat {
                 return "ACTION_PASTE";
             case ACTION_SET_SELECTION:
                 return "ACTION_SET_SELECTION";
+            case ACTION_EXPAND:
+                return "ACTION_EXPAND";
+            case ACTION_COLLAPSE:
+                return "ACTION_COLLAPSE";
+            case ACTION_SET_TEXT:
+                return "ACTION_SET_TEXT";
+            case android.R.id.accessibilityActionScrollUp:
+                return "ACTION_SCROLL_UP";
+            case android.R.id.accessibilityActionScrollLeft:
+                return "ACTION_SCROLL_LEFT";
+            case android.R.id.accessibilityActionScrollDown:
+                return "ACTION_SCROLL_DOWN";
+            case android.R.id.accessibilityActionScrollRight:
+                return "ACTION_SCROLL_RIGHT";
+            case android.R.id.accessibilityActionPageDown:
+                return "ACTION_PAGE_DOWN";
+            case android.R.id.accessibilityActionPageUp:
+                return "ACTION_PAGE_UP";
+            case android.R.id.accessibilityActionPageLeft:
+                return "ACTION_PAGE_LEFT";
+            case android.R.id.accessibilityActionPageRight:
+                return "ACTION_PAGE_RIGHT";
+            case android.R.id.accessibilityActionShowOnScreen:
+                return "ACTION_SHOW_ON_SCREEN";
+            case android.R.id.accessibilityActionScrollToPosition:
+                return "ACTION_SCROLL_TO_POSITION";
+            case android.R.id.accessibilityActionContextClick:
+                return "ACTION_CONTEXT_CLICK";
+            case android.R.id.accessibilityActionSetProgress:
+                return "ACTION_SET_PROGRESS";
+            case android.R.id.accessibilityActionMoveWindow:
+                return "ACTION_MOVE_WINDOW";
+            case android.R.id.accessibilityActionShowTooltip:
+                return "ACTION_SHOW_TOOLTIP";
+            case android.R.id.accessibilityActionHideTooltip:
+                return "ACTION_HIDE_TOOLTIP";
             default:
                 return"ACTION_UNKNOWN";
         }

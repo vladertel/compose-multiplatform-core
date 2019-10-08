@@ -157,5 +157,14 @@ object ComposeDefaultErrorMessages : DefaultErrorMessages.Extension {
             "Ambiguous targets. {0}",
             Renderers.AMBIGUOUS_CALLS
         )
+        MAP.put(
+            ComposeErrors.CHILDREN_MUST_BE_LAST,
+            "Children annotation must only occur on last parameter.  This annotation is deprecated (move children to " +
+                    "be last parameter, make it @Composable, and remove the @Children annotation.)."
+        )
+        MAP.put(
+            ComposeErrors.ILLEGAL_TRY_CATCH_AROUND_COMPOSABLE,
+            "Try catch is not supported around composable function invocations."
+        )
     }
 }

@@ -32,15 +32,49 @@
 
 package androidx.ui.material.demos
 
-import android.app.Activity
-import android.os.Bundle
-import androidx.compose.setContent
+import android.util.Log
+import androidx.compose.Composable
 import androidx.compose.composer
+import androidx.compose.unaryPlus
+import androidx.ui.layout.Center
+import androidx.ui.layout.Column
+import androidx.ui.layout.CrossAxisAlignment
+import androidx.ui.layout.LayoutSize
+import androidx.ui.layout.MainAxisAlignment
+import androidx.ui.material.Button
+import androidx.ui.material.ContainedButtonStyle
+import androidx.ui.material.samples.ButtonWithTextSample
+import androidx.ui.material.samples.ContainedButtonSample
+import androidx.ui.material.samples.OutlinedButtonSample
+import androidx.ui.material.samples.TextButtonSample
+import androidx.ui.material.themeColor
 
-class ButtonActivity : Activity() {
+class ButtonActivity : MaterialDemoActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent { ButtonDemo()}
+    @Composable
+    override fun materialContent() {
+        val onClick: () -> Unit = { Log.e("ButtonDemo", "onClick") }
+        Center {
+            Column(
+                mainAxisSize = LayoutSize.Expand,
+                mainAxisAlignment = MainAxisAlignment.SpaceEvenly,
+                crossAxisAlignment = CrossAxisAlignment.Center
+            ) {
+                ContainedButtonSample(onClick)
+
+                OutlinedButtonSample(onClick)
+
+                TextButtonSample(onClick)
+
+                Button("SECONDARY COLOR", onClick, ContainedButtonStyle(+themeColor { secondary }))
+
+                ButtonWithTextSample(onClick)
+
+                // TODO(Andrey): Disabled button has wrong bg and text color for now.
+                // Need to figure out where will we store their styling. Not a part of
+                // MaterialColors right now and specs are not clear about this.
+                Button("DISABLED. TODO")
+            }
+        }
     }
 }

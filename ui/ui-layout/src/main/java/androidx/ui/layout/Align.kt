@@ -19,41 +19,13 @@ package androidx.ui.layout
 import androidx.ui.core.IntPxPosition
 import androidx.ui.core.IntPxSize
 import androidx.ui.core.Layout
-import androidx.ui.core.center
 import androidx.ui.core.isFinite
 import androidx.ui.core.looseMin
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
-
-/**
- * Represents a positioning of a point inside a 2D box. [Alignment] is often used to define
- * the alignment of a box inside a parent container.
- * The coordinate space of the 2D box is the continuous [-1f, 1f] range in both dimensions,
- * so (verticalBias, horizontalBias) will be points in this space. (verticalBias=0f,
- * horizontalBias=0f) represents the center of the box, (verticalBias=-1f, horizontalBias=1f)
- * will be the top right, etc.
- */
-enum class Alignment(private val verticalBias: Float, private val horizontalBias: Float) {
-    TopLeft(-1f, -1f),
-    TopCenter(-1f, 0f),
-    TopRight(-1f, 1f),
-    CenterLeft(0f, -1f),
-    Center(0f, 0f),
-    CenterRight(0f, 1f),
-    BottomLeft(1f, -1f),
-    BottomCenter(1f, 0f),
-    BottomRight(1f, 1f);
-
-    /**
-     * Returns the position of a 2D point in a container of a given size,
-     * according to this [Alignment].
-     */
-    fun align(size: IntPxSize): IntPxPosition {
-        val center = size.center()
-        return IntPxPosition(center.x * (1 + horizontalBias), center.y * (1 + verticalBias))
-    }
-}
+import androidx.ui.core.Alignment
+import androidx.ui.core.round
+import androidx.ui.core.toPx
 
 /**
  * A layout that takes a child and aligns it within itself, according to the alignment parameter.
@@ -63,8 +35,8 @@ enum class Alignment(private val verticalBias: Float, private val horizontalBias
  * For a widget that does alignment and tries to be the same size as its child, see [Wrap].
  */
 @Composable
-fun Align(alignment: Alignment, @Children children: @Composable() () -> Unit) {
-    Layout(layoutBlock ={ measurables, constraints ->
+fun Align(alignment: Alignment, children: @Composable() () -> Unit) {
+    Layout(children) { measurables, constraints ->
         val measurable = measurables.firstOrNull()
         // The child cannot be larger than our max constraints, but we ignore min constraints.
         val placeable = measurable?.measure(constraints.looseMin())
@@ -90,7 +62,7 @@ fun Align(alignment: Alignment, @Children children: @Composable() () -> Unit) {
                 placeable.place(position.x, position.y)
             }
         }
-    }, children = children)
+    }
 }
 
 /**
@@ -102,10 +74,10 @@ fun Align(alignment: Alignment, @Children children: @Composable() () -> Unit) {
  *
  * Example usage:
  * Center {
- *    SizedRectangle(color = Color(0xFF0000FF.toInt()), width = 40.dp, height = 40.dp)
+ *    SizedRectangle(color = Color(0xFF0000FF), width = 40.dp, height = 40.dp)
  * }
  */
 @Composable
-fun Center(@Children children: @Composable() () -> Unit) {
+fun Center(children: @Composable() () -> Unit) {
     Align(alignment = Alignment.Center, children = children)
 }

@@ -16,23 +16,27 @@
 
 package androidx.build.metalava
 
-import androidx.build.AndroidXPlugin.Companion.BUILD_ON_SERVER_TASK
 import androidx.build.AndroidXExtension
+import androidx.build.AndroidXPlugin.Companion.BUILD_ON_SERVER_TASK
 import androidx.build.checkapi.ApiLocation
 import androidx.build.checkapi.ApiViolationBaselines
 import androidx.build.checkapi.getApiLocation
 import androidx.build.checkapi.getRequiredCompatibilityApiLocation
 import androidx.build.checkapi.hasApiFolder
 import androidx.build.checkapi.hasApiTasks
-import androidx.build.docsDir
-import androidx.build.java.JavaCompileInputs
 import androidx.build.defaultPublishVariant
+import androidx.build.java.JavaCompileInputs
 import com.android.build.gradle.LibraryExtension
+import com.android.build.gradle.api.LibraryVariant
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.kotlin.dsl.getPlugin
 import java.io.File
+
+const val CREATE_STUB_API_JAR_TASK = "createStubApiJar"
 
 object MetalavaTasks {
 
@@ -53,8 +57,9 @@ object MetalavaTasks {
                     return@defaultPublishVariant
                 }
 
-                val javaInputs = JavaCompileInputs.fromLibraryVariant(library, variant)
+                val javaInputs = JavaCompileInputs.fromLibraryVariant(library, variant, project)
                 setupProject(this, javaInputs, extension)
+                setupStubs(this, javaInputs, variant)
             }
         }
     }
@@ -81,7 +86,8 @@ object MetalavaTasks {
     }
 
     fun applyInputs(inputs: JavaCompileInputs, task: MetalavaTask) {
-        task.sourcePaths = inputs.sourcePaths
+        task.sourcePaths = inputs.sourcePaths.files
+        task.dependsOn(inputs.sourcePaths)
         task.dependencyClasspath = inputs.dependencyClasspath
         task.bootClasspath = inputs.bootClasspath
     }
@@ -108,7 +114,7 @@ object MetalavaTasks {
             }
 
         val builtApiLocation = ApiLocation.fromPublicApiFile(
-            File(project.docsDir(), "release/${project.name}/current.txt"))
+            File(project.buildDir, "api/current.txt"))
 
         val baselines = ApiViolationBaselines.fromApiLocation(libraryVersionApi)
 
@@ -136,7 +142,10 @@ object MetalavaTasks {
                 task.baselines.set(baselines)
                 task.dependsOn(metalavaConfiguration)
                 task.checkRestrictedAPIs = extension.trackRestrictedAPIs
-                applyInputs(javaCompileInputs, task)
+                task.api.set(builtApiLocation)
+                task.dependencyClasspath = javaCompileInputs.dependencyClasspath
+                task.bootClasspath = javaCompileInputs.bootClasspath
+                task.dependsOn(generateApi)
             }
 
             project.tasks.register("ignoreApiChanges", IgnoreApiChangesTask::class.java) { task ->
@@ -144,7 +153,10 @@ object MetalavaTasks {
                 task.referenceApi.set(checkApiRelease!!.flatMap { it.referenceApi })
                 task.baselines.set(checkApiRelease!!.flatMap { it.baselines })
                 task.processRestrictedApis = extension.trackRestrictedAPIs
-                applyInputs(javaCompileInputs, task)
+                task.api.set(builtApiLocation)
+                task.dependencyClasspath = javaCompileInputs.dependencyClasspath
+                task.bootClasspath = javaCompileInputs.bootClasspath
+                task.dependsOn(generateApi)
             }
         }
 
@@ -171,6 +183,20 @@ object MetalavaTasks {
                 }
             }
 
+        val regenerateOldApis = project.tasks.register("regenerateOldApis",
+                RegenerateOldApisTask::class.java) { task ->
+            task.group = "API"
+            task.description = "Regenerates historic API .txt files using the " +
+                "corresponding prebuilt and the latest Metalava"
+            // if checkApiRelease and regenerateOldApis both run, then checkApiRelease must
+            // be the second one run of the two (because checkApiRelease validates
+            // files modified by regenerateOldApis)
+            val cr = checkApiRelease
+            if (cr != null) {
+                cr.get().mustRunAfter(task)
+            }
+        }
+
         val updateApi = project.tasks.register("updateApi", UpdateApiTask::class.java) { task ->
             task.group = "API"
             task.description = "Updates the checked in API files to match source code API"
@@ -178,15 +204,21 @@ object MetalavaTasks {
             task.outputApiLocations.set(checkApi.flatMap { it.checkedInApis })
             task.updateRestrictedAPIs = extension.trackRestrictedAPIs
             task.dependsOn(generateApi)
+            if (checkApiRelease != null) {
+                // If a developer (accidentally) makes a non-backwards compatible change to an
+                // api, the developer will want to be informed of it as soon as possible.
+                // So, whenever a developer updates an api, if backwards compatibility checks are
+                // enabled in the library, then we want to check that the changes are backwards
+                // compatible
+                task.dependsOn(checkApiRelease)
+            }
         }
 
-        project.tasks.register("regenerateOldApis", RegenerateOldApisTask::class.java) { task ->
+        project.tasks.register("regenerateApis") { task ->
             task.group = "API"
             task.description = "Regenerates current and historic API .txt files using the " +
                 "corresponding prebuilt and the latest Metalava"
-            // Technically this doesn't need updateApi to happen first, but adding this dependency
-            // is a convenient way to make updateApi also happen when the user runs
-            // `./gradlew regenerateOldApis`
+            task.dependsOn(regenerateOldApis)
             task.dependsOn(updateApi)
         }
 
@@ -196,5 +228,67 @@ object MetalavaTasks {
         project.rootProject.tasks.named(BUILD_ON_SERVER_TASK).configure {
             it.dependsOn(checkApi)
         }
+    }
+
+    private fun setupStubs(
+        project: Project,
+        javaCompileInputs: JavaCompileInputs,
+        variant: LibraryVariant
+    ) {
+        if (hasKotlinCode(project, variant)) return
+
+        val apiStubsDirectory = File(project.buildDir, "stubs/api")
+        val docsStubsDirectory = File(project.buildDir, "stubs/docs")
+        val generateApiStubClasses = project.tasks.register(
+            "generateApiStubClasses",
+            GenerateApiStubClassesTask::class.java
+        ) { task ->
+            task.apiStubsDirectory.set(apiStubsDirectory)
+            task.docStubsDirectory.set(docsStubsDirectory)
+            task.configuration = project.getMetalavaConfiguration()
+            applyInputs(javaCompileInputs, task)
+        }
+
+        val apiStubClassesDirectory = File(project.buildDir, "stubs/api_classes")
+        val compileStubClasses = project.tasks.register(
+            "compileApiStubClasses",
+            JavaCompile::class.java
+        ) { task ->
+            @Suppress("DEPRECATION") val compileTask = variant.javaCompile
+            task.source = project.files(apiStubsDirectory).asFileTree
+            task.destinationDir = apiStubClassesDirectory
+
+            task.classpath = compileTask.classpath
+            task.options.compilerArgs = compileTask.options.compilerArgs
+            task.options.bootstrapClasspath = compileTask.options.bootstrapClasspath
+            task.sourceCompatibility = compileTask.sourceCompatibility
+            task.targetCompatibility = compileTask.targetCompatibility
+            task.dependsOn(generateApiStubClasses)
+            task.dependsOn(compileTask)
+        }
+
+        project.tasks.register(CREATE_STUB_API_JAR_TASK, Zip::class.java) { task ->
+            task.from(apiStubClassesDirectory)
+            task.destinationDirectory.set(project.buildDir)
+            task.archiveFileName.set("api.jar")
+
+            task.dependsOn(compileStubClasses)
+        }
+
+        /*
+            TODO: Enable packaging api.jar inside aars.
+            project.tasks.withType(BundleAar::class.java) { task ->
+                task.dependsOn(packageStubs)
+                task.from(File(project.buildDir, "api.jar"))
+            }
+         */
+    }
+
+    private fun hasKotlinCode(project: Project, variant: LibraryVariant): Boolean {
+        return project.files(variant.sourceSets.flatMap { it.javaDirectories })
+            .asFileTree
+            .files
+            .filter { it.extension == "kt" }
+            .isNotEmpty()
     }
 }

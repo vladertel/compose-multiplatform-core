@@ -16,13 +16,31 @@
 
 package androidx.ui.text
 
+import java.util.SortedSet
+
 /**
  * The basic data structure of text with multiple styles.
  */
 data class AnnotatedString(
     val text: String,
-    val textStyles: List<Item<TextStyle>> = listOf()
+    val textStyles: List<Item<TextStyle>> = listOf(),
+    val paragraphStyles: List<Item<ParagraphStyle>> = listOf()
 ) {
+
+    init {
+        var lastStyleEnd = -1
+        for (paragraphStyle in paragraphStyles) {
+            if (paragraphStyle.start < lastStyleEnd) {
+                throw IllegalArgumentException("ParagraphStyle should not overlap")
+            }
+            if (paragraphStyle.end > text.length) {
+                throw IllegalArgumentException("ParagraphStyle range " +
+                        "[${paragraphStyle.start}, ${paragraphStyle.end}) is out of boundary")
+            }
+            lastStyleEnd = paragraphStyle.end
+        }
+    }
+
     /**
      * The information attached on the text such as a TextStyle.
      *
@@ -31,5 +49,267 @@ data class AnnotatedString(
      * @param end The end of the range where [style] takes effect. It's exclusive.
      */
     // TODO(haoyuchang): Check some other naming options.
-    data class Item<T>(val style: T, val start: Int, val end: Int)
+    data class Item<T>(val style: T, val start: Int, val end: Int) {
+        init {
+            if (start > end) {
+                throw IllegalArgumentException("Reversed range is not supported")
+            }
+        }
+    }
+
+    /**
+     * Create upper case transformed [AnnotatedString]
+     *
+     * The uppercase sometimes maps different number of characters. This function adjusts the text
+     * style and paragraph style ranges to transformed offset.
+     *
+     * Note, if the style's offset is middle of the uppercase mapping context, this function won't
+     * transform the character, e.g. style starts from between base alphabet character and accent
+     * character.
+     *
+     * @param localeList A locale list used for upper case mapping. Only the first locale is
+     *                   effective. If empty locale list is passed, use the current locale instead.
+     * @return A uppercase transformed string.
+     */
+    fun toUpperCase(localeList: LocaleList = LocaleList.current): AnnotatedString {
+        return transform { str, start, end -> str.substring(start, end).toUpperCase(localeList) }
+    }
+
+    /**
+     * Create lower case transformed [AnnotatedString]
+     *
+     * The lowercase sometimes maps different number of characters. This function adjusts the text
+     * style and paragraph style ranges to transformed offset.
+     *
+     * Note, if the style's offset is middle of the lowercase mapping context, this function won't
+     * transform the character, e.g. style starts from between base alphabet character and accent
+     * character.
+     *
+     * @param localeList A locale list used for lower case mapping. Only the first locale is
+     *                   effective. If empty locale list is passed, use the current locale instead.
+     * @return A lowercase transformed string.
+     */
+    fun toLowerCase(localeList: LocaleList = LocaleList.current): AnnotatedString {
+        return transform { str, start, end -> str.substring(start, end).toLowerCase(localeList) }
+    }
+
+    /**
+     * Create capitalized [AnnotatedString]
+     *
+     * The capitalization sometimes maps different number of characters. This function adjusts the
+     * text style and paragraph style ranges to transformed offset.
+     *
+     * Note, if the style's offset is middle of the capitalization context, this function won't
+     * transform the character, e.g. style starts from between base alphabet character and accent
+     * character.
+     *
+     * @param localeList A locale list used for capitalize mapping. Only the first locale is
+     *                   effective. If empty locale list is passed, use the current locale instead.
+     *                   Note that, this locale is currently ignored since underlying Kotlin method
+     *                   is experimental.
+     * @return A capitalized string.
+     */
+    fun capitalize(localeList: LocaleList = LocaleList.current): AnnotatedString {
+        return transform { str, start, end ->
+            if (start == 0) {
+                str.substring(start, end).capitalize(localeList)
+            } else {
+                str.substring(start, end)
+            }
+        }
+    }
+
+    /**
+     * Create capitalized [AnnotatedString]
+     *
+     * The decapitalization sometimes maps different number of characters. This function adjusts
+     * the text style and paragraph style ranges to transformed offset.
+     *
+     * Note, if the style's offset is middle of the decapitalization context, this function won't
+     * transform the character, e.g. style starts from between base alphabet character and accent
+     * character.
+     *
+     * @param localeList A locale list used for decapitalize mapping. Only the first locale is
+     *                   effective. If empty locale list is passed, use the current locale instead.
+     *                   Note that, this locale is currently ignored since underlying Kotlin method
+     *                   is experimental.
+     * @return A decapitalized string.
+     */
+    fun decapitalize(localeList: LocaleList = LocaleList.current): AnnotatedString {
+        return transform { str, start, end ->
+            if (start == 0) {
+                str.substring(start, end).decapitalize(localeList)
+            } else {
+                str.substring(start, end)
+            }
+        }
+    }
+
+    /**
+     * The core function of [AnnotatedString] transformation.
+     *
+     * @param transform the transformation method
+     * @return newly allocated transformed AnnotatedString
+     */
+    private fun transform(transform: (String, Int, Int) -> String): AnnotatedString {
+        val transitions = sortedSetOf<Int>()
+        collectItemTransitions(textStyles, transitions)
+        collectItemTransitions(paragraphStyles, transitions)
+
+        var resultStr = ""
+        val offsetMap = mutableMapOf(0 to 0)
+        transitions.windowed(size = 2) { (start, end) ->
+            resultStr += transform(text, start, end)
+            offsetMap.put(end, resultStr.length)
+        }
+
+        val newTextStyles = mutableListOf<Item<TextStyle>>()
+        val newParaStyles = mutableListOf<Item<ParagraphStyle>>()
+
+        for (textStyle in textStyles) {
+            // The offset map must have mapping entry from all style start, end position.
+            newTextStyles.add(
+                Item(
+                    textStyle.style,
+                    offsetMap[textStyle.start]!!,
+                    offsetMap[textStyle.end]!!
+                )
+            )
+        }
+
+        for (paraStyle in paragraphStyles) {
+            newParaStyles.add(
+                Item(
+                    paraStyle.style,
+                    offsetMap[paraStyle.start]!!,
+                    offsetMap[paraStyle.end]!!
+                )
+            )
+        }
+
+        return AnnotatedString(
+            text = resultStr,
+            textStyles = newTextStyles,
+            paragraphStyles = newParaStyles)
+    }
+
+    /**
+     * Adds all [AnnotatedString.Item] transition points
+     *
+     * @param items The list of AnnotatedString.Item
+     * @param target The output list
+     */
+    private fun <T> collectItemTransitions(items: List<Item<T>>, target: SortedSet<Int>) {
+        items.fold(target) { acc, item ->
+            acc.apply {
+                add(item.start)
+                add(item.end)
+            }
+        }
+    }
+}
+
+/**
+ * A helper function used to determine the paragraph boundaries in [MultiParagraph].
+ *
+ * It reads paragraph information from [AnnotatedString.paragraphStyles] where only some parts of
+ * text has [ParagraphStyle] specified, and unspecified parts(gaps between specified paragraphs)
+ * are considered as default paragraph with default [ParagraphStyle].
+ * For example, the following string with a specified paragraph denoted by "[]"
+ *      "Hello WorldHi!"
+ *      [          ]
+ * The result paragraphs are "Hello World" and "Hi!".
+ *
+ * @param defaultParagraphStyle The default [ParagraphStyle]. It's used for both unspecified
+ *  default paragraphs and specified paragraph. When a specified paragraph's [ParagraphStyle] has
+ *  a null attribute, the default one will be used instead.
+ */
+internal fun AnnotatedString.normalizedParagraphStyles(
+    defaultParagraphStyle: ParagraphStyle
+): List<AnnotatedString.Item<ParagraphStyle>> {
+    val length = text.length
+    val paragraphStyles = paragraphStyles
+
+    var lastOffset = 0
+    val result = mutableListOf<AnnotatedString.Item<ParagraphStyle>>()
+    for ((style, start, end) in paragraphStyles) {
+        if (start != lastOffset) {
+            result.add(AnnotatedString.Item(defaultParagraphStyle, lastOffset, start))
+        }
+        result.add(AnnotatedString.Item(defaultParagraphStyle.merge(style), start, end))
+        lastOffset = end
+    }
+    if (lastOffset != length) {
+        result.add(AnnotatedString.Item(defaultParagraphStyle, lastOffset, length))
+    }
+    // This is a corner case where annotatedString is an empty string without any ParagraphStyle.
+    // In this case, a dummy ParagraphStyle is created.
+    if (result.isEmpty()) {
+        result.add(AnnotatedString.Item(defaultParagraphStyle, 0, 0))
+    }
+    return result
+}
+
+/**
+ * Helper function used to find the [TextStyle]s in the given paragraph range and also convert the
+ * range of those [TextStyle]s to paragraph local range.
+ *
+ * @param start The start index of the paragraph range, inclusive.
+ * @param end The end index of the paragraph range, exclusive.
+ * @return The list of converted [TextStyle]s in the given paragraph range.
+ */
+private fun AnnotatedString.getLocalStyles(
+    start: Int,
+    end: Int
+): List<AnnotatedString.Item<TextStyle>> {
+    if (start == end) {
+        return listOf()
+    }
+    // If the given range covers the whole AnnotatedString, return textStyles without conversion.
+    if (start == 0 && end >= this.text.length) {
+        return textStyles
+    }
+    return textStyles.filter { it.start < end && it.end > start }
+        .map {
+            AnnotatedString.Item(
+                it.style,
+                it.start.coerceIn(start, end) - start,
+                it.end.coerceIn(start, end) - start
+            )
+        }
+}
+
+/**
+ * Helper function used to return another AnnotatedString that is a substring from [start] to
+ * [end]. This will ignore the [ParagraphStyle]s and the resulting [AnnotatedString] will have no
+ * [ParagraphStyle]s.
+ *
+ * @param start The start index of the paragraph range, inclusive.
+ * @param end The end index of the paragraph range, exclusive.
+ * @return The list of converted [TextStyle]s in the given paragraph range.
+ */
+private fun AnnotatedString.substringWithoutParagraphStyles(
+    start: Int,
+    end: Int
+): AnnotatedString {
+    return AnnotatedString(
+        text = if (start != end) text.substring(start, end) else "",
+        textStyles = getLocalStyles(start, end)
+    )
+}
+
+internal inline fun <T> AnnotatedString.mapEachParagraphStyle(
+    defaultParagraphStyle: ParagraphStyle,
+    crossinline block: (
+        annotatedString: AnnotatedString,
+        paragraphStyle: AnnotatedString.Item<ParagraphStyle>
+    ) -> T
+): List<T> {
+    return normalizedParagraphStyles(defaultParagraphStyle).map { paragraphStyleItem ->
+        val annotatedString = substringWithoutParagraphStyles(
+            paragraphStyleItem.start,
+            paragraphStyleItem.end
+        )
+        block(annotatedString, paragraphStyleItem)
+    }
 }

@@ -38,10 +38,20 @@ fun Project.runMetalavaWithArgs(configuration: Configuration, args: List<String>
         it.classpath = checkNotNull(configuration) { "Configuration not set." }
         it.main = "com.android.tools.metalava.Driver"
         it.args = listOf(
-            "--no-banner"
+            "--no-banner",
+            "--hide",
+            "HiddenSuperclass" // We allow having a hidden parent class
         ) + args
     }
 }
+
+// Metalava arguments to hide all experimental API surfaces.
+val HIDE_EXPERIMENTAL_ARGS: List<String> = listOf(
+    "--hide-annotation", "androidx.annotation.experimental.Experimental",
+    "--hide-annotation", "kotlin.Experimental",
+    "--hide-meta-annotation", "androidx.annotation.experimental.Experimental",
+    "--hide-meta-annotation", "kotlin.Experimental"
+)
 
 val API_LINT_ARGS: List<String> = listOf(
     "--api-lint",
@@ -50,10 +60,11 @@ val API_LINT_ARGS: List<String> = listOf(
         // The list of checks that are hidden as they are not useful in androidx
         "Enum", // Enums are allowed to be use in androidx
         "CallbackInterface", // With target Java 8, we have default methods
-        "HiddenSuperclass", // We allow having a hidden parent class
         "ProtectedMember", // We allow using protected members in androidx
         "ManagerLookup", // Managers in androidx are not the same as platfrom services
         "ManagerConstructor",
+        "RethrowRemoteException", // This check is for calls into system_server
+        "PackageLayering", // This check is not relevant to androidx.* code.
 
         // List of checks that have bugs, but should be enabled once fixed.
         "GetterSetterNames", // b/135498039
@@ -62,17 +73,10 @@ val API_LINT_ARGS: List<String> = listOf(
         "StartWithLower", // b/135710527
 
         // The list of checks that are API lint warnings and are yet to be enabled
-        "MinMaxConstant",
         "IntentBuilderName",
         "OnNameExpected",
         "TopLevelBuilder",
-        "MissingBuild",
         "BuilderSetStyle",
-        "SetterReturnsThis",
-        "PackageLayering",
-        "OverlappingConstants",
-        "IllegalStateException",
-        "ListenerLast",
         "ExecutorRegistration",
         "StreamFiles",
         "ParcelableList",
@@ -87,12 +91,22 @@ val API_LINT_ARGS: List<String> = listOf(
         "CommonArgsFirst",
         "SamShouldBeLast",
         "MissingJvmStatic"
+    ).joinToString(),
+    "--error",
+    listOf(
+        "MinMaxConstant",
+        "MissingBuild",
+        "SetterReturnsThis",
+        "OverlappingConstants",
+        "IllegalStateException",
+        "ListenerLast"
     ).joinToString()
 )
 
 sealed class GenerateApiMode {
     object PublicApi : GenerateApiMode()
     object RestrictedApi : GenerateApiMode()
+    object ExperimentalApi : GenerateApiMode()
 }
 
 sealed class ApiLintMode {
@@ -108,10 +122,12 @@ fun Project.generateApi(
     apiLintMode: ApiLintMode,
     includeRestrictedApis: Boolean
 ) {
-    generateApi(files.bootClasspath, files.dependencyClasspath, files.sourcePaths,
+    generateApi(files.bootClasspath, files.dependencyClasspath, files.sourcePaths.files,
         apiLocation.publicApiFile, tempDir, GenerateApiMode.PublicApi, apiLintMode)
+    generateApi(files.bootClasspath, files.dependencyClasspath, files.sourcePaths.files,
+        apiLocation.experimentalApiFile, tempDir, GenerateApiMode.ExperimentalApi, apiLintMode)
     if (includeRestrictedApis) {
-        generateApi(files.bootClasspath, files.dependencyClasspath, files.sourcePaths,
+        generateApi(files.bootClasspath, files.dependencyClasspath, files.sourcePaths.files,
             apiLocation.restrictedApiFile, tempDir, GenerateApiMode.RestrictedApi, ApiLintMode.Skip)
     }
 }
@@ -133,7 +149,8 @@ fun Project.generateApi(
     }
 
     // generate public API txt
-    val args = mutableListOf("--classpath",
+    val args = mutableListOf(
+        "--classpath",
         (bootClasspath + dependencyClasspath.files).joinToString(File.pathSeparator),
 
         "--source-path",
@@ -148,13 +165,18 @@ fun Project.generateApi(
 
     when (generateApiMode) {
         is GenerateApiMode.PublicApi -> {
+            args += HIDE_EXPERIMENTAL_ARGS
         }
         is GenerateApiMode.RestrictedApi -> {
+            // Show restricted APIs despite @hide.
             args += listOf(
-                "--show-annotation",
-                "androidx.annotation.RestrictTo",
+                "--show-annotation", "androidx.annotation.RestrictTo",
                 "--show-unannotated"
             )
+            args += HIDE_EXPERIMENTAL_ARGS
+        }
+        is GenerateApiMode.ExperimentalApi -> {
+            // No additional args needed.
         }
     }
 

@@ -30,6 +30,7 @@ import androidx.annotation.LayoutRes
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.test.FragmentTestActivity
 import androidx.fragment.test.R
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
@@ -64,11 +65,11 @@ class FragmentAnimationTest {
 
     // Ensure that adding and popping a Fragment uses the enter and popExit animators
     @Test
-    fun addAnimators() {
+    fun addAnimations() {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment = AnimatorFragment()
+        val fragment = AnimationFragment()
         fm.beginTransaction()
             .setCustomAnimations(ENTER, EXIT, POP_ENTER, POP_EXIT)
             .add(R.id.fragmentContainer, fragment)
@@ -81,11 +82,11 @@ class FragmentAnimationTest {
 
     // Ensure that removing and popping a Fragment uses the exit and popEnter animators
     @Test
-    fun removeAnimators() {
+    fun removeAnimations() {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment = AnimatorFragment()
+        val fragment = AnimationFragment()
         fm.beginTransaction().add(R.id.fragmentContainer, fragment, "1").commit()
         activityRule.waitForExecution()
 
@@ -101,11 +102,11 @@ class FragmentAnimationTest {
 
     // Ensure that showing and popping a Fragment uses the enter and popExit animators
     @Test
-    fun showAnimators() {
+    fun showAnimations() {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment = AnimatorFragment()
+        val fragment = AnimationFragment()
         fm.beginTransaction().add(R.id.fragmentContainer, fragment).hide(fragment).commit()
         activityRule.waitForExecution()
 
@@ -121,11 +122,11 @@ class FragmentAnimationTest {
 
     // Ensure that hiding and popping a Fragment uses the exit and popEnter animators
     @Test
-    fun hideAnimators() {
+    fun hideAnimations() {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment = AnimatorFragment()
+        val fragment = AnimationFragment()
         fm.beginTransaction().add(R.id.fragmentContainer, fragment, "1").commit()
         activityRule.waitForExecution()
 
@@ -141,11 +142,11 @@ class FragmentAnimationTest {
 
     // Ensure that attaching and popping a Fragment uses the enter and popExit animators
     @Test
-    fun attachAnimators() {
+    fun attachAnimations() {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment = AnimatorFragment()
+        val fragment = AnimationFragment()
         fm.beginTransaction().add(R.id.fragmentContainer, fragment).detach(fragment).commit()
         activityRule.waitForExecution()
 
@@ -161,11 +162,11 @@ class FragmentAnimationTest {
 
     // Ensure that detaching and popping a Fragment uses the exit and popEnter animators
     @Test
-    fun detachAnimators() {
+    fun detachAnimations() {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment = AnimatorFragment()
+        val fragment = AnimationFragment()
         fm.beginTransaction().add(R.id.fragmentContainer, fragment, "1").commit()
         activityRule.waitForExecution()
 
@@ -182,19 +183,19 @@ class FragmentAnimationTest {
     // Replace should exit the existing fragments and enter the added fragment, then
     // popping should popExit the removed fragment and popEnter the added fragments
     @Test
-    fun replaceAnimators() {
+    fun replaceAnimations() {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment1 = AnimatorFragment()
-        val fragment2 = AnimatorFragment()
+        val fragment1 = AnimationFragment()
+        val fragment2 = AnimationFragment()
         fm.beginTransaction()
             .add(R.id.fragmentContainer, fragment1, "1")
             .add(R.id.fragmentContainer, fragment2, "2")
             .commit()
         activityRule.waitForExecution()
 
-        val fragment3 = AnimatorFragment()
+        val fragment3 = AnimationFragment()
         fm.beginTransaction()
             .setCustomAnimations(ENTER, EXIT, POP_ENTER, POP_EXIT)
             .replace(R.id.fragmentContainer, fragment3)
@@ -210,8 +211,8 @@ class FragmentAnimationTest {
         activityRule.waitForExecution()
 
         assertFragmentAnimation(fragment3, 2, false, POP_EXIT)
-        val replacement1 = fm.findFragmentByTag("1") as AnimatorFragment?
-        val replacement2 = fm.findFragmentByTag("1") as AnimatorFragment?
+        val replacement1 = fm.findFragmentByTag("1") as AnimationFragment?
+        val replacement2 = fm.findFragmentByTag("1") as AnimationFragment?
         val expectedAnimations = if (replacement1 === fragment1) 2 else 1
         assertFragmentAnimation(replacement1!!, expectedAnimations, true, POP_ENTER)
         assertFragmentAnimation(replacement2!!, expectedAnimations, true, POP_ENTER)
@@ -223,25 +224,25 @@ class FragmentAnimationTest {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val parent = AnimatorFragment(R.layout.simple_container)
+        val parent = AnimationFragment(R.layout.simple_container)
         fm.beginTransaction()
             .setCustomAnimations(ENTER, EXIT, POP_ENTER, POP_EXIT)
             .add(R.id.fragmentContainer, parent, "parent")
             .commit()
         activityRule.executePendingTransactions()
 
-        val child = AnimatorFragment()
+        val child = AnimationFragment()
         parent.childFragmentManager.beginTransaction()
             .add(R.id.fragmentContainer, child, "child")
             .commit()
         activityRule.executePendingTransactions(parent.childFragmentManager)
 
         val childContainer = child.mContainer
-        val childView = child.mView
+        val childView = child.requireView()
 
         fm.beginTransaction()
             .setCustomAnimations(ENTER, EXIT, POP_ENTER, POP_EXIT)
-            .replace(R.id.fragmentContainer, AnimatorFragment(), "other")
+            .replace(R.id.fragmentContainer, AnimationFragment(), "other")
             .commit()
         activityRule.executePendingTransactions()
 
@@ -255,34 +256,34 @@ class FragmentAnimationTest {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val parent = AnimatorFragment(R.layout.simple_container)
+        val parent = AnimationFragment(R.layout.simple_container)
         fm.beginTransaction()
             .setCustomAnimations(ENTER, EXIT, POP_ENTER, POP_EXIT)
             .add(R.id.fragmentContainer, parent, "parent")
             .commit()
         activityRule.executePendingTransactions()
 
-        val child = AnimatorFragment(R.layout.simple_container)
+        val child = AnimationFragment(R.layout.simple_container)
         parent.childFragmentManager.beginTransaction()
             .add(R.id.fragmentContainer, child, "child")
             .commit()
         activityRule.executePendingTransactions(parent.childFragmentManager)
 
-        val grandChild = AnimatorFragment()
+        val grandChild = AnimationFragment()
         child.childFragmentManager.beginTransaction()
             .add(R.id.fragmentContainer, grandChild, "grandChild")
             .commit()
         activityRule.executePendingTransactions(child.childFragmentManager)
 
         val childContainer = child.mContainer
-        val childView = child.mView
+        val childView = child.requireView()
 
         val grandChildContainer = grandChild.mContainer
-        val grandChildView = grandChild.mView
+        val grandChildView = grandChild.requireView()
 
         fm.beginTransaction()
             .setCustomAnimations(ENTER, EXIT, POP_ENTER, POP_EXIT)
-            .replace(R.id.fragmentContainer, AnimatorFragment(), "other")
+            .replace(R.id.fragmentContainer, AnimationFragment(), "other")
             .commit()
         activityRule.executePendingTransactions()
 
@@ -294,11 +295,11 @@ class FragmentAnimationTest {
     // Ensure that adding and popping a Fragment uses the enter and popExit animators,
     // but the animators are delayed when an entering Fragment is postponed.
     @Test
-    fun postponedAddAnimators() {
+    fun postponedAddAnimations() {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment = AnimatorFragment()
+        val fragment = AnimationFragment()
         fragment.postponeEnterTransition()
         fm.beginTransaction()
             .setCustomAnimations(ENTER, EXIT, POP_ENTER, POP_EXIT)
@@ -318,11 +319,11 @@ class FragmentAnimationTest {
     // Ensure that removing and popping a Fragment uses the exit and popEnter animators,
     // but the animators are delayed when an entering Fragment is postponed.
     @Test
-    fun postponedRemoveAnimators() {
+    fun postponedRemoveAnimations() {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment = AnimatorFragment()
+        val fragment = AnimationFragment()
         fm.beginTransaction().add(R.id.fragmentContainer, fragment, "1").commit()
         activityRule.waitForExecution()
 
@@ -344,7 +345,7 @@ class FragmentAnimationTest {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment1 = AnimatorFragment()
+        val fragment1 = AnimationFragment()
         fm.beginTransaction()
             .add(R.id.fragmentContainer, fragment1)
             .addToBackStack(null)
@@ -352,7 +353,7 @@ class FragmentAnimationTest {
             .commit()
         activityRule.waitForExecution()
 
-        val fragment2 = AnimatorFragment()
+        val fragment2 = AnimationFragment()
         fragment2.postponeEnterTransition()
 
         fm.beginTransaction()
@@ -382,7 +383,7 @@ class FragmentAnimationTest {
         waitForAnimationReady()
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment1 = AnimatorFragment()
+        val fragment1 = AnimationFragment()
         fm.beginTransaction()
             .add(R.id.fragmentContainer, fragment1)
             .setReorderingAllowed(true)
@@ -390,7 +391,7 @@ class FragmentAnimationTest {
         activityRule.waitForExecution()
         assertThat(fragment1.numAnimators).isEqualTo(0)
 
-        val fragment2 = AnimatorFragment()
+        val fragment2 = AnimationFragment()
         fragment2.postponeEnterTransition()
 
         fm.beginTransaction()
@@ -432,26 +433,26 @@ class FragmentAnimationTest {
 
         val fm1 = fc1.supportFragmentManager
 
-        val fragment1 = StrictViewFragment(R.layout.scene1)
+        val fragment1 = AnimationListenerFragment(R.layout.scene1)
         fm1.beginTransaction()
             .add(R.id.fragmentContainer, fragment1, "1")
             .commit()
         activityRule.waitForExecution()
 
-        val fragment2 = StrictViewFragment()
+        val fragment2 = AnimationListenerFragment()
 
         fm1.beginTransaction()
             .setCustomAnimations(0, 0, 0, R.anim.long_fade_out)
             .replace(R.id.fragmentContainer, fragment2, "2")
             .addToBackStack(null)
             .commit()
-        instrumentation.runOnMainSync { fm1.executePendingTransactions() }
-        activityRule.waitForExecution()
+        activityRule.executePendingTransactions(fm1)
 
         fm1.popBackStack()
-
-        instrumentation.runOnMainSync { fm1.executePendingTransactions() }
-        activityRule.waitForExecution()
+        activityRule.executePendingTransactions(fm1)
+        // ensure the animation was started
+        assertThat(fragment2.startAnimationLatch.await(1000, TimeUnit.MILLISECONDS))
+            .isTrue()
         // Now fragment2 should be animating away
         assertThat(fragment2.isAdded).isFalse()
         // still exists because it is animating
@@ -615,7 +616,7 @@ class FragmentAnimationTest {
         }
     }
 
-    private fun assertEnterPopExit(fragment: AnimatorFragment) {
+    private fun assertEnterPopExit(fragment: AnimationFragment) {
         assertFragmentAnimation(fragment, 1, true, ENTER)
 
         val fm = activityRule.activity.supportFragmentManager
@@ -625,21 +626,21 @@ class FragmentAnimationTest {
         assertFragmentAnimation(fragment, 2, false, POP_EXIT)
     }
 
-    private fun assertExitPopEnter(fragment: AnimatorFragment) {
+    private fun assertExitPopEnter(fragment: AnimationFragment) {
         assertFragmentAnimation(fragment, 1, false, EXIT)
 
         val fm = activityRule.activity.supportFragmentManager
         fm.popBackStack()
         activityRule.waitForExecution()
 
-        val replacement = fm.findFragmentByTag("1") as AnimatorFragment?
+        val replacement = fm.findFragmentByTag("1") as AnimationFragment?
 
         val isSameFragment = replacement === fragment
         val expectedAnimators = if (isSameFragment) 2 else 1
         assertFragmentAnimation(replacement!!, expectedAnimators, true, POP_ENTER)
     }
 
-    private fun assertExitPostponedPopEnter(fragment: AnimatorFragment) {
+    private fun assertExitPostponedPopEnter(fragment: AnimationFragment) {
         assertFragmentAnimation(fragment, 1, false, EXIT)
 
         fragment.postponeEnterTransition()
@@ -653,7 +654,7 @@ class FragmentAnimationTest {
     }
 
     private fun assertFragmentAnimation(
-        fragment: AnimatorFragment,
+        fragment: AnimationFragment,
         numAnimators: Int,
         isEnter: Boolean,
         animatorResourceId: Int
@@ -667,7 +668,7 @@ class FragmentAnimationTest {
         assertThat(fragment.nextAnim).isEqualTo(0)
     }
 
-    private fun assertPostponed(fragment: AnimatorFragment, expectedAnimators: Int) {
+    private fun assertPostponed(fragment: AnimationFragment, expectedAnimators: Int) {
         assertThat(fragment.onCreateViewCalled).isTrue()
         assertThat(fragment.requireView().visibility).isEqualTo(View.VISIBLE)
         assertThat(fragment.requireView().alpha).isWithin(0f).of(0f)
@@ -696,7 +697,7 @@ class FragmentAnimationTest {
         }
     }
 
-    class AnimatorFragment(@LayoutRes contentLayoutId: Int = R.layout.strict_view_fragment) :
+    class AnimationFragment(@LayoutRes contentLayoutId: Int = R.layout.strict_view_fragment) :
         StrictViewFragment(contentLayoutId) {
         var numAnimators: Int = 0
         var animation: Animation? = null
@@ -704,7 +705,8 @@ class FragmentAnimationTest {
         var resourceId: Int = 0
 
         override fun onCreateAnimation(transit: Int, enter: Boolean, nextAnim: Int): Animation? {
-            if (nextAnim == 0) {
+            if (nextAnim == 0 ||
+                viewLifecycleOwner.lifecycle.currentState == Lifecycle.State.DESTROYED) {
                 return null
             }
             numAnimators++
@@ -716,7 +718,9 @@ class FragmentAnimationTest {
         }
     }
 
-    class AnimationListenerFragment : StrictViewFragment() {
+    class AnimationListenerFragment(
+        @LayoutRes contentLayoutId: Int = R.layout.strict_view_fragment
+    ) : StrictViewFragment(contentLayoutId) {
         lateinit var createdView: View
         var forceRunOnHwLayer: Boolean = false
         var repeat: Boolean = false
@@ -726,6 +730,7 @@ class FragmentAnimationTest {
         var exitStartCount = 0
         var exitRepeatCount = 0
         var exitEndCount = 0
+        val startAnimationLatch = CountDownLatch(1)
         val enterLatch = CountDownLatch(1)
         val exitLatch = CountDownLatch(1)
 
@@ -768,17 +773,21 @@ class FragmentAnimationTest {
                         } else {
                             exitStartCount++
                         }
+                        startAnimationLatch.countDown()
                     }
 
                     override fun onAnimationEnd(animation: Animation) {
-                        if (enter) {
-                            enterEndCount++
-                            enterLatch.countDown()
-                        } else {
-                            exitEndCount++
-                            // When exiting, the view is detached after onAnimationEnd,
-                            // so wait one frame to count down the latch
-                            createdView.post { exitLatch.countDown() }
+                        if (viewLifecycleOwner.lifecycle.currentState
+                            != Lifecycle.State.DESTROYED) {
+                            if (enter) {
+                                enterEndCount++
+                                enterLatch.countDown()
+                            } else {
+                                exitEndCount++
+                                // When exiting, the view is detached after onAnimationEnd,
+                                // so wait one frame to count down the latch
+                                createdView.post { exitLatch.countDown() }
+                            }
                         }
                     }
 

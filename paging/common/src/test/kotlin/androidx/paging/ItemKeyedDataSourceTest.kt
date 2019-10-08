@@ -16,10 +16,10 @@
 
 package androidx.paging
 
-import androidx.paging.futures.DirectExecutor
+import androidx.paging.PagedSource.LoadResult.Page.Companion.COUNT_UNDEFINED
+import androidx.paging.futures.DirectDispatcher
 import com.nhaarman.mockitokotlin2.capture
 import com.nhaarman.mockitokotlin2.mock
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -43,7 +43,6 @@ class ItemKeyedDataSourceTest {
         initialLoadSize: Int,
         enablePlaceholders: Boolean
     ): DataSource.BaseResult<Item> {
-        dataSource.initExecutor(DirectExecutor)
         return dataSource.loadInitial(
             ItemKeyedDataSource.LoadInitialParams(key, initialLoadSize, enablePlaceholders)
         )
@@ -54,9 +53,9 @@ class ItemKeyedDataSourceTest {
         val dataSource = ItemDataSource()
         val result = loadInitial(dataSource, dataSource.getKey(ITEMS_BY_NAME_ID[49]), 10, true)
 
-        assertEquals(45, result.leadingNulls)
+        assertEquals(45, result.itemsBefore)
         assertEquals(ITEMS_BY_NAME_ID.subList(45, 55), result.data)
-        assertEquals(45, result.trailingNulls)
+        assertEquals(45, result.itemsAfter)
     }
 
     @Test
@@ -66,9 +65,9 @@ class ItemKeyedDataSourceTest {
         // this is tricky, since load after and load before with the passed key will fail
         val result = loadInitial(dataSource, dataSource.getKey(ITEMS_BY_NAME_ID[0]), 20, true)
 
-        assertEquals(0, result.leadingNulls)
+        assertEquals(0, result.itemsBefore)
         assertEquals(ITEMS_BY_NAME_ID.subList(0, 1), result.data)
-        assertEquals(0, result.trailingNulls)
+        assertEquals(0, result.itemsAfter)
     }
 
     @Test
@@ -79,21 +78,20 @@ class ItemKeyedDataSourceTest {
         val key = dataSource.getKey(ITEMS_BY_NAME_ID.last())
         val result = loadInitial(dataSource, key, 20, true)
 
-        assertEquals(90, result.leadingNulls)
+        assertEquals(90, result.itemsBefore)
         assertEquals(ITEMS_BY_NAME_ID.subList(90, 100), result.data)
-        assertEquals(0, result.trailingNulls)
+        assertEquals(0, result.itemsAfter)
     }
 
     @Test
     fun loadInitial_nullKey() = runBlocking {
         val dataSource = ItemDataSource()
 
-        // dispatchLoadInitial(null, count) == dispatchLoadInitial(count)
         val result = loadInitial(dataSource, null, 10, true)
 
-        assertEquals(0, result.leadingNulls)
+        assertEquals(0, result.itemsBefore)
         assertEquals(ITEMS_BY_NAME_ID.subList(0, 10), result.data)
-        assertEquals(90, result.trailingNulls)
+        assertEquals(90, result.itemsAfter)
     }
 
     @Test
@@ -107,9 +105,9 @@ class ItemKeyedDataSourceTest {
         // NOTE: ideally we'd load 10 items here, but it adds complexity and unpredictability to
         // do: load after was empty, so pass full size to load before, since this can incur larger
         // loads than requested (see keyMatchesLastItem test)
-        assertEquals(95, result.leadingNulls)
+        assertEquals(95, result.itemsBefore)
         assertEquals(ITEMS_BY_NAME_ID.subList(95, 100), result.data)
-        assertEquals(0, result.trailingNulls)
+        assertEquals(0, result.itemsAfter)
     }
 
     // ----- UNCOUNTED -----
@@ -122,9 +120,9 @@ class ItemKeyedDataSourceTest {
         val key = dataSource.getKey(ITEMS_BY_NAME_ID[49])
         val result = loadInitial(dataSource, key, 10, false)
 
-        assertEquals(0, result.leadingNulls)
+        assertEquals(COUNT_UNDEFINED, result.itemsBefore)
         assertEquals(ITEMS_BY_NAME_ID.subList(45, 55), result.data)
-        assertEquals(0, result.trailingNulls)
+        assertEquals(COUNT_UNDEFINED, result.itemsAfter)
     }
 
     @Test
@@ -135,9 +133,9 @@ class ItemKeyedDataSourceTest {
         val key = dataSource.getKey(ITEMS_BY_NAME_ID[49])
         val result = loadInitial(dataSource, key, 10, true)
 
-        assertEquals(0, result.leadingNulls)
+        assertEquals(COUNT_UNDEFINED, result.itemsBefore)
         assertEquals(ITEMS_BY_NAME_ID.subList(45, 55), result.data)
-        assertEquals(0, result.trailingNulls)
+        assertEquals(COUNT_UNDEFINED, result.itemsAfter)
     }
 
     @Test
@@ -147,9 +145,9 @@ class ItemKeyedDataSourceTest {
         // dispatchLoadInitial(null, count) == dispatchLoadInitial(count)
         val result = loadInitial(dataSource, null, 10, true)
 
-        assertEquals(0, result.leadingNulls)
+        assertEquals(COUNT_UNDEFINED, result.itemsBefore)
         assertEquals(ITEMS_BY_NAME_ID.subList(0, 10), result.data)
-        assertEquals(0, result.trailingNulls)
+        assertEquals(COUNT_UNDEFINED, result.itemsAfter)
     }
 
     // ----- EMPTY -----
@@ -162,9 +160,9 @@ class ItemKeyedDataSourceTest {
         val key = dataSource.getKey(ITEMS_BY_NAME_ID[49])
         val result = loadInitial(dataSource, key, 10, true)
 
-        assertEquals(0, result.leadingNulls)
+        assertEquals(0, result.itemsBefore)
         assertTrue(result.data.isEmpty())
-        assertEquals(0, result.trailingNulls)
+        assertEquals(0, result.itemsAfter)
     }
 
     @Test
@@ -172,9 +170,9 @@ class ItemKeyedDataSourceTest {
         val dataSource = ItemDataSource(items = ArrayList())
         val result = loadInitial(dataSource, null, 10, true)
 
-        assertEquals(0, result.leadingNulls)
+        assertEquals(0, result.itemsBefore)
         assertTrue(result.data.isEmpty())
-        assertEquals(0, result.trailingNulls)
+        assertEquals(0, result.itemsAfter)
     }
 
     // ----- Other behavior -----
@@ -212,18 +210,10 @@ class ItemKeyedDataSourceTest {
         private val counted: Boolean = true,
         private val items: List<Item> = ITEMS_BY_NAME_ID
     ) : ItemKeyedDataSource<Key, Item>() {
-        private var error = false
-
         override fun loadInitial(
             params: LoadInitialParams<Key>,
             callback: LoadInitialCallback<Item>
         ) {
-            if (error) {
-                callback.onError(EXCEPTION)
-                error = false
-                return
-            }
-
             val key = params.requestedInitialKey ?: Key("", Int.MAX_VALUE)
             val start = maxOf(0, findFirstIndexAfter(key) - params.requestedLoadSize / 2)
             val endExclusive = minOf(start + params.requestedLoadSize, items.size)
@@ -236,12 +226,6 @@ class ItemKeyedDataSourceTest {
         }
 
         override fun loadAfter(params: LoadParams<Key>, callback: LoadCallback<Item>) {
-            if (error) {
-                callback.onError(EXCEPTION)
-                error = false
-                return
-            }
-
             val start = findFirstIndexAfter(params.key)
             val endExclusive = minOf(start + params.requestedLoadSize, items.size)
 
@@ -249,12 +233,6 @@ class ItemKeyedDataSourceTest {
         }
 
         override fun loadBefore(params: LoadParams<Key>, callback: LoadCallback<Item>) {
-            if (error) {
-                callback.onError(EXCEPTION)
-                error = false
-                return
-            }
-
             val firstIndexBefore = findFirstIndexBefore(params.key)
             val endExclusive = maxOf(0, firstIndexBefore + 1)
             val start = maxOf(0, firstIndexBefore - params.requestedLoadSize + 1)
@@ -276,10 +254,6 @@ class ItemKeyedDataSourceTest {
             return items.indices.reversed().firstOrNull {
                 KEY_COMPARATOR.compare(key, getKey(items[it])) > 0
             } ?: -1
-        }
-
-        fun enqueueError() {
-            error = true
         }
     }
 
@@ -312,20 +286,11 @@ class ItemKeyedDataSourceTest {
             }
         }
 
-        runBlocking {
-            PagedList.create(
-                dataSource,
-                GlobalScope,
-                FailExecutor(),
-                DirectExecutor,
-                DirectExecutor,
-                null,
-                PagedList.Config.Builder()
-                    .setPageSize(10)
-                    .build(),
-                ""
-            )
-        }
+        PagedList.Builder(dataSource, 10)
+            .setNotifyDispatcher(FailDispatcher())
+            .setFetchDispatcher(DirectDispatcher)
+            .setInitialKey("")
+            .build()
     }
 
     @Test
@@ -408,10 +373,6 @@ class ItemKeyedDataSourceTest {
                 override fun onResult(data: List<A>) {
                     callback.onResult(convert(data))
                 }
-
-                override fun onError(error: Throwable) {
-                    callback.onError(error)
-                }
             })
         }
 
@@ -420,10 +381,6 @@ class ItemKeyedDataSourceTest {
                 override fun onResult(data: List<A>) {
                     callback.onResult(convert(data))
                 }
-
-                override fun onError(error: Throwable) {
-                    callback.onError(error)
-                }
             })
         }
 
@@ -431,10 +388,6 @@ class ItemKeyedDataSourceTest {
             source.loadBefore(params, object : LoadCallback<A>() {
                 override fun onResult(data: List<A>) {
                     callback.onResult(convert(data))
-                }
-
-                override fun onError(error: Throwable) {
-                    callback.onError(error)
                 }
             })
         }
@@ -473,12 +426,8 @@ class ItemKeyedDataSourceTest {
             loadInitialCallback
         )
         verify(loadInitialCallback).onResult(
-            ITEMS_BY_NAME_ID.subList(0, 10).map { DecoratedItem(it) })
-        //     error
-        orig.enqueueError()
-        wrapper.loadInitial(initParams, loadInitialCallback)
-        verify(loadInitialCallback).onError(EXCEPTION)
-        verifyNoMoreInteractions(loadInitialCallback)
+            ITEMS_BY_NAME_ID.subList(0, 10).map { DecoratedItem(it) }
+        )
 
         val key = orig.getKey(ITEMS_BY_NAME_ID[20])
         @Suppress("UNCHECKED_CAST")
@@ -487,22 +436,12 @@ class ItemKeyedDataSourceTest {
         // load after
         wrapper.loadAfter(ItemKeyedDataSource.LoadParams(key, 10), loadCallback)
         verify(loadCallback).onResult(ITEMS_BY_NAME_ID.subList(21, 31).map { DecoratedItem(it) })
-        // load after - error
-        orig.enqueueError()
-        wrapper.loadAfter(ItemKeyedDataSource.LoadParams(key, 10), loadCallback)
-        verify(loadCallback).onError(EXCEPTION)
-        verifyNoMoreInteractions(loadCallback)
 
         // load before
         @Suppress("UNCHECKED_CAST")
         loadCallback = mock()
         wrapper.loadBefore(ItemKeyedDataSource.LoadParams(key, 10), loadCallback)
         verify(loadCallback).onResult(ITEMS_BY_NAME_ID.subList(10, 20).map { DecoratedItem(it) })
-        // load before - error
-        orig.enqueueError()
-        wrapper.loadBefore(ItemKeyedDataSource.LoadParams(key, 10), loadCallback)
-        verify(loadCallback).onError(EXCEPTION)
-        verifyNoMoreInteractions(loadCallback)
 
         // verify invalidation
         orig.invalidate()
@@ -555,7 +494,5 @@ class ItemKeyedDataSourceTest {
                 (Math.random() * 200).toInt().toString() + " fake st."
             )
         }.sortedWith(ITEM_COMPARATOR)
-
-        private val EXCEPTION = Exception()
     }
 }

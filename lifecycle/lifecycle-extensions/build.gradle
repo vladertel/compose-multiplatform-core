@@ -28,8 +28,8 @@ plugins {
 
 dependencies {
     api(project(":lifecycle:lifecycle-runtime"))
-    api(project(":arch:core-common"))
-    api(project(":arch:core-runtime"))
+    api("androidx.arch.core:core-common:2.1.0")
+    api("androidx.arch.core:core-runtime:2.1.0")
     api(project(":fragment:fragment"))
     api(project(":lifecycle:lifecycle-common"))
     api(project(":lifecycle:lifecycle-livedata"))
@@ -37,7 +37,7 @@ dependencies {
     api(project(":lifecycle:lifecycle-service"))
     api(project(":lifecycle:lifecycle-viewmodel"))
 
-    testImplementation(project(":arch:core-testing"))
+    testImplementation("androidx.arch.core:core-testing:2.1.0")
     testImplementation(JUNIT)
     testImplementation(MOCKITO_CORE)
 
@@ -48,14 +48,14 @@ dependencies {
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ESPRESSO_CORE)
-    androidTestImplementation(SUPPORT_APPCOMPAT, libs.support_exclude_config)
-    androidTestImplementation(project(":internal-testutils"))
+    androidTestImplementation("androidx.appcompat:appcompat:1.0.0")
+    androidTestImplementation(project(":internal-testutils-runtime"))
 }
 
 androidx {
     name = "Android Lifecycle Extensions"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.LIFECYCLE
+    mavenVersion = LibraryVersions.LIFECYCLE_EXTENSIONS
     mavenGroup = LibraryGroups.LIFECYCLE
     inceptionYear = "2017"
     description = "Android Lifecycle Extensions"

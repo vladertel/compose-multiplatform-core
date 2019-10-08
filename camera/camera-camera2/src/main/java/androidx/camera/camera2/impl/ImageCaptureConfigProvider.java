@@ -33,9 +33,6 @@ import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureConfig;
 import androidx.camera.core.SessionConfig;
 
-import java.util.Arrays;
-import java.util.List;
-
 /**
  * Provides defaults for {@link ImageCaptureConfig} in the Camera2 implementation.
  * @hide
@@ -74,24 +71,13 @@ public final class ImageCaptureConfigProvider implements ConfigProvider<ImageCap
         builder.setDefaultCaptureConfig(captureConfig.build());
         builder.setCaptureOptionUnpacker(ImageCaptureOptionUnpacker.INSTANCE);
 
-        List<LensFacing> lensFacingList;
-
-        // Add default lensFacing if we can
-        if (lensFacing == LensFacing.FRONT) {
-            lensFacingList = Arrays.asList(LensFacing.FRONT, LensFacing.BACK);
-        } else {
-            lensFacingList = Arrays.asList(LensFacing.BACK, LensFacing.FRONT);
-        }
-
         try {
-            String defaultId = null;
-
-            for (LensFacing lensFacingCandidate : lensFacingList) {
-                defaultId = mCameraFactory.cameraIdForLensFacing(lensFacingCandidate);
-                if (defaultId != null) {
-                    builder.setLensFacing(lensFacingCandidate);
-                    break;
-                }
+            // Add default lensFacing if we can
+            LensFacing checkedLensFacing =
+                    (lensFacing != null) ? lensFacing : CameraX.getDefaultLensFacing();
+            String defaultId = mCameraFactory.cameraIdForLensFacing(checkedLensFacing);
+            if (defaultId != null) {
+                builder.setLensFacing(checkedLensFacing);
             }
 
             int targetRotation = mWindowManager.getDefaultDisplay().getRotation();
@@ -99,7 +85,7 @@ public final class ImageCaptureConfigProvider implements ConfigProvider<ImageCap
                     targetRotation);
             boolean isRotateNeeded = (rotationDegrees == 90 || rotationDegrees == 270);
             builder.setTargetRotation(targetRotation);
-            builder.setTargetAspectRatio(
+            builder.setTargetAspectRatioCustom(
                     isRotateNeeded ? DEFAULT_ASPECT_RATIO_3_4 : DEFAULT_ASPECT_RATIO_4_3);
         } catch (Exception e) {
             Log.w(TAG, "Unable to determine default lens facing for ImageCapture.", e);

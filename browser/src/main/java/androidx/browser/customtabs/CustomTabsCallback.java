@@ -19,6 +19,8 @@ package androidx.browser.customtabs;
 import android.net.Uri;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.browser.customtabs.CustomTabsService.Relation;
 
@@ -90,6 +92,15 @@ public class CustomTabsCallback {
      * @param args Arguments for the callback
      */
     public void extraCallback(String callbackName, Bundle args) {}
+
+    /**
+     * The same as {@link #extraCallback}, except that this method allows the custom tabs provider
+     * to return a result
+     */
+    @Nullable
+    public Bundle extraCallbackWithResult(@NonNull String callbackName, @Nullable Bundle args) {
+        return null;
+    }
 
     /**
      * Called when {@link CustomTabsSession} has requested a postMessage channel through

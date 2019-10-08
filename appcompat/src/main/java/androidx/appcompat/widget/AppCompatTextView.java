@@ -87,16 +87,19 @@ public class AppCompatTextView extends TextView implements TintableBackgroundVie
     @Nullable
     private Future<PrecomputedTextCompat> mPrecomputedTextFuture;
 
-    public AppCompatTextView(Context context) {
+    public AppCompatTextView(@NonNull Context context) {
         this(context, null);
     }
 
-    public AppCompatTextView(Context context, AttributeSet attrs) {
+    public AppCompatTextView(@NonNull Context context, @Nullable AttributeSet attrs) {
         this(context, attrs, android.R.attr.textViewStyle);
     }
 
-    public AppCompatTextView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public AppCompatTextView(
+            @NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(TintContextWrapper.wrap(context), attrs, defStyleAttr);
+
+        ThemeUtils.checkAppCompatTheme(this, getContext());
 
         mBackgroundTintHelper = new AppCompatBackgroundHelper(this);
         mBackgroundTintHelper.loadFromAttributes(attrs, defStyleAttr);

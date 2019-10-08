@@ -20,13 +20,13 @@ import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.trace
 import androidx.ui.core.Dp
-import androidx.ui.core.Draw
-import androidx.ui.core.toRect
-import androidx.ui.core.vectorgraphics.Brush
-import androidx.ui.core.vectorgraphics.SolidColor
+import androidx.ui.core.Modifier
+import androidx.ui.foundation.shape.DrawShape
+import androidx.ui.foundation.shape.RectangleShape
 import androidx.ui.graphics.Color
+import androidx.ui.graphics.Brush
+import androidx.ui.graphics.SolidColor
 import androidx.ui.layout.Container
-import androidx.ui.painting.Paint
 
 /**
  * Component that represents a rectangle painted with the specified [Brush].
@@ -37,36 +37,39 @@ import androidx.ui.painting.Paint
  * Note that even if width and height are specified, these will not be satisfied
  * if the component's incoming layout constraints do not allow that.
  *
+ * @sample androidx.ui.foundation.samples.ColoredRectBrushSample
+ *
  * @param brush brush to paint rect with
  * @param width width of this rect, by default it will match incoming layout constraints
  * @param height height of this rect, by default it will match incoming layout constraints
  */
 @Composable
-fun ColoredRect(brush: Brush, width: Dp? = null, height: Dp? = null) {
-    trace("UI:ColoredRect") {
-        Container(width = width, height = height, expanded = true) {
-            DrawFillRect(brush = brush)
-        }
+fun ColoredRect(
+    brush: Brush,
+    modifier: Modifier = Modifier.None,
+    width: Dp? = null,
+    height: Dp? = null
+) {
+    Container(modifier = modifier, width = width, height = height, expanded = true) {
+        DrawShape(RectangleShape, brush)
     }
 }
 
 /**
  * Component that represents a rectangle painted with a solid color.
  *
+ * @sample androidx.ui.foundation.samples.ColoredRectColorSample
+ *
  * @param color color to paint rect with
  * @param width width of this rect, by default it will match parent's constraints
  * @param height height of this rect, by default it will match parent's constraints
  */
 @Composable
-fun ColoredRect(color: Color, width: Dp? = null, height: Dp? = null) {
-    ColoredRect(brush = SolidColor(color), width = width, height = height)
-}
-
-@Composable
-private fun DrawFillRect(brush: Brush) {
-    Draw { canvas, parentSize ->
-        val paint = Paint()
-        brush.applyBrush(paint)
-        canvas.drawRect(parentSize.toRect(), paint)
-    }
+fun ColoredRect(
+    color: Color,
+    modifier: Modifier = Modifier.None,
+    width: Dp? = null,
+    height: Dp? = null
+) {
+    ColoredRect(brush = SolidColor(color), modifier = modifier, width = width, height = height)
 }

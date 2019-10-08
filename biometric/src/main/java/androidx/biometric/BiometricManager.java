@@ -22,6 +22,10 @@ import android.os.Build;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.annotation.VisibleForTesting;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * A class that contains biometric utilities. For authentication, see {@link BiometricPrompt}.
@@ -31,10 +35,10 @@ import androidx.annotation.RequiresApi;
  */
 public class BiometricManager {
 
-    private final Context mContext;
     // Only guaranteed to be non-null on SDK < 29
     @SuppressWarnings("deprecation")
     private final androidx.core.hardware.fingerprint.FingerprintManagerCompat mFingerprintManager;
+
     // Only guaranteed to be non-null on SDK >= 29 (Q)
     private final android.hardware.biometrics.BiometricManager mBiometricManager;
 
@@ -62,7 +66,13 @@ public class BiometricManager {
     public static final int BIOMETRIC_ERROR_NO_HARDWARE =
             android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE;
 
-    @RequiresApi(29)
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({BIOMETRIC_SUCCESS, BIOMETRIC_ERROR_HW_UNAVAILABLE,
+            BIOMETRIC_ERROR_NONE_ENROLLED, BIOMETRIC_ERROR_NO_HARDWARE})
+    private @interface BiometricError {
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
     private static class Api29Impl {
         @NonNull
         static android.hardware.biometrics.BiometricManager create(Context context) {
@@ -75,11 +85,7 @@ public class BiometricManager {
         }
     }
 
-    /**
-     * Get a {@link BiometricManager} instance with the provided context.
-     * @param context
-     * @return
-     */
+    /** @return A {@link BiometricManager} instance with the provided context. */
     @NonNull
     public static BiometricManager from(@NonNull Context context) {
         return new BiometricManager(context);
@@ -87,39 +93,37 @@ public class BiometricManager {
 
     @SuppressWarnings("deprecation")
     private BiometricManager(Context context) {
-        mContext = context;
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             mBiometricManager = Api29Impl.create(context);
             mFingerprintManager = null;
         } else {
             mBiometricManager = null;
-            mFingerprintManager = androidx.core.hardware.fingerprint.FingerprintManagerCompat
-                    .from(mContext);
+            mFingerprintManager =
+                    androidx.core.hardware.fingerprint.FingerprintManagerCompat.from(context);
         }
     }
 
-    @IntDef({android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS,
-            android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE,
-            android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED,
-            android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE})
-    @interface BiometricError {}
+    @VisibleForTesting
+    @RequiresApi(Build.VERSION_CODES.Q)
+    BiometricManager(android.hardware.biometrics.BiometricManager biometricManager) {
+        mBiometricManager = biometricManager;
+        mFingerprintManager = null;
+    }
 
     /**
-     * Determine if biometrics can be used. In other words, determine if {@link BiometricPrompt}
-     * can be expected to be shown (hardware available, templates enrolled, user-enabled).
+     * Determines if biometrics can be used, or equivalently, whether {@link BiometricPrompt} can
+     * be shown (hardware available, templates enrolled, user-enabled).
      *
-     * @return Returns {@link #BIOMETRIC_ERROR_NONE_ENROLLED} if the user does not have any
-     *     enrolled, or {@link #BIOMETRIC_ERROR_HW_UNAVAILABLE} if none are currently
-     *     supported/enabled. Returns {@link #BIOMETRIC_SUCCESS} if a biometric can currently be
-     *     used (enrolled and available).
+     * @return {@link #BIOMETRIC_SUCCESS} if a biometric can currently be used (enrolled and
+     * available), {@link #BIOMETRIC_ERROR_NONE_ENROLLED} if the user does not have any enrolled,
+     * or {@link #BIOMETRIC_ERROR_NO_HARDWARE} if none are currently enabled/supported.
      */
     public @BiometricError int canAuthenticate() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             return Api29Impl.canAuthenticate(mBiometricManager);
         } else {
             if (!mFingerprintManager.isHardwareDetected()) {
-                return BIOMETRIC_ERROR_HW_UNAVAILABLE;
+                return BIOMETRIC_ERROR_NO_HARDWARE;
             } else if (!mFingerprintManager.hasEnrolledFingerprints()) {
                 return BIOMETRIC_ERROR_NONE_ENROLLED;
             } else {
@@ -127,5 +131,4 @@ public class BiometricManager {
             }
         }
     }
-
 }

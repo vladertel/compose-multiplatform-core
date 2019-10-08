@@ -16,24 +16,26 @@
 
 package androidx.ui.material
 
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.unaryPlus
+import androidx.ui.core.CurrentTextStyleProvider
 import androidx.ui.core.Dp
 import androidx.ui.core.Text
 import androidx.ui.core.dp
 import androidx.ui.engine.geometry.Shape
+import androidx.ui.foundation.Clickable
 import androidx.ui.foundation.SimpleImage
 import androidx.ui.foundation.shape.corner.CircleShape
 import androidx.ui.graphics.Color
 import androidx.ui.layout.Container
 import androidx.ui.layout.DpConstraints
-import androidx.ui.layout.FlexSize
 import androidx.ui.layout.Padding
 import androidx.ui.layout.Row
 import androidx.ui.layout.WidthSpacer
-import androidx.ui.painting.Image
+import androidx.ui.graphics.Image
+import androidx.ui.material.ripple.Ripple
+import androidx.ui.material.surface.Surface
 import androidx.ui.text.TextStyle
 
 /**
@@ -63,12 +65,16 @@ fun FloatingActionButton(
     minSize: Dp = FabSize,
     shape: Shape = CircleShape,
     color: Color = +themeColor { primary },
-    elevation: Dp = 0.dp, // TODO(Andrey) add the default elevation when it ready b/123215187
-    @Children children: @Composable() () -> Unit
+    elevation: Dp = 6.dp,
+    children: @Composable() () -> Unit
 ) {
-    Button(color = color, onClick = onClick, shape = shape, elevation = elevation) {
-        Container(constraints = DpConstraints(minWidth = minSize, minHeight = minSize)) {
-            children()
+    Surface(shape = shape, color = color, elevation = elevation) {
+        Ripple(bounded = true, enabled = onClick != null) {
+            Clickable(onClick) {
+                Container(constraints = DpConstraints(minWidth = minSize, minHeight = minSize)) {
+                    CurrentTextStyleProvider(+themeTextStyle { button }, children)
+                }
+            }
         }
     }
 }
@@ -94,10 +100,11 @@ fun FloatingActionButton(
 fun FloatingActionButton(
     icon: Image,
     onClick: (() -> Unit)? = null,
+    shape: Shape = CircleShape,
     color: Color = +themeColor { primary },
-    elevation: Dp = 0.dp
+    elevation: Dp = 6.dp
 ) {
-    FloatingActionButton(onClick = onClick, color = color, elevation = elevation) {
+    FloatingActionButton(onClick = onClick, shape = shape, color = color, elevation = elevation) {
         SimpleImage(image = icon)
     }
 }
@@ -126,7 +133,7 @@ fun FloatingActionButton(
     textStyle: TextStyle? = null,
     onClick: (() -> Unit)? = null,
     color: Color = +themeColor { primary },
-    elevation: Dp = 0.dp
+    elevation: Dp = 6.dp
 ) {
     FloatingActionButton(
         onClick = onClick,
@@ -139,7 +146,7 @@ fun FloatingActionButton(
             }
         } else {
             Padding(left = ExtendedFabIconPadding, right = ExtendedFabTextPadding) {
-                Row(mainAxisSize = FlexSize.Min) {
+                Row {
                     SimpleImage(image = icon)
                     WidthSpacer(width = ExtendedFabIconPadding)
                     Text(text = text, style = textStyle)

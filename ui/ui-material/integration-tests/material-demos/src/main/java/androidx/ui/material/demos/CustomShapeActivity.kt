@@ -16,45 +16,47 @@
 
 package androidx.ui.material.demos
 
-import android.app.Activity
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import androidx.compose.Composable
 import androidx.compose.composer
-import androidx.compose.setContent
-import androidx.ui.core.CraneWrapper
+import androidx.ui.core.Alignment
 import androidx.ui.core.dp
 import androidx.ui.foundation.shape.border.Border
 import androidx.ui.foundation.shape.GenericShape
 import androidx.ui.graphics.Color
-import androidx.ui.layout.Alignment
 import androidx.ui.layout.FixedSpacer
 import androidx.ui.layout.Wrap
 import androidx.ui.material.Button
 import androidx.ui.material.MaterialTheme
+import androidx.ui.material.OutlinedButtonStyle
 
-class CustomShapeActivity : Activity() {
+class CustomShapeActivity : MaterialDemoActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.WHITE))
-        setContent { CustomShapeDemo() }
+    }
+
+    @Composable
+    override fun materialContent() {
+        CustomShapeDemo()
     }
 }
 
 @Composable
 fun CustomShapeDemo() {
-    CraneWrapper {
-        MaterialTheme {
-            Wrap(Alignment.Center) {
-                Button(
+    MaterialTheme {
+        Wrap(Alignment.Center) {
+            Button(
+                onClick = {},
+                style = OutlinedButtonStyle(
                     shape = TriangleShape,
-                    color = Color.Aqua,
-                    onClick = {},
+                    color = Color.Cyan,
                     border = Border(Color.DarkGray, 1.dp)
-                ) {
-                    FixedSpacer(100.dp, 100.dp)
-                }
+                )
+            ) {
+                FixedSpacer(100.dp, 100.dp)
             }
         }
     }

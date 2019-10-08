@@ -60,8 +60,7 @@ import java.util.Set;
  * position. If we already have the fragment, or have previously saved its state, we use those.
  * <li>{@link RecyclerView.Adapter#onAttachedToWindow} we attach the {@link Fragment} to a
  * container.
- * <li>{@link RecyclerView.Adapter#onViewRecycled} and
- * {@link RecyclerView.Adapter#onFailedToRecycleView} we remove, save state, destroy the
+ * <li>{@link RecyclerView.Adapter#onViewRecycled} we remove, save state, destroy the
  * {@link Fragment}.
  * </ul>
  */
@@ -219,7 +218,7 @@ public abstract class FragmentStateAdapter extends
 
             for (int ix = 0; ix < mFragments.size(); ix++) {
                 long itemId = mFragments.keyAt(ix);
-                if (!mItemIdToViewHolder.containsKey(itemId)) {
+                if (!isFragmentViewBound(itemId)) {
                     toRemove.add(itemId);
                 }
             }
@@ -228,6 +227,24 @@ public abstract class FragmentStateAdapter extends
         for (Long itemId : toRemove) {
             removeFragment(itemId);
         }
+    }
+
+    private boolean isFragmentViewBound(long itemId) {
+        if (mItemIdToViewHolder.containsKey(itemId)) {
+            return true;
+        }
+
+        Fragment fragment = mFragments.get(itemId);
+        if (fragment == null) {
+            return false;
+        }
+
+        View view = fragment.getView();
+        if (view == null) {
+            return false;
+        }
+
+        return view.getParent() != null;
     }
 
     private Long itemForViewHolder(int viewHolderId) {
@@ -350,6 +367,8 @@ public abstract class FragmentStateAdapter extends
         // all Fragment views.
         mFragmentManager.registerFragmentLifecycleCallbacks(
                 new FragmentManager.FragmentLifecycleCallbacks() {
+                    // TODO(b/141956012): Suppressed during upgrade to AGP 3.6.
+                    @SuppressWarnings("ReferenceEquality")
                     @Override
                     public void onFragmentViewCreated(@NonNull FragmentManager fm,
                             @NonNull Fragment f, @NonNull View v,
@@ -395,12 +414,20 @@ public abstract class FragmentStateAdapter extends
 
     @Override
     public final boolean onFailedToRecycleView(@NonNull FragmentViewHolder holder) {
-        // This happens when a ViewHolder is in a transient state (e.g. during custom
-        // animation). We don't have sufficient information on how to clear up what lead to
-        // the transient state, so we are throwing away the ViewHolder to stay on the
-        // conservative side.
-        onViewRecycled(holder); // the same clean-up steps as when recycling a ViewHolder
-        return false; // don't recycle the view
+        /*
+         This happens when a ViewHolder is in a transient state (e.g. during an
+         animation).
+
+         Our ViewHolders are effectively just FrameLayout instances in which we put Fragment
+         Views, so it's safe to force recycle them. This is because:
+         - FrameLayout instances are not to be directly manipulated, so no animations are
+         expected to be running directly on them.
+         - Fragment Views are not reused between position (one Fragment = one page). Animation
+         running in one of the Fragment Views won't affect another Fragment View.
+         - If a user chooses to violate these assumptions, they are also in the position to
+         correct the state in their code.
+        */
+        return true;
     }
 
     private void removeFragment(long itemId) {
@@ -674,6 +701,7 @@ public abstract class FragmentStateAdapter extends
             mPrimaryItemId = currentItemId;
             FragmentTransaction transaction = mFragmentManager.beginTransaction();
 
+            Fragment toResume = null;
             for (int ix = 0; ix < mFragments.size(); ix++) {
                 long itemId = mFragments.keyAt(ix);
                 Fragment fragment = mFragments.valueAt(ix);
@@ -682,8 +710,16 @@ public abstract class FragmentStateAdapter extends
                     continue;
                 }
 
-                transaction.setMaxLifecycle(fragment, itemId == mPrimaryItemId ? RESUMED : STARTED);
+                if (itemId != mPrimaryItemId) {
+                    transaction.setMaxLifecycle(fragment, STARTED);
+                } else {
+                    toResume = fragment; // itemId map key, so only one can match the predicate
+                }
+
                 fragment.setMenuVisibility(itemId == mPrimaryItemId);
+            }
+            if (toResume != null) { // in case the Fragment wasn't added yet
+                transaction.setMaxLifecycle(toResume, RESUMED);
             }
 
             if (!transaction.isEmpty()) {

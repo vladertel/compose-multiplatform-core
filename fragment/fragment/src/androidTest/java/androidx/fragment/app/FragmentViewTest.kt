@@ -249,7 +249,7 @@ class FragmentViewTest {
     // Removing a detached fragment should do nothing to the View and popping should bring
     // the Fragment back detached
     @Test
-    fun removeDetatchedView() {
+    fun removeDetachedView() {
         activityRule.setContentView(R.layout.simple_container)
         val container =
             activityRule.activity.findViewById<View>(R.id.fragmentContainer) as ViewGroup
@@ -308,6 +308,46 @@ class FragmentViewTest {
         assertWithMessage("Fragment should not go through lifecycle changes until it is added")
             .that(fragment.lifecycle.currentState)
             .isEqualTo(Lifecycle.State.INITIALIZED)
+    }
+
+    @Test
+    fun findFragmentNoTagSet() {
+        val view = View(activityRule.activity)
+        try {
+            FragmentManager.findFragment<Fragment>(view)
+            fail("findFragment should throw IllegalStateException if a Fragment was not set")
+        } catch (e: IllegalStateException) {
+            assertThat(e)
+                .hasMessageThat().contains("View $view does not have a Fragment set")
+        }
+    }
+
+    @Test
+    fun findFragmentAfterAdd() {
+        activityRule.setContentView(R.layout.simple_container)
+        val fm = activityRule.activity.supportFragmentManager
+
+        val fragment = StrictViewFragment()
+        fm.beginTransaction().add(R.id.fragmentContainer, fragment).commit()
+        activityRule.executePendingTransactions()
+
+        assertThat(FragmentManager.findFragment<StrictViewFragment>(fragment.requireView()))
+            .isSameInstanceAs(fragment)
+    }
+
+    @Test
+    fun findFragmentFindByIdChildView() {
+        activityRule.setContentView(R.layout.simple_container)
+        val fm = activityRule.activity.supportFragmentManager
+
+        val fragment = StrictViewFragment(R.layout.fragment_a)
+        fm.beginTransaction().add(R.id.fragmentContainer, fragment).commit()
+        activityRule.executePendingTransactions()
+
+        val view = fragment.requireView().findViewById<View>(R.id.textA)
+        assertThat(view).isNotNull()
+        assertThat(FragmentManager.findFragment<StrictViewFragment>(view))
+            .isSameInstanceAs(fragment)
     }
 
     // Hide a fragment and its View should be GONE. Then pop it and the View should be VISIBLE
@@ -492,7 +532,7 @@ class FragmentViewTest {
 
     // Detaching a detached fragment should not throw
     @Test
-    fun detachDetatched() {
+    fun detachDetached() {
         activityRule.setContentView(R.layout.simple_container)
         val fm = activityRule.activity.supportFragmentManager
         val fragment = StrictViewFragment()
@@ -997,18 +1037,6 @@ class FragmentViewTest {
 
     private fun findViewById(viewId: Int): View? {
         return activityRule.activity.findViewById(viewId)
-    }
-
-    private fun assertChildren(container: ViewGroup, vararg fragments: Fragment) {
-        val numFragments = fragments.size
-        assertWithMessage("There aren't the correct number of fragment Views in its container")
-            .that(container.childCount)
-            .isEqualTo(numFragments)
-        for (i in 0 until numFragments) {
-            assertWithMessage("Wrong Fragment View order for [$i]")
-                .that(fragments[i].view)
-                .isEqualTo(container.getChildAt(i))
-        }
     }
 
     class InvisibleFragment : StrictViewFragment() {

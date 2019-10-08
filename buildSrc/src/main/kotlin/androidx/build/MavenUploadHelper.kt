@@ -17,6 +17,7 @@
 package androidx.build
 
 import com.android.build.gradle.LibraryPlugin
+import java.io.File
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
@@ -95,7 +96,22 @@ fun Project.configureMavenArtifactUpload(extension: AndroidXExtension) {
                     }
                 }
 
+                val groupText = extension.mavenGroup!!.group
+
+                uploadTask.outputs.dir(
+                    File(
+                        getRepositoryDirectory(),
+                        "${groupText.replace('.', '/')}/${project.name}/${project.version}"
+                    )
+                )
+
                 uploadTask.doFirst {
+                    // Delete any existing archives, so that developers don't get
+                    // confused/surprised by the presence of old versions.
+                    // Additionally, deleting old versions makes it more convenient to iterate
+                    // over all existing archives without visiting archives having old versions too
+                    removePreviouslyUploadedArchives(groupText)
+
                     val androidxDeps = HashSet<Dependency>()
                     collectDependenciesForConfiguration(androidxDeps, this, "api")
                     collectDependenciesForConfiguration(androidxDeps, this, "implementation")
@@ -114,10 +130,8 @@ fun Project.configureMavenArtifactUpload(extension: AndroidXExtension) {
                 }
             }
 
-            if (extension.publish.shouldRelease()) {
-                // Register it as part of release so that we create a Zip file for it
-                Release.register(this, extension)
-            }
+            // Register it as part of release so that we create a Zip file for it
+            Release.register(this, extension)
         } else {
             uploadTask.enabled = false
         }
@@ -134,6 +148,14 @@ private fun Project.removeTestDeps(pom: MavenPom) {
         val getScopeMethod = dep::class.java.getDeclaredMethod("getScope")
         getScopeMethod.invoke(dep) as String == "test"
     }
+}
+
+private fun Project.removePreviouslyUploadedArchives(group: String) {
+    val projectArchiveDir = File(
+                                getRepositoryDirectory(),
+                                "${group.replace('.', '/')}/${project.name}"
+                            )
+    projectArchiveDir.deleteRecursively()
 }
 
 // TODO(aurimas): remove this when Gradle bug is fixed.

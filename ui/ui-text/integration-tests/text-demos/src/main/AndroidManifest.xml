@@ -19,7 +19,7 @@
         package="androidx.ui.text.demos">
 
     <application>
-        <activity android:name=".CraneTextActivity"
+        <activity android:name=".ComposeTextActivity"
                   android:configChanges="orientation|screenSize"
                   android:label="Text/Static Text Demo">
             <intent-filter>
@@ -28,14 +28,58 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".CraneInputFieldActivity"
+        <activity android:name=".ComposeTextSelectionActivity"
             android:configChanges="orientation|screenSize"
-            android:label="Text/Input Field Demo">
+            android:label="Text/Text Selection">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="androidx.ui.demos.SAMPLE_CODE" />
             </intent-filter>
         </activity>
 
+        <activity android:name=".ComposeMultiParagraphActivity"
+            android:configChanges="orientation|screenSize"
+            android:label="Text/Multi Paragraph">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="androidx.ui.demos.SAMPLE_CODE" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".ComposeInputFieldActivity"
+            android:configChanges="orientation|screenSize"
+            android:label="Text/Input Field/Input Field Demo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="androidx.ui.demos.SAMPLE_CODE" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".ComposeVariousInputFieldActivity"
+                  android:configChanges="orientation|screenSize"
+                  android:label="Text/Input Field/Various Input Field Demo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="androidx.ui.demos.SAMPLE_CODE" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".ComposeInputFieldTrickyUseCaseActivity"
+                  android:configChanges="orientation|screenSize"
+                  android:label="Text/Input Field/Tricky Input Field Demo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="androidx.ui.demos.SAMPLE_CODE" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".ComposeInputFieldFocusTransitionActivity"
+            android:configChanges="orientation|screenSize"
+            android:label="Text/Input Field/Focus Transition Demo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="androidx.ui.demos.SAMPLE_CODE" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

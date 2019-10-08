@@ -19,10 +19,6 @@ package androidx.viewpager2.widget
 import android.os.Build
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_PAGE_DOWN
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_PAGE_LEFT
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_PAGE_RIGHT
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_PAGE_UP
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.testutils.LocaleTestUtils
@@ -79,12 +75,14 @@ class AccessibilityTest(private val config: TestConfig) : BaseTest() {
                     targetPage ->
                 val currentPage = viewPager.currentItem
                 val latch = viewPager.addWaitForScrolledLatch(targetPage)
-                if (targetPage - currentPage == 1) {
-                    ViewCompat.performAccessibilityAction(viewPager,
-                        getNextPageAction(config.orientation, viewPager.isRtl), null)
-                } else {
-                    ViewCompat.performAccessibilityAction(viewPager,
-                        getPreviousPageAction(config.orientation, viewPager.isRtl), null)
+                runOnUiThreadSync {
+                    if (targetPage - currentPage == 1) {
+                        ViewCompat.performAccessibilityAction(viewPager,
+                            getNextPageAction(config.orientation, viewPager.isRtl), null)
+                    } else {
+                        ViewCompat.performAccessibilityAction(viewPager,
+                            getPreviousPageAction(config.orientation, viewPager.isRtl), null)
+                    }
                 }
                 latch.await(2, TimeUnit.SECONDS)
                 assertBasicState(targetPage)
@@ -101,7 +99,7 @@ class AccessibilityTest(private val config: TestConfig) : BaseTest() {
             assertBasicState(initialPage)
 
             var node = AccessibilityNodeInfoCompat.obtain()
-            activityTestRule.runOnUiThread {
+            runOnUiThreadSync {
                 ViewCompat.onInitializeAccessibilityNodeInfo(viewPager, node)
             }
             var collectionInfo = node.collectionInfo
@@ -131,7 +129,7 @@ class AccessibilityTest(private val config: TestConfig) : BaseTest() {
             val initialPage = viewPager.currentItem
             assertBasicState(initialPage)
 
-            activityTestRule.runOnUiThread {
+            runOnUiThreadSync {
                 viewPager.setOrientation(getOppositeOrientation(config.orientation))
             }
             assertBasicState(initialPage)
@@ -142,12 +140,12 @@ class AccessibilityTest(private val config: TestConfig) : BaseTest() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             if (orientation == ViewPager2.ORIENTATION_HORIZONTAL) {
                 if (isRtl) {
-                    return ACTION_PAGE_LEFT.id
+                    return ACTION_ID_PAGE_LEFT
                 } else {
-                    return ACTION_PAGE_RIGHT.id
+                    return ACTION_ID_PAGE_RIGHT
                 }
             }
-            return ACTION_PAGE_DOWN.id
+            return ACTION_ID_PAGE_DOWN
         }
         return AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD
     }
@@ -156,12 +154,12 @@ class AccessibilityTest(private val config: TestConfig) : BaseTest() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             if (orientation == ViewPager2.ORIENTATION_HORIZONTAL) {
                 if (isRtl) {
-                    return ACTION_PAGE_RIGHT.id
+                    return ACTION_ID_PAGE_RIGHT
                 } else {
-                    return ACTION_PAGE_LEFT.id
+                    return ACTION_ID_PAGE_LEFT
                 }
             }
-            return ACTION_PAGE_UP.id
+            return ACTION_ID_PAGE_UP
         }
         return AccessibilityNodeInfoCompat.ACTION_SCROLL_BACKWARD
     }

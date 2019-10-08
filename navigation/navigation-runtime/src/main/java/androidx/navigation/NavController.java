@@ -33,6 +33,9 @@ import androidx.annotation.NavigationRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.TaskStackBuilder;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleEventObserver;
+import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ViewModelStore;
 import androidx.lifecycle.ViewModelStoreOwner;
@@ -40,9 +43,9 @@ import androidx.lifecycle.ViewModelStoreOwner;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -64,11 +67,8 @@ public class NavController {
             "android-support-nav:controller:navigatorState";
     private static final String KEY_NAVIGATOR_STATE_NAMES =
             "android-support-nav:controller:navigatorState:names";
-    private static final String KEY_BACK_STACK_UUIDS =
-            "android-support-nav:controller:backStackUUIDs";
-    private static final String KEY_BACK_STACK_IDS = "android-support-nav:controller:backStackIds";
-    private static final String KEY_BACK_STACK_ARGS =
-            "android-support-nav:controller:backStackArgs";
+    private static final String KEY_BACK_STACK =
+            "android-support-nav:controller:backStack";
     static final String KEY_DEEP_LINK_IDS = "android-support-nav:controller:deepLinkIds";
     static final String KEY_DEEP_LINK_EXTRAS =
             "android-support-nav:controller:deepLinkExtras";
@@ -83,14 +83,14 @@ public class NavController {
     private final Context mContext;
     private Activity mActivity;
     private NavInflater mInflater;
-    private NavGraph mGraph;
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    NavGraph mGraph;
     private Bundle mNavigatorStateToRestore;
-    private String[] mBackStackUUIDsToRestore;
-    private int[] mBackStackIdsToRestore;
-    private Parcelable[] mBackStackArgsToRestore;
+    private Parcelable[] mBackStackToRestore;
     private boolean mDeepLinkHandled;
 
-    private final Deque<NavBackStackEntry> mBackStack = new ArrayDeque<>();
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    final Deque<NavBackStackEntry> mBackStack = new ArrayDeque<>();
 
     private LifecycleOwner mLifecycleOwner;
     private NavControllerViewModel mViewModel;
@@ -100,6 +100,17 @@ public class NavController {
     private final CopyOnWriteArrayList<OnDestinationChangedListener>
             mOnDestinationChangedListeners = new CopyOnWriteArrayList<>();
 
+    private final LifecycleObserver mLifecycleObserver = new LifecycleEventObserver() {
+        @Override
+        public void onStateChanged(@NonNull LifecycleOwner source,
+                @NonNull Lifecycle.Event event) {
+            if (mGraph != null) {
+                for (NavBackStackEntry entry : mBackStack) {
+                    entry.handleLifecycleEvent(event);
+                }
+            }
+        }
+    };
     private final OnBackPressedCallback mOnBackPressedCallback =
             new OnBackPressedCallback(false) {
         @Override
@@ -255,12 +266,12 @@ public class NavController {
             // Nothing to pop if the back stack is empty
             return false;
         }
-        ArrayList<Navigator> popOperations = new ArrayList<>();
+        ArrayList<Navigator<?>> popOperations = new ArrayList<>();
         Iterator<NavBackStackEntry> iterator = mBackStack.descendingIterator();
         boolean foundDestination = false;
         while (iterator.hasNext()) {
             NavDestination destination = iterator.next().getDestination();
-            Navigator navigator = mNavigatorProvider.getNavigator(
+            Navigator<?> navigator = mNavigatorProvider.getNavigator(
                     destination.getNavigatorName());
             if (inclusive || destination.getId() != destinationId) {
                 popOperations.add(navigator);
@@ -279,9 +290,10 @@ public class NavController {
             return false;
         }
         boolean popped = false;
-        for (Navigator navigator : popOperations) {
+        for (Navigator<?> navigator : popOperations) {
             if (navigator.popBackStack()) {
                 NavBackStackEntry entry = mBackStack.removeLast();
+                entry.setMaxLifecycle(Lifecycle.State.DESTROYED);
                 if (mViewModel != null) {
                     mViewModel.clear(entry.mId);
                 }
@@ -366,6 +378,68 @@ public class NavController {
             // Keep popping
         }
         if (!mBackStack.isEmpty()) {
+            // First determine what the current resumed destination is and, if and only if
+            // the current resumed destination is a FloatingWindow, what destination is
+            // underneath it that must remain started.
+            NavDestination nextResumed = mBackStack.peekLast().getDestination();
+            NavDestination nextStarted = null;
+            if (nextResumed instanceof FloatingWindow) {
+                // Find the next destination in the back stack as that destination
+                // should still be STARTED when the FloatingWindow destination is above it.
+                Iterator<NavBackStackEntry> iterator = mBackStack.descendingIterator();
+                while (iterator.hasNext()) {
+                    NavDestination destination = iterator.next().getDestination();
+                    if (!(destination instanceof NavGraph)
+                            && !(destination instanceof FloatingWindow)) {
+                        nextStarted = destination;
+                        break;
+                    }
+                }
+            }
+            // First iterate downward through the stack, applying downward Lifecycle
+            // transitions and capturing any upward Lifecycle transitions to apply afterwards.
+            // This ensures proper nesting where parent navigation graphs are started before
+            // their children and stopped only after their children are stopped.
+            HashMap<NavBackStackEntry, Lifecycle.State> upwardStateTransitions = new HashMap<>();
+            Iterator<NavBackStackEntry> iterator = mBackStack.descendingIterator();
+            while (iterator.hasNext()) {
+                NavBackStackEntry entry = iterator.next();
+                Lifecycle.State currentMaxLifecycle = entry.getMaxLifecycle();
+                NavDestination destination = entry.getDestination();
+                if (nextResumed != null && destination.getId() == nextResumed.getId()) {
+                    // Upward Lifecycle transitions need to be done afterwards so that
+                    // the parent navigation graph is resumed before their children
+                    if (currentMaxLifecycle != Lifecycle.State.RESUMED) {
+                        upwardStateTransitions.put(entry, Lifecycle.State.RESUMED);
+                    }
+                    nextResumed = nextResumed.getParent();
+                } else if (nextStarted != null && destination.getId() == nextStarted.getId()) {
+                    if (currentMaxLifecycle == Lifecycle.State.RESUMED) {
+                        // Downward transitions should be done immediately so children are
+                        // paused before their parent navigation graphs
+                        entry.setMaxLifecycle(Lifecycle.State.STARTED);
+                    } else if (currentMaxLifecycle != Lifecycle.State.STARTED) {
+                        // Upward Lifecycle transitions need to be done afterwards so that
+                        // the parent navigation graph is started before their children
+                        upwardStateTransitions.put(entry, Lifecycle.State.STARTED);
+                    }
+                    nextStarted = nextStarted.getParent();
+                } else {
+                    entry.setMaxLifecycle(Lifecycle.State.CREATED);
+                }
+            }
+            // Apply all upward Lifecycle transitions by iterating through the stack again,
+            // this time applying the new lifecycle to the parent navigation graphs first
+            iterator = mBackStack.iterator();
+            while (iterator.hasNext()) {
+                NavBackStackEntry entry = iterator.next();
+                Lifecycle.State newState = upwardStateTransitions.get(entry);
+                if (newState != null) {
+                    entry.setMaxLifecycle(newState);
+                }
+            }
+
+            // Now call all registered OnDestinationChangedListener instances
             NavBackStackEntry backStackEntry = mBackStack.peekLast();
             for (OnDestinationChangedListener listener :
                     mOnDestinationChangedListeners) {
@@ -466,7 +540,7 @@ public class NavController {
                     KEY_NAVIGATOR_STATE_NAMES);
             if (navigatorNames != null) {
                 for (String name : navigatorNames) {
-                    Navigator navigator = mNavigatorProvider.getNavigator(name);
+                    Navigator<?> navigator = mNavigatorProvider.getNavigator(name);
                     Bundle bundle = mNavigatorStateToRestore.getBundle(name);
                     if (bundle != null) {
                         navigator.onRestoreState(bundle);
@@ -474,25 +548,25 @@ public class NavController {
                 }
             }
         }
-        if (mBackStackUUIDsToRestore != null) {
-            for (int index = 0; index < mBackStackUUIDsToRestore.length; index++) {
-                UUID uuid = UUID.fromString(mBackStackUUIDsToRestore[index]);
-                int destinationId = mBackStackIdsToRestore[index];
-                Bundle args = (Bundle) mBackStackArgsToRestore[index];
-                NavDestination node = findDestination(destinationId);
+        if (mBackStackToRestore != null) {
+            for (Parcelable parcelable : mBackStackToRestore) {
+                NavBackStackEntryState state = (NavBackStackEntryState) parcelable;
+                NavDestination node = findDestination(state.getDestinationId());
                 if (node == null) {
                     throw new IllegalStateException("unknown destination during restore: "
-                            + mContext.getResources().getResourceName(destinationId));
+                            + mContext.getResources().getResourceName(state.getDestinationId()));
                 }
+                Bundle args = state.getArgs();
                 if (args != null) {
                     args.setClassLoader(mContext.getClassLoader());
                 }
-                mBackStack.add(new NavBackStackEntry(uuid, node, args, mViewModel));
+                NavBackStackEntry entry = new NavBackStackEntry(mContext, node, args,
+                        mLifecycleOwner, mViewModel,
+                        state.getUUID(), state.getSavedState());
+                mBackStack.add(entry);
             }
             updateOnBackPressedCallbackEnabled();
-            mBackStackUUIDsToRestore = null;
-            mBackStackIdsToRestore = null;
-            mBackStackArgsToRestore = null;
+            mBackStackToRestore = null;
         }
         if (mGraph != null && mBackStack.isEmpty()) {
             boolean deepLinked = !mDeepLinkHandled && mActivity != null
@@ -873,7 +947,9 @@ public class NavController {
             }
             // The mGraph should always be on the back stack after you navigate()
             if (mBackStack.isEmpty()) {
-                mBackStack.add(new NavBackStackEntry(mGraph, finalArgs, mViewModel));
+                NavBackStackEntry entry = new NavBackStackEntry(mContext, mGraph, finalArgs,
+                        mLifecycleOwner, mViewModel);
+                mBackStack.add(entry);
             }
             // Now ensure all intermediate NavGraphs are put on the back stack
             // to ensure that global actions work.
@@ -882,14 +958,16 @@ public class NavController {
             while (destination != null && findDestination(destination.getId()) == null) {
                 NavGraph parent = destination.getParent();
                 if (parent != null) {
-                    hierarchy.addFirst(new NavBackStackEntry(parent, finalArgs, mViewModel));
+                    NavBackStackEntry entry = new NavBackStackEntry(mContext, parent, finalArgs,
+                            mLifecycleOwner, mViewModel);
+                    hierarchy.addFirst(entry);
                 }
                 destination = parent;
             }
             mBackStack.addAll(hierarchy);
             // And finally, add the new destination with its default args
-            NavBackStackEntry newBackStackEntry = new NavBackStackEntry(newDest,
-                    newDest.addInDefaultArgs(finalArgs), mViewModel);
+            NavBackStackEntry newBackStackEntry = new NavBackStackEntry(mContext, newDest,
+                    newDest.addInDefaultArgs(finalArgs), mLifecycleOwner, mViewModel);
             mBackStack.add(newBackStackEntry);
         }
         updateOnBackPressedCallbackEnabled();
@@ -971,18 +1049,12 @@ public class NavController {
             if (b == null) {
                 b = new Bundle();
             }
-            String[] backStackUUIDs = new String[mBackStack.size()];
-            int[] backStackIds = new int[mBackStack.size()];
-            Parcelable[] backStackArgs = new Parcelable[mBackStack.size()];
+            Parcelable[] backStack = new Parcelable[mBackStack.size()];
             int index = 0;
             for (NavBackStackEntry backStackEntry : mBackStack) {
-                backStackUUIDs[index] = backStackEntry.mId.toString();
-                backStackIds[index] = backStackEntry.getDestination().getId();
-                backStackArgs[index++] = backStackEntry.getArguments();
+                backStack[index++] = new NavBackStackEntryState(backStackEntry);
             }
-            b.putStringArray(KEY_BACK_STACK_UUIDS, backStackUUIDs);
-            b.putIntArray(KEY_BACK_STACK_IDS, backStackIds);
-            b.putParcelableArray(KEY_BACK_STACK_ARGS, backStackArgs);
+            b.putParcelableArray(KEY_BACK_STACK, backStack);
         }
         if (mDeepLinkHandled) {
             if (b == null) {
@@ -1011,14 +1083,13 @@ public class NavController {
         navState.setClassLoader(mContext.getClassLoader());
 
         mNavigatorStateToRestore = navState.getBundle(KEY_NAVIGATOR_STATE);
-        mBackStackUUIDsToRestore = navState.getStringArray(KEY_BACK_STACK_UUIDS);
-        mBackStackIdsToRestore = navState.getIntArray(KEY_BACK_STACK_IDS);
-        mBackStackArgsToRestore = navState.getParcelableArray(KEY_BACK_STACK_ARGS);
+        mBackStackToRestore = navState.getParcelableArray(KEY_BACK_STACK);
         mDeepLinkHandled = navState.getBoolean(KEY_DEEP_LINK_HANDLED);
     }
 
     void setLifecycleOwner(@NonNull LifecycleOwner owner) {
         mLifecycleOwner = owner;
+        mLifecycleOwner.getLifecycle().addObserver(mLifecycleObserver);
     }
 
     void setOnBackPressedDispatcher(@NonNull OnBackPressedDispatcher dispatcher) {
@@ -1043,16 +1114,14 @@ public class NavController {
     }
 
     void setViewModelStore(@NonNull ViewModelStore viewModelStore) {
-        mViewModel = NavControllerViewModel.getInstance(viewModelStore);
-        // Ensure that all of the NavBackStackEntry instances are using the
-        // newly set NavControllerViewModel as their backing store.
-        for (NavBackStackEntry entry : mBackStack) {
-            entry.setNavControllerViewModel(mViewModel);
+        if (!mBackStack.isEmpty()) {
+            throw new IllegalStateException("ViewModelStore should be set before setGraph call");
         }
+        mViewModel = NavControllerViewModel.getInstance(viewModelStore);
     }
 
     /**
-     * Gets the {@link ViewModelStoreOwner} for a NavGraph.This can be passed to
+     * Gets the {@link ViewModelStoreOwner} for a NavGraph. This can be passed to
      * {@link androidx.lifecycle.ViewModelProvider} to retrieve a ViewModel that is scoped
      * to the navigation graph - it will be cleared when the navigation graph is popped off
      * the back stack.
@@ -1068,19 +1137,39 @@ public class NavController {
             throw new IllegalStateException("You must call setViewModelStore() before calling "
                     + "getViewModelStoreOwner().");
         }
+        NavBackStackEntry lastFromBackStack = getBackStackEntry(navGraphId);
+        if (!(lastFromBackStack.getDestination() instanceof NavGraph)) {
+            throw new IllegalArgumentException("No NavGraph with ID " + navGraphId
+                    + " is on the NavController's back stack");
+        }
+        return lastFromBackStack;
+    }
+
+    /**
+     * Gets the topmost {@link NavBackStackEntry} for a destination id.
+     * <p>
+     * This is always safe to use with {@link #getCurrentDestination() the current destination} or
+     * {@link NavDestination#getParent() its parent} or grandparent navigation graphs as these
+     * destinations are guaranteed to be on the back stack.
+     *
+     * @param destinationId ID of a destination that exists on the back stack
+     * @throws IllegalArgumentException if the destination is not on the back stack
+     */
+    @NonNull
+    public NavBackStackEntry getBackStackEntry(@IdRes int destinationId) {
         NavBackStackEntry lastFromBackStack = null;
         Iterator<NavBackStackEntry> iterator = mBackStack.descendingIterator();
         while (iterator.hasNext()) {
             NavBackStackEntry entry = iterator.next();
             NavDestination destination = entry.getDestination();
-            if (destination instanceof NavGraph && destination.getId() == navGraphId) {
+            if (destination.getId() == destinationId) {
                 lastFromBackStack = entry;
                 break;
             }
         }
         if (lastFromBackStack == null) {
-            throw new IllegalArgumentException("No NavGraph with ID " + navGraphId + " is on the "
-                    + "NavController's back stack");
+            throw new IllegalArgumentException("No destination with ID " + destinationId
+                    + " is on the NavController's back stack");
         }
         return lastFromBackStack;
     }

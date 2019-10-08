@@ -12,10 +12,10 @@ plugins {
 dependencies {
     api("androidx.annotation:annotation:1.1.0")
 
-    api("androidx.core:core:1.1.0-rc01")
+    api("androidx.core:core:1.1.0")
     implementation("androidx.collection:collection:1.0.0")
     api("androidx.cursoradapter:cursoradapter:1.0.0")
-    api("androidx.fragment:fragment:1.1.0-rc01")
+    api("androidx.fragment:fragment:1.1.0")
     api(project(":appcompat:appcompat-resources"))
     api("androidx.drawerlayout:drawerlayout:1.0.0")
 
@@ -28,7 +28,7 @@ dependencies {
     androidTestImplementation(ESPRESSO_CORE, libs.exclude_for_espresso)
     androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
     androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
-    androidTestImplementation project(':internal-testutils'), {
+    androidTestImplementation project(':internal-testutils-appcompat'), {
         exclude group: 'androidx.appcompat', module: 'appcompat'
         exclude group: 'androidx.core', module: 'core'
     }
@@ -51,6 +51,10 @@ android {
     aaptOptions {
         additionalParameters "--no-version-vectors"
         noCompress 'ttf'
+    }
+
+    testOptions {
+        animationsDisabled = true
     }
 
     buildTypes.all {

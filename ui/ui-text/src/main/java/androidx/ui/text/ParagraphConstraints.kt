@@ -18,7 +18,7 @@ package androidx.ui.text
 /**
  * Layout constraints for [Paragraph] objects.
  *
- * Instances of this class are typically used with [Paragraph.layout].
+ * Instances of this class are typically used with [Paragraph].
  *
  * The only constraint that can be specified is the [width]. See the discussion
  * at [width] for more details.
@@ -38,12 +38,10 @@ package androidx.ui.text
  * forced line break is placed after it (even if an explicit line break
  * follows).
  *
- * The width influences how ellipses are applied. See the discussion at [new
- * ParagraphStyle] for more details.
+ * The width influences how ellipses are applied.
  *
- * This width is also used to position glyphs according to the [TextAlign]
- * alignment described in the [ParagraphStyle] used when building the
- * [Paragraph] with a [ParagraphBuilder].
+ * This width is also used to position glyphs according to the text alignment
+ * described in the [ParagraphStyle.textAlign] to create [Paragraph].
  */
 data class ParagraphConstraints(val width: Float) {
     override fun toString(): String {

@@ -56,17 +56,37 @@ public abstract class CustomTabsService extends Service {
      * the color of the navigation bar ({@link CustomTabsIntent.Builder#setNavigationBarColor}).
      */
     public static final String CATEGORY_NAVBAR_COLOR_CUSTOMIZATION =
-            "androidx.browser.trusted.category.NavBarColorCustomization";
+            "androidx.browser.customtabs.category.NavBarColorCustomization";
+
+    /**
+     * An Intent filter category to signify that the Custom Tabs provider supports selecting and
+     * customizing color schemes via {@link CustomTabsIntent.Builder#setColorScheme} and
+     * {@link CustomTabsIntent.Builder#setColorSchemeParams}.
+     */
+    public static final String CATEGORY_COLOR_SCHEME_CUSTOMIZATION =
+            "androidx.browser.customtabs.category.ColorSchemeCustomization";
 
     /**
      * An Intent filter category to signify that the Custom Tabs provider supports Trusted Web
-     * Activities.
-     *
-     * @hide
+     * Activities (see {@link TrustedWebUtils} for more details).
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
     public static final String TRUSTED_WEB_ACTIVITY_CATEGORY =
             "androidx.browser.trusted.category.TrustedWebActivities";
+
+    /**
+     * An Intent filter category to signify that the Trusted Web Activity provider supports
+     * sending shared data according to the Web Share Target v2 protocol defined in
+     * https://wicg.github.io/web-share-target/level-2/.
+     */
+    public static final String CATEGORY_WEB_SHARE_TARGET_V2 =
+            "androidx.browser.trusted.category.WebShareTargetV2";
+
+    /**
+     * An Intent filter category to signify that the Trusted Web Activity provider supports
+     * immersive mode.
+     */
+    public static final String CATEGORY_TRUSTED_WEB_ACTIVITY_IMMERSIVE_MODE =
+            "androidx.browser.trusted.category.ImmersiveMode";
 
     /**
      * For {@link CustomTabsService#mayLaunchUrl} calls that wants to specify more than one url,
@@ -126,18 +146,16 @@ public abstract class CustomTabsService extends Service {
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({FILE_PURPOSE_TWA_SPLASH_IMAGE})
+    @IntDef({FILE_PURPOSE_TRUSTED_WEB_ACTIVITY_SPLASH_IMAGE})
     public @interface FilePurpose {
     }
 
     /**
-     * File is a splash image to be shown on top of a Trusted Web Activity while the web contents
+     * A constant to be used with {@link CustomTabsSession#receiveFile} indicating that the file
+     * is a splash image to be shown on top of a Trusted Web Activity while the web contents
      * are loading.
-     *
-     * @hide
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
-    public static final int FILE_PURPOSE_TWA_SPLASH_IMAGE = 1;
+    public static final int FILE_PURPOSE_TRUSTED_WEB_ACTIVITY_SPLASH_IMAGE = 1;
 
     final SimpleArrayMap<IBinder, DeathRecipient> mDeathRecipientMap = new SimpleArrayMap<>();
 
@@ -149,11 +167,13 @@ public abstract class CustomTabsService extends Service {
         }
 
         @Override
+        @SuppressWarnings("NullAway") // TODO: b/141869399
         public boolean newSession(ICustomTabsCallback callback) {
             return newSessionInternal(callback, null);
         }
 
         @Override
+        @SuppressWarnings("NullAway") // TODO: b/141869399
         public boolean newSessionWithExtras(ICustomTabsCallback callback, Bundle extras) {
             return newSessionInternal(callback, getSessionIdFromBundle(extras));
         }
@@ -179,8 +199,9 @@ public abstract class CustomTabsService extends Service {
         }
 
         @Override
-        public boolean mayLaunchUrl(ICustomTabsCallback callback, Uri url,
-                Bundle extras, List<Bundle> otherLikelyBundles) {
+        @SuppressWarnings("NullAway") // TODO: b/141869399
+        public boolean mayLaunchUrl(@Nullable ICustomTabsCallback callback, @NonNull Uri url,
+                @Nullable Bundle extras, @Nullable List<Bundle> otherLikelyBundles) {
             return CustomTabsService.this.mayLaunchUrl(
                     new CustomTabsSessionToken(callback, getSessionIdFromBundle(extras)),
                     url, extras, otherLikelyBundles);
@@ -258,6 +279,7 @@ public abstract class CustomTabsService extends Service {
      * @return Whether the clean up was successful. Multiple calls with two tokens holdings the
      * same binder will return false.
      */
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     protected boolean cleanUpSession(CustomTabsSessionToken sessionToken) {
         try {
             synchronized (mDeathRecipientMap) {
@@ -407,10 +429,7 @@ public abstract class CustomTabsService extends Service {
      *                {@code CustomTabsService#FilePurpose}.
      * @param extras Reserved for future use.
      * @return {@code true} if the file was received successfully.
-     *
-     * @hide
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
     protected abstract boolean receiveFile(@NonNull CustomTabsSessionToken sessionToken,
             @NonNull Uri uri, @FilePurpose int purpose, @Nullable Bundle extras);
 }

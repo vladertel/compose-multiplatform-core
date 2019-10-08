@@ -17,6 +17,7 @@
 package androidx.media2.test.client.tests;
 
 import static android.media.AudioAttributes.CONTENT_TYPE_MUSIC;
+import static android.media.MediaFormat.MIMETYPE_TEXT_CEA_608;
 
 import static androidx.media.VolumeProviderCompat.VOLUME_CONTROL_ABSOLUTE;
 import static androidx.media2.session.SessionResult.RESULT_SUCCESS;
@@ -865,7 +866,7 @@ public class MediaControllerCallbackTest extends MediaSessionTestBase {
         prepareLooper();
 
         final VideoSize testSize = new VideoSize(100, 42);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch latch = new CountDownLatch(2);
         final MediaController.ControllerCallback callback =
                 new MediaController.ControllerCallback() {
                     @Override
@@ -875,16 +876,24 @@ public class MediaControllerCallbackTest extends MediaSessionTestBase {
                         assertEquals(testSize, videoSize);
                         latch.countDown();
                     }
+
+                    @Override
+                    public void onVideoSizeChanged(@NonNull MediaController controller,
+                            @NonNull VideoSize videoSize) {
+                        assertEquals(testSize, videoSize);
+                        latch.countDown();
+                    }
                 };
 
         MediaController controller = createController(mRemoteSession2.getToken(), true, null,
                 callback);
+        mRemoteSession2.getMockPlayer().notifyCurrentMediaItemChanged(INDEX_FOR_UNKONWN_ITEM);
         mRemoteSession2.getMockPlayer().notifyVideoSizeChanged(testSize);
         assertTrue(latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void testOnTrackInfoChanged() throws InterruptedException {
+    public void testOnTracksChanged() throws InterruptedException {
         prepareLooper();
         final List<SessionPlayer.TrackInfo> testTracks = MediaTestUtils.createTrackInfoList();
 
@@ -892,22 +901,22 @@ public class MediaControllerCallbackTest extends MediaSessionTestBase {
         final MediaController.ControllerCallback callback =
                 new MediaController.ControllerCallback() {
                     @Override
-                    public void onTrackInfoChanged(@NonNull MediaController controller,
-                            @NonNull List<SessionPlayer.TrackInfo> trackInfos) {
-                        assertEquals(testTracks, trackInfos);
+                    public void onTracksChanged(@NonNull MediaController controller,
+                            @NonNull List<TrackInfo> tracks) {
+                        assertEquals(testTracks, tracks);
                         latch.countDown();
                     }
                 };
         MediaController controller = createController(mRemoteSession2.getToken(), true, null,
                 callback);
-        mRemoteSession2.getMockPlayer().notifyTrackInfoChanged(testTracks);
+        mRemoteSession2.getMockPlayer().notifyTracksChanged(testTracks);
         assertTrue(latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void testOnTrackSelected() throws InterruptedException {
         prepareLooper();
-        final SessionPlayer.TrackInfo testTrack = MediaTestUtils.createTrackInfo(1, "test",
+        final SessionPlayer.TrackInfo testTrack = MediaTestUtils.createTrackInfo(1,
                 SessionPlayer.TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE);
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -929,7 +938,7 @@ public class MediaControllerCallbackTest extends MediaSessionTestBase {
     @Test
     public void testOnTrackDeselected() throws InterruptedException {
         prepareLooper();
-        final SessionPlayer.TrackInfo testTrack = MediaTestUtils.createTrackInfo(1, "test",
+        final SessionPlayer.TrackInfo testTrack = MediaTestUtils.createTrackInfo(1,
                 SessionPlayer.TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE);
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -954,12 +963,11 @@ public class MediaControllerCallbackTest extends MediaSessionTestBase {
 
         MediaFormat format = new MediaFormat();
         format.setString(MediaFormat.KEY_LANGUAGE, "und");
-        format.setString(MediaFormat.KEY_MIME, SubtitleData.MIMETYPE_TEXT_CEA_608);
+        format.setString(MediaFormat.KEY_MIME, MIMETYPE_TEXT_CEA_608);
         MediaMetadata metadata = new MediaMetadata.Builder()
                 .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, "onSubtitleData").build();
         final MediaItem testItem = new MediaItem.Builder().setMetadata(metadata).build();
-        final TrackInfo testTrack = new TrackInfo(1, testItem, TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE,
-                format);
+        final TrackInfo testTrack = new TrackInfo(1, TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE, format);
         final SubtitleData testData = new SubtitleData(123, 456,
                 new byte[] { 7, 8, 9, 0, 1, 2, 3, 4, 5, 6 });
 

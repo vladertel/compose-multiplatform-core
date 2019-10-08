@@ -13,7 +13,7 @@ dependencies {
     api(project(":media"))
     api(project(":media2:media2-common"))
     api(GUAVA_LISTENABLE_FUTURE)
-    implementation(project(":concurrent:concurrent-futures"))
+    implementation("androidx.concurrent:concurrent-futures:1.0.0")
     implementation("androidx.collection:collection:1.0.0")
     compileOnly(CHECKER_FRAMEWORK)
 
@@ -22,7 +22,7 @@ dependencies {
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ESPRESSO_CORE, libs.exclude_for_espresso)
-    androidTestImplementation project(':internal-testutils')
+    androidTestImplementation project(':internal-testutils-runtime')
     annotationProcessor(project(":versionedparcelable-annotation"))
 }
 
@@ -41,5 +41,4 @@ androidx {
     description = "Media2 Session"
     // TODO: Remove these (b/130838274)
     failOnDeprecationWarnings = false
-    trackRestrictedAPIs = false // TODO: Remove it (b/131561173)
 }

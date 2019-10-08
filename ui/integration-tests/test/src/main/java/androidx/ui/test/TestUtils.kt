@@ -16,43 +16,23 @@
 
 package androidx.ui.test
 
-import androidx.compose.composer
 import android.app.Activity
-import androidx.compose.Composable
-import androidx.compose.CompositionContext
-import androidx.ui.core.composeIntoActivity
-import androidx.ui.material.MaterialTheme
-import androidx.ui.material.surface.Surface
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import androidx.test.rule.ActivityTestRule
 
-fun ComposeMaterialIntoActivity(
-    activity: Activity,
-    composable: @Composable() () -> Unit
-): CompositionContext? {
-    return composeIntoActivity(activity) {
-        MaterialTheme {
-            Surface {
-                composable()
-            }
+fun <T : Activity> ActivityTestRule<T>.runOnUiThreadSync(action: () -> Unit) {
+    // Workaround for lambda bug in IR
+    runOnUiThread(object : Runnable {
+        override fun run() {
+            action.invoke()
         }
-    }
+    })
 }
 
-/**
- * Performs recomposition and asserts that there were some pending changes.
- */
-fun CompositionContext.recomposeSyncAssertHadChanges() {
-    val hadChanges = recomposeSync()
-    assertTrue("Expected pending changes on recomposition but there were none. Did " +
-            "you forget to call FrameManager.next()?", hadChanges)
-}
-
-/**
- * Performs recomposition and asserts that there were no pending changes.
- */
-fun CompositionContext.recomposeSyncAssertNoChanges() {
-    val hadChanges = recomposeSync()
-    assertFalse("Expected no pending changes on recomposition but there were some.",
-        hadChanges)
+fun Activity.runOnUiThreadSync(action: () -> Unit) {
+    // Workaround for lambda bug in IR
+    runOnUiThread(object : Runnable {
+        override fun run() {
+            action.invoke()
+        }
+    })
 }

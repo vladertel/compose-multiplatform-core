@@ -31,6 +31,7 @@ import androidx.ui.layout.Container
 import androidx.ui.layout.CrossAxisAlignment
 import androidx.ui.layout.DpConstraints
 import androidx.ui.layout.FlexRow
+import androidx.ui.layout.LayoutSize
 import androidx.ui.layout.MaxIntrinsicHeight
 import androidx.ui.layout.MaxIntrinsicWidth
 import androidx.ui.layout.MinIntrinsicHeight
@@ -51,7 +52,10 @@ import androidx.ui.layout.Wrap
 fun SameWidthBoxes() {
     Wrap {
         MinIntrinsicWidth {
-            Column(crossAxisAlignment = CrossAxisAlignment.Stretch) {
+            Column(
+                mainAxisSize = LayoutSize.Expand,
+                crossAxisAlignment = CrossAxisAlignment.Stretch
+            ) {
                 ConstrainedBox(DpConstraints.tightConstraints(width = 20.dp, height = 10.dp)) {
                     DrawShape(RectangleShape, Color.Gray)
                 }
@@ -59,7 +63,7 @@ fun SameWidthBoxes() {
                     DrawShape(RectangleShape, Color.Blue)
                 }
                 ConstrainedBox(DpConstraints.tightConstraints(width = 10.dp, height = 10.dp)) {
-                    DrawShape(RectangleShape, Color.Fuchsia)
+                    DrawShape(RectangleShape, Color.Magenta)
                 }
             }
         }
@@ -111,7 +115,10 @@ fun MatchParentDividerForText() {
 fun SameWidthTextBoxes() {
     Wrap {
         MaxIntrinsicWidth {
-            Column(crossAxisAlignment = CrossAxisAlignment.Stretch) {
+            Column(
+                mainAxisSize = LayoutSize.Expand,
+                crossAxisAlignment = CrossAxisAlignment.Stretch
+            ) {
                 Wrap {
                     DrawShape(RectangleShape, Color.Gray)
                     Text("Short text")
@@ -121,7 +128,7 @@ fun SameWidthTextBoxes() {
                     Text("Extremely long text giving the width of its siblings")
                 }
                 Wrap {
-                    DrawShape(RectangleShape, Color.Fuchsia)
+                    DrawShape(RectangleShape, Color.Magenta)
                     Text("Medium length text")
                 }
             }

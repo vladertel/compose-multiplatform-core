@@ -82,8 +82,11 @@ fun Project.configureLint(lintOptions: LintOptions, extension: AndroidXExtension
                     fatal("UnusedResources")
                     fatal("KotlinPropertyAccess")
                     fatal("LambdaLast")
-                    fatal("NoHardKeywords")
                     fatal("UnknownNullness")
+
+                    // suppress warnings more specifically than issue-wide severity (regexes)
+                    // Currently suppresses warnings from baseline files working as intended
+                    lintConfig = project.rootProject.file("buildSrc/lint.xml")
 
                     // Only override if not set explicitly.
                     // Some Kotlin projects may wish to disable this.
@@ -132,9 +135,9 @@ val Project.lintBaseline get() = File(projectDir, "/lint-baseline.xml")
 
 private fun Project.getIgnoreNullnessError(count: Int): String = (
         "\n${pluralizeMessage(count)} currently whitelisted in " +
-                "$projectDir/nullness-lint-baseline.xml - these warnings need to be fixed before " +
+                "$projectDir/lint-baseline.xml - these warnings should ideally be fixed before " +
                 "this library moves to a stable release. Run " +
-                "'./gradlew $name:lintDebug -PcheckUnknownNullness' to fail on these warnings."
+                "'./gradlew $name:lintDebug -PcheckUnknownNullness' to fail lint on these warnings."
         )
 
 private fun pluralizeMessage(count: Int) = if (count > 1) {

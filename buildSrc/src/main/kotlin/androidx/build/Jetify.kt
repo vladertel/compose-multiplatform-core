@@ -25,11 +25,13 @@ import org.gradle.api.tasks.bundling.Zip
 
 val archivesToDejetify = listOf(
     "m2repository/androidx/activity/**",
+    "m2repository/androidx/ads/identifier/**",
     "m2repository/androidx/annotation/**",
     "m2repository/androidx/appcompat/**",
     "m2repository/androidx/arch/**",
     "m2repository/androidx/arch/core/**",
     "m2repository/androidx/asynclayoutinflater/**",
+    "m2repository/androidx/benchmark/**",
     "m2repository/androidx/biometric/**",
     "m2repository/androidx/browser/**",
     "m2repository/androidx/camera/**",

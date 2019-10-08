@@ -38,12 +38,12 @@ package androidx.room {
     method public final void insert(T![]!);
     method public final void insert(Iterable<? extends T>!);
     method public final long insertAndReturnId(T!);
-    method public final long[]! insertAndReturnIdsArray(java.util.Collection<T!>!);
+    method public final long[]! insertAndReturnIdsArray(java.util.Collection<? extends T>!);
     method public final long[]! insertAndReturnIdsArray(T![]!);
-    method public final Long![]! insertAndReturnIdsArrayBox(java.util.Collection<T!>!);
+    method public final Long![]! insertAndReturnIdsArrayBox(java.util.Collection<? extends T>!);
     method public final Long![]! insertAndReturnIdsArrayBox(T![]!);
     method public final java.util.List<java.lang.Long!>! insertAndReturnIdsList(T![]!);
-    method public final java.util.List<java.lang.Long!>! insertAndReturnIdsList(java.util.Collection<T!>!);
+    method public final java.util.List<java.lang.Long!>! insertAndReturnIdsList(java.util.Collection<? extends T>!);
   }
 
   public class InvalidationTracker {
@@ -95,8 +95,9 @@ package androidx.room {
     method @CallSuper public void init(androidx.room.DatabaseConfiguration);
     method protected void internalInitInvalidationTracker(androidx.sqlite.db.SupportSQLiteDatabase);
     method public boolean isOpen();
-    method public android.database.Cursor! query(String!, Object![]?);
-    method public android.database.Cursor! query(androidx.sqlite.db.SupportSQLiteQuery!);
+    method public android.database.Cursor query(String, Object![]?);
+    method public android.database.Cursor query(androidx.sqlite.db.SupportSQLiteQuery);
+    method public android.database.Cursor query(androidx.sqlite.db.SupportSQLiteQuery, android.os.CancellationSignal?);
     method public void runInTransaction(Runnable);
     method public <V> V! runInTransaction(java.util.concurrent.Callable<V!>);
     method @Deprecated public void setTransactionSuccessful();
@@ -125,6 +126,7 @@ package androidx.room {
   public abstract static class RoomDatabase.Callback {
     ctor public RoomDatabase.Callback();
     method public void onCreate(androidx.sqlite.db.SupportSQLiteDatabase);
+    method public void onDestructiveMigration(androidx.sqlite.db.SupportSQLiteDatabase);
     method public void onOpen(androidx.sqlite.db.SupportSQLiteDatabase);
   }
 
@@ -231,8 +233,10 @@ package androidx.room.util {
   }
 
   @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public class DBUtil {
+    method public static android.os.CancellationSignal? createCancellationSignal();
     method public static void dropFtsSyncTriggers(androidx.sqlite.db.SupportSQLiteDatabase!);
-    method public static android.database.Cursor query(androidx.room.RoomDatabase!, androidx.sqlite.db.SupportSQLiteQuery!, boolean);
+    method @Deprecated public static android.database.Cursor query(androidx.room.RoomDatabase!, androidx.sqlite.db.SupportSQLiteQuery!, boolean);
+    method public static android.database.Cursor query(androidx.room.RoomDatabase, androidx.sqlite.db.SupportSQLiteQuery, boolean, android.os.CancellationSignal?);
     method public static int readVersion(java.io.File) throws java.io.IOException;
   }
 

@@ -19,7 +19,6 @@ package androidx.ui.material.studies
 import androidx.ui.layout.FlexColumn
 import androidx.ui.material.surface.Surface
 import androidx.ui.material.themeColor
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.unaryPlus
@@ -31,13 +30,13 @@ import androidx.compose.unaryPlus
  */
 
 @Composable
-fun Scaffold(appBar: @Composable() () -> Unit, @Children children: @Composable() () -> Unit) {
+fun Scaffold(appBar: @Composable() () -> Unit, children: @Composable() () -> Unit) {
     FlexColumn {
         inflexible {
             appBar()
         }
         expanded(flex = 1.0f) {
-            Surface(color = +themeColor{ surface }) {
+            Surface(color = +themeColor { background }) {
                 children()
             }
         }

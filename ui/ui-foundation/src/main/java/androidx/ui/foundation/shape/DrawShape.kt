@@ -22,13 +22,13 @@ import androidx.compose.memo
 import androidx.compose.unaryPlus
 import androidx.ui.core.Draw
 import androidx.ui.core.PxSize
-import androidx.ui.core.vectorgraphics.Brush
-import androidx.ui.core.vectorgraphics.SolidColor
 import androidx.ui.engine.geometry.Outline
 import androidx.ui.engine.geometry.Shape
 import androidx.ui.engine.geometry.drawOutline
 import androidx.ui.graphics.Color
-import androidx.ui.painting.Paint
+import androidx.ui.graphics.Brush
+import androidx.ui.graphics.SolidColor
+import androidx.ui.graphics.Paint
 
 /**
  * Draw the [shape] with the provided [color].
@@ -52,7 +52,7 @@ fun DrawShape(shape: Shape, brush: Brush) {
     with(+memo { DrawShapeCacheHolder() }) {
         lastShape = shape
         Draw { canvas, parentSize ->
-            brush.applyBrush(paint)
+            brush.applyTo(paint)
             lastParentSize = parentSize
             val outline =
                 lastOutline ?: shape.createOutline(parentSize, density).also { lastOutline = it }

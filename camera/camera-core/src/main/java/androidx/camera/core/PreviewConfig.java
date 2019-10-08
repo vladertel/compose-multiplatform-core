@@ -16,7 +16,7 @@
 
 package androidx.camera.core;
 
-import android.os.Handler;
+import android.util.Pair;
 import android.util.Rational;
 import android.util.Size;
 import android.view.Surface;
@@ -26,8 +26,10 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 
 /** Configuration for a {@link Preview} use case. */
 public final class PreviewConfig
@@ -61,7 +63,7 @@ public final class PreviewConfig
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
-    public boolean containsOption(Option<?> id) {
+    public boolean containsOption(@NonNull Option<?> id) {
         return mConfig.containsOption(id);
     }
 
@@ -69,7 +71,7 @@ public final class PreviewConfig
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
     @Nullable
-    public <ValueT> ValueT retrieveOption(Option<ValueT> id) {
+    public <ValueT> ValueT retrieveOption(@NonNull Option<ValueT> id) {
         return mConfig.retrieveOption(id);
     }
 
@@ -77,20 +79,22 @@ public final class PreviewConfig
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
     @Nullable
-    public <ValueT> ValueT retrieveOption(Option<ValueT> id, @Nullable ValueT valueIfMissing) {
+    public <ValueT> ValueT retrieveOption(@NonNull Option<ValueT> id,
+            @Nullable ValueT valueIfMissing) {
         return mConfig.retrieveOption(id, valueIfMissing);
     }
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
-    public void findOptions(String idStem, OptionMatcher matcher) {
+    public void findOptions(@NonNull String idStem, @NonNull OptionMatcher matcher) {
         mConfig.findOptions(idStem, matcher);
     }
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
+    @NonNull
     public Set<Option<?>> listOptions() {
         return mConfig.listOptions();
     }
@@ -114,6 +118,7 @@ public final class PreviewConfig
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
+    @NonNull
     public Class<Preview> getTargetClass() {
         @SuppressWarnings("unchecked") // Value should only be added via Builder#setTargetClass()
                 Class<Preview> storedClass =
@@ -148,6 +153,7 @@ public final class PreviewConfig
      * @throws IllegalArgumentException if the option does not exist in this configuration.
      */
     @Override
+    @NonNull
     public String getTargetName() {
         return retrieveOption(OPTION_TARGET_NAME);
     }
@@ -174,8 +180,38 @@ public final class PreviewConfig
      * @throws IllegalArgumentException if the option does not exist in this configuration.
      */
     @Override
+    @NonNull
     public CameraX.LensFacing getLensFacing() {
         return retrieveOption(OPTION_LENS_FACING);
+    }
+
+    /**
+     * Returns the set of {@link CameraIdFilter} that filter out unavailable camera id.
+     *
+     * @param valueIfMissing The value to return if this configuration option has not been set.
+     * @return The stored value or <code>ValueIfMissing</code> if the value does not exist in this
+     * configuration.
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Override
+    @Nullable
+    public CameraIdFilter getCameraIdFilter(@Nullable CameraIdFilter valueIfMissing) {
+        return retrieveOption(OPTION_CAMERA_ID_FILTER, valueIfMissing);
+    }
+
+    /**
+     * Returns the set of {@link CameraIdFilter} that filter out unavailable camera id.
+     *
+     * @return The stored value, if it exists in the configuration.
+     * @throws IllegalArgumentException if the option does not exist in this configuration.
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Override
+    @NonNull
+    public CameraIdFilter getCameraIdFilter() {
+        return retrieveOption(OPTION_CAMERA_ID_FILTER);
     }
 
     // Implementations of ImageOutputConfig default methods
@@ -190,11 +226,13 @@ public final class PreviewConfig
      * @param valueIfMissing The value to return if this configuration option has not been set.
      * @return The stored value or <code>valueIfMissing</code> if the value does not exist in this
      * configuration.
+     * @hide
      */
+    @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
     @Nullable
-    public Rational getTargetAspectRatio(@Nullable Rational valueIfMissing) {
-        return retrieveOption(OPTION_TARGET_ASPECT_RATIO, valueIfMissing);
+    public Rational getTargetAspectRatioCustom(@Nullable Rational valueIfMissing) {
+        return retrieveOption(OPTION_TARGET_ASPECT_RATIO_CUSTOM, valueIfMissing);
     }
 
     /**
@@ -206,9 +244,37 @@ public final class PreviewConfig
      *
      * @return The stored value, if it exists in this configuration.
      * @throws IllegalArgumentException if the option does not exist in this configuration.
+     * @hide
      */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
     @Override
-    public Rational getTargetAspectRatio() {
+    public Rational getTargetAspectRatioCustom() {
+        return retrieveOption(OPTION_TARGET_ASPECT_RATIO_CUSTOM);
+    }
+
+    /**
+     * Retrieves the aspect ratio of the target intending to use images from this configuration.
+     *
+     * @param valueIfMissing The value to return if this configuration option has not been set.
+     * @return The stored value or <code>valueIfMissing</code> if the value does not exist in this
+     * configuration.
+     */
+    @Nullable
+    @Override
+    public AspectRatio getTargetAspectRatio(@Nullable AspectRatio valueIfMissing) {
+        return retrieveOption(OPTION_TARGET_ASPECT_RATIO, valueIfMissing);
+    }
+
+    /**
+     * Retrieves the aspect ratio of the target intending to use images from this configuration.
+     *
+     * @return The stored value, if it exists in this configuration.
+     * @throws IllegalArgumentException if the option does not exist in this configuration.
+     */
+    @NonNull
+    @Override
+    public AspectRatio getTargetAspectRatio() {
         return retrieveOption(OPTION_TARGET_ASPECT_RATIO);
     }
 
@@ -253,7 +319,8 @@ public final class PreviewConfig
      * configuration.
      */
     @Override
-    public Size getTargetResolution(Size valueIfMissing) {
+    @Nullable
+    public Size getTargetResolution(@Nullable Size valueIfMissing) {
         return retrieveOption(ImageOutputConfig.OPTION_TARGET_RESOLUTION, valueIfMissing);
     }
 
@@ -264,28 +331,77 @@ public final class PreviewConfig
      * @throws IllegalArgumentException if the option does not exist in this configuration.
      */
     @Override
+    @NonNull
     public Size getTargetResolution() {
         return retrieveOption(ImageOutputConfig.OPTION_TARGET_RESOLUTION);
+    }
+
+    /**
+     * Retrieves the default resolution of the target intending to use from this configuration.
+     *
+     * @param valueIfMissing The value to return if this configuration option has not been set.
+     * @return The stored value or <code>valueIfMissing</code> if the value does not exist in this
+     * configuration.
+     * @hide
+     */
+    @Nullable
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Override
+    public Size getDefaultResolution(@Nullable Size valueIfMissing) {
+        return retrieveOption(ImageOutputConfig.OPTION_DEFAULT_RESOLUTION, valueIfMissing);
+    }
+
+    /**
+     * Retrieves the default resolution of the target intending to use from this configuration.
+     *
+     * @return The stored value, if it exists in this configuration.
+     * @throws IllegalArgumentException if the option does not exist in this configuration.
+     * @hide
+     */
+    @NonNull
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Override
+    public Size getDefaultResolution() {
+        return retrieveOption(ImageOutputConfig.OPTION_DEFAULT_RESOLUTION);
     }
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
-    public Size getMaxResolution(Size valueIfMissing) {
+    @Nullable
+    public Size getMaxResolution(@Nullable Size valueIfMissing) {
         return retrieveOption(OPTION_MAX_RESOLUTION, valueIfMissing);
     }
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
+    @NonNull
     public Size getMaxResolution() {
         return retrieveOption(OPTION_MAX_RESOLUTION);
+    }
+
+    /** @hide */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Override
+    @Nullable
+    public List<Pair<Integer, Size[]>> getSupportedResolutions(
+            @Nullable List<Pair<Integer, Size[]>> valueIfMissing) {
+        return retrieveOption(OPTION_SUPPORTED_RESOLUTIONS, valueIfMissing);
+    }
+
+    /** @hide */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Override
+    @NonNull
+    public List<Pair<Integer, Size[]>> getSupportedResolutions() {
+        return retrieveOption(OPTION_SUPPORTED_RESOLUTIONS);
     }
 
     // Implementations of ThreadConfig default methods
 
     /**
-     * Returns the default handler that will be used for callbacks.
+     * Returns the executor that will be used for background tasks.
      *
      * @param valueIfMissing The value to return if this configuration option has not been set.
      * @return The stored value or <code>valueIfMissing</code> if the value does not exist in this
@@ -293,19 +409,20 @@ public final class PreviewConfig
      */
     @Override
     @Nullable
-    public Handler getCallbackHandler(@Nullable Handler valueIfMissing) {
-        return retrieveOption(OPTION_CALLBACK_HANDLER, valueIfMissing);
+    public Executor getBackgroundExecutor(@Nullable Executor valueIfMissing) {
+        return retrieveOption(OPTION_BACKGROUND_EXECUTOR, valueIfMissing);
     }
 
     /**
-     * Returns the default handler that will be used for callbacks.
+     * Returns the executor that will be used for background tasks.
      *
      * @return The stored value, if it exists in this configuration.
      * @throws IllegalArgumentException if the option does not exist in this configuration.
      */
     @Override
-    public Handler getCallbackHandler() {
-        return retrieveOption(OPTION_CALLBACK_HANDLER);
+    @NonNull
+    public Executor getBackgroundExecutor() {
+        return retrieveOption(OPTION_BACKGROUND_EXECUTOR);
     }
 
     // Implementations of UseCaseConfig default methods
@@ -321,6 +438,7 @@ public final class PreviewConfig
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
+    @NonNull
     public SessionConfig getDefaultSessionConfig() {
         return retrieveOption(OPTION_DEFAULT_SESSION_CONFIG);
     }
@@ -337,6 +455,7 @@ public final class PreviewConfig
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
+    @NonNull
     public SessionConfig.OptionUnpacker getSessionOptionUnpacker() {
         return retrieveOption(OPTION_SESSION_CONFIG_UNPACKER);
     }
@@ -352,6 +471,7 @@ public final class PreviewConfig
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
+    @NonNull
     public CaptureConfig getDefaultCaptureConfig() {
         return retrieveOption(OPTION_DEFAULT_CAPTURE_CONFIG);
     }
@@ -368,26 +488,29 @@ public final class PreviewConfig
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
+    @NonNull
     public CaptureConfig.OptionUnpacker getCaptureOptionUnpacker() {
         return retrieveOption(OPTION_CAPTURE_CONFIG_UNPACKER);
     }
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
+    @Override
     public int getSurfaceOccupancyPriority(int valueIfMissing) {
         return retrieveOption(OPTION_SURFACE_OCCUPANCY_PRIORITY, valueIfMissing);
     }
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
+    @Override
     public int getSurfaceOccupancyPriority() {
         return retrieveOption(OPTION_SURFACE_OCCUPANCY_PRIORITY);
     }
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
-    @Nullable
     @Override
+    @Nullable
     public UseCase.EventListener getUseCaseEventListener(
             @Nullable UseCase.EventListener valueIfMissing) {
         return retrieveOption(OPTION_USE_CASE_EVENT_LISTENER, valueIfMissing);
@@ -395,20 +518,22 @@ public final class PreviewConfig
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
-    @Nullable
     @Override
+    @NonNull
     public UseCase.EventListener getUseCaseEventListener() {
         return retrieveOption(OPTION_USE_CASE_EVENT_LISTENER);
     }
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
-    ImageInfoProcessor getImageInfoProcessor(ImageInfoProcessor valueIfMissing) {
+    @Nullable
+    ImageInfoProcessor getImageInfoProcessor(@Nullable ImageInfoProcessor valueIfMissing) {
         return retrieveOption(IMAGE_INFO_PROCESSOR, valueIfMissing);
     }
 
     /** @hide */
     @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
     ImageInfoProcessor getImageInfoProcessor() {
         return retrieveOption(IMAGE_INFO_PROCESSOR);
     }
@@ -435,6 +560,7 @@ public final class PreviewConfig
      * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
     public CaptureProcessor getCaptureProcessor() {
         return retrieveOption(OPTION_PREVIEW_CAPTURE_PROCESSOR);
     }
@@ -478,7 +604,8 @@ public final class PreviewConfig
          * @param configuration An immutable configuration to pre-populate this builder.
          * @return The new Builder.
          */
-        public static Builder fromConfig(PreviewConfig configuration) {
+        @NonNull
+        public static Builder fromConfig(@NonNull PreviewConfig configuration) {
             return new Builder(MutableOptionsBundle.from(configuration));
         }
 
@@ -489,6 +616,7 @@ public final class PreviewConfig
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
+        @NonNull
         public MutableConfig getMutableConfig() {
             return mMutableConfig;
         }
@@ -498,7 +626,17 @@ public final class PreviewConfig
          *
          * @return A {@link PreviewConfig} populated with the current state.
          */
+        @NonNull
+        @Override
         public PreviewConfig build() {
+            // Error at runtime for using both setTargetResolution and setTargetAspectRatio on
+            // the same config.
+            if (getMutableConfig().retrieveOption(OPTION_TARGET_ASPECT_RATIO, null) != null
+                    && getMutableConfig().retrieveOption(OPTION_TARGET_RESOLUTION, null) != null) {
+                throw new IllegalArgumentException(
+                        "Cannot use both setTargetResolution and setTargetAspectRatio on the same "
+                                + "config.");
+            }
             return new PreviewConfig(OptionsBundle.from(mMutableConfig));
         }
 
@@ -507,7 +645,8 @@ public final class PreviewConfig
         /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
-        public Builder setTargetClass(Class<Preview> targetClass) {
+        @NonNull
+        public Builder setTargetClass(@NonNull Class<Preview> targetClass) {
             getMutableConfig().insertOption(OPTION_TARGET_CLASS, targetClass);
 
             // If no name is set yet, then generate a unique name
@@ -530,7 +669,8 @@ public final class PreviewConfig
          * @return the current Builder.
          */
         @Override
-        public Builder setTargetName(String targetName) {
+        @NonNull
+        public Builder setTargetName(@NonNull String targetName) {
             getMutableConfig().insertOption(OPTION_TARGET_NAME, targetName);
             return this;
         }
@@ -547,8 +687,27 @@ public final class PreviewConfig
          * @return the current Builder.
          */
         @Override
-        public Builder setLensFacing(CameraX.LensFacing lensFacing) {
+        @NonNull
+        public Builder setLensFacing(@NonNull CameraX.LensFacing lensFacing) {
             getMutableConfig().insertOption(OPTION_LENS_FACING, lensFacing);
+            return this;
+        }
+
+        /**
+         * Sets a {@link CameraIdFilter} that filter out the unavailable camera id.
+         *
+         * <p>The camera id filter will be used to filter those cameras with lens facing
+         * specified in the config.
+         *
+         * @param cameraIdFilter The {@link CameraIdFilter}.
+         * @return the current Builder.
+         * @hide
+         */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Override
+        @NonNull
+        public Builder setCameraIdFilter(@NonNull CameraIdFilter cameraIdFilter) {
+            getMutableConfig().insertOption(OPTION_CAMERA_ID_FILTER, cameraIdFilter);
             return this;
         }
 
@@ -565,15 +724,48 @@ public final class PreviewConfig
          * ratio which may differ from the request, possibly due to device constraints.
          * Application code should check the resulting output's resolution.
          *
+         * <p>This method can be used to request an aspect ratio that is not from the standard set
+         * of aspect ratios defined in the {@link AspectRatio}.
+         *
+         * <p>This method will remove any value set by setTargetAspectRatio().
+         *
          * <p>For Preview, the output is the SurfaceTexture of the
          * {@link androidx.camera.core.Preview.PreviewOutput}.
          *
          * @param aspectRatio A {@link Rational} representing the ratio of the target's width and
          *                    height.
          * @return The current Builder.
+         * @hide
          */
+        @NonNull
+        @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
-        public Builder setTargetAspectRatio(Rational aspectRatio) {
+        public Builder setTargetAspectRatioCustom(@NonNull Rational aspectRatio) {
+            getMutableConfig().insertOption(OPTION_TARGET_ASPECT_RATIO_CUSTOM, aspectRatio);
+            getMutableConfig().removeOption(OPTION_TARGET_ASPECT_RATIO);
+            return this;
+        }
+
+        /**
+         * Sets the aspect ratio of the intended target for images from this configuration.
+         *
+         * <p>It is not allowed to set both target aspect ratio and target resolution on the same
+         * use case.
+         *
+         * <p>The target aspect ratio is used as a hint when determining the resulting output aspect
+         * ratio which may differ from the request, possibly due to device constraints.
+         * Application code should check the resulting output's resolution.
+         *
+         * <p>For Preview, the output is the SurfaceTexture of the
+         * {@link androidx.camera.core.Preview.PreviewOutput}.
+         *
+         * @param aspectRatio A {@link AspectRatio} representing the ratio of the
+         *                    target's width and height.
+         * @return The current Builder.
+         */
+        @NonNull
+        @Override
+        public Builder setTargetAspectRatio(@NonNull AspectRatio aspectRatio) {
             getMutableConfig().insertOption(OPTION_TARGET_ASPECT_RATIO, aspectRatio);
             return this;
         }
@@ -588,6 +780,7 @@ public final class PreviewConfig
          * @param rotation The rotation of the intended target.
          * @return The current Builder.
          */
+        @NonNull
         @Override
         public Builder setTargetRotation(@RotationValue int rotation) {
             getMutableConfig().insertOption(OPTION_TARGET_ROTATION, rotation);
@@ -604,35 +797,72 @@ public final class PreviewConfig
          * target resolution, the nearest available resolution smaller than the target resolution
          * will be chosen.
          *
+         * <p>It is not allowed to set both target aspect ratio and target resolution on the same
+         * use case.
+         *
+         * <p>The target aspect ratio will also be set the same as the aspect ratio of the provided
+         * {@link Size}. Make sure to set the target resolution with the correct orientation.
+         *
          * @param resolution The target resolution to choose from supported output sizes list.
          * @return The current Builder.
          */
+        @NonNull
         @Override
-        public Builder setTargetResolution(Size resolution) {
+        public Builder setTargetResolution(@NonNull Size resolution) {
             getMutableConfig()
                     .insertOption(ImageOutputConfig.OPTION_TARGET_RESOLUTION, resolution);
+            if (resolution != null) {
+                getMutableConfig().insertOption(OPTION_TARGET_ASPECT_RATIO_CUSTOM,
+                        new Rational(resolution.getWidth(), resolution.getHeight()));
+            }
+            return this;
+        }
+
+        /**
+         * Sets the default resolution of the intended target from this configuration.
+         *
+         * @param resolution The default resolution to choose from supported output sizes list.
+         * @return The current Builder.
+         * @hide
+         */
+        @NonNull
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Override
+        public Builder setDefaultResolution(@NonNull Size resolution) {
+            getMutableConfig().insertOption(OPTION_DEFAULT_RESOLUTION, resolution);
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Override
+        public Builder setMaxResolution(@NonNull Size resolution) {
+            getMutableConfig().insertOption(OPTION_MAX_RESOLUTION, resolution);
             return this;
         }
 
         /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
-        public Builder setMaxResolution(Size resolution) {
-            getMutableConfig().insertOption(OPTION_MAX_RESOLUTION, resolution);
+        @NonNull
+        public Builder setSupportedResolutions(@NonNull List<Pair<Integer, Size[]>> resolutions) {
+            getMutableConfig().insertOption(OPTION_SUPPORTED_RESOLUTIONS, resolutions);
             return this;
         }
 
         // Implementations of ThreadConfig.Builder default methods
 
         /**
-         * Sets the default handler that will be used for callbacks.
+         * Sets the default executor that will be used for background tasks.
          *
-         * @param handler The handler which will be used to post callbacks.
+         * @param executor The executor which will be used for background tasks.
          * @return the current Builder.
          */
         @Override
-        public Builder setCallbackHandler(Handler handler) {
-            getMutableConfig().insertOption(OPTION_CALLBACK_HANDLER, handler);
+        @NonNull
+        public Builder setBackgroundExecutor(@NonNull Executor executor) {
+            getMutableConfig().insertOption(OPTION_BACKGROUND_EXECUTOR, executor);
             return this;
         }
 
@@ -641,7 +871,8 @@ public final class PreviewConfig
         /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
-        public Builder setDefaultSessionConfig(SessionConfig sessionConfig) {
+        @NonNull
+        public Builder setDefaultSessionConfig(@NonNull SessionConfig sessionConfig) {
             getMutableConfig().insertOption(OPTION_DEFAULT_SESSION_CONFIG, sessionConfig);
             return this;
         }
@@ -649,7 +880,8 @@ public final class PreviewConfig
         /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
-        public Builder setDefaultCaptureConfig(CaptureConfig captureConfig) {
+        @NonNull
+        public Builder setDefaultCaptureConfig(@NonNull CaptureConfig captureConfig) {
             getMutableConfig().insertOption(OPTION_DEFAULT_CAPTURE_CONFIG, captureConfig);
             return this;
         }
@@ -657,7 +889,9 @@ public final class PreviewConfig
         /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
-        public Builder setSessionOptionUnpacker(SessionConfig.OptionUnpacker optionUnpacker) {
+        @NonNull
+        public Builder setSessionOptionUnpacker(
+                @NonNull SessionConfig.OptionUnpacker optionUnpacker) {
             getMutableConfig().insertOption(OPTION_SESSION_CONFIG_UNPACKER, optionUnpacker);
             return this;
         }
@@ -665,7 +899,9 @@ public final class PreviewConfig
         /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
-        public Builder setCaptureOptionUnpacker(CaptureConfig.OptionUnpacker optionUnpacker) {
+        @NonNull
+        public Builder setCaptureOptionUnpacker(
+                @NonNull CaptureConfig.OptionUnpacker optionUnpacker) {
             getMutableConfig().insertOption(OPTION_CAPTURE_CONFIG_UNPACKER, optionUnpacker);
             return this;
         }
@@ -673,6 +909,7 @@ public final class PreviewConfig
         /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
+        @NonNull
         public Builder setSurfaceOccupancyPriority(int priority) {
             getMutableConfig().insertOption(OPTION_SURFACE_OCCUPANCY_PRIORITY, priority);
             return this;
@@ -681,7 +918,9 @@ public final class PreviewConfig
         /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
-        public Builder setUseCaseEventListener(UseCase.EventListener useCaseEventListener) {
+        @NonNull
+        public Builder setUseCaseEventListener(
+                @NonNull UseCase.EventListener useCaseEventListener) {
             getMutableConfig().insertOption(OPTION_USE_CASE_EVENT_LISTENER, useCaseEventListener);
             return this;
         }
@@ -689,7 +928,7 @@ public final class PreviewConfig
         /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
-        public Builder setImageInfoProcessor(@Nullable ImageInfoProcessor processor) {
+        public Builder setImageInfoProcessor(@NonNull ImageInfoProcessor processor) {
             getMutableConfig().insertOption(IMAGE_INFO_PROCESSOR, processor);
             return this;
         }
@@ -703,7 +942,7 @@ public final class PreviewConfig
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
-        public Builder setCaptureProcessor(@Nullable CaptureProcessor captureProcessor) {
+        public Builder setCaptureProcessor(@NonNull CaptureProcessor captureProcessor) {
             getMutableConfig().insertOption(OPTION_PREVIEW_CAPTURE_PROCESSOR, captureProcessor);
             return this;
         }

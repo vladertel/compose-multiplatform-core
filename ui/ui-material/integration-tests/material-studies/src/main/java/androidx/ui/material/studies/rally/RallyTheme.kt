@@ -16,10 +16,8 @@
 
 package androidx.ui.material.studies.rally
 
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
-import androidx.ui.core.CurrentTextStyleProvider
 import androidx.ui.core.sp
 import androidx.ui.text.font.FontWeight
 import androidx.ui.text.font.FontFamily
@@ -29,19 +27,21 @@ import androidx.ui.material.MaterialTheme
 import androidx.ui.material.MaterialTypography
 import androidx.ui.text.TextStyle
 
-val rallyGreen = Color(0xFF1EB980.toInt())
-val rallyDarkGreen = Color(0xFF045D56.toInt())
-val rallyOrange = Color(0xFFFF6859.toInt())
-val rallyYellow = Color(0xFFFFCF44.toInt())
-val rallyPurple = Color(0xFFB15DFF.toInt())
-val rallyBlue = Color(0xFF72DEFF.toInt())
+val rallyGreen = Color(0xFF1EB980)
+val rallyDarkGreen = Color(0xFF045D56)
+val rallyOrange = Color(0xFFFF6859)
+val rallyYellow = Color(0xFFFFCF44)
+val rallyPurple = Color(0xFFB15DFF)
+val rallyBlue = Color(0xFF72DEFF)
 
 @Composable
-fun RallyTheme(@Children children: @Composable() () -> Unit) {
+fun RallyTheme(children: @Composable() () -> Unit) {
     val colors = MaterialColors(
         primary = rallyGreen,
-        surface = Color(0xFF26282F.toInt()),
-        onSurface = Color(0xFFFFFFFF.toInt())
+        surface = Color(0xFF33333D),
+        onSurface = Color.White,
+        background = Color(0xFF26282F),
+        onBackground = Color.White
     )
     val typography = MaterialTypography(
         h1 = TextStyle(fontFamily = FontFamily("RobotoCondensed"),
@@ -86,10 +86,6 @@ fun RallyTheme(@Children children: @Composable() () -> Unit) {
 
     )
     MaterialTheme(colors = colors, typography = typography) {
-        // TODO: remove this when surface auto-sets the text color
-        val value = TextStyle(color = Color(0xFFFFFFFF.toInt()))
-        CurrentTextStyleProvider(value = value) {
-            children()
-        }
+        children()
     }
 }

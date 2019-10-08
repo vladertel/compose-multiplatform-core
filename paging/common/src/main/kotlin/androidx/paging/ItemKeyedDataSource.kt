@@ -19,11 +19,9 @@ package androidx.paging
 import androidx.annotation.VisibleForTesting
 import androidx.arch.core.util.Function
 import androidx.paging.DataSource.KeyType.ITEM_KEYED
-import androidx.paging.ItemKeyedDataSource.Result
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
  * Incremental data loader for paging keyed content, where loaded content uses previously loaded
@@ -39,8 +37,8 @@ import kotlin.coroutines.resumeWithException
  * [Retrofit](https://square.github.io/retrofit/), while handling swipe-to-refresh, network errors,
  * and retry.
  *
- * @param Key Type of data used to query Value types out of the DataSource.
- * @param Value Type of items being loaded by the DataSource.
+ * @param Key Type of data used to query Value types out of the [DataSource].
+ * @param Value Type of items being loaded by the [DataSource].
  */
 abstract class ItemKeyedDataSource<Key : Any, Value : Any> : DataSource<Key, Value>(ITEM_KEYED) {
 
@@ -81,33 +79,6 @@ abstract class ItemKeyedDataSource<Key : Any, Value : Any> : DataSource<Key, Val
      * data source where the backend defines page size.
      */
     open class LoadParams<Key : Any>(@JvmField val key: Key, @JvmField val requestedLoadSize: Int)
-
-    /**
-     * Type produced by [loadInitial] to represent initially loaded data.
-     *
-     * @param V The type of the data loaded.
-     */
-    internal class InitialResult<V : Any> : BaseResult<V> {
-        constructor(data: List<V>, position: Int, totalCount: Int) : super(
-            data,
-            null,
-            null,
-            position,
-            totalCount - data.size - position,
-            position,
-            true
-        )
-
-        constructor(data: List<V>) : super(data, null, null, 0, 0, 0, false)
-    }
-
-    /**
-     * Type produced by [loadBefore] and [loadAfter] to represent a page of loaded data.
-     *
-     * @param V The type of the data loaded.
-     */
-    internal class Result<V : Any>(data: List<V>) :
-        DataSource.BaseResult<V>(data, null, null, 0, 0, 0, false)
 
     /**
      * Callback for [loadInitial]
@@ -177,27 +148,12 @@ abstract class ItemKeyedDataSource<Key : Any, Value : Any> : DataSource<Key, Val
          * @param data List of items loaded from the [ItemKeyedDataSource].
          */
         abstract fun onResult(data: List<Value>)
-
-        /**
-         * Called to report an error from a DataSource.
-         *
-         * Call this method to report an error from [loadInitial], [loadBefore], or [loadAfter]
-         * methods.
-         *
-         * @param error The error that occurred during loading.
-         */
-        open fun onError(error: Throwable) {
-            // TODO: remove default implementation in 3.0
-            throw IllegalStateException(
-                "You must implement onError if implementing your own load callback"
-            )
-        }
     }
 
     @Suppress("RedundantVisibilityModifier") // Metalava doesn't inherit visibility properly.
     internal final override suspend fun load(params: Params<Key>): BaseResult<Value> {
         return when (params.type) {
-            LoadType.INITIAL -> loadInitial(
+            LoadType.REFRESH -> loadInitial(
                 LoadInitialParams(
                     params.key,
                     params.initialLoadSize,
@@ -209,32 +165,56 @@ abstract class ItemKeyedDataSource<Key : Any, Value : Any> : DataSource<Key, Val
         }
     }
 
+    internal fun List<Value>.getPrevKey() = firstOrNull()?.let { getKey(it) }
+    internal fun List<Value>.getNextKey() = lastOrNull()?.let { getKey(it) }
+
     @VisibleForTesting
     internal suspend fun loadInitial(params: LoadInitialParams<Key>) =
-        suspendCancellableCoroutine<InitialResult<Value>> { cont ->
+        suspendCancellableCoroutine<BaseResult<Value>> { cont ->
             loadInitial(params, object : LoadInitialCallback<Value>() {
                 override fun onResult(data: List<Value>, position: Int, totalCount: Int) {
-                    cont.resume(InitialResult(data, position, totalCount))
+                    cont.resume(
+                        BaseResult(
+                            data = data,
+                            prevKey = data.getPrevKey(),
+                            nextKey = data.getNextKey(),
+                            itemsBefore = position,
+                            itemsAfter = totalCount - data.size - position
+                        )
+                    )
                 }
 
                 override fun onResult(data: List<Value>) {
-                    cont.resume(InitialResult(data))
-                }
-
-                override fun onError(error: Throwable) {
-                    cont.resumeWithException(error)
+                    cont.resume(
+                        BaseResult(
+                            data = data,
+                            prevKey = data.getPrevKey(),
+                            nextKey = data.getNextKey()
+                        )
+                    )
                 }
             })
         }
 
+    private fun CancellableContinuation<BaseResult<Value>>.asCallback() =
+        object : ItemKeyedDataSource.LoadCallback<Value>() {
+            override fun onResult(data: List<Value>) {
+                resume(BaseResult(
+                    data,
+                    data.getPrevKey(),
+                    data.getNextKey()
+                ))
+            }
+        }
+
     @VisibleForTesting
     internal suspend fun loadBefore(params: LoadParams<Key>) =
-        suspendCancellableCoroutine<Result<Value>> { cont ->
+        suspendCancellableCoroutine<BaseResult<Value>> { cont ->
             loadBefore(params, cont.asCallback())
         }
 
     @VisibleForTesting
-    internal suspend fun loadAfter(params: LoadParams<Key>): Result<Value> {
+    internal suspend fun loadAfter(params: LoadParams<Key>): BaseResult<Value> {
         return suspendCancellableCoroutine { cont ->
             loadAfter(params, cont.asCallback())
         }
@@ -340,14 +320,3 @@ abstract class ItemKeyedDataSource<Key : Any, Value : Any> : DataSource<Key, Val
         function: (Value) -> ToValue
     ): ItemKeyedDataSource<Key, ToValue> = mapByPage(Function { list -> list.map(function) })
 }
-
-internal fun <Value : Any> CancellableContinuation<Result<Value>>.asCallback() =
-    object : ItemKeyedDataSource.LoadCallback<Value>() {
-        override fun onResult(data: List<Value>) {
-            resume(Result(data))
-        }
-
-        override fun onError(error: Throwable) {
-            resumeWithException(error)
-        }
-    }

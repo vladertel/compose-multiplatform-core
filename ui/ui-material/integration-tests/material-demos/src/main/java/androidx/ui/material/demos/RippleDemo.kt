@@ -19,12 +19,11 @@ package androidx.ui.material.demos
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.unaryPlus
-import androidx.ui.core.CraneWrapper
+import androidx.ui.core.ComposeView
 import androidx.ui.core.Text
 import androidx.ui.core.dp
 import androidx.ui.core.px
 import androidx.ui.foundation.shape.border.Border
-import androidx.ui.foundation.shape.corner.CornerSizes
 import androidx.ui.foundation.shape.corner.RoundedCornerShape
 import androidx.ui.graphics.Color
 import androidx.ui.layout.Container
@@ -36,12 +35,12 @@ import androidx.ui.material.themeTextStyle
 
 @Composable
 fun RippleDemo() {
-    CraneWrapper {
+    ComposeView {
         MaterialTheme {
             Padding(padding = 50.dp) {
                 Card(
-                    shape = RoundedCornerShape(CornerSizes(100.px)),
-                    border = Border(Color(0x80000000.toInt()), 1.dp)
+                    shape = RoundedCornerShape(100.px),
+                    border = Border(Color(0x80000000), 1.dp)
                 ) {
                     Ripple(bounded = true) {
                         Container(expanded = true) {

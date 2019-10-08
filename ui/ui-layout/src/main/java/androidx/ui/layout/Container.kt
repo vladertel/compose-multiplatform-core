@@ -16,22 +16,26 @@
 
 package androidx.ui.layout
 
+import androidx.ui.core.Alignment
 import androidx.ui.core.Constraints
 import androidx.ui.core.Dp
 import androidx.ui.core.IntPxSize
 import androidx.ui.core.Layout
+import androidx.ui.core.Placeable
 import androidx.ui.core.dp
 import androidx.ui.core.enforce
+import androidx.ui.core.hasTightHeight
+import androidx.ui.core.hasTightWidth
 import androidx.ui.core.ipx
 import androidx.ui.core.isFinite
 import androidx.ui.core.looseMin
 import androidx.ui.core.max
 import androidx.ui.core.offset
 import androidx.ui.core.withTight
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.trace
+import androidx.ui.core.Modifier
 
 /**
  * A convenience widget that combines common layout widgets for one child:
@@ -55,49 +59,57 @@ import androidx.compose.trace
  */
 @Composable
 fun Container(
+    modifier: Modifier = Modifier.None,
     padding: EdgeInsets = EdgeInsets(0.dp),
     alignment: Alignment = Alignment.Center,
     expanded: Boolean = false,
     constraints: DpConstraints = DpConstraints(),
     width: Dp? = null,
     height: Dp? = null,
-    @Children children: @Composable() () -> Unit
+    children: @Composable() () -> Unit
 ) {
-    trace("UI:Container") {
-        Layout(children = children, layoutBlock = { measurables, incomingConstraints ->
-            val containerConstraints = Constraints(constraints)
-                .withTight(width?.toIntPx(), height?.toIntPx())
-                .enforce(incomingConstraints)
-            val totalHorizontal = padding.left.toIntPx() + padding.right.toIntPx()
-            val totalVertical = padding.top.toIntPx() + padding.bottom.toIntPx()
-            val childConstraints = containerConstraints
-                .looseMin()
-                .offset(-totalHorizontal, -totalVertical)
-            val placeable = measurables.firstOrNull()?.measure(childConstraints)
-            val containerWidth = if (!expanded || !containerConstraints.maxWidth.isFinite()) {
-                max((placeable?.width ?: 0.ipx) + totalHorizontal, containerConstraints.minWidth)
-            } else {
-                containerConstraints.maxWidth
+    Layout(children, modifier) { measurables, incomingConstraints ->
+        val containerConstraints = Constraints(constraints)
+            .withTight(width?.toIntPx(), height?.toIntPx())
+            .enforce(incomingConstraints)
+        val totalHorizontal = padding.left.toIntPx() + padding.right.toIntPx()
+        val totalVertical = padding.top.toIntPx() + padding.bottom.toIntPx()
+        val childConstraints = containerConstraints
+            .looseMin()
+            .offset(-totalHorizontal, -totalVertical)
+        var placeable: Placeable? = null
+        val containerWidth = if ((containerConstraints.hasTightWidth || expanded) &&
+            containerConstraints.maxWidth.isFinite()
+        ) {
+            containerConstraints.maxWidth
+        } else {
+            placeable = measurables.firstOrNull()?.measure(childConstraints)
+            max((placeable?.width ?: 0.ipx) + totalHorizontal, containerConstraints.minWidth)
+        }
+        val containerHeight = if ((containerConstraints.hasTightHeight || expanded) &&
+            containerConstraints.maxHeight.isFinite()
+        ) {
+            containerConstraints.maxHeight
+        } else {
+            if (placeable == null) {
+                placeable = measurables.firstOrNull()?.measure(childConstraints)
             }
-            val containerHeight = if (!expanded || !containerConstraints.maxHeight.isFinite()) {
-                max((placeable?.height ?: 0.ipx) + totalVertical, containerConstraints.minHeight)
-            } else {
-                containerConstraints.maxHeight
-            }
-            layout(containerWidth, containerHeight) {
-                if (placeable != null) {
-                    val position = alignment.align(
-                        IntPxSize(
-                            containerWidth - placeable.width - totalHorizontal,
-                            containerHeight - placeable.height - totalVertical
-                        )
+            max((placeable?.height ?: 0.ipx) + totalVertical, containerConstraints.minHeight)
+        }
+        layout(containerWidth, containerHeight) {
+            val p = placeable ?: measurables.firstOrNull()?.measure(childConstraints)
+            p?.let {
+                val position = alignment.align(
+                    IntPxSize(
+                        containerWidth - it.width - totalHorizontal,
+                        containerHeight - it.height - totalVertical
                     )
-                    placeable.place(
-                        padding.left.toIntPx() + position.x,
-                        padding.top.toIntPx() + position.y
-                    )
-                }
+                )
+                it.place(
+                    padding.left.toIntPx() + position.x,
+                    padding.top.toIntPx() + position.y
+                )
             }
-        })
+        }
     }
 }

@@ -25,22 +25,22 @@ import androidx.ui.core.Text
 import androidx.ui.core.dp
 import androidx.ui.foundation.ColoredRect
 import androidx.ui.graphics.Color
-import androidx.ui.layout.Alignment
 import androidx.ui.layout.Center
 import androidx.ui.layout.Column
+import androidx.ui.layout.Container
 import androidx.ui.layout.HeightSpacer
+import androidx.ui.layout.LayoutSize
 import androidx.ui.layout.Row
-import androidx.ui.layout.Stack
-import androidx.ui.material.BottomDrawer
+import androidx.ui.material.BottomDrawerLayout
 import androidx.ui.material.Button
 import androidx.ui.material.DrawerState
-import androidx.ui.material.ModalDrawer
+import androidx.ui.material.ModalDrawerLayout
 import androidx.ui.material.StaticDrawer
 
 @Sampled
 @Composable
 fun StaticDrawerSample() {
-    Row {
+    Row(mainAxisSize = LayoutSize.Expand) {
         StaticDrawer {
             Center {
                 Text("Drawer Content")
@@ -57,23 +57,12 @@ fun ModalDrawerSample() {
     val (state, onStateChange) = +state { DrawerState.Closed }
     val appContentText =
         if (state == DrawerState.Closed) ">>> Pull to open >>>" else "<<< Swipe to close <<<"
-    Stack {
-        aligned(Alignment.Center) {
-            // your app content goes there
-            YourAppContent(appContentText, onStateChange)
-        }
-        aligned(Alignment.CenterLeft) {
-            ModalDrawer(state, onStateChange) {
-                Column {
-                    Text(text = "Drawer Content")
-                    HeightSpacer(20.dp)
-                    Button(
-                        text = "Close Drawer",
-                        onClick = { onStateChange(DrawerState.Closed) })
-                }
-            }
-        }
-    }
+    ModalDrawerLayout(
+        drawerState = state,
+        onStateChange = onStateChange,
+        drawerContent = { YourDrawerContent(onStateChange) },
+        bodyContent = { YourAppContent(appContentText, onStateChange) }
+    )
 }
 
 @Sampled
@@ -82,33 +71,37 @@ fun BottomDrawerSample() {
     val (state, onStateChange) = +state { DrawerState.Closed }
     val appContentText =
         if (state == DrawerState.Closed) "▲▲▲ Pull to open ▲▲▲" else "▼▼▼ Drag down to close ▼▼▼"
-    Stack {
-        aligned(Alignment.Center) {
-            // your app content goes there
-            YourAppContent(appContentText, onStateChange)
-        }
-        aligned(Alignment.BottomCenter) {
-            BottomDrawer(state, onStateChange) {
-                Column {
-                    Text(text = "Drawer Content")
-                    HeightSpacer(20.dp)
-                    Button(
-                        text = "Close Drawer",
-                        onClick = { onStateChange(DrawerState.Closed) })
-                }
-            }
+    BottomDrawerLayout(
+        drawerState = state,
+        onStateChange = onStateChange,
+        drawerContent = { YourDrawerContent(onStateChange) },
+        bodyContent = { YourAppContent(appContentText, onStateChange) }
+    )
+}
+
+@Composable
+private fun YourDrawerContent(onStateChange: (DrawerState) -> Unit) {
+    Container(expanded = true) {
+        Column(mainAxisSize = LayoutSize.Expand) {
+            Text(text = "Drawer Content")
+            HeightSpacer(20.dp)
+            Button(
+                text = "Close Drawer",
+                onClick = { onStateChange(DrawerState.Closed) })
         }
     }
 }
 
 @Composable
 private fun YourAppContent(text: String, onDrawerStateChange: (DrawerState) -> Unit) {
-    Column {
-        Text(text = text)
-        HeightSpacer(20.dp)
-        Button(
-            text = "Click to open",
-            onClick = { onDrawerStateChange(DrawerState.Opened) }
-        )
+    Center {
+        Column(mainAxisSize = LayoutSize.Expand) {
+            Text(text = text)
+            HeightSpacer(20.dp)
+            Button(
+                text = "Click to open",
+                onClick = { onDrawerStateChange(DrawerState.Opened) }
+            )
+        }
     }
 }

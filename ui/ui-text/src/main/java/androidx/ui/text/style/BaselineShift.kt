@@ -22,7 +22,7 @@ import androidx.ui.lerp
  * The amount by which the text is shifted up from current baseline.
  * @constructor
  * @param multiplier shift the baseline by multiplier * (baseline - ascent)
- * TODO(Migration/haoyuchang): support baseline shift given by pixel and other multiplier reference
+ * TODO(haoyuchang): support baseline shift given by pixel and other multiplier reference
  */
 /*inline*/ data class BaselineShift constructor(
     val multiplier: Float
@@ -41,17 +41,19 @@ import androidx.ui.lerp
         /**
          * Linearly interpolate two [BaselineShift]s.
          */
-        fun lerp(a: BaselineShift?, b: BaselineShift?, t: Float): BaselineShift? {
-            if (a == null && b == null) {
+        // TODO(haoyuchang): This should not be in the companion, it should be at file level
+        // TODO(haoyuchang): This should not accept nullables
+        fun lerp(start: BaselineShift?, stop: BaselineShift?, fraction: Float): BaselineShift? {
+            if (start == null && stop == null) {
                 return null
             }
-            if (a == null) {
-                return BaselineShift(b!!.multiplier * t)
+            if (start == null) {
+                return BaselineShift(stop!!.multiplier * fraction)
             }
-            if (b == null) {
-                return BaselineShift(a.multiplier * (1f - t))
+            if (stop == null) {
+                return BaselineShift(start.multiplier * (1f - fraction))
             }
-            return BaselineShift(lerp(a.multiplier, b.multiplier, t))
+            return BaselineShift(lerp(start.multiplier, stop.multiplier, fraction))
         }
     }
 }

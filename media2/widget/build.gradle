@@ -25,11 +25,10 @@ plugins {
 }
 
 dependencies {
-    api("androidx.media2:media2-common:1.0.0-rc01")
-    api("androidx.media2:media2-session:1.0.0-rc01")
+    api(project(":media2:media2-common"))
+    api(project(":media2:media2-session"))
     implementation("androidx.appcompat:appcompat:1.0.2")
     implementation("androidx.palette:palette:1.0.0")
-    implementation("androidx.concurrent:concurrent-futures:1.0.0-beta01")
 
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
     androidTestImplementation(ANDROIDX_TEST_CORE)
@@ -38,13 +37,16 @@ dependencies {
     androidTestImplementation(ESPRESSO_CORE, libs.exclude_for_espresso)
     androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
     androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
-    androidTestImplementation project(':internal-testutils')
+    androidTestImplementation project(':internal-testutils-runtime')
     androidTestImplementation project(':media2:media2-player')
 }
 
 android {
     defaultConfig {
         minSdkVersion 19
+    }
+    sourceSets {
+        main.res.srcDirs += 'src/main/res-public'
     }
     lintOptions {
 	// Lint cannot determine the groupId of androidx.media2:media2widget,

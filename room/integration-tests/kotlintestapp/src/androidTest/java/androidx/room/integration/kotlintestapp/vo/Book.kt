@@ -16,6 +16,7 @@
 
 package androidx.room.integration.kotlintestapp.vo
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
@@ -30,7 +31,9 @@ data class Book(
     @PrimaryKey val bookId: String,
     val title: String,
     val bookPublisherId: String,
+    @ColumnInfo(defaultValue = "0")
     @field:TypeConverters(Lang::class)
     val languages: Set<Lang>,
+    @ColumnInfo(defaultValue = "0")
     val salesCnt: Int
 )

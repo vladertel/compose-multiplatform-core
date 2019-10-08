@@ -18,6 +18,8 @@ package androidx.camera.extensions;
 
 import android.text.TextUtils;
 
+import androidx.annotation.NonNull;
+
 import com.google.auto.value.AutoValue;
 
 import java.math.BigInteger;
@@ -30,6 +32,9 @@ import java.util.regex.Pattern;
  */
 @AutoValue
 abstract class Version implements Comparable<Version> {
+    static final Version VERSION_1_0 = Version.create(1, 0, 0, "");
+    static final Version VERSION_1_1 = Version.create(1, 1, 0, "");
+
     private static final Pattern VERSION_STRING_PATTERN =
             Pattern.compile("(\\d+)(?:\\.(\\d+))(?:\\.(\\d+))(?:\\-(.+))?");
 
@@ -76,6 +81,7 @@ abstract class Version implements Comparable<Version> {
 
     abstract String getDescription();
 
+    @NonNull
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(getMajor() + "." + getMinor() + "." + getPatch());

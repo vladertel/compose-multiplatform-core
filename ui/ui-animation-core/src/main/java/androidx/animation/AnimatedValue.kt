@@ -18,6 +18,9 @@ package androidx.animation
 
 import android.util.Log
 import android.view.Choreographer
+import androidx.animation.AnimationEndReason.BoundReached
+import androidx.animation.AnimationEndReason.Interrupted
+import androidx.animation.AnimationEndReason.TargetReached
 import androidx.ui.lerp
 
 /**
@@ -28,8 +31,8 @@ import androidx.ui.lerp
  * @param valueHolder A value holder whose value gets updated by [BaseAnimatedValue] on every
  *                    animation frame.
  */
-sealed class BaseAnimatedValue<T>(private val valueHolder: ValueHolder<T>)
-    : DynamicTargetAnimation<T> {
+sealed class BaseAnimatedValue<T>(private val valueHolder: ValueHolder<T>) :
+    DynamicTargetAnimation<T> {
 
     /**
      * Creates a [BaseAnimatedValue] instance that starts at the given value, and uses the given
@@ -41,7 +44,7 @@ sealed class BaseAnimatedValue<T>(private val valueHolder: ValueHolder<T>)
     constructor(
         initVal: T,
         valueInterpolator: (T, T, Float) -> T
-    ): this(ValueHolderImpl<T>(initVal, valueInterpolator))
+    ) : this(ValueHolderImpl<T>(initVal, valueInterpolator))
 
     override var value: T
         internal set(newVal: T) {
@@ -56,9 +59,12 @@ sealed class BaseAnimatedValue<T>(private val valueHolder: ValueHolder<T>)
         internal set
 
     internal var internalVelocity: Float = 0f
-    internal var onFinished: ((Boolean) -> Unit)? = null
+    internal var onEnd: ((AnimationEndReason, T) -> Unit)? = null
     private lateinit var anim: AnimationWrapper<T>
-    private var startTime: Long = -1
+    private var startTime: Long = Unset
+    // last frame time only gets updated during the animation pulse. It will be reset at the
+    // end of the animation.
+    private var lastFrameTime: Long = Unset
 
     private var frameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
@@ -67,35 +73,41 @@ sealed class BaseAnimatedValue<T>(private val valueHolder: ValueHolder<T>)
         }
     }
 
+    // TODO: Need a test for animateTo(...) being called with the same target value
     override fun animateTo(targetValue: T) {
         toValueInternal(targetValue, null, PhysicsBuilder())
     }
-    override fun animateTo(targetValue: T, onFinished: (Boolean) -> Unit) {
-        toValueInternal(targetValue, onFinished, PhysicsBuilder())
+
+    override fun animateTo(targetValue: T, onEnd: (AnimationEndReason, T) -> Unit) {
+        toValueInternal(targetValue, onEnd, PhysicsBuilder())
     }
+
     override fun animateTo(
         targetValue: T,
         anim: AnimationBuilder<T>,
-        onFinished: (Boolean) -> Unit
+        onEnd: (AnimationEndReason, T) -> Unit
     ) {
-        toValueInternal(targetValue, onFinished, anim)
+        toValueInternal(targetValue, onEnd, anim)
     }
+
     override fun animateTo(targetValue: T, anim: AnimationBuilder<T>) {
         toValueInternal(targetValue, null, anim)
     }
 
     private fun toValueInternal(
         targetValue: T,
-        onFinished: ((Boolean) -> Unit)?,
+        onEnd: ((AnimationEndReason, T) -> Unit)?,
         anim: AnimationBuilder<T>
     ) {
         if (isRunning) {
-            notifyFinished(true)
+            notifyEnded(Interrupted, value)
         }
 
         this.targetValue = targetValue
-        val animationWrapper = TargetBasedAnimationWrapper(value, internalVelocity, targetValue,
-            valueHolder.interpolator, anim.build())
+        val animationWrapper = TargetBasedAnimationWrapper(
+            value, internalVelocity, targetValue,
+            valueHolder.interpolator, anim.build()
+        )
 
         if (DEBUG) {
             Log.w(
@@ -103,7 +115,7 @@ sealed class BaseAnimatedValue<T>(private val valueHolder: ValueHolder<T>)
                         "end value: $targetValue, velocity: $internalVelocity"
             )
         }
-        this.onFinished = onFinished
+        this.onEnd = onEnd
         startAnimation(animationWrapper)
     }
 
@@ -115,24 +127,26 @@ sealed class BaseAnimatedValue<T>(private val valueHolder: ValueHolder<T>)
 
     override fun stop() {
         if (isRunning) {
-            endAnimation(true)
+            endAnimation(Interrupted)
         }
     }
 
-    internal fun notifyFinished(canceled: Boolean) {
-        val onFinished = this.onFinished
-        this.onFinished = null
-        onFinished?.invoke(canceled)
+    internal fun notifyEnded(endReason: AnimationEndReason, endValue: T) {
+        val onEnd = this.onEnd
+        this.onEnd = null
+        onEnd?.invoke(endReason, endValue)
     }
 
     internal open fun doAnimationFrame(time: Long) {
-        var playtime: Long
-        if (startTime == -1L) {
+        val playtime: Long
+        if (startTime == Unset) {
             startTime = time
             playtime = 0
         } else {
             playtime = time - startTime
         }
+
+        lastFrameTime = time
         value = anim.getValue(playtime)
         internalVelocity = anim.getVelocity(playtime)
         val animationFinished = anim.isFinished(playtime)
@@ -154,8 +168,18 @@ sealed class BaseAnimatedValue<T>(private val valueHolder: ValueHolder<T>)
 
     internal fun startAnimation(anim: AnimationWrapper<T>) {
         this.anim = anim
-        startTime = -1
-        if (!isRunning) {
+        // Quick sanity check before officially starting
+        if (anim.isFinished(0)) {
+            // If the animation value & velocity is already meeting the finished condition before
+            // the animation even starts, end it now.
+            endAnimation()
+            return
+        }
+
+        if (isRunning) {
+            startTime = lastFrameTime
+        } else {
+            startTime = Unset
             isRunning = true
             Choreographer.getInstance().postFrameCallback(frameCallback)
         }
@@ -164,14 +188,18 @@ sealed class BaseAnimatedValue<T>(private val valueHolder: ValueHolder<T>)
         }
     }
 
-    internal fun endAnimation(canceled: Boolean = false) {
+    internal fun endAnimation(endReason: AnimationEndReason = TargetReached) {
         Choreographer.getInstance().removeFrameCallback(frameCallback)
         isRunning = false
-        startTime = -1
+        startTime = Unset
+        lastFrameTime = Unset
         if (DEBUG) {
-            Log.w("AnimValue", "end animation")
+            Log.w("AnimValue", "end animation with reason $endReason")
         }
-        notifyFinished(canceled)
+        notifyEnded(endReason, value)
+        // reset velocity after notifyFinish as we might need to return it in onFinished callback
+        // depending on whether or not velocity was involved in the animation
+        internalVelocity = 0f
     }
 }
 
@@ -229,14 +257,21 @@ class AnimatedFloat(valueHolder: ValueHolder<Float>) : BaseAnimatedValue<Float>(
         super.doAnimationFrame(time)
         if (value < min) {
             value = min
-            endAnimation()
+            endAnimation(BoundReached)
         } else if (value > max) {
             value = max
-            stop()
-            endAnimation()
+            endAnimation(BoundReached)
         }
     }
 }
+
+/**
+ * Typealias for lambda that will be invoked when fling animation ends.
+ * Unlike [AnimatedValue.animateTo] onEnd, this lambda includes 3rd param remainingVelocity,
+ * that represents velocity that wasn't consumed after fling finishes.
+ */
+typealias OnFlingEnd =
+            (endReason: AnimationEndReason, endValue: Float, remainingVelocity: Float) -> Unit
 
 /**
  * Starts a fling animation with the specified starting velocity.
@@ -244,20 +279,22 @@ class AnimatedFloat(valueHolder: ValueHolder<Float>) : BaseAnimatedValue<Float>(
  * @param startVelocity Starting velocity of the fling animation
  * @param decay The decay animation used for slowing down the animation from the starting
  *              velocity
- * @param onFinished An optional callback that will be invoked when this fling animation is
+ * @param onEnd An optional callback that will be invoked when this fling animation is
  *                   finished.
  */
 // TODO: Figure out an API for customizing the type of decay & the friction
 fun AnimatedFloat.fling(
     startVelocity: Float,
     decay: DecayAnimation = ExponentialDecay(),
-    onFinished: ((Boolean) -> Unit)? = null
+    onEnd: OnFlingEnd? = null
 ) {
     if (isRunning) {
-        notifyFinished(true)
+        notifyEnded(Interrupted, value)
     }
 
-    this.onFinished = onFinished
+    this.onEnd = { endReason, endValue ->
+        onEnd?.invoke(endReason, endValue, internalVelocity)
+    }
 
     // start from current value with the given internalVelocity
     targetValue = decay.getTarget(value, startVelocity)
@@ -277,20 +314,22 @@ fun AnimatedFloat.fling(
  *                     lambda should return null when the original target is respected.
  * @param decay The decay animation used for slowing down the animation from the starting
  *              velocity
- * @param onFinished An optional callback that will be invoked when this fling animation is
- *                   finished.
+ * @param onEnd An optional callback that will be invoked when the animation
+ *              finished by any reason.
  */
 fun AnimatedFloat.fling(
     startVelocity: Float,
     decay: DecayAnimation = ExponentialDecay(),
     adjustTarget: (Float) -> TargetAnimation?,
-    onFinished: ((Boolean) -> Unit)? = null
+    onEnd: OnFlingEnd? = null
 ) {
     if (isRunning) {
-        notifyFinished(true)
+        notifyEnded(Interrupted, value)
     }
 
-    this.onFinished = onFinished
+    this.onEnd = { endReason, endValue ->
+        onEnd?.invoke(endReason, endValue, internalVelocity)
+    }
 
     // start from current value with the given internalVelocity
     if (DEBUG) {
@@ -299,8 +338,10 @@ fun AnimatedFloat.fling(
     targetValue = decay.getTarget(value, startVelocity)
     val targetAnimation = adjustTarget(targetValue)
     if (DEBUG) {
-        Log.w("AnimFloat", "original targetValue: $targetValue, new target:" +
-                " ${targetAnimation?.target}")
+        Log.w(
+            "AnimFloat", "original targetValue: $targetValue, new target:" +
+                    " ${targetAnimation?.target}"
+        )
     }
     if (targetAnimation == null) {
         val animWrapper = DecayAnimationWrapper(value, startVelocity, decay)
@@ -312,3 +353,5 @@ fun AnimatedFloat.fling(
         startAnimation(animWrapper)
     }
 }
+
+private const val Unset: Long = -1

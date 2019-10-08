@@ -25,7 +25,9 @@ plugins {
     id("kotlin-android")
 }
 
-dependencies {}
+dependencies {
+    implementation("androidx.core:core:1.1.0")
+}
 
 androidx {
     name = "AndroidX Autofill"

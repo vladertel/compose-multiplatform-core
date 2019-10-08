@@ -15,15 +15,13 @@
  */
 package androidx.fragment.app
 
-import android.os.SystemClock
 import android.transition.Transition
 import androidx.annotation.LayoutRes
 import androidx.fragment.test.R
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.never
-import org.mockito.Mockito.reset
-import org.mockito.Mockito.verify
+import androidx.lifecycle.Lifecycle
+import com.google.common.truth.Truth.assertThat
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * A fragment that has transitions that can be tracked.
@@ -37,8 +35,27 @@ open class TransitionFragment(
     val returnTransition = TrackingVisibility()
     val sharedElementEnter = TrackingTransition()
     val sharedElementReturn = TrackingTransition()
+    var startTransitionCountDownLatch = CountDownLatch(1)
+    var endTransitionCountDownLatch = CountDownLatch(1)
 
-    private val listener = mock(Transition.TransitionListener::class.java)
+    val listener = object : Transition.TransitionListener {
+        override fun onTransitionEnd(transition: Transition) {
+            assertThat(viewLifecycleOwner.lifecycle.currentState)
+                .isNotEqualTo(Lifecycle.State.DESTROYED)
+            endTransitionCountDownLatch.countDown()
+            startTransitionCountDownLatch = CountDownLatch(1)
+        }
+
+        override fun onTransitionResume(transition: Transition) {}
+
+        override fun onTransitionPause(transition: Transition) {}
+
+        override fun onTransitionCancel(transition: Transition) {}
+
+        override fun onTransitionStart(transition: Transition) {
+            startTransitionCountDownLatch.countDown()
+        }
+    }
 
     init {
         @Suppress("LeakingThis")
@@ -60,18 +77,11 @@ open class TransitionFragment(
     }
 
     internal fun waitForTransition() {
-        verify(
-            listener,
-            within(1000)
-        ).onTransitionEnd(ArgumentMatchers.any())
-        reset(listener)
+        endTransitionCountDownLatch.await()
+        endTransitionCountDownLatch = CountDownLatch(1)
     }
 
     internal fun waitForNoTransition() {
-        SystemClock.sleep(250)
-        verify(
-            listener,
-            never()
-        ).onTransitionStart(ArgumentMatchers.any())
+        assertThat(startTransitionCountDownLatch.await(250, TimeUnit.MILLISECONDS)).isFalse()
     }
 }

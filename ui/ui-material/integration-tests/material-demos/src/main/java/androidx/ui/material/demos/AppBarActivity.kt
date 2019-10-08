@@ -16,47 +16,137 @@
 
 package androidx.ui.material.demos
 
-import android.app.Activity
-import android.os.Bundle
 import androidx.compose.Composable
-import androidx.compose.setContent
 import androidx.compose.composer
+import androidx.compose.state
 import androidx.compose.unaryPlus
-import androidx.ui.core.CraneWrapper
+import androidx.ui.core.Alignment
 import androidx.ui.core.Text
 import androidx.ui.core.dp
 import androidx.ui.layout.Column
-import androidx.ui.layout.HeightSpacer
-import androidx.ui.material.MaterialTheme
-import androidx.ui.material.TopAppBar
+import androidx.ui.layout.Container
+import androidx.ui.layout.CrossAxisAlignment
+import androidx.ui.layout.FlexColumn
+import androidx.ui.layout.LayoutSize
+import androidx.ui.layout.MainAxisAlignment
+import androidx.ui.material.RadioGroup
+import androidx.ui.material.demos.AppBarActivity.BottomAppBarOption.CenterFab
+import androidx.ui.material.demos.AppBarActivity.BottomAppBarOption.CutoutFab
+import androidx.ui.material.demos.AppBarActivity.BottomAppBarOption.EndFab
+import androidx.ui.material.demos.AppBarActivity.BottomAppBarOption.ExtendedCutoutFab
+import androidx.ui.material.demos.AppBarActivity.BottomAppBarOption.FancyAnimatingCutoutFab
+import androidx.ui.material.demos.AppBarActivity.BottomAppBarOption.NoFab
+import androidx.ui.material.demos.AppBarActivity.TopAppBarOption.NavIcon
+import androidx.ui.material.demos.AppBarActivity.TopAppBarOption.Simple
+import androidx.ui.material.samples.SimpleBottomAppBarCutoutFab
+import androidx.ui.material.samples.SimpleBottomAppBarCenterFab
+import androidx.ui.material.samples.SimpleBottomAppBarEndFab
+import androidx.ui.material.samples.SimpleBottomAppBarExtendedCutoutFab
+import androidx.ui.material.samples.SimpleBottomAppBarFancyAnimatingCutoutFab
+import androidx.ui.material.samples.SimpleBottomAppBarNoFab
+import androidx.ui.material.samples.SimpleTopAppBar
+import androidx.ui.material.samples.SimpleTopAppBarNavIcon
+import androidx.ui.material.surface.Surface
 import androidx.ui.material.themeTextStyle
-import androidx.ui.graphics.Color
+import androidx.ui.graphics.imageFromResource
 
-class AppBarActivity : Activity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            CraneWrapper {
-                MaterialTheme {
-                    AppBarDemo()
+class AppBarActivity : MaterialDemoActivity() {
+
+    private val favouriteImage by lazy { { imageFromResource(resources, R.drawable.ic_favorite) } }
+    private val navigationImage by lazy { { imageFromResource(resources, R.drawable.ic_menu) } }
+
+    private enum class TopAppBarOption(val description: String) {
+        Simple("Simple"),
+        NavIcon("With Nav Icon")
+    }
+
+    private enum class BottomAppBarOption(val description: String) {
+        NoFab("No FAB"),
+        CenterFab("Center FAB"),
+        EndFab("End FAB"),
+        CutoutFab("Cutout FAB"),
+        ExtendedCutoutFab("Extended Cutout FAB"),
+        FancyAnimatingCutoutFab("Fancy Animating Cutout FAB")
+    }
+
+    private val topAppBarOptions = listOf(Simple, NavIcon)
+    private val bottomAppBarOptions = listOf(
+        NoFab, CenterFab, EndFab, CutoutFab, ExtendedCutoutFab, FancyAnimatingCutoutFab
+    )
+
+    @Composable
+    override fun materialContent() {
+        var selectedTopAppBar by +state { Simple }
+        var selectedBottomAppBar by +state { NoFab }
+
+        Surface {
+            FlexColumn {
+                inflexible {
+                    Container(height = 120.dp, alignment = Alignment.TopCenter) {
+                        when (selectedTopAppBar) {
+                            Simple -> SimpleTopAppBar(favouriteImage)
+                            NavIcon -> SimpleTopAppBarNavIcon(favouriteImage, navigationImage)
+                        }
+                    }
+                }
+                flexible(1f) {
+                    Column(
+                        mainAxisSize = LayoutSize.Expand,
+                        mainAxisAlignment = MainAxisAlignment.SpaceBetween,
+                        crossAxisAlignment = CrossAxisAlignment.Center
+                    ) {
+                        DemoText("TopAppBar options")
+                        RadioGroup {
+                            topAppBarOptions.forEach { topAppBar ->
+                                RadioGroupTextItem(
+                                    selected = (topAppBar == selectedTopAppBar),
+                                    onSelect = { selectedTopAppBar = topAppBar },
+                                    text = topAppBar.description
+                                )
+                            }
+                        }
+                        DemoText("BottomAppBar options")
+                        RadioGroup {
+                            bottomAppBarOptions.forEach { bottomAppBar ->
+                                RadioGroupTextItem(
+                                    selected = (bottomAppBar == selectedBottomAppBar),
+                                    onSelect = { selectedBottomAppBar = bottomAppBar },
+                                    text = bottomAppBar.description
+                                )
+                            }
+                        }
+                    }
+                }
+                inflexible {
+                    Container(height = 120.dp, alignment = Alignment.BottomCenter) {
+                        when (selectedBottomAppBar) {
+                            NoFab -> SimpleBottomAppBarNoFab(favouriteImage, navigationImage)
+                            CenterFab -> SimpleBottomAppBarCenterFab(
+                                favouriteImage,
+                                navigationImage
+                            )
+                            EndFab -> SimpleBottomAppBarEndFab(favouriteImage)
+                            CutoutFab -> SimpleBottomAppBarCutoutFab(
+                                favouriteImage,
+                                navigationImage
+                            )
+                            ExtendedCutoutFab -> SimpleBottomAppBarExtendedCutoutFab(
+                                favouriteImage,
+                                navigationImage
+                            )
+                            FancyAnimatingCutoutFab -> SimpleBottomAppBarFancyAnimatingCutoutFab(
+                                favouriteImage,
+                                navigationImage
+                            )
+                        }
+                    }
                 }
             }
         }
     }
-}
 
-@Composable
-fun AppBarDemo() {
-    Column {
-        TopAppBar(title = "Default")
-        HeightSpacer(height = 24.dp)
-        TopAppBar(title = "Custom color", color = Color(0xFFE91E63.toInt()))
-        HeightSpacer(height = 24.dp)
-        TopAppBar(title = "Custom icons", icons = listOf(24.dp, 24.dp))
-        HeightSpacer(height = 12.dp)
-        Text(text = "No title", style = +themeTextStyle { h6 })
-        TopAppBar(icons = listOf(24.dp, 24.dp))
-        HeightSpacer(height = 24.dp)
-        TopAppBar(title = "Too many icons", icons = listOf(24.dp, 24.dp, 24.dp, 24.dp))
+    @Composable
+    private fun DemoText(text: String) {
+        Text(text, style = +themeTextStyle { h6 })
     }
 }

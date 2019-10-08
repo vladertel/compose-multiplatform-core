@@ -16,11 +16,13 @@
 
 package androidx.camera.core;
 
+import android.annotation.SuppressLint;
 import android.graphics.ImageFormat;
 import android.location.Location;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
@@ -43,25 +45,28 @@ import androidx.camera.core.CameraCaptureResult.EmptyCameraCaptureResult;
 import androidx.camera.core.CameraX.LensFacing;
 import androidx.camera.core.ForwardingImageProxy.OnImageCloseListener;
 import androidx.camera.core.ImageOutputConfig.RotationValue;
+import androidx.camera.core.impl.utils.Threads;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.impl.utils.futures.AsyncFunction;
-import androidx.camera.core.impl.utils.futures.FluentFuture;
 import androidx.camera.core.impl.utils.futures.FutureCallback;
+import androidx.camera.core.impl.utils.futures.FutureChain;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -82,6 +87,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>When capturing to memory, the captured image is made available through an {@link ImageProxy}
  * via an {@link ImageCapture.OnImageCapturedListener}.
  */
+@SuppressWarnings("ClassCanBeStatic") // TODO(b/141958189): Suppressed during upgrade to AGP 3.6.
 public class ImageCapture extends UseCase {
     /**
      * Provides a static configuration with implementation-agnostic options.
@@ -98,11 +104,15 @@ public class ImageCapture extends UseCase {
     private static final Metadata EMPTY_METADATA = new Metadata();
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
     final Handler mMainHandler = new Handler(Looper.getMainLooper());
+    @Nullable
+    private HandlerThread mProcessingImageResultThread;
+    @Nullable
+    private Handler mProcessingImageResultHandler;
+
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
-    final ArrayDeque<ImageCaptureRequest> mImageCaptureRequests = new ArrayDeque<>();
+    final Deque<ImageCaptureRequest> mImageCaptureRequests = new ConcurrentLinkedDeque<>();
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
-    final Handler mHandler;
-    private final SessionConfig.Builder mSessionConfigBuilder;
+    SessionConfig.Builder mSessionConfigBuilder;
     private final CaptureConfig mCaptureConfig;
     private final ExecutorService mExecutor =
             Executors.newFixedThreadPool(
@@ -111,12 +121,14 @@ public class ImageCapture extends UseCase {
                         private final AtomicInteger mId = new AtomicInteger(0);
 
                         @Override
-                        public Thread newThread(Runnable r) {
+                        public Thread newThread(@NonNull Runnable r) {
                             return new Thread(
                                     r,
                                     CameraXThreads.TAG + "image_capture_" + mId.getAndIncrement());
                         }
                     });
+    @NonNull
+    final Executor mIoExecutor;
     private final CaptureCallbackChecker mSessionCallbackChecker = new CaptureCallbackChecker();
     private final CaptureMode mCaptureMode;
 
@@ -126,7 +138,7 @@ public class ImageCapture extends UseCase {
 
     /**
      * Processing that gets done to the mCaptureBundle to produce the final image that is produced
-     * by {@link #takePicture(OnImageCapturedListener)}
+     * by {@link #takePicture(Executor, OnImageCapturedListener)}
      */
     private final CaptureProcessor mCaptureProcessor;
     private final ImageCaptureConfig.Builder mUseCaseConfigBuilder;
@@ -136,6 +148,7 @@ public class ImageCapture extends UseCase {
     private CameraCaptureCallback mMetadataMatchingCaptureCallback;
     private ImageCaptureConfig mConfig;
     private DeferrableSurface mDeferrableSurface;
+
     /**
      * A flag to check 3A converged or not.
      *
@@ -153,7 +166,7 @@ public class ImageCapture extends UseCase {
      * @param userConfig for this use case instance
      * @throws IllegalArgumentException if the configuration is invalid.
      */
-    public ImageCapture(ImageCaptureConfig userConfig) {
+    public ImageCapture(@NonNull ImageCaptureConfig userConfig) {
         super(userConfig);
         mUseCaseConfigBuilder = ImageCaptureConfig.Builder.fromConfig(userConfig);
         // Ensure we're using the combined configuration (user config + defaults)
@@ -186,30 +199,120 @@ public class ImageCapture extends UseCase {
 
         mCaptureBundle = mConfig.getCaptureBundle(CaptureBundles.singleDefaultCaptureBundle());
 
+        mIoExecutor = mConfig.getIoExecutor(CameraXExecutors.ioExecutor());
+
         if (mCaptureMode == CaptureMode.MAX_QUALITY) {
             mEnableCheck3AConverged = true; // check 3A convergence in MAX_QUALITY mode
         } else if (mCaptureMode == CaptureMode.MIN_LATENCY) {
             mEnableCheck3AConverged = false; // skip 3A convergence in MIN_LATENCY mode
         }
 
-        mHandler = mConfig.getCallbackHandler(null);
-        if (mHandler == null) {
-            throw new IllegalStateException("No default handler specified.");
-        }
-
-        mSessionConfigBuilder = SessionConfig.Builder.createFrom(mConfig);
-        mSessionConfigBuilder.addRepeatingCameraCaptureCallback(mSessionCallbackChecker);
-
         CaptureConfig.Builder captureBuilder = CaptureConfig.Builder.createFrom(mConfig);
         mCaptureConfig = captureBuilder.build();
     }
 
-    private static String getCameraIdUnchecked(LensFacing lensFacing) {
-        try {
-            return CameraX.getCameraWithLensFacing(lensFacing);
-        } catch (Exception e) {
-            throw new IllegalArgumentException(
-                    "Unable to get camera id for camera lens facing " + lensFacing, e);
+    @SuppressWarnings("WeakerAccess") /* synthetic accessor */
+    SessionConfig.Builder createPipeline(ImageCaptureConfig config,  Size resolution) {
+        Threads.checkMainThread();
+        SessionConfig.Builder sessionConfigBuilder = SessionConfig.Builder.createFrom(config);
+        sessionConfigBuilder.addRepeatingCameraCaptureCallback(mSessionCallbackChecker);
+
+        mProcessingImageResultThread = new HandlerThread("OnImageAvailableHandlerThread");
+        mProcessingImageResultThread.start();
+        mProcessingImageResultHandler = new Handler(mProcessingImageResultThread.getLooper());
+
+        // Setup the ImageReader to do processing
+        if (mCaptureProcessor != null) {
+            // TODO: To allow user to use an Executor for the image processing.
+            ProcessingImageReader processingImageReader =
+                    new ProcessingImageReader(
+                            resolution.getWidth(),
+                            resolution.getHeight(),
+                            getImageFormat(), mMaxCaptureStages,
+                            mProcessingImageResultHandler,
+                            getCaptureBundle(CaptureBundles.singleDefaultCaptureBundle()),
+                            mCaptureProcessor);
+            mMetadataMatchingCaptureCallback = processingImageReader.getCameraCaptureCallback();
+            mImageReader = processingImageReader;
+        } else {
+            MetadataImageReader metadataImageReader = new MetadataImageReader(resolution.getWidth(),
+                    resolution.getHeight(), getImageFormat(), MAX_IMAGES,
+                    mProcessingImageResultHandler);
+            mMetadataMatchingCaptureCallback = metadataImageReader.getCameraCaptureCallback();
+            mImageReader = metadataImageReader;
+        }
+
+        mImageReader.setOnImageAvailableListener(
+                new ImageReaderProxy.OnImageAvailableListener() {
+                    @Override
+                    public void onImageAvailable(ImageReaderProxy imageReader) {
+                        ImageProxy image = null;
+                        try {
+                            image = imageReader.acquireLatestImage();
+                        } catch (IllegalStateException e) {
+                            Log.e(TAG, "Failed to acquire latest image.", e);
+                        } finally {
+                            if (image != null) {
+                                // Call the head request listener to process the captured image.
+                                ImageCaptureRequest imageCaptureRequest;
+                                if ((imageCaptureRequest = mImageCaptureRequests.peek()) != null) {
+                                    SingleCloseImageProxy wrappedImage = new SingleCloseImageProxy(
+                                            image);
+                                    wrappedImage.addOnImageCloseListener(mOnImageCloseListener);
+                                    imageCaptureRequest.dispatchImage(wrappedImage);
+                                } else {
+                                    // Discard the image if we have no requests.
+                                    image.close();
+                                }
+                            }
+                        }
+                    }
+                },
+                mProcessingImageResultHandler);
+
+        mDeferrableSurface = new ImmediateSurface(mImageReader.getSurface());
+        sessionConfigBuilder.addNonRepeatingSurface(mDeferrableSurface);
+
+        sessionConfigBuilder.addErrorListener(new SessionConfig.ErrorListener() {
+            @Override
+            public void onError(@NonNull SessionConfig sessionConfig,
+                    @NonNull SessionConfig.SessionError error) {
+                clearPipeline();
+                String cameraId = getCameraIdUnchecked(config);
+                mSessionConfigBuilder = createPipeline(config, resolution);
+                attachToCamera(cameraId, mSessionConfigBuilder.build());
+                notifyReset();
+            }
+        });
+
+        return sessionConfigBuilder;
+    }
+
+    /**
+     * Clear the internal pipeline so that the pipeline can be set up again.
+     */
+    void clearPipeline() {
+        Threads.checkMainThread();
+        DeferrableSurface deferrableSurface = mDeferrableSurface;
+        mDeferrableSurface = null;
+        ImageReaderProxy imageReaderProxy = mImageReader;
+        mImageReader = null;
+        HandlerThread handlerThread = mProcessingImageResultThread;
+
+        if (deferrableSurface != null) {
+            deferrableSurface.setOnSurfaceDetachedListener(
+                    CameraXExecutors.mainThreadExecutor(),
+                    new DeferrableSurface.OnSurfaceDetachedListener() {
+                        @Override
+                        public void onSurfaceDetached() {
+                            if (imageReaderProxy != null) {
+                                imageReaderProxy.close();
+                            }
+
+                            // Close the handlerThread after the ImageReader was closed.
+                            handlerThread.quitSafely();
+                        }
+                    });
         }
     }
 
@@ -232,7 +335,7 @@ public class ImageCapture extends UseCase {
     }
 
     private CameraControlInternal getCurrentCameraControl() {
-        String cameraId = getCameraIdUnchecked(mConfig.getLensFacing());
+        String cameraId = getCameraIdUnchecked(mConfig);
         return getCameraControl(cameraId);
     }
 
@@ -265,22 +368,22 @@ public class ImageCapture extends UseCase {
      * Sets target aspect ratio.
      *
      * <p>This sets the cropping rectangle returned by {@link ImageProxy#getCropRect()} returned
-     * from {@link ImageCapture#takePicture(OnImageCapturedListener)}.
+     * from {@link ImageCapture#takePicture(Executor, OnImageCapturedListener)}.
      *
      * <p>This crops the saved image when calling
-     * {@link ImageCapture#takePicture(File, OnImageSavedListener)} or
-     * {@link ImageCapture#takePicture(File, OnImageSavedListener, Metadata)}.
+     * {@link ImageCapture#takePicture(File, Executor, OnImageSavedListener)} or
+     * {@link ImageCapture#takePicture(File, Metadata, Executor, OnImageSavedListener)}.
      *
      * <p>Cropping occurs around the center of the image and as though it were in the target
      * rotation.
      *
      * @param aspectRatio New target aspect ratio.
      */
-    public void setTargetAspectRatio(Rational aspectRatio) {
+    public void setTargetAspectRatioCustom(Rational aspectRatio) {
         ImageOutputConfig oldConfig = (ImageOutputConfig) getUseCaseConfig();
-        Rational oldRatio = oldConfig.getTargetAspectRatio(null);
+        Rational oldRatio = oldConfig.getTargetAspectRatioCustom(null);
         if (!aspectRatio.equals(oldRatio)) {
-            mUseCaseConfigBuilder.setTargetAspectRatio(aspectRatio);
+            mUseCaseConfigBuilder.setTargetAspectRatioCustom(aspectRatio);
             updateUseCaseConfig(mUseCaseConfigBuilder.build());
             mConfig = (ImageCaptureConfig) getUseCaseConfig();
 
@@ -330,21 +433,24 @@ public class ImageCapture extends UseCase {
      * <p>The listener's callback will be called only once for every invocation of this method. The
      * listener is responsible for calling {@link Image#close()} on the returned image.
      *
+     * @param executor The executor in which the listener callback methods will be run.
      * @param listener Listener to be called for the newly captured image
      */
-    public void takePicture(final OnImageCapturedListener listener) {
+    @SuppressLint("LambdaLast") // Maybe remove after https://issuetracker.google.com/135275901
+    public void takePicture(@NonNull Executor executor,
+            final @NonNull OnImageCapturedListener listener) {
         if (Looper.getMainLooper() != Looper.myLooper()) {
             mMainHandler.post(
                     new Runnable() {
                         @Override
                         public void run() {
-                            ImageCapture.this.takePicture(listener);
+                            ImageCapture.this.takePicture(executor, listener);
                         }
                     });
             return;
         }
 
-        sendImageCaptureRequest(listener, mHandler);
+        sendImageCaptureRequest(executor, listener);
     }
 
     /**
@@ -353,10 +459,14 @@ public class ImageCapture extends UseCase {
      * <p>The listener's callback will be called only once for every invocation of this method.
      *
      * @param saveLocation       Location to store the newly captured image.
+     * @param executor           The executor in which the listener callback methods will be run.
      * @param imageSavedListener Listener to be called for the newly captured image.
      */
-    public void takePicture(File saveLocation, OnImageSavedListener imageSavedListener) {
-        takePicture(saveLocation, imageSavedListener, EMPTY_METADATA);
+    @SuppressLint("LambdaLast") // Maybe remove after https://issuetracker.google.com/135275901
+    public void takePicture(@NonNull File saveLocation,
+            @NonNull Executor executor,
+            @NonNull OnImageSavedListener imageSavedListener) {
+        takePicture(saveLocation, EMPTY_METADATA, executor, imageSavedListener);
     }
 
     /**
@@ -368,20 +478,23 @@ public class ImageCapture extends UseCase {
      * metadata will be included in the EXIF.
      *
      * @param saveLocation       Location to store the newly captured image.
-     * @param imageSavedListener Listener to be called for the newly captured image.
      * @param metadata           Metadata to be stored with the saved image. For JPEG this will
      *                           be included in the EXIF.
+     * @param executor           The executor in which the listener callback methods will be run.
+     * @param imageSavedListener Listener to be called for the newly captured image.
      */
+    @SuppressLint("LambdaLast") // Maybe remove after https://issuetracker.google.com/135275901
     public void takePicture(
-            final File saveLocation, final OnImageSavedListener imageSavedListener,
-            final Metadata metadata) {
+            final @NonNull File saveLocation,
+            final @NonNull Metadata metadata, @NonNull Executor executor,
+            final @NonNull OnImageSavedListener imageSavedListener) {
         if (Looper.getMainLooper() != Looper.myLooper()) {
             mMainHandler.post(
                     new Runnable() {
                         @Override
                         public void run() {
-                            ImageCapture.this.takePicture(saveLocation, imageSavedListener,
-                                    metadata);
+                            ImageCapture.this.takePicture(saveLocation,
+                                    metadata, executor, imageSavedListener);
                         }
                     });
             return;
@@ -417,17 +530,17 @@ public class ImageCapture extends UseCase {
                     @Override
                     public void onError(
                             ImageSaver.SaveError error, String message, @Nullable Throwable cause) {
-                        UseCaseError useCaseError = UseCaseError.UNKNOWN_ERROR;
+                        ImageCaptureError imageCaptureError = ImageCaptureError.UNKNOWN_ERROR;
                         switch (error) {
                             case FILE_IO_FAILED:
-                                useCaseError = UseCaseError.FILE_IO_ERROR;
+                                imageCaptureError = ImageCaptureError.FILE_IO_ERROR;
                                 break;
                             default:
-                                // Keep the useCaseError as UNKNOWN_ERROR
+                                // Keep the imageCaptureError as UNKNOWN_ERROR
                                 break;
                         }
 
-                        imageSavedListener.onError(useCaseError, message, cause);
+                        imageSavedListener.onError(imageCaptureError, message, cause);
                     }
                 };
 
@@ -437,54 +550,53 @@ public class ImageCapture extends UseCase {
                 new OnImageCapturedListener() {
                     @Override
                     public void onCaptureSuccess(ImageProxy image, int rotationDegrees) {
-                        Handler completionHandler = (mHandler != null) ? mHandler : mMainHandler;
-                        CameraXExecutors.ioExecutor()
-                                .execute(
-                                        new ImageSaver(
-                                                image,
-                                                saveLocation,
-                                                rotationDegrees,
-                                                metadata.isReversedHorizontal,
-                                                metadata.isReversedVertical,
-                                                metadata.location,
-                                                imageSavedListenerWrapper,
-                                                completionHandler));
+                        mIoExecutor.execute(
+                                new ImageSaver(
+                                        image,
+                                        saveLocation,
+                                        rotationDegrees,
+                                        metadata.isReversedHorizontal,
+                                        metadata.isReversedVertical,
+                                        metadata.location,
+                                        executor,
+                                        imageSavedListenerWrapper));
                     }
 
                     @Override
                     public void onError(
-                            UseCaseError error, String message, @Nullable Throwable cause) {
+                            @NonNull ImageCaptureError error, @NonNull String message,
+                            @Nullable Throwable cause) {
                         imageSavedListener.onError(error, message, cause);
                     }
                 };
 
-        // Always use the mMainHandler for the initial callback so we don't need to double post to
-        // another thread
-        sendImageCaptureRequest(imageCaptureCallbackWrapper, mMainHandler);
+        // Always use the mainThreadExecutor for the initial callback so we don't need to double
+        // post to another thread
+        sendImageCaptureRequest(CameraXExecutors.mainThreadExecutor(), imageCaptureCallbackWrapper);
     }
 
     @UiThread
     private void sendImageCaptureRequest(
-            OnImageCapturedListener listener, @Nullable Handler listenerHandler) {
+            @Nullable Executor listenerExecutor, OnImageCapturedListener listener) {
 
-        String cameraId = getCameraIdUnchecked(mConfig.getLensFacing());
+        String cameraId = getCameraIdUnchecked(mConfig);
 
         // Get the relative rotation or default to 0 if the camera info is unavailable
         int relativeRotation = 0;
         try {
-            CameraInfo cameraInfo = CameraX.getCameraInfo(cameraId);
+            CameraInfoInternal cameraInfoInternal = CameraX.getCameraInfo(cameraId);
             relativeRotation =
-                    cameraInfo.getSensorRotationDegrees(
+                    cameraInfoInternal.getSensorRotationDegrees(
                             mConfig.getTargetRotation(Surface.ROTATION_0));
         } catch (CameraInfoUnavailableException e) {
             Log.e(TAG, "Unable to retrieve camera sensor orientation.", e);
         }
 
-        Rational targetRatio = mConfig.getTargetAspectRatio(null);
+        Rational targetRatio = mConfig.getTargetAspectRatioCustom(null);
         targetRatio = ImageUtil.rotate(targetRatio, relativeRotation);
 
         mImageCaptureRequests.offer(
-                new ImageCaptureRequest(listener, listenerHandler, relativeRotation, targetRatio));
+                new ImageCaptureRequest(relativeRotation, targetRatio, listenerExecutor, listener));
         if (mImageCaptureRequests.size() == 1) {
             issueImageCaptureRequests();
         }
@@ -514,7 +626,7 @@ public class ImageCapture extends UseCase {
     private void takePictureInternal() {
         final TakePictureState state = new TakePictureState();
 
-        FluentFuture.from(preTakePicture(state))
+        FutureChain.from(preTakePicture(state))
                 .transformAsync(new AsyncFunction<Void, Void>() {
                     @Override
                     public ListenableFuture<Void> apply(Void v) throws Exception {
@@ -557,7 +669,8 @@ public class ImageCapture extends UseCase {
                                             ImageCaptureRequest request =
                                                     mImageCaptureRequests.poll();
                                             if (request != null) {
-                                                request.callbackError(UseCaseError.UNKNOWN_ERROR,
+                                                request.callbackError(
+                                                        ImageCaptureError.UNKNOWN_ERROR,
                                                         (error != null) ? error.getMessage()
                                                                 : "Unknown error", error);
                                                 // Handle the next request.
@@ -573,6 +686,7 @@ public class ImageCapture extends UseCase {
                         mExecutor);
     }
 
+    @NonNull
     @Override
     public String toString() {
         return TAG + ":" + getName();
@@ -586,19 +700,7 @@ public class ImageCapture extends UseCase {
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
     public void clear() {
-        if (mDeferrableSurface != null) {
-            mDeferrableSurface.setOnSurfaceDetachedListener(
-                    CameraXExecutors.mainThreadExecutor(),
-                    new DeferrableSurface.OnSurfaceDetachedListener() {
-                        @Override
-                        public void onSurfaceDetached() {
-                            if (mImageReader != null) {
-                                mImageReader.close();
-                                mImageReader = null;
-                            }
-                        }
-                    });
-        }
+        clearPipeline();
         mExecutor.shutdown();
         super.clear();
     }
@@ -612,7 +714,7 @@ public class ImageCapture extends UseCase {
     @RestrictTo(Scope.LIBRARY_GROUP)
     protected Map<String, Size> onSuggestedResolutionUpdated(
             Map<String, Size> suggestedResolutionMap) {
-        String cameraId = getCameraIdUnchecked(mConfig.getLensFacing());
+        String cameraId = getCameraIdUnchecked(mConfig);
         Size resolution = suggestedResolutionMap.get(cameraId);
         if (resolution == null) {
             throw new IllegalArgumentException(
@@ -628,56 +730,7 @@ public class ImageCapture extends UseCase {
             mImageReader.close();
         }
 
-        // Setup the ImageReader to do processing
-        if (mCaptureProcessor != null) {
-            ProcessingImageReader processingImageReader =
-                    new ProcessingImageReader(
-                            resolution.getWidth(),
-                            resolution.getHeight(),
-                            getImageFormat(), mMaxCaptureStages,
-                            mHandler, getCaptureBundle(CaptureBundles.singleDefaultCaptureBundle()),
-                            mCaptureProcessor);
-            mMetadataMatchingCaptureCallback = processingImageReader.getCameraCaptureCallback();
-            mImageReader = processingImageReader;
-        } else {
-            MetadataImageReader metadataImageReader = new MetadataImageReader(resolution.getWidth(),
-                    resolution.getHeight(), getImageFormat(), MAX_IMAGES, mHandler);
-            mMetadataMatchingCaptureCallback = metadataImageReader.getCameraCaptureCallback();
-            mImageReader = metadataImageReader;
-        }
-
-        mImageReader.setOnImageAvailableListener(
-                new ImageReaderProxy.OnImageAvailableListener() {
-                    @Override
-                    public void onImageAvailable(ImageReaderProxy imageReader) {
-                        ImageProxy image = null;
-                        try {
-                            image = imageReader.acquireLatestImage();
-                        } catch (IllegalStateException e) {
-                            Log.e(TAG, "Failed to acquire latest image.", e);
-                        } finally {
-                            if (image != null) {
-                                // Call the head request listener to process the captured image.
-                                ImageCaptureRequest imageCaptureRequest;
-                                if ((imageCaptureRequest = mImageCaptureRequests.peek()) != null) {
-                                    SingleCloseImageProxy wrappedImage = new SingleCloseImageProxy(
-                                            image);
-                                    wrappedImage.addOnImageCloseListener(mOnImageCloseListener);
-                                    imageCaptureRequest.dispatchImage(wrappedImage);
-                                } else {
-                                    // Discard the image if we have no requests.
-                                    image.close();
-                                }
-                            }
-                        }
-                    }
-                },
-                mMainHandler);
-
-        mSessionConfigBuilder.clearSurfaces();
-
-        mDeferrableSurface = new ImmediateSurface(mImageReader.getSurface());
-        mSessionConfigBuilder.addNonRepeatingSurface(mDeferrableSurface);
+        mSessionConfigBuilder = createPipeline(mConfig, resolution);
 
         attachToCamera(cameraId, mSessionConfigBuilder.build());
 
@@ -717,7 +770,7 @@ public class ImageCapture extends UseCase {
      * <p>For example, trigger 3A scan, open torch and check 3A converged if necessary.
      */
     private ListenableFuture<Void> preTakePicture(final TakePictureState state) {
-        return FluentFuture.from(getPreCaptureStateIfNeeded())
+        return FutureChain.from(getPreCaptureStateIfNeeded())
                 .transformAsync(
                         new AsyncFunction<CameraCaptureResult, Boolean>() {
                             @Override
@@ -949,30 +1002,32 @@ public class ImageCapture extends UseCase {
 
             ListenableFuture<Boolean> future = CallbackToFutureAdapter.getFuture(
                     new CallbackToFutureAdapter.Resolver<Boolean>() {
-
                         @Override
                         public Object attachCompleter(@NonNull final
                                 CallbackToFutureAdapter.Completer<Boolean> completer) {
-                            CameraCaptureCallback completerCallback = new CameraCaptureCallback() {
-                                @Override
-                                public void onCaptureCompleted(
-                                        @NonNull CameraCaptureResult result) {
-                                    completer.set(true);
-                                }
+                                CameraCaptureCallback completerCallback =
+                                        new CameraCaptureCallback() {
+                                        @Override
+                                        public void onCaptureCompleted(
+                                                @NonNull CameraCaptureResult result) {
+                                            completer.set(true);
+                                        }
 
-                                @Override
-                                public void onCaptureFailed(@NonNull CameraCaptureFailure failure) {
-                                    Log.e(TAG,
-                                            "capture picture get onCaptureFailed with reason "
-                                                    + failure.getReason());
-                                    completer.set(false);
-                                }
-                            };
-                            builder.addCameraCaptureCallback(completerCallback);
+                                        @Override
+                                        public void onCaptureFailed(
+                                                @NonNull CameraCaptureFailure failure) {
+                                            Log.e(TAG,
+                                                    "capture picture get onCaptureFailed with "
+                                                            + "reason "
+                                                            + failure.getReason());
+                                            completer.set(false);
+                                        }
+                                    };
+                                builder.addCameraCaptureCallback(completerCallback);
 
-                            captureConfigs.add(builder.build());
-                            return "issueTakePicture[stage=" + captureStage.getId() + "]";
-                        }
+                                captureConfigs.add(builder.build());
+                                return "issueTakePicture[stage=" + captureStage.getId() + "]";
+                            }
                     });
             futureList.add(future);
 
@@ -1016,12 +1071,12 @@ public class ImageCapture extends UseCase {
 
     /**
      * Describes the error that occurred during an image capture operation (such as {@link
-     * ImageCapture#takePicture(OnImageCapturedListener)}).
+     * ImageCapture#takePicture(Executor, OnImageCapturedListener)}).
      *
      * <p>This is a parameter sent to the error callback functions set in listeners such as {@link
-     * ImageCapture.OnImageSavedListener#onError(UseCaseError, String, Throwable)}.
+     * ImageCapture.OnImageSavedListener#onError(ImageCaptureError, String, Throwable)}.
      */
-    public enum UseCaseError {
+    public enum ImageCaptureError {
         /**
          * An unknown error occurred.
          *
@@ -1060,7 +1115,7 @@ public class ImageCapture extends UseCase {
 
         /** Called when an error occurs while attempting to save an image. */
         void onError(
-                @NonNull UseCaseError useCaseError,
+                @NonNull ImageCaptureError imageCaptureError,
                 @NonNull String message,
                 @Nullable Throwable cause);
     }
@@ -1102,7 +1157,8 @@ public class ImageCapture extends UseCase {
 
         /** Callback for when an error occurred during image capture. */
         public void onError(
-                UseCaseError useCaseError, String message, @Nullable Throwable cause) {
+                @NonNull ImageCaptureError imageCaptureError, @NonNull String message,
+                @Nullable Throwable cause) {
         }
     }
 
@@ -1119,7 +1175,6 @@ public class ImageCapture extends UseCase {
             implements ConfigProvider<ImageCaptureConfig> {
         private static final CaptureMode DEFAULT_CAPTURE_MODE = CaptureMode.MIN_LATENCY;
         private static final FlashMode DEFAULT_FLASH_MODE = FlashMode.OFF;
-        private static final Handler DEFAULT_HANDLER = new Handler(Looper.getMainLooper());
         private static final int DEFAULT_SURFACE_OCCUPANCY_PRIORITY = 4;
 
         private static final ImageCaptureConfig DEFAULT_CONFIG;
@@ -1129,7 +1184,6 @@ public class ImageCapture extends UseCase {
                     new ImageCaptureConfig.Builder()
                             .setCaptureMode(DEFAULT_CAPTURE_MODE)
                             .setFlashMode(DEFAULT_FLASH_MODE)
-                            .setCallbackHandler(DEFAULT_HANDLER)
                             .setSurfaceOccupancyPriority(DEFAULT_SURFACE_OCCUPANCY_PRIORITY);
 
             DEFAULT_CONFIG = builder.build();
@@ -1305,67 +1359,60 @@ public class ImageCapture extends UseCase {
     }
 
     private final class ImageCaptureRequest {
-        OnImageCapturedListener mListener;
-        @Nullable
-        Handler mHandler;
         @RotationValue
         int mRotationDegrees;
         Rational mTargetRatio;
+        @NonNull
+        Executor mListenerExecutor;
+        @NonNull
+        OnImageCapturedListener mListener;
 
         ImageCaptureRequest(
-                OnImageCapturedListener listener,
-                @Nullable Handler handler,
                 @RotationValue int rotationDegrees,
-                Rational targetRatio) {
-            mListener = listener;
-            mHandler = handler;
+                Rational targetRatio,
+                @NonNull Executor executor,
+                @NonNull OnImageCapturedListener listener) {
             mRotationDegrees = rotationDegrees;
             mTargetRatio = targetRatio;
+            mListenerExecutor = executor;
+            mListener = listener;
         }
 
         void dispatchImage(final ImageProxy image) {
-            if (mHandler != null && Looper.myLooper() != mHandler.getLooper()) {
-                boolean posted =
-                        mHandler.post(
-                                new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        ImageCaptureRequest.this.dispatchImage(image);
-                                    }
-                                });
-                // Unable to post to the supplied handler, close the image.
-                if (!posted) {
-                    Log.e(TAG, "Unable to post to the supplied handler.");
-                    image.close();
-                }
-                return;
-            }
-
-            Size sourceSize = new Size(image.getWidth(), image.getHeight());
-            if (ImageUtil.isAspectRatioValid(sourceSize, mTargetRatio)) {
-                image.setCropRect(
-                        ImageUtil.computeCropRectFromAspectRatio(sourceSize, mTargetRatio));
-            }
-
-            mListener.onCaptureSuccess(image, mRotationDegrees);
-        }
-
-        void callbackError(final UseCaseError useCaseError, final String message,
-                final Throwable cause) {
-            if (mHandler != null && Looper.myLooper() != mHandler.getLooper()) {
-                boolean posted = mHandler.post(new Runnable() {
+            try {
+                mListenerExecutor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        ImageCaptureRequest.this.callbackError(useCaseError, message, cause);
+                        Size sourceSize = new Size(image.getWidth(), image.getHeight());
+                        if (ImageUtil.isAspectRatioValid(sourceSize, mTargetRatio)) {
+                            image.setCropRect(
+                                    ImageUtil.computeCropRectFromAspectRatio(sourceSize,
+                                            mTargetRatio));
+                        }
+
+                        mListener.onCaptureSuccess(image, mRotationDegrees);
                     }
                 });
-                if (!posted) {
-                    Log.e(TAG, "Unable to post to the supplied handler.");
-                }
-                return;
-            }
+            } catch (RejectedExecutionException e) {
+                Log.e(TAG, "Unable to post to the supplied executor.");
 
-            mListener.onError(useCaseError, message, cause);
+                // Unable to execute on the supplied executor, close the image.
+                image.close();
+            }
+        }
+
+        void callbackError(final ImageCaptureError imageCaptureError, final String message,
+                final Throwable cause) {
+            try {
+                mListenerExecutor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        mListener.onError(imageCaptureError, message, cause);
+                    }
+                });
+            } catch (RejectedExecutionException e) {
+                Log.e(TAG, "Unable to post to the supplied executor.");
+            }
         }
     }
 }

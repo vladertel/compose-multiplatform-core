@@ -136,6 +136,47 @@ class FragmentTest {
         activityRule.popBackStackImmediate()
     }
 
+    @LargeTest
+    @Test
+    @SdkSuppress(minSdkVersion = 16) // waitForHalfFadeIn requires API 16
+    fun testRemoveUnrelatedDuringAnimation() {
+        val unrelatedFragment = StrictFragment()
+        val fragmentA = FragmentA()
+        val fragmentB = FragmentB()
+        activityRule.runOnUiThread {
+            activity.supportFragmentManager.beginTransaction()
+                .add(unrelatedFragment, "unrelated")
+                .commitNow()
+            activity.supportFragmentManager.beginTransaction()
+                .add(R.id.content, fragmentA)
+                .commitNow()
+        }
+        instrumentation.waitForIdleSync()
+        activityRule.runOnUiThread {
+            activity.supportFragmentManager.beginTransaction()
+                .setCustomAnimations(
+                    R.anim.long_fade_in, R.anim.long_fade_out,
+                    R.anim.long_fade_in, R.anim.long_fade_out
+                )
+                .replace(R.id.content, fragmentB)
+                .addToBackStack(null)
+                .commit()
+        }
+        // Wait for the middle of the animation
+        waitForHalfFadeIn(fragmentB)
+
+        assertThat(unrelatedFragment.calledOnResume).isTrue()
+
+        activityRule.runOnUiThread {
+            activity.supportFragmentManager.beginTransaction()
+                .remove(unrelatedFragment)
+                .commit()
+        }
+        instrumentation.waitForIdleSync()
+
+        assertThat(unrelatedFragment.calledOnDestroy).isTrue()
+    }
+
     @SmallTest
     @Test
     fun testChildFragmentManagerNotAttached() {
@@ -214,6 +255,7 @@ class FragmentTest {
         assertThat(childFragment.requireParentFragment()).isSameInstanceAs(parentFragment)
     }
 
+    @Suppress("DEPRECATION") // needed for requireFragmentManager()
     @SmallTest
     @Test
     fun requireMethodsThrowsWhenNotAttached() {
@@ -268,6 +310,15 @@ class FragmentTest {
 
         try {
             fragment.requireFragmentManager()
+            fail()
+        } catch (expected: IllegalStateException) {
+            assertThat(expected)
+                .hasMessageThat()
+                .contains("Fragment $fragment not associated with a fragment manager.")
+        }
+
+        try {
+            fragment.parentFragmentManager
             fail()
         } catch (expected: IllegalStateException) {
             assertThat(expected)

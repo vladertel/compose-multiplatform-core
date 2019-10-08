@@ -134,17 +134,21 @@ public final class ViewPager2 extends ViewGroup {
                 @Override
                 public void onChanged() {
                     mCurrentItemDirty = true;
+                    mScrollEventAdapter.notifyDataSetChangeHappened();
                 }
             };
 
-    LinearLayoutManager mLayoutManager;
+    private LinearLayoutManager mLayoutManager;
     private int mPendingCurrentItem = NO_POSITION;
     private Parcelable mPendingAdapterState;
-    private RecyclerView mRecyclerView;
+    RecyclerView mRecyclerView;
     private PagerSnapHelper mPagerSnapHelper;
-    private ScrollEventAdapter mScrollEventAdapter;
+    ScrollEventAdapter mScrollEventAdapter;
+    private CompositeOnPageChangeCallback mPageChangeEventDispatcher;
     private FakeDrag mFakeDragger;
     private PageTransformerAdapter mPageTransformerAdapter;
+    private RecyclerView.ItemAnimator mSavedItemAnimator = null;
+    private boolean mSavedItemAnimatorPresent = false;
     private boolean mUserInputEnabled = true;
     private @OffscreenPageLimit int mOffscreenPageLimit = OFFSCREEN_PAGE_LIMIT_DEFAULT;
     AccessibilityProvider mAccessibilityProvider; // to avoid creation of a synthetic accessor
@@ -178,9 +182,11 @@ public final class ViewPager2 extends ViewGroup {
 
         mRecyclerView = new RecyclerViewImpl(context);
         mRecyclerView.setId(ViewCompat.generateViewId());
+        mRecyclerView.setDescendantFocusability(FOCUS_BEFORE_DESCENDANTS);
 
         mLayoutManager = new LinearLayoutManagerImpl(context);
         mRecyclerView.setLayoutManager(mLayoutManager);
+        mRecyclerView.setScrollingTouchSlop(RecyclerView.TOUCH_SLOP_PAGING);
         setOrientation(context, attrs);
 
         mRecyclerView.setLayoutParams(
@@ -198,9 +204,8 @@ public final class ViewPager2 extends ViewGroup {
         // don't want to respond on the events sent out during the attach process
         mRecyclerView.addOnScrollListener(mScrollEventAdapter);
 
-        CompositeOnPageChangeCallback pageChangeEventDispatcher =
-                new CompositeOnPageChangeCallback(3);
-        mScrollEventAdapter.setOnPageChangeCallback(pageChangeEventDispatcher);
+        mPageChangeEventDispatcher = new CompositeOnPageChangeCallback(3);
+        mScrollEventAdapter.setOnPageChangeCallback(mPageChangeEventDispatcher);
 
         // Callback that updates mCurrentItem after swipes. Also triggered in other cases, but in
         // all those cases mCurrentItem will only be overwritten with the same value.
@@ -212,20 +217,39 @@ public final class ViewPager2 extends ViewGroup {
                     mAccessibilityProvider.onSetNewCurrentItem();
                 }
             }
+
+            @Override
+            public void onPageScrollStateChanged(int newState) {
+                if (newState == SCROLL_STATE_IDLE) {
+                    updateCurrentItem();
+                }
+            }
+        };
+
+        // Prevents focus from remaining on a no-longer visible page
+        final OnPageChangeCallback focusClearer = new OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                clearFocus();
+                if (hasFocus()) { // if clear focus did not succeed
+                    mRecyclerView.requestFocus(View.FOCUS_FORWARD);
+                }
+            }
         };
 
         // Add currentItemUpdater before mExternalPageChangeCallbacks, because we need to update
         // internal state first
-        pageChangeEventDispatcher.addOnPageChangeCallback(currentItemUpdater);
-        // Allow a11y to register its listeners just after currentItemUpdater (so it has the
+        mPageChangeEventDispatcher.addOnPageChangeCallback(currentItemUpdater);
+        mPageChangeEventDispatcher.addOnPageChangeCallback(focusClearer);
+        // Allow a11y to register its listeners after currentItemUpdater (so it has the
         // right data). TODO: replace ordering comments with a test.
-        mAccessibilityProvider.onInitialize(pageChangeEventDispatcher, mRecyclerView);
-        pageChangeEventDispatcher.addOnPageChangeCallback(mExternalPageChangeCallbacks);
+        mAccessibilityProvider.onInitialize(mPageChangeEventDispatcher, mRecyclerView);
+        mPageChangeEventDispatcher.addOnPageChangeCallback(mExternalPageChangeCallbacks);
 
         // Add mPageTransformerAdapter after mExternalPageChangeCallbacks, because page transform
         // events must be fired after scroll events
         mPageTransformerAdapter = new PageTransformerAdapter(mLayoutManager);
-        pageChangeEventDispatcher.addOnPageChangeCallback(mPageTransformerAdapter);
+        mPageChangeEventDispatcher.addOnPageChangeCallback(mPageTransformerAdapter);
 
         attachViewToParent(mRecyclerView, 0, mRecyclerView.getLayoutParams());
     }
@@ -504,17 +528,7 @@ public final class ViewPager2 extends ViewGroup {
                 mTmpChildRect.bottom);
 
         if (mCurrentItemDirty) {
-            RecyclerView.ItemAnimator animator = mRecyclerView.getItemAnimator();
-            if (animator == null) {
-                updateCurrentItem();
-            } else {
-                animator.isRunning(new RecyclerView.ItemAnimator.ItemAnimatorFinishedListener() {
-                    @Override
-                    public void onAnimationsFinished() {
-                        updateCurrentItem();
-                    }
-                });
-            }
+            updateCurrentItem();
         }
     }
 
@@ -524,27 +538,25 @@ public final class ViewPager2 extends ViewGroup {
             throw new IllegalStateException("Design assumption violated.");
         }
 
-        int snapPosition = mPagerSnapHelper.findTargetSnapPosition(mLayoutManager, 0, 0);
+        View snapView = mPagerSnapHelper.findSnapView(mLayoutManager);
+        if (snapView == null) {
+            return; // nothing we can do
+        }
+        int snapPosition = mLayoutManager.getPosition(snapView);
 
-        // Extra checks verifying assumptions
-        // TODO: remove after testing
-        View snapView1 = mPagerSnapHelper.findSnapView(mLayoutManager);
-        View snapView2 = mLayoutManager.findViewByPosition(snapPosition);
-        if (snapView1 != snapView2) {
-            throw new IllegalStateException("Design assumption violated.");
+        if (snapPosition != mCurrentItem && getScrollState() == SCROLL_STATE_IDLE) {
+            /** TODO: revisit if push to {@link ScrollEventAdapter} / separate component */
+            mPageChangeEventDispatcher.onPageSelected(snapPosition);
         }
 
-        if (snapPosition != mCurrentItem) {
-            // TODO: handle fakeDrag
-            setCurrentItem(snapPosition, false);
-        }
         mCurrentItemDirty = false;
     }
 
     int getPageSize() {
+        final RecyclerView rv = mRecyclerView;
         return getOrientation() == ORIENTATION_HORIZONTAL
-                ? getWidth() - getPaddingLeft() - getPaddingRight()
-                : getHeight() - getPaddingTop() - getPaddingBottom();
+                ? rv.getWidth() - rv.getPaddingLeft() - rv.getPaddingRight()
+                : rv.getHeight() - rv.getPaddingTop() - rv.getPaddingBottom();
     }
 
     /**
@@ -561,9 +573,8 @@ public final class ViewPager2 extends ViewGroup {
         return mLayoutManager.getOrientation();
     }
 
-    boolean isLayoutRtl() {
-        return mLayoutManager.getLayoutDirection()
-                == androidx.core.view.ViewCompat.LAYOUT_DIRECTION_RTL;
+    boolean isRtl() {
+        return mLayoutManager.getLayoutDirection() == ViewCompat.LAYOUT_DIRECTION_RTL;
     }
 
     /**
@@ -627,7 +638,7 @@ public final class ViewPager2 extends ViewGroup {
 
         // 2. Update the item internally
 
-        float previousItem = mCurrentItem;
+        double previousItem = mCurrentItem;
         mCurrentItem = item;
         mAccessibilityProvider.onSetNewCurrentItem();
 
@@ -839,6 +850,16 @@ public final class ViewPager2 extends ViewGroup {
         return mOffscreenPageLimit;
     }
 
+    @Override
+    public boolean canScrollHorizontally(int direction) {
+        return mRecyclerView.canScrollHorizontally(direction);
+    }
+
+    @Override
+    public boolean canScrollVertically(int direction) {
+        return mRecyclerView.canScrollVertically(direction);
+    }
+
     /**
      * Add a callback that will be invoked whenever the page changes or is incrementally
      * scrolled. See {@link OnPageChangeCallback}.
@@ -865,6 +886,10 @@ public final class ViewPager2 extends ViewGroup {
      * Sets a {@link PageTransformer} that will be called for each attached page whenever the
      * scroll position is changed. This allows the application to apply custom property
      * transformations to each page, overriding the default sliding behavior.
+     * <p>
+     * Note: setting a {@link PageTransformer} disables data-set change animations to prevent
+     * conflicts between the two animation systems. Setting a {@code null} transformer will restore
+     * data-set change animations.
      *
      * @param transformer PageTransformer that will modify each page's animation properties
      *
@@ -872,6 +897,20 @@ public final class ViewPager2 extends ViewGroup {
      * @see CompositePageTransformer
      */
     public void setPageTransformer(@Nullable PageTransformer transformer) {
+        if (transformer != null) {
+            if (!mSavedItemAnimatorPresent) {
+                mSavedItemAnimator = mRecyclerView.getItemAnimator();
+                mSavedItemAnimatorPresent = true;
+            }
+            mRecyclerView.setItemAnimator(null);
+        } else {
+            if (mSavedItemAnimatorPresent) {
+                mRecyclerView.setItemAnimator(mSavedItemAnimator);
+                mSavedItemAnimator = null;
+                mSavedItemAnimatorPresent = false;
+            }
+        }
+
         // TODO: add support for reverseDrawingOrder: b/112892792
         // TODO: add support for pageLayerType: b/112893074
         if (transformer == mPageTransformerAdapter.getPageTransformer()) {
@@ -891,9 +930,9 @@ public final class ViewPager2 extends ViewGroup {
         if (mPageTransformerAdapter.getPageTransformer() == null) {
             return;
         }
-        float relativePosition = mScrollEventAdapter.getRelativeScrollPosition();
+        double relativePosition = mScrollEventAdapter.getRelativeScrollPosition();
         int position = (int) relativePosition;
-        float positionOffset = relativePosition - position;
+        float positionOffset = (float) (relativePosition - position);
         int positionOffsetPx = Math.round(getPageSize() * positionOffset);
         mPageTransformerAdapter.onPageScrolled(position, positionOffset, positionOffsetPx);
     }
@@ -991,6 +1030,13 @@ public final class ViewPager2 extends ViewGroup {
             final int offscreenSpace = getPageSize() * pageLimit;
             extraLayoutSpace[0] = offscreenSpace;
             extraLayoutSpace[1] = offscreenSpace;
+        }
+
+        @Override
+        public boolean requestChildRectangleOnScreen(@NonNull RecyclerView parent,
+                @NonNull View child, @NonNull Rect rect, boolean immediate,
+                boolean focusedChildVisible) {
+            return false; // users should use setCurrentItem instead
         }
     }
 
@@ -1169,6 +1215,8 @@ public final class ViewPager2 extends ViewGroup {
         mRecyclerView.removeItemDecoration(decor);
     }
 
+    // TODO(b/141956012): Suppressed during upgrade to AGP 3.6.
+    @SuppressWarnings("ClassCanBeStatic")
     private abstract class AccessibilityProvider {
         void onInitialize(@NonNull CompositeOnPageChangeCallback pageChangeEventDispatcher,
                 @NonNull RecyclerView recyclerView) {
@@ -1457,7 +1505,7 @@ public final class ViewPager2 extends ViewGroup {
             }
 
             if (getOrientation() == ORIENTATION_HORIZONTAL) {
-                boolean isLayoutRtl = isLayoutRtl();
+                boolean isLayoutRtl = isRtl();
                 int actionIdPageForward = isLayoutRtl ? actionIdPageLeft : actionIdPageRight;
                 int actionIdPageBackward = isLayoutRtl ? actionIdPageRight : actionIdPageLeft;
 

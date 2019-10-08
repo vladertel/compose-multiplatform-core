@@ -31,7 +31,7 @@ import java.util.ArrayList;
  */
 final class BackStackRecord extends FragmentTransaction implements
         FragmentManager.BackStackEntry, FragmentManager.OpGenerator {
-    static final String TAG = FragmentManager.TAG;
+    private static final String TAG = FragmentManager.TAG;
 
     final FragmentManager mManager;
 
@@ -256,7 +256,7 @@ final class BackStackRecord extends FragmentTransaction implements
         if (!mAddToBackStack) {
             return;
         }
-        if (FragmentManager.DEBUG) {
+        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
             Log.v(TAG, "Bump nesting in " + this + " by " + amt);
         }
         final int numOps = mOps.size();
@@ -264,7 +264,7 @@ final class BackStackRecord extends FragmentTransaction implements
             final Op op = mOps.get(opNum);
             if (op.mFragment != null) {
                 op.mFragment.mBackStackNesting += amt;
-                if (FragmentManager.DEBUG) {
+                if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
                     Log.v(TAG, "Bump nesting of "
                             + op.mFragment + " to " + op.mFragment.mBackStackNesting);
                 }
@@ -305,7 +305,7 @@ final class BackStackRecord extends FragmentTransaction implements
 
     int commitInternal(boolean allowStateLoss) {
         if (mCommitted) throw new IllegalStateException("commit already called");
-        if (FragmentManager.DEBUG) {
+        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
             Log.v(TAG, "Commit: " + this);
             LogWriter logw = new LogWriter(TAG);
             PrintWriter pw = new PrintWriter(logw);
@@ -314,7 +314,7 @@ final class BackStackRecord extends FragmentTransaction implements
         }
         mCommitted = true;
         if (mAddToBackStack) {
-            mIndex = mManager.allocBackStackIndex(this);
+            mIndex = mManager.allocBackStackIndex();
         } else {
             mIndex = -1;
         }
@@ -332,8 +332,9 @@ final class BackStackRecord extends FragmentTransaction implements
      * @return true always because the records and isRecordPop will always be changed
      */
     @Override
-    public boolean generateOps(ArrayList<BackStackRecord> records, ArrayList<Boolean> isRecordPop) {
-        if (FragmentManager.DEBUG) {
+    public boolean generateOps(@NonNull ArrayList<BackStackRecord> records,
+            @NonNull ArrayList<Boolean> isRecordPop) {
+        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
             Log.v(TAG, "Run: " + this);
         }
 
@@ -400,7 +401,8 @@ final class BackStackRecord extends FragmentTransaction implements
             switch (op.mCmd) {
                 case OP_ADD:
                     f.setNextAnim(op.mEnterAnim);
-                    mManager.addFragment(f, false);
+                    mManager.setExitAnimationOrder(f, false);
+                    mManager.addFragment(f);
                     break;
                 case OP_REMOVE:
                     f.setNextAnim(op.mExitAnim);
@@ -412,6 +414,7 @@ final class BackStackRecord extends FragmentTransaction implements
                     break;
                 case OP_SHOW:
                     f.setNextAnim(op.mEnterAnim);
+                    mManager.setExitAnimationOrder(f, false);
                     mManager.showFragment(f);
                     break;
                 case OP_DETACH:
@@ -420,6 +423,7 @@ final class BackStackRecord extends FragmentTransaction implements
                     break;
                 case OP_ATTACH:
                     f.setNextAnim(op.mEnterAnim);
+                    mManager.setExitAnimationOrder(f, false);
                     mManager.attachFragment(f);
                     break;
                 case OP_SET_PRIMARY_NAV:
@@ -461,11 +465,12 @@ final class BackStackRecord extends FragmentTransaction implements
             switch (op.mCmd) {
                 case OP_ADD:
                     f.setNextAnim(op.mPopExitAnim);
+                    mManager.setExitAnimationOrder(f, true);
                     mManager.removeFragment(f);
                     break;
                 case OP_REMOVE:
                     f.setNextAnim(op.mPopEnterAnim);
-                    mManager.addFragment(f, false);
+                    mManager.addFragment(f);
                     break;
                 case OP_HIDE:
                     f.setNextAnim(op.mPopEnterAnim);
@@ -473,6 +478,7 @@ final class BackStackRecord extends FragmentTransaction implements
                     break;
                 case OP_SHOW:
                     f.setNextAnim(op.mPopExitAnim);
+                    mManager.setExitAnimationOrder(f, true);
                     mManager.hideFragment(f);
                     break;
                 case OP_DETACH:
@@ -481,6 +487,7 @@ final class BackStackRecord extends FragmentTransaction implements
                     break;
                 case OP_ATTACH:
                     f.setNextAnim(op.mPopExitAnim);
+                    mManager.setExitAnimationOrder(f, true);
                     mManager.detachFragment(f);
                     break;
                 case OP_SET_PRIMARY_NAV:

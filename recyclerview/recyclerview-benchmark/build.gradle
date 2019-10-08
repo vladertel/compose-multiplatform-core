@@ -19,12 +19,13 @@ plugins {
     id("AndroidXPlugin")
     id("com.android.library")
     id("kotlin-android")
+    id("androidx.benchmark")
 }
 
 dependencies {
-    androidTestImplementation(project(":appcompat"))
+    androidTestImplementation("androidx.appcompat:appcompat:1.1.0")
     androidTestImplementation(project(":recyclerview:recyclerview"))
-    androidTestImplementation(project(":benchmark"))
+    androidTestImplementation(project(":benchmark:benchmark-junit4"))
     androidTestImplementation(JUNIT)
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
     androidTestImplementation(ANDROIDX_TEST_CORE)

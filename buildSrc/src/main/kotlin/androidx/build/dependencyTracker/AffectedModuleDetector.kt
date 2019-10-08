@@ -20,6 +20,8 @@ import androidx.build.dependencyTracker.AffectedModuleDetector.Companion.CHANGED
 import androidx.build.dependencyTracker.AffectedModuleDetector.Companion.DEPENDENT_PROJECTS_ARG
 import androidx.build.dependencyTracker.AffectedModuleDetector.Companion.ENABLE_ARG
 import androidx.build.getDistributionDirectory
+import androidx.build.gitclient.GitClient
+import androidx.build.gitclient.GitClientImpl
 import androidx.build.gradle.isRoot
 import androidx.build.isRunningOnBuildServer
 import java.io.File
@@ -48,7 +50,7 @@ import org.gradle.api.logging.Logger
  *  ALL_AFFECTED_PROJECTS -- The union of CHANGED_PROJECTS and DEPENDENT_PROJECTS,
  *      which encompasses all projects that could possibly break due to the changes.
  */
-internal enum class ProjectSubset { DEPENDENT_PROJECTS, CHANGED_PROJECTS, ALL_AFFECTED_PROJECTS }
+enum class ProjectSubset { DEPENDENT_PROJECTS, CHANGED_PROJECTS, ALL_AFFECTED_PROJECTS }
 
 /**
  * A utility class that can discover which files are changed based on git history.
@@ -183,7 +185,7 @@ private class AcceptAll(
  *
  * When a file in a module is changed, all modules that depend on it are considered as changed.
  */
-internal class AffectedModuleDetectorImpl constructor(
+class AffectedModuleDetectorImpl constructor(
     private val rootProject: Project,
     private val logger: Logger?,
         // used for debugging purposes when we want to ignore non module files

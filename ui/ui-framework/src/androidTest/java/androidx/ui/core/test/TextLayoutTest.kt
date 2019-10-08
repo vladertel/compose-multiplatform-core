@@ -16,16 +16,16 @@
 
 package androidx.ui.core.test
 
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
-import androidx.compose.setContent
 import androidx.test.filters.SmallTest
 import androidx.test.rule.ActivityTestRule
 import androidx.ui.core.ComplexLayout
-import androidx.ui.core.CraneWrapper
+import androidx.ui.core.Constraints
 import androidx.ui.core.Density
+import androidx.ui.core.FirstBaseline
 import androidx.ui.core.IntPx
+import androidx.ui.core.LastBaseline
 import androidx.ui.core.Layout
 import androidx.ui.core.OnChildPositioned
 import androidx.ui.core.PxSize
@@ -35,6 +35,7 @@ import androidx.ui.core.ipx
 import androidx.ui.core.looseMin
 import androidx.ui.core.px
 import androidx.ui.core.round
+import androidx.ui.core.setContent
 import androidx.ui.core.withDensity
 import androidx.ui.framework.test.TestActivity
 import androidx.ui.text.TextStyle
@@ -50,7 +51,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import java.lang.UnsupportedOperationException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -111,13 +111,13 @@ class TextLayoutTest {
                 textSize.value = coordinates.size
                 layoutLatch.countDown()
             }) {
-                Text("aa", style = TextStyle(fontFamily = fontFamily))
+                Text("aa ", style = TextStyle(fontFamily = fontFamily))
             }
             OnChildPositioned({ coordinates ->
                 doubleTextSize.value = coordinates.size
                 layoutLatch.countDown()
             }) {
-                Text("aaaa", style = TextStyle(fontFamily = fontFamily))
+                Text("aa aa ", style = TextStyle(fontFamily = fontFamily))
             }
         }
         assertTrue(layoutLatch.await(1, TimeUnit.SECONDS))
@@ -128,20 +128,13 @@ class TextLayoutTest {
         val intrinsicsLatch = CountDownLatch(1)
         show {
             val text = @Composable {
-                Text("aaaa", style = TextStyle(fontFamily = fontFamily))
+                Text("aa aa ", style = TextStyle(fontFamily = fontFamily))
             }
             ComplexLayout(text) {
-                layout { measurables, _ ->
+                measure { measurables, _ ->
                     val textMeasurable = measurables.first()
-
                     // Min width.
-                    var threw = false
-                    try {
-                        textMeasurable.minIntrinsicWidth(0.ipx)
-                    } catch(e: UnsupportedOperationException) {
-                        threw = true
-                    }
-                    assertTrue(threw)
+                    assertEquals(textWidth, textMeasurable.minIntrinsicWidth(0.ipx))
                     // Min height.
                     assertTrue(textMeasurable.minIntrinsicHeight(textWidth) > textHeight)
                     assertEquals(textHeight, textMeasurable.minIntrinsicHeight(doubleTextWidth))
@@ -154,6 +147,8 @@ class TextLayoutTest {
                     assertEquals(textHeight, textMeasurable.maxIntrinsicHeight(IntPx.Infinity))
 
                     intrinsicsLatch.countDown()
+
+                    layout(0.ipx, 0.ipx) {}
                 }
                 minIntrinsicWidth { _, _ -> 0.ipx }
                 minIntrinsicHeight { _, _ -> 0.ipx }
@@ -164,19 +159,44 @@ class TextLayoutTest {
         assertTrue(intrinsicsLatch.await(1, TimeUnit.SECONDS))
     }
 
-    private fun show(@Children composable: @Composable() () -> Unit) {
+    @Test
+    fun testTextLayout_providesBaselines() = withDensity(density) {
+        val layoutLatch = CountDownLatch(2)
+        show {
+            val text = @Composable {
+                Text("aa", style = TextStyle(fontFamily = fontFamily))
+            }
+            Layout(text) { measurables, _ ->
+                val placeable = measurables.first().measure(Constraints())
+                assertNotNull(placeable[FirstBaseline])
+                assertNotNull(placeable[LastBaseline])
+                assertEquals(placeable[FirstBaseline], placeable[LastBaseline])
+                layoutLatch.countDown()
+                layout(0.ipx, 0.ipx) {}
+            }
+            Layout(text) { measurables, _ ->
+                val placeable = measurables.first().measure(Constraints(maxWidth = 0.ipx))
+                assertNotNull(placeable[FirstBaseline])
+                assertNotNull(placeable[LastBaseline])
+                assertTrue(placeable[FirstBaseline]!!.value < placeable[LastBaseline]!!.value)
+                layoutLatch.countDown()
+                layout(0.ipx, 0.ipx) {}
+            }
+        }
+        assertTrue(layoutLatch.await(1, TimeUnit.SECONDS))
+    }
+
+    private fun show(composable: @Composable() () -> Unit) {
         val runnable: Runnable = object : Runnable {
             override fun run() {
                 activity.setContent {
-                    CraneWrapper {
-                        Layout(composable) { measurables, constraints ->
-                            val placeables = measurables.map { it.measure(constraints.looseMin()) }
-                            layout(constraints.maxWidth, constraints.maxHeight) {
-                                var top = 0.px
-                                placeables.forEach {
-                                    it.place(0.px, top)
-                                    top += it.height
-                                }
+                    Layout(composable) { measurables, constraints ->
+                        val placeables = measurables.map { it.measure(constraints.looseMin()) }
+                        layout(constraints.maxWidth, constraints.maxHeight) {
+                            var top = 0.px
+                            placeables.forEach {
+                                it.place(0.px, top)
+                                top += it.height
                             }
                         }
                     }

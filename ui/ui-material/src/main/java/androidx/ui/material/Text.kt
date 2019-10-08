@@ -16,13 +16,19 @@
 
 package androidx.ui.material
 
+import androidx.annotation.FloatRange
 import androidx.ui.graphics.Color
 import androidx.compose.ambient
 import androidx.compose.effectOf
+import androidx.compose.unaryPlus
+import androidx.ui.core.currentTextStyle
+import androidx.ui.text.TextStyle
 
 /**
  * Tries to match the background color to correlated text color. For example,
  * on [MaterialColors.primary] background [MaterialColors.onPrimary] will be used.
+ * If the background is not from the [MaterialColors] the text color will not be
+ * automatically resolved.
  */
 fun textColorForBackground(background: Color) = effectOf<Color?> {
     with(+ambient(Colors)) {
@@ -37,4 +43,19 @@ fun textColorForBackground(background: Color) = effectOf<Color?> {
             else -> null
         }
     }
+}
+
+/**
+ * TEMPORARY solution to apply an opacity for the [TextStyle] even if it has no
+ * color provided. We wanted to have this right now to improve our tutorial for ADS.
+ * But the problem is actually way wider and we would need to rethink how we apply
+ * modifications like this to our styles and do we need similar methods for other
+ * params we have in TextStyle.
+ * We will continue investigation as part of b/141362712
+ *
+ * @param opacity the text color opacity to apply for this [TextStyle].
+ */
+fun TextStyle.withOpacity(@FloatRange(from = 0.0, to = 1.0) opacity: Float): TextStyle {
+    val color = color ?: (+currentTextStyle()).color ?: Color.Black
+    return copy(color = color.copy(alpha = opacity))
 }

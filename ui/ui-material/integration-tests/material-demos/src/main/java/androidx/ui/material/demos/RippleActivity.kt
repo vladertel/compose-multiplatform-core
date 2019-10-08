@@ -26,15 +26,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.ui.androidview.adapters.dp
 import androidx.ui.androidview.adapters.setPadding
-import androidx.compose.Composable
 import androidx.compose.composer
-import androidx.compose.setContent
+import androidx.compose.setViewContent
 
 class RippleActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
+        setViewContent {
             val layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 0,
@@ -42,7 +41,7 @@ class RippleActivity : Activity() {
             )
             val gravity = Gravity.CENTER_HORIZONTAL
             LinearLayout(orientation = LinearLayout.VERTICAL) {
-                TextView(gravity = gravity, text = "Crane card with ripple:")
+                TextView(gravity = gravity, text = "Compose card with ripple:")
                 FrameLayout(layoutParams = layoutParams) {
                     RippleDemo()
                 }

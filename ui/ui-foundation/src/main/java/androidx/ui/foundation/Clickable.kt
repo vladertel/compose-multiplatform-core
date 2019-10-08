@@ -16,19 +16,20 @@
 
 package androidx.ui.foundation
 
-import androidx.ui.core.Semantics
+import androidx.ui.semantics.Semantics
 import androidx.ui.core.gesture.PressReleasedGestureDetector
-import androidx.ui.core.semantics.SemanticsAction
-import androidx.ui.core.semantics.SemanticsActionType
-import androidx.compose.Children
-import androidx.compose.Composable
 import androidx.compose.composer
+import androidx.compose.Composable
+import androidx.ui.semantics.enabled
+import androidx.ui.semantics.onClick
 
 /**
  * Combines [PressReleasedGestureDetector] and [Semantics] for the clickable
  * components like Button.
  *
- * @param onClick will be called when user clicked on the button. The button will not be
+ * @sample androidx.ui.foundation.samples.ClickableSample
+ *
+ * @param onClick will be called when user clicked on the button. The children will not be
  *  clickable when it is null.
  * @param consumeDownOnStart true means [PressReleasedGestureDetector] should consume
  *  down events. Provide false if you have some visual feedback like Ripples,
@@ -38,16 +39,14 @@ import androidx.compose.composer
 fun Clickable(
     onClick: (() -> Unit)? = null,
     consumeDownOnStart: Boolean = false,
-    @Children children: @Composable() () -> Unit
+    children: @Composable() () -> Unit
 ) {
     Semantics(
-        button = true,
-        enabled = (onClick != null),
-        actions = if (onClick != null) {
-            // TODO(ryanmentley): The unnecessary generic type specification works around an IR bug
-            listOf<SemanticsAction<*>>(SemanticsAction(SemanticsActionType.Tap, onClick))
-        } else {
-            emptyList<SemanticsAction<*>>()
+        properties = {
+            enabled = (onClick != null)
+            if (onClick != null) {
+                onClick(action = onClick)
+            }
         }
     ) {
         PressReleasedGestureDetector(

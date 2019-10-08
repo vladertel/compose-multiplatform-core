@@ -52,6 +52,7 @@ import androidx.media2.session.MediaController.PlaybackInfo;
 import androidx.media2.session.SessionToken;
 import androidx.media2.test.client.MediaTestUtils;
 import androidx.media2.test.client.RemoteMediaSession;
+import androidx.media2.test.common.CustomParcelable;
 import androidx.media2.test.common.PollingCheck;
 import androidx.media2.test.common.TestUtils;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -138,6 +139,16 @@ public class MediaControllerTest extends MediaSessionTestBase {
             builder.setControllerCallback(null, null);
             fail("null executor or null callback shouldn't be allowed");
         } catch (NullPointerException e) {
+            // expected. pass-through
+        }
+
+        try {
+            Bundle connectionHints = new Bundle();
+            connectionHints.putParcelable("key", new CustomParcelable(1));
+            builder = new MediaController.Builder(mContext);
+            builder.setConnectionHints(connectionHints);
+            fail("custom parcelables shouldn't be allowed for connectionHints");
+        } catch (IllegalArgumentException e) {
             // expected. pass-through
         }
 
@@ -371,7 +382,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testGetTrackInfo() throws Exception {
+    public void testGetTracks() throws Exception {
         prepareLooper();
 
         final List<SessionPlayer.TrackInfo> testTracks = MediaTestUtils.createTrackInfoList();
@@ -380,7 +391,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
         mRemoteSession.updatePlayer(playerConfig);
 
         MediaController controller = createController(mRemoteSession.getToken());
-        List<SessionPlayer.TrackInfo> testTracksFromController = controller.getTrackInfo();
+        List<SessionPlayer.TrackInfo> testTracksFromController = controller.getTracks();
         assertEquals(testTracks.size(), testTracksFromController.size());
         for (int i = 0; i < testTracks.size(); i++) {
             assertEquals(testTracks.get(i), testTracksFromController.get(i));

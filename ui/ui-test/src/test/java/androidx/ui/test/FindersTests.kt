@@ -18,13 +18,16 @@ package androidx.ui.test
 
 import androidx.ui.core.SemanticsTreeNode
 import androidx.ui.core.semantics.SemanticsConfiguration
+import androidx.ui.core.semantics.getOrNull
+import androidx.ui.semantics.SemanticsProperties
+import androidx.ui.semantics.testTag
 import androidx.ui.test.helpers.FakeSemanticsTreeInteraction
 import com.google.common.truth.Truth
 import org.junit.Test
 
 class FindersTests {
     @Test
-    fun findByTag_zeroOutOfOne_findsNone() {
+    fun findAll_zeroOutOfOne_findsNone() {
         semanticsTreeInteractionFactory = { selector ->
             FakeSemanticsTreeInteraction(selector)
                 .withSemantics(newNode(
@@ -34,12 +37,12 @@ class FindersTests {
                 ))
         }
 
-        val foundNodes = findAll { testTag == "myTestTag" }
+        val foundNodes = findAll { getOrNull(SemanticsProperties.TestTag) == "myTestTag" }
         Truth.assertThat(foundNodes).isEmpty()
     }
 
     @Test
-    fun findByTag_oneOutOfTwo_findsOne() {
+    fun findAll_oneOutOfTwo_findsOne() {
         val node1 = newNode(SemanticsConfiguration().apply {
             testTag = "myTestTag"
         })
@@ -52,12 +55,12 @@ class FindersTests {
                 .withSemantics(node1, node2)
         }
 
-        val foundNodes = findAll { testTag == "myTestTag" }
+        val foundNodes = findAll { getOrNull(SemanticsProperties.TestTag) == "myTestTag" }
         Truth.assertThat(foundNodes.map { it.semanticsTreeNode }).containsExactly(node1)
     }
 
     @Test
-    fun findByTag_twoOutOfTwo_findsTwo() {
+    fun findAll_twoOutOfTwo_findsTwo() {
         val node1 = newNode(
             SemanticsConfiguration().apply {
                 testTag = "myTestTag"
@@ -74,7 +77,7 @@ class FindersTests {
                 .withSemantics(node1, node2)
         }
 
-        val foundNodes = findAll { testTag == "myTestTag" }
+        val foundNodes = findAll { getOrNull(SemanticsProperties.TestTag) == "myTestTag" }
         Truth.assertThat(foundNodes.map { it.semanticsTreeNode }).containsExactly(node1, node2)
     }
 

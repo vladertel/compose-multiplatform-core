@@ -161,6 +161,11 @@ public class NavDestination {
      */
     @NonNull
     static String getDisplayName(@NonNull Context context, int id) {
+        // aapt-generated IDs have the high byte nonzero,
+        // so anything below that cannot be a valid resource id
+        if (id <= 0x00FFFFFF) {
+            return Integer.toString(id);
+        }
         try {
             return context.getResources().getResourceName(id);
         } catch (Resources.NotFoundException e) {
@@ -522,5 +527,25 @@ public class NavDestination {
             }
         }
         return defaultArgs;
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(getClass().getSimpleName());
+        sb.append("(");
+        if (mIdName == null) {
+            sb.append("0x");
+            sb.append(Integer.toHexString(mId));
+        } else {
+            sb.append(mIdName);
+        }
+        sb.append(")");
+        if (mLabel != null) {
+            sb.append(" label=");
+            sb.append(mLabel);
+        }
+        return sb.toString();
     }
 }

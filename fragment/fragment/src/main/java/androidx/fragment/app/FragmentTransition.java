@@ -21,8 +21,10 @@ import android.util.SparseArray;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
 import androidx.collection.ArrayMap;
 import androidx.core.app.SharedElementCallback;
+import androidx.core.os.CancellationSignal;
 import androidx.core.view.OneShotPreDrawListener;
 import androidx.core.view.ViewCompat;
 
@@ -55,6 +57,21 @@ class FragmentTransition {
             BackStackRecord.OP_SET_PRIMARY_NAV,     // inverse of OP_UNSET_PRIMARY_NAV
             BackStackRecord.OP_SET_MAX_LIFECYCLE
     };
+
+    /**
+     * Interface to watch Fragment Transitions
+     */
+    interface Callback {
+        /**
+         * Called whenever an transition started
+         */
+        void onStart(@NonNull Fragment fragment, @NonNull CancellationSignal signal);
+
+        /**
+         * Called whenever an transition is complete
+         */
+        void onComplete(@NonNull Fragment fragment, @NonNull CancellationSignal signal);
+    }
 
     private static final FragmentTransitionImpl PLATFORM_IMPL = Build.VERSION.SDK_INT >= 21
             ? new FragmentTransitionCompat21()
@@ -103,7 +120,7 @@ class FragmentTransition {
      */
     static void startTransitions(FragmentManager fragmentManager,
             ArrayList<BackStackRecord> records, ArrayList<Boolean> isRecordPop,
-            int startIndex, int endIndex, boolean isReordered) {
+            int startIndex, int endIndex, boolean isReordered, Callback callback) {
         if (fragmentManager.mCurState < Fragment.CREATED) {
             return;
         }
@@ -133,10 +150,10 @@ class FragmentTransition {
 
                 if (isReordered) {
                     configureTransitionsReordered(fragmentManager, containerId,
-                            containerTransition, nonExistentView, nameOverrides);
+                            containerTransition, nonExistentView, nameOverrides, callback);
                 } else {
                     configureTransitionsOrdered(fragmentManager, containerId,
-                            containerTransition, nonExistentView, nameOverrides);
+                            containerTransition, nonExistentView, nameOverrides, callback);
                 }
             }
         }
@@ -210,7 +227,7 @@ class FragmentTransition {
      */
     private static void configureTransitionsReordered(FragmentManager fragmentManager,
             int containerId, FragmentContainerTransition fragments,
-            View nonExistentView, ArrayMap<String, String> nameOverrides) {
+            View nonExistentView, ArrayMap<String, String> nameOverrides, final Callback callback) {
         ViewGroup sceneRoot = null;
         if (fragmentManager.mContainer.onHasView()) {
             sceneRoot = (ViewGroup) fragmentManager.mContainer.onFindViewById(containerId);
@@ -251,6 +268,18 @@ class FragmentTransition {
 
         Object transition = mergeTransitions(impl, enterTransition, exitTransition,
                 sharedElementTransition, inFragment, inIsPop);
+
+        if (outFragment != null && exitingViews != null
+                && (exitingViews.size() > 0 || sharedElementsOut.size() > 0)) {
+            final CancellationSignal signal = new CancellationSignal();
+            callback.onStart(outFragment, signal);
+            impl.setListenerForTransitionEnd(outFragment, transition, signal, new Runnable() {
+                @Override
+                public void run() {
+                    callback.onComplete(outFragment, signal);
+                }
+            });
+        }
 
         if (transition != null) {
             replaceHide(impl, exitTransition, outFragment, exitingViews);
@@ -308,7 +337,7 @@ class FragmentTransition {
      */
     private static void configureTransitionsOrdered(FragmentManager fragmentManager,
             int containerId, FragmentContainerTransition fragments,
-            View nonExistentView, ArrayMap<String, String> nameOverrides) {
+            View nonExistentView, ArrayMap<String, String> nameOverrides, final Callback callback) {
         ViewGroup sceneRoot = null;
         if (fragmentManager.mContainer.onHasView()) {
             sceneRoot = (ViewGroup) fragmentManager.mContainer.onFindViewById(containerId);
@@ -353,6 +382,18 @@ class FragmentTransition {
 
         Object transition = mergeTransitions(impl, enterTransition, exitTransition,
                 sharedElementTransition, inFragment, fragments.lastInIsPop);
+
+        if (outFragment != null && exitingViews != null
+                && (exitingViews.size() > 0 || sharedElementsOut.size() > 0)) {
+            final CancellationSignal signal = new CancellationSignal();
+            callback.onStart(outFragment, signal);
+            impl.setListenerForTransitionEnd(outFragment, transition, signal, new Runnable() {
+                @Override
+                public void run() {
+                    callback.onComplete(outFragment, signal);
+                }
+            });
+        }
 
         if (transition != null) {
             final ArrayList<View> enteringViews = new ArrayList<>();
@@ -1196,7 +1237,7 @@ class FragmentTransition {
             if (fragment.mState < Fragment.CREATED && manager.mCurState >= Fragment.CREATED
                     && !transaction.mReorderingAllowed) {
                 manager.makeActive(fragment);
-                manager.moveToState(fragment, Fragment.CREATED, 0, false);
+                manager.moveToState(fragment, Fragment.CREATED);
             }
         }
         if (setFirstOut && (containerTransition == null || containerTransition.firstOut == null)) {

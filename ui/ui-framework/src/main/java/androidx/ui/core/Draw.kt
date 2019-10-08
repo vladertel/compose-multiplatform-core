@@ -15,31 +15,36 @@
  */
 package androidx.ui.core
 
-import androidx.ui.painting.Canvas
-import androidx.compose.Children
+import androidx.ui.graphics.Canvas
 import androidx.compose.Composable
+import androidx.compose.ambient
 import androidx.compose.composer
+import androidx.compose.unaryPlus
+import androidx.ui.tooling.InspectionMode
 
 /**
  * Use Draw to get a [Canvas] to paint into the parent.
  *
- *     Draw { canvas, parentSize ->
- *         val paint = Paint()
- *         paint.color = Color(0xFF000000.toInt())
- *         canvas.drawRect(Rect(0.0f, 0.0f, parentSize.width, parentSize.height, paint)
- *     }
+ * Example usage:
+ * @sample androidx.ui.framework.samples.DrawSample
  *
- *  The [onPaint] lambda uses a [DensityReceiver] receiver scope, to allow easy translation
- *  between [Dp], [Sp], and [Px]. The [parentSize] parameter indicates the layout size of
+ *  The [onPaint] lambda uses a [DensityScope] receiver scope, to allow easy translation
+ *  between [Dp], [Sp], and [Px]. The `parentSize` parameter indicates the layout size of
  *  the parent.
  */
+@Suppress("NOTHING_TO_INLINE")
 @Composable
-fun Draw(
-    @Children(composable = false)
-    onPaint: DensityReceiver.(canvas: Canvas, parentSize: PxSize) -> Unit
+inline fun Draw(
+    noinline onPaint: DensityScope.(canvas: Canvas, parentSize: PxSize) -> Unit
 ) {
     // Hide the internals of DrawNode
-    <DrawNode onPaint=onPaint/>
+    if (+ambient(InspectionMode)) {
+        <RepaintBoundaryNode name=null>
+            <DrawNode onPaint=onPaint/>
+        </RepaintBoundaryNode>
+    } else {
+        <DrawNode onPaint=onPaint/>
+    }
 }
 
 /**
@@ -48,23 +53,24 @@ fun Draw(
  * If the [onPaint] does not call [DrawReceiver.drawChildren] then it will be called
  * after the lambda.
  *
- *     Draw(children) { canvas, parentSize ->
- *         canvas.save()
- *         val circle = Path()
- *         circle.addOval(parentSize.toRect())
- *         canvas.clipPath(circle)
- *         drawChildren()
- *         canvas.restore()
- *     }
+ * Example usage:
+ * @sample androidx.ui.framework.samples.DrawWithChildrenSample
  */
 @Composable
-fun Draw(
-    children: @Composable() () -> Unit,
-    @Children(composable = false)
-    onPaint: DrawReceiver.(canvas: Canvas, parentSize: PxSize) -> Unit
+inline fun Draw(
+    crossinline children: @Composable() () -> Unit,
+    noinline onPaint: DrawReceiver.(canvas: Canvas, parentSize: PxSize) -> Unit
 ) {
     // Hide the internals of DrawNode
-    <DrawNode onPaintWithChildren=onPaint>
-        children()
-    </DrawNode>
+    if (+ambient(InspectionMode)) {
+        <RepaintBoundaryNode name=null>
+            <DrawNode onPaintWithChildren=onPaint>
+                children()
+            </DrawNode>
+        </RepaintBoundaryNode>
+    } else {
+        <DrawNode onPaintWithChildren=onPaint>
+            children()
+        </DrawNode>
+    }
 }

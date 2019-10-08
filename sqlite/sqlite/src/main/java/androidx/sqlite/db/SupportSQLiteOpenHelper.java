@@ -27,6 +27,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -38,11 +39,12 @@ import java.util.List;
  * the methods that should be overridden.
  */
 @SuppressWarnings("unused")
-public interface SupportSQLiteOpenHelper {
+public interface SupportSQLiteOpenHelper extends Closeable {
     /**
      * Return the name of the SQLite database being opened, as given to
-     * the constructor.
+     * the constructor. {@code null} indicates an in-memory database.
      */
+    @Nullable
     String getDatabaseName();
 
     /**
@@ -102,7 +104,7 @@ public interface SupportSQLiteOpenHelper {
     /**
      * Close any open database object.
      */
-    void close();
+    @Override void close();
 
     /**
      * Handles various lifecycle events for the SQLite connection, similar to
@@ -146,7 +148,7 @@ public interface SupportSQLiteOpenHelper {
          *
          * @param db The database.
          */
-        public void onConfigure(SupportSQLiteDatabase db) {
+        public void onConfigure(@NonNull SupportSQLiteDatabase db) {
 
         }
 
@@ -156,7 +158,7 @@ public interface SupportSQLiteOpenHelper {
          *
          * @param db The database.
          */
-        public abstract void onCreate(SupportSQLiteDatabase db);
+        public abstract void onCreate(@NonNull SupportSQLiteDatabase db);
 
         /**
          * Called when the database needs to be upgraded. The implementation
@@ -178,7 +180,8 @@ public interface SupportSQLiteOpenHelper {
          * @param oldVersion The old database version.
          * @param newVersion The new database version.
          */
-        public abstract void onUpgrade(SupportSQLiteDatabase db, int oldVersion, int newVersion);
+        public abstract void onUpgrade(@NonNull SupportSQLiteDatabase db, int oldVersion,
+                int newVersion);
 
         /**
          * Called when the database needs to be downgraded. This is strictly similar to
@@ -197,7 +200,7 @@ public interface SupportSQLiteOpenHelper {
          * @param oldVersion The old database version.
          * @param newVersion The new database version.
          */
-        public void onDowngrade(SupportSQLiteDatabase db, int oldVersion, int newVersion) {
+        public void onDowngrade(@NonNull SupportSQLiteDatabase db, int oldVersion, int newVersion) {
             throw new SQLiteException("Can't downgrade database from version "
                     + oldVersion + " to " + newVersion);
         }
@@ -215,7 +218,7 @@ public interface SupportSQLiteOpenHelper {
          *
          * @param db The database.
          */
-        public void onOpen(SupportSQLiteDatabase db) {
+        public void onOpen(@NonNull SupportSQLiteDatabase db) {
 
         }
 
@@ -226,7 +229,7 @@ public interface SupportSQLiteOpenHelper {
          * @param db the {@link SupportSQLiteDatabase} object representing the database on which
          *           corruption is detected.
          */
-        public void onCorruption(SupportSQLiteDatabase db) {
+        public void onCorruption(@NonNull SupportSQLiteDatabase db) {
             // the following implementation is taken from {@link DefaultDatabaseErrorHandler}.
 
             Log.e(TAG, "Corruption reported by sqlite on database: " + db.getPath());
@@ -298,7 +301,6 @@ public interface SupportSQLiteOpenHelper {
     /**
      * The configuration to create an SQLite open helper object using {@link Factory}.
      */
-    @SuppressWarnings("WeakerAccess")
     class Configuration {
         /**
          * Context to use to open or create the database.
@@ -327,7 +329,8 @@ public interface SupportSQLiteOpenHelper {
          *
          * @param context to use to open or create the database.
          */
-        public static Builder builder(Context context) {
+        @NonNull
+        public static Builder builder(@NonNull Context context) {
             return new Builder(context);
         }
 
@@ -339,6 +342,7 @@ public interface SupportSQLiteOpenHelper {
             String mName;
             SupportSQLiteOpenHelper.Callback mCallback;
 
+            @NonNull
             public Configuration build() {
                 if (mCallback == null) {
                     throw new IllegalArgumentException("Must set a callback to create the"
@@ -359,6 +363,7 @@ public interface SupportSQLiteOpenHelper {
              * @param name Name of the database file, or null for an in-memory database.
              * @return This
              */
+            @NonNull
             public Builder name(@Nullable String name) {
                 mName = name;
                 return this;
@@ -368,6 +373,7 @@ public interface SupportSQLiteOpenHelper {
              * @param callback The callback class to handle creation, upgrade and downgrade.
              * @return this
              */
+            @NonNull
             public Builder callback(@NonNull Callback callback) {
                 mCallback = callback;
                 return this;
@@ -387,6 +393,7 @@ public interface SupportSQLiteOpenHelper {
          *
          * @return A SupportSQLiteOpenHelper which can be used to open a database.
          */
-        SupportSQLiteOpenHelper create(Configuration configuration);
+        @NonNull
+        SupportSQLiteOpenHelper create(@NonNull Configuration configuration);
     }
 }

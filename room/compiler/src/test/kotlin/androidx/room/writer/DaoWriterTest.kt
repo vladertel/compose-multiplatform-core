@@ -78,7 +78,8 @@ class DaoWriterTest {
                 .that(jfo.toList() + COMMON.USER + COMMON.MULTI_PKEY_ENTITY + COMMON.BOOK +
                         COMMON.LIVE_DATA + COMMON.COMPUTABLE_LIVE_DATA + COMMON.SINGLE +
                         COMMON.MAYBE + COMMON.COMPLETABLE + COMMON.USER_SUMMARY + COMMON.RX2_ROOM +
-                        COMMON.PARENT + COMMON.CHILD1 + COMMON.CHILD2 + COMMON.INFO)
+                        COMMON.PARENT + COMMON.CHILD1 + COMMON.CHILD2 + COMMON.INFO +
+                        COMMON.LISTENABLE_FUTURE + COMMON.GUAVA_ROOM)
                 .processedWith(TestProcessor.builder()
                         .forAnnotations(androidx.room.Dao::class)
                         .nextRunHandler { invocation ->
@@ -106,10 +107,6 @@ class DaoWriterTest {
                                     queryInterpreter = queryInterpreter,
                                     dbVerifier = createVerifierFromEntitiesAndViews(invocation))
                             val parsedDao = parser.process()
-                            parsedDao.queryMethods.forEach { method ->
-                                method.query.interpreted =
-                                    queryInterpreter.interpret(method.query, null)
-                            }
                             DaoWriter(parsedDao, db, invocation.processingEnv)
                                 .write(invocation.processingEnv)
                             true

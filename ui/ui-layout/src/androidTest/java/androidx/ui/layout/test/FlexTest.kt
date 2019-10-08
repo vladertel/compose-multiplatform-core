@@ -17,11 +17,8 @@
 package androidx.ui.layout.test
 
 import androidx.test.filters.SmallTest
-import androidx.ui.core.DensityReceiver
 import androidx.ui.core.IntPx
 import androidx.ui.core.LayoutCoordinates
-import androidx.ui.core.OnChildPositioned
-import androidx.ui.core.OnPositioned
 import androidx.ui.core.PxPosition
 import androidx.ui.core.PxSize
 import androidx.ui.core.Ref
@@ -32,22 +29,28 @@ import androidx.ui.core.round
 import androidx.ui.core.toPx
 import androidx.ui.core.withDensity
 import androidx.ui.layout.AspectRatio
-import androidx.ui.layout.Center
-import androidx.ui.layout.Column
 import androidx.ui.layout.ConstrainedBox
-import androidx.ui.layout.Container
 import androidx.ui.layout.CrossAxisAlignment
 import androidx.ui.layout.DpConstraints
+import androidx.ui.layout.LayoutSize
+import androidx.ui.layout.MainAxisAlignment
+import androidx.compose.Composable
+import androidx.compose.composer
+import androidx.ui.core.Alignment
+import androidx.ui.core.HorizontalAlignmentLine
+import androidx.ui.core.OnChildPositioned
+import androidx.ui.core.OnPositioned
+import androidx.ui.core.VerticalAlignmentLine
+import androidx.ui.core.min
+import androidx.ui.layout.Align
+import androidx.ui.layout.Center
+import androidx.ui.layout.Column
+import androidx.ui.layout.Container
 import androidx.ui.layout.FixedSpacer
 import androidx.ui.layout.FlexColumn
 import androidx.ui.layout.FlexRow
-import androidx.ui.layout.FlexSize
-import androidx.ui.layout.MainAxisAlignment
 import androidx.ui.layout.Row
-import androidx.compose.Composable
-import androidx.compose.composer
-import androidx.ui.core.max
-import androidx.ui.core.min
+import androidx.ui.layout.Wrap
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -67,7 +70,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Container(alignment = Alignment.TopLeft) {
                 Row {
                     Container(width = sizeDp, height = sizeDp) {
                         OnPositioned(onPositioned = { coordinates ->
@@ -89,7 +92,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(size, size), childSize[0])
@@ -97,14 +100,8 @@ class FlexTest : LayoutTest() {
             PxSize((sizeDp.toPx() * 2).round(), (sizeDp.toPx() * 2).round()),
             childSize[1]
         )
-        assertEquals(
-            PxPosition(0.px, (root.height.px / 2 - (size.toPx() - 1.px) / 2).round().toPx()),
-            childPosition[0]
-        )
-        assertEquals(
-            PxPosition(size.toPx(), (root.height.px / 2 - size.toPx()).round().toPx()),
-            childPosition[1]
-        )
+        assertEquals(PxPosition(0.px, 0.px), childPosition[0])
+        assertEquals(PxPosition(size.toPx(), 0.px), childPosition[1])
     }
 
     @Test
@@ -116,7 +113,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Container(alignment = Alignment.TopLeft) {
                 FlexRow {
                     val widthDp = 50.px.toDp()
 
@@ -144,28 +141,19 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
-        assertEquals(PxSize(root.width.px / 3, childrenHeight.toPx()), childSize[0])
         assertEquals(
-            PxSize(root.width.px * 2 / 3, (heightDp.toPx() * 2).round().toPx()),
+            PxSize((root.width.px / 3).round().toPx(), childrenHeight.toPx()),
+            childSize[0]
+        )
+        assertEquals(
+            PxSize((root.width.px * 2 / 3).round().toPx(), (heightDp.toPx() * 2).round().toPx()),
             childSize[1]
         )
-        assertEquals(
-            PxPosition(
-                0.px,
-                (root.height.px / 2 - (childrenHeight.toPx() - 1.px) / 2).round().toPx()
-            ),
-            childPosition[0]
-        )
-        assertEquals(
-            PxPosition(
-                (root.width.px / 3).round().toPx(),
-                (root.height.px / 2).round().toPx() - childrenHeight.toPx()
-            ),
-            childPosition[1]
-        )
+        assertEquals(PxPosition(0.px, 0.px), childPosition[0])
+        assertEquals(PxPosition((root.width.px / 3).round().toPx(), 0.px), childPosition[1])
     }
 
     @Test
@@ -179,7 +167,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Container(alignment = Alignment.TopLeft) {
                 FlexRow {
                     flexible(flex = 1f) {
                         Container(width = childrenWidthDp, height = childrenHeightDp) {
@@ -205,7 +193,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(childrenWidth.toPx(), childrenHeight.toPx()), childSize[0])
@@ -213,17 +201,8 @@ class FlexTest : LayoutTest() {
             PxSize(childrenWidth.toPx(), (childrenHeightDp.toPx() * 2).round().toPx()),
             childSize[1]
         )
-        assertEquals(
-            PxPosition(0.px, ((root.height.px - childrenHeight.toPx() + 1.px) / 2).round().toPx()),
-            childPosition[0]
-        )
-        assertEquals(
-            PxPosition(
-                childrenWidth.toPx(),
-                (root.height.px / 2 - childrenHeight.toPx()).round().toPx()
-            ),
-            childPosition[1]
-        )
+        assertEquals(PxPosition(0.px, 0.px), childPosition[0])
+        assertEquals(PxPosition(childrenWidth.toPx(), 0.px), childPosition[1])
     }
 
     @Test
@@ -235,7 +214,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Container(alignment = Alignment.TopLeft) {
                 Column {
                     Container(width = sizeDp, height = sizeDp) {
                         OnPositioned(onPositioned = { coordinates ->
@@ -256,7 +235,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(size, size), childSize[0])
@@ -264,14 +243,8 @@ class FlexTest : LayoutTest() {
             PxSize((sizeDp.toPx() * 2).round(), (sizeDp.toPx() * 2).round()),
             childSize[1]
         )
-        assertEquals(
-            PxPosition((root.width.px / 2 - size.toPx() / 2).round().toPx(), 0.px),
-            childPosition[0]
-        )
-        assertEquals(
-            PxPosition((root.width.px / 2 - size.toPx()).round().toPx(), size.toPx()),
-            childPosition[1]
-        )
+        assertEquals(PxPosition(0.px, 0.px), childPosition[0])
+        assertEquals(PxPosition(0.px, size.toPx()), childPosition[1])
     }
 
     @Test
@@ -283,7 +256,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Container(alignment = Alignment.TopLeft) {
                 FlexColumn {
                     val heightDp = 50.px.toDp()
 
@@ -311,7 +284,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -322,17 +295,8 @@ class FlexTest : LayoutTest() {
             PxSize((widthDp.toPx() * 2).round(), (root.height.px * 2 / 3).round()),
             childSize[1]
         )
-        assertEquals(
-            PxPosition((root.width.px / 2 - childrenWidth.toPx() / 2).round().toPx(), 0.px),
-            childPosition[0]
-        )
-        assertEquals(
-            PxPosition(
-                (root.width.px / 2 - childrenWidth.toPx()).round().toPx(),
-                (root.height.px / 3).round().toPx()
-            ),
-            childPosition[1]
-        )
+        assertEquals(PxPosition(0.px, 0.px), childPosition[0])
+        assertEquals(PxPosition(0.px, (root.height.px / 3).round().toPx()), childPosition[1])
     }
 
     @Test
@@ -346,7 +310,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Container(alignment = Alignment.TopLeft) {
                 FlexColumn {
                     flexible(flex = 1f) {
                         Container(width = childrenWidthDp, height = childrenHeightDp) {
@@ -372,7 +336,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(childrenWidth.toPx(), childrenHeight.toPx()), childSize[0])
@@ -380,17 +344,8 @@ class FlexTest : LayoutTest() {
             PxSize((childrenWidthDp.toPx() * 2).round(), childrenHeight),
             childSize[1]
         )
-        assertEquals(
-            PxPosition((root.width.px / 2 - childrenWidth.toPx() / 2).round().toPx(), 0.px),
-            childPosition[0]
-        )
-        assertEquals(
-            PxPosition(
-                (root.width.px / 2 - childrenWidth.toPx()).round().toPx(),
-                childrenHeight.toPx()
-            ),
-            childPosition[1]
-        )
+        assertEquals(PxPosition(0.px, 0.px), childPosition[0])
+        assertEquals(PxPosition(0.px, childrenHeight.toPx()), childPosition[1])
     }
 
     @Test
@@ -402,7 +357,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Align(Alignment.CenterLeft) {
                 Row(crossAxisAlignment = CrossAxisAlignment.Start) {
                     Container(width = sizeDp, height = sizeDp) {
                         OnPositioned(onPositioned = { coordinates ->
@@ -424,7 +379,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(size, size), childSize[0])
@@ -451,7 +406,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Align(Alignment.CenterLeft) {
                 Row(crossAxisAlignment = CrossAxisAlignment.End) {
                     Container(width = sizeDp, height = sizeDp) {
                         OnPositioned(onPositioned = { coordinates ->
@@ -473,7 +428,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(size, size), childSize[0])
@@ -503,7 +458,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Align(Alignment.CenterLeft) {
                 Row(crossAxisAlignment = CrossAxisAlignment.Stretch) {
                     Container(width = sizeDp, height = sizeDp) {
                         OnPositioned(onPositioned = { coordinates ->
@@ -525,7 +480,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(size.toPx(), root.height.px), childSize[0])
@@ -546,7 +501,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Align(Alignment.TopCenter) {
                 Column(crossAxisAlignment = CrossAxisAlignment.Start) {
                     Container(width = sizeDp, height = sizeDp) {
                         OnPositioned(onPositioned = { coordinates ->
@@ -568,7 +523,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(size, size), childSize[0])
@@ -595,7 +550,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Align(Alignment.TopCenter) {
                 Column(crossAxisAlignment = CrossAxisAlignment.End) {
                     Container(width = sizeDp, height = sizeDp) {
                         OnPositioned(onPositioned = { coordinates ->
@@ -617,7 +572,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(size, size), childSize[0])
@@ -648,7 +603,7 @@ class FlexTest : LayoutTest() {
         val childSize = arrayOf(PxSize(-1.px, -1.px), PxSize(-1.px, -1.px))
         val childPosition = arrayOf(PxPosition(-1.px, -1.px), PxPosition(-1.px, -1.px))
         show {
-            Center {
+            Align(Alignment.TopCenter) {
                 Column(crossAxisAlignment = CrossAxisAlignment.Stretch) {
                     Container(width = sizeDp, height = sizeDp) {
                         OnPositioned(onPositioned = { coordinates ->
@@ -670,7 +625,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxSize(root.width.px, size.toPx()), childSize[0])
@@ -690,7 +645,7 @@ class FlexTest : LayoutTest() {
         lateinit var rowSize: PxSize
         show {
             Center {
-                Row(mainAxisSize = FlexSize.Max) {
+                Row(mainAxisSize = LayoutSize.Expand) {
                     FixedSpacer(width = sizeDp, height = sizeDp)
                     FixedSpacer(width = (sizeDp * 2), height = (sizeDp * 2))
 
@@ -703,7 +658,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -720,7 +675,7 @@ class FlexTest : LayoutTest() {
         lateinit var rowSize: PxSize
         show {
             Center {
-                Row(mainAxisSize = FlexSize.Min) {
+                Row(mainAxisSize = LayoutSize.Wrap) {
                     FixedSpacer(width = sizeDp, height = sizeDp)
                     FixedSpacer(width = (sizeDp * 2), height = (sizeDp * 2))
 
@@ -733,7 +688,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -750,7 +705,7 @@ class FlexTest : LayoutTest() {
         lateinit var rowSize: PxSize
         show {
             Center {
-                Row(crossAxisSize = FlexSize.Max) {
+                Row(crossAxisSize = LayoutSize.Expand) {
                     FixedSpacer(width = sizeDp, height = sizeDp)
                     FixedSpacer(width = (sizeDp * 2), height = (sizeDp * 2))
 
@@ -763,7 +718,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -780,7 +735,7 @@ class FlexTest : LayoutTest() {
         lateinit var rowSize: PxSize
         show {
             Center {
-                Row(crossAxisSize = FlexSize.Min) {
+                Row(crossAxisSize = LayoutSize.Wrap) {
                     FixedSpacer(width = sizeDp, height = sizeDp)
                     FixedSpacer(width = (sizeDp * 2), height = (sizeDp * 2))
 
@@ -793,7 +748,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -812,7 +767,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(maxWidth = rowWidthDp)) {
-                    Row(mainAxisSize = FlexSize.Max) {
+                    Row(mainAxisSize = LayoutSize.Expand) {
                         FixedSpacer(width = sizeDp, height = sizeDp)
                         FixedSpacer(width = sizeDp * 2, height = sizeDp * 2)
 
@@ -826,7 +781,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -845,7 +800,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(minWidth = rowWidthDp)) {
-                    Row(mainAxisSize = FlexSize.Min) {
+                    Row(mainAxisSize = LayoutSize.Wrap) {
                         FixedSpacer(width = sizeDp, height = sizeDp)
                         FixedSpacer(width = sizeDp * 2, height = sizeDp * 2)
 
@@ -859,7 +814,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -878,7 +833,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(maxHeight = rowHeightDp)) {
-                    Row(crossAxisSize = FlexSize.Max) {
+                    Row(crossAxisSize = LayoutSize.Expand) {
                         FixedSpacer(width = sizeDp, height = sizeDp)
                         FixedSpacer(width = sizeDp * 2, height = sizeDp * 2)
 
@@ -892,7 +847,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -911,7 +866,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(maxHeight = rowHeightDp)) {
-                    Row(crossAxisSize = FlexSize.Max) {
+                    Row(crossAxisSize = LayoutSize.Expand) {
                         FixedSpacer(width = sizeDp, height = sizeDp)
                         FixedSpacer(width = sizeDp * 2, height = sizeDp * 2)
 
@@ -925,7 +880,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -947,7 +902,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(minWidth = rowWidthDp)) {
-                    FlexRow(mainAxisSize = FlexSize.Min) {
+                    FlexRow(mainAxisSize = LayoutSize.Wrap) {
                         expanded(flex = 1f) {
                             Container(width = sizeDp, height = sizeDp) {
                                 OnPositioned(onPositioned = { coordinates ->
@@ -968,7 +923,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -989,7 +944,7 @@ class FlexTest : LayoutTest() {
         lateinit var columnSize: PxSize
         show {
             Center {
-                Column(mainAxisSize = FlexSize.Max) {
+                Column(mainAxisSize = LayoutSize.Expand) {
                     FixedSpacer(width = sizeDp, height = sizeDp)
                     FixedSpacer(width = (sizeDp * 2), height = (sizeDp * 2))
 
@@ -1002,7 +957,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -1019,7 +974,7 @@ class FlexTest : LayoutTest() {
         lateinit var columnSize: PxSize
         show {
             Center {
-                Column(mainAxisSize = FlexSize.Min) {
+                Column(mainAxisSize = LayoutSize.Wrap) {
                     FixedSpacer(width = sizeDp, height = sizeDp)
                     FixedSpacer(width = (sizeDp * 2), height = (sizeDp * 2))
 
@@ -1032,7 +987,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -1049,7 +1004,7 @@ class FlexTest : LayoutTest() {
         lateinit var columnSize: PxSize
         show {
             Center {
-                Column(crossAxisSize = FlexSize.Max) {
+                Column(crossAxisSize = LayoutSize.Expand) {
                     FixedSpacer(width = sizeDp, height = sizeDp)
                     FixedSpacer(width = (sizeDp * 2), height = (sizeDp * 2))
 
@@ -1062,7 +1017,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -1079,7 +1034,7 @@ class FlexTest : LayoutTest() {
         lateinit var columnSize: PxSize
         show {
             Center {
-                Column(crossAxisSize = FlexSize.Min) {
+                Column(crossAxisSize = LayoutSize.Wrap) {
                     FixedSpacer(width = sizeDp, height = sizeDp)
                     FixedSpacer(width = (sizeDp * 2), height = (sizeDp * 2))
 
@@ -1092,7 +1047,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -1111,7 +1066,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(maxHeight = columnHeightDp)) {
-                    Column(mainAxisSize = FlexSize.Max) {
+                    Column(mainAxisSize = LayoutSize.Expand) {
                         FixedSpacer(width = sizeDp, height = sizeDp)
                         FixedSpacer(width = sizeDp * 2, height = sizeDp * 2)
 
@@ -1125,7 +1080,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -1144,7 +1099,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(minHeight = columnHeightDp)) {
-                    Column(mainAxisSize = FlexSize.Min) {
+                    Column(mainAxisSize = LayoutSize.Wrap) {
                         FixedSpacer(width = sizeDp, height = sizeDp)
                         FixedSpacer(width = sizeDp * 2, height = sizeDp * 2)
 
@@ -1158,7 +1113,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -1177,7 +1132,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(maxWidth = columnWidthDp)) {
-                    Column(crossAxisSize = FlexSize.Max) {
+                    Column(crossAxisSize = LayoutSize.Expand) {
                         FixedSpacer(width = sizeDp, height = sizeDp)
                         FixedSpacer(width = sizeDp * 2, height = sizeDp * 2)
 
@@ -1191,7 +1146,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -1210,7 +1165,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(minWidth = columnWidthDp)) {
-                    Column(crossAxisSize = FlexSize.Min) {
+                    Column(crossAxisSize = LayoutSize.Wrap) {
                         FixedSpacer(width = sizeDp, height = sizeDp)
                         FixedSpacer(width = sizeDp * 2, height = sizeDp * 2)
 
@@ -1224,7 +1179,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -1246,7 +1201,7 @@ class FlexTest : LayoutTest() {
         show {
             Center {
                 ConstrainedBox(constraints = DpConstraints(minHeight = columnHeightDp)) {
-                    FlexColumn(mainAxisSize = FlexSize.Min) {
+                    FlexColumn(mainAxisSize = LayoutSize.Wrap) {
                         expanded(flex = 1f) {
                             Container(width = sizeDp, height = sizeDp) {
                                 OnPositioned(onPositioned = { coordinates ->
@@ -1267,7 +1222,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(
@@ -1292,7 +1247,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Row(mainAxisAlignment = MainAxisAlignment.Start) {
+                Row(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.Start
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1313,7 +1271,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxPosition(0.px, 0.px), childPosition[0])
@@ -1333,7 +1291,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Row(mainAxisAlignment = MainAxisAlignment.End) {
+                Row(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.End
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1354,7 +1315,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxPosition(root.width.px - size.toPx() * 3, 0.px), childPosition[0])
@@ -1374,7 +1335,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Row(mainAxisAlignment = MainAxisAlignment.Center) {
+                Row(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.Center
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1395,7 +1359,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         val extraSpace = root.width.px.round() - size * 3
@@ -1416,7 +1380,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Row(mainAxisAlignment = MainAxisAlignment.SpaceEvenly) {
+                Row(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.SpaceEvenly
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1437,13 +1404,13 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
-        val gap = (root.width.px.round() - size * 3) / 4
-        assertEquals(PxPosition(gap.toPx(), 0.px), childPosition[0])
-        assertEquals(PxPosition(size.toPx() + gap.toPx() * 2, 0.px), childPosition[1])
-        assertEquals(PxPosition(size.toPx() * 2 + gap.toPx() * 3, 0.px), childPosition[2])
+        val gap = (root.width.px - size.toPx() * 3) / 4
+        assertEquals(PxPosition(gap.round().toPx(), 0.px), childPosition[0])
+        assertEquals(PxPosition((size.toPx() + gap * 2).round().toPx(), 0.px), childPosition[1])
+        assertEquals(PxPosition((size.toPx() * 2 + gap * 3).round().toPx(), 0.px), childPosition[2])
     }
 
     @Test
@@ -1458,7 +1425,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Row(mainAxisAlignment = MainAxisAlignment.SpaceBetween) {
+                Row(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.SpaceBetween
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1479,13 +1449,13 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
-        val gap = (root.width.px.round() - size * 3) / 2
+        val gap = (root.width.px - size.toPx() * 3) / 2
         assertEquals(PxPosition(0.px, 0.px), childPosition[0])
-        assertEquals(PxPosition(gap.toPx() + size.toPx(), 0.px), childPosition[1])
-        assertEquals(PxPosition(gap.toPx() * 2 + size.toPx() * 2, 0.px), childPosition[2])
+        assertEquals(PxPosition((gap + size.toPx()).round().toPx(), 0.px), childPosition[1])
+        assertEquals(PxPosition((gap * 2 + size.toPx() * 2).round().toPx(), 0.px), childPosition[2])
     }
 
     @Test
@@ -1500,7 +1470,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Row(mainAxisAlignment = MainAxisAlignment.SpaceAround) {
+                Row(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.SpaceAround
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1521,7 +1494,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         val gap = (root.width.px.round() - size * 3) / 3
@@ -1542,7 +1515,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Column(mainAxisAlignment = MainAxisAlignment.Start) {
+                Column(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.Start
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1563,7 +1539,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxPosition(0.px, 0.px), childPosition[0])
@@ -1583,7 +1559,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Column(mainAxisAlignment = MainAxisAlignment.End) {
+                Column(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.End
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1604,7 +1583,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         assertEquals(PxPosition(0.px, root.height.px - size.toPx() * 3), childPosition[0])
@@ -1624,7 +1603,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Column(mainAxisAlignment = MainAxisAlignment.Center) {
+                Column(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.Center
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1645,7 +1627,7 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
         val extraSpace = root.height.px.round() - size * 3
@@ -1666,7 +1648,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Column(mainAxisAlignment = MainAxisAlignment.SpaceEvenly) {
+                Column(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.SpaceEvenly
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1687,13 +1672,13 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
-        val gap = (root.height.px.round() - size * 3) / 4
-        assertEquals(PxPosition(0.px, gap.toPx()), childPosition[0])
-        assertEquals(PxPosition(0.px, size.toPx() + gap.toPx() * 2), childPosition[1])
-        assertEquals(PxPosition(0.px, size.toPx() * 2 + gap.toPx() * 3), childPosition[2])
+        val gap = (root.height.px - size.toPx() * 3) / 4
+        assertEquals(PxPosition(0.px, gap.round().toPx()), childPosition[0])
+        assertEquals(PxPosition(0.px, (size.toPx() + gap * 2).round().toPx()), childPosition[1])
+        assertEquals(PxPosition(0.px, (size.toPx() * 2 + gap * 3).round().toPx()), childPosition[2])
     }
 
     @Test
@@ -1708,7 +1693,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Column(mainAxisAlignment = MainAxisAlignment.SpaceBetween) {
+                Column(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.SpaceBetween
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1729,13 +1717,13 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
-        val gap = (root.height.px.round() - size * 3) / 2
+        val gap = (root.height.px - size.toPx() * 3) / 2
         assertEquals(PxPosition(0.px, 0.px), childPosition[0])
-        assertEquals(PxPosition(0.px, gap.toPx() + size.toPx()), childPosition[1])
-        assertEquals(PxPosition(0.px, gap.toPx() * 2 + size.toPx() * 2), childPosition[2])
+        assertEquals(PxPosition(0.px, (gap + size.toPx()).round().toPx()), childPosition[1])
+        assertEquals(PxPosition(0.px, (gap * 2 + size.toPx() * 2).round().toPx()), childPosition[2])
     }
 
     @Test
@@ -1750,7 +1738,10 @@ class FlexTest : LayoutTest() {
         val childLayoutCoordinates = arrayOfNulls<LayoutCoordinates?>(childPosition.size)
         show {
             Center {
-                Column(mainAxisAlignment = MainAxisAlignment.SpaceAround) {
+                Column(
+                    mainAxisSize = LayoutSize.Expand,
+                    mainAxisAlignment = MainAxisAlignment.SpaceAround
+                ) {
                     for (i in 0 until childPosition.size) {
                         Container(width = sizeDp, height = sizeDp) {
                             OnPositioned(onPositioned = { coordinates ->
@@ -1771,13 +1762,19 @@ class FlexTest : LayoutTest() {
         }
         drawLatch.await(1, TimeUnit.SECONDS)
 
-        val root = findAndroidCraneView()
+        val root = findAndroidComposeView()
         waitForDraw(root)
 
-        val gap = (root.height.px.round() - size * 3) / 3
-        assertEquals(PxPosition(0.px, (gap / 2).toPx()), childPosition[0])
-        assertEquals(PxPosition(0.px, (gap * 3 / 2).toPx() + size.toPx()), childPosition[1])
-        assertEquals(PxPosition(0.px, (gap * 5 / 2).toPx() + size.toPx() * 2), childPosition[2])
+        val gap = (root.height.px - size.toPx() * 3) / 3
+        assertEquals(PxPosition(0.px, (gap / 2).round().toPx()), childPosition[0])
+        assertEquals(
+            PxPosition(0.px, ((gap * 3 / 2) + size.toPx()).round().toPx()),
+            childPosition[1]
+        )
+        assertEquals(
+            PxPosition(0.px, ((gap * 5 / 2) + size.toPx() * 2).round().toPx()),
+            childPosition[2]
+        )
     }
 
     @Test
@@ -1846,12 +1843,13 @@ class FlexTest : LayoutTest() {
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
         }, @Composable {
-            Row(mainAxisSize = FlexSize.Min) {
+            Row(mainAxisSize = LayoutSize.Expand) {
                 AspectRatio(2f) { }
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
         }, @Composable {
             Row(
+                mainAxisSize = LayoutSize.Expand,
                 mainAxisAlignment = MainAxisAlignment.Start,
                 crossAxisAlignment = CrossAxisAlignment.Start
             ) {
@@ -1860,6 +1858,7 @@ class FlexTest : LayoutTest() {
             }
         }, @Composable {
             Row(
+                mainAxisSize = LayoutSize.Expand,
                 mainAxisAlignment = MainAxisAlignment.Center,
                 crossAxisAlignment = CrossAxisAlignment.Center
             ) {
@@ -1868,6 +1867,7 @@ class FlexTest : LayoutTest() {
             }
         }, @Composable {
             Row(
+                mainAxisSize = LayoutSize.Expand,
                 mainAxisAlignment = MainAxisAlignment.End,
                 crossAxisAlignment = CrossAxisAlignment.End
             ) {
@@ -1876,6 +1876,7 @@ class FlexTest : LayoutTest() {
             }
         }, @Composable {
             Row(
+                mainAxisSize = LayoutSize.Expand,
                 mainAxisAlignment = MainAxisAlignment.SpaceAround,
                 crossAxisAlignment = CrossAxisAlignment.Stretch
             ) {
@@ -1883,12 +1884,18 @@ class FlexTest : LayoutTest() {
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
         }, @Composable {
-            Row(mainAxisAlignment = MainAxisAlignment.SpaceBetween) {
+            Row(
+                mainAxisSize = LayoutSize.Expand,
+                mainAxisAlignment = MainAxisAlignment.SpaceBetween
+            ) {
                 AspectRatio(2f) { }
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
         }, @Composable {
-            Row(mainAxisAlignment = MainAxisAlignment.SpaceEvenly) {
+            Row(
+                mainAxisSize = LayoutSize.Expand,
+                mainAxisAlignment = MainAxisAlignment.SpaceEvenly
+            ) {
                 AspectRatio(2f) { }
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
@@ -1920,12 +1927,13 @@ class FlexTest : LayoutTest() {
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
         }, @Composable {
-            Column(mainAxisSize = FlexSize.Min) {
+            Column(mainAxisSize = LayoutSize.Expand) {
                 AspectRatio(2f) { }
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
         }, @Composable {
             Column(
+                mainAxisSize = LayoutSize.Expand,
                 mainAxisAlignment = MainAxisAlignment.Start,
                 crossAxisAlignment = CrossAxisAlignment.Start
             ) {
@@ -1934,6 +1942,7 @@ class FlexTest : LayoutTest() {
             }
         }, @Composable {
             Column(
+                mainAxisSize = LayoutSize.Expand,
                 mainAxisAlignment = MainAxisAlignment.Center,
                 crossAxisAlignment = CrossAxisAlignment.Center
             ) {
@@ -1942,6 +1951,7 @@ class FlexTest : LayoutTest() {
             }
         }, @Composable {
             Column(
+                mainAxisSize = LayoutSize.Expand,
                 mainAxisAlignment = MainAxisAlignment.End,
                 crossAxisAlignment = CrossAxisAlignment.End
             ) {
@@ -1950,6 +1960,7 @@ class FlexTest : LayoutTest() {
             }
         }, @Composable {
             Column(
+                mainAxisSize = LayoutSize.Expand,
                 mainAxisAlignment = MainAxisAlignment.SpaceAround,
                 crossAxisAlignment = CrossAxisAlignment.Stretch
             ) {
@@ -1957,12 +1968,18 @@ class FlexTest : LayoutTest() {
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
         }, @Composable {
-            Column(mainAxisAlignment = MainAxisAlignment.SpaceBetween) {
+            Column(
+                mainAxisSize = LayoutSize.Expand,
+                mainAxisAlignment = MainAxisAlignment.SpaceBetween
+            ) {
                 AspectRatio(2f) { }
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
         }, @Composable {
-            Column(mainAxisAlignment = MainAxisAlignment.SpaceEvenly) {
+            Column(
+                mainAxisSize = LayoutSize.Expand,
+                mainAxisAlignment = MainAxisAlignment.SpaceEvenly
+            ) {
                 AspectRatio(2f) { }
                 ConstrainedBox(DpConstraints.tightConstraints(50.dp, 40.dp)) { }
             }
@@ -2004,7 +2021,7 @@ class FlexTest : LayoutTest() {
                 }
             }
         }, @Composable {
-            FlexRow(mainAxisSize = FlexSize.Min) {
+            FlexRow(mainAxisSize = LayoutSize.Wrap) {
                 expanded(flex = 3f) {
                     ConstrainedBox(DpConstraints.tightConstraints(20.dp, 30.dp)) { }
                 }
@@ -2186,7 +2203,7 @@ class FlexTest : LayoutTest() {
                 }
             }
         }, @Composable {
-            FlexColumn(mainAxisSize = FlexSize.Min) {
+            FlexColumn(mainAxisSize = LayoutSize.Wrap) {
                 expanded(flex = 3f) {
                     ConstrainedBox(DpConstraints.tightConstraints(30.dp, 20.dp)) { }
                 }
@@ -2348,5 +2365,83 @@ class FlexTest : LayoutTest() {
                 maxIntrinsicHeight(IntPx.Infinity)
             )
         }
+    }
+
+    @Test
+    fun testRow_alignmentUsingAlignmentKey() = withDensity(density) {
+        val TestAlignmentLine = HorizontalAlignmentLine(::min)
+        val rowSize = Ref<PxSize>()
+        val childPosition = arrayOf<Ref<PxPosition>>(Ref(), Ref(), Ref())
+        val layoutLatch = CountDownLatch(4)
+        show {
+            Wrap {
+                Row(crossAxisAlignment = CrossAxisAlignment.AlignmentLine(TestAlignmentLine)) {
+                    SaveLayoutInfo(rowSize, Ref(), layoutLatch)
+                    OnChildPositioned({ coordinates ->
+                        childPosition[0].value = coordinates.localToGlobal(PxPosition(0.px, 0.px))
+                        layoutLatch.countDown()
+                    }) {
+                        FixedSizeLayout(10.ipx, 30.ipx, TestAlignmentLine to 10.ipx)
+                    }
+                    OnChildPositioned({ coordinates ->
+                        childPosition[1].value = coordinates.localToGlobal(PxPosition(0.px, 0.px))
+                        layoutLatch.countDown()
+                    }) {
+                        FixedSizeLayout(10.ipx, 10.ipx)
+                    }
+                    OnChildPositioned({ coordinates ->
+                        childPosition[2].value = coordinates.localToGlobal(PxPosition(0.px, 0.px))
+                        layoutLatch.countDown()
+                    }) {
+                        FixedSizeLayout(10.ipx, 30.ipx, TestAlignmentLine to 20.ipx)
+                    }
+                }
+            }
+        }
+        assertTrue(layoutLatch.await(1, TimeUnit.SECONDS))
+
+        assertEquals(PxSize(30.ipx, 40.ipx), rowSize.value)
+        assertEquals(PxPosition(0.ipx, 10.ipx), childPosition[0].value)
+        assertEquals(PxPosition(10.ipx, 0.ipx), childPosition[1].value)
+        assertEquals(PxPosition(20.ipx, 0.ipx), childPosition[2].value)
+    }
+
+    @Test
+    fun testColumn_alignmentUsingAlignmentKey() = withDensity(density) {
+        val TestAlignmentLine = VerticalAlignmentLine(::min)
+        val columnSize = Ref<PxSize>()
+        val childPosition = arrayOf<Ref<PxPosition>>(Ref(), Ref(), Ref())
+        val layoutLatch = CountDownLatch(4)
+        show {
+            Wrap {
+                Column(crossAxisAlignment = CrossAxisAlignment.AlignmentLine(TestAlignmentLine)) {
+                    SaveLayoutInfo(columnSize, Ref(), layoutLatch)
+                    OnChildPositioned({ coordinates ->
+                        childPosition[0].value = coordinates.localToGlobal(PxPosition(0.px, 0.px))
+                        layoutLatch.countDown()
+                    }) {
+                        FixedSizeLayout(30.ipx, 10.ipx, TestAlignmentLine to 10.ipx)
+                    }
+                    OnChildPositioned({ coordinates ->
+                        childPosition[1].value = coordinates.localToGlobal(PxPosition(0.px, 0.px))
+                        layoutLatch.countDown()
+                    }) {
+                        FixedSizeLayout(10.ipx, 10.ipx)
+                    }
+                    OnChildPositioned({ coordinates ->
+                        childPosition[2].value = coordinates.localToGlobal(PxPosition(0.px, 0.px))
+                        layoutLatch.countDown()
+                    }) {
+                        FixedSizeLayout(30.ipx, 10.ipx, TestAlignmentLine to 20.ipx)
+                    }
+                }
+            }
+        }
+        assertTrue(layoutLatch.await(1, TimeUnit.SECONDS))
+
+        assertEquals(PxSize(40.ipx, 30.ipx), columnSize.value)
+        assertEquals(PxPosition(10.ipx, 0.ipx), childPosition[0].value)
+        assertEquals(PxPosition(0.ipx, 10.ipx), childPosition[1].value)
+        assertEquals(PxPosition(0.ipx, 20.ipx), childPosition[2].value)
     }
 }

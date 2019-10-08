@@ -16,13 +16,18 @@
 
 package androidx.camera.core.impl.utils.futures;
 
+import static androidx.core.util.Preconditions.checkNotNull;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.arch.core.util.Function;
+import androidx.camera.core.impl.utils.executor.CameraXExecutors;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.core.util.Preconditions;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -85,19 +90,21 @@ public final class Futures {
      * of the given {@code Future}. If the given {@code Future} fails, the returned {@code Future}
      * fails with the same exception (and the function is not invoked).
      *
-     * @param input The future to transform
+     * @param input    The future to transform
      * @param function A function to transform the result of the input future to the result of the
-     *     output future
+     *                 output future
      * @param executor Executor to run the function in.
      * @return A future that holds result of the function (if the input succeeded) or the original
-     *     input's failure (if not)
+     * input's failure (if not)
      */
     @NonNull
     public static <I, O> ListenableFuture<O> transformAsync(
             @NonNull ListenableFuture<I> input,
             @NonNull AsyncFunction<? super I, ? extends O> function,
             @NonNull Executor executor) {
-        return AbstractTransformFuture.create(input, function, executor);
+        ChainingListenableFuture<I, O> output = new ChainingListenableFuture<I, O>(function, input);
+        input.addListener(output, executor);
+        return output;
     }
 
     /**
@@ -105,17 +112,100 @@ public final class Futures {
      * Future}. If {@code input} fails, the returned {@code Future} fails with the same
      * exception (and the function is not invoked)
      *
-     * @param input The future to transform
-     * @param function A Function to transform the results of the provided future to the results of
-     *     the returned future.
+     * @param input    The future to transform
+     * @param function A function to transform the results of the provided future to the results of
+     *                 the returned future.
      * @param executor Executor to run the function in.
      * @return A future that holds result of the transformation.
      */
     @NonNull
     public static <I, O> ListenableFuture<O> transform(
-            @NonNull ListenableFuture<I> input, @NonNull Function<? super I, ? extends O> function,
+            @NonNull ListenableFuture<I> input,
+            @NonNull Function<? super I, ? extends O> function,
             @NonNull Executor executor) {
-        return AbstractTransformFuture.create(input, function, executor);
+        checkNotNull(function);
+        return transformAsync(input, new AsyncFunction<I, O>() {
+
+            @Override
+            public ListenableFuture<O> apply(I input) {
+                return immediateFuture(function.apply(input));
+            }
+        }, executor);
+    }
+
+    private static final Function<?, ?> IDENTITY_FUNCTION = new Function<Object, Object>() {
+        @Override
+        public Object apply(Object input) {
+            return input;
+        }
+    };
+
+    /**
+     * Propagates the result of the given {@code ListenableFuture} to the given {@link
+     * CallbackToFutureAdapter.Completer} directly.
+     *
+     * <p>If {@code input} fails, the failure will be propagated to the {@code completer}.
+     *
+     * @param input     The future being propagated.
+     * @param completer The completer which will receive the result of the provided future.
+     */
+    @SuppressWarnings("LambdaLast") // ListenableFuture not needed for SAM conversion
+    public static <V> void propagate(
+            @NonNull ListenableFuture<V> input,
+            @NonNull final CallbackToFutureAdapter.Completer<V> completer) {
+        @SuppressWarnings({"unchecked"}) // Input of function is same as output
+                Function<? super V, ? extends V> identityTransform =
+                (Function<? super V, ? extends V>) IDENTITY_FUNCTION;
+        // Use direct executor here since function is just unpacking the output and should be quick
+        propagateTransform(input, identityTransform, completer, CameraXExecutors.directExecutor());
+    }
+
+    /**
+     * Propagates the result of the given {@code ListenableFuture} to the given {@link
+     * CallbackToFutureAdapter.Completer} by applying the provided transformation function.
+     *
+     * <p>If {@code input} fails, the failure will be propagated to the {@code completer} (and the
+     * function is not invoked)
+     *
+     * @param input     The future to transform.
+     * @param function  A function to transform the results of the provided future to the results of
+     *                  the provided completer.
+     * @param completer The completer which will receive the result of the provided future.
+     * @param executor  Executor to run the function in.
+     */
+    public static <I, O> void propagateTransform(
+            @NonNull final ListenableFuture<I> input,
+            @NonNull final Function<? super I, ? extends O> function,
+            @NonNull final CallbackToFutureAdapter.Completer<O> completer,
+            @NonNull Executor executor) {
+        Preconditions.checkNotNull(input);
+        Preconditions.checkNotNull(function);
+        Preconditions.checkNotNull(completer);
+        Preconditions.checkNotNull(executor);
+
+        addCallback(input, new FutureCallback<I>() {
+            @Override
+            public void onSuccess(@Nullable I result) {
+                try {
+                    completer.set(function.apply(result));
+                } catch (Throwable t) {
+                    completer.setException(t);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                completer.setException(t);
+            }
+        }, executor);
+
+        // Propagate cancellation from completer to input future
+        completer.addCancellationListener(new Runnable() {
+            @Override
+            public void run() {
+                input.cancel(true);
+            }
+        }, CameraXExecutors.directExecutor());
     }
 
     /**
@@ -133,7 +223,8 @@ public final class Futures {
     @NonNull
     public static <V> ListenableFuture<List<V>> successfulAsList(
             @NonNull Collection<? extends ListenableFuture<? extends V>> futures) {
-        return new CollectionFuture.ListFuture<V>(futures, false);
+        return new ListFuture<V>(new ArrayList<>(futures), false,
+                CameraXExecutors.directExecutor());
     }
 
     /**
@@ -151,7 +242,7 @@ public final class Futures {
     @NonNull
     public static <V> ListenableFuture<List<V>> allAsList(
             @NonNull Collection<? extends ListenableFuture<? extends V>> futures) {
-        return new CollectionFuture.ListFuture<V>(futures, true);
+        return new ListFuture<V>(new ArrayList<>(futures), true, CameraXExecutors.directExecutor());
     }
 
     /**
@@ -159,7 +250,7 @@ public final class Futures {
      * computation is {@linkplain java.util.concurrent.Future#isDone() complete} or, if the
      * computation is already complete, immediately.
      *
-     * @param future The future attach the callback to.
+     * @param future   The future attach the callback to.
      * @param callback The callback to invoke when {@code future} is completed.
      * @param executor The executor to run {@code callback} when the future completes.
      */
@@ -211,7 +302,7 @@ public final class Futures {
      * that the {@code Future} is already done. Second, if buggy code calls {@code getDone} on a
      * {@code Future} that is still pending, the program will throw instead of block.
      *
-     * @throws ExecutionException if the {@code Future} failed with an exception
+     * @throws ExecutionException    if the {@code Future} failed with an exception
      * @throws CancellationException if the {@code Future} was cancelled
      * @throws IllegalStateException if the {@code Future} is not done
      */
@@ -235,7 +326,7 @@ public final class Futures {
     /**
      * Invokes {@code Future.}{@link Future#get() get()} uninterruptibly.
      *
-     * @throws ExecutionException if the computation threw an exception
+     * @throws ExecutionException    if the computation threw an exception
      * @throws CancellationException if the computation was cancelled
      */
     @Nullable

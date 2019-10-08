@@ -22,21 +22,22 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.test.rule.ActivityTestRule
-import androidx.ui.core.AndroidCraneView
-import androidx.ui.core.CraneWrapper
+import androidx.ui.core.AndroidComposeView
 import androidx.ui.core.Density
 import androidx.ui.core.OnPositioned
 import androidx.ui.core.PxPosition
 import androidx.ui.core.PxSize
 import androidx.ui.core.Ref
 import androidx.ui.core.px
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
-import androidx.compose.setContent
+import androidx.ui.core.AlignmentLine
 import androidx.ui.core.ComplexLayout
 import androidx.ui.core.IntPx
+import androidx.ui.core.Layout
+import androidx.ui.core.coerceIn
 import androidx.ui.core.ipx
+import androidx.ui.core.setContent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -71,37 +72,33 @@ open class LayoutTest {
         activityTestRule.runOnUiThread(runnable)
     }
 
-    internal fun show(@Children composable: @Composable() () -> Unit) {
+    internal fun show(composable: @Composable() () -> Unit) {
         val runnable: Runnable = object : Runnable {
             override fun run() {
-                activity.setContent {
-                    CraneWrapper {
-                        composable()
-                    }
-                }
+                activity.setContent(composable)
             }
         }
         activityTestRule.runOnUiThread(runnable)
     }
 
-    internal fun findAndroidCraneView(): AndroidCraneView {
-        return findAndroidCraneView(activity)
+    internal fun findAndroidComposeView(): AndroidComposeView {
+        return findAndroidComposeView(activity)
     }
 
-    internal fun findAndroidCraneView(activity: Activity): AndroidCraneView {
+    internal fun findAndroidComposeView(activity: Activity): AndroidComposeView {
         val contentViewGroup = activity.findViewById<ViewGroup>(android.R.id.content)
-        return findAndroidCraneView(contentViewGroup)!!
+        return findAndroidComposeView(contentViewGroup)!!
     }
 
-    internal fun findAndroidCraneView(parent: ViewGroup): AndroidCraneView? {
+    internal fun findAndroidComposeView(parent: ViewGroup): AndroidComposeView? {
         for (index in 0 until parent.childCount) {
             val child = parent.getChildAt(index)
-            if (child is AndroidCraneView) {
+            if (child is AndroidComposeView) {
                 return child
             } else if (child is ViewGroup) {
-                val craneView = findAndroidCraneView(child)
-                if (craneView != null) {
-                    return craneView
+                val composeView = findAndroidComposeView(child)
+                if (composeView != null) {
+                    return composeView
                 }
             }
         }
@@ -145,7 +142,7 @@ open class LayoutTest {
             val layoutLatch = CountDownLatch(1)
             show {
                 ComplexLayout(layout) {
-                    layout { measurables, _ ->
+                    measure { measurables, _ ->
                         val measurable = measurables.first()
                         test(
                             { h -> measurable.minIntrinsicWidth(h) },
@@ -154,6 +151,7 @@ open class LayoutTest {
                             { w -> measurable.maxIntrinsicHeight(w) }
                         )
                         layoutLatch.countDown()
+                        layout(0.ipx, 0.ipx) {}
                     }
                     minIntrinsicWidth { _, _ -> 0.ipx }
                     maxIntrinsicWidth { _, _ -> 0.ipx }
@@ -162,6 +160,21 @@ open class LayoutTest {
                 }
             }
             assertTrue(layoutLatch.await(1, TimeUnit.SECONDS))
+        }
+    }
+
+    @Composable
+    internal fun FixedSizeLayout(
+        width: IntPx,
+        height: IntPx,
+        vararg alignmentLines: Pair<AlignmentLine, IntPx>
+    ) {
+        Layout({}) { _, constraints ->
+            layout(
+                width.coerceIn(constraints.minWidth, constraints.maxWidth),
+                height.coerceIn(constraints.minHeight, constraints.maxHeight),
+                *alignmentLines
+            ) {}
         }
     }
 
@@ -175,13 +188,13 @@ open class LayoutTest {
             "Expected width ${expected.width.value} but obtained ${actual.width.value}",
             expected.width.value,
             actual.width.value,
-            1f
+            0f
         )
         assertEquals(
             "Expected height ${expected.height.value} but obtained ${actual.height.value}",
             expected.height.value,
             actual.height.value,
-            1f
+            0f
         )
         if (actual.width.value != actual.width.value.toInt().toFloat()) {
             fail("Expected integer width")
@@ -201,16 +214,16 @@ open class LayoutTest {
             "Expected x ${expected.x.value} but obtained ${actual.x.value}",
             expected.x.value,
             actual.x.value,
-            1f
+            0f
         )
         assertEquals(
             "Expected y ${expected.y.value} but obtained ${actual.y.value}",
             expected.y.value,
             actual.y.value,
-            1f
+            0f
         )
         if (actual.x.value != actual.x.value.toInt().toFloat()) {
-           fail("Expected integer x coordinate")
+            fail("Expected integer x coordinate")
         }
         if (actual.y.value != actual.y.value.toInt().toFloat()) {
             fail("Expected integer y coordinate")
@@ -219,10 +232,10 @@ open class LayoutTest {
 
     internal fun assertEquals(expected: IntPx, actual: IntPx) {
         assertEquals(
-            "Expected ${expected} but obtained ${actual}",
+            "Expected $expected but obtained $actual",
             expected.value.toFloat(),
             actual.value.toFloat(),
-            1f
+            0f
         )
     }
 }

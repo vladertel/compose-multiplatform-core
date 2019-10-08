@@ -16,40 +16,56 @@
 
 package androidx.ui.material.demos
 
-import android.app.Activity
-import android.os.Bundle
+import androidx.compose.Composable
 import androidx.compose.composer
-import androidx.compose.setContent
-import androidx.ui.core.CraneWrapper
+import androidx.compose.state
+import androidx.compose.unaryPlus
+import androidx.ui.graphics.Color
+import androidx.ui.layout.Center
 import androidx.ui.layout.FlexColumn
-import androidx.ui.material.MaterialTheme
-import androidx.ui.material.samples.CustomTabs
+import androidx.ui.material.Button
+import androidx.ui.material.ContainedButtonStyle
+import androidx.ui.material.samples.FancyIndicatorContainerTabs
+import androidx.ui.material.samples.FancyIndicatorTabs
+import androidx.ui.material.samples.FancyTabs
 import androidx.ui.material.samples.IconTabs
+import androidx.ui.material.samples.ScrollingFancyIndicatorContainerTabs
+import androidx.ui.material.samples.ScrollingTextTabs
 import androidx.ui.material.samples.TextAndIconTabs
 import androidx.ui.material.samples.TextTabs
-import androidx.ui.painting.imageFromResource
+import androidx.ui.graphics.imageFromResource
 
-class TabActivity : Activity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            CraneWrapper {
-                MaterialTheme {
-                    val favouriteImage = imageFromResource(resources, R.drawable.ic_favorite)
-                    FlexColumn {
-                        expanded(flex = 1f) {
-                            TextTabs()
-                        }
-                        expanded(flex = 1f) {
-                            IconTabs(favouriteImage)
-                        }
-                        expanded(flex = 1f) {
-                            TextAndIconTabs(favouriteImage)
-                        }
-                        expanded(flex = 1f) {
-                            CustomTabs()
-                        }
-                    }
+class TabActivity : MaterialDemoActivity() {
+
+    @Composable
+    override fun materialContent() {
+        val favouriteImage = imageFromResource(resources, R.drawable.ic_favorite)
+        FlexColumn {
+            val showingSimple = +state { true }
+            val buttonText = "Show ${if (showingSimple.value) "custom" else "simple"} tabs"
+
+            expanded(flex = 1f) {
+                if (showingSimple.value) {
+                    TextTabs()
+                    IconTabs(favouriteImage)
+                    TextAndIconTabs(favouriteImage)
+                    ScrollingTextTabs()
+                } else {
+                    FancyTabs()
+                    FancyIndicatorTabs()
+                    FancyIndicatorContainerTabs()
+                    ScrollingFancyIndicatorContainerTabs()
+                }
+            }
+
+            expanded(flex = 1f) {
+                Center {
+                    Button(
+                        style = ContainedButtonStyle(color = Color.Cyan),
+                        text = buttonText,
+                        onClick = {
+                            showingSimple.value = !showingSimple.value
+                        })
                 }
             }
         }

@@ -16,10 +16,9 @@
 
 package androidx.paging
 
-import androidx.paging.futures.DirectExecutor
-import androidx.testutils.TestExecutor
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.runBlocking
+import androidx.paging.futures.DirectDispatcher
+import androidx.testutils.TestDispatcher
+import kotlinx.coroutines.CoroutineScope
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,12 +30,13 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.Mockito.verifyZeroInteractions
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.assertFailsWith
 
 @RunWith(JUnit4::class)
 class PageKeyedDataSourceTest {
-    private val mainThread = TestExecutor()
-    private val backgroundThread = TestExecutor()
+    private val mainThread = TestDispatcher()
+    private val backgroundThread = TestDispatcher()
 
     internal data class Item(val name: String)
 
@@ -53,7 +53,6 @@ class PageKeyedDataSourceTest {
             callback: LoadInitialCallback<String, Item>
         ) {
             if (error) {
-                callback.onError(EXCEPTION)
                 error = false
                 return
             }
@@ -64,7 +63,6 @@ class PageKeyedDataSourceTest {
 
         override fun loadBefore(params: LoadParams<String>, callback: LoadCallback<String, Item>) {
             if (error) {
-                callback.onError(EXCEPTION)
                 error = false
                 return
             }
@@ -75,7 +73,6 @@ class PageKeyedDataSourceTest {
 
         override fun loadAfter(params: LoadParams<String>, callback: LoadCallback<String, Item>) {
             if (error) {
-                callback.onError(EXCEPTION)
                 error = false
                 return
             }
@@ -92,19 +89,13 @@ class PageKeyedDataSourceTest {
     @Test
     fun loadFullVerify() {
         // validate paging entire ItemDataSource results in full, correctly ordered data
-        val pagedList = runBlocking {
-            PagedList.create(
-                ItemDataSource(),
-                GlobalScope,
-                mainThread,
-                backgroundThread,
-                backgroundThread,
-                null,
-                PagedList.Config.Builder().setPageSize(100).build(),
-                null
-            )
-        }
-        backgroundThread.executeAll()
+        val testCoroutineScope = CoroutineScope(EmptyCoroutineContext)
+
+        val pagedList = PagedList.Builder(ItemDataSource(), 100)
+            .setCoroutineScope(testCoroutineScope)
+            .setNotifyDispatcher(mainThread)
+            .setFetchDispatcher(DirectDispatcher)
+            .build()
 
         // validate initial load
         assertEquals(PAGE_MAP[INIT_KEY]!!.data, pagedList)
@@ -152,20 +143,10 @@ class PageKeyedDataSourceTest {
             }
         }
 
-        runBlocking {
-            PagedList.create(
-                dataSource,
-                GlobalScope,
-                FailExecutor(),
-                DirectExecutor,
-                DirectExecutor,
-                null,
-                PagedList.Config.Builder()
-                    .setPageSize(10)
-                    .build(),
-                ""
-            )
-        }
+        PagedList.Builder(dataSource, 10)
+            .setNotifyDispatcher(FailDispatcher())
+            .setFetchDispatcher(DirectDispatcher)
+            .build()
     }
 
     @Test
@@ -256,29 +237,21 @@ class PageKeyedDataSourceTest {
         @Suppress("UNCHECKED_CAST")
         val boundaryCallback =
             mock(PagedList.BoundaryCallback::class.java) as PagedList.BoundaryCallback<String>
-        val executor = TestExecutor()
+        val dispatcher = TestDispatcher()
 
-        val pagedList = runBlocking {
-            PagedList.create(
-                dataSource,
-                GlobalScope,
-                executor,
-                executor,
-                executor,
-                boundaryCallback,
-                PagedList.Config.Builder()
-                    .setPageSize(10)
-                    .build(),
-                ""
-            )
-        }
-        executor.executeAll()
+        val testCoroutineScope = CoroutineScope(EmptyCoroutineContext)
+        val pagedList = PagedList.Builder(dataSource, 10)
+            .setBoundaryCallback(boundaryCallback)
+            .setCoroutineScope(testCoroutineScope)
+            .setFetchDispatcher(dispatcher)
+            .setNotifyDispatcher(dispatcher)
+            .build()
 
         pagedList.loadAround(0)
 
         verifyZeroInteractions(boundaryCallback)
 
-        executor.executeAll()
+        dispatcher.executeAll()
 
         // verify boundary callbacks are triggered
         verify(boundaryCallback).onItemAtFrontLoaded("A")
@@ -315,29 +288,21 @@ class PageKeyedDataSourceTest {
         @Suppress("UNCHECKED_CAST")
         val boundaryCallback =
             mock(PagedList.BoundaryCallback::class.java) as PagedList.BoundaryCallback<String>
-        val executor = TestExecutor()
+        val dispatcher = TestDispatcher()
 
-        val pagedList = runBlocking {
-            PagedList.create(
-                dataSource,
-                GlobalScope,
-                executor,
-                executor,
-                executor,
-                boundaryCallback,
-                PagedList.Config.Builder()
-                    .setPageSize(10)
-                    .build(),
-                ""
-            )
-        }
-        executor.executeAll()
+        val testCoroutineScope = CoroutineScope(EmptyCoroutineContext)
+        val pagedList = PagedList.Builder(dataSource, 10)
+            .setBoundaryCallback(boundaryCallback)
+            .setCoroutineScope(testCoroutineScope)
+            .setFetchDispatcher(dispatcher)
+            .setNotifyDispatcher(dispatcher)
+            .build()
 
         pagedList.loadAround(0)
 
         verifyZeroInteractions(boundaryCallback)
 
-        executor.executeAll()
+        dispatcher.executeAll()
 
         // verify boundary callbacks are triggered
         verify(boundaryCallback).onItemAtFrontLoaded("B")
@@ -387,10 +352,6 @@ class PageKeyedDataSourceTest {
                 override fun onResult(data: List<A>, previousPageKey: K?, nextPageKey: K?) {
                     callback.onResult(convert(data), previousPageKey, nextPageKey)
                 }
-
-                override fun onError(error: Throwable) {
-                    callback.onError(error)
-                }
             })
         }
 
@@ -399,10 +360,6 @@ class PageKeyedDataSourceTest {
                 override fun onResult(data: List<A>, adjacentPageKey: K?) {
                     callback.onResult(convert(data), adjacentPageKey)
                 }
-
-                override fun onError(error: Throwable) {
-                    callback.onError(error)
-                }
             })
         }
 
@@ -410,10 +367,6 @@ class PageKeyedDataSourceTest {
             source.loadAfter(params, object : LoadCallback<K, A>() {
                 override fun onResult(data: List<A>, adjacentPageKey: K?) {
                     callback.onResult(convert(data), adjacentPageKey)
-                }
-
-                override fun onError(error: Throwable) {
-                    callback.onError(error)
                 }
             })
         }
@@ -459,7 +412,6 @@ class PageKeyedDataSourceTest {
         // load after - error
         orig.enqueueError()
         wrapper.loadAfter(PageKeyedDataSource.LoadParams(expectedInitial.next, 4), loadCallback)
-        verify(loadCallback).onError(EXCEPTION)
         verifyNoMoreInteractions(loadCallback)
 
         // load before
@@ -475,7 +427,6 @@ class PageKeyedDataSourceTest {
         // load before - error
         orig.enqueueError()
         wrapper.loadBefore(PageKeyedDataSource.LoadParams(expectedAfter.prev, 4), loadCallback)
-        verify(loadCallback).onError(EXCEPTION)
         verifyNoMoreInteractions(loadCallback)
 
         // verify invalidation
@@ -521,7 +472,6 @@ class PageKeyedDataSourceTest {
         private const val INIT_KEY: String = "key 2"
         private val PAGE_MAP: Map<String, Page>
         private val ITEM_LIST: List<Item>
-        private val EXCEPTION = Exception()
 
         init {
             val map = HashMap<String, Page>()
@@ -542,10 +492,9 @@ class PageKeyedDataSourceTest {
     }
 
     private fun drain() {
-        var executed: Boolean
-        do {
-            executed = backgroundThread.executeAll()
-            executed = mainThread.executeAll() || executed
-        } while (executed)
+        while (backgroundThread.queue.isNotEmpty() || mainThread.queue.isNotEmpty()) {
+            backgroundThread.executeAll()
+            mainThread.executeAll()
+        }
     }
 }

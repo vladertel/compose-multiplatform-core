@@ -17,24 +17,23 @@
 package androidx.camera.extensions;
 
 import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CaptureResult;
-import android.hardware.camera2.TotalCaptureResult;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+import android.util.Pair;
+import android.util.Size;
 
 import androidx.annotation.GuardedBy;
+import androidx.annotation.NonNull;
 import androidx.camera.camera2.Camera2Config;
-import androidx.camera.camera2.impl.Camera2CameraCaptureResultConverter;
 import androidx.camera.camera2.impl.CameraEventCallback;
 import androidx.camera.camera2.impl.CameraEventCallbacks;
-import androidx.camera.core.CameraCaptureResult;
-import androidx.camera.core.CameraCaptureResults;
+import androidx.camera.core.CameraIdFilter;
+import androidx.camera.core.CameraIdFilterSet;
+import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraX;
 import androidx.camera.core.CaptureConfig;
-import androidx.camera.core.CaptureStage;
 import androidx.camera.core.Config;
-import androidx.camera.core.ImageInfo;
-import androidx.camera.core.ImageInfoProcessor;
 import androidx.camera.core.PreviewConfig;
 import androidx.camera.core.UseCase;
 import androidx.camera.extensions.ExtensionsErrorListener.ExtensionsErrorCode;
@@ -42,14 +41,16 @@ import androidx.camera.extensions.ExtensionsManager.EffectMode;
 import androidx.camera.extensions.impl.CaptureStageImpl;
 import androidx.camera.extensions.impl.PreviewExtenderImpl;
 import androidx.camera.extensions.impl.PreviewImageProcessorImpl;
-import androidx.camera.extensions.impl.RequestUpdateProcessorImpl;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Class for using an OEM provided extension on preview.
  */
 public abstract class PreviewExtender {
+    private static final String TAG = "PreviewExtender";
     static final Config.Option<EffectMode> OPTION_PREVIEW_EXTENDER_MODE = Config.Option.create(
             "camerax.extensions.previewExtender.mode", EffectMode.class);
 
@@ -72,9 +73,17 @@ public abstract class PreviewExtender {
      */
     public boolean isExtensionAvailable() {
         CameraX.LensFacing lensFacing = mBuilder.build().getLensFacing();
-        String cameraId = CameraUtil.getCameraId(lensFacing);
-        CameraCharacteristics cameraCharacteristics = CameraUtil.getCameraCharacteristics(cameraId);
-        return mImpl.isExtensionAvailable(cameraId, cameraCharacteristics);
+        Set<String> availableCameraIds = null;
+        try {
+            availableCameraIds = CameraUtil.getCameraIdSetWithLensFacing(lensFacing);
+        } catch (CameraInfoUnavailableException e) {
+            // Returns false if camera info is unavailable.
+            return false;
+        }
+        ExtensionCameraIdFilter extensionCameraIdFilter = new ExtensionCameraIdFilter(mImpl);
+        availableCameraIds = extensionCameraIdFilter.filter(availableCameraIds);
+
+        return !availableCameraIds.isEmpty();
     }
 
     /**
@@ -85,38 +94,82 @@ public abstract class PreviewExtender {
      * extension is not enabled together.
      */
     public void enableExtension() {
-        CameraX.LensFacing lensFacing = mBuilder.build().getLensFacing();
-        String cameraId = CameraUtil.getCameraId(lensFacing);
+        // Add extension camera id filter to config.
+        ExtensionCameraIdFilter extensionCameraIdFilter = new ExtensionCameraIdFilter(mImpl);
+        CameraIdFilter currentCameraIdFilter = mBuilder.build().getCameraIdFilter(null);
+        if (currentCameraIdFilter == null) {
+            mBuilder.setCameraIdFilter(extensionCameraIdFilter);
+        } else {
+            CameraIdFilterSet cameraIdFilterSet = new CameraIdFilterSet();
+            cameraIdFilterSet.addCameraIdFilter(currentCameraIdFilter);
+            cameraIdFilterSet.addCameraIdFilter(extensionCameraIdFilter);
+            mBuilder.setCameraIdFilter(cameraIdFilterSet);
+        }
+
+        String cameraId = CameraUtil.getCameraId(mBuilder.build());
+        if (cameraId == null) {
+            // If there's no available camera id for the extender to function, just return here
+            // and it will be no-ops.
+            return;
+        }
+
         CameraCharacteristics cameraCharacteristics = CameraUtil.getCameraCharacteristics(cameraId);
         mImpl.init(cameraId, cameraCharacteristics);
 
         PreviewExtenderAdapter previewExtenderAdapter;
         switch (mImpl.getProcessorType()) {
             case PROCESSOR_TYPE_REQUEST_UPDATE_ONLY:
-                RequestUpdateProcessingExtenderAdapter requestUpdateProcessingExtenderAdapter =
-                        new RequestUpdateProcessingExtenderAdapter(mImpl, mEffectMode);
-                mBuilder.setImageInfoProcessor(requestUpdateProcessingExtenderAdapter);
-                previewExtenderAdapter = requestUpdateProcessingExtenderAdapter;
+                AdaptingRequestUpdateProcessor adaptingRequestUpdateProcessor =
+                        new AdaptingRequestUpdateProcessor(mImpl);
+                mBuilder.setImageInfoProcessor(adaptingRequestUpdateProcessor);
+                previewExtenderAdapter = new PreviewExtenderAdapter(mImpl, mEffectMode,
+                        adaptingRequestUpdateProcessor);
                 break;
             case PROCESSOR_TYPE_IMAGE_PROCESSOR:
-                mBuilder.setCaptureProcessor(new
-                        AdaptingPreviewProcessor((PreviewImageProcessorImpl) mImpl.getProcessor()));
-                previewExtenderAdapter = new PreviewExtenderAdapter(mImpl, mEffectMode);
+                AdaptingPreviewProcessor adaptingPreviewProcessor = new
+                        AdaptingPreviewProcessor((PreviewImageProcessorImpl) mImpl.getProcessor());
+                mBuilder.setCaptureProcessor(adaptingPreviewProcessor);
+                previewExtenderAdapter = new PreviewExtenderAdapter(mImpl, mEffectMode,
+                        adaptingPreviewProcessor);
                 break;
             default:
-                previewExtenderAdapter = new PreviewExtenderAdapter(mImpl, mEffectMode);
+                previewExtenderAdapter = new PreviewExtenderAdapter(mImpl, mEffectMode, null);
         }
 
         new Camera2Config.Extender(mBuilder).setCameraEventCallback(
                 new CameraEventCallbacks(previewExtenderAdapter));
         mBuilder.setUseCaseEventListener(previewExtenderAdapter);
         mBuilder.getMutableConfig().insertOption(OPTION_PREVIEW_EXTENDER_MODE, mEffectMode);
+        setSupportedResolutions();
+    }
+
+    private void setSupportedResolutions() {
+        if (ExtensionVersion.getRuntimeVersion().compareTo(Version.VERSION_1_1) < 0) {
+            return;
+        }
+
+        List<Pair<Integer, Size[]>> supportedResolutions = null;
+
+        try {
+            supportedResolutions = mImpl.getSupportedResolutions();
+        } catch (NoSuchMethodError e) {
+            Log.e(TAG, "getSupportedResolution interface is not implemented in vendor library.");
+        }
+
+        if (supportedResolutions != null) {
+            mBuilder.setSupportedResolutions(supportedResolutions);
+        }
     }
 
     static void checkImageCaptureEnabled(EffectMode effectMode,
             Collection<UseCase> activeUseCases) {
         boolean isImageCaptureExtenderEnabled = false;
         boolean isMismatched = false;
+
+        // In case all use cases are unbound when doing the check.
+        if (activeUseCases == null || activeUseCases.isEmpty()) {
+            return;
+        }
 
         for (UseCase useCase : activeUseCases) {
             EffectMode imageCaptureExtenderMode = useCase.getUseCaseConfig().retrieveOption(
@@ -147,6 +200,8 @@ public abstract class PreviewExtender {
 
         final PreviewExtenderImpl mImpl;
 
+        final CloseableProcessor mCloseableProcessor;
+
         // Once the adapter has set mActive to false a new instance needs to be created
         @GuardedBy("mLock")
         volatile boolean mActive = true;
@@ -156,13 +211,16 @@ public abstract class PreviewExtender {
         @GuardedBy("mLock")
         private volatile boolean mUnbind = false;
 
-        PreviewExtenderAdapter(PreviewExtenderImpl impl, EffectMode effectMode) {
+        PreviewExtenderAdapter(PreviewExtenderImpl impl, EffectMode effectMode,
+                CloseableProcessor closeableProcessor) {
             mImpl = impl;
             mEffectMode = effectMode;
+            mCloseableProcessor = closeableProcessor;
         }
 
         @Override
-        public void onBind(String cameraId) {
+        @SuppressWarnings("GuardedBy") // TODO(b/141956018): Suppressed during upgrade to AGP 3.6.
+        public void onBind(@NonNull String cameraId) {
             if (mActive) {
                 CameraCharacteristics cameraCharacteristics =
                         CameraUtil.getCameraCharacteristics(cameraId);
@@ -183,6 +241,9 @@ public abstract class PreviewExtender {
         private void callDeInit() {
             synchronized (mLock) {
                 if (mActive) {
+                    if (mCloseableProcessor != null) {
+                        mCloseableProcessor.close();
+                    }
                     mImpl.onDeInit();
                     mActive = false;
                 }
@@ -195,6 +256,7 @@ public abstract class PreviewExtender {
                 if (mActive) {
                     Handler handler = new Handler(Looper.getMainLooper());
                     handler.post(new Runnable() {
+                        @Override
                         public void run() {
                             checkImageCaptureEnabled(mEffectMode, CameraX.getActiveUseCases());
                         }
@@ -267,54 +329,11 @@ public abstract class PreviewExtender {
         }
     }
 
-    // Prevents the implementation from being accessed after deInit() has been called
-    private static final class RequestUpdateProcessingExtenderAdapter extends
-            PreviewExtenderAdapter implements ImageInfoProcessor {
-
-        private final RequestUpdateProcessorImpl mProcessor;
-
-        RequestUpdateProcessingExtenderAdapter(PreviewExtenderImpl impl, EffectMode effectMode) {
-            super(impl, effectMode);
-            mProcessor = ((RequestUpdateProcessorImpl) mImpl.getProcessor());
-        }
-
-        @Override
-        public CaptureStage getCaptureStage() {
-            synchronized (mLock) {
-                if (mActive) {
-                    return new AdaptingCaptureStage(mImpl.getCaptureStage());
-                }
-                return null;
-            }
-        }
-
-        @Override
-        public boolean process(ImageInfo imageInfo) {
-            CameraCaptureResult result =
-                    CameraCaptureResults.retrieveCameraCaptureResult(imageInfo);
-            if (result == null) {
-                return false;
-            }
-
-            CaptureResult captureResult =
-                    Camera2CameraCaptureResultConverter.getCaptureResult(result);
-            if (captureResult == null) {
-                return false;
-            }
-
-            if (captureResult instanceof TotalCaptureResult) {
-                synchronized (mLock) {
-                    if (mActive) {
-                        CaptureStageImpl captureStageImpl =
-                                mProcessor.process((TotalCaptureResult) captureResult);
-                        return captureStageImpl != null;
-                    }
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-
+    /**
+     * A processor that can be closed so that the underlying processing implementation is skipped,
+     * if it has been closed.
+     */
+    interface CloseableProcessor {
+        void close();
     }
 }

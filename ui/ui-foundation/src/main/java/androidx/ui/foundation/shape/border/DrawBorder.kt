@@ -27,9 +27,9 @@ import androidx.ui.core.px
 import androidx.ui.engine.geometry.Offset
 import androidx.ui.engine.geometry.Shape
 import androidx.ui.engine.geometry.addOutline
-import androidx.ui.painting.Paint
-import androidx.ui.painting.Path
-import androidx.ui.painting.PathOperation
+import androidx.ui.graphics.Paint
+import androidx.ui.graphics.Path
+import androidx.ui.graphics.PathOperation
 
 /**
  * Draw the [Border] as an inner stroke for the provided [shape].
@@ -54,7 +54,7 @@ fun DrawBorder(shape: Shape, border: Border) {
             if (!diffPathIsCached) {
                 // to have an inner path we provide a smaller parent size and shift the result
                 val borderSize = if (border.width == Dp.Hairline) 1.px else border.width.toPx()
-                val sizeMinusBorder = parentSize.copy(
+                val sizeMinusBorder = PxSize(
                     width = parentSize.width - borderSize * 2,
                     height = parentSize.height - borderSize * 2
                 )
@@ -67,7 +67,7 @@ fun DrawBorder(shape: Shape, border: Border) {
                 diffPathIsCached = true
             }
 
-            border.brush.applyBrush(paint)
+            border.brush.applyTo(paint)
             canvas.drawPath(diffPath, paint)
         }
     }

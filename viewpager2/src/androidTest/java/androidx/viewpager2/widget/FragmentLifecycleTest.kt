@@ -184,7 +184,7 @@ class FragmentLifecycleTest : BaseTest() {
 
                 // wait for layout to finish after data-set change
                 val latchLayout = viewPager.addWaitForLayoutChangeLatch()
-                activityTestRule.runOnUiThread(it.dataChangeAction)
+                runOnUiThreadSync(it.dataChangeAction)
                 latchLayout.await(timeoutMs, MILLISECONDS)
 
                 // wait for animations to finish after data-set change

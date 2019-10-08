@@ -16,12 +16,12 @@
 
 package androidx.ui.layout
 
-import androidx.compose.Children
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.ui.core.Constraints
 import androidx.ui.core.ComplexLayout
 import androidx.ui.core.IntPx
+import androidx.ui.core.Modifier
 import androidx.ui.core.coerceIn
 import androidx.ui.core.enforce
 import androidx.ui.core.ipx
@@ -38,17 +38,18 @@ import androidx.ui.core.ipx
 @Composable
 fun ConstrainedBox(
     constraints: DpConstraints,
-    @Children children: @Composable() () -> Unit
+    modifier: Modifier = Modifier.None,
+    children: @Composable() () -> Unit
 ) {
-    ComplexLayout(children) {
-        layout { measurables, incomingConstraints ->
+    ComplexLayout(children, modifier) {
+        measure { measurables, incomingConstraints ->
             val measurable = measurables.firstOrNull()
             val childConstraints = Constraints(constraints).enforce(incomingConstraints)
             val placeable = measurable?.measure(childConstraints)
 
             val layoutWidth = placeable?.width ?: childConstraints.minWidth
             val layoutHeight = placeable?.height ?: childConstraints.minHeight
-            layoutResult(layoutWidth, layoutHeight) {
+            layout(layoutWidth, layoutHeight) {
                 placeable?.place(IntPx.Zero, IntPx.Zero)
             }
         }

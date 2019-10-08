@@ -34,6 +34,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.DataInput;
@@ -60,6 +61,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
@@ -2893,6 +2895,19 @@ public class ExifInterface {
     // See http://www.exiv2.org/makernote.html#R11
     private static final int PEF_MAKER_NOTE_SKIP_SIZE = 6;
 
+    // See PNG (Portable Network Graphics) Specification, Version 1.2,
+    // 3.1. PNG file signature
+    private static final byte[] PNG_SIGNATURE = new byte[] {(byte) 0x89, (byte) 0x50, (byte) 0x4e,
+            (byte) 0x47, (byte) 0x0d, (byte) 0x0a, (byte) 0x1a, (byte) 0x0a};
+    // See PNG (Portable Network Graphics) Specification, Version 1.2,
+    // 3.7. eXIf Exchangeable Image File (Exif) Profile
+    private static final byte[] PNG_CHUNK_TYPE_EXIF = new byte[]{(byte) 0x65, (byte) 0x58,
+            (byte) 0x49, (byte) 0x66};
+    private static final byte[] PNG_CHUNK_TYPE_IEND = new byte[]{(byte) 0x49, (byte) 0x45,
+            (byte) 0x4e, (byte) 0x44};
+    private static final int PNG_CHUNK_LENGTH_BYTE_LENGTH = 4;
+    private static final int PNG_CHUNK_CRC_BYTE_LENGTH = 4;
+
     private static SimpleDateFormat sFormatter;
 
     // See Exchangeable image file format for digital still cameras: Exif version 2.2.
@@ -2926,7 +2941,7 @@ public class ExifInterface {
     // Names for the data formats for debugging purpose.
     static final String[] IFD_FORMAT_NAMES = new String[] {
             "", "BYTE", "STRING", "USHORT", "ULONG", "URATIONAL", "SBYTE", "UNDEFINED", "SSHORT",
-            "SLONG", "SRATIONAL", "SINGLE", "DOUBLE"
+            "SLONG", "SRATIONAL", "SINGLE", "DOUBLE", "IFD"
     };
     // Sizes of the components of each IFD value format
     static final int[] IFD_FORMAT_BYTES_PER_FORMAT = new int[] {
@@ -3712,6 +3727,7 @@ public class ExifInterface {
     private static final int IMAGE_TYPE_RW2 = 10;
     private static final int IMAGE_TYPE_SRW = 11;
     private static final int IMAGE_TYPE_HEIF = 12;
+    private static final int IMAGE_TYPE_PNG = 13;
 
     static {
         sFormatter = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
@@ -3845,6 +3861,37 @@ public class ExifInterface {
             mSeekableFileDescriptor = null;
         }
         loadAttributes(inputStream);
+    }
+
+    /**
+     * Returns whether ExifInterface currently supports parsing data from the specified mime type
+     * or not.
+     *
+     * @param mimeType the string value of mime type
+     */
+    public static boolean isSupportedMimeType(@NonNull String mimeType) {
+        if (mimeType == null) {
+            throw new NullPointerException("mimeType shouldn't be null");
+        }
+
+        switch (mimeType.toLowerCase(Locale.ROOT)) {
+            case "image/jpeg":
+            case "image/x-adobe-dng":
+            case "image/x-canon-cr2":
+            case "image/x-nikon-nef":
+            case "image/x-nikon-nrw":
+            case "image/x-sony-arw":
+            case "image/x-panasonic-rw2":
+            case "image/x-olympus-orf":
+            case "image/x-pentax-pef":
+            case "image/x-samsung-srw":
+            case "image/x-fuji-raf":
+            case "image/heic":
+            case "image/heif":
+                return true;
+            default:
+                return false;
+        }
     }
 
     /**
@@ -4358,6 +4405,10 @@ public class ExifInterface {
                     getRw2Attributes(inputStream);
                     break;
                 }
+                case IMAGE_TYPE_PNG: {
+                    getPngAttributes(inputStream);
+                    break;
+                }
                 case IMAGE_TYPE_ARW:
                 case IMAGE_TYPE_CR2:
                 case IMAGE_TYPE_DNG:
@@ -4450,12 +4501,15 @@ public class ExifInterface {
 
         FileInputStream in = null;
         FileOutputStream out = null;
+        File originalFile = null;
+        if (mFilename != null) {
+            originalFile = new File(mFilename);
+        }
         File tempFile = null;
         try {
             // Move the original file to temporary file.
             if (mFilename != null) {
                 tempFile = new File(mFilename + ".tmp");
-                File originalFile = new File(mFilename);
                 if (!originalFile.renameTo(tempFile)) {
                     throw new IOException("Couldn't rename to " + tempFile.getAbsolutePath());
                 }
@@ -4467,7 +4521,7 @@ public class ExifInterface {
                 copy(in, out);
             }
         } catch (Exception e) {
-            throw new IOException("Failed to copy file");
+            throw new IOException("Failed to copy original file to temp file", e);
         } finally {
             closeQuietly(in);
             closeQuietly(out);
@@ -4475,6 +4529,8 @@ public class ExifInterface {
 
         in = null;
         out = null;
+        BufferedInputStream bufferedIn = null;
+        BufferedOutputStream bufferedOut = null;
         try {
             // Save the new file.
             in = new FileInputStream(tempFile);
@@ -4484,12 +4540,20 @@ public class ExifInterface {
                 Os.lseek(mSeekableFileDescriptor, 0, OsConstants.SEEK_SET);
                 out = new FileOutputStream(mSeekableFileDescriptor);
             }
-            saveJpegAttributes(in, out);
+            bufferedIn = new BufferedInputStream(in);
+            bufferedOut = new BufferedOutputStream(out);
+            saveJpegAttributes(bufferedIn, bufferedOut);
         } catch (Exception e) {
-            throw new IOException("Failed to copy file");
+            if (mFilename != null) {
+                if (!tempFile.renameTo(originalFile)) {
+                    throw new IOException("Couldn't restore original file: "
+                            + originalFile.getAbsolutePath());
+                }
+            }
+            throw new IOException("Failed to save new file", e);
         } finally {
-            closeQuietly(in);
-            closeQuietly(out);
+            closeQuietly(bufferedIn);
+            closeQuietly(bufferedOut);
             tempFile.delete();
         }
 
@@ -4566,6 +4630,7 @@ public class ExifInterface {
             if (in.skip(mThumbnailOffset) != mThumbnailOffset) {
                 throw new IOException("Corrupted image");
             }
+            // TODO: Need to handle potential OutOfMemoryError
             byte[] buffer = new byte[mThumbnailLength];
             if (in.read(buffer) != mThumbnailLength) {
                 throw new IOException("Corrupted image");
@@ -5006,6 +5071,8 @@ public class ExifInterface {
             return IMAGE_TYPE_ORF;
         } else if (isRw2Format(signatureCheckBytes)) {
             return IMAGE_TYPE_RW2;
+        } else if (isPngFormat(signatureCheckBytes)) {
+            return IMAGE_TYPE_PNG;
         }
         // Certain file formats (PEF) are identified in readImageFileDirectory()
         return IMAGE_TYPE_UNKNOWN;
@@ -5121,16 +5188,26 @@ public class ExifInterface {
      * http://fileformats.archiveteam.org/wiki/Olympus_ORF
      */
     private boolean isOrfFormat(byte[] signatureCheckBytes) throws IOException {
-        ByteOrderedDataInputStream signatureInputStream =
-                new ByteOrderedDataInputStream(signatureCheckBytes);
-        // Read byte order
-        mExifByteOrder = readByteOrder(signatureInputStream);
-        // Set byte order
-        signatureInputStream.setByteOrder(mExifByteOrder);
+        ByteOrderedDataInputStream signatureInputStream = null;
 
-        short orfSignature = signatureInputStream.readShort();
-        signatureInputStream.close();
-        return orfSignature == ORF_SIGNATURE_1 || orfSignature == ORF_SIGNATURE_2;
+        try {
+            signatureInputStream = new ByteOrderedDataInputStream(signatureCheckBytes);
+
+            // Read byte order
+            mExifByteOrder = readByteOrder(signatureInputStream);
+            // Set byte order
+            signatureInputStream.setByteOrder(mExifByteOrder);
+
+            short orfSignature = signatureInputStream.readShort();
+            return orfSignature == ORF_SIGNATURE_1 || orfSignature == ORF_SIGNATURE_2;
+        } catch (Exception e) {
+            // Do nothing
+        } finally {
+            if (signatureInputStream != null) {
+                signatureInputStream.close();
+            }
+        }
+        return false;
     }
 
     /**
@@ -5138,16 +5215,39 @@ public class ExifInterface {
      * See http://lclevy.free.fr/raw/
      */
     private boolean isRw2Format(byte[] signatureCheckBytes) throws IOException {
-        ByteOrderedDataInputStream signatureInputStream =
-                new ByteOrderedDataInputStream(signatureCheckBytes);
-        // Read byte order
-        mExifByteOrder = readByteOrder(signatureInputStream);
-        // Set byte order
-        signatureInputStream.setByteOrder(mExifByteOrder);
+        ByteOrderedDataInputStream signatureInputStream = null;
 
-        short signatureByte = signatureInputStream.readShort();
-        signatureInputStream.close();
-        return signatureByte == RW2_SIGNATURE;
+        try {
+            signatureInputStream = new ByteOrderedDataInputStream(signatureCheckBytes);
+
+            // Read byte order
+            mExifByteOrder = readByteOrder(signatureInputStream);
+            // Set byte order
+            signatureInputStream.setByteOrder(mExifByteOrder);
+
+            short signatureByte = signatureInputStream.readShort();
+            return signatureByte == RW2_SIGNATURE;
+        } catch (Exception e) {
+            // Do nothing
+        } finally {
+            if (signatureInputStream != null) {
+                signatureInputStream.close();
+            }
+        }
+        return false;
+    }
+
+    /**
+     * PNG's file signature is first 8 bytes.
+     * See PNG (Portable Network Graphics) Specification, Version 1.2, 3.1. PNG file signature
+     */
+    private boolean isPngFormat(byte[] signatureCheckBytes) throws IOException {
+        for (int i = 0; i < PNG_SIGNATURE.length; i++) {
+            if (signatureCheckBytes[i] != PNG_SIGNATURE[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -5218,17 +5318,17 @@ public class ExifInterface {
                     length = 0;
 
                     if (startsWith(bytes, IDENTIFIER_EXIF_APP1)) {
-                        final long offset = start + IDENTIFIER_EXIF_APP1.length;
+                        final int offset = start + IDENTIFIER_EXIF_APP1.length;
                         final byte[] value = Arrays.copyOfRange(bytes, IDENTIFIER_EXIF_APP1.length,
                                 bytes.length);
 
                         readExifSegment(value, imageType);
 
-                        // Save offset values for createJpegThumbnailBitmap() function
+                        // Save offset values for handleThumbnailFromJfif() function
                         mExifOffset = (int) offset;
                     } else if (startsWith(bytes, IDENTIFIER_XMP_APP1)) {
                         // See XMP Specification Part 3: Storage in Files, 1.1.3 JPEG, Table 6
-                        final long offset = start + IDENTIFIER_XMP_APP1.length;
+                        final int offset = start + IDENTIFIER_XMP_APP1.length;
                         final byte[] value = Arrays.copyOfRange(bytes,
                                 IDENTIFIER_XMP_APP1.length, bytes.length);
 
@@ -5536,6 +5636,7 @@ public class ExifInterface {
                     throw new IOException("Invalid identifier");
                 }
 
+                // TODO: Need to handle potential OutOfMemoryError
                 byte[] bytes = new byte[length];
                 if (in.read(bytes) != length) {
                     throw new IOException("Can't read exif");
@@ -5663,6 +5764,64 @@ public class ExifInterface {
         if (rw2IsoAttribute != null && exifIsoAttribute == null) {
             // Place this attribute only if it doesn't exist
             mAttributes[IFD_TYPE_EXIF].put(TAG_PHOTOGRAPHIC_SENSITIVITY, rw2IsoAttribute);
+        }
+    }
+
+    // PNG contains the EXIF data as a Special-Purpose Chunk
+    private void getPngAttributes(ByteOrderedDataInputStream in) throws IOException {
+        if (DEBUG) {
+            Log.d(TAG, "getPngAttributes starting with: " + in);
+        }
+
+        // PNG uses Big Endian by default.
+        // See PNG (Portable Network Graphics) Specification, Version 1.2,
+        // 2.1. Integers and byte order
+        in.setByteOrder(ByteOrder.BIG_ENDIAN);
+
+        // Skip the signature bytes
+        in.seek(PNG_SIGNATURE.length);
+
+        try {
+            while (true) {
+                // Each chunk is made up of four parts:
+                //   1) Length: 4-byte unsigned integer indicating the number of bytes in the
+                //   Chunk Data field. Excludes Chunk Type and CRC bytes.
+                //   2) Chunk Type: 4-byte chunk type code.
+                //   3) Chunk Data: The data bytes. Can be zero-length.
+                //   4) CRC: 4-byte data calculated on the preceding bytes in the chunk. Always
+                //   present.
+                // --> 4 (length bytes) + 4 (type bytes) + X (data bytes) + 4 (CRC bytes)
+                // See PNG (Portable Network Graphics) Specification, Version 1.2,
+                // 3.2. Chunk layout
+                int length = in.readInt();
+
+                byte[] type = new byte[PNG_CHUNK_LENGTH_BYTE_LENGTH];
+                if (in.read(type) != type.length) {
+                    throw new IOException("Encountered invalid length while parsing PNG chunk"
+                            + "type");
+                }
+
+                if (Arrays.equals(type, PNG_CHUNK_TYPE_IEND)) {
+                    // IEND marks the end of the image.
+                    break;
+                } else if (Arrays.equals(type, PNG_CHUNK_TYPE_EXIF)) {
+                    // TODO: Need to handle potential OutOfMemoryError
+                    byte[] data = new byte[length];
+                    if (in.read(data) != length) {
+                        throw new IOException("Failed to read given length for given PNG chunk "
+                                + "type: " + byteArrayToHexString(type));
+                    }
+                    readExifSegment(data, IFD_TYPE_PRIMARY);
+                    break;
+                } else {
+                    // Skip to next chunk
+                    in.skipBytes(length + PNG_CHUNK_CRC_BYTE_LENGTH);
+                }
+            }
+        } catch (EOFException e) {
+            // Should not reach here. Will only reach here if the file is corrupted or
+            // does not follow the PNG specifications
+            throw new IOException("Encountered corrupt PNG file.");
         }
     }
 
@@ -6178,6 +6337,7 @@ public class ExifInterface {
                 mThumbnailLength = thumbnailLength;
                 if (mFilename == null && mAssetInputStream == null
                         && mSeekableFileDescriptor == null) {
+                    // TODO: Need to handle potential OutOfMemoryError
                     // Save the thumbnail in memory if the input doesn't support reading again.
                     byte[] thumbnailBytes = new byte[thumbnailLength];
                     in.seek(thumbnailOffset);
@@ -6216,6 +6376,7 @@ public class ExifInterface {
                 totalStripByteCount += byteCount;
             }
 
+            // TODO: Need to handle potential OutOfMemoryError
             // Set thumbnail byte array data for non-consecutive strip bytes
             byte[] totalStripBytes = new byte[(int) totalStripByteCount];
 
@@ -6233,6 +6394,7 @@ public class ExifInterface {
                 in.seek(skipBytes);
                 bytesRead += skipBytes;
 
+                // TODO: Need to handle potential OutOfMemoryError
                 // Read strip bytes
                 byte[] stripBytes = new byte[stripByteCount];
                 in.read(stripBytes);
@@ -6271,7 +6433,7 @@ public class ExifInterface {
                     if ((photometricInterpretationValue == PHOTOMETRIC_INTERPRETATION_BLACK_IS_ZERO
                             && Arrays.equals(bitsPerSampleValue, BITS_PER_SAMPLE_GREYSCALE_2))
                             || ((photometricInterpretationValue == PHOTOMETRIC_INTERPRETATION_YCBCR)
-                            && (Arrays.equals(bitsPerSampleValue, BITS_PER_SAMPLE_RGB)))) {
+                            && Arrays.equals(bitsPerSampleValue, BITS_PER_SAMPLE_RGB))) {
                         return true;
                     } else {
                         // TODO: Add support for lossless Huffman JPEG data
@@ -6808,9 +6970,9 @@ public class ExifInterface {
                 throw new EOFException();
             }
             if (mByteOrder == LITTLE_ENDIAN) {
-                return (short) ((ch2 << 8) + (ch1));
+                return (short) ((ch2 << 8) + ch1);
             } else if (mByteOrder == BIG_ENDIAN) {
-                return (short) ((ch1 << 8) + (ch2));
+                return (short) ((ch1 << 8) + ch2);
             }
             throw new IOException("Invalid byte order: " + mByteOrder);
         }
@@ -6859,9 +7021,9 @@ public class ExifInterface {
                 throw new EOFException();
             }
             if (mByteOrder == LITTLE_ENDIAN) {
-                return ((ch2 << 8) + (ch1));
+                return ((ch2 << 8) + ch1);
             } else if (mByteOrder == BIG_ENDIAN) {
-                return ((ch1 << 8) + (ch2));
+                return ((ch1 << 8) + ch2);
             }
             throw new IOException("Invalid byte order: " + mByteOrder);
         }
@@ -7097,5 +7259,13 @@ public class ExifInterface {
             }
         }
         return true;
+    }
+
+    private static String byteArrayToHexString(byte[] bytes) {
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (int i = 0; i < bytes.length; i++) {
+            sb.append(String.format("%02x", bytes[i]));
+        }
+        return sb.toString();
     }
 }

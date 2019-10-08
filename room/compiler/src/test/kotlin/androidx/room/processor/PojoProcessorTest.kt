@@ -51,6 +51,7 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import simpleRun
 import toJFO
+import java.io.File
 import javax.lang.model.element.Element
 import javax.tools.JavaFileObject
 
@@ -1363,6 +1364,8 @@ class PojoProcessorTest {
                 """
                 package foo.bar;
                 import androidx.room.*;
+
+                @Entity(ignoredColumns = {"bar"})
                 public class ${MY_POJO.simpleName()} {
                     public String foo;
                     public String bar;
@@ -1371,7 +1374,6 @@ class PojoProcessorTest {
             val pojo = PojoProcessor.createFor(context = invocation.context,
                     element = invocation.typeElement(MY_POJO.toString()),
                     bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
-                    ignoredColumns = setOf("bar"),
                     parent = null).process()
             assertThat(pojo.fields.find { it.name == "foo" }, notNullValue())
             assertThat(pojo.fields.find { it.name == "bar" }, nullValue())
@@ -1384,6 +1386,8 @@ class PojoProcessorTest {
             """
                 package foo.bar;
                 import androidx.room.*;
+
+                @Entity(ignoredColumns = {"bar"})
                 public class ${MY_POJO.simpleName()} {
                     private final String foo;
                     private final String bar;
@@ -1401,8 +1405,7 @@ class PojoProcessorTest {
             val pojo = PojoProcessor.createFor(context = invocation.context,
                 element = invocation.typeElement(MY_POJO.toString()),
                 bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
-                ignoredColumns = setOf("bar"),
-                parent = null).process()
+                    parent = null).process()
             assertThat(pojo.fields.find { it.name == "foo" }, notNullValue())
             assertThat(pojo.fields.find { it.name == "bar" }, nullValue())
         }.compilesWithoutError()
@@ -1414,6 +1417,8 @@ class PojoProcessorTest {
             """
                 package foo.bar;
                 import androidx.room.*;
+
+                @Entity(ignoredColumns = {"bar"})
                 public class ${MY_POJO.simpleName()} {
                     private String foo;
                     private String bar;
@@ -1430,7 +1435,6 @@ class PojoProcessorTest {
             val pojo = PojoProcessor.createFor(context = invocation.context,
                 element = invocation.typeElement(MY_POJO.toString()),
                 bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
-                ignoredColumns = setOf("bar"),
                 parent = null).process()
             assertThat(pojo.fields.find { it.name == "foo" }, notNullValue())
             assertThat(pojo.fields.find { it.name == "bar" }, nullValue())
@@ -1443,6 +1447,8 @@ class PojoProcessorTest {
                 """
                 package foo.bar;
                 import androidx.room.*;
+
+                @Entity(ignoredColumns = {"my_bar"})
                 public class ${MY_POJO.simpleName()} {
                     public String foo;
                     @ColumnInfo(name = "my_bar")
@@ -1452,7 +1458,6 @@ class PojoProcessorTest {
             val pojo = PojoProcessor.createFor(context = invocation.context,
                     element = invocation.typeElement(MY_POJO.toString()),
                     bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
-                    ignoredColumns = setOf("my_bar"),
                     parent = null).process()
             assertThat(pojo.fields.find { it.name == "foo" }, notNullValue())
             assertThat(pojo.fields.find { it.name == "bar" }, nullValue())
@@ -1465,6 +1470,8 @@ class PojoProcessorTest {
                 """
                 package foo.bar;
                 import androidx.room.*;
+
+                @Entity(ignoredColumns = {"no_such_column"})
                 public class ${MY_POJO.simpleName()} {
                     public String foo;
                     public String bar;
@@ -1473,12 +1480,137 @@ class PojoProcessorTest {
             val pojo = PojoProcessor.createFor(context = invocation.context,
                     element = invocation.typeElement(MY_POJO.toString()),
                     bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
-                    ignoredColumns = setOf("no_such_column"),
                     parent = null).process()
             assertThat(pojo.fields.find { it.name == "foo" }, notNullValue())
             assertThat(pojo.fields.find { it.name == "bar" }, notNullValue())
         }.failsToCompile().withErrorContaining(
                 ProcessorErrors.missingIgnoredColumns(listOf("no_such_column")))
+    }
+
+    @Test
+    fun noSetter_scopeBindStmt() {
+        simpleRun(
+            """
+                package foo.bar;
+                import androidx.room.*;
+                public class ${MY_POJO.simpleName()} {
+                    private String foo;
+                    private String bar;
+
+                    public String getFoo() { return foo; }
+                    public String getBar() { return bar; }
+                }
+                """.toJFO(MY_POJO.toString())) { invocation ->
+            PojoProcessor.createFor(context = invocation.context,
+                element = invocation.typeElement(MY_POJO.toString()),
+                bindingScope = FieldProcessor.BindingScope.BIND_TO_STMT,
+                parent = null).process()
+        }.compilesWithoutError()
+    }
+
+    @Test
+    fun noSetter_scopeTwoWay() {
+        simpleRun(
+            """
+                package foo.bar;
+                import androidx.room.*;
+                public class ${MY_POJO.simpleName()} {
+                    private String foo;
+                    private String bar;
+
+                    public String getFoo() { return foo; }
+                    public String getBar() { return bar; }
+                }
+                """.toJFO(MY_POJO.toString())) { invocation ->
+            PojoProcessor.createFor(context = invocation.context,
+                element = invocation.typeElement(MY_POJO.toString()),
+                bindingScope = FieldProcessor.BindingScope.TWO_WAY,
+                parent = null).process()
+        }.failsToCompile().withErrorContaining("Cannot find setter for field.")
+    }
+
+    @Test
+    fun noSetter_scopeReadFromCursor() {
+        simpleRun(
+            """
+                package foo.bar;
+                import androidx.room.*;
+                public class ${MY_POJO.simpleName()} {
+                    private String foo;
+                    private String bar;
+
+                    public String getFoo() { return foo; }
+                    public String getBar() { return bar; }
+                }
+                """.toJFO(MY_POJO.toString())) { invocation ->
+            PojoProcessor.createFor(context = invocation.context,
+                element = invocation.typeElement(MY_POJO.toString()),
+                bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
+                parent = null).process()
+        }.failsToCompile().withErrorContaining("Cannot find setter for field.")
+    }
+
+    @Test
+    fun noGetter_scopeBindStmt() {
+        simpleRun(
+            """
+                package foo.bar;
+                import androidx.room.*;
+                public class ${MY_POJO.simpleName()} {
+                    private String foo;
+                    private String bar;
+
+                    public void setFoo(String foo) { this.foo = foo; }
+                    public void setBar(String bar) { this.bar = bar; }
+                }
+                """.toJFO(MY_POJO.toString())) { invocation ->
+            PojoProcessor.createFor(context = invocation.context,
+                element = invocation.typeElement(MY_POJO.toString()),
+                bindingScope = FieldProcessor.BindingScope.BIND_TO_STMT,
+                parent = null).process()
+        }.failsToCompile().withErrorContaining("Cannot find getter for field.")
+    }
+
+    @Test
+    fun noGetter_scopeTwoWay() {
+        simpleRun(
+            """
+                package foo.bar;
+                import androidx.room.*;
+                public class ${MY_POJO.simpleName()} {
+                    private String foo;
+                    private String bar;
+
+                    public void setFoo(String foo) { this.foo = foo; }
+                    public void setBar(String bar) { this.bar = bar; }
+                }
+                """.toJFO(MY_POJO.toString())) { invocation ->
+            PojoProcessor.createFor(context = invocation.context,
+                element = invocation.typeElement(MY_POJO.toString()),
+                bindingScope = FieldProcessor.BindingScope.TWO_WAY,
+                parent = null).process()
+        }.failsToCompile().withErrorContaining("Cannot find getter for field.")
+    }
+
+    @Test
+    fun noGetter_scopeReadCursor() {
+        simpleRun(
+            """
+                package foo.bar;
+                import androidx.room.*;
+                public class ${MY_POJO.simpleName()} {
+                    private String foo;
+                    private String bar;
+
+                    public void setFoo(String foo) { this.foo = foo; }
+                    public void setBar(String bar) { this.bar = bar; }
+                }
+                """.toJFO(MY_POJO.toString())) { invocation ->
+            PojoProcessor.createFor(context = invocation.context,
+                element = invocation.typeElement(MY_POJO.toString()),
+                bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
+                parent = null).process()
+        }.compilesWithoutError()
     }
 
     private fun singleRun(
@@ -1494,7 +1626,7 @@ class PojoProcessorTest {
     private fun singleRun(
         code: String,
         vararg jfos: JavaFileObject,
-        classLoader: ClassLoader = javaClass.classLoader,
+        classpathFiles: Set<File> = emptySet(),
         handler: (Pojo, TestInvocation) -> Unit
     ): CompileTester {
         val pojoCode = """
@@ -1505,7 +1637,7 @@ class PojoProcessorTest {
         return singleRunFullClass(
             code = pojoCode,
             jfos = *jfos,
-            classLoader = classLoader,
+            classpathFiles = classpathFiles,
             handler = handler
         )
     }
@@ -1513,16 +1645,16 @@ class PojoProcessorTest {
     private fun singleRunFullClass(
         code: String,
         vararg jfos: JavaFileObject,
-        classLoader: ClassLoader = javaClass.classLoader,
+        classpathFiles: Set<File> = emptySet(),
         handler: (Pojo, TestInvocation) -> Unit
     ): CompileTester {
         val pojoJFO = code.toJFO(MY_POJO.toString())
         val all = (jfos.toList() + pojoJFO).toTypedArray()
-        return simpleRun(*all, classLoader = classLoader) { invocation ->
+        return simpleRun(*all, classpathFiles = classpathFiles) { invocation ->
             handler.invoke(
                 PojoProcessor.createFor(context = invocation.context,
                         element = invocation.typeElement(MY_POJO.toString()),
-                        bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
+                        bindingScope = FieldProcessor.BindingScope.TWO_WAY,
                         parent = null).process(),
                 invocation
             )

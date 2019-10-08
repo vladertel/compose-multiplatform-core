@@ -16,14 +16,13 @@
 
 package androidx.paging
 
-import androidx.paging.PagedList.LoadState.DONE
-import androidx.paging.PagedList.LoadState.IDLE
-import androidx.paging.PagedList.LoadState.LOADING
-import androidx.paging.PagedList.LoadType.END
-import androidx.paging.PagedList.LoadType.START
-import androidx.paging.futures.DirectExecutor
-import androidx.testutils.TestExecutor
+import androidx.paging.PagedList.Config
+import androidx.paging.PagedSource.LoadResult
+import androidx.paging.PagedSource.LoadResult.Page
+import androidx.paging.futures.DirectDispatcher
+import androidx.testutils.TestDispatcher
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -32,56 +31,53 @@ import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
 class PagerTest {
-    val testExecutor = TestExecutor()
+    private val testDispatcher = TestDispatcher()
+    private val data = List(9) { "$it" }
 
-    inner class ImmediateListDataSource(private val data: List<String>) :
-        PositionalDataSource<String>() {
+    inner class ImmediateListDataSource(val data: List<String>) : PagedSource<Int, String>() {
+        override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> {
+            val key = params.key ?: 0
 
-        init {
-            initExecutor(testExecutor)
-        }
+            val start = when (params.loadType) {
+                LoadType.REFRESH -> key
+                LoadType.START -> key - params.loadSize
+                LoadType.END -> key
+            }.coerceAtLeast(0)
 
-        override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<String>) {
-            executor.execute {
-                val totalCount = data.size
+            val end = when (params.loadType) {
+                LoadType.REFRESH -> key + params.loadSize
+                LoadType.START -> key
+                LoadType.END -> key + params.loadSize
+            }.coerceAtMost(data.size)
 
-                val position = computeInitialLoadPosition(params, totalCount)
-                val loadSize = computeInitialLoadSize(params, position, totalCount)
-
-                val sublist = data.subList(position, position + loadSize)
-                callback.onResult(sublist, position, totalCount)
-            }
-        }
-
-        override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<String>) {
-            executor.execute {
-                val position = params.startPosition
-                val end = minOf(position + params.loadSize, data.size)
-                callback.onResult(data.subList(position, end))
-            }
+            return Page(
+                data = data.subList(start, end),
+                prevKey = if (start > 0) start else null,
+                nextKey = if (end < data.size) end else null,
+                itemsBefore = start,
+                itemsAfter = data.size - end
+            )
         }
     }
 
-    val data = List(9) { "$it" }
-
-    private fun rangeResult(start: Int, end: Int) =
-        PositionalDataSource.RangeResult(data.subList(start, end))
-
-    private data class Result(
-        val type: PagedList.LoadType,
-        val pageResult: DataSource.BaseResult<String>
+    private fun rangeResult(start: Int, end: Int) = Page(
+        data = data.subList(start, end),
+        prevKey = if (start > 0) start else null,
+        nextKey = if (end < data.size) end else null,
+        itemsBefore = start,
+        itemsAfter = data.size - end
     )
 
-    private data class StateChange(
-        val type: PagedList.LoadType,
-        val state: PagedList.LoadState,
-        val error: Throwable? = null
+    private data class Result(
+        val type: LoadType,
+        val pageResult: LoadResult<*, String>
     )
 
     private class MockConsumer : Pager.PageConsumer<String> {
-
         private val results: MutableList<Result> = arrayListOf()
         private val stateChanges: MutableList<StateChange> = arrayListOf()
+
+        var storage: PagedStorage<String>? = null
 
         fun takeResults(): List<Result> {
             val ret = results.map { it }
@@ -95,33 +91,61 @@ class PagerTest {
             return ret
         }
 
-        override fun onPageResult(
-            type: PagedList.LoadType,
-            pageResult: DataSource.BaseResult<String>
-        ): Boolean {
-            results.add(Result(type, pageResult))
+        override fun onPageResult(type: LoadType, page: Page<*, String>): Boolean {
+            @Suppress("NON_EXHAUSTIVE_WHEN")
+            when (type) {
+                LoadType.START -> storage?.prependPage(page)
+                LoadType.END -> storage?.appendPage(page)
+            }
+
+            results.add(Result(type, page))
             return false
         }
 
-        override fun onStateChanged(
-            type: PagedList.LoadType,
-            state: PagedList.LoadState,
-            error: Throwable?
-        ) {
-            stateChanges.add(StateChange(type, state, error))
+        override fun onStateChanged(type: LoadType, state: LoadState) {
+            stateChanges.add(StateChange(type, state))
         }
     }
 
-    private fun createPager(consumer: MockConsumer, start: Int = 0, end: Int = 10) = Pager(
-        GlobalScope,
-        PagedList.Config(2, 2, true, 10, PagedList.Config.MAX_SIZE_UNBOUNDED),
-        PagedSourceWrapper(ImmediateListDataSource(data)),
-        DirectExecutor,
-        DirectExecutor,
-        consumer,
-        null,
-        PositionalDataSource.InitialResult(data.subList(start, end), start, data.size)
-    )
+    private fun createPager(
+        consumer: MockConsumer,
+        start: Int = 0,
+        end: Int = 10
+    ): Pager<Int, String> {
+        val config = Config(2, 2, true, 10, Config.MAX_SIZE_UNBOUNDED)
+        val pagedSource = ImmediateListDataSource(data)
+
+        val initialResult = runBlocking {
+            pagedSource.load(
+                PagedSource.LoadParams(
+                    loadType = LoadType.REFRESH,
+                    key = start,
+                    loadSize = end - start,
+                    placeholdersEnabled = config.enablePlaceholders,
+                    pageSize = config.pageSize
+                )
+            )
+        }
+
+        val initialData = (initialResult as Page).data
+        val storage = PagedStorage(
+            start,
+            initialResult,
+            data.size - initialData.size - start
+        )
+        consumer.storage = storage
+
+        @Suppress("UNCHECKED_CAST")
+        return Pager(
+            GlobalScope,
+            config,
+            pagedSource,
+            DirectDispatcher,
+            testDispatcher,
+            consumer,
+            storage as Pager.KeyProvider<Int>
+        )
+    }
 
     @Test
     fun simplePagerAppend() {
@@ -135,19 +159,15 @@ class PagerTest {
 
         assertTrue(consumer.takeResults().isEmpty())
         assertEquals(
-            consumer.takeStateChanges(), listOf(
-                StateChange(END, PagedList.LoadState.LOADING)
-            )
+            listOf(StateChange(LoadType.END, LoadState.Loading)),
+            consumer.takeStateChanges()
         )
 
-        testExecutor.executeAll()
+        testDispatcher.executeAll()
 
+        assertEquals(listOf(Result(LoadType.END, rangeResult(6, 8))), consumer.takeResults())
         assertEquals(
-            listOf(Result(END, rangeResult(6, 8))),
-            consumer.takeResults()
-        )
-        assertEquals(
-            listOf(StateChange(END, IDLE)),
+            listOf(StateChange(LoadType.END, LoadState.Idle)),
             consumer.takeStateChanges()
         )
     }
@@ -161,19 +181,18 @@ class PagerTest {
 
         assertTrue(consumer.takeResults().isEmpty())
         assertEquals(
-            consumer.takeStateChanges(), listOf(
-                StateChange(START, LOADING)
-            )
+            listOf(StateChange(LoadType.START, LoadState.Loading)),
+            consumer.takeStateChanges()
         )
 
-        testExecutor.executeAll()
+        testDispatcher.executeAll()
 
         assertEquals(
-            listOf(Result(START, rangeResult(2, 4))),
+            listOf(Result(LoadType.START, rangeResult(2, 4))),
             consumer.takeResults()
         )
         assertEquals(
-            listOf(StateChange(START, IDLE)),
+            listOf(StateChange(LoadType.START, LoadState.Idle)),
             consumer.takeStateChanges()
         )
     }
@@ -184,23 +203,24 @@ class PagerTest {
         val pager = createPager(consumer, 2, 6)
 
         pager.tryScheduleAppend()
-        testExecutor.executeAll()
+        testDispatcher.executeAll()
         pager.tryScheduleAppend()
-        testExecutor.executeAll()
+        testDispatcher.executeAll()
 
         assertEquals(
             listOf(
-                Result(END, rangeResult(6, 8)),
-                Result(END, rangeResult(8, 9))
+                Result(LoadType.END, rangeResult(6, 8)),
+                Result(LoadType.END, rangeResult(8, 9))
             ), consumer.takeResults()
         )
         assertEquals(
             listOf(
-                StateChange(END, LOADING),
-                StateChange(END, IDLE),
-                StateChange(END, LOADING),
-                StateChange(END, IDLE)
-            ), consumer.takeStateChanges()
+                StateChange(LoadType.END, LoadState.Loading),
+                StateChange(LoadType.END, LoadState.Idle),
+                StateChange(LoadType.END, LoadState.Loading),
+                StateChange(LoadType.END, LoadState.Idle)
+            ),
+            consumer.takeStateChanges()
         )
     }
 
@@ -210,23 +230,24 @@ class PagerTest {
         val pager = createPager(consumer, 4, 8)
 
         pager.trySchedulePrepend()
-        testExecutor.executeAll()
+        testDispatcher.executeAll()
         pager.trySchedulePrepend()
-        testExecutor.executeAll()
+        testDispatcher.executeAll()
 
         assertEquals(
             listOf(
-                Result(START, rangeResult(2, 4)),
-                Result(START, rangeResult(0, 2))
+                Result(LoadType.START, rangeResult(2, 4)),
+                Result(LoadType.START, rangeResult(0, 2))
             ), consumer.takeResults()
         )
         assertEquals(
             listOf(
-                StateChange(START, LOADING),
-                StateChange(START, IDLE),
-                StateChange(START, LOADING),
-                StateChange(START, IDLE)
-            ), consumer.takeStateChanges()
+                StateChange(LoadType.START, LoadState.Loading),
+                StateChange(LoadType.START, LoadState.Idle),
+                StateChange(LoadType.START, LoadState.Loading),
+                StateChange(LoadType.START, LoadState.Idle)
+            ),
+            consumer.takeStateChanges()
         )
     }
 
@@ -239,14 +260,12 @@ class PagerTest {
 
         // Pager triggers an immediate empty response here, so we don't need to flush the executor
         assertEquals(
-            listOf(
-                Result(END, DataSource.BaseResult.empty())
-            ), consumer.takeResults()
+            listOf(Result(LoadType.END, Page.empty<Int, String>())),
+            consumer.takeResults()
         )
         assertEquals(
-            listOf(
-                StateChange(END, DONE)
-            ), consumer.takeStateChanges()
+            listOf(StateChange(LoadType.END, LoadState.Done)),
+            consumer.takeStateChanges()
         )
     }
 
@@ -259,14 +278,12 @@ class PagerTest {
 
         // Pager triggers an immediate empty response here, so we don't need to flush the executor
         assertEquals(
-            listOf(
-                Result(START, DataSource.BaseResult.empty())
-            ), consumer.takeResults()
+            listOf(Result(LoadType.START, Page.empty<Int, String>())),
+            consumer.takeResults()
         )
         assertEquals(
-            listOf(
-                StateChange(START, DONE)
-            ), consumer.takeStateChanges()
+            listOf(StateChange(LoadType.START, LoadState.Done)),
+            consumer.takeStateChanges()
         )
     }
 }

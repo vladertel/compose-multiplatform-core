@@ -44,13 +44,6 @@ apply from: "kotlin-dsl-dependency.gradle.kts"
 allprojects {
     repos.addMavenRepositories(repositories)
 
-    tasks.withType(Test) {
-        testLogging {
-            events = ["failed"]
-            exceptionFormat "full"
-        }
-    }
-
     tasks.withType(KotlinCompile).configureEach {
         kotlinOptions {
             freeCompilerArgs += ["-Werror"]
@@ -58,18 +51,28 @@ allprojects {
     }
 }
 
-sourceSets {
-    main.java.srcDirs += '../benchmark/gradle-plugin/src/main/kotlin'
-    main.resources.srcDirs += '../benchmark/gradle-plugin/src/main/resources'
-}
-
 dependencies {
     implementation build_libs.gradle
+    implementation build_libs.dex_member_list
     implementation build_libs.error_prone_gradle
     implementation build_libs.dokka_gradle
     implementation build_libs.kotlin.gradle_plugin
     implementation gradleApi()
     implementation project("jetpad-integration")
-    testImplementation "junit:junit:4.12"
 }
 
+apply plugin: "java-gradle-plugin"
+
+sourceSets {
+    main.java.srcDirs += "${supportRootFolder}/benchmark/gradle-plugin/src/main/kotlin"
+    main.resources.srcDirs += "${supportRootFolder}/benchmark/gradle-plugin/src/main/resources"
+}
+
+gradlePlugin {
+    plugins {
+        benchmark {
+            id = 'androidx.benchmark'
+            implementationClass = 'androidx.benchmark.gradle.BenchmarkPlugin'
+        }
+    }
+}

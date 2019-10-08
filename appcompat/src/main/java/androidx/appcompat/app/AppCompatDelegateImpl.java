@@ -43,6 +43,7 @@ import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.LocaleList;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.PowerManager;
@@ -100,9 +101,10 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.appcompat.widget.VectorEnabledTintResources;
 import androidx.appcompat.widget.ViewStubCompat;
 import androidx.appcompat.widget.ViewUtils;
-import androidx.collection.ArrayMap;
+import androidx.collection.SimpleArrayMap;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NavUtils;
+import androidx.core.util.ObjectsCompat;
 import androidx.core.view.KeyEventDispatcher;
 import androidx.core.view.LayoutInflaterCompat;
 import androidx.core.view.OnApplyWindowInsetsListener;
@@ -118,7 +120,6 @@ import androidx.lifecycle.LifecycleOwner;
 import org.xmlpull.v1.XmlPullParser;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * @hide
@@ -127,7 +128,8 @@ import java.util.Map;
 class AppCompatDelegateImpl extends AppCompatDelegate
         implements MenuBuilder.Callback, LayoutInflater.Factory2 {
 
-    private static final Map<Class<?>, Integer> sLocalNightModes = new ArrayMap<>();
+    private static final SimpleArrayMap<Class<?>, Integer> sLocalNightModes =
+            new SimpleArrayMap<>();
 
     private static final boolean DEBUG = false;
     private static final boolean IS_PRE_LOLLIPOP = Build.VERSION.SDK_INT < 21;
@@ -135,6 +137,16 @@ class AppCompatDelegateImpl extends AppCompatDelegate
     private static final int[] sWindowBackgroundStyleable = {android.R.attr.windowBackground};
 
     private static boolean sInstalledExceptionHandler;
+
+    /**
+     * AppCompat selectively uses applyOverrideConfiguration() for DayNight functionality.
+     * Unfortunately the framework has a few bugs around Resources instances on SDKs 21-25,
+     * resulting in the root Resources instance (i.e. Application) being modified when it
+     * shouldn't be. We can work around it by always calling applyOverrideConfiguration()
+     * where available.
+     */
+    private static final boolean sAlwaysOverrideConfiguration = Build.VERSION.SDK_INT >= 21
+            && Build.VERSION.SDK_INT <= 25;
 
     static final String EXCEPTION_HANDLER_MESSAGE_SUFFIX= ". If the resource you are"
             + " trying to use is a vector resource, you may be referencing it in an unsupported"
@@ -321,7 +333,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
     @Override
     public void attachBaseContext(Context context) {
         // Activity.recreate() cannot be called before attach is complete.
-        applyDayNight(false);
+        applyDayNight(false, context.getResources().getConfiguration());
         mBaseContextAttached = true;
     }
 
@@ -333,7 +345,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
 
         // Our implicit call to applyDayNight() should not recreate until after the Activity is
         // created
-        applyDayNight(false);
+        applyDayNight(false, null);
 
         // We lazily fetch the Window for Activities, to allow DayNight to apply in
         // attachBaseContext
@@ -488,7 +500,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
 
         // Re-apply Day/Night with the new configuration but disable recreations. Since this
         // configuration change has only just happened we can safely just update the resources now
-        applyDayNight(false);
+        applyDayNight(false, null);
     }
 
     @Override
@@ -1366,10 +1378,9 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             TypedArray a = mContext.obtainStyledAttributes(R.styleable.AppCompatTheme);
             String viewInflaterClassName =
                     a.getString(R.styleable.AppCompatTheme_viewInflaterClass);
-            if ((viewInflaterClassName == null)
-                    || AppCompatViewInflater.class.getName().equals(viewInflaterClassName)) {
-                // Either default class name or set explicitly to null. In both cases
-                // create the base inflater (no reflection)
+            if (viewInflaterClassName == null) {
+                // Set to null (the default in all AppCompat themes). Create the base inflater
+                // (no reflection)
                 mAppCompatViewInflater = new AppCompatViewInflater();
             } else {
                 try {
@@ -2149,10 +2160,11 @@ class AppCompatDelegateImpl extends AppCompatDelegate
 
     @Override
     public boolean applyDayNight() {
-        return applyDayNight(true);
+        return applyDayNight(true, null);
     }
 
-    private boolean applyDayNight(final boolean allowRecreation) {
+    private boolean applyDayNight(final boolean allowRecreation,
+            @Nullable Configuration baseConfiguration) {
         if (mIsDestroyed) {
             // If we're destroyed, ignore the call
             return false;
@@ -2160,7 +2172,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
 
         @NightMode final int nightMode = calculateNightMode();
         @ApplyableNightMode final int modeToApply = mapNightMode(nightMode);
-        final boolean applied = updateForNightMode(modeToApply, allowRecreation);
+        final boolean applied = updateForNightMode(modeToApply, allowRecreation, baseConfiguration);
 
         if (nightMode == MODE_NIGHT_AUTO_TIME) {
             getAutoTimeNightModeManager().setup();
@@ -2231,14 +2243,16 @@ class AppCompatDelegateImpl extends AppCompatDelegate
      *
      * @param mode The new night mode to apply
      * @param allowRecreation whether to attempt activity recreate
+     * @param baseConfig the base configuration to use, if any
      * @return true if an action has been taken (recreation, resources updating, etc)
      */
     private boolean updateForNightMode(@ApplyableNightMode final int mode,
-            final boolean allowRecreation) {
+            final boolean allowRecreation, @Nullable Configuration baseConfig) {
         boolean handled = false;
 
-        final int applicationNightMode = mContext.getApplicationContext()
-                .getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        final Configuration appConfig = mContext.getApplicationContext()
+                .getResources().getConfiguration();
+        final int applicationNightMode = appConfig.uiMode & Configuration.UI_MODE_NIGHT_MASK;
 
         int newNightMode;
         switch (mode) {
@@ -2258,28 +2272,34 @@ class AppCompatDelegateImpl extends AppCompatDelegate
 
         final boolean activityHandlingUiMode = isActivityManifestHandlingUiMode();
 
-        if (newNightMode != applicationNightMode
+        if ((sAlwaysOverrideConfiguration || newNightMode != applicationNightMode)
                 && !activityHandlingUiMode
                 && Build.VERSION.SDK_INT >= 17
                 && !mBaseContextAttached
                 && mHost instanceof android.view.ContextThemeWrapper) {
+            final android.view.ContextThemeWrapper host = (android.view.ContextThemeWrapper) mHost;
+
             // If we're here then we can try and apply an override configuration on the Context.
-            final Configuration conf = new Configuration();
-            conf.uiMode = newNightMode | (conf.uiMode & ~Configuration.UI_MODE_NIGHT_MASK);
+            final Configuration overrideConfig = generateConfigDelta(appConfig, baseConfig);
+            overrideConfig.uiMode =
+                    newNightMode | (overrideConfig.uiMode & ~Configuration.UI_MODE_NIGHT_MASK);
 
             try {
                 if (DEBUG) {
                     Log.d(TAG, "updateForNightMode. Applying override config");
                 }
-                ((android.view.ContextThemeWrapper) mHost).applyOverrideConfiguration(conf);
+                host.applyOverrideConfiguration(overrideConfig);
                 handled = true;
             } catch (IllegalStateException e) {
                 // applyOverrideConfiguration throws an IllegalStateException if its resources
                 // have already been created. Since there's no way to check this beforehand we
-                // just have to try it and catch the exception.
-                Log.e(TAG, "updateForNightMode. Calling applyOverrideConfiguration() failed"
-                        + " with an exception. Will fall back to using"
-                        + " Resources.updateConfiguration()", e);
+                // just have to try it and catch the exception. We only log if we're actually
+                // trying to apply a uiMode configuration though.
+                if (newNightMode != applicationNightMode) {
+                    Log.w(TAG, "updateForNightMode. Calling applyOverrideConfiguration() failed"
+                            + " with an exception. Will fall back to using"
+                            + " Resources.updateConfiguration()", e);
+                }
                 handled = false;
             }
         }
@@ -2310,7 +2330,8 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             if (DEBUG) {
                 Log.d(TAG, "updateForNightMode. Updating resources config");
             }
-            updateResourcesConfigurationForNightMode(newNightMode, activityHandlingUiMode);
+            updateResourcesConfigurationForNightMode(newNightMode, activityHandlingUiMode,
+                    baseConfig);
             handled = true;
         }
 
@@ -2328,11 +2349,15 @@ class AppCompatDelegateImpl extends AppCompatDelegate
     }
 
     private void updateResourcesConfigurationForNightMode(
-            final int uiModeNightModeValue, final boolean callOnConfigChange) {
+            final int uiModeNightModeValue, final boolean callOnConfigChange,
+            @Nullable Configuration baseConfiguration) {
         // If the Activity is not set to handle uiMode config changes we will
         // update the Resources with a new Configuration with an updated UI Mode
         final Resources res = mContext.getResources();
         final Configuration conf = new Configuration(res.getConfiguration());
+        if (baseConfiguration != null) {
+            conf.updateFrom(baseConfiguration);
+        }
         conf.uiMode = uiModeNightModeValue
                 | (res.getConfiguration().uiMode & ~Configuration.UI_MODE_NIGHT_MASK);
         res.updateConfiguration(conf, null);
@@ -3092,6 +3117,172 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             ActionBar ab = getSupportActionBar();
             if (ab != null) {
                 ab.setHomeActionContentDescription(contentDescRes);
+            }
+        }
+    }
+
+    /**
+     * Copied from the platform's private method in Configuration. This is <strong>not</strong>
+     * suitable for general use, as it cannot handle some properties including any added after
+     * API 29. See comments inside method for specific properties that could not be handled.
+     * <p>
+     * Generate a delta Configuration between <code>base</code> and <code>change</code>. The
+     * resulting delta can be used with {@link Configuration#updateFrom(Configuration)}.
+     * <p>
+     * Caveat: If the any of the Configuration's members becomes undefined, then
+     * {@link Configuration#updateFrom(Configuration)} will treat it as a no-op and not update that
+     * member.
+     * <p>
+     * This is fine for device configurations as no member is ever undefined.
+     */
+    private static Configuration generateConfigDelta(@NonNull Configuration base,
+            @Nullable Configuration change) {
+        final Configuration delta = new Configuration();
+        if (change == null || base.diff(change) == 0) {
+            return delta;
+        }
+
+        if (base.fontScale != change.fontScale) {
+            delta.fontScale = change.fontScale;
+        }
+
+        if (base.mcc != change.mcc) {
+            delta.mcc = change.mcc;
+        }
+
+        if (base.mnc != change.mnc) {
+            delta.mnc = change.mnc;
+        }
+
+        if (Build.VERSION.SDK_INT >= 24) {
+            ConfigurationImplApi24.generateConfigDelta_locale(base, change, delta);
+        } else {
+            if (!ObjectsCompat.equals(base.locale, change.locale)) {
+                delta.locale = change.locale;
+            }
+        }
+
+        if (base.touchscreen != change.touchscreen) {
+            delta.touchscreen = change.touchscreen;
+        }
+
+        if (base.keyboard != change.keyboard) {
+            delta.keyboard = change.keyboard;
+        }
+
+        if (base.keyboardHidden != change.keyboardHidden) {
+            delta.keyboardHidden = change.keyboardHidden;
+        }
+
+        if (base.navigation != change.navigation) {
+            delta.navigation = change.navigation;
+        }
+
+        if (base.navigationHidden != change.navigationHidden) {
+            delta.navigationHidden = change.navigationHidden;
+        }
+
+        if (base.orientation != change.orientation) {
+            delta.orientation = change.orientation;
+        }
+
+        if ((base.screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK)
+                != (change.screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK)) {
+            delta.screenLayout |= change.screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK;
+        }
+
+        if ((base.screenLayout & Configuration.SCREENLAYOUT_LAYOUTDIR_MASK)
+                != (change.screenLayout & Configuration.SCREENLAYOUT_LAYOUTDIR_MASK)) {
+            delta.screenLayout |= change.screenLayout & Configuration.SCREENLAYOUT_LAYOUTDIR_MASK;
+        }
+
+        if ((base.screenLayout & Configuration.SCREENLAYOUT_LONG_MASK)
+                != (change.screenLayout & Configuration.SCREENLAYOUT_LONG_MASK)) {
+            delta.screenLayout |= change.screenLayout & Configuration.SCREENLAYOUT_LONG_MASK;
+        }
+
+        if ((base.screenLayout & Configuration.SCREENLAYOUT_ROUND_MASK)
+                != (change.screenLayout & Configuration.SCREENLAYOUT_ROUND_MASK)) {
+            delta.screenLayout |= change.screenLayout & Configuration.SCREENLAYOUT_ROUND_MASK;
+        }
+
+        if (Build.VERSION.SDK_INT >= 26) {
+            ConfigurationImplApi26.generateConfigDelta_colorMode(base, change, delta);
+        }
+
+        if ((base.uiMode & Configuration.UI_MODE_TYPE_MASK)
+                != (change.uiMode & Configuration.UI_MODE_TYPE_MASK)) {
+            delta.uiMode |= change.uiMode & Configuration.UI_MODE_TYPE_MASK;
+        }
+
+        if ((base.uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                != (change.uiMode & Configuration.UI_MODE_NIGHT_MASK)) {
+            delta.uiMode |= change.uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        }
+
+        if (base.screenWidthDp != change.screenWidthDp) {
+            delta.screenWidthDp = change.screenWidthDp;
+        }
+
+        if (base.screenHeightDp != change.screenHeightDp) {
+            delta.screenHeightDp = change.screenHeightDp;
+        }
+
+        if (base.smallestScreenWidthDp != change.smallestScreenWidthDp) {
+            delta.smallestScreenWidthDp = change.smallestScreenWidthDp;
+        }
+
+        if (Build.VERSION.SDK_INT >= 17) {
+            ConfigurationImplApi17.generateConfigDelta_densityDpi(base, change, delta);
+        }
+
+        // Assets sequence and window configuration are not supported.
+
+        return delta;
+    }
+
+    @RequiresApi(17)
+    static class ConfigurationImplApi17 {
+        private ConfigurationImplApi17() { }
+
+        static void generateConfigDelta_densityDpi(@NonNull Configuration base,
+                @NonNull Configuration change, @NonNull Configuration delta) {
+            if (base.densityDpi != change.densityDpi) {
+                delta.densityDpi = change.densityDpi;
+            }
+        }
+    }
+
+    @RequiresApi(24)
+    static class ConfigurationImplApi24 {
+        private ConfigurationImplApi24() { }
+
+        static void generateConfigDelta_locale(@NonNull Configuration base,
+                @NonNull Configuration change, @NonNull Configuration delta) {
+            final LocaleList baseLocales = base.getLocales();
+            final LocaleList changeLocales = change.getLocales();
+            if (!baseLocales.equals(changeLocales)) {
+                delta.setLocales(changeLocales);
+                delta.locale = change.locale;
+            }
+        }
+    }
+
+    @RequiresApi(26)
+    static class ConfigurationImplApi26 {
+        private ConfigurationImplApi26() { }
+
+        static void generateConfigDelta_colorMode(@NonNull Configuration base,
+                @NonNull Configuration change, @NonNull Configuration delta) {
+            if ((base.colorMode & Configuration.COLOR_MODE_WIDE_COLOR_GAMUT_MASK)
+                    != (change.colorMode & Configuration.COLOR_MODE_WIDE_COLOR_GAMUT_MASK)) {
+                delta.colorMode |=
+                        change.colorMode & Configuration.COLOR_MODE_WIDE_COLOR_GAMUT_MASK;
+            }
+
+            if ((base.colorMode & Configuration.COLOR_MODE_HDR_MASK)
+                    != (change.colorMode & Configuration.COLOR_MODE_HDR_MASK)) {
+                delta.colorMode |= change.colorMode & Configuration.COLOR_MODE_HDR_MASK;
             }
         }
     }

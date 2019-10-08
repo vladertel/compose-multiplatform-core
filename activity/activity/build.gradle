@@ -18,10 +18,11 @@ android {
 
 dependencies {
     api("androidx.annotation:annotation:1.1.0")
-    api("androidx.core:core:1.1.0-rc01")
+    api("androidx.core:core:1.1.0")
     api(project(":lifecycle:lifecycle-runtime"))
     api(project(":lifecycle:lifecycle-viewmodel"))
-    api(project(":savedstate"))
+    api("androidx.savedstate:savedstate:1.0.0")
+    api(project(":lifecycle:lifecycle-viewmodel-savedstate"))
 
     androidTestImplementation(KOTLIN_STDLIB)
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
@@ -32,7 +33,7 @@ dependencies {
     androidTestImplementation(ESPRESSO_CORE, libs.exclude_for_espresso)
     androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
     androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
-    androidTestImplementation project(':internal-testutils'), {
+    androidTestImplementation project(':internal-testutils-runtime'), {
         exclude group: 'androidx.activity', module: 'activity'
     }
 }

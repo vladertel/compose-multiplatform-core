@@ -18,6 +18,7 @@ package androidx.ui.animation.demos
 
 import android.app.Activity
 import android.os.Bundle
+import androidx.animation.AnimationEndReason
 import androidx.animation.ExponentialDecay
 import androidx.animation.FastOutSlowInEasing
 import androidx.animation.PhysicsBuilder
@@ -26,11 +27,9 @@ import androidx.animation.fling
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.memo
-import androidx.compose.setContent
 import androidx.compose.state
 import androidx.compose.unaryPlus
 import androidx.ui.animation.animatedFloat
-import androidx.ui.core.CraneWrapper
 import androidx.ui.core.Draw
 import androidx.ui.core.IntPx
 import androidx.ui.core.Layout
@@ -38,14 +37,15 @@ import androidx.ui.core.OnChildPositioned
 import androidx.ui.core.PxPosition
 import androidx.ui.core.Text
 import androidx.ui.core.dp
-import androidx.ui.core.gesture.DragGestureDetector
+import androidx.ui.core.gesture.RawDragGestureDetector
 import androidx.ui.core.gesture.DragObserver
+import androidx.ui.core.setContent
 import androidx.ui.core.sp
 import androidx.ui.engine.geometry.Rect
 import androidx.ui.graphics.Color
 import androidx.ui.layout.Column
 import androidx.ui.layout.Padding
-import androidx.ui.painting.Paint
+import androidx.ui.graphics.Paint
 import androidx.ui.text.TextStyle
 import kotlin.math.sign
 
@@ -54,13 +54,11 @@ class SwipeToDismiss : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CraneWrapper {
-                Column {
-                        SwipeToDismiss()
+            Column {
+                SwipeToDismiss()
 
-                    Padding(40.dp) {
-                        Text("Swipe up to dismiss", style = TextStyle(fontSize = 80.sp))
-                    }
+                Padding(40.dp) {
+                    Text("Swipe up to dismiss", style = TextStyle(fontSize = 80.sp))
                 }
             }
         }
@@ -76,8 +74,8 @@ class SwipeToDismiss : Activity() {
         val index = +state { 0 }
         val itemWidth = +state { 0f }
         val isFlinging = +state { false }
-        DragGestureDetector(canDrag = { true }, dragObserver = object : DragObserver {
-            override fun onStart() {
+        RawDragGestureDetector(dragObserver = object : DragObserver {
+            override fun onStart(downPosition: PxPosition) {
                 itemBottom.setBounds(0f, height)
                 if (isFlinging.value && itemBottom.targetValue < 100f) {
                     reset()
@@ -113,14 +111,15 @@ class SwipeToDismiss : Activity() {
                     }
                 }
             }
+
             override fun onStop(velocity: PxPosition) {
                 isFlinging.value = true
                 itemBottom.fling(velocity.y.value,
                     ExponentialDecay(3.0f),
                     adjustTarget(velocity.y.value),
-                    onFinished = {
+                    onEnd = { endReason, final, _ ->
                         isFlinging.value = false
-                        if (!it && itemBottom.value == 0f) {
+                        if (endReason != AnimationEndReason.Interrupted && final == 0f) {
                             reset()
                         }
                     })
@@ -132,16 +131,18 @@ class SwipeToDismiss : Activity() {
                 val alpha = 1f - FastOutSlowInEasing(progress)
                 val horizontalOffset = progress * itemWidth.value
                 drawLeftItems(horizontalOffset, itemWidth.value, itemHeight, index.value)
-                drawDismissingItem(itemBottom.value, itemWidth.value, itemHeight, index.value + 1,
-                    alpha)
+                drawDismissingItem(
+                    itemBottom.value, itemWidth.value, itemHeight, index.value + 1,
+                    alpha
+                )
             }
 
             OnChildPositioned({ coordinates ->
                 itemWidth.value = coordinates.size.width.value * 2 / 3f
             }) {
-                Layout(children = children, layoutBlock = { _, constraints ->
-                layout(constraints.maxWidth, IntPx(height.toInt())) {}
-            })
+                Layout(children) { _, constraints ->
+                    layout(constraints.maxWidth, IntPx(height.toInt())) {}
+                }
             }
         }
     }
@@ -153,10 +154,12 @@ class SwipeToDismiss : Activity() {
             paint.color = colors[index % colors.size]
             val centerX = parentSize.width.value / 2
             val itemRect =
-                Rect(centerX - width * 1.5f + horizontalOffset + padding,
+                Rect(
+                    centerX - width * 1.5f + horizontalOffset + padding,
                     parentSize.height.value - height,
                     centerX - width * 0.5f + horizontalOffset - padding,
-                    parentSize.height.value)
+                    parentSize.height.value
+                )
             canvas.drawRect(itemRect, paint)
 
             if (itemRect.left >= 0) {
@@ -175,18 +178,22 @@ class SwipeToDismiss : Activity() {
             paint.alpha = alpha
             val centerX = parentSize.width.value / 2
             canvas.drawRect(
-                Rect(centerX - width / 2 + padding,
+                Rect(
+                    centerX - width / 2 + padding,
                     bottom - height,
                     centerX + width / 2 - padding,
-                    bottom),
-                paint)
+                    bottom
+                ),
+                paint
+            )
         }
     }
 
     private val colors = listOf(
-        Color(0xFFffd7d7.toInt()),
-        Color(0xFFffe9d6.toInt()),
-        Color(0xFFfffbd0.toInt()),
-        Color(0xFFe3ffd9.toInt()),
-        Color(0xFFd0fff8.toInt()))
+        Color(0xFFffd7d7),
+        Color(0xFFffe9d6),
+        Color(0xFFfffbd0),
+        Color(0xFFe3ffd9),
+        Color(0xFFd0fff8)
+    )
 }

@@ -16,41 +16,36 @@
 
 package androidx.ui.material
 
-import androidx.animation.AnimatedFloat
-import androidx.animation.ExponentialDecay
 import androidx.animation.PhysicsBuilder
-import androidx.animation.TargetAnimation
-import androidx.animation.fling
 import androidx.compose.Composable
 import androidx.compose.composer
-import androidx.compose.memo
-import androidx.compose.onCommit
+import androidx.compose.ambient
+import androidx.compose.state
 import androidx.compose.unaryPlus
-import androidx.ui.animation.animatedFloat
-import androidx.ui.core.Direction
+import androidx.ui.core.Alignment
+import androidx.ui.core.Constraints
+import androidx.ui.core.ContextAmbient
 import androidx.ui.core.Dp
 import androidx.ui.core.IntPx
 import androidx.ui.core.Layout
 import androidx.ui.core.Px
-import androidx.ui.core.PxPosition
 import androidx.ui.core.RepaintBoundary
-import androidx.ui.core.WithConstraints
 import androidx.ui.core.dp
-import androidx.ui.core.gesture.DragGestureDetector
-import androidx.ui.core.gesture.DragObserver
 import androidx.ui.core.hasBoundedHeight
 import androidx.ui.core.hasBoundedWidth
+import androidx.ui.core.ipx
 import androidx.ui.core.min
-import androidx.ui.core.px
 import androidx.ui.core.withDensity
 import androidx.ui.foundation.Clickable
 import androidx.ui.foundation.ColoredRect
-import androidx.ui.layout.Alignment
+import androidx.ui.foundation.gestures.DragDirection
+import androidx.ui.foundation.gestures.Draggable
 import androidx.ui.layout.Container
 import androidx.ui.layout.DpConstraints
 import androidx.ui.layout.EdgeInsets
 import androidx.ui.layout.Stack
 import androidx.ui.lerp
+import androidx.ui.material.internal.anchoredControllerByState
 import androidx.ui.material.surface.Surface
 import kotlin.math.max
 
@@ -76,7 +71,7 @@ enum class DrawerState {
  * at the same time. They can be used on tablet and desktop,
  * but they are not suitable for mobile due to limited screen size.
  *
- * @see [ModalDrawer] and [BottomDrawer] for more mobile friendly options
+ * See [ModalDrawerLayout] and [BottomDrawerLayout] for more mobile friendly options.
  *
  * @sample androidx.ui.material.samples.StaticDrawerSample
  *
@@ -97,26 +92,31 @@ fun StaticDrawer(
  * Modal navigation drawers block interaction with the rest of an app’s content with a scrim.
  * They are elevated above most of the app’s UI and don’t affect the screen’s layout grid.
  *
- * @see [StaticDrawer] for always visible drawer, suitable for tables or desktop
- * @see [BottomDrawer] for drawer that is recommended when you have bottom navigation
+ * See [StaticDrawer] for always visible drawer, suitable for tablet or desktop.
+ * See [BottomDrawerLayout] for a layout that introduces a bottom drawer, suitable when
+ * using bottom navigation.
  *
  * @sample androidx.ui.material.samples.ModalDrawerSample
  *
  * @param drawerState state of the drawer
  * @param onStateChange lambda to be invoked when the drawer requests to change its state,
  * e.g. when the drawer is being swiped to the new state or when the scrim is clicked
+ * @param gesturesEnabled whether or not drawer can be interacted by gestures
  * @param drawerContent composable that represents content inside the drawer
+ * @param bodyContent content of the rest of the UI
  *
  * @throws IllegalStateException when parent has [Px.Infinity] width
  */
 @Composable
-fun ModalDrawer(
+fun ModalDrawerLayout(
     drawerState: DrawerState,
     onStateChange: (DrawerState) -> Unit,
-    drawerContent: @Composable() () -> Unit
+    gesturesEnabled: Boolean = true,
+    drawerContent: @Composable() () -> Unit,
+    bodyContent: @Composable() () -> Unit
 ) {
     Container(expanded = true) {
-        WithConstraints { pxConstraints ->
+        NoCompositionWithConstraints { pxConstraints ->
             // TODO : think about Infinite max bounds case
             if (!pxConstraints.hasBoundedWidth) {
                 throw IllegalStateException("Drawer shouldn't have infinite width")
@@ -124,28 +124,33 @@ fun ModalDrawer(
             val constraints = +withDensity {
                 DpConstraints(pxConstraints)
             }
-            val info = +memo(pxConstraints.maxWidth) {
-                ModalDragInfo(pxConstraints.maxWidth.value.toFloat())
-            }
-            val fling = +memo(pxConstraints.maxWidth) {
-                ModalDrawerFlinger(pxConstraints.maxWidth.value.toFloat(), onStateChange)
-            }
-            fling.onStateChange = onStateChange
+            val minValue = -pxConstraints.maxWidth.value.toFloat()
+            val maxValue = 0f
 
-            val valueByState =
-                if (drawerState == DrawerState.Opened) info.maxBound else info.minBound
-            AnimatedDraggable(info, valueByState, fling) { animatedValue ->
-                +onCommit(valueByState) {
-                    animatedValue.animateTo(valueByState, AnimationBuilder)
-                }
-                val fraction = calculateFraction(info.minBound, info.maxBound, animatedValue.value)
+            val (controller, callback) = +anchoredControllerByState(
+                drawerState,
+                onStateChange,
+                listOf(minValue to DrawerState.Closed, maxValue to DrawerState.Opened),
+                AnimationBuilder
+            )
+            controller.enabled = gesturesEnabled
+
+            Draggable(
+                dragDirection = DragDirection.Horizontal,
+                minValue = minValue,
+                maxValue = maxValue,
+                valueController = controller,
+                callback = callback
+            ) { value ->
+                val fraction = calculateFraction(minValue, maxValue, value)
                 val scrimAlpha = fraction * ScrimDefaultOpacity
                 val dpOffset = +withDensity {
-                    animatedValue.value.toDp()
+                    value.toDp()
                 }
 
                 Stack {
                     aligned(Alignment.TopLeft) {
+                        bodyContent()
                         Scrim(drawerState, onStateChange, scrimAlpha)
                         DrawerContent(dpOffset, constraints, drawerContent)
                     }
@@ -165,26 +170,30 @@ fun ModalDrawer(
  * These drawers open upon tapping the navigation menu icon in the bottom app bar.
  * They are only for use on mobile.
  *
- * @see [StaticDrawer] for always visible drawer, suitable for tables or desktop
- * @see [ModalDrawer] for classic "from the side" drawer
+ * See [StaticDrawer] for always visible drawer, suitable for tablet or desktop
+ * See [ModalDrawerLayout] for a layout that introduces a classic from-the-side drawer.
  *
  * @sample androidx.ui.material.samples.BottomDrawerSample
  *
  * @param drawerState state of the drawer
  * @param onStateChange lambda to be invoked when the drawer requests to change its state,
  * e.g. when the drawer is being swiped to the new state or when the scrim is clicked
+ * @param gesturesEnabled whether or not drawer can be interacted by gestures
  * @param drawerContent composable that represents content inside the drawer
+ * @param bodyContent content of the rest of the UI
  *
  * @throws IllegalStateException when parent has [Px.Infinity] height
  */
 @Composable
-fun BottomDrawer(
+fun BottomDrawerLayout(
     drawerState: DrawerState,
     onStateChange: (DrawerState) -> Unit,
-    drawerContent: @Composable() () -> Unit
+    gesturesEnabled: Boolean = true,
+    drawerContent: @Composable() () -> Unit,
+    bodyContent: @Composable() () -> Unit
 ) {
     Container(expanded = true) {
-        WithConstraints { pxConstraints ->
+        NoCompositionWithConstraints { pxConstraints ->
             // TODO : think about Infinite max bounds case
             if (!pxConstraints.hasBoundedHeight) {
                 throw IllegalStateException("Drawer shouldn't have infinite height")
@@ -192,36 +201,42 @@ fun BottomDrawer(
             val constraints = +withDensity {
                 DpConstraints(pxConstraints)
             }
-            val info = +memo(pxConstraints.maxHeight) {
-                BottomDragInfo(pxConstraints.maxHeight.value.toFloat())
-            }
-            val fling = +memo(pxConstraints.maxHeight) {
-                BottomDrawerFlinger(pxConstraints.maxHeight.value.toFloat(), onStateChange)
-            }
-            fling.onStateChange = onStateChange
+            val minValue = 0f
+            val maxValue = pxConstraints.maxHeight.value.toFloat()
 
             // TODO: add proper landscape support
             val isLandscape = constraints.maxWidth > constraints.maxHeight
-            val openedValue = if (isLandscape) info.maxBound else lerp(
-                info.minBound,
-                info.maxBound,
+            val openedValue = if (isLandscape) maxValue else lerp(
+                minValue,
+                maxValue,
                 BottomDrawerOpenFraction
             )
-            val valueByState = if (drawerState == DrawerState.Opened) openedValue else info.maxBound
+            val anchors = listOf(
+                maxValue to DrawerState.Closed,
+                openedValue to DrawerState.Opened,
+                minValue to DrawerState.Opened
+            )
+            val (controller, callback) =
+                +anchoredControllerByState(drawerState, onStateChange, anchors, AnimationBuilder)
+            controller.enabled = gesturesEnabled
 
-            AnimatedDraggable(info, valueByState, fling) { animatedValue ->
-                +onCommit(valueByState) {
-                    animatedValue.animateTo(valueByState, AnimationBuilder)
-                }
+            Draggable(
+                dragDirection = DragDirection.Vertical,
+                minValue = minValue,
+                maxValue = maxValue,
+                valueController = controller,
+                callback = callback
+            ) { value ->
                 // as we scroll "from height to 0" backwards, (1 - fraction) will reverse it
                 val fractionToOpened =
-                    1 - max(0f, calculateFraction(openedValue, info.maxBound, animatedValue.value))
+                    1 - max(0f, calculateFraction(openedValue, maxValue, value))
                 val scrimAlpha = fractionToOpened * ScrimDefaultOpacity
                 val dpOffset = +withDensity {
-                    animatedValue.value.toDp()
+                    value.toDp()
                 }
                 Stack {
                     aligned(Alignment.TopLeft) {
+                        bodyContent()
                         Scrim(drawerState, onStateChange, scrimAlpha)
                         BottomDrawerContent(dpOffset, constraints, drawerContent)
                     }
@@ -264,155 +279,6 @@ private fun BottomDrawerContent(
 
 private fun calculateFraction(a: Float, b: Float, pos: Float) = (pos - a) / (b - a)
 
-private interface Flinger {
-    fun fling(animation: AnimatedFloat, velocity: Float)
-}
-
-private data class DragInfo(
-    val minBound: Float,
-    val maxBound: Float,
-    val positionToAxis: (PxPosition) -> Px,
-    val axisToPosition: (Float) -> PxPosition,
-    val isDraggableInDirection: (direction: Direction, currentValue: Float) -> Boolean
-)
-
-@Composable
-private fun AnimatedDraggable(
-    dragInfo: DragInfo,
-    startValue: Float,
-    fling: Flinger,
-    children: @Composable() (AnimatedFloat) -> Unit
-) {
-    val offset = (+animatedFloat(startValue)).apply {
-        setBounds(dragInfo.minBound, dragInfo.maxBound)
-    }
-    DragGestureDetector(
-        canDrag = { direction ->
-            dragInfo.isDraggableInDirection(direction, offset.value)
-        },
-        dragObserver = object : DragObserver {
-
-            override fun onDrag(dragDistance: PxPosition): PxPosition {
-                val draggedFraction = dragInfo.positionToAxis(dragDistance).value
-                val newValue =
-                    (offset.value + draggedFraction)
-                        .coerceIn(dragInfo.minBound, dragInfo.maxBound)
-                val consumed = newValue - offset.value
-                offset.snapTo(newValue)
-                return dragInfo.axisToPosition(consumed)
-            }
-
-            override fun onStop(velocity: PxPosition) {
-                fling.fling(offset, dragInfo.positionToAxis(velocity).value)
-            }
-        }
-    ) {
-        children(offset)
-    }
-}
-
-private fun ModalDragInfo(width: Float): DragInfo {
-    val min = -width
-    val max = 0f
-    return DragInfo(
-        minBound = min,
-        maxBound = max,
-        positionToAxis = { it.x },
-        axisToPosition = { PxPosition(it.px, 0.px) },
-        isDraggableInDirection = { direction, currentValue ->
-            when (direction) {
-                Direction.RIGHT -> currentValue <= max
-                Direction.LEFT -> currentValue >= min
-                else -> false
-            }
-        }
-    )
-}
-
-private fun BottomDragInfo(height: Float): DragInfo {
-    val min = 0f
-    val max = height
-    return DragInfo(
-        minBound = min,
-        maxBound = max,
-        positionToAxis = { it.y },
-        axisToPosition = { PxPosition(0.px, it.px) },
-        isDraggableInDirection = { direction, currentValue ->
-            when (direction) {
-                Direction.UP -> currentValue <= max
-                Direction.DOWN -> currentValue >= min
-                else -> false
-            }
-        }
-
-    )
-}
-
-private class BottomDrawerFlinger(
-    height: Float,
-    var onStateChange: (DrawerState) -> Unit
-) : Flinger {
-    val openValue = lerp(0f, height, BottomDrawerOpenFraction)
-    val expandedValue = 0f
-    val closedValue = height
-
-    override fun fling(animation: AnimatedFloat, velocity: Float) {
-        animation.fling(
-            startVelocity = velocity,
-            decay = DefaultDecay,
-            adjustTarget = adjustTarget(animation),
-            onFinished = onFinished(animation)
-        )
-    }
-
-    fun onFinished(animation: AnimatedFloat) = { _: Boolean ->
-        if (animation.value >= closedValue) onStateChange(DrawerState.Closed)
-        else if (animation.value <= openValue) onStateChange(DrawerState.Opened)
-    }
-
-    fun adjustTarget(animation: AnimatedFloat) = { targetToAdjust: Float ->
-        val target =
-            if (targetToAdjust > openValue / 2) {
-                closedValue
-            } else if (animation.value <= openValue && targetToAdjust < openValue) {
-                expandedValue
-            } else {
-                openValue
-            }
-        TargetAnimation(target, AnimationBuilder)
-    }
-}
-
-private class ModalDrawerFlinger(
-    width: Float,
-    var onStateChange: (DrawerState) -> Unit
-) : Flinger {
-    val openValue = 0f
-    val closedValue = -width
-
-    override fun fling(animation: AnimatedFloat, velocity: Float) {
-        animation.fling(
-            startVelocity = velocity,
-            decay = DefaultDecay,
-            adjustTarget = adjustTarget,
-            onFinished = onFinished(animation)
-        )
-    }
-
-    fun onFinished(animation: AnimatedFloat) = { _: Boolean ->
-        if (animation.value <= closedValue) {
-            onStateChange(DrawerState.Closed)
-        } else if (animation.value >= openValue) {
-            onStateChange(DrawerState.Opened)
-        }
-    }
-
-    val adjustTarget = { targetToAdjust: Float ->
-        val target = if (targetToAdjust < openValue / 2) closedValue else openValue
-        TargetAnimation(target, AnimationBuilder)
-    }
-}
-
 @Composable
 private fun Scrim(state: DrawerState, onStateChange: (DrawerState) -> Unit, opacity: Float) {
     // TODO: use enabled = false here when it will be available
@@ -436,7 +302,7 @@ private fun WithOffset(
         RepaintBoundary {
             child()
         }
-    }, layoutBlock = { measurables, constraints ->
+    }) { measurables, constraints ->
         if (measurables.size > 1) {
             throw IllegalStateException("Only one child is allowed")
         }
@@ -454,7 +320,42 @@ private fun WithOffset(
         layout(width, height) {
             placeable?.place(xOffset.toIntPx(), yOffset.toIntPx())
         }
-    })
+    }
+}
+
+// TODO (malkov): This adhoc handmade WithConstrains is to ensure we work fast enough in
+//  DrawerAnimation as well as ensure that all the children will recompose/relayout properly
+// Remove when WithConstraints will be fast enough and work properly with relayouting on @
+@Composable
+private fun NoCompositionWithConstraints(children: @Composable() (Constraints) -> Unit) {
+    val dm = (+ambient(ContextAmbient)).resources.displayMetrics
+    // as a default, we emulate full-activity constraints (which is most cases will be exactly what
+    // we want) and then wait for layout to know proper constraints
+    var stateConstraints by +state {
+        Constraints(
+            minWidth = 0.ipx,
+            minHeight = 0.ipx,
+            maxWidth = dm.widthPixels.ipx,
+            maxHeight = dm.heightPixels.ipx
+        )
+    }
+    Layout({ children(stateConstraints) }) { measurables, constraints ->
+        if (measurables.size > 1) {
+            throw IllegalStateException(
+                "NoCompositionWithConstraints can have only one direct measurable child!"
+            )
+        }
+        val measurable = measurables.firstOrNull()
+        if (constraints != stateConstraints) stateConstraints = constraints
+        if (measurable == null) {
+            layout(constraints.minWidth, constraints.minHeight) {}
+        } else {
+            val placeable = measurable.measure(constraints)
+            layout(placeable.width, placeable.height) {
+                placeable.place(0.ipx, 0.ipx)
+            }
+        }
+    }
 }
 
 private val ScrimDefaultOpacity = 0.32f
@@ -464,8 +365,6 @@ private val VerticalDrawerPadding = 56.dp
 private val StaticDrawerWidth = 256.dp
 private val DrawerStiffness = 1000f
 
-// TODO: figure out default decay
-private val DefaultDecay = ExponentialDecay(0.7f)
 private val AnimationBuilder =
     PhysicsBuilder<Float>().apply {
         stiffness = DrawerStiffness

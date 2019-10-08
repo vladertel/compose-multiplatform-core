@@ -21,9 +21,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -54,35 +51,10 @@ public class BiometricPromptDemoFragmentHost extends DialogFragment {
         final TextView hostTypeTextView = view.findViewById(R.id.host_type_text_view);
         hostTypeTextView.setText(R.string.label_host_type_fragment);
 
-        final Button createKeysButton = view.findViewById(R.id.button_enable_biometric_with_crypto);
-        final Button authenticateButton = view.findViewById(R.id.button_authenticate);
-        final Button canAuthenticateButton = view.findViewById(R.id.can_authenticate);
-        final CheckBox useCryptoCheckbox = view.findViewById(R.id.checkbox_use_crypto);
-        final CheckBox confirmationRequiredCheckbox = view.findViewById(
-                R.id.checkbox_require_confirmation);
-        final CheckBox deviceCredentialAllowedCheckbox = view.findViewById(
-                R.id.checkbox_enable_fallback);
-        final RadioGroup radioGroup = view.findViewById(R.id.radio_group);
-
-        mController = new BiometricPromptDemoFragmentController(
-                mContext,
-                this,
-                createKeysButton,
-                authenticateButton,
-                canAuthenticateButton,
-                useCryptoCheckbox,
-                confirmationRequiredCheckbox,
-                deviceCredentialAllowedCheckbox,
-                radioGroup);
+        mController = new BiometricPromptDemoFragmentController(mContext, this, view);
         mController.init(savedInstanceState);
-
+        mController.reconnect();
         return view;
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        mController.onResume();
     }
 
     @Override

@@ -23,13 +23,13 @@ import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 
 import androidx.annotation.CallSuper;
 import androidx.annotation.NavigationRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentContainerView;
 import androidx.navigation.NavController;
 import androidx.navigation.NavGraph;
 import androidx.navigation.NavHost;
@@ -104,7 +104,7 @@ public class NavHostFragment extends Fragment implements NavHost {
             if (findFragment instanceof NavHostFragment) {
                 return ((NavHostFragment) findFragment).getNavController();
             }
-            Fragment primaryNavFragment = findFragment.requireFragmentManager()
+            Fragment primaryNavFragment = findFragment.getParentFragmentManager()
                     .getPrimaryNavigationFragment();
             if (primaryNavFragment instanceof NavHostFragment) {
                 return ((NavHostFragment) primaryNavFragment).getNavController();
@@ -193,7 +193,7 @@ public class NavHostFragment extends Fragment implements NavHost {
         // but it can stay here until we can add the necessary attr resources to
         // the fragment lib.
         if (mDefaultNavHost) {
-            requireFragmentManager().beginTransaction()
+            getParentFragmentManager().beginTransaction()
                     .setPrimaryNavigationFragment(this)
                     .commit();
         }
@@ -221,7 +221,7 @@ public class NavHostFragment extends Fragment implements NavHost {
             navState = savedInstanceState.getBundle(KEY_NAV_CONTROLLER_STATE);
             if (savedInstanceState.getBoolean(KEY_DEFAULT_NAV_HOST, false)) {
                 mDefaultNavHost = true;
-                requireFragmentManager().beginTransaction()
+                getParentFragmentManager().beginTransaction()
                         .setPrimaryNavigationFragment(this)
                         .commit();
             }
@@ -290,20 +290,38 @@ public class NavHostFragment extends Fragment implements NavHost {
     @Deprecated
     @NonNull
     protected Navigator<? extends FragmentNavigator.Destination> createFragmentNavigator() {
-        return new FragmentNavigator(requireContext(), getChildFragmentManager(), getId());
+        return new FragmentNavigator(requireContext(), getChildFragmentManager(),
+                getContainerId());
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        FrameLayout frameLayout = new FrameLayout(inflater.getContext());
-        // When added via XML, this has no effect (since this FrameLayout is given the ID
+        FragmentContainerView containerView = new FragmentContainerView(inflater.getContext());
+        // When added via XML, this has no effect (since this FragmentContainerView is given the ID
         // automatically), but this ensures that the View exists as part of this Fragment's View
         // hierarchy in cases where the NavHostFragment is added programmatically as is required
         // for child fragment transactions
-        frameLayout.setId(getId());
-        return frameLayout;
+        containerView.setId(getContainerId());
+        return containerView;
+    }
+
+    /**
+     * We specifically can't use {@link View#NO_ID} as the container ID (as we use
+     * {@link androidx.fragment.app.FragmentTransaction#add(int, Fragment)} under the hood),
+     * so we need to make sure we return a valid ID when asked for the container ID.
+     *
+     * @return a valid ID to be used to contain child fragments
+     */
+    private int getContainerId() {
+        int id = getId();
+        if (id != 0 && id != View.NO_ID) {
+            return id;
+        }
+        // Fallback to using our own ID if this Fragment wasn't added via
+        // add(containerViewId, Fragment)
+        return R.id.nav_host_fragment_container;
     }
 
     @Override

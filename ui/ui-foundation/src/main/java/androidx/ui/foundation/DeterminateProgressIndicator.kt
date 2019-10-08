@@ -17,14 +17,16 @@
 package androidx.ui.foundation
 
 import androidx.annotation.FloatRange
-import androidx.ui.core.Semantics
-import androidx.compose.Children
+import androidx.ui.semantics.Semantics
 import androidx.compose.Composable
 import androidx.compose.composer
+import androidx.ui.semantics.accessibilityValue
 
 /**
  * Contains the [Semantics] required for a determinate progress indicator, that represents progress
  * ranging from 0.0 to 1.0.
+ *
+ * @sample androidx.ui.foundation.samples.DeterminateProgressSample
  *
  * @param progress The progress of this progress indicator, where 0.0 represents no progress and 1.0
  * represents full progress
@@ -34,12 +36,12 @@ import androidx.compose.composer
 @Composable
 fun DeterminateProgressIndicator(
     @FloatRange(from = 0.0, to = 1.0) progress: Float,
-    @Children children: @Composable() () -> Unit
+    children: @Composable() () -> Unit
 ) {
     if (progress !in 0f..1f) {
         throw IllegalArgumentException("Progress must be between 0.0 and 1.0")
     }
-    Semantics(value = ("$progress")) {
+    Semantics(properties = { accessibilityValue = "$progress" }) {
         children()
     }
 }

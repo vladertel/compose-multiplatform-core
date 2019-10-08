@@ -17,36 +17,45 @@
 package androidx.ui.material
 
 import androidx.animation.ColorPropKey
-import androidx.animation.DpPropKey
 import androidx.animation.FastOutSlowInEasing
 import androidx.animation.LinearEasing
+import androidx.animation.PxPropKey
 import androidx.animation.transitionDefinition
 import androidx.ui.core.Text
 import androidx.ui.core.dp
 import androidx.compose.Composable
 import androidx.compose.composer
 import androidx.compose.memo
+import androidx.compose.state
 import androidx.compose.unaryPlus
 import androidx.ui.animation.Transition
-import androidx.ui.core.Dp
-import androidx.ui.core.WithConstraints
-import androidx.ui.core.hasBoundedWidth
-import androidx.ui.core.px
+import androidx.ui.core.Alignment
+import androidx.ui.core.IntPx
+import androidx.ui.core.Layout
+import androidx.ui.core.Placeable
+import androidx.ui.core.Px
+import androidx.ui.core.coerceIn
+import androidx.ui.core.toPx
 import androidx.ui.core.withDensity
+import androidx.ui.core.withTight
 import androidx.ui.foundation.ColoredRect
+import androidx.ui.foundation.HorizontalScroller
+import androidx.ui.foundation.ScrollerPosition
 import androidx.ui.foundation.SimpleImage
 import androidx.ui.foundation.selection.MutuallyExclusiveSetItem
 import androidx.ui.graphics.Color
-import androidx.ui.layout.Alignment
 import androidx.ui.layout.Column
 import androidx.ui.layout.Container
+import androidx.ui.layout.CrossAxisAlignment
 import androidx.ui.layout.FlexRow
+import androidx.ui.layout.LayoutSize
 import androidx.ui.layout.MainAxisAlignment
 import androidx.ui.layout.Padding
 import androidx.ui.layout.Stack
+import androidx.ui.material.TabRow.TabPosition
 import androidx.ui.material.ripple.Ripple
 import androidx.ui.material.surface.Surface
-import androidx.ui.painting.Image
+import androidx.ui.graphics.Image
 
 /**
  * A TabRow contains a row of [Tab]s, and displays an indicator underneath the currently
@@ -58,111 +67,368 @@ import androidx.ui.painting.Image
  *
  * You can also provide your own custom tab, such as:
  *
- * @sample androidx.ui.material.samples.CustomTabs
+ * @sample androidx.ui.material.samples.FancyTabs
  *
  * Where the custom tab itself could look like:
  *
  * @sample androidx.ui.material.samples.FancyTab
  *
+ * As well as customizing the tab, you can also provide a custom [indicatorContainer], to customize
+ * the indicator displayed for a tab. [indicatorContainer] is responsible for positioning an
+ * indicator and for animating its position when [selectedIndex] changes.
+ *
+ * For example, given an indicator that draws a rounded rectangle near the edges of the [Tab]:
+ *
+ * @sample androidx.ui.material.samples.FancyIndicator
+ *
+ * We can reuse [TabRow.IndicatorContainer] and just provide this indicator, as we aren't changing
+ * the transition:
+ *
+ * @sample androidx.ui.material.samples.FancyIndicatorTabs
+ *
+ * You may also want to provide a custom transition, to allow you to dynamically change the
+ * appearance of the indicator as it animates between tabs, such as changing its color or size.
+ * [indicatorContainer] is stacked on top of the entire TabRow, so you just need to provide a custom
+ * container that animates the offset of the indicator from the start of the TabRow and place your
+ * custom indicator inside of it. For example, take the following custom container that animates
+ * position of the indicator, the color of the indicator, and also adds a physics based 'spring'
+ * effect to the indicator in the direction of motion:
+ *
+ * @sample androidx.ui.material.samples.FancyIndicatorContainer
+ *
+ * This container will fill up the entire width of the TabRow, and when a new tab is selected,
+ * the transition will be called with a new value for [selectedIndex], which will animate the
+ * indicator to the position of the new tab.
+ *
+ * We can use this custom container similarly to before:
+ *
+ * @sample androidx.ui.material.samples.FancyIndicatorContainerTabs
+ *
  * @param T the type of the item provided that will map to a [Tab]
  * @param items the list containing the items used to build this TabRow
  * @param selectedIndex the index of the currently selected tab
+ * @param scrollable if the tabs should be scrollable. If `false` the tabs will take up an equal
+ * amount of the space given to TabRow. If `true` the tabs will take up only as much space as they
+ * need, with any excess tabs positioned off screen and able to be scrolled to.
+ * @param indicatorContainer the container responsible for positioning and animating the position of
+ * the indicator between tabs. By default this will be [TabRow.IndicatorContainer], which animates a
+ * [TabRow.Indicator] between tabs.
  * @param tab the [Tab] to be emitted for the given index and element of type [T] in [items]
- *
- * @throws IllegalStateException when TabRow's parent has [Px.Infinity] width
  */
+// TODO: b/137311217 - type inference for nullable lambdas currently doesn't work
+@Suppress("USELESS_CAST")
 @Composable
 fun <T> TabRow(
     items: List<T>,
     selectedIndex: Int,
+    scrollable: Boolean = false,
+    indicatorContainer: @Composable() (tabPositions: List<TabPosition>) -> Unit = { tabPositions ->
+        TabRow.IndicatorContainer(tabPositions, selectedIndex) {
+            TabRow.Indicator()
+        }
+    },
     tab: @Composable() (Int, T) -> Unit
 ) {
-    val count = items.size
     Surface(color = +themeColor { primary }) {
-        WithConstraints { constraints ->
-            // TODO : think about Infinite max bounds case
-            require(constraints.hasBoundedWidth) { "TabRow can't have infinite width" }
-            val totalWidth = +withDensity {
-                constraints.maxWidth.toDp()
+        val divider = TabRow.Divider
+
+        val tabs = @Composable {
+            items.forEachIndexed { index, item ->
+                tab(index, item)
             }
-            val indicatorWidth = totalWidth / count
-            TabIndicatorTransition(count, indicatorWidth, selectedIndex) { indicatorPosition ->
-                Stack {
-                    aligned(Alignment.Center) {
-                        FlexRow {
-                            items.forEachIndexed { index, item ->
-                                expanded(1f) {
-                                    tab(index, item)
-                                }
-                            }
-                        }
-                    }
-                    aligned(Alignment.BottomCenter) {
-                        TabRowDivider()
-                    }
-                    positioned(leftInset = indicatorPosition, bottomInset = 0.dp) {
-                        TabIndicator(indicatorWidth)
-                    }
-                }
+        }
+
+        WithExpandedWidth { width ->
+            // TODO: force scrollable for tabs that will be too small if they take up equal space?
+            if (scrollable) {
+                ScrollableTabRow(width, selectedIndex, tabs, divider, indicatorContainer)
+            } else {
+                FixedTabRow(width, items.size, tabs, divider, indicatorContainer)
             }
         }
     }
 }
 
-private val IndicatorPosition = DpPropKey()
+@Composable
+private fun FixedTabRow(
+    width: IntPx,
+    tabCount: Int,
+    tabs: @Composable() () -> Unit,
+    divider: @Composable() () -> Unit,
+    indicatorContainer: @Composable() (tabPositions: List<TabPosition>) -> Unit
+) {
+    val tabWidth = width / tabCount
+
+    val tabPositions = +memo(tabCount, tabWidth) {
+        (0 until tabCount).map { index ->
+            val left = (tabWidth * index)
+            TabPosition(left, tabWidth)
+        }
+    }
+
+    Stack {
+        aligned(Alignment.Center) {
+            FlexRow {
+                expanded(1f) {
+                    tabs()
+                }
+            }
+        }
+        aligned(Alignment.BottomCenter) {
+            divider()
+        }
+        positioned(0.dp, 0.dp, 0.dp, 0.dp) {
+            indicatorContainer(tabPositions)
+        }
+    }
+}
+
+@Composable
+private fun ScrollableTabRow(
+    width: IntPx,
+    selectedIndex: Int,
+    tabs: @Composable() () -> Unit,
+    divider: @Composable() () -> Unit,
+    indicatorContainer: @Composable() (tabPositions: List<TabPosition>) -> Unit
+) {
+    val edgeOffset = +withDensity { ScrollableTabRowEdgeOffset.toIntPx() }
+
+    // TODO: unfortunate 1f lag as we need to first calculate tab positions before drawing the
+    // indicator container
+    var tabPositions by +state { listOf<TabPosition>() }
+
+    val scrollableTabData = +memo {
+        ScrollableTabData(selectedIndex, tabPositions, width, edgeOffset)
+    }
+
+    scrollableTabData.selectedTab = selectedIndex
+    scrollableTabData.tabPositions = tabPositions
+    scrollableTabData.visibleWidth = width
+
+    val indicator = @Composable {
+        // Delay indicator composition until we know tab positions
+        if (tabPositions.isNotEmpty()) {
+            indicatorContainer(tabPositions)
+        }
+    }
+
+    HorizontalScroller(
+        scrollerPosition = scrollableTabData.position,
+        onScrollPositionChanged = { position, _ ->
+            scrollableTabData.position.value = position
+            scrollableTabData.currentScrollPosition = position
+        }
+    ) {
+        Layout(tabs, indicator, divider) { measurables, constraints ->
+            val tabPlaceables = mutableListOf<Pair<Placeable, IntPx>>()
+            val minTabWidth = ScrollableTabRowMinimumTabWidth.toIntPx()
+
+            var layoutHeight = IntPx.Zero
+
+            val tabConstraints = constraints.copy(minWidth = minTabWidth)
+
+            val newTabPositions = mutableListOf<TabPosition>()
+
+            val layoutWidth = measurables[tabs].fold(edgeOffset) { sum, measurable ->
+                val placeable = measurable.measure(tabConstraints)
+
+                if (placeable.height > layoutHeight) {
+                    layoutHeight = placeable.height
+                }
+
+                // Position each tab at the end of the previous one
+                tabPlaceables.add(placeable to sum)
+                newTabPositions.add(TabPosition(left = sum, width = placeable.width))
+                sum + placeable.width
+            } + edgeOffset
+
+            if (tabPositions != newTabPositions) {
+                tabPositions = newTabPositions
+            }
+
+            // Position the children.
+            layout(layoutWidth, layoutHeight) {
+                // Place the tabs
+                tabPlaceables.forEach { (placeable, left) ->
+                    placeable.place(left, IntPx.Zero)
+                }
+
+                // The divider is measured with its own height, and width equal to the total width
+                // of the tab row, and then placed on top of the tabs.
+                measurables[divider].firstOrNull()
+                    ?.measure(constraints.withTight(width = layoutWidth))
+                    ?.run { place(IntPx.Zero, layoutHeight - height) }
+
+                // The indicator container is measured to fill the entire space occupied by the tab
+                // row, and then placed on top of the divider.
+                measurables[indicator].firstOrNull()
+                    ?.measure(constraints.withTight(width = layoutWidth, height = layoutHeight))
+                    ?.place(IntPx.Zero, IntPx.Zero)
+            }
+        }
+    }
+}
 
 /**
- * [Transition] defining how the indicator position animates between tabs, when a new tab is
- * selected.
+ * Class holding onto state needed for [ScrollableTabRow]
+ */
+private class ScrollableTabData(
+    initialSelectedTab: Int,
+    var tabPositions: List<TabPosition>,
+    var visibleWidth: IntPx,
+    val edgeOffset: IntPx
+) {
+    var selectedTab: Int = initialSelectedTab
+        set(value) {
+            if (field != value && !isTabFullyVisible(value)) {
+                val calculatedOffset = calculateTabOffset(value)
+                position.smoothScrollTo(calculatedOffset)
+            }
+            field = value
+        }
+
+    val position = ScrollerPosition()
+
+    // Need to use a separate var here - directly consuming position.value will cause recompositions
+    // as it is an @Model class
+    var currentScrollPosition: Px = Px.Zero
+
+    private fun isTabFullyVisible(index: Int): Boolean {
+        val tabPosition = tabPositions[index]
+        val leftEdgeStart = currentScrollPosition
+        val leftEdgeVisible = leftEdgeStart <= tabPosition.left.toPx()
+        val rightEdgeEnd = leftEdgeStart + visibleWidth
+        val rightEdgeVisible = rightEdgeEnd >= tabPosition.right.toPx()
+        return leftEdgeVisible && rightEdgeVisible
+    }
+
+    // TODO: this currently always centers the tab (if possible), should we support only scrolling
+    // until the tab just becomes visible?
+    private fun calculateTabOffset(index: Int): Px {
+        val tabPosition = tabPositions[index]
+        val tabOffset = tabPosition.left
+        val scrollerCenter = visibleWidth / 2
+        val tabWidth = tabPosition.width
+        val centeredTabOffset = tabOffset - (scrollerCenter - tabWidth / 2)
+        val totalTabRowWidth = tabPositions.last().right + edgeOffset
+        return centeredTabOffset.coerceIn(IntPx.Zero, totalTabRowWidth - visibleWidth).toPx()
+    }
+}
+
+// TODO: cleanup when expanded width layouts are supported natively b/140408477
+/**
+ * A layout that is sized according to its [child]'s height, and all the available width.
  */
 @Composable
-private fun TabIndicatorTransition(
-    tabCount: Int,
-    indicatorWidth: Dp,
-    selectedIndex: Int,
-    children: @Composable() (indicatorPosition: Dp) -> Unit
-) {
-    val transitionDefinition = +memo(tabCount, indicatorWidth) {
-        transitionDefinition {
-            // TODO: currently the first state set is the 'default' state, so we want to define the
-            // state that is initially selected first, so we don't have any initial animations
-            // when this is supported by transitionDefinition, we should fix this to just set a
-            // default or similar
-            state(selectedIndex) {
-                this[IndicatorPosition] = indicatorWidth * selectedIndex
-            }
-            (0 until tabCount).minus(selectedIndex).forEach { tabIndex ->
-                state(tabIndex) {
-                    this[IndicatorPosition] = indicatorWidth * tabIndex
-                }
-            }
+private fun WithExpandedWidth(child: @Composable() (width: IntPx) -> Unit) {
+    // TODO: unfortunate 1f lag as we need to first measure total width and then recompose so the
+    // tab row knows the correct width
+    var widthState by +state { IntPx.Zero }
+    Layout({ child(widthState) }) { measurables, constraints ->
+        val width = constraints.maxWidth
+        if (widthState != width) widthState = width
+        val placeable = measurables.first().measure(constraints)
+        val height = placeable.height
 
-            transition {
-                IndicatorPosition using tween {
-                    duration = 250
-                    easing = FastOutSlowInEasing
+        layout(width, height) {
+            placeable.place(IntPx.Zero, IntPx.Zero)
+        }
+    }
+}
+
+object TabRow {
+    private val IndicatorOffset = PxPropKey()
+
+    /**
+     * Data class that contains information about a tab's position on screen
+     *
+     * @property left the left edge's x position from the start of the [TabRow]
+     * @property right the right edge's x position from the start of the [TabRow]
+     * @property width the width of this tab
+     */
+    data class TabPosition internal constructor(val left: IntPx, val width: IntPx) {
+        val right: IntPx get() = left + width
+    }
+
+    /**
+     * Positions and animates the given [indicator] between tabs when [selectedIndex] changes.
+     */
+    @Composable
+    fun IndicatorContainer(
+        tabPositions: List<TabPosition>,
+        selectedIndex: Int,
+        indicator: @Composable() () -> Unit
+    ) {
+        // TODO: should we animate the width of the indicator as it moves between tabs of different
+        // sizes inside a scrollable tab row?
+        val currentTabWidth = +withDensity { tabPositions[selectedIndex].width.toDp() }
+
+        Container(expanded = true, alignment = Alignment.BottomLeft) {
+            IndicatorTransition(tabPositions, selectedIndex) { indicatorOffset ->
+                Padding(left = +withDensity { indicatorOffset.toDp() }) {
+                    Container(width = currentTabWidth) {
+                        indicator()
+                    }
                 }
             }
         }
     }
-    Transition(transitionDefinition, selectedIndex) { state ->
-        children(state[IndicatorPosition])
+
+    /**
+     * Default indicator, which will be positioned at the bottom of the tab, on top of the divider.
+     *
+     * This is used as the default indicator inside [TabRow].
+     */
+    @Composable
+    fun Indicator() {
+        ColoredRect(color = +themeColor { onPrimary }, height = IndicatorHeight)
     }
-}
 
-@Composable
-private fun TabIndicator(width: Dp) {
-    ColoredRect(
-        color = +themeColor { onPrimary },
-        height = IndicatorHeight,
-        width = width
-    )
-}
+    /**
+     * [Transition] that animates the indicator offset between a given list of [TabPosition]s.
+     */
+    @Composable
+    internal fun IndicatorTransition(
+        tabPositions: List<TabPosition>,
+        selectedIndex: Int,
+        children: @Composable() (indicatorOffset: Px) -> Unit
+    ) {
+        val transitionDefinition = +memo(tabPositions) {
+            transitionDefinition {
+                // TODO: currently the first state set is the 'default' state, so we want to define the
+                // state that is initially selected first, so we don't have any initial animations.
+                // When this is supported by transitionDefinition, we should fix this to just set a
+                // default or similar.
+                state(selectedIndex) {
+                    this[IndicatorOffset] = tabPositions[selectedIndex].left.toPx()
+                }
 
-@Composable
-private fun TabRowDivider() {
-    val onPrimary = +themeColor { onPrimary }
-    Divider(color = (onPrimary.copy(alpha = DividerOpacity)))
+                tabPositions.forEachIndexed { index, position ->
+                    if (index != selectedIndex) {
+                        state(index) {
+                            this[IndicatorOffset] = position.left.toPx()
+                        }
+                    }
+                }
+
+                transition {
+                    IndicatorOffset using tween {
+                        duration = 250
+                        easing = FastOutSlowInEasing
+                    }
+                }
+            }
+        }
+
+        Transition(transitionDefinition, selectedIndex) { state ->
+            children(state[IndicatorOffset])
+        }
+    }
+
+    internal val Divider = @Composable {
+        val onPrimary = +themeColor { onPrimary }
+        Divider(color = (onPrimary.copy(alpha = DividerOpacity)))
+    }
 }
 
 /**
@@ -271,7 +537,11 @@ private fun CombinedTab(
         Container(height = LargeTabHeight) {
             Padding(top = SingleRowTextImagePadding, bottom = SingleRowTextBaselinePadding) {
                 TabTransition(color = tint, selected = selected) { tabTintColor ->
-                    Column(mainAxisAlignment = MainAxisAlignment.SpaceBetween) {
+                    Column(
+                        mainAxisSize = LayoutSize.Expand,
+                        mainAxisAlignment = MainAxisAlignment.SpaceBetween,
+                        crossAxisAlignment = CrossAxisAlignment.Center
+                    ) {
                         TabIcon(icon, tabTintColor)
                         // TODO: This should be aligned to the bottom padding by baseline,
                         // not raw layout
@@ -349,13 +619,15 @@ private fun TabIcon(icon: Image, tint: Color) {
 // TabRow specifications
 private val IndicatorHeight = 2.dp
 private const val DividerOpacity = 0.12f
+// How far from the start and end of a scrollable TabRow should the first Tab be displayed
+private val ScrollableTabRowEdgeOffset = 52.dp
+private val ScrollableTabRowMinimumTabWidth = 90.dp
 
 // Tab specifications
 private val SmallTabHeight = 48.dp
 private val LargeTabHeight = 72.dp
 private const val InactiveTabOpacity = 0.74f
-// TODO: b/123936606 (IR bug) prevents using constants in a closure
-private val MaxTitleLineCount = 2
+private const val MaxTitleLineCount = 2
 
 // Tab transition specifications
 private const val TabFadeInAnimationDuration = 150

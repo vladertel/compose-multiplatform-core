@@ -16,10 +16,12 @@ dependencies {
     kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
 
     implementation(KOTLIN_COMPOSE_COROUTINES)
+    implementation(KOTLIN_COMPOSE_REFLECT)
     implementation(KOTLIN_COMPOSE_STDLIB)
 
     implementation "androidx.activity:activity:1.0.0-alpha01"
     implementation "androidx.annotation:annotation:1.1.0"
+    implementation "androidx.preference:preference:1.1.0-rc01"
 
     implementation project(":compose:compose-runtime")
     implementation project(":ui:ui-core")
@@ -41,10 +43,10 @@ android {
 }
 
 androidx {
-    name = "Crane Material Composables"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    name = "Compose Material Demos"
+    publish = Publish.NONE
     mavenVersion = LibraryVersions.UI
     mavenGroup = LibraryGroups.UI
     inceptionYear = "2019"
-    description = "This is a temporary project for Material composables."
+    description = "This is a project for Material demos."
 }

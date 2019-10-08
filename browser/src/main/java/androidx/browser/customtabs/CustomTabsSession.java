@@ -67,12 +67,14 @@ public final class CustomTabsSession {
      */
     @VisibleForTesting
     @NonNull
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     public static CustomTabsSession createMockSessionForTesting(
             @NonNull ComponentName componentName) {
         return new CustomTabsSession(
                 null, new CustomTabsSessionToken.MockCallback(), componentName, null);
     }
 
+    @SuppressWarnings("NullAway") // TODO: b/141869399
     /* package */ CustomTabsSession(
             ICustomTabsService service, ICustomTabsCallback callback, ComponentName componentName,
             @Nullable PendingIntent sessionId) {
@@ -98,8 +100,10 @@ public final class CustomTabsSession {
      *                           {@link Bundle#putParcelable(String, android.os.Parcelable)}.
      * @return                   true for success.
      */
-    public boolean mayLaunchUrl(Uri url, Bundle extras, List<Bundle> otherLikelyBundles) {
-        addIdToBundle(extras);
+    @SuppressWarnings("NullAway") // TODO: b/141869399
+    public boolean mayLaunchUrl(@NonNull Uri url, @Nullable Bundle extras,
+            @Nullable List<Bundle> otherLikelyBundles) {
+        extras = createBundleWithId(extras);
         try {
             return mService.mayLaunchUrl(mCallback, url, extras, otherLikelyBundles);
         } catch (RemoteException e) {
@@ -190,12 +194,20 @@ public final class CustomTabsSession {
      *         here doesn't mean an origin has already been assigned as the validation is
      *         asynchronous.
      */
-    public boolean requestPostMessageChannel(Uri postMessageOrigin) {
-        Bundle extras = new Bundle();
-        addIdToBundle(extras);
+    public boolean requestPostMessageChannel(@NonNull Uri postMessageOrigin) {
         try {
-            return mService.requestPostMessageChannelWithExtras(
-                    mCallback, postMessageOrigin, extras);
+            // If mId is not null we know that the CustomTabsService supports
+            // requestPostMessageChannelWithExtras. That is because non-null mId means that
+            // CustomTabsSession was created with CustomTabsClient#newSession(Callback int), which
+            // can succeed only when browsers supporting CustomTabsService#newSessionWithExtras.
+            // This was added at the same time as requestPostMessageChannelWithExtras.
+            if (mId != null) {
+                return mService.requestPostMessageChannelWithExtras(
+                        mCallback, postMessageOrigin, createBundleWithId(null));
+            } else {
+                return mService.requestPostMessageChannel(mCallback, postMessageOrigin);
+            }
+
         } catch (RemoteException e) {
             return false;
         }
@@ -214,8 +226,8 @@ public final class CustomTabsSession {
      *        {@link CustomTabsService#RESULT_SUCCESS} if successful.
      */
     @Result
-    public int postMessage(String message, Bundle extras) {
-        addIdToBundle(extras);
+    public int postMessage(@NonNull String message, @Nullable Bundle extras) {
+        extras = createBundleWithId(extras);
         synchronized (mLock) {
             try {
                 return mService.postMessage(mCallback, message, extras);
@@ -251,10 +263,7 @@ public final class CustomTabsSession {
                 || relation > CustomTabsService.RELATION_HANDLE_ALL_URLS) {
             return false;
         }
-        if (extras == null) {
-            extras = new Bundle();
-        }
-        addIdToBundle(extras);
+        extras = createBundleWithId(extras);
         try {
             return mService.validateRelationship(mCallback, relation, origin, extras);
         } catch (RemoteException e) {
@@ -277,21 +286,22 @@ public final class CustomTabsSession {
      *                {@code CustomTabsService#FilePurpose}.
      * @param extras Reserved for future use.
      * @return {@code true} if the file was received successfully.
-     *
-     * @hide
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
     public boolean receiveFile(@NonNull Uri uri, @CustomTabsService.FilePurpose int purpose,
             @Nullable Bundle extras) {
-        if (extras == null) {
-            extras = new Bundle();
-        }
-        addIdToBundle(extras);
+        extras = createBundleWithId(extras);
         try {
             return mService.receiveFile(mCallback, uri, purpose, extras);
         } catch (RemoteException e) {
             return false;
         }
+    }
+
+    private Bundle createBundleWithId(@Nullable Bundle bundle) {
+        Bundle bundleWithId = new Bundle();
+        if (bundle != null) bundleWithId.putAll(bundle);
+        addIdToBundle(bundleWithId);
+        return bundleWithId;
     }
 
     private void addIdToBundle(Bundle bundle) {

@@ -26,6 +26,7 @@ import androidx.ui.input.DeleteSurroundingTextInCodePointsEditOp
 import androidx.ui.input.EditOperation
 import androidx.ui.input.FinishComposingTextEditOp
 import androidx.ui.input.InputEventListener
+import androidx.ui.input.InputState
 import androidx.ui.input.MoveCursorEditOp
 import androidx.ui.input.SetComposingRegionEditOp
 import androidx.ui.input.SetComposingTextEditOp
@@ -504,6 +505,32 @@ class RecordingInputConnectionTest {
     @Test
     fun key_event_right_up() {
         ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT))
+        verify(listener, never()).onEditOperations(any())
+    }
+
+    @Test
+    fun key_event_printablekey_down() {
+        val captor = argumentCaptor<List<EditOperation>>()
+        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_1))
+        verify(listener, times(1)).onEditOperations(captor.capture())
+
+        val editOps = captor.lastValue
+        assertEquals(1, editOps.size)
+        assertEquals(CommitTextEditOp("1", 1), editOps[0])
+    }
+
+    @Test
+    fun do_not_callback_empty_edit_ops() {
+        ic.beginBatchEdit()
+        ic.endBatchEdit()
+        verify(listener, never()).onEditOperations(any())
+    }
+
+    @Test
+    fun do_not_callback_if_only_readonly_ops() {
+        ic.beginBatchEdit()
+        ic.getSelectedText(1)
+        ic.endBatchEdit()
         verify(listener, never()).onEditOperations(any())
     }
 }

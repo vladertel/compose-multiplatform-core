@@ -27,13 +27,11 @@ plugins {
 
 dependencies {
     api("androidx.annotation:annotation:1.1.0")
-    implementation("androidx.core:core:1.1.0-rc01")
-    api("androidx.fragment:fragment:1.1.0-rc01")
-    api("androidx.recyclerview:recyclerview:1.1.0-beta01")
+    implementation("androidx.core:core:1.1.0")
+    api("androidx.fragment:fragment:1.1.0")
+    api(project(":recyclerview:recyclerview"))
     implementation("androidx.collection:collection:1.1.0")
 
-    androidTestImplementation(project(":appcompat"))
-    androidTestImplementation(project(":core:core"))
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
     androidTestImplementation(ANDROIDX_TEST_CORE)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
@@ -41,11 +39,12 @@ dependencies {
     androidTestImplementation(ESPRESSO_CORE, libs.exclude_for_espresso)
     androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
     androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
-    androidTestImplementation project(':internal-testutils'), {
+    androidTestImplementation(project(":internal-testutils-espresso"))
+    androidTestImplementation project(':internal-testutils-appcompat'), {
         exclude group: 'androidx.viewpager2', module: 'viewpager2'
     }
     androidTestImplementation(KOTLIN_STDLIB)
-    androidTestImplementation(project(":internal-testutils-ktx"))
+    androidTestImplementation(project(":internal-testutils-truth"))
 }
 
 android {

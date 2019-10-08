@@ -58,7 +58,6 @@ public class SystemJobScheduler implements Scheduler {
     private final Context mContext;
     private final JobScheduler mJobScheduler;
     private final WorkManagerImpl mWorkManager;
-    private final IdGenerator mIdGenerator;
     private final SystemJobInfoConverter mSystemJobInfoConverter;
 
     public SystemJobScheduler(@NonNull Context context, @NonNull WorkManagerImpl workManager) {
@@ -77,13 +76,13 @@ public class SystemJobScheduler implements Scheduler {
         mContext = context;
         mWorkManager = workManager;
         mJobScheduler = jobScheduler;
-        mIdGenerator = new IdGenerator(context);
         mSystemJobInfoConverter = systemJobInfoConverter;
     }
 
     @Override
     public void schedule(@NonNull WorkSpec... workSpecs) {
         WorkDatabase workDatabase = mWorkManager.getWorkDatabase();
+        IdGenerator idGenerator = new IdGenerator(workDatabase);
 
         for (WorkSpec workSpec : workSpecs) {
             workDatabase.beginTransaction();
@@ -114,7 +113,7 @@ public class SystemJobScheduler implements Scheduler {
                 SystemIdInfo info = workDatabase.systemIdInfoDao()
                         .getSystemIdInfo(workSpec.id);
 
-                int jobId = info != null ? info.systemId : mIdGenerator.nextJobSchedulerIdWithRange(
+                int jobId = info != null ? info.systemId : idGenerator.nextJobSchedulerIdWithRange(
                         mWorkManager.getConfiguration().getMinJobSchedulerId(),
                         mWorkManager.getConfiguration().getMaxJobSchedulerId());
 
@@ -153,7 +152,7 @@ public class SystemJobScheduler implements Scheduler {
                             nextJobId = jobIds.get(0);
                         } else {
                             // Create a new jobId
-                            nextJobId = mIdGenerator.nextJobSchedulerIdWithRange(
+                            nextJobId = idGenerator.nextJobSchedulerIdWithRange(
                                     mWorkManager.getConfiguration().getMinJobSchedulerId(),
                                     mWorkManager.getConfiguration().getMaxJobSchedulerId());
                         }
@@ -264,9 +263,7 @@ public class SystemJobScheduler implements Scheduler {
             List<JobInfo> jobs = getPendingJobs(context, jobScheduler);
             if (jobs != null && !jobs.isEmpty()) {
                 for (JobInfo jobInfo : jobs) {
-                    PersistableBundle extras = jobInfo.getExtras();
-                    //noinspection ConstantConditions
-                    if (extras == null || !extras.containsKey(EXTRA_WORK_SPEC_ID)) {
+                    if (getWorkSpecIdFromJobInfo(jobInfo) == null) {
                         cancelJobById(jobScheduler, jobInfo.getId());
                     }
                 }
@@ -312,7 +309,6 @@ public class SystemJobScheduler implements Scheduler {
      * For reference: b/133556574, b/133556809, b/133556535
      */
     @Nullable
-    @SuppressWarnings("ConstantConditions")
     private static List<Integer> getPendingJobIds(
             @NonNull Context context,
             @NonNull JobScheduler jobScheduler,
@@ -327,14 +323,25 @@ public class SystemJobScheduler implements Scheduler {
         List<Integer> jobIds = new ArrayList<>(2);
 
         for (JobInfo jobInfo : jobs) {
-            PersistableBundle extras = jobInfo.getExtras();
-            if (extras != null && extras.containsKey(EXTRA_WORK_SPEC_ID)) {
-                if (workSpecId.equals(extras.getString(EXTRA_WORK_SPEC_ID))) {
-                    jobIds.add(jobInfo.getId());
-                }
+            if (workSpecId.equals(getWorkSpecIdFromJobInfo(jobInfo))) {
+                jobIds.add(jobInfo.getId());
             }
         }
 
         return jobIds;
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    private static @Nullable String getWorkSpecIdFromJobInfo(@NonNull JobInfo jobInfo) {
+        PersistableBundle extras = jobInfo.getExtras();
+        try {
+            if (extras != null && extras.containsKey(EXTRA_WORK_SPEC_ID)) {
+                return extras.getString(EXTRA_WORK_SPEC_ID);
+            }
+        } catch (NullPointerException e) {
+            // b/138364061: BaseBundle.mMap seems to be null in some cases here.  Ignore and return
+            // null.
+        }
+        return null;
     }
 }

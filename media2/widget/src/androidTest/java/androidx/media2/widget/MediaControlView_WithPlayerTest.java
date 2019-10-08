@@ -23,6 +23,7 @@ import static androidx.test.espresso.matcher.RootMatchers.isPlatformPopup;
 import static androidx.test.espresso.matcher.ViewMatchers.isClickable;
 import static androidx.test.espresso.matcher.ViewMatchers.isCompletelyDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
+import static androidx.test.espresso.matcher.ViewMatchers.isEnabled;
 import static androidx.test.espresso.matcher.ViewMatchers.withContentDescription;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
@@ -43,7 +44,6 @@ import androidx.media2.common.MediaMetadata;
 import androidx.media2.common.SessionPlayer;
 import androidx.media2.common.SessionPlayer.TrackInfo;
 import androidx.media2.session.MediaController;
-import androidx.media2.widget.test.R;
 import androidx.test.filters.LargeTest;
 import androidx.test.rule.ActivityTestRule;
 
@@ -89,10 +89,11 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
     @Before
     public void setup() throws Throwable {
         mActivity = mActivityRule.getActivity();
-        mMediaControlView = mActivity.findViewById(R.id.mediacontrolview);
+        mMediaControlView = mActivity.findViewById(
+                androidx.media2.widget.test.R.id.mediacontrolview);
 
         Uri fileSchemeUri = Uri.parse("android.resource://" + mContext.getPackageName() + "/"
-                + R.raw.test_file_scheme_video);
+                + androidx.media2.widget.test.R.raw.test_file_scheme_video);
         mFileSchemeMediaItem = createTestMediaItem(fileSchemeUri);
 
         setKeepScreenOn(mActivityRule);
@@ -125,7 +126,7 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
                     latchForPlayingState.countDown();
                 }
             }
-        }, mFileSchemeMediaItem);
+        }, mFileSchemeMediaItem, null);
         setPlayerWrapper(playerWrapper);
         assertTrue(latchForPausedState.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
         onView(allOf(withId(R.id.pause), isCompletelyDisplayed()))
@@ -162,7 +163,7 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
                 }
                 mState = state;
             }
-        }, mFileSchemeMediaItem);
+        }, mFileSchemeMediaItem, null);
         assertTrue(latchForPreparedState.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
         playerWrapper.play();
         assertTrue(latchForPlayingState.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
@@ -178,19 +179,20 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
     @Test
     public void testSetPlayerAndController_MultipleTimes() throws Throwable {
         DefaultPlayerCallback callback1 = new DefaultPlayerCallback();
-        PlayerWrapper wrapper1 = createPlayerWrapper(callback1, mFileSchemeMediaItem);
+        PlayerWrapper wrapper1 = createPlayerWrapper(callback1, mFileSchemeMediaItem, null);
         assertTrue(callback1.mPausedLatch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
 
         DefaultPlayerCallback callback2 = new DefaultPlayerCallback();
-        PlayerWrapper wrapper2 = createPlayerWrapperOfPlayer(callback2, mFileSchemeMediaItem);
+        PlayerWrapper wrapper2 = createPlayerWrapperOfPlayer(callback2, mFileSchemeMediaItem, null);
         assertTrue(callback2.mPausedLatch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
 
         DefaultPlayerCallback callback3 = new DefaultPlayerCallback();
-        PlayerWrapper wrapper3 = createPlayerWrapperOfController(callback3, mFileSchemeMediaItem);
+        PlayerWrapper wrapper3 = createPlayerWrapperOfController(callback3, mFileSchemeMediaItem,
+                null);
         assertTrue(callback3.mPausedLatch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
 
         DefaultPlayerCallback callback4 = new DefaultPlayerCallback();
-        PlayerWrapper wrapper4 = createPlayerWrapper(callback4, mFileSchemeMediaItem);
+        PlayerWrapper wrapper4 = createPlayerWrapper(callback4, mFileSchemeMediaItem, null);
         assertTrue(callback4.mPausedLatch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
 
         setPlayerWrapper(wrapper1);
@@ -243,7 +245,7 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
                     latchForPausedState.countDown();
                 }
             }
-        }, mFileSchemeMediaItem);
+        }, mFileSchemeMediaItem, null);
         setPlayerWrapper(playerWrapper);
         assertTrue(latchForPausedState.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
         onView(allOf(withId(R.id.ffwd), isCompletelyDisplayed())).perform(click());
@@ -284,7 +286,7 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
             private boolean equalsSeekPosition(long expected, long actual, long delta) {
                 return (actual < expected + delta) && (actual > expected - delta);
             }
-        }, mFileSchemeMediaItem);
+        }, mFileSchemeMediaItem, null);
         setPlayerWrapper(playerWrapper);
         assertTrue(latchForFfwd.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
         onView(allOf(withId(R.id.rew), isCompletelyDisplayed())).perform(click());
@@ -292,12 +294,55 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
     }
 
     @Test
+    public void testPrevNextButtonClick() throws Throwable {
+        DefaultPlayerCallback callback = new DefaultPlayerCallback();
+        final List<MediaItem> playlist = createTestPlaylist();
+        final PlayerWrapper playerWrapper = createPlayerWrapper(callback, null, playlist);
+        setPlayerWrapper(playerWrapper);
+
+        assertTrue(callback.mItemLatch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
+        assertEquals(0, playerWrapper.getCurrentMediaItemIndex());
+        onView(allOf(withId(R.id.prev), isCompletelyDisplayed()))
+                .check(matches(not(isEnabled())));
+        onView(allOf(withId(R.id.next), isCompletelyDisplayed())).check(matches(isEnabled()));
+        callback.mItemLatch = new CountDownLatch(1);
+        onView(allOf(withId(R.id.next), isCompletelyDisplayed())).perform(click());
+
+        assertTrue(callback.mItemLatch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
+        assertEquals(1, playerWrapper.getCurrentMediaItemIndex());
+        onView(allOf(withId(R.id.prev), isCompletelyDisplayed())).check(matches(isEnabled()));
+        onView(allOf(withId(R.id.next), isCompletelyDisplayed())).check(matches(isEnabled()));
+        callback.mItemLatch = new CountDownLatch(1);
+        onView(allOf(withId(R.id.next), isCompletelyDisplayed())).perform(click());
+
+        assertTrue(callback.mItemLatch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
+        assertEquals(2, playerWrapper.getCurrentMediaItemIndex());
+        onView(allOf(withId(R.id.prev), isCompletelyDisplayed())).check(matches(isEnabled()));
+        onView(allOf(withId(R.id.next), isCompletelyDisplayed()))
+                .check(matches(not(isEnabled())));
+        callback.mItemLatch = new CountDownLatch(1);
+        onView(allOf(withId(R.id.prev), isCompletelyDisplayed())).perform(click());
+
+        assertTrue(callback.mItemLatch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
+        assertEquals(1, playerWrapper.getCurrentMediaItemIndex());
+        onView(allOf(withId(R.id.prev), isCompletelyDisplayed())).check(matches(isEnabled()));
+        onView(allOf(withId(R.id.next), isCompletelyDisplayed())).check(matches(isEnabled()));
+    }
+
+    @Test
     public void testSetMetadataForNonMusicFile() throws Throwable {
         final String title = "BigBuckBunny";
         final CountDownLatch latch = new CountDownLatch(1);
-        final MediaMetadata metadata = new MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_TITLE, title).build();
+
+        MediaMetadata existingMetadata = mFileSchemeMediaItem.getMetadata();
+        MediaMetadata.Builder metadataBuilder = existingMetadata == null
+                ? new MediaMetadata.Builder()
+                : new MediaMetadata.Builder(existingMetadata);
+        MediaMetadata metadata = metadataBuilder
+                .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                .build();
         mFileSchemeMediaItem.setMetadata(metadata);
+
         final PlayerWrapper playerWrapper = createPlayerWrapper(new PlayerWrapper.PlayerCallback() {
             @Override
             public void onCurrentMediaItemChanged(@NonNull PlayerWrapper player,
@@ -308,7 +353,7 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
                     latch.countDown();
                 }
             }
-        }, mFileSchemeMediaItem);
+        }, mFileSchemeMediaItem, null);
         setPlayerWrapper(playerWrapper);
         assertTrue(latch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
         onView(withId(R.id.title_text)).check(matches(withText(title)));
@@ -317,17 +362,21 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
     @Test
     public void testButtonVisibilityForMusicFile() throws Throwable {
         Uri uri = Uri.parse("android.resource://" + mContext.getPackageName() + "/"
-                + R.raw.test_music);
+                + androidx.media2.widget.test.R.raw.test_music);
         final MediaItem uriMediaItem = createTestMediaItem(uri);
 
         final CountDownLatch latch = new CountDownLatch(1);
         final PlayerWrapper playerWrapper = createPlayerWrapper(new PlayerWrapper.PlayerCallback() {
             @Override
-            public void onTrackInfoChanged(@NonNull PlayerWrapper player,
-                    @NonNull List<TrackInfo> trackInfos) {
+            void onTracksChanged(@NonNull PlayerWrapper player, @NonNull List<TrackInfo> tracks) {
+                assertNotNull(tracks);
+                if (tracks.isEmpty()) {
+                    // This callback can be called before tracks are available after setMediaItem
+                    return;
+                }
                 latch.countDown();
             }
-        }, uriMediaItem);
+        }, uriMediaItem, null);
         setPlayerWrapper(playerWrapper);
         assertTrue(latch.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
         onView(withId(R.id.subtitle)).check(matches(not(isDisplayed())));
@@ -336,7 +385,7 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
     @Test
     public void testUpdateAndSelectSubtitleTrack() throws Throwable {
         Uri uri = Uri.parse("android.resource://" + mContext.getPackageName() + "/"
-                + R.raw.testvideo_with_2_subtitle_tracks);
+                + androidx.media2.widget.test.R.raw.testvideo_with_2_subtitle_tracks);
 
         final String subtitleTrackOffText = mContext.getResources().getString(
                 R.string.MediaControlView_subtitle_off_text);
@@ -360,14 +409,13 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
             }
 
             @Override
-            public void onTrackInfoChanged(@NonNull PlayerWrapper player,
-                    @NonNull List<TrackInfo> trackInfos) {
+            void onTracksChanged(@NonNull PlayerWrapper player, @NonNull List<TrackInfo> tracks) {
                 if (mFirstSubtitleTrack != null) {
                     return;
                 }
-                assertNotNull(trackInfos);
-                for (int i = 0; i < trackInfos.size(); i++) {
-                    TrackInfo trackInfo = trackInfos.get(i);
+                assertNotNull(tracks);
+                for (int i = 0; i < tracks.size(); i++) {
+                    TrackInfo trackInfo = tracks.get(i);
                     if (trackInfo.getTrackType() == TrackInfo.MEDIA_TRACK_TYPE_SUBTITLE) {
                         mFirstSubtitleTrack = trackInfo;
                         latchForTrackUpdate.countDown();
@@ -389,7 +437,7 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
                 assertEquals(mFirstSubtitleTrack, trackInfo);
                 latchForSubtitleDeselect.countDown();
             }
-        }, mediaItem);
+        }, mediaItem, null);
         setPlayerWrapper(playerWrapper);
         assertTrue(latchForReady.await(WAIT_TIME_MS, TimeUnit.MILLISECONDS));
         // MediaPlayer needs a surface to be set in order to produce subtitle tracks
@@ -424,11 +472,12 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
                     latchForPlayingState.countDown();
                 }
             }
-        }, mFileSchemeMediaItem);
+        }, mFileSchemeMediaItem, null);
         mActivityRule.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                ViewGroup layout = mActivity.findViewById(R.id.framelayout);
+                ViewGroup layout = mActivity.findViewById(
+                        androidx.media2.widget.test.R.id.framelayout);
                 layout.removeView(mMediaControlView);
                 mMediaControlView = new MediaControlView(mActivity);
                 if (playerWrapper.mPlayer != null) {
@@ -463,7 +512,7 @@ public class MediaControlView_WithPlayerTest extends MediaWidgetTestBase {
     }
 
     private PlayerWrapper createPlayerWrapper(@NonNull PlayerWrapper.PlayerCallback callback,
-            @Nullable MediaItem item) {
-        return createPlayerWrapperOfType(callback, item, mPlayerType);
+            @Nullable MediaItem item, @Nullable List<MediaItem> playlist) {
+        return createPlayerWrapperOfType(callback, item, playlist, mPlayerType);
     }
 }

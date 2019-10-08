@@ -26,11 +26,14 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.CamcorderProfile;
 import android.os.Build;
+import android.util.Pair;
 import android.util.Rational;
 import android.util.Size;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import androidx.annotation.Nullable;
+import androidx.camera.core.AspectRatio;
 import androidx.camera.core.CameraDeviceConfig;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraX;
@@ -43,6 +46,7 @@ import androidx.camera.core.SurfaceConfig.ConfigType;
 import androidx.camera.core.SurfaceSizeDefinition;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.UseCaseConfig;
+import androidx.core.util.Preconditions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,6 +73,11 @@ final class SupportedSurfaceCombination {
     private static final Size QUALITY_1080P_SIZE = new Size(1920, 1080);
     private static final Size QUALITY_720P_SIZE = new Size(1280, 720);
     private static final Size QUALITY_480P_SIZE = new Size(720, 480);
+    private static final int ALIGN16 = 16;
+    private static final Rational ASPECT_RATIO_4_3 = new Rational(4, 3);
+    private static final Rational ASPECT_RATIO_3_4 = new Rational(3, 4);
+    private static final Rational ASPECT_RATIO_16_9 = new Rational(16, 9);
+    private static final Rational ASPECT_RATIO_9_16 = new Rational(9, 16);
     private final List<SurfaceCombination> mSurfaceCombinations = new ArrayList<>();
     private final Map<Integer, Size> mMaxSizeCache = new HashMap<>();
     private String mCameraId;
@@ -204,10 +213,10 @@ final class SupportedSurfaceCombination {
                     CameraDeviceConfig config = (CameraDeviceConfig) useCase.getUseCaseConfig();
                     String useCaseCameraId;
                     try {
-                        useCaseCameraId = CameraX.getCameraWithLensFacing(config.getLensFacing());
-                    } catch (Exception e) {
+                        useCaseCameraId = CameraX.getCameraWithCameraDeviceConfig(config);
+                    } catch (CameraInfoUnavailableException e) {
                         throw new IllegalArgumentException(
-                                "Unable to get camera ID for use case " + useCase.getName(), e);
+                                "Unable to get camera id for the camera device config.", e);
                     }
                     Size resolution = useCase.getAttachedSurfaceResolution(useCaseCameraId);
 
@@ -319,7 +328,7 @@ final class SupportedSurfaceCombination {
 
     private List<Size> getSupportedOutputSizes(UseCase useCase) {
         int imageFormat = useCase.getImageFormat();
-        Size[] outputSizes = getAllOutputSizesByFormat(imageFormat);
+        Size[] outputSizes = getAllOutputSizesByFormat(imageFormat, useCase);
         List<Size> outputSizeCandidates = new ArrayList<>();
         ImageOutputConfig config = (ImageOutputConfig) useCase.getUseCaseConfig();
         Size maxSize = config.getMaxResolution(getMaxOutputSizeByFormat(imageFormat));
@@ -328,10 +337,17 @@ final class SupportedSurfaceCombination {
         // result.
         Arrays.sort(outputSizes, new CompareSizesByArea(true));
 
-        // Filter out the ones that exceed the maximum size
+        // Get the minimum size according to min(DEFAULT_SIZE, TARGET_RESOLUTION).
+        Size targetSize = config.getTargetResolution(ZERO_SIZE);
+        Size minSize = DEFAULT_SIZE;
+        if (!targetSize.equals(ZERO_SIZE) && getArea(targetSize) < getArea(DEFAULT_SIZE)) {
+            minSize = targetSize;
+        }
+
+        // Filter out the ones that exceed the maximum size and the minimum size.
         for (Size outputSize : outputSizes) {
-            if (outputSize.getWidth() * outputSize.getHeight()
-                    <= maxSize.getWidth() * maxSize.getHeight()) {
+            if (getArea(outputSize) <= getArea(maxSize)
+                    && getArea(outputSize) >= getArea(minSize)) {
                 outputSizeCandidates.add(outputSize);
             }
         }
@@ -342,55 +358,69 @@ final class SupportedSurfaceCombination {
                             + imageFormat);
         }
 
-        // Check whether the desired default resolution is included in the original supported list
-        boolean isDefaultResolutionSupported = outputSizeCandidates.contains(DEFAULT_SIZE);
-
-        // If the target resolution is set, use it to find the minimum one from big enough items
-        Size targetSize = config.getTargetResolution(ZERO_SIZE);
-
-        if (!targetSize.equals(ZERO_SIZE)) {
-            int indexBigEnough = 0;
-
-            // Get the index of the item that is big enough for the view size
-            for (int i = 0; i < outputSizeCandidates.size(); i++) {
-                Size outputSize = outputSizeCandidates.get(i);
-                if (outputSize.getWidth() * outputSize.getHeight()
-                        >= targetSize.getWidth() * targetSize.getHeight()) {
-                    indexBigEnough = i;
-                } else {
-                    break;
-                }
-            }
-
-            // Remove the additional items that is larger than the big enough item
-            outputSizeCandidates.subList(0, indexBigEnough).clear();
-        }
-
-        if (outputSizeCandidates.isEmpty() && !isDefaultResolutionSupported) {
-            throw new IllegalArgumentException(
-                    "Can not get supported output size for the desired output size quality for "
-                            + "the format: "
-                            + imageFormat);
-        }
-
         // Rearrange the supported size to put the ones with the same aspect ratio in the front
         // of the list and put others in the end from large to small. Some low end devices may
         // not able to get an supported resolution that match the preferred aspect ratio.
         List<Size> sizesMatchAspectRatio = new ArrayList<>();
         List<Size> sizesNotMatchAspectRatio = new ArrayList<>();
 
-        Rational aspectRatio = config.getTargetAspectRatio(null);
-        int targetRotation = config.getTargetRotation(Surface.ROTATION_0);
-        aspectRatio = rotateAspectRatioByRotation(aspectRatio, targetRotation);
+        Rational aspectRatio = null;
+        AspectRatio targetAspectRatio = config.getTargetAspectRatio(null);
+        if (targetAspectRatio != null) {
+            // Checks the sensor orientation.
+            boolean isSensorLandscapeOrientation = isRotationNeeded(Surface.ROTATION_0);
+            switch (targetAspectRatio) {
+                case RATIO_4_3:
+                    aspectRatio =
+                            isSensorLandscapeOrientation ? ASPECT_RATIO_4_3 : ASPECT_RATIO_3_4;
+                    break;
+                case RATIO_16_9:
+                    aspectRatio =
+                            isSensorLandscapeOrientation ? ASPECT_RATIO_16_9 : ASPECT_RATIO_9_16;
+                    break;
+                default:
+                    // Unhandled event.
+            }
+        } else {
+            aspectRatio = config.getTargetAspectRatioCustom(null);
+            int targetRotation = config.getTargetRotation(Surface.ROTATION_0);
+            aspectRatio = rotateAspectRatioByRotation(aspectRatio, targetRotation);
+        }
 
         for (Size outputSize : outputSizeCandidates) {
             // If target aspect ratio is set, moves the matched results to the front of the list.
-            if (aspectRatio != null && aspectRatio.equals(
-                    new Rational(outputSize.getWidth(), outputSize.getHeight()))) {
+            if (hasMatchingAspectRatio(outputSize, aspectRatio)) {
                 sizesMatchAspectRatio.add(outputSize);
             } else {
                 sizesNotMatchAspectRatio.add(outputSize);
             }
+        }
+
+        // Sort not matched results by how close they are to the target aspect ratio.
+        if (aspectRatio != null) {
+            Collections.sort(sizesNotMatchAspectRatio,
+                    new CompareSizesByDistanceToTargetRatio(aspectRatio.floatValue()));
+        }
+
+        // Check whether the desired default resolution is included in the original supported list
+        boolean isDefaultResolutionSupported = outputSizeCandidates.contains(DEFAULT_SIZE);
+
+        // Check the default resolution if the target resolution is not set
+        targetSize = (targetSize.equals(ZERO_SIZE)) ? config.getDefaultResolution(ZERO_SIZE)
+                : targetSize;
+
+        // If the target resolution is set, use it to find the minimum one from big enough items
+        if (!targetSize.equals(ZERO_SIZE)) {
+            removeSupportedSizesByTargetSize(sizesMatchAspectRatio, targetSize);
+            removeSupportedSizesByTargetSize(sizesNotMatchAspectRatio, targetSize);
+        }
+
+        if (sizesMatchAspectRatio.isEmpty() && sizesNotMatchAspectRatio.isEmpty()
+                && !isDefaultResolutionSupported) {
+            throw new IllegalArgumentException(
+                    "Can not get supported output size for the desired output size quality for "
+                            + "the format: "
+                            + imageFormat);
         }
 
         List<Size> supportedResolutions = new ArrayList<>();
@@ -399,8 +429,7 @@ final class SupportedSurfaceCombination {
         supportedResolutions.addAll(sizesNotMatchAspectRatio);
 
         // If there is no available size for the conditions and default resolution is in the
-        // supported
-        // list, return the default resolution.
+        // supported list, return the default resolution.
         if (supportedResolutions.isEmpty() && !isDefaultResolutionSupported) {
             supportedResolutions.add(DEFAULT_SIZE);
         }
@@ -411,6 +440,16 @@ final class SupportedSurfaceCombination {
     // Use target rotation to calibrate the aspect ratio.
     private Rational rotateAspectRatioByRotation(Rational aspectRatio, int targetRotation) {
         Rational outputRatio = aspectRatio;
+        // Calibrates the aspect ratio with the display and sensor rotation degrees values.
+        // Otherwise, retrieves default aspect ratio for the target use case.
+        if (aspectRatio != null && isRotationNeeded(targetRotation)) {
+            outputRatio = new Rational(aspectRatio.getDenominator(),
+                    aspectRatio.getNumerator());
+        }
+        return outputRatio;
+    }
+
+    private boolean isRotationNeeded(int targetRotation) {
         int sensorRotationDegrees;
         try {
             sensorRotationDegrees = CameraX.getCameraInfo(mCameraId).getSensorRotationDegrees(
@@ -418,13 +457,76 @@ final class SupportedSurfaceCombination {
         } catch (CameraInfoUnavailableException e) {
             throw new IllegalArgumentException("Unable to retrieve camera sensor orientation.", e);
         }
-        // Calibrates the aspect ratio with the display and sensor rotation degrees values.
-        // Otherwise, retrieves default aspect ratio for the target use case.
-        if (aspectRatio != null && (sensorRotationDegrees == 90 || sensorRotationDegrees == 270)) {
-            outputRatio = new Rational(aspectRatio.getDenominator(),
-                    aspectRatio.getNumerator());
+        return sensorRotationDegrees == 90 || sensorRotationDegrees == 270;
+    }
+
+    private boolean hasMatchingAspectRatio(Size resolution, Rational aspectRatio) {
+        boolean isMatch;
+        if (aspectRatio == null) {
+            isMatch = false;
+        } else if (aspectRatio.equals(
+                new Rational(resolution.getWidth(), resolution.getHeight()))) {
+            isMatch = true;
+        } else {
+            isMatch = isPossibleMod16FromAspectRatio(resolution, aspectRatio);
         }
-        return outputRatio;
+        return isMatch;
+    }
+
+    private boolean isPossibleMod16FromAspectRatio(Size resolution, Rational aspectRatio) {
+        int width = resolution.getWidth();
+        int height = resolution.getHeight();
+        Rational invAspectRatio = new Rational(aspectRatio.getDenominator(),
+                aspectRatio.getNumerator());
+        if (width % 16 == 0 && height % 16 == 0) {
+            return ratioIntersectsMod16Segment(Math.max(0, height - ALIGN16), width, aspectRatio)
+                    || ratioIntersectsMod16Segment(Math.max(0, width - ALIGN16), height,
+                    invAspectRatio);
+        } else if (width % 16 == 0) {
+            return ratioIntersectsMod16Segment(height, width, aspectRatio);
+        } else if (height % 16 == 0) {
+            return ratioIntersectsMod16Segment(width, height, invAspectRatio);
+        }
+        return false;
+    }
+
+    private int getArea(Size size) {
+        return size.getWidth() * size.getHeight();
+    }
+
+    private boolean ratioIntersectsMod16Segment(int height, int mod16Width, Rational aspectRatio) {
+        Preconditions.checkArgument(mod16Width % 16 == 0);
+        double aspectRatioWidth =
+                height * aspectRatio.getNumerator() / (double) aspectRatio.getDenominator();
+        return aspectRatioWidth > Math.max(0, mod16Width - ALIGN16) && aspectRatioWidth < (
+                mod16Width + ALIGN16);
+    }
+
+    private void removeSupportedSizesByTargetSize(List<Size> supportedSizesList,
+            Size targetSize) {
+        if (supportedSizesList != null && supportedSizesList.size() != 0) {
+            int indexBigEnough = 0;
+            // Get the index of the item that is big enough for the view size in matched list
+            for (int i = 0; i < supportedSizesList.size(); i++) {
+                Size outputSize = supportedSizesList.get(i);
+                if (getArea(outputSize) >= getArea(targetSize)) {
+                    indexBigEnough = i;
+                } else {
+                    break;
+                }
+            }
+
+            Size bigEnoughSize = supportedSizesList.get(indexBigEnough);
+            List<Size> removeSizes = new ArrayList<>();
+            for (Size size : supportedSizesList) {
+                if (getArea(size) > getArea(bigEnoughSize)) {
+                    removeSizes.add(size);
+                }
+            }
+
+            // Remove the additional items that is larger than the big enough item
+            supportedSizesList.removeAll(removeSizes);
+        }
     }
 
     private List<List<Size>> getAllPossibleSizeArrangements(
@@ -480,32 +582,58 @@ final class SupportedSurfaceCombination {
         return allPossibleSizeArrangements;
     }
 
+    @Nullable
     private Size[] getAllOutputSizesByFormat(int imageFormat) {
-        if (mCharacteristics == null) {
-            throw new IllegalStateException("CameraCharacteristics is null.");
+        return getAllOutputSizesByFormat(imageFormat, null);
+    }
+
+    @Nullable
+    private Size[] getAllOutputSizesByFormat(int imageFormat, @Nullable UseCase useCase) {
+        Size[] outputSizes = null;
+
+        // Try to retrieve customized supported resolutions from config.
+        List<Pair<Integer, Size[]>> formatResolutionsPairList = null;
+
+        if (useCase != null) {
+            ImageOutputConfig imageOutputConfig = (ImageOutputConfig) useCase.getUseCaseConfig();
+
+            formatResolutionsPairList = imageOutputConfig.getSupportedResolutions(null);
         }
 
-        StreamConfigurationMap map =
-                mCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-
-        if (map == null) {
-            throw new IllegalArgumentException(
-                    "Can not get supported output size for the format: " + imageFormat);
+        if (formatResolutionsPairList != null) {
+            for (Pair<Integer, Size[]> formatResolutionPair : formatResolutionsPairList) {
+                if (formatResolutionPair.first == imageFormat) {
+                    outputSizes = formatResolutionPair.second;
+                    break;
+                }
+            }
         }
 
-        Size[] outputSizes;
-        if (Build.VERSION.SDK_INT < 23
-                && imageFormat == ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE) {
-            // This is a little tricky that 0x22 that is internal defined in
-            // StreamConfigurationMap.java
-            // to be equal to ImageFormat.PRIVATE that is public after Android level 23 but not
-            // public in
-            // Android L. Use {@link SurfaceTexture} or {@link MediaCodec} will finally mapped to
-            // 0x22 in
-            // StreamConfigurationMap to retrieve the output sizes information.
-            outputSizes = map.getOutputSizes(SurfaceTexture.class);
-        } else {
-            outputSizes = map.getOutputSizes(imageFormat);
+        // Try to retrieve supported resolutions if there is no customization.
+        if (outputSizes == null) {
+            if (mCharacteristics == null) {
+                throw new IllegalStateException("CameraCharacteristics is null.");
+            }
+
+            StreamConfigurationMap map =
+                    mCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+            if (map == null) {
+                throw new IllegalArgumentException(
+                        "Can not get supported output size for the format: " + imageFormat);
+            }
+
+            if (Build.VERSION.SDK_INT < 23
+                    && imageFormat == ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE) {
+                // This is a little tricky that 0x22 that is internal defined in
+                // StreamConfigurationMap.java to be equal to ImageFormat.PRIVATE that is public
+                // after Android level 23 but not public in Android L. Use {@link SurfaceTexture}
+                // or {@link MediaCodec} will finally mapped to 0x22 in StreamConfigurationMap to
+                // retrieve the output sizes information.
+                outputSizes = map.getOutputSizes(SurfaceTexture.class);
+            } else {
+                outputSizes = map.getOutputSizes(imageFormat);
+            }
         }
 
         if (outputSizes == null) {
@@ -1016,6 +1144,28 @@ final class SupportedSurfaceCombination {
                 result *= -1;
             }
 
+            return result;
+        }
+    }
+
+    /** Comparator based on how close they are to the target aspect ratio. */
+    static final class CompareSizesByDistanceToTargetRatio implements Comparator<Size> {
+        private Float mTargetRatio;
+
+        CompareSizesByDistanceToTargetRatio(Float targetRatio) {
+            mTargetRatio = targetRatio;
+        }
+
+        @Override
+        public int compare(Size lhs, Size rhs) {
+
+            final Float lhsRatio = lhs.getWidth() * 1.0f / lhs.getHeight();
+            final Float rhsRatio = rhs.getWidth() * 1.0f / rhs.getHeight();
+
+            final Float lhsRatioDelta = Math.abs(lhsRatio - mTargetRatio);
+            final Float rhsRatioDelta = Math.abs(rhsRatio - mTargetRatio);
+
+            int result = (int) Math.signum(lhsRatioDelta - rhsRatioDelta);
             return result;
         }
     }

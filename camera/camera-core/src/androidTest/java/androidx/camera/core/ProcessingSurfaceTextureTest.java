@@ -28,7 +28,6 @@ import android.util.Size;
 import android.view.Surface;
 
 import androidx.annotation.RequiresApi;
-import androidx.camera.testing.HandlerUtil;
 import androidx.camera.testing.fakes.FakeCameraCaptureResult;
 import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
@@ -41,11 +40,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @SmallTest
 @RunWith(AndroidJUnit4.class)
@@ -104,17 +102,6 @@ public final class ProcessingSurfaceTextureTest {
     }
 
     @Test
-    public void resetCreatesNewSurfaceTexture() {
-        ProcessingSurfaceTexture processingSurfaceTexture = createProcessingSurfaceTexture();
-
-        SurfaceTexture surfaceTextureBefore = processingSurfaceTexture.getSurfaceTexture();
-        processingSurfaceTexture.resetSurfaceTexture();
-
-        assertThat(processingSurfaceTexture.getSurfaceTexture()).isNotSameInstanceAs(
-                surfaceTextureBefore);
-    }
-
-    @Test
     public void validInputSurface() throws ExecutionException, InterruptedException {
         ProcessingSurfaceTexture processingSurfaceTexture = createProcessingSurfaceTexture();
 
@@ -125,26 +112,27 @@ public final class ProcessingSurfaceTextureTest {
 
     @Test
     @SdkSuppress(minSdkVersion = 28)
-    public void writingToSurface() throws ExecutionException, InterruptedException {
+    public void writeToInputSurface_outputSurfaceReceivesFrame() throws ExecutionException,
+            InterruptedException {
+        // Arrange.
         ProcessingSurfaceTexture processingSurfaceTexture = createProcessingSurfaceTexture();
         SurfaceTexture outputSurface = processingSurfaceTexture.getSurfaceTexture();
 
-        final AtomicBoolean mFrameReceived = new AtomicBoolean(false);
-
+        final Semaphore frameReceivedSemaphore = new Semaphore(0);
         outputSurface.setOnFrameAvailableListener(
                 new SurfaceTexture.OnFrameAvailableListener() {
                     @Override
                     public void onFrameAvailable(SurfaceTexture surfaceTexture) {
-                        mFrameReceived.set(true);
+                        frameReceivedSemaphore.release();
                     }
                 },
                 mBackgroundHandler);
 
+        // Act: Send one frame to processingSurfaceTexture.
         triggerImage(processingSurfaceTexture, 1);
 
-        HandlerUtil.waitForLooperToIdle(mBackgroundHandler);
-
-        assertThat(mFrameReceived.get()).isTrue();
+        // Assert: verify that the frame has been received or time-out after 1 second.
+        assertThat(frameReceivedSemaphore.tryAcquire(1, TimeUnit.SECONDS)).isTrue();
     }
 
     ProcessingSurfaceTexture createProcessingSurfaceTexture() {
@@ -178,30 +166,20 @@ public final class ProcessingSurfaceTextureTest {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void getSurfaceTextureThrowsExceptionWhenClosed() {
+    public void getSurfaceTextureThrowsExceptionWhenReleased() {
         ProcessingSurfaceTexture processingSurfaceTexture = createProcessingSurfaceTexture();
 
-        processingSurfaceTexture.close();
+        processingSurfaceTexture.release();
 
         // Exception should be thrown here
         processingSurfaceTexture.getSurfaceTexture();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void resetSurfaceTextureThrowsExceptionWhenClosed() {
+    public void getCameraCaptureCallbackThrowsExceptionWhenReleased() {
         ProcessingSurfaceTexture processingSurfaceTexture = createProcessingSurfaceTexture();
 
-        processingSurfaceTexture.close();
-
-        // Exception should be thrown here
-        processingSurfaceTexture.resetSurfaceTexture();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void getCameraCaptureCallbackThrowsExceptionWhenClosed() {
-        ProcessingSurfaceTexture processingSurfaceTexture = createProcessingSurfaceTexture();
-
-        processingSurfaceTexture.close();
+        processingSurfaceTexture.release();
 
         // Exception should be thrown here
         processingSurfaceTexture.getCameraCaptureCallback();

@@ -40,6 +40,7 @@ import androidx.media2.common.MediaMetadata;
 import androidx.media2.session.MediaBrowser.BrowserCallback;
 import androidx.media2.session.MediaLibraryService.LibraryParams;
 import androidx.media2.session.MockMediaBrowserServiceCompat.Proxy;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -47,6 +48,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +59,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Tests {@link MediaBrowser} with {@link MediaBrowserServiceCompat}.
  */
+@RunWith(AndroidJUnit4.class)
 @LargeTest
 public class MediaBrowserLegacyTest extends MediaSessionTestBase {
     private static final String TAG = "MediaBrowserLegacyTest";
@@ -170,7 +173,7 @@ public class MediaBrowserLegacyTest extends MediaSessionTestBase {
             public BrowserRoot onGetRoot(String clientPackageName, int clientUid,
                     Bundle rootHints) {
                 assertEquals(mContext.getPackageName(), clientPackageName);
-                if (rootHints.keySet().contains(testMediaId)) {
+                if (rootHints != null && rootHints.keySet().contains(testMediaId)) {
                     // This should happen because getLibraryRoot() is called with testExtras.
                     return browserRootWithParam;
                 }

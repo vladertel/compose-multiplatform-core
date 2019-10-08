@@ -25,6 +25,7 @@ import static androidx.media2.session.LibraryResult.RESULT_ERROR_INVALID_STATE;
 import static androidx.media2.session.LibraryResult.RESULT_SUCCESS;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -32,6 +33,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 
+import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.media2.common.MediaItem;
 import androidx.media2.common.MediaMetadata;
@@ -45,8 +47,6 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import javax.annotation.concurrent.GuardedBy;
 
 /**
  * Mock implementation of {@link MediaLibraryService} for testing.
@@ -221,13 +221,13 @@ public class MockMediaLibraryService extends MediaLibraryService {
                         params);
             } else if (SEARCH_QUERY_TAKES_TIME.equals(query)) {
                 // Searching takes some time. Notify after 5 seconds.
-                Executors.newSingleThreadScheduledExecutor().schedule(new Runnable() {
+                assertNotNull(Executors.newSingleThreadScheduledExecutor().schedule(new Runnable() {
                     @Override
                     public void run() {
                         mSession.notifySearchResultChanged(
                                 controllerInfo, query, SEARCH_RESULT_COUNT, params);
                     }
-                }, SEARCH_TIME_IN_MS, TimeUnit.MILLISECONDS);
+                }, SEARCH_TIME_IN_MS, TimeUnit.MILLISECONDS));
             } else if (SEARCH_QUERY_EMPTY_RESULT.equals(query)) {
                 mSession.notifySearchResultChanged(controllerInfo, query, 0, params);
             } else {

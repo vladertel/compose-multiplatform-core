@@ -339,6 +339,21 @@ public enum WebViewFeatureInternal {
      */
     FORCE_DARK(WebViewFeature.FORCE_DARK, Features.FORCE_DARK),
 
+    /**
+     * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#setForceDarkStrategy(WebSettings, int)} and
+     * {@link androidx.webkit.WebSettingsCompat#getForceDarkStrategy(WebSettings)}.
+     */
+    FORCE_DARK_STRATEGY(WebViewFeature.FORCE_DARK_STRATEGY, Features.FORCE_DARK_BEHAVIOR),
+
+    /**
+     * This feature covers
+     * {@link androidx.webkit.WebViewCompat#setWebMessageListener(android.webkit.WebView,
+     * androidx.webkit.WebViewCompat.WebMessageListener, String, String[])} and
+     * {@link androidx.webkit.WebViewCompat#removeWebMessageListener()}
+     */
+    WEB_MESSAGE_LISTENER(WebViewFeature.WEB_MESSAGE_LISTENER, Features.WEB_MESSAGE_LISTENER),
+
     ;  // This semicolon ends the enum. Add new features with a trailing comma above this line.
 
     private static final int NOT_SUPPORTED_BY_FRAMEWORK = -1;
@@ -380,6 +395,7 @@ public enum WebViewFeatureInternal {
     /**
      * Return the {@link WebViewFeatureInternal} corresponding to {@param feature}.
      */
+    @NonNull
     public static WebViewFeatureInternal getFeature(@NonNull @WebViewFeature.WebViewSupportFeature
             String publicFeatureValue) {
         for (WebViewFeatureInternal internalFeature : WebViewFeatureInternal.values()) {
@@ -415,6 +431,7 @@ public enum WebViewFeatureInternal {
                         Arrays.asList(WebViewGlueCommunicator.getFactory().getWebViewFeatures()));
     }
 
+    @NonNull
     public static Set<String> getWebViewApkFeaturesForTesting() {
         return LAZY_HOLDER.WEBVIEW_APK_FEATURES;
     }
@@ -423,6 +440,7 @@ public enum WebViewFeatureInternal {
      * Utility method for throwing an exception explaining that the feature the app trying to use
      * isn't supported.
      */
+    @NonNull
     public static UnsupportedOperationException getUnsupportedOperationException() {
         return new UnsupportedOperationException("This method is not supported by the current "
                 + "version of the framework and the current WebView APK");
