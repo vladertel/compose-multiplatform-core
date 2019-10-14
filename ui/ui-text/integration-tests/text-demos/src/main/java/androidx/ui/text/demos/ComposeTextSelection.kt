@@ -25,7 +25,7 @@ import androidx.ui.core.Text
 import androidx.ui.core.selection.Selection
 import androidx.ui.core.selection.SelectionMode
 import androidx.ui.foundation.VerticalScroller
-import androidx.ui.foundation.selection.SelectionContainer
+import androidx.ui.foundation.text.SelectionContainer
 import androidx.ui.graphics.Color
 import androidx.ui.layout.Column
 import androidx.ui.layout.CrossAxisAlignment
@@ -69,7 +69,7 @@ fun TextDemoSelection() {
                 style = TextStyle(
                     color = Color(0xFFFF0000),
                     fontSize = fontSize6,
-                    fontWeight = FontWeight.w200,
+                    fontWeight = FontWeight.W200,
                     fontStyle = FontStyle.Italic
                 )
             ) {
@@ -81,7 +81,7 @@ fun TextDemoSelection() {
                     style = TextStyle(
                         color = Color(0xFF0000FF),
                         fontSize = fontSize10,
-                        fontWeight = FontWeight.w800,
+                        fontWeight = FontWeight.W800,
                         fontStyle = FontStyle.Normal
                     )
                 )
@@ -110,7 +110,7 @@ fun TextDemoSelectionWithStringInput() {
             style = TextStyle(
                 color = Color(0xFFFF0000),
                 fontSize = fontSize6,
-                fontWeight = FontWeight.w200,
+                fontWeight = FontWeight.W200,
                 fontStyle = FontStyle.Italic
             )
         )

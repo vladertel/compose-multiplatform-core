@@ -18,7 +18,10 @@ package androidx.ui.text.font
 import androidx.ui.lerp
 
 /**
- * The thickness of the glyphs used to draw the text.
+ * The thickness of the glyphs, in a range of [1, 1000].
+ *
+ * @see [Font]
+ * @see [FontFamily]
  */
 /* inline */ data class FontWeight private constructor(
     /**
@@ -28,42 +31,42 @@ import androidx.ui.lerp
 ) : Comparable<FontWeight> {
 
     // TODO(siyamed): This is weird since it should actually be possible to create a font
-    // weight that is not one of the items here. This decision changes the lerp behavior.
+    //  weight that is not one of the items here. This decision changes the lerp behavior.
     companion object {
-        // Thin, the least thick
-        val w100 = FontWeight(100)
-        // Extra-light
-        val w200 = FontWeight(200)
-        // Light
-        val w300 = FontWeight(300)
-        // Normal / regular / plain
-        val w400 = FontWeight(400)
-        // Medium
-        val w500 = FontWeight(500)
-        // Semi-bold
-        val w600 = FontWeight(600)
-        // Bold
-        val w700 = FontWeight(700)
-        // Extra-bold
-        val w800 = FontWeight(800)
-        // Black, the most thick
-        val w900 = FontWeight(900)
-        // The default font weight.
-        val normal = w400
-        // A commonly used font weight that is heavier than normal.
-        val bold = w700
+        /** Thin, the minimum thickness */
+        val W100 = FontWeight(100)
+        /** Extra-light */
+        val W200 = FontWeight(200)
+        /** Light */
+        val W300 = FontWeight(300)
+        /** Normal / regular / plain */
+        val W400 = FontWeight(400)
+        /** Medium */
+        val W500 = FontWeight(500)
+        /** Semi-bold */
+        val W600 = FontWeight(600)
+        /** Bold */
+        val W700 = FontWeight(700)
+        /** Extra-bold */
+        val W800 = FontWeight(800)
+        /** Black, maximum thickness */
+        val W900 = FontWeight(900)
+        /** The default font weight. */
+        val Normal = W400
+        /** A commonly used font weight that is heavier than normal. */
+        val Bold = W700
 
-        // A list of all the font weights.
+        /** A list of all the font weights. */
         val values: List<FontWeight> = listOf(
-            w100,
-            w200,
-            w300,
-            w400,
-            w500,
-            w600,
-            w700,
-            w800,
-            w900
+            W100,
+            W200,
+            W300,
+            W400,
+            W500,
+            W600,
+            W700,
+            W800,
+            W900
         )
 
         /**
@@ -88,8 +91,8 @@ import androidx.ui.lerp
         // TODO(siyamed): This should be in the file, not a Companion function
         fun lerp(start: FontWeight?, stop: FontWeight?, fraction: Float): FontWeight {
             return values[lerp(
-                start?.index ?: normal.index,
-                stop?.index ?: normal.index,
+                start?.index ?: Normal.index,
+                stop?.index ?: Normal.index,
                 fraction
             ).coerceIn(0, 8)]
         }
@@ -103,16 +106,16 @@ import androidx.ui.lerp
 
     override fun toString(): String {
         return when (index) {
-            0 -> "FontWeight.w100"
-            1 -> "FontWeight.w200"
-            2 -> "FontWeight.w300"
-            3 -> "FontWeight.w400"
-            4 -> "FontWeight.w500"
-            5 -> "FontWeight.w600"
-            6 -> "FontWeight.w700"
-            7 -> "FontWeight.w800"
-            8 -> "FontWeight.w900"
-            else -> "FontWeight.unknown"
+            0 -> "FontWeight.W100"
+            1 -> "FontWeight.W200"
+            2 -> "FontWeight.W300"
+            3 -> "FontWeight.W400"
+            4 -> "FontWeight.W500"
+            5 -> "FontWeight.W600"
+            6 -> "FontWeight.W700"
+            7 -> "FontWeight.W800"
+            8 -> "FontWeight.W900"
+            else -> "FontWeight Unknown"
         }
     }
 }

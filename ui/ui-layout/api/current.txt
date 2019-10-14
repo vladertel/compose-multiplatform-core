@@ -38,7 +38,7 @@ package androidx.ui.layout {
   public final class AspectRatioKt {
     ctor public AspectRatioKt();
     method public static androidx.ui.core.LayoutModifier AspectRatio(float value);
-    method public static void AspectRatio(float aspectRatio, kotlin.jvm.functions.Function0<kotlin.Unit> children);
+    method @Deprecated public static void AspectRatio(float aspectRatio, kotlin.jvm.functions.Function0<kotlin.Unit> children);
   }
 
   public final class ConstrainedBoxKt {
@@ -123,6 +123,13 @@ package androidx.ui.layout {
     method public androidx.ui.core.Dp getTop();
   }
 
+  public final class ExpandedModifierKt {
+    ctor public ExpandedModifierKt();
+    method public static androidx.ui.core.LayoutModifier getExpanded();
+    method public static androidx.ui.core.LayoutModifier getExpandedHeight();
+    method public static androidx.ui.core.LayoutModifier getExpandedWidth();
+  }
+
   public final class FlexChildren {
     method public void expanded(@FloatRange(from=0.0) float flex, kotlin.jvm.functions.Function0<kotlin.Unit> children);
     method public void flexible(@FloatRange(from=0.0) float flex, kotlin.jvm.functions.Function0<kotlin.Unit> children);
@@ -145,8 +152,8 @@ package androidx.ui.layout {
 
   public final class FlowKt {
     ctor public FlowKt();
-    method public static void FlowColumn(androidx.ui.layout.LayoutSize mainAxisSize = LayoutSize.Wrap, androidx.ui.layout.MainAxisAlignment mainAxisAlignment = FlowMainAxisAlignment.Start, androidx.ui.core.Dp mainAxisSpacing = 0.dp, androidx.ui.layout.FlowCrossAxisAlignment crossAxisAlignment = FlowCrossAxisAlignment.Start, androidx.ui.core.Dp crossAxisSpacing = 0.dp, kotlin.jvm.functions.Function0<kotlin.Unit> children);
-    method public static void FlowRow(androidx.ui.layout.LayoutSize mainAxisSize = LayoutSize.Wrap, androidx.ui.layout.MainAxisAlignment mainAxisAlignment = FlowMainAxisAlignment.Start, androidx.ui.core.Dp mainAxisSpacing = 0.dp, androidx.ui.layout.FlowCrossAxisAlignment crossAxisAlignment = FlowCrossAxisAlignment.Start, androidx.ui.core.Dp crossAxisSpacing = 0.dp, kotlin.jvm.functions.Function0<kotlin.Unit> children);
+    method public static void FlowColumn(androidx.ui.layout.LayoutSize mainAxisSize = LayoutSize.Wrap, androidx.ui.layout.MainAxisAlignment mainAxisAlignment = FlowMainAxisAlignment.Start, androidx.ui.core.Dp mainAxisSpacing = 0.dp, androidx.ui.layout.FlowCrossAxisAlignment crossAxisAlignment = FlowCrossAxisAlignment.Start, androidx.ui.core.Dp crossAxisSpacing = 0.dp, androidx.ui.layout.MainAxisAlignment lastLineMainAxisAlignment = mainAxisAlignment, kotlin.jvm.functions.Function0<kotlin.Unit> children);
+    method public static void FlowRow(androidx.ui.layout.LayoutSize mainAxisSize = LayoutSize.Wrap, androidx.ui.layout.MainAxisAlignment mainAxisAlignment = FlowMainAxisAlignment.Start, androidx.ui.core.Dp mainAxisSpacing = 0.dp, androidx.ui.layout.FlowCrossAxisAlignment crossAxisAlignment = FlowCrossAxisAlignment.Start, androidx.ui.core.Dp crossAxisSpacing = 0.dp, androidx.ui.layout.MainAxisAlignment lastLineMainAxisAlignment = mainAxisAlignment, kotlin.jvm.functions.Function0<kotlin.Unit> children);
   }
 
   public final class IntrinsicKt {

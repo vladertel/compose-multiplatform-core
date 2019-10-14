@@ -20,6 +20,8 @@ import android.Manifest
 import android.util.Log
 import androidx.annotation.RestrictTo
 import androidx.benchmark.BenchmarkState
+import androidx.benchmark.beginTraceSection
+import androidx.benchmark.endTraceSection
 import androidx.test.rule.GrantPermissionRule
 import org.junit.Assert.assertTrue
 import org.junit.rules.RuleChain
@@ -175,10 +177,7 @@ class BenchmarkRule : TestRule {
         Statement {
             applied = true
             var invokeMethodName = description.methodName
-            Log.i(
-                TAG,
-                "Running ${description.className}#$invokeMethodName"
-            )
+            Log.d(TAG, "-- Running ${description.className}#$invokeMethodName --")
 
             // validate and simplify the function name.
             // First, remove the "test" prefix which normally comes from CTS test.
@@ -192,7 +191,12 @@ class BenchmarkRule : TestRule {
                         invokeMethodName.substring(5)
             }
 
-            base.evaluate()
+            try {
+                beginTraceSection(description.displayName)
+                base.evaluate()
+            } finally {
+                endTraceSection()
+            }
 
             if (enableReport) {
                 internalState.report(
@@ -204,7 +208,7 @@ class BenchmarkRule : TestRule {
         }
 
     internal companion object {
-        private const val TAG = "BenchmarkRule"
+        private const val TAG = "Benchmark"
     }
 }
 

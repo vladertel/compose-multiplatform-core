@@ -92,7 +92,7 @@ interface Owner {
     /**
      * Returns a position of the owner in its window.
      */
-    fun calculatePosition(): PxPosition
+    fun calculatePosition(): IntPxPosition
 
     /**
      * Called when some params of [RepaintBoundaryNode] are updated.
@@ -377,58 +377,60 @@ private val Origin = IntPxPosition(IntPx.Zero, IntPx.Zero)
  * Backing node for Layout component.
  *
  * Measuring a [LayoutNode] as a [Measurable] will measure the node's content as adjusted by
- * [modifier]. All layout state such as [modifiedSize] and [modifiedPosition] also reflect the modified
- * state of the node.
+ * [modifier]. All layout state such as [modifiedSize] and [modifiedPosition] also reflect
+ * the modified state of the node.
  */
 class LayoutNode : ComponentNode(), Measurable, MeasureScope {
-    /**
-     * The lambda used to measure the child. It must call [MeasureScope.layout] before
-     * completing.
-     */
-    var measureBlock: MeasureBlock = ErrorMeasureBlock
-        set(value) {
-            field = value
-            requestRemeasure()
-        }
+    interface MeasureBlocks {
+        /**
+         * The function used to measure the child. It must call [MeasureScope.layout] before
+         * completing.
+         */
+        fun measure(
+            measureScope: MeasureScope,
+            measurables: List<Measurable>,
+            constraints: Constraints
+        ): MeasureScope.LayoutResult
+        /**
+         * The function used to calculate [IntrinsicMeasurable.minIntrinsicWidth].
+         */
+        fun minIntrinsicWidth(
+            densityScope: DensityScope,
+            measurables: List<IntrinsicMeasurable>,
+            h: IntPx
+        ): IntPx
+        /**
+         * The lambda used to calculate [IntrinsicMeasurable.minIntrinsicHeight].
+         */
+        fun minIntrinsicHeight(
+            densityScope: DensityScope,
+            measurables: List<IntrinsicMeasurable>,
+            w: IntPx
+        ): IntPx
+        /**
+         * The function used to calculate [IntrinsicMeasurable.maxIntrinsicWidth].
+         */
+        fun maxIntrinsicWidth(
+            densityScope: DensityScope,
+            measurables: List<IntrinsicMeasurable>,
+            h: IntPx
+        ): IntPx
+        /**
+         * The lambda used to calculate [IntrinsicMeasurable.maxIntrinsicHeight].
+         */
+        fun maxIntrinsicHeight(
+            densityScope: DensityScope,
+            measurables: List<IntrinsicMeasurable>,
+            w: IntPx
+        ): IntPx
+    }
 
-    /**
-     * The lambda used to calculate [IntrinsicMeasurable.minIntrinsicWidth].
-     */
-    var minIntrinsicWidthBlock:
-            DensityScope.(List<IntrinsicMeasurable>, IntPx) -> IntPx = ErrorIntrinsicBlock
+    var measureBlocks: MeasureBlocks = ErrorMeasureBlocks
         set(value) {
-            field = value
-            requestRemeasure()
-        }
-
-    /**
-     * The lambda used to calculate [IntrinsicMeasurable.maxIntrinsicWidth].
-     */
-    var maxIntrinsicWidthBlock:
-            DensityScope.(List<IntrinsicMeasurable>, IntPx) -> IntPx = ErrorIntrinsicBlock
-        set(value) {
-            field = value
-            requestRemeasure()
-        }
-
-    /**
-     * The lambda used to calculate [IntrinsicMeasurable.minIntrinsicHeight].
-     */
-    var minIntrinsicHeightBlock:
-            DensityScope.(List<IntrinsicMeasurable>, IntPx) -> IntPx = ErrorIntrinsicBlock
-        set(value) {
-            field = value
-            requestRemeasure()
-        }
-
-    /**
-     * The lambda used to calculate [IntrinsicMeasurable.maxIntrinsicHeight].
-     */
-    var maxIntrinsicHeightBlock:
-            DensityScope.(List<IntrinsicMeasurable>, IntPx) -> IntPx = ErrorIntrinsicBlock
-        set(value) {
-            field = value
-            requestRemeasure()
+            if (field != value) {
+                field = value
+                requestRemeasure()
+            }
         }
 
     /**
@@ -573,7 +575,7 @@ class LayoutNode : ComponentNode(), Measurable, MeasureScope {
     private var positioningBlock: Placeable.PlacementScope.() -> Unit = {}
 
     /**
-     * A local version of [Owner.measureIteration] to ensure that [measureBlock]
+     * A local version of [Owner.measureIteration] to ensure that [MeasureBlocks.measure]
      * is not called multiple times within a measure pass.
      */
     private var measureIteration = 0L
@@ -677,7 +679,7 @@ class LayoutNode : ComponentNode(), Measurable, MeasureScope {
 
     private inner class InnerPlaceable : LayoutNodeWrapper(), DensityScope {
         override fun measure(constraints: Constraints): Placeable {
-            measureBlock(layoutChildren, constraints)
+            measureBlocks.measure(this@LayoutNode, layoutChildren, constraints)
             return this
         }
 
@@ -685,16 +687,16 @@ class LayoutNode : ComponentNode(), Measurable, MeasureScope {
             get() = this@LayoutNode.parentData
 
         override fun minIntrinsicWidth(height: IntPx): IntPx =
-            minIntrinsicWidthBlock(this, layoutChildren, height)
-
-        override fun maxIntrinsicWidth(height: IntPx): IntPx =
-            maxIntrinsicWidthBlock(this, layoutChildren, height)
+            measureBlocks.minIntrinsicWidth(this@LayoutNode, layoutChildren, height)
 
         override fun minIntrinsicHeight(width: IntPx): IntPx =
-            minIntrinsicHeightBlock(this, layoutChildren, width)
+            measureBlocks.minIntrinsicHeight(this@LayoutNode, layoutChildren, width)
+
+        override fun maxIntrinsicWidth(height: IntPx): IntPx =
+            measureBlocks.maxIntrinsicWidth(this@LayoutNode, layoutChildren, height)
 
         override fun maxIntrinsicHeight(width: IntPx): IntPx =
-            maxIntrinsicHeightBlock(this, layoutChildren, width)
+            measureBlocks.maxIntrinsicHeight(this@LayoutNode, layoutChildren, width)
 
         override var size: IntPxSize = Unmeasured
             private set
@@ -924,7 +926,7 @@ class LayoutNode : ComponentNode(), Measurable, MeasureScope {
     override fun layout(
         width: IntPx,
         height: IntPx,
-        vararg alignmentLines: Pair<AlignmentLine, IntPx>,
+        alignmentLines: Map<AlignmentLine, IntPx>,
         placementBlock: Placeable.PlacementScope.() -> Unit
     ): MeasureScope.LayoutResult {
         val oldSize = modifiedSize
@@ -991,12 +993,36 @@ class LayoutNode : ComponentNode(), Measurable, MeasureScope {
             }
         }
 
-        private val ErrorMeasureBlock: MeasureBlock = { _, _ ->
-            error("Undefined measure and it is required")
-        }
-        private val ErrorIntrinsicBlock:
-                DensityScope.(List<IntrinsicMeasurable>, IntPx) -> IntPx = { _, _ ->
-            error("Undefined intrinsics block and it is required")
+        private val ErrorMeasureBlocks = object : MeasureBlocks {
+            override fun measure(
+                measureScope: MeasureScope,
+                measurables: List<Measurable>,
+                constraints: Constraints
+            ) = error("Undefined measure and it is required")
+
+            override fun minIntrinsicWidth(
+                densityScope: DensityScope,
+                measurables: List<IntrinsicMeasurable>,
+                h: IntPx
+            ) = error("Undefined intrinsics block and it is required")
+
+            override fun minIntrinsicHeight(
+                densityScope: DensityScope,
+                measurables: List<IntrinsicMeasurable>,
+                w: IntPx
+            ) = error("Undefined intrinsics block and it is required")
+
+            override fun maxIntrinsicWidth(
+                densityScope: DensityScope,
+                measurables: List<IntrinsicMeasurable>,
+                h: IntPx
+            ) = error("Undefined intrinsics block and it is required")
+
+            override fun maxIntrinsicHeight(
+                densityScope: DensityScope,
+                measurables: List<IntrinsicMeasurable>,
+                w: IntPx
+            ) = error("Undefined intrinsics block and it is required")
         }
 
         private fun addLayoutChildren(node: ComponentNode, list: MutableList<LayoutNode>) {
@@ -1080,11 +1106,11 @@ class SemanticsComponentNode(
 
 /**
  * The key used in DataNode.
- * TODO(mount): Make this inline
  *
  * @param T Identifies the type used in the value
  * @property name A unique name identifying the type of the key.
  */
+// TODO(mount): Make this inline
 class DataNodeKey<T>(val name: String)
 
 /**
@@ -1119,7 +1145,12 @@ class Ref<T> {
 }
 
 /**
- * Converts a global position into a local position within this LayoutNode.
+ * Converts a [PxPosition] relative to a global context into a [PxPosition] that is relative
+ * to this [LayoutNode].
+ *
+ * If [withOwnerOffset] is true (which is the default), the [global] parameter is interpreted as
+ * being a position relative to the application window. Otherwise, the [global] parameter is
+ * interpreted to be relative to the root of the compose context.
  */
 fun LayoutNode.globalToLocal(global: PxPosition, withOwnerOffset: Boolean = true): PxPosition {
     var x: Px = global.x
@@ -1140,7 +1171,11 @@ fun LayoutNode.globalToLocal(global: PxPosition, withOwnerOffset: Boolean = true
 }
 
 /**
- * Converts a local position within this LayoutNode into a global one.
+ * Converts an [PxPosition] that is relative to this [LayoutNode] into one that is relative to
+ * a more global context.
+ *
+ * If [withOwnerOffset] is true (which is the default), the return value will be relative to the
+ * application window.  Otherwise, the location is relative to the root of the compose context.
  */
 fun LayoutNode.localToGlobal(local: PxPosition, withOwnerOffset: Boolean = true): PxPosition {
     var x: Px = local.x
@@ -1158,6 +1193,58 @@ fun LayoutNode.localToGlobal(local: PxPosition, withOwnerOffset: Boolean = true)
         y += ownerPosition.y
     }
     return PxPosition(x, y)
+}
+
+/**
+ * Converts a [IntPxPosition] relative to a global context into a [IntPxPosition] that is relative
+ * to this [LayoutNode].
+ *
+ * If [withOwnerOffset] is true (which is the default), the [global] parameter is interpreted as
+ * being a position relative to the application window. Otherwise, the [global] parameter is
+ * interpreted to be relative to the root of the compose context.
+ */
+fun LayoutNode.globalToLocal(global: IntPxPosition, withOwnerOffset: Boolean = true):
+        IntPxPosition {
+    var x: IntPx = global.x
+    var y: IntPx = global.y
+    var node: LayoutNode? = this
+    while (node != null) {
+        val pos = node.contentPosition
+        x -= pos.x
+        y -= pos.y
+        node = node.parentLayoutNode
+    }
+    if (withOwnerOffset) {
+        val ownerPosition = requireOwner().calculatePosition()
+        x -= ownerPosition.x
+        y -= ownerPosition.y
+    }
+    return IntPxPosition(x, y)
+}
+
+/**
+ * Converts an [IntPxPosition] that is relative to this [LayoutNode] into one that is relative to
+ * a more global context.
+ *
+ * If [withOwnerOffset] is true (which is the default), the return value will be relative to the
+ * app window.  Otherwise, the location is relative to the root of the compose context.
+ */
+fun LayoutNode.localToGlobal(local: IntPxPosition, withOwnerOffset: Boolean = true): IntPxPosition {
+    var x: IntPx = local.x
+    var y: IntPx = local.y
+    var node: LayoutNode? = this
+    while (node != null) {
+        val pos = node.contentPosition
+        x += pos.x
+        y += pos.y
+        node = node.parentLayoutNode
+    }
+    if (withOwnerOffset) {
+        val ownerPosition = requireOwner().calculatePosition()
+        x += ownerPosition.x
+        y += ownerPosition.y
+    }
+    return IntPxPosition(x, y)
 }
 
 /**
@@ -1189,7 +1276,7 @@ fun LayoutNode.childToLocal(child: LayoutNode, childLocal: PxPosition): PxPositi
 /**
  * Calculates the position of this [LayoutNode] relative to the root of the ui tree.
  */
-fun LayoutNode.positionRelativeToRoot() = localToGlobal(PxPosition.Origin, false)
+fun LayoutNode.positionRelativeToRoot() = localToGlobal(IntPxPosition.Origin, false)
 
 /**
  * Calculates the position of this [LayoutNode] relative to the provided ancestor.
