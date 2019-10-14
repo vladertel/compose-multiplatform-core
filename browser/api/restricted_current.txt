@@ -253,8 +253,8 @@ package androidx.browser.customtabs {
   }
 
   public class TrustedWebUtils {
+    method public static boolean areSplashScreensSupported(android.content.Context, String, String);
     method @Deprecated public static void launchAsTrustedWebActivity(android.content.Context, androidx.browser.customtabs.CustomTabsIntent, android.net.Uri);
-    method public static boolean splashScreensAreSupported(android.content.Context, String, String);
     method @WorkerThread public static boolean transferSplashImage(android.content.Context, java.io.File, String, String, androidx.browser.customtabs.CustomTabsSession);
     field public static final String EXTRA_LAUNCH_AS_TRUSTED_WEB_ACTIVITY = "android.support.customtabs.extra.LAUNCH_AS_TRUSTED_WEB_ACTIVITY";
   }
@@ -263,6 +263,18 @@ package androidx.browser.customtabs {
 
 package androidx.browser.trusted {
 
+
+  public final class Token {
+    method public static androidx.browser.trusted.Token? create(String, android.content.pm.PackageManager);
+    method public static androidx.browser.trusted.Token deserialize(byte[]);
+    method public boolean matches(String, android.content.pm.PackageManager);
+    method public byte[] serialize();
+  }
+
+  public interface TokenStore {
+    method @BinderThread public androidx.browser.trusted.Token? load();
+    method @WorkerThread public void store(androidx.browser.trusted.Token?);
+  }
 
   public interface TrustedWebActivityDisplayMode {
     method public static androidx.browser.trusted.TrustedWebActivityDisplayMode fromBundle(android.os.Bundle);
@@ -294,7 +306,7 @@ package androidx.browser.trusted {
     method public androidx.browser.trusted.TrustedWebActivityIntent build(androidx.browser.customtabs.CustomTabsSession);
     method public androidx.browser.customtabs.CustomTabsIntent buildCustomTabsIntent();
     method public androidx.browser.trusted.TrustedWebActivityDisplayMode? getDisplayMode();
-    method public android.net.Uri getUrl();
+    method public android.net.Uri getUri();
     method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setAdditionalTrustedOrigins(java.util.List<java.lang.String!>);
     method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setColorScheme(int);
     method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setColorSchemeParams(int, androidx.browser.customtabs.CustomTabColorSchemeParams);
@@ -310,8 +322,9 @@ package androidx.browser.trusted {
     field public static final String EXTRA_SPLASH_SCREEN_PARAMS = "androidx.browser.trusted.EXTRA_SPLASH_SCREEN_PARAMS";
   }
 
-  public class TrustedWebActivityService extends android.app.Service {
+  public abstract class TrustedWebActivityService extends android.app.Service {
     ctor public TrustedWebActivityService();
+    method @BinderThread public abstract androidx.browser.trusted.TokenStore getTokenStore();
     method @BinderThread public boolean onAreNotificationsEnabled(String);
     method @MainThread public final android.os.IBinder? onBind(android.content.Intent?);
     method @BinderThread public void onCancelNotification(String, int);
@@ -319,7 +332,6 @@ package androidx.browser.trusted {
     method @BinderThread public int onGetSmallIconId();
     method @BinderThread public boolean onNotifyNotificationWithChannel(String, int, android.app.Notification, String);
     method @MainThread public final boolean onUnbind(android.content.Intent?);
-    method public static final void setVerifiedProvider(android.content.Context, String?);
     field public static final String ACTION_TRUSTED_WEB_ACTIVITY_SERVICE = "android.support.customtabs.trusted.TRUSTED_WEB_ACTIVITY_SERVICE";
     field public static final String KEY_SMALL_ICON_BITMAP = "android.support.customtabs.trusted.SMALL_ICON_BITMAP";
     field public static final String META_DATA_NAME_SMALL_ICON = "android.support.customtabs.trusted.SMALL_ICON";
@@ -327,12 +339,12 @@ package androidx.browser.trusted {
   }
 
   public final class TrustedWebActivityServiceConnection {
-    method public boolean areNotificationsEnabled(String);
-    method public void cancel(String, int);
+    method public boolean areNotificationsEnabled(String) throws android.os.RemoteException;
+    method public void cancel(String, int) throws android.os.RemoteException;
     method public android.content.ComponentName getComponentName();
-    method public android.graphics.Bitmap? getSmallIconBitmap();
-    method public int getSmallIconId();
-    method public boolean notify(String, int, android.app.Notification, String);
+    method public android.graphics.Bitmap? getSmallIconBitmap() throws android.os.RemoteException;
+    method public int getSmallIconId() throws android.os.RemoteException;
+    method public boolean notify(String, int, android.app.Notification, String) throws android.os.RemoteException;
   }
 
   public final class TrustedWebActivityServiceConnectionPool {
@@ -402,11 +414,11 @@ package androidx.browser.trusted.sharing {
 package androidx.browser.trusted.splashscreens {
 
   public final class SplashScreenParamKey {
-    field public static final String BACKGROUND_COLOR = "androidx.browser.trusted.trusted.KEY_SPLASH_SCREEN_BACKGROUND_COLOR";
-    field public static final String FADE_OUT_DURATION_MS = "androidx.browser.trusted.KEY_SPLASH_SCREEN_FADE_OUT_DURATION";
-    field public static final String IMAGE_TRANSFORMATION_MATRIX = "androidx.browser.trusted.KEY_SPLASH_SCREEN_TRANSFORMATION_MATRIX";
-    field public static final String SCALE_TYPE = "androidx.browser.trusted.KEY_SPLASH_SCREEN_SCALE_TYPE";
-    field public static final String VERSION = "androidx.browser.trusted.KEY_SPLASH_SCREEN_VERSION";
+    field public static final String KEY_BACKGROUND_COLOR = "androidx.browser.trusted.trusted.KEY_SPLASH_SCREEN_BACKGROUND_COLOR";
+    field public static final String KEY_FADE_OUT_DURATION_MS = "androidx.browser.trusted.KEY_SPLASH_SCREEN_FADE_OUT_DURATION";
+    field public static final String KEY_IMAGE_TRANSFORMATION_MATRIX = "androidx.browser.trusted.KEY_SPLASH_SCREEN_TRANSFORMATION_MATRIX";
+    field public static final String KEY_SCALE_TYPE = "androidx.browser.trusted.KEY_SPLASH_SCREEN_SCALE_TYPE";
+    field public static final String KEY_VERSION = "androidx.browser.trusted.KEY_SPLASH_SCREEN_VERSION";
   }
 
   public final class SplashScreenVersion {
