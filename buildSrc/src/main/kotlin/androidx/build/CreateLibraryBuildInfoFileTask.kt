@@ -68,16 +68,23 @@ open class CreateLibraryBuildInfoFileTask : DefaultTask() {
         return library?.mavenGroup?.requireSameVersion ?: false
     }
 
+    /* For androidx release notes, the most common use case is to track and publish the last sha
+     * of the build that is released.  Thus, we use frameworks/support to get the sha
+     */
     private fun getCommitShaAtHead(): String {
-        val commitList: List<Commit> = GitClientImpl(project.rootDir).getGitLog(
+        val supportRoot = getSupportRoot(project)
+        val commitList: List<Commit> = GitClientImpl(supportRoot).getGitLog(
             GitCommitRange(
                 fromExclusive = "",
                 untilInclusive = "HEAD",
                 n = 1
             ),
             keepMerges = true,
-            fullProjectDir = project.projectDir
+            fullProjectDir = supportRoot
         )
+        if (commitList.size < 1) {
+            throw RuntimeException("Failed to find git commit for HEAD!")
+        }
         return commitList.first().sha
     }
 
