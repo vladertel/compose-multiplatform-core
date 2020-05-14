@@ -928,6 +928,7 @@ public class NavController {
     private void navigate(@NonNull NavDestination node, @Nullable Bundle args,
             @Nullable NavOptions navOptions, @Nullable Navigator.Extras navigatorExtras) {
         boolean popped = false;
+        boolean launchSingleTop = false;
         if (navOptions != null) {
             if (navOptions.getPopUpTo() != -1) {
                 popped = popBackStackInternal(navOptions.getPopUpTo(),
@@ -976,9 +977,14 @@ public class NavController {
             NavBackStackEntry newBackStackEntry = new NavBackStackEntry(mContext, newDest,
                     newDest.addInDefaultArgs(finalArgs), mLifecycleOwner, mViewModel);
             mBackStack.add(newBackStackEntry);
+        } else if (navOptions != null && navOptions.shouldLaunchSingleTop()) {
+            launchSingleTop = true;
+            if (mBackStack.peekLast() != null && args != null) {
+                mBackStack.peekLast().getArguments().putAll(args);
+            }
         }
         updateOnBackPressedCallbackEnabled();
-        if (popped || newDest != null) {
+        if (popped || newDest != null || launchSingleTop) {
             dispatchOnDestinationChanged();
         }
     }
