@@ -343,6 +343,37 @@ class NavControllerTest {
     }
 
     @Test
+    fun testSaveRestoreStateDestinationChanged() {
+        val context = ApplicationProvider.getApplicationContext() as Context
+        var navController = NavController(context)
+        val navigator = SaveStateTestNavigator()
+        navController.navigatorProvider.addNavigator(navigator)
+
+        navController.setGraph(R.navigation.nav_simple)
+
+        val savedState = navController.saveState()
+        navController = NavController(context)
+        navController.navigatorProvider.addNavigator(navigator)
+
+        // Restore state doesn't recreate any graph
+        navController.restoreState(savedState)
+        assertNull(navController.currentDestination)
+
+        var destinationChangedCount = 0
+
+        navController.addOnDestinationChangedListener { _, _, _ ->
+            destinationChangedCount++
+        }
+
+        // Explicitly setting a graph then restores the state
+        navController.setGraph(R.navigation.nav_simple)
+        // Save state should be called on the navigator exactly once
+        assertEquals(1, navigator.saveStateCount)
+        // listener should have been fired again when state restored
+        assertThat(destinationChangedCount).isEqualTo(1)
+    }
+
+    @Test
     fun testSaveRestoreStateProgrammatic() {
         val context = ApplicationProvider.getApplicationContext() as Context
         var navController = NavController(context)
@@ -688,6 +719,70 @@ class NavControllerTest {
         navController.navigate(R.id.self)
         assertEquals(R.id.second_test, navController.currentDestination?.id ?: 0)
         assertEquals(2, navigator.backStack.size)
+    }
+
+    @Test
+    fun testNavigateOptionSingleTopNewArgs() {
+        val navController = createNavController()
+        navController.setGraph(R.navigation.nav_simple)
+        navController.navigate(R.id.second_test)
+        assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.second_test)
+        val navigator = navController.navigatorProvider.getNavigator(TestNavigator::class.java)
+        assertThat(navigator.backStack.size).isEqualTo(2)
+
+        val args = Bundle()
+        val testKey = "testKey"
+        val testValue = "testValue"
+        args.putString(testKey, testValue)
+
+        var destinationListenerExecuted = false
+
+        navController.navigate(R.id.self, args)
+
+        navController.addOnDestinationChangedListener { _, destination, arguments ->
+            destinationListenerExecuted = true
+            assertThat(destination.id).isEqualTo(R.id.second_test)
+            assertThat(arguments?.getString(testKey)).isEqualTo(testValue)
+        }
+
+        assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.second_test)
+        assertThat(navigator.backStack.size).isEqualTo(2)
+
+        val returnedArgs = navigator.current.second
+        assertThat(returnedArgs?.getString(testKey)).isEqualTo(testValue)
+        assertThat(destinationListenerExecuted).isTrue()
+    }
+
+    @Test
+    fun testNavigateOptionSingleTopNewArgsIgnore() {
+        val navController = createNavController()
+        navController.setGraph(R.navigation.nav_simple)
+
+        assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.start_test)
+        val navigator = navController.navigatorProvider.getNavigator(TestNavigator::class.java)
+        assertThat(navigator.backStack.size).isEqualTo(1)
+
+        val args = Bundle()
+        val testKey = "testKey"
+        val testValue = "testValue"
+        args.putString(testKey, testValue)
+
+        var destinationListenerExecuted = false
+
+        navController.navigate(R.id.second_test, args)
+
+        navController.addOnDestinationChangedListener { _, destination, arguments ->
+            destinationListenerExecuted = true
+            assertThat(destination.id).isEqualTo(R.id.second_test)
+            assertThat(arguments?.getString(testKey)).isEqualTo(testValue)
+        }
+
+        assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.second_test)
+        assertThat(navigator.backStack.size).isEqualTo(2)
+
+        val returnedArgs = navigator.current.second
+        assertThat(returnedArgs?.getString(testKey)).isEqualTo(testValue)
+        assertThat(destinationListenerExecuted).isTrue()
     }
 
     @Test
