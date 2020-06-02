@@ -30,11 +30,11 @@ plugins {
 
 android {
     defaultConfig {
+        multiDexEnabled true
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = [
                         "room.schemaLocation"  : "$projectDir/schemas".toString(),
-                        "room.expandProjection": "true"
                 ]
             }
         }
@@ -43,28 +43,59 @@ android {
         androidTest.assets.srcDirs += files("$projectDir/schemas".toString())
         androidTest.assets.srcDirs += files("$projectDir/databases".toString())
     }
+// TODO re-enable flavors when b/153917176 is fixed
+//    flavorDimensions "processorConfiguration"
+//    productFlavors {
+//        withExpandProjection {
+//            dimension "processorConfiguration"
+//            javaCompileOptions {
+//                annotationProcessorOptions {
+//                    arguments = [
+//                            "room.schemaLocation"  : "$projectDir/schemas".toString(),
+//                            "room.expandProjection"  : "true"
+//                    ]
+//                }
+//            }
+//        }
+//        withoutExpandProjection {
+//            dimension "processorConfiguration"
+//            javaCompileOptions {
+//                annotationProcessorOptions {
+//                    arguments = [
+//                            "room.schemaLocation"  : "$projectDir/schemas".toString(),
+//                            "room.expandProjection"  : "false"
+//                    ]
+//                }
+//            }
+//        }
+//    }
 }
 
 dependencies {
     implementation(project(":room:room-common"))
     implementation(project(":room:room-runtime"))
-    implementation(project(":sqlite:sqlite"))
-    implementation(project(":sqlite:sqlite-framework"))
     implementation(project(":arch:core-runtime"))
     implementation(project(":lifecycle:lifecycle-livedata"))
+    implementation(MULTIDEX)
 
     // FINDBUGS dependency resolves an app/testapp version conflict.
     implementation(FINDBUGS)
     implementation("androidx.recyclerview:recyclerview:1.0.0")
     implementation("androidx.appcompat:appcompat:1.0.0")
-    annotationProcessor project(":room:room-compiler")
-    androidTestAnnotationProcessor project(":room:room-compiler")
+    // use the shadowed dependency in tests so that if the shadowing does not work properly,
+    // our tests fail.
+    annotationProcessor project(path: ":room:room-compiler",
+            configuration: 'shadowAndImplementation')
+    androidTestAnnotationProcessor project(path: ":room:room-compiler",
+            configuration: 'shadowAndImplementation')
 
     androidTestImplementation(project(":room:room-testing"))
     androidTestImplementation(project(":room:room-rxjava2"))
     androidTestImplementation(project(":room:room-guava"))
     androidTestImplementation("androidx.arch.core:core-testing:2.0.1")
-    androidTestImplementation("androidx.paging:paging-runtime:2.0.0")
+    androidTestImplementation(project(":paging:paging-runtime"))
+    androidTestImplementation(project(":lifecycle:lifecycle-runtime"))
+    androidTestImplementation(project(":lifecycle:lifecycle-runtime-testing"))
 
     // FINDBUGS dependency resolves an app/testapp version conflict.
     androidTestImplementation(FINDBUGS)
@@ -75,6 +106,7 @@ dependencies {
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ESPRESSO_CORE)
+    androidTestImplementation(TRUTH)
     androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it's own MockMaker
     androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it's own MockMaker
 

@@ -29,38 +29,43 @@ plugins {
 }
 
 dependencies {
-    kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
+    kotlinPlugin project(path: ":compose:compose-compiler")
 
-    implementation(KOTLIN_COMPOSE_STDLIB)
+    implementation(KOTLIN_STDLIB)
 
-    implementation "androidx.annotation:annotation:1.1.0"
+    api "androidx.annotation:annotation:1.1.0"
 
     api project(":compose:compose-runtime")
+    implementation project(":ui:ui-util")
     api project(":ui:ui-core")
-    implementation project(":ui:ui-framework")
-    implementation project(":ui:ui-layout")
+    api project(":ui:ui-foundation")
+    api project(":ui:ui-material-icons-core")
+    api project(":ui:ui-text-core")
     api project(":ui:ui-text")
+    api project(":ui:ui-animation-core")
+
+    implementation project(":ui:ui-layout")
     implementation project(":ui:ui-animation")
-    implementation project(":ui:ui-foundation")
     implementation project(":ui:ui-vector")
 
     testImplementation(ANDROIDX_TEST_RULES)
     testImplementation(ANDROIDX_TEST_RUNNER)
     testImplementation(JUNIT)
-    testImplementation(MOCKITO_CORE)
     testImplementation(TRUTH)
-    testImplementation MOCKITO_KOTLIN, {
-        exclude group: 'org.mockito' // to keep control on the mockito version
-    }
 
-    androidTestImplementation project(":ui:ui-material:integration-tests:samples")
-    androidTestImplementation project(":ui:ui-platform")
+    androidTestImplementation project(":ui:ui-material:samples")
     androidTestImplementation project(":ui:ui-test")
+    androidTestImplementation project(":test-screenshot")
 
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
     androidTestImplementation(JUNIT)
     androidTestImplementation(TRUTH)
+    androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
+    androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
+    androidTestImplementation MOCKITO_KOTLIN, {
+        exclude group: 'org.mockito' // to keep control on the mockito version
+    }
 }
 
 androidx {
@@ -76,4 +81,13 @@ tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
         useIR = true
     }
+}
+
+// Screenshot tests related setup
+android {
+    defaultConfig {
+        testInstrumentationRunnerArgument("thisisignored", "thisisignored --no-isolated-storage")
+    }
+    sourceSets.androidTest.assets.srcDirs +=
+            project.rootDir.absolutePath + "/../../../golden/ui/ui-material"
 }

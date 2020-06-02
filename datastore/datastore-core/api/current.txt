@@ -1,0 +1,34 @@
+// Signature format: 3.0
+package androidx.datastore {
+
+  public final class CorruptionException extends java.io.IOException {
+    ctor public CorruptionException(String message, Throwable? cause);
+  }
+
+  public interface CorruptionHandler<T> {
+    method public suspend Object? handleCorruption(androidx.datastore.CorruptionException ex, kotlin.coroutines.Continuation<? super T> p);
+  }
+
+  public interface DataMigration<T> {
+    method public suspend Object? cleanUp(kotlin.coroutines.Continuation<? super kotlin.Unit> p);
+    method public suspend Object? migrate(T? currentData, kotlin.coroutines.Continuation<? super T> p);
+    method public suspend Object? shouldMigrate(kotlin.coroutines.Continuation<? super java.lang.Boolean> p);
+  }
+
+  public interface DataStore<T> {
+    method public kotlinx.coroutines.flow.Flow<T> getData();
+    method public suspend Object? updateData(kotlin.jvm.functions.Function2<? super T,? super kotlin.coroutines.Continuation<? super T>,?> transform, kotlin.coroutines.Continuation<? super T> p);
+    property public abstract kotlinx.coroutines.flow.Flow<T> data;
+  }
+
+}
+
+package androidx.datastore.handlers {
+
+  public final class ReplaceFileCorruptionHandler<T> implements androidx.datastore.CorruptionHandler<T> {
+    ctor public ReplaceFileCorruptionHandler(kotlin.jvm.functions.Function1<? super androidx.datastore.CorruptionException,? extends T> produceNewData);
+    method @kotlin.jvm.Throws(exceptionClasses=IOException::class) public suspend Object? handleCorruption(androidx.datastore.CorruptionException ex, kotlin.coroutines.Continuation<? super T> p) throws java.io.IOException;
+  }
+
+}
+

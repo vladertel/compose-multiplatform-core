@@ -9,5 +9,5 @@ ListenerLast: androidx.paging.AsyncPagedListDiffer#AsyncPagedListDiffer(androidx
     Listeners should always be at end of argument list (method `AsyncPagedListDiffer`)
 
 
-SetterReturnsThis: androidx.paging.LivePagedListBuilder:
-    Methods must return the builder object (return type LivePagedListBuilder instead of androidx.paging.LivePagedListBuilder<Key,Value>): method androidx.paging.LivePagedListBuilder.setCoroutineScope(kotlinx.coroutines.CoroutineScope)
+TopLevelBuilder: androidx.paging.LivePagedListBuilder:
+    Builder should be defined as inner class: androidx.paging.LivePagedListBuilder

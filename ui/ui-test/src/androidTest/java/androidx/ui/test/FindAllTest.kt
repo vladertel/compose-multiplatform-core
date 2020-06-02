@@ -16,17 +16,12 @@
 
 package androidx.ui.test
 
-import androidx.compose.composer
 import androidx.compose.state
-import androidx.compose.unaryPlus
 import androidx.test.filters.MediumTest
-import androidx.ui.core.semantics.getOrNull
-import androidx.ui.foundation.selection.ToggleableState
-import androidx.ui.foundation.semantics.FoundationSemanticsProperties
 import androidx.ui.layout.Column
 import androidx.ui.material.Checkbox
 import androidx.ui.material.MaterialTheme
-import androidx.ui.material.surface.Surface
+import androidx.ui.material.Surface
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,27 +40,26 @@ class FindAllTest {
             MaterialTheme {
                 Surface {
                     Column {
-                        Checkbox(checked = true, onCheckedChange = null)
-                        Checkbox(checked = true, onCheckedChange = null)
+                        Checkbox(checked = true, onCheckedChange = {}, enabled = false)
+                        Checkbox(checked = true, onCheckedChange = {}, enabled = false)
                     }
                 }
             }
         }
 
-        findAll {
-            getOrNull(FoundationSemanticsProperties.ToggleableState) == ToggleableState.Checked
-        }
+        findAll(isOn())
             .assertCountEquals(2)
-            .forEach {
-                it.assertIsChecked()
+            .apply {
+                get(0).assertIsOn()
+                get(1).assertIsOn()
             }
     }
 
     @Test
     fun findAllTest_twoComponents_toggleBoth() {
         composeTestRule.setContent {
-            val (checked1, onCheckedChange1) = +state { false }
-            val (checked2, onCheckedChange2) = +state { false }
+            val (checked1, onCheckedChange1) = state { false }
+            val (checked2, onCheckedChange2) = state { false }
             MaterialTheme {
                 Surface {
                     Column {
@@ -82,11 +76,15 @@ class FindAllTest {
             }
         }
 
-        findAll { isToggleable }
+        findAll(isToggleable())
             .assertCountEquals(2)
-            .forEach {
-                it.doClick()
-                it.assertIsChecked()
+            .apply {
+                get(0)
+                    .doClick()
+                    .assertIsOn()
+                get(1)
+                    .doClick()
+                    .assertIsOn()
             }
     }
 
@@ -96,16 +94,14 @@ class FindAllTest {
             MaterialTheme {
                 Surface {
                     Column {
-                        Checkbox(checked = true, onCheckedChange = null)
-                        Checkbox(checked = true, onCheckedChange = null)
+                        Checkbox(checked = true, onCheckedChange = {}, enabled = false)
+                        Checkbox(checked = true, onCheckedChange = {}, enabled = false)
                     }
                 }
             }
         }
 
-        findAll {
-            getOrNull(FoundationSemanticsProperties.ToggleableState) != ToggleableState.Checked
-        }
+        findAll(isOff())
             .assertCountEquals(0)
     }
 
@@ -114,8 +110,8 @@ class FindAllTest {
         composeTestRule.setContent {
             MaterialTheme {
                 Surface {
-                    val (checked1, onCheckedChange1) = +state { false }
-                    val (checked2, onCheckedChange2) = +state { false }
+                    val (checked1, onCheckedChange1) = state { false }
+                    val (checked2, onCheckedChange2) = state { false }
 
                     Column {
                         Checkbox(
@@ -131,12 +127,12 @@ class FindAllTest {
             }
         }
 
-        findAll { isToggleable }.apply {
+        findAll(isToggleable()).apply {
             get(0)
                 .doClick()
-                .assertIsChecked()
+                .assertIsOn()
             get(1)
-                .assertIsUnchecked()
+                .assertIsOff()
         }.assertCountEquals(2)
     }
 
@@ -145,7 +141,7 @@ class FindAllTest {
         composeTestRule.setContent {
             MaterialTheme {
                 Surface {
-                    val (checked, onCheckedChange) = +state { false }
+                    val (checked, onCheckedChange) = state { false }
 
                     Column {
                         Checkbox(
@@ -156,13 +152,15 @@ class FindAllTest {
                         )
                         Checkbox(
                             checked = false,
-                            onCheckedChange = null
+                            onCheckedChange = {},
+                            enabled = false
                         )
 
                         if (checked) {
                             Checkbox(
                                 checked = false,
-                                onCheckedChange = null
+                                onCheckedChange = {},
+                                enabled = false
                             )
                         }
                     }
@@ -170,17 +168,19 @@ class FindAllTest {
             }
         }
 
-        findAll { isToggleable }.assertCountEquals(2).apply {
-            get(0)
-                .assertIsUnchecked()
-                .doClick()
-                .assertIsChecked()
-        }
+        findAll(isToggleable())
+            .assertCountEquals(2).apply {
+                get(0)
+                    .assertIsOff()
+                    .doClick()
+                    .assertIsOn()
+            }
 
-        findAll { isToggleable }.assertCountEquals(3).apply {
-            get(2)
-                .assertIsUnchecked()
-        }
+        findAll(isToggleable())
+            .assertCountEquals(3).apply {
+                get(2)
+                    .assertIsOff()
+            }
     }
 
     @Test
@@ -188,7 +188,7 @@ class FindAllTest {
         composeTestRule.setContent {
             MaterialTheme {
                 Surface {
-                    val (checked, onCheckedChange) = +state { false }
+                    val (checked, onCheckedChange) = state { false }
 
                     Column {
                         Checkbox(
@@ -200,7 +200,8 @@ class FindAllTest {
                         if (!checked) {
                             Checkbox(
                                 checked = false,
-                                onCheckedChange = null
+                                onCheckedChange = {},
+                                enabled = false
                             )
                         }
                     }
@@ -208,13 +209,15 @@ class FindAllTest {
             }
         }
 
-        findAll { isToggleable }.assertCountEquals(2).apply {
-            get(0)
-                .assertIsUnchecked()
-                .doClick()
-                .assertIsChecked()
-            get(1)
-                .assertNoLongerExists()
-        }
+        findAll(isToggleable())
+            .assertCountEquals(2)
+            .apply {
+                get(0)
+                    .assertIsOff()
+                    .doClick()
+                    .assertIsOn()
+                get(1)
+                    .assertDoesNotExist()
+            }
     }
 }

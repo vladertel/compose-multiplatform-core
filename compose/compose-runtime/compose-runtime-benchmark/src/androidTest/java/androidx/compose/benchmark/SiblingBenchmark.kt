@@ -16,39 +16,17 @@
 
 package androidx.compose.benchmark
 
-import androidx.compose.Composable
-import androidx.compose.Composer
-import androidx.compose.FrameManager
-import androidx.compose.Model
-import androidx.compose.Observe
-import androidx.compose.State
-import androidx.compose.benchmark.deeptree.DeepTree
-import androidx.compose.benchmark.realworld4.RealWorld4_FancyWidget_000
 import androidx.compose.benchmark.siblings.IdentityType
 import androidx.compose.benchmark.siblings.Item
 import androidx.compose.benchmark.siblings.ReorderType
 import androidx.compose.benchmark.siblings.SiblingManagement
 import androidx.compose.benchmark.siblings.update
-import androidx.compose.composer
-import androidx.compose.disposeComposition
-import androidx.compose.runWithCurrent
-import androidx.compose.state
-import androidx.compose.unaryPlus
+import androidx.compose.mutableStateOf
 import androidx.test.annotation.UiThreadTest
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.rule.ActivityTestRule
-import androidx.ui.core.dp
-import androidx.ui.core.setContent
-import androidx.ui.foundation.ColoredRect
-import androidx.ui.graphics.Color
-import org.junit.Assert.assertTrue
-import org.junit.FixMethodOrder
-import org.junit.Ignore
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.MethodSorters
 import org.junit.runners.Parameterized
 import kotlin.random.Random
 
@@ -105,7 +83,7 @@ class SiblingBenchmark(
     @Test
     fun runBenchmark() {
         activityRule.runUiRunnable {
-            val items = ValueHolder((0..count).map { Item(it) })
+            val items = mutableStateOf((0..count).map { Item(it) })
             val random = Random(0)
             measureRecompose {
                 compose {
@@ -127,5 +105,3 @@ fun ActivityTestRule<ComposeActivity>.runUiRunnable(block: () -> Unit) {
         }
     })
 }
-
-@Model private class ValueHolder<T>(var value: T)

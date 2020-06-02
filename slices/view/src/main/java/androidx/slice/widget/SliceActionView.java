@@ -107,11 +107,11 @@ public class SliceActionView extends FrameLayout implements View.OnClickListener
         if (action.isDefaultToggle()) {
             Switch switchView = (Switch) LayoutInflater.from(getContext()).inflate(
                     R.layout.abc_slice_switch, this, false);
-            addView(switchView);
             switchView.setChecked(action.isChecked());
             switchView.setOnCheckedChangeListener(this);
             switchView.setMinimumHeight(mImageSize);
             switchView.setMinimumWidth(mImageSize);
+            addView(switchView);
             if (color != -1) {
                 // See frameworks/base/core/res/res/color/switch_track_material.xml.
                 final int uncheckedTrackColor = SliceViewUtil.getColorAttr(getContext(),
@@ -131,7 +131,7 @@ public class SliceActionView extends FrameLayout implements View.OnClickListener
                 if (uncheckedThumbColor == 0) {
                     // We aren't in an appcompat theme, pull the default light switch color.
                     uncheckedThumbColor = ContextCompat.getColor(getContext(),
-                            R.color.switch_thumb_normal_material_light);
+                            androidx.appcompat.R.color.switch_thumb_normal_material_light);
                 }
 
                 ColorStateList thumbTintList = new ColorStateList(

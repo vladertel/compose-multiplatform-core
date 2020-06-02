@@ -16,9 +16,13 @@
 
 package androidx.camera.testing.activity;
 
+
+import static androidx.camera.testing.SurfaceTextureProvider.createSurfaceTextureProvider;
+
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Size;
 import android.view.TextureView;
 import android.view.ViewGroup;
 
@@ -26,12 +30,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.CameraInfoUnavailableException;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraX;
 import androidx.camera.core.Preview;
-import androidx.camera.core.PreviewConfig;
 import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.R;
+import androidx.camera.testing.SurfaceTextureProvider;
 import androidx.test.espresso.idling.CountingIdlingResource;
 
 /** An activity which starts CameraX preview for testing. */
@@ -43,8 +47,8 @@ public class CameraXTestActivity extends AppCompatActivity {
     private Preview mPreview;
     @Nullable
     public String mCameraId = null;
-    @NonNull
-    public CameraX.LensFacing mLensFacing = CameraX.LensFacing.BACK;
+    @CameraSelector.LensFacing
+    public int mLensFacing = CameraSelector.LENS_FACING_BACK;
 
     @VisibleForTesting
     public final CountingIdlingResource mPreviewReady = new CountingIdlingResource("PreviewReady");
@@ -52,7 +56,7 @@ public class CameraXTestActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setTheme(R.style.Theme_AppCompat);
+        setTheme(androidx.appcompat.R.style.Theme_AppCompat);
         setContentView(R.layout.activity_camera_main);
     }
 
@@ -76,46 +80,44 @@ public class CameraXTestActivity extends AppCompatActivity {
         if (!CameraUtil.hasCameraWithLensFacing(mLensFacing)) {
             try {
                 mLensFacing = CameraX.getDefaultLensFacing();
-            } catch (CameraInfoUnavailableException e) {
+            } catch (IllegalStateException e) {
                 throw new IllegalArgumentException("Cannot find camera to use", e);
             }
         }
 
-        PreviewConfig config =
-                new PreviewConfig.Builder()
-                        .setLensFacing(mLensFacing)
-                        .setTargetName("Preview")
-                        .build();
-
-        mPreview = new Preview(config);
+        mPreview = new Preview.Builder()
+                .setTargetName("Preview")
+                .build();
         TextureView textureView = findViewById(R.id.textureView);
-        mPreview.setOnPreviewOutputUpdateListener(
-                new Preview.OnPreviewOutputUpdateListener() {
+        mPreview.setSurfaceProvider(createSurfaceTextureProvider(
+                new SurfaceTextureProvider.SurfaceTextureCallback() {
                     @Override
-                    public void onUpdated(Preview.PreviewOutput previewOutput) {
-                        // If TextureView was already created, need to re-add it to change the
-                        // SurfaceTexture.
+                    public void onSurfaceTextureReady(@NonNull SurfaceTexture surfaceTexture,
+                            @NonNull Size resolution) {
                         ViewGroup viewGroup = (ViewGroup) textureView.getParent();
                         viewGroup.removeView(textureView);
                         viewGroup.addView(textureView);
-                        textureView.setSurfaceTexture(previewOutput.getSurfaceTexture());
+                        textureView.setSurfaceTexture(surfaceTexture);
                     }
-                });
 
+                    @Override
+                    public void onSafeToRelease(@NonNull SurfaceTexture surfaceTexture) {
+                        surfaceTexture.release();
+                    }
+                }));
+
+
+        CameraSelector cameraSelector =
+                new CameraSelector.Builder().requireLensFacing(mLensFacing).build();
         try {
-            CameraX.bindToLifecycle(this, mPreview);
+            CameraX.bindToLifecycle(this, cameraSelector, mPreview);
         } catch (IllegalArgumentException e) {
             mPreview = null;
             return;
         }
 
-        try {
-            mCameraId = CameraX.getCameraWithCameraDeviceConfig(config);
-        } catch (CameraInfoUnavailableException e) {
-            throw new IllegalArgumentException(
-                    "Unable to get camera id for the camera device config "
-                            + config.getLensFacing(), e);
-        }
+        mCameraId = CameraX.getCameraWithCameraSelector(
+                cameraSelector).getCameraInfoInternal().getCameraId();
 
         textureView.setSurfaceTextureListener(
                 new TextureView.SurfaceTextureListener() {

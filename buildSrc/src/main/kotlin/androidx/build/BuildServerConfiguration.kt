@@ -20,8 +20,6 @@ import androidx.build.gradle.isRoot
 import org.gradle.api.Project
 import java.io.File
 
-fun isRunningOnBuildServer() = System.getenv("DIST_DIR") != null
-
 /**
  * @return build id string for current build
  *
@@ -29,7 +27,11 @@ fun isRunningOnBuildServer() = System.getenv("DIST_DIR") != null
  * distribution directory name.
  */
 fun getBuildId(): String {
-    return if (System.getenv("DIST_DIR") != null) File(System.getenv("DIST_DIR").removeSuffix("/ui")).name else "0"
+    return if (System.getenv("DIST_DIR") != null) {
+        File(System.getenv("DIST_DIR").removeSuffix("/ui")).name
+    } else {
+        "0"
+    }
 }
 
 /**
@@ -40,8 +42,8 @@ fun Project.getDistributionDirectory(): File {
     return if (System.getenv("DIST_DIR") != null) {
         File(System.getenv("DIST_DIR"))
     } else {
-        val subdir = System.getProperty("DIST_SUBDIR") ?: ""
-        File(getRootDirectory(this), "../../out/dist$subdir")
+        val subdir = System.getenv("DIST_SUBDIR") ?: ""
+        File(getRootOutDirectory(), "dist$subdir")
     }
 }
 
@@ -75,11 +77,6 @@ fun Project.getHostTestResultDirectory(): File =
  */
 fun Project.getHostTestCoverageDirectory(): File =
     File(getDistributionDirectory(), "host-test-coverage")
-
-private fun getRootDirectory(project: Project): File {
-    val actualRootProject = if (project.isRoot) project else project.rootProject
-    return actualRootProject.extensions.extraProperties.get("supportRootFolder") as File
-}
 
 /**
  * Whether the build should force all versions to be snapshots.

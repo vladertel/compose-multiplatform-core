@@ -36,11 +36,16 @@ public class RowStyle {
     private int mTitleItemEndPadding;
     private int mContentStartPadding;
     private int mContentEndPadding;
+    private int mTitleStartPadding;
+    private int mTitleEndPadding;
+    private int mSubContentStartPadding;
+    private int mSubContentEndPadding;
     private int mEndItemStartPadding;
     private int mEndItemEndPadding;
     private int mBottomDividerStartPadding;
     private int mBottomDividerEndPadding;
     private int mActionDividerHeight;
+    private int mSeekBarInlineWidth;
 
     public RowStyle(Context context, int resId) {
         TypedArray a = context.getTheme().obtainStyledAttributes(resId, R.styleable.RowStyle);
@@ -53,6 +58,14 @@ public class RowStyle {
                     R.styleable.RowStyle_contentStartPadding, UNBOUNDED);
             mContentEndPadding = (int) a.getDimension(
                     R.styleable.RowStyle_contentEndPadding, UNBOUNDED);
+            mTitleStartPadding = (int) a.getDimension(
+                    R.styleable.RowStyle_titleStartPadding, UNBOUNDED);
+            mTitleEndPadding = (int) a.getDimension(
+                    R.styleable.RowStyle_titleEndPadding, UNBOUNDED);
+            mSubContentStartPadding = (int) a.getDimension(
+                    R.styleable.RowStyle_subContentStartPadding, UNBOUNDED);
+            mSubContentEndPadding = (int) a.getDimension(
+                    R.styleable.RowStyle_subContentEndPadding, UNBOUNDED);
             mEndItemStartPadding = (int) a.getDimension(
                     R.styleable.RowStyle_endItemStartPadding, UNBOUNDED);
             mEndItemEndPadding = (int) a.getDimension(
@@ -63,6 +76,8 @@ public class RowStyle {
                     R.styleable.RowStyle_bottomDividerEndPadding, UNBOUNDED);
             mActionDividerHeight = (int) a.getDimension(
                     R.styleable.RowStyle_actionDividerHeight, UNBOUNDED);
+            mSeekBarInlineWidth = (int) a.getDimension(
+                    R.styleable.RowStyle_seekBarInlineWidth, UNBOUNDED);
         } finally {
             a.recycle();
         }
@@ -84,6 +99,22 @@ public class RowStyle {
         return mContentEndPadding;
     }
 
+    public int getTitleStartPadding() {
+        return mTitleStartPadding;
+    }
+
+    public int getTitleEndPadding() {
+        return mTitleEndPadding;
+    }
+
+    public int getSubContentStartPadding() {
+        return mSubContentStartPadding;
+    }
+
+    public int getSubContentEndPadding() {
+        return mSubContentEndPadding;
+    }
+
     public int getEndItemStartPadding() {
         return mEndItemStartPadding;
     }
@@ -102,5 +133,9 @@ public class RowStyle {
 
     public int getActionDividerHeight() {
         return mActionDividerHeight;
+    }
+
+    public int getSeekBarInlineWidth() {
+        return mSeekBarInlineWidth;
     }
 }

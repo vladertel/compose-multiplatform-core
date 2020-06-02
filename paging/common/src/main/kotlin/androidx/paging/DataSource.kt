@@ -17,16 +17,14 @@
 package androidx.paging
 
 import androidx.annotation.AnyThread
-import androidx.annotation.RestrictTo
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.WorkerThread
 import androidx.arch.core.util.Function
-import androidx.paging.PagedSource.LoadResult.Page
-import androidx.paging.PagedSource.LoadResult.Page.Companion.COUNT_UNDEFINED
+import androidx.paging.PagingSource.LoadResult.Page.Companion.COUNT_UNDEFINED
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
-
-typealias OnInvalidated = () -> Unit
 
 /**
  * Base class for loading pages of snapshot data into a [PagedList].
@@ -35,7 +33,7 @@ typealias OnInvalidated = () -> Unit
  * it loads more data, but the data loaded cannot be updated. If the underlying data set is
  * modified, a new PagedList / DataSource pair must be created to represent the new data.
  *
- * <h4>Loading Pages</h4>
+ * ### Loading Pages
  *
  * PagedList queries data from its DataSource in response to loading hints. PagedListAdapter
  * calls [PagedList.loadAround] to load content as the user scrolls in a RecyclerView.
@@ -43,7 +41,7 @@ typealias OnInvalidated = () -> Unit
  * To control how and when a PagedList queries data from its DataSource, see
  * [PagedList.Config]. The Config object defines things like load sizes and prefetch distance.
  *
- * <h4>Updating Paged Data</h4>
+ * ### Updating Paged Data
  *
  * A PagedList / DataSource pair are a snapshot of the data set. A new pair of
  * PagedList / DataSource must be created if an update occurs, such as a reorder, insert, delete, or
@@ -70,7 +68,7 @@ typealias OnInvalidated = () -> Unit
  * copy changes, invalidate the previous DataSource, and a new one wrapping the new state of the
  * snapshot can be created.
  *
- * <h4>Implementing a DataSource</h4>
+ * ### Implementing a DataSource
  *
  * To implement, extend one of the subclasses: [PageKeyedDataSource], [ItemKeyedDataSource], or
  * [PositionalDataSource].
@@ -107,6 +105,7 @@ internal constructor(internal val type: KeyType) {
     internal val onInvalidatedCallbacks = CopyOnWriteArrayList<InvalidatedCallback>()
 
     private val _invalid = AtomicBoolean(false)
+
     /**
      * @return `true` if the data source is invalid, and can no longer be queried for data.
      */
@@ -150,7 +149,6 @@ internal constructor(internal val type: KeyType) {
          *
          * @return the new DataSource.
          */
-        @Suppress("KDocUnresolvedReference")
         abstract fun create(): DataSource<Key, Value>
 
         /**
@@ -230,12 +228,11 @@ internal constructor(internal val type: KeyType) {
             function: (List<Value>) -> List<ToValue>
         ): Factory<Key, ToValue> = mapByPage(Function { function(it) })
 
-        /**
-         * @hide
-         */
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-        fun asPagedSourceFactory(): PagedSourceFactory<Key, Value> = {
-            LegacyPagedSource(create())
+        @JvmOverloads
+        fun asPagingSourceFactory(
+            fetchDispatcher: CoroutineDispatcher = Dispatchers.IO
+        ): () -> PagingSource<Key, Value> = {
+            LegacyPagingSource(fetchDispatcher) { create() }
         }
     }
 
@@ -342,10 +339,10 @@ internal constructor(internal val type: KeyType) {
     }
 
     /**
-     * Wrapper for [OnInvalidated] which holds a reference to allow removal by referential equality
-     * of Kotlin functions within [removeInvalidatedCallback].
+     * Wrapper for invalidation callback which holds a reference to allow removal by referential
+     * equality of Kotlin functions within [removeInvalidatedCallback].
      */
-    private class OnInvalidatedWrapper(val callback: OnInvalidated) : InvalidatedCallback {
+    private class OnInvalidatedWrapper(val callback: () -> Unit) : InvalidatedCallback {
         override fun onInvalidated() = callback()
     }
 
@@ -379,7 +376,7 @@ internal constructor(internal val type: KeyType) {
      * [DataSource].
      */
     @AnyThread
-    fun addInvalidatedCallback(onInvalidatedCallback: OnInvalidated) {
+    fun addInvalidatedCallback(onInvalidatedCallback: () -> Unit) {
         onInvalidatedCallbacks.add(OnInvalidatedWrapper(onInvalidatedCallback))
     }
 
@@ -401,7 +398,7 @@ internal constructor(internal val type: KeyType) {
      * @param onInvalidatedCallback The previously added callback.
      */
     @AnyThread
-    fun removeInvalidatedCallback(onInvalidatedCallback: OnInvalidated) {
+    fun removeInvalidatedCallback(onInvalidatedCallback: () -> Unit) {
         onInvalidatedCallbacks.removeAll {
             it is OnInvalidatedWrapper && it.callback === onInvalidatedCallback
         }
@@ -494,19 +491,6 @@ internal constructor(internal val type: KeyType) {
                 )
             }
         }
-
-        /**
-         * Assumes that nextKey and prevKey returned by this [BaseResult] matches the expected type
-         * in [PagedSource.LoadResult].
-         */
-        @Suppress("UNCHECKED_CAST") // Guaranteed to be the correct Key type.
-        internal fun <Key : Any> toLoadResult(): Page<Key, Value> = Page(
-            data,
-            prevKey as Key?,
-            nextKey as Key?,
-            itemsBefore,
-            itemsAfter
-        )
 
         override fun equals(other: Any?) = when (other) {
             is BaseResult<*> -> data == other.data &&

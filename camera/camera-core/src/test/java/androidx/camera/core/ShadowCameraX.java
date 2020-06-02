@@ -16,10 +16,14 @@
 
 package androidx.camera.core;
 
-import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.camera.core.impl.CameraDeviceSurfaceManager;
+import androidx.camera.core.impl.ImageAnalysisConfig;
+import androidx.camera.core.impl.ImageCaptureConfig;
+import androidx.camera.core.impl.PreviewConfig;
+import androidx.camera.core.impl.UseCaseConfig;
 import androidx.camera.testing.fakes.FakeCameraDeviceSurfaceManager;
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
+import androidx.camera.testing.fakes.FakeCameraInfoInternal;
 
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
@@ -29,68 +33,52 @@ import org.robolectric.annotation.Implements;
  */
 @Implements(CameraX.class)
 public class ShadowCameraX {
-    public static final String DEFAULT_CAMERA_ID = "DEFAULT_CAMERA_ID";
+    public static final String DEFAULT_CAMERA_ID = "0";
 
     private static final UseCaseConfig<ImageAnalysis> DEFAULT_IMAGE_ANALYSIS_CONFIG =
-            new ImageAnalysisConfig.Builder().setSessionOptionUnpacker(
-                    new SessionConfig.OptionUnpacker() {
-                        @Override
-                        public void unpack(UseCaseConfig<?> config, SessionConfig.Builder builder) {
-                            // no op.
-                        }
-                    }).build();
+            new ImageAnalysis.Builder().setSessionOptionUnpacker(
+                    (config, builder) -> {
+                    }).getUseCaseConfig();
 
-    private static final CameraInfo DEFAULT_CAMERA_INFO = new CameraInfoInternal() {
-        MutableLiveData<Boolean> mFlashAvailability = new MutableLiveData<>(Boolean.TRUE);
-        @Override
-        public CameraX.LensFacing getLensFacing() {
-            return CameraX.LensFacing.BACK;
-        }
+    private static final UseCaseConfig<Preview> DEFAULT_PREVIEW_CONFIG =
+            new Preview.Builder().setSessionOptionUnpacker(
+                    (config, builder) -> {
+                    }).getUseCaseConfig();
 
-        @Override
-        public int getSensorRotationDegrees() {
-            return 0;
-        }
+    private static final UseCaseConfig<ImageCapture> DEFAULT_IMAGE_CAPTURE_CONFIG =
+            new ImageCapture.Builder().setSessionOptionUnpacker(
+                    (config, builder) -> {
+                    }).getUseCaseConfig();
 
-        @Override
-        public int getSensorRotationDegrees(int relativeRotation) {
-            return 0;
-        }
-
-        @NonNull
-        @Override
-        public LiveData<Boolean> isFlashAvailable() {
-            return mFlashAvailability;
-        }
-    };
+    private static final CameraInfo DEFAULT_CAMERA_INFO = new FakeCameraInfoInternal();
 
     private static final CameraDeviceSurfaceManager DEFAULT_DEVICE_SURFACE_MANAGER =
             new FakeCameraDeviceSurfaceManager();
 
     /**
-     * Shadow of {@link ShadowCameraX#getCameraWithCameraDeviceConfig(CameraDeviceConfig)}.
-     */
-    @Implementation
-    public static String getCameraWithCameraDeviceConfig(CameraDeviceConfig config) {
-        return DEFAULT_CAMERA_ID;
-    }
-
-    /**
      * Shadow of {@link CameraX#getCameraInfo(String)}.
      */
     @Implementation
-    public static CameraInfo getCameraInfo(String cameraId) throws CameraInfoUnavailableException {
+    public static CameraInfo getCameraInfo(String cameraId) {
         return DEFAULT_CAMERA_INFO;
     }
 
     /**
-     * Shadow of {@link CameraX#getDefaultUseCaseConfig(Class, CameraX.LensFacing)}.
+     * Shadow of {@link CameraX#getDefaultUseCaseConfig(Class, CameraInfo)}.
      */
     @SuppressWarnings("unchecked")
     @Implementation
-    public static <C extends UseCaseConfig<?>> C getDefaultUseCaseConfig(
-            Class<C> configType, CameraX.LensFacing lensFacing) {
-        return (C) DEFAULT_IMAGE_ANALYSIS_CONFIG;
+    public static <C extends UseCaseConfig<?>> C getDefaultUseCaseConfig(Class<C> configType,
+            @Nullable CameraInfo cameraInfo) {
+        if (configType.equals(PreviewConfig.class)) {
+            return (C) DEFAULT_PREVIEW_CONFIG;
+        } else if (configType.equals(ImageAnalysisConfig.class)) {
+            return (C) DEFAULT_IMAGE_ANALYSIS_CONFIG;
+        } else if (configType.equals(ImageCaptureConfig.class)) {
+            return (C) DEFAULT_IMAGE_CAPTURE_CONFIG;
+        }
+        throw new UnsupportedOperationException(
+                "Shadow UseCase config not implemented: " + configType);
     }
 
     /**

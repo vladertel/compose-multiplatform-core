@@ -21,6 +21,8 @@ import static android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE;
 import static androidx.slice.builders.ListBuilder.ICON_IMAGE;
 import static androidx.slice.builders.ListBuilder.INFINITY;
 import static androidx.slice.builders.ListBuilder.LARGE_IMAGE;
+import static androidx.slice.builders.ListBuilder.RAW_IMAGE_LARGE;
+import static androidx.slice.builders.ListBuilder.RAW_IMAGE_SMALL;
 import static androidx.slice.builders.ListBuilder.SMALL_IMAGE;
 
 import android.app.PendingIntent;
@@ -59,6 +61,7 @@ import androidx.slice.builders.SliceAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -93,11 +96,14 @@ public class SampleSliceProvider extends SliceProvider {
             "contact3",
             "contact4",
             "gallery",
+            "indeterminaterange",
+            "indeterminaterange2",
             "weather",
             "reservation",
             "loadlist",
             "loadgrid",
             "inputrange",
+            "richinputrange",
             "range",
             "subscription",
             "singleitems",
@@ -109,6 +115,7 @@ public class SampleSliceProvider extends SliceProvider {
             "longtext",
             "loading",
             "selection",
+            "notification"
     };
 
     /**
@@ -156,6 +163,10 @@ public class SampleSliceProvider extends SliceProvider {
                 return createNoteSlice(sliceUri);
             case "/grocery":
                 return createInteractiveNote(sliceUri);
+            case "/indeterminaterange":
+                return createIndeterminateProgressRange(sliceUri);
+            case "/indeterminaterange2":
+                return createIndeterminateProgressRange2(sliceUri);
             case "/ride":
                 return createRideSlice(sliceUri);
             case "/toggle":
@@ -184,6 +195,8 @@ public class SampleSliceProvider extends SliceProvider {
                 return createLoadingGridSlice(sliceUri);
             case "/inputrange":
                 return createStarRatingInputRange(sliceUri);
+            case "/richinputrange":
+                return createRichInputRange(sliceUri);
             case "/range":
                 return createDownloadProgressRange(sliceUri);
             case "/subscription":
@@ -204,6 +217,8 @@ public class SampleSliceProvider extends SliceProvider {
                 return createLoadingSlice(sliceUri);
             case "/selection":
                 return createSelectionSlice(sliceUri);
+            case "/notification":
+                return createNotificationSlice(sliceUri);
         }
         Log.w(TAG, String.format("Unknown uri: %s", sliceUri));
         return null;
@@ -339,7 +354,7 @@ public class SampleSliceProvider extends SliceProvider {
         SliceAction primaryAction = SliceAction.create(pi, ic, LARGE_IMAGE, "Cats you follow");
         gb.setPrimaryAction(primaryAction);
         gb.addCell(new GridRowBuilder.CellBuilder()
-                .addImage(ic, LARGE_IMAGE));
+                .addImage(ic, RAW_IMAGE_LARGE));
         b.addGridRow(gb);
         return b.build();
     }
@@ -736,8 +751,8 @@ public class SampleSliceProvider extends SliceProvider {
                         .setSubtitle(state)
                         .setContentDescription(sliceCDString)
                         .setPrimaryAction(primaryAction))
-                .addAction((SliceAction.createToggle(getBroadcastIntent(ACTION_WIFI_CHANGED, null),
-                        toggleCDString, finalWifiEnabled)));
+                .addAction(SliceAction.createToggle(getBroadcastIntent(ACTION_WIFI_CHANGED, null),
+                        toggleCDString, finalWifiEnabled));
 
         // Add fake wifi networks
         int[] wifiIcons = new int[]{R.drawable.ic_wifi_full, R.drawable.ic_wifi_low,
@@ -802,17 +817,80 @@ public class SampleSliceProvider extends SliceProvider {
                 .build();
     }
 
+    private Slice createRichInputRange(Uri sliceUri) {
+        IconCompat thumbIcon = IconCompat.createWithResource(getContext(), R.drawable.ic_star_on);
+        IconCompat titleIcon = IconCompat.createWithResource(getContext(), R.drawable.ic_car);
+        IconCompat checkBoxIcon = IconCompat.createWithResource(getContext(),
+                R.drawable.toggle_check);
+        SliceAction primaryAction = SliceAction.create(
+                getBroadcastIntent(ACTION_TOAST, "open rich star rating"), thumbIcon, ICON_IMAGE,
+                "Rate");
+        return new ListBuilder(getContext(), sliceUri, INFINITY)
+                .setAccentColor(0xff4285f4)
+                .setHeader(new HeaderBuilder()
+                        .setTitle("Rich InputRangeBuilder demo"))
+                .addInputRange(new InputRangeBuilder()
+                        .setTitleItem(titleIcon, ListBuilder.ICON_IMAGE)
+                        .addEndItem(SliceAction.createToggle(
+                                getBroadcastIntent(ACTION_TOAST, "click checkbox"), checkBoxIcon,
+                                "checkbox", false))
+                        .setTitle("Rich star rating")
+                        .setMin(5)
+                        .setThumb(thumbIcon)
+                        .setInputAction(getBroadcastIntent(ACTION_TOAST_RANGE_VALUE, null))
+                        .setMax(100)
+                        .setValue(sStarRating)
+                        .setPrimaryAction(primaryAction)
+                        .setContentDescription("Slider for star ratings"))
+                .build();
+    }
+
     private Slice createDownloadProgressRange(Uri sliceUri) {
         IconCompat icon = IconCompat.createWithResource(getContext(), R.drawable.ic_star_on);
         SliceAction primaryAction = SliceAction.create(
                 getBroadcastIntent(ACTION_TOAST, "open download"), icon, ICON_IMAGE,  "Download");
+        int progress = PROGRESS.next();
+        if (progress != 100) {
+            mHandler.postDelayed(() -> getContext().getContentResolver().notifyChange(sliceUri,
+                    null), 500);
+        }
         return new ListBuilder(getContext(), sliceUri, INFINITY)
                 .setAccentColor(0xffff4081)
                 .addRange(new RangeBuilder()
                         .setTitle("Download progress")
                         .setSubtitle("Download is happening")
                         .setMax(100)
-                        .setValue(75)
+                        .setValue(progress)
+                        .setPrimaryAction(primaryAction))
+                .build();
+    }
+
+    private Slice createIndeterminateProgressRange(Uri sliceUri) {
+        IconCompat icon = IconCompat.createWithResource(getContext(), R.drawable.ic_star_on);
+        SliceAction primaryAction = SliceAction.create(
+                getBroadcastIntent(ACTION_TOAST, "open download"), icon, ICON_IMAGE,
+                "Download");
+        return new ListBuilder(getContext(), sliceUri, INFINITY)
+                .setAccentColor(0xff4285f4)
+                .addRange(new RangeBuilder()
+                        .setMode(ListBuilder.RANGE_MODE_INDETERMINATE)
+                        .setTitle("Indeterminate progress")
+                        .setSubtitle("Download is happening")
+                        .setPrimaryAction(primaryAction))
+                .build();
+    }
+
+    private Slice createIndeterminateProgressRange2(Uri sliceUri) {
+        IconCompat icon = IconCompat.createWithResource(getContext(), R.drawable.ic_star_on);
+        SliceAction primaryAction = SliceAction.create(
+                getBroadcastIntent(ACTION_TOAST, "open download"), icon, ICON_IMAGE,
+                "Download");
+        return new ListBuilder(getContext(), sliceUri, INFINITY)
+                .setAccentColor(0xff4285f4)
+                .addRange(new RangeBuilder()
+                        .setTitleItem(icon, ListBuilder.ICON_IMAGE)
+                        .setMode(ListBuilder.RANGE_MODE_INDETERMINATE)
+                        .setTitle("Indeterminate progress")
                         .setPrimaryAction(primaryAction))
                 .build();
     }
@@ -1167,6 +1245,36 @@ public class SampleSliceProvider extends SliceProvider {
                 .build();
     }
 
+    private Slice createNotificationSlice(Uri sliceUri) {
+        final IconCompat icon = IconCompat.createWithResource(getContext(), R.drawable.message);
+        final SliceAction action = SliceAction.create(getBroadcastIntent(ACTION_TOAST,
+                "View notifications"), icon, ICON_IMAGE, "Notifications");
+        SliceAction toggleAction = SliceAction.createToggle(
+                getBroadcastIntent(ACTION_TOAST, "toggle action"), "toggle", false);
+        return new ListBuilder(getContext(), sliceUri, INFINITY)
+                .addRow(new RowBuilder()
+                        .setTitleItem(icon, RAW_IMAGE_SMALL)
+                        .setTitle("Manage Message Notifications")
+                        .setSubtitle("7 notification channels. Tap to manage all.")
+                        .setPrimaryAction(action))
+                .addRow(new RowBuilder()
+                        .setTitle("Chat heads active")
+                        .setSubtitle("~6 per week")
+                        .setPrimaryAction(action)
+                        .addEndItem(toggleAction))
+                .addRow(new RowBuilder()
+                        .setTitle("Chats and calls")
+                        .setSubtitle("~2 per week")
+                        .setPrimaryAction(action)
+                        .addEndItem(toggleAction))
+                .addRow(new RowBuilder()
+                        .setTitle("Other")
+                        .setSubtitle("~2 per week")
+                        .setPrimaryAction(action)
+                        .addEndItem(toggleAction))
+                .build();
+    }
+
     private PendingIntent getIntent(String action) {
         Intent intent = new Intent(action);
         PendingIntent pi = PendingIntent.getActivity(getContext(), 0, intent, 0);
@@ -1185,4 +1293,18 @@ public class SampleSliceProvider extends SliceProvider {
         return PendingIntent.getBroadcast(getContext(), requestCode, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
     }
+
+    static final class RandomProgressGenerator {
+        private int mProgress = 0;
+        private int mEnd = 100;
+        private int mInterval = 5;
+
+        int next() {
+            if (mProgress >= mEnd) return mEnd;
+            mProgress += new Random().nextInt(mInterval);
+            return Math.min(mEnd, mProgress);
+        }
+    }
+
+    private static final RandomProgressGenerator PROGRESS = new RandomProgressGenerator();
 }

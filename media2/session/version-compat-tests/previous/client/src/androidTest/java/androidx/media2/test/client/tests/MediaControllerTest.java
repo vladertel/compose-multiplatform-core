@@ -56,7 +56,6 @@ import androidx.media2.test.common.PollingCheck;
 import androidx.media2.test.common.TestUtils;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
-import androidx.test.filters.SdkSuppress;
 
 import org.junit.After;
 import org.junit.Before;
@@ -72,7 +71,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * Tests {@link MediaController}.
  */
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.JELLY_BEAN)
 @RunWith(AndroidJUnit4.class)
 @LargeTest
 public class MediaControllerTest extends MediaSessionTestBase {
@@ -106,7 +104,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testBuilder() {
+    public void builder() {
         prepareLooper();
         MediaController.Builder builder;
 
@@ -149,7 +147,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testGetSessionActivity() throws InterruptedException {
+    public void getSessionActivity() throws InterruptedException {
         prepareLooper();
         RemoteMediaSession session = createRemoteMediaSession(TEST_GET_SESSION_ACTIVITY, null);
 
@@ -167,7 +165,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testSetVolumeWithLocalVolume() throws Exception {
+    public void setVolumeWithLocalVolume() throws Exception {
         prepareLooper();
         if (Build.VERSION.SDK_INT >= 21 && mAudioManager.isVolumeFixed()) {
             // This test is not eligible for this device.
@@ -212,7 +210,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testAdjustVolumeWithLocalVolume() throws Exception {
+    public void adjustVolumeWithLocalVolume() throws Exception {
         prepareLooper();
         if (Build.VERSION.SDK_INT >= 21 && mAudioManager.isVolumeFixed()) {
             // This test is not eligible for this device.
@@ -258,14 +256,14 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testGetPackageName() throws Exception {
+    public void getPackageName() throws Exception {
         prepareLooper();
         MediaController controller = createController(mRemoteSession.getToken());
         assertEquals(SERVICE_PACKAGE_NAME, controller.getConnectedToken().getPackageName());
     }
 
     @Test
-    public void testGetTokenExtras() throws Exception {
+    public void getTokenExtras() throws Exception {
         prepareLooper();
         Bundle testTokenExtras = TestUtils.createTestBundle();
         RemoteMediaSession session = createRemoteMediaSession("testGetExtras", testTokenExtras);
@@ -277,7 +275,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testIsConnected() throws InterruptedException {
+    public void isConnected() throws InterruptedException {
         prepareLooper();
         MediaController controller = createController(mRemoteSession.getToken());
         assertTrue(controller.isConnected());
@@ -288,7 +286,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testClose_beforeConnected() throws InterruptedException {
+    public void close_beforeConnected() throws InterruptedException {
         prepareLooper();
         MediaController controller = createController(mRemoteSession.getToken(),
                 false /* waitForConnect */, null, null /* callback */);
@@ -296,7 +294,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testClose_twice() throws InterruptedException {
+    public void close_twice() throws InterruptedException {
         prepareLooper();
         MediaController controller = createController(mRemoteSession.getToken());
         controller.close();
@@ -304,7 +302,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testGettersAfterConnected() throws InterruptedException {
+    public void gettersAfterConnected() throws InterruptedException {
         prepareLooper();
         final int state = SessionPlayer.PLAYER_STATE_PLAYING;
         final int bufferingState = SessionPlayer.BUFFERING_STATE_COMPLETE;
@@ -330,7 +328,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testGetPlaybackInfo() throws Exception {
+    public void getPlaybackInfo() throws Exception {
         prepareLooper();
         final AudioAttributesCompat attrs = new AudioAttributesCompat.Builder()
                 .setContentType(CONTENT_TYPE_MUSIC)
@@ -359,7 +357,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testGetVideoSize() throws InterruptedException {
+    public void getVideoSize() throws InterruptedException {
         prepareLooper();
 
         VideoSize testSize = new VideoSize(100, 42);
@@ -371,7 +369,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testGetTrackInfo() throws Exception {
+    public void getTrackInfo() throws Exception {
         prepareLooper();
 
         final List<SessionPlayer.TrackInfo> testTracks = MediaTestUtils.createTrackInfoList();
@@ -388,7 +386,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testSelectDeselectTrackAndGetSelectedTrack() throws Exception {
+    public void selectDeselectTrackAndGetSelectedTrack() throws Exception {
         prepareLooper();
         final CountDownLatch selectTrackLatch = new CountDownLatch(1);
         final CountDownLatch deselectTrackLatch = new CountDownLatch(1);
@@ -431,7 +429,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
      * {@link MediaController#unregisterExtraCallback(ControllerCallback)}.
      */
     @Test
-    public void testRegisterExtraCallback() throws InterruptedException {
+    public void registerExtraCallback() throws InterruptedException {
         prepareLooper();
 
         MediaController controller = createController(mRemoteSession.getToken(),
@@ -478,7 +476,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
     }
 
     @Test
-    public void testNotifyControllerCallback() throws InterruptedException {
+    public void notifyControllerCallback() throws InterruptedException {
         prepareLooper();
 
         final CountDownLatch primaryLatch = new CountDownLatch(1);

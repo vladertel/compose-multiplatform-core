@@ -17,38 +17,37 @@
 package androidx.ui.material
 
 import androidx.compose.Composable
-import androidx.compose.composer
-import androidx.compose.unaryPlus
 import androidx.ui.core.Alignment
-import androidx.ui.core.CurrentTextStyleProvider
-import androidx.ui.core.Dp
-import androidx.ui.core.FirstBaseline
-import androidx.ui.core.IntPx
-import androidx.ui.core.IntPxSize
-import androidx.ui.core.LastBaseline
 import androidx.ui.core.Layout
-import androidx.ui.core.Text
-import androidx.ui.core.dp
-import androidx.ui.core.ipx
-import androidx.ui.core.max
-import androidx.ui.foundation.Clickable
-import androidx.ui.foundation.SimpleImage
-import androidx.ui.graphics.Color
-import androidx.ui.graphics.Image
-import androidx.ui.layout.ConstrainedBox
-import androidx.ui.layout.Container
-import androidx.ui.layout.CrossAxisAlignment
-import androidx.ui.layout.DpConstraints
-import androidx.ui.layout.EdgeInsets
-import androidx.ui.layout.FlexRow
-import androidx.ui.layout.Padding
-import androidx.ui.material.ripple.Ripple
-import androidx.ui.material.surface.Surface
+import androidx.ui.core.Modifier
+import androidx.ui.core.semantics.semantics
+import androidx.ui.foundation.Box
+import androidx.ui.foundation.ContentGravity
+import androidx.ui.foundation.Image
+import androidx.ui.foundation.ProvideTextStyle
+import androidx.ui.foundation.Text
+import androidx.ui.foundation.clickable
+import androidx.ui.graphics.ImageAsset
+import androidx.ui.layout.Row
+import androidx.ui.layout.padding
+import androidx.ui.layout.preferredHeightIn
+import androidx.ui.layout.preferredSizeIn
+import androidx.ui.layout.preferredWidthIn
+import androidx.ui.material.ripple.RippleIndication
+import androidx.ui.text.FirstBaseline
+import androidx.ui.text.LastBaseline
 import androidx.ui.text.TextStyle
 import androidx.ui.text.style.TextOverflow
+import androidx.ui.unit.Dp
+import androidx.ui.unit.IntPx
+import androidx.ui.unit.IntPxSize
+import androidx.ui.unit.dp
+import androidx.ui.unit.ipx
+import androidx.ui.unit.max
+import androidx.ui.util.fastForEachIndexed
 
 /**
- * Material Design implementation of [list items][https://material.io/components/lists].
+ * Material Design implementation of [list items](https://material.io/components/lists).
  *
  * This component can be used to achieve the list item templates existing in the spec. For example:
  * - one-line items
@@ -59,55 +58,58 @@ import androidx.ui.text.style.TextOverflow
  * @sample androidx.ui.material.samples.ThreeLineListItems
  *
  * @param text The primary text of the list item
+ * @param modifier Modifier to be applied to the list item
+ * @param onClick Callback to be invoked when the list item is clicked
  * @param icon The leading supporting visual of the list item
  * @param secondaryText The secondary text of the list item
  * @param singleLineSecondaryText Whether the secondary text is single line
  * @param overlineText The text displayed above the primary text
  * @param metaText The meta text to be displayed in the trailing position
- * @param onClick Callback to be invoked when the list item is clicked
  */
 @Composable
 fun ListItem(
     text: String,
-    icon: Image? = null,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    icon: ImageAsset? = null,
     secondaryText: String? = null,
     // TODO(popam): find a way to remove this
     singleLineSecondaryText: Boolean = true,
     overlineText: String? = null,
-    metaText: String? = null,
-    onClick: (() -> Unit)? = null
+    metaText: String? = null
 ) {
-    val iconComposable: @Composable() (() -> Unit)? = icon?.let {
-        { SimpleImage(it) }
+    val iconComposable: @Composable (() -> Unit)? = icon?.let {
+        { Image(it) }
     }
-    val textComposable: @Composable() () -> Unit = text.let {
+    val textComposable: @Composable () -> Unit = text.let {
         { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
-    val secondaryTextComposable: @Composable() (() -> Unit)? = secondaryText?.let {
+    val secondaryTextComposable: @Composable (() -> Unit)? = secondaryText?.let {
         {
             val maxLines = if (!singleLineSecondaryText && overlineText == null) 2 else 1
             Text(it, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
         }
     }
-    val overlineTextComposable: @Composable() (() -> Unit)? = overlineText?.let {
+    val overlineTextComposable: @Composable (() -> Unit)? = overlineText?.let {
         { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
-    val metaTextComposable: @Composable() (() -> Unit)? = metaText?.let {
+    val metaTextComposable: @Composable (() -> Unit)? = metaText?.let {
         { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
     ListItem(
-        textComposable,
+        modifier,
+        onClick,
         iconComposable,
         secondaryTextComposable,
         singleLineSecondaryText,
         overlineTextComposable,
         metaTextComposable,
-        onClick
+        textComposable
     )
 }
 
 /**
- * Material Design implementation of [list items][https://material.io/components/lists].
+ * Material Design implementation of [list items](https://material.io/components/lists).
  *
  * This component can be used to achieve the list item templates existing in the spec. For example:
  * - one-line items
@@ -117,37 +119,42 @@ fun ListItem(
  * - three-line items
  * @sample androidx.ui.material.samples.ThreeLineListItems
  *
- * @param text The primary text of the list item
+ * @param modifier Modifier to be applied to the list item
+ * @param onClick Callback to be invoked when the list item is clicked
  * @param icon The leading supporting visual of the list item
  * @param secondaryText The secondary text of the list item
  * @param singleLineSecondaryText Whether the secondary text is single line
  * @param overlineText The text displayed above the primary text
  * @param trailing The trailing meta text or meta icon of the list item
- * @param onClick Callback to be invoked when the list item is clicked
+ * @param text The primary text of the list item
  */
-// TODO(popam): b/137311217
-@Suppress("USELESS_CAST")
 @Composable
 fun ListItem(
-    text: @Composable() (() -> Unit),
-    icon: @Composable() (() -> Unit)? = null as @Composable() (() -> Unit)?,
-    secondaryText: @Composable() (() -> Unit)? = null as @Composable() (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    icon: @Composable (() -> Unit)? = null,
+    secondaryText: @Composable (() -> Unit)? = null,
     singleLineSecondaryText: Boolean = true,
-    overlineText: @Composable() (() -> Unit)? = null as @Composable() (() -> Unit)?,
-    trailing: @Composable() (() -> Unit)? = null as @Composable() (() -> Unit)?,
-    onClick: (() -> Unit)? = null
+    overlineText: @Composable (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
+    text: @Composable (() -> Unit)
 ) {
-    val styledText = applyTextStyle(PrimaryTextStyle, text)!!
-    val styledSecondaryText = applyTextStyle(SecondaryTextStyle, secondaryText)
-    val styledOverlineText = applyTextStyle(OverlineTextStyle, overlineText)
-    val styledTrailing = applyTextStyle(MetaTextStyle, trailing)
+    val emphasisLevels = EmphasisAmbient.current
+    val typography = MaterialTheme.typography
+
+    val styledText = applyTextStyle(typography.subtitle1, emphasisLevels.high, text)!!
+    val styledSecondaryText = applyTextStyle(typography.body2, emphasisLevels.medium, secondaryText)
+    val styledOverlineText = applyTextStyle(typography.overline, emphasisLevels.high, overlineText)
+    val styledTrailing = applyTextStyle(typography.caption, emphasisLevels.high, trailing)
 
     val item = @Composable {
         if (styledSecondaryText == null && styledOverlineText == null) {
-            OneLine.ListItem(icon, styledText, styledTrailing)
+            OneLine.ListItem(modifier, icon, styledText, styledTrailing)
         } else if ((styledOverlineText == null && singleLineSecondaryText) ||
-            styledSecondaryText == null) {
+            styledSecondaryText == null
+        ) {
             TwoLine.ListItem(
+                modifier,
                 icon,
                 styledText,
                 styledSecondaryText,
@@ -156,6 +163,7 @@ fun ListItem(
             )
         } else {
             ThreeLine.ListItem(
+                modifier,
                 icon,
                 styledText,
                 styledSecondaryText,
@@ -166,10 +174,12 @@ fun ListItem(
     }
 
     if (onClick != null) {
-        val rippleColor = (+themeColor { onSurface }).copy(alpha = RippleOpacity)
-        Ripple(bounded = true, color = rippleColor) {
-            Clickable(onClick = onClick, children = item)
-        }
+        val indication = RippleIndication(
+            color = MaterialTheme.colors.onSurface.copy(alpha = RippleOpacity)
+        )
+        Box(Modifier
+            .semantics(mergeAllDescendants = true)
+            .clickable(onClick = onClick, indication = indication), children = item)
     } else {
         item()
     }
@@ -193,42 +203,37 @@ private object OneLine {
 
     @Composable
     fun ListItem(
-        icon: @Composable() (() -> Unit)?,
-        text: @Composable() (() -> Unit),
-        trailing: @Composable() (() -> Unit)?
+        modifier: Modifier = Modifier,
+        icon: @Composable (() -> Unit)?,
+        text: @Composable (() -> Unit),
+        trailing: @Composable (() -> Unit)?
     ) {
         val minHeight = if (icon == null) MinHeight else MinHeightWithIcon
-        ConstrainedBox(constraints = DpConstraints(minHeight = minHeight)) {
-            FlexRow(crossAxisAlignment = CrossAxisAlignment.Center) {
-                inflexible {
-                    if (icon != null) {
-                        Container(
-                            alignment = Alignment.CenterLeft,
-                            constraints = DpConstraints(
-                                minWidth = IconLeftPadding + IconMinPaddedWidth
-                            ),
-                            padding = EdgeInsets(
-                                // TODO(popam): remove left padding for wide icons
-                                left = IconLeftPadding,
-                                top = IconVerticalPadding,
-                                bottom = IconVerticalPadding
-                            ),
-                            children = icon
-                        )
-                    }
-                }
-                expanded(flex = 1f) {
-                    Padding(left = ContentLeftPadding, right = ContentRightPadding, children = text)
-                }
-                inflexible {
-                    if (trailing != null) {
-                        Container(
-                            alignment = Alignment.Center,
-                            padding = EdgeInsets(right = TrailingRightPadding),
-                            children = trailing
-                        )
-                    }
-                }
+        Row(modifier.preferredHeightIn(minHeight = minHeight)) {
+            if (icon != null) {
+                Box(
+                    Modifier.gravity(Alignment.CenterVertically)
+                        .preferredWidthIn(minWidth = IconLeftPadding + IconMinPaddedWidth),
+                    gravity = ContentGravity.CenterStart,
+                    paddingStart = IconLeftPadding,
+                    paddingTop = IconVerticalPadding,
+                    paddingBottom = IconVerticalPadding,
+                    children = icon
+                )
+            }
+            Box(
+                Modifier.weight(1f)
+                    .gravity(Alignment.CenterVertically)
+                    .padding(start = ContentLeftPadding, end = ContentRightPadding),
+                gravity = ContentGravity.CenterStart,
+                children = text
+            )
+            if (trailing != null) {
+                Box(
+                    Modifier.gravity(Alignment.CenterVertically),
+                    paddingEnd = TrailingRightPadding,
+                    children = trailing
+                )
             }
         }
     }
@@ -256,79 +261,75 @@ private object TwoLine {
 
     @Composable
     fun ListItem(
-        icon: @Composable() (() -> Unit)?,
-        text: @Composable() (() -> Unit),
-        secondaryText: @Composable() (() -> Unit)?,
-        overlineText: @Composable() (() -> Unit)?,
-        trailing: @Composable() (() -> Unit)?
+        modifier: Modifier = Modifier,
+        icon: @Composable (() -> Unit)?,
+        text: @Composable (() -> Unit),
+        secondaryText: @Composable (() -> Unit)?,
+        overlineText: @Composable (() -> Unit)?,
+        trailing: @Composable (() -> Unit)?
     ) {
         val minHeight = if (icon == null) MinHeight else MinHeightWithIcon
-        ConstrainedBox(constraints = DpConstraints(minHeight = minHeight)) {
-            FlexRow(crossAxisAlignment = CrossAxisAlignment.Start) {
-                inflexible {
-                    if (icon != null) {
-                        Container(
-                            alignment = Alignment.TopLeft,
-                            constraints = DpConstraints(
-                                // TODO(popam): remove minHeight with cross axis alignment per child
-                                minHeight = minHeight,
-                                minWidth = IconLeftPadding + IconMinPaddedWidth
-                            ),
-                            padding = EdgeInsets(
-                                left = IconLeftPadding,
-                                top = IconVerticalPadding,
-                                bottom = IconVerticalPadding
-                            ),
-                            children = icon
-                        )
-                    }
+        Row(modifier.preferredHeightIn(minHeight = minHeight)) {
+            val columnModifier = Modifier.weight(1f)
+                .padding(start = ContentLeftPadding, end = ContentRightPadding)
+
+            if (icon != null) {
+                Box(
+                    Modifier.preferredSizeIn(
+                        minWidth = IconLeftPadding + IconMinPaddedWidth,
+                        minHeight = minHeight
+                    ),
+                    gravity = ContentGravity.TopStart,
+                    paddingStart = IconLeftPadding,
+                    paddingTop = IconVerticalPadding,
+                    paddingBottom = IconVerticalPadding,
+                    children = icon
+                )
+            }
+
+            if (overlineText != null) {
+                BaselinesOffsetColumn(
+                    listOf(OverlineBaselineOffset, OverlineToPrimaryBaselineOffset),
+                    columnModifier
+                ) {
+                    overlineText()
+                    text()
                 }
-                expanded(flex = 1f) {
-                    Padding(left = ContentLeftPadding, right = ContentRightPadding) {
-                        if (overlineText != null) {
-                            BaselinesOffsetColumn(
-                                listOf(OverlineBaselineOffset, OverlineToPrimaryBaselineOffset)
-                            ) {
-                                overlineText()
-                                text()
-                            }
+            } else {
+                BaselinesOffsetColumn(
+                    listOf(
+                        if (icon != null) {
+                            PrimaryBaselineOffsetWithIcon
                         } else {
-                            BaselinesOffsetColumn(
-                                listOf(
-                                    if (icon != null) {
-                                        PrimaryBaselineOffsetWithIcon
-                                    } else {
-                                        PrimaryBaselineOffsetNoIcon
-                                    },
-                                    if (icon != null) {
-                                        PrimaryToSecondaryBaselineOffsetWithIcon
-                                    } else {
-                                        PrimaryToSecondaryBaselineOffsetNoIcon
-                                    }
-                                )
-                            ) {
-                                text()
-                                secondaryText!!()
-                            }
+                            PrimaryBaselineOffsetNoIcon
+                        },
+                        if (icon != null) {
+                            PrimaryToSecondaryBaselineOffsetWithIcon
+                        } else {
+                            PrimaryToSecondaryBaselineOffsetNoIcon
                         }
-                    }
+                    ),
+                    columnModifier
+                ) {
+                    text()
+                    secondaryText!!()
                 }
-                inflexible {
-                    if (trailing != null) {
-                        Padding(right = TrailingRightPadding) {
-                            // TODO(popam): find way to center and wrap content without minHeight
-                            ConstrainedBox(constraints = DpConstraints(minHeight = minHeight)) {
-                                OffsetToBaselineOrCenter(
-                                    if (icon != null) {
-                                        PrimaryBaselineOffsetWithIcon
-                                    } else {
-                                        PrimaryBaselineOffsetNoIcon
-                                    },
-                                    trailing
-                                )
-                            }
-                        }
+            }
+            if (trailing != null) {
+                OffsetToBaselineOrCenter(
+                    if (icon != null) {
+                        PrimaryBaselineOffsetWithIcon
+                    } else {
+                        PrimaryBaselineOffsetNoIcon
                     }
+                ) {
+                    Box(
+                        // TODO(popam): find way to center and wrap content without minHeight
+                        Modifier.preferredHeightIn(minHeight = minHeight)
+                            .padding(end = TrailingRightPadding),
+                        gravity = ContentGravity.Center,
+                        children = trailing
+                    )
                 }
             }
         }
@@ -354,55 +355,44 @@ private object ThreeLine {
 
     @Composable
     fun ListItem(
-        icon: @Composable() (() -> Unit)?,
-        text: @Composable() (() -> Unit),
-        secondaryText: @Composable() (() -> Unit),
-        overlineText: @Composable() (() -> Unit)?,
-        trailing: @Composable() (() -> Unit)?
+        modifier: Modifier = Modifier,
+        icon: @Composable (() -> Unit)?,
+        text: @Composable (() -> Unit),
+        secondaryText: @Composable (() -> Unit),
+        overlineText: @Composable (() -> Unit)?,
+        trailing: @Composable (() -> Unit)?
     ) {
-        ConstrainedBox(constraints = DpConstraints(minHeight = MinHeight)) {
-            FlexRow(crossAxisAlignment = CrossAxisAlignment.Start) {
-                inflexible {
-                    if (icon != null) {
-                        Container(
-                            alignment = Alignment.CenterLeft,
-                            constraints = DpConstraints(
-                                minWidth = IconLeftPadding + IconMinPaddedWidth
-                            ),
-                            padding = EdgeInsets(
-                                left = IconLeftPadding,
-                                top = IconThreeLineVerticalPadding,
-                                bottom = IconThreeLineVerticalPadding
-                            ),
-                            children = icon
-                        )
-                    }
-                }
-                expanded(flex = 1f) {
-                    Padding(left = ContentLeftPadding, right = ContentRightPadding) {
-                        BaselinesOffsetColumn(
-                            listOf(
-                                ThreeLineBaselineFirstOffset,
-                                ThreeLineBaselineSecondOffset,
-                                ThreeLineBaselineThirdOffset
-                            )
-                        ) {
-                            if (overlineText != null) overlineText()
-                            text()
-                            secondaryText()
-                        }
-                    }
-                }
-                inflexible {
-                    if (trailing != null) {
-                        Padding(top = ThreeLineTrailingTopPadding, right = TrailingRightPadding) {
-                            OffsetToBaselineOrCenter(
-                                ThreeLineBaselineFirstOffset - ThreeLineTrailingTopPadding,
-                                trailing
-                            )
-                        }
-                    }
-                }
+        Row(modifier.preferredHeightIn(minHeight = MinHeight)) {
+            if (icon != null) {
+                val minSize = IconLeftPadding + IconMinPaddedWidth
+                Box(
+                    Modifier.preferredSizeIn(minWidth = minSize, minHeight = minSize),
+                    gravity = ContentGravity.CenterStart,
+                    paddingStart = IconLeftPadding,
+                    paddingTop = IconThreeLineVerticalPadding,
+                    paddingBottom = IconThreeLineVerticalPadding,
+                    children = icon
+                )
+            }
+            BaselinesOffsetColumn(
+                listOf(
+                    ThreeLineBaselineFirstOffset,
+                    ThreeLineBaselineSecondOffset,
+                    ThreeLineBaselineThirdOffset
+                ),
+                Modifier.weight(1f)
+                    .padding(start = ContentLeftPadding, end = ContentRightPadding)
+            ) {
+                if (overlineText != null) overlineText()
+                text()
+                secondaryText()
+            }
+            if (trailing != null) {
+                OffsetToBaselineOrCenter(
+                    ThreeLineBaselineFirstOffset - ThreeLineTrailingTopPadding,
+                    Modifier.padding(top = ThreeLineTrailingTopPadding, end = TrailingRightPadding),
+                    trailing
+                )
             }
         }
     }
@@ -413,10 +403,14 @@ private object ThreeLine {
  * top of the layout and the first text, as well as the last baseline and first baseline
  * for subsequent pairs of texts.
  */
-// TODO(popam): consider making this a layout widget in ui-layout.
+// TODO(popam): consider making this a layout composable in ui-layout.
 @Composable
-private fun BaselinesOffsetColumn(offsets: List<Dp>, children: @Composable() () -> Unit) {
-    Layout(children) { measurables, constraints ->
+private fun BaselinesOffsetColumn(
+    offsets: List<Dp>,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Layout(content, modifier) { measurables, constraints, _ ->
         val childConstraints = constraints.copy(minHeight = 0.ipx, maxHeight = IntPx.Infinity)
         val placeables = measurables.map { it.measure(childConstraints) }
 
@@ -425,7 +419,7 @@ private fun BaselinesOffsetColumn(offsets: List<Dp>, children: @Composable() () 
         }
         val y = Array(placeables.size) { 0.ipx }
         var containerHeight = 0.ipx
-        placeables.forEachIndexed { index, placeable ->
+        placeables.fastForEachIndexed { index, placeable ->
             val toPreviousBaseline = if (index > 0) {
                 placeables[index - 1].height - placeables[index - 1][LastBaseline]!!
             } else 0.ipx
@@ -438,12 +432,13 @@ private fun BaselinesOffsetColumn(offsets: List<Dp>, children: @Composable() () 
         }
 
         layout(containerWidth, containerHeight) {
-            placeables.forEachIndexed { index, placeable ->
+            placeables.fastForEachIndexed { index, placeable ->
                 placeable.place(0.ipx, y[index])
             }
         }
     }
 }
+
 /**
  * Layout that takes a child and adds the necessary padding such that the first baseline of the
  * child is at a specific offset from the top of the container. If the child does not have
@@ -452,8 +447,12 @@ private fun BaselinesOffsetColumn(offsets: List<Dp>, children: @Composable() () 
  */
 // TODO(popam): support fallback alignment in AlignmentLineOffset, and use that here.
 @Composable
-private fun OffsetToBaselineOrCenter(offset: Dp, children: @Composable() () -> Unit) {
-    Layout(children) { measurables, constraints ->
+private fun OffsetToBaselineOrCenter(
+    offset: Dp,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Layout(content, modifier) { measurables, constraints, _ ->
         val placeable = measurables[0].measure(constraints.copy(minHeight = 0.ipx))
         val baseline = placeable[FirstBaseline]
         val y: IntPx
@@ -472,33 +471,18 @@ private fun OffsetToBaselineOrCenter(offset: Dp, children: @Composable() () -> U
     }
 }
 
-private data class ListItemTextStyle(
-    val style: MaterialTypography.() -> TextStyle,
-    val color: MaterialColors.() -> Color,
-    val opacity: Float
-)
-
-// TODO(popam): b/137311217
-@Suppress("USELESS_CAST")
 private fun applyTextStyle(
-    textStyle: ListItemTextStyle,
-    children: @Composable() (() -> Unit)?
-): @Composable() (() -> Unit)? {
-    if (children == null) return null as @Composable() (() -> Unit)?
+    textStyle: TextStyle,
+    emphasis: Emphasis,
+    icon: @Composable (() -> Unit)?
+): @Composable (() -> Unit)? {
+    if (icon == null) return null
     return {
-        val textColor = (+themeColor(textStyle.color)).copy(alpha = textStyle.opacity)
-        val appliedTextStyle = (+themeTextStyle(textStyle.style)).copy(color = textColor)
-        CurrentTextStyleProvider(appliedTextStyle, children)
+        ProvideEmphasis(emphasis) {
+            ProvideTextStyle(textStyle, icon)
+        }
     }
 }
 
 // Material spec values.
-private const val PrimaryTextOpacity = 0.87f
-private const val SecondaryTextOpacity = 0.6f
-private const val OverlineTextOpacity = 0.87f
-private const val MetaTextOpacity = 0.87f
 private const val RippleOpacity = 0.16f
-private val PrimaryTextStyle = ListItemTextStyle({ subtitle1 }, { onSurface }, PrimaryTextOpacity)
-private val SecondaryTextStyle = ListItemTextStyle({ body2 }, { onSurface }, SecondaryTextOpacity)
-private val OverlineTextStyle = ListItemTextStyle({ overline }, { onSurface }, OverlineTextOpacity)
-private val MetaTextStyle = ListItemTextStyle({ caption }, { onSurface }, MetaTextOpacity)

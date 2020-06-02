@@ -16,15 +16,16 @@
 
 package androidx.compose.benchmark.dbmonster
 
-import androidx.compose.Children
 import androidx.compose.Composable
-import androidx.compose.Model
-import androidx.compose.composer
-import androidx.ui.core.Text
+import androidx.compose.getValue
+import androidx.compose.mutableStateOf
+import androidx.compose.setValue
+import androidx.ui.core.Modifier
+import androidx.ui.foundation.Text
 import androidx.ui.layout.Column
-import androidx.ui.layout.LayoutSize
 import androidx.ui.layout.Row
-
+import androidx.ui.layout.fillMaxHeight
+import androidx.ui.layout.fillMaxWidth
 import kotlin.random.Random
 
 private fun randomQuery(random: Random): String = random.nextDouble().let {
@@ -37,25 +38,24 @@ private fun randomQuery(random: Random): String = random.nextDouble().let {
 
 private const val MAX_ELAPSED = 15.0
 
-@Model
-class Query(random: Random, var elapsed: Double = random.nextDouble() * MAX_ELAPSED) {
-    var query = randomQuery(random)
+class Query(query: String, elapsed: Double) {
+    var query by mutableStateOf(query)
+    var elapsed by mutableStateOf(elapsed)
 }
 
-@Model
-class Database(var name: String, val random: Random) {
+class Database(name: String, random: Random) {
+    var name: String by mutableStateOf(name)
+    private val myRandom = random
     var queries: List<Query> = (1..10).map {
-        Query(
-            random
-        )
+        Query(randomQuery(random), random.nextDouble() * MAX_ELAPSED)
     }
     fun topQueries(n: Int): List<Query> {
         return queries/*.sortedByDescending { it.elapsed }*/.take(n)
     }
     fun update() {
-        val r = random.nextInt(queries.size)
+        val r = myRandom.nextInt(queries.size)
         (0..r).forEach {
-            queries[it].elapsed = random.nextDouble() * MAX_ELAPSED
+            queries[it].elapsed = myRandom.nextDouble() * MAX_ELAPSED
         }
     }
 }
@@ -74,14 +74,9 @@ class DatabaseList(n: Int, val random: Random) {
 }
 
 @Composable
-fun Table(children: @Composable() () -> Unit) {
-    Column(mainAxisSize = LayoutSize.Expand) { children() }
-}
-
-@Composable
 fun QueryColumn(query: Query) {
     // TODO: we could do some conditional styling here which would make the test better
-    Column(mainAxisSize = LayoutSize.Expand) {
+    Column(Modifier.fillMaxHeight()) {
         Text(text = "${query.elapsed}")
         Text(text = query.query)
     }
@@ -92,9 +87,9 @@ fun DatabaseRow(db: Database) {
     println(db)
     val columns = 5
     val topQueries = db.topQueries(columns)
-    Row(mainAxisSize = LayoutSize.Expand) {
-        Column(mainAxisSize = LayoutSize.Expand) { Text(text = db.name) }
-        Column(mainAxisSize = LayoutSize.Expand) { Text(text = "${db.queries.size}") }
+    Row(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxHeight()) { Text(text = db.name) }
+        Column(Modifier.fillMaxHeight()) { Text(text = "${db.queries.size}") }
         topQueries.forEach { query ->
             QueryColumn(query = query)
         }

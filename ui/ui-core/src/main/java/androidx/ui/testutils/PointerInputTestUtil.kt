@@ -17,33 +17,37 @@
 package androidx.ui.testutils
 
 import androidx.ui.core.ConsumedData
-import androidx.ui.core.Duration
+import androidx.ui.core.CustomEvent
 import androidx.ui.core.PointerEventPass
+import androidx.ui.core.PointerId
 import androidx.ui.core.PointerInputChange
 import androidx.ui.core.PointerInputData
 import androidx.ui.core.PointerInputHandler
-import androidx.ui.core.PxPosition
-import androidx.ui.core.Timestamp
-import androidx.ui.core.millisecondsToTimestamp
-import androidx.ui.core.px
+import androidx.ui.unit.Duration
+import androidx.ui.unit.IntPxSize
+import androidx.ui.unit.PxPosition
+import androidx.ui.unit.Uptime
+import androidx.ui.unit.ipx
+
+// TODO(shepshapard): Document.
 
 fun down(
-    id: Int = 0,
-    timestamp: Timestamp = 0L.millisecondsToTimestamp(),
+    id: Long,
+    duration: Duration = Duration.Zero,
     x: Float = 0f,
     y: Float = 0f
 ): PointerInputChange =
     PointerInputChange(
-        id,
-        PointerInputData(timestamp, PxPosition(x.px, y.px), true),
+        PointerId(id),
+        PointerInputData(Uptime.Boot + duration, PxPosition(x, y), true),
         PointerInputData(null, null, false),
         ConsumedData(PxPosition.Origin, false)
     )
 
-fun PointerInputChange.moveTo(timestamp: Timestamp, x: Float = 0f, y: Float = 0f) =
+fun PointerInputChange.moveTo(duration: Duration, x: Float = 0f, y: Float = 0f) =
     copy(
         previous = current,
-        current = PointerInputData(timestamp, PxPosition(x.px, y.px), true),
+        current = PointerInputData(Uptime.Boot + duration, PxPosition(x, y), true),
         consumed = ConsumedData()
     )
 
@@ -51,17 +55,17 @@ fun PointerInputChange.moveBy(duration: Duration, dx: Float = 0f, dy: Float = 0f
     copy(
         previous = current,
         current = PointerInputData(
-            current.timestamp!! + duration,
-            PxPosition(current.position!!.x + dx.px, current.position.y + dy.px),
+            current.uptime!! + duration,
+            PxPosition(current.position!!.x + dx, current.position.y + dy),
             true
         ),
         consumed = ConsumedData()
     )
 
-fun PointerInputChange.up(timestamp: Timestamp) =
+fun PointerInputChange.up(duration: Duration) =
     copy(
         previous = current,
-        current = PointerInputData(timestamp, null, false),
+        current = PointerInputData(Uptime.Boot + duration, null, false),
         consumed = ConsumedData()
     )
 
@@ -69,41 +73,109 @@ fun PointerInputChange.consume(dx: Float = 0f, dy: Float = 0f, downChange: Boole
     copy(
         consumed = consumed.copy(
             positionChange = PxPosition(
-                consumed.positionChange.x + dx.px,
-                consumed.positionChange.y + dy.px
+                consumed.positionChange.x + dx,
+                consumed.positionChange.y + dy
             ), downChange = consumed.downChange || downChange
         )
     )
 
+fun PointerInputHandler.invokeOverAllPasses(
+    pointerInputChanges: PointerInputChange,
+    size: IntPxSize = IntPxSize(Int.MAX_VALUE.ipx, Int.MAX_VALUE.ipx)
+) = invokeOverPasses(
+    listOf(pointerInputChanges),
+    listOf(
+        PointerEventPass.InitialDown,
+        PointerEventPass.PreUp,
+        PointerEventPass.PreDown,
+        PointerEventPass.PostUp,
+        PointerEventPass.PostDown
+    ),
+    size = size
+).first()
+
+fun PointerInputHandler.invokeOverAllPasses(
+    vararg pointerInputChanges: PointerInputChange,
+    size: IntPxSize = IntPxSize(Int.MAX_VALUE.ipx, Int.MAX_VALUE.ipx)
+) = invokeOverPasses(
+    pointerInputChanges.toList(),
+    listOf(
+        PointerEventPass.InitialDown,
+        PointerEventPass.PreUp,
+        PointerEventPass.PreDown,
+        PointerEventPass.PostUp,
+        PointerEventPass.PostDown
+    ),
+    size = size
+)
+
+// TODO(shepshapard): Rename to invokeOverPass
+fun PointerInputHandler.invokeOverPasses(
+    pointerInputChange: PointerInputChange,
+    pointerEventPass: PointerEventPass,
+    size: IntPxSize = IntPxSize(Int.MAX_VALUE.ipx, Int.MAX_VALUE.ipx)
+) = invokeOverPasses(listOf(pointerInputChange), listOf(pointerEventPass), size).first()
+
+// TODO(shepshapard): Rename to invokeOverPass
+fun PointerInputHandler.invokeOverPasses(
+    vararg pointerInputChanges: PointerInputChange,
+    pointerEventPass: PointerEventPass,
+    size: IntPxSize = IntPxSize(Int.MAX_VALUE.ipx, Int.MAX_VALUE.ipx)
+) = invokeOverPasses(pointerInputChanges.toList(), listOf(pointerEventPass), size)
+
+fun PointerInputHandler.invokeOverPasses(
+    pointerInputChange: PointerInputChange,
+    vararg pointerEventPasses: PointerEventPass,
+    size: IntPxSize = IntPxSize(Int.MAX_VALUE.ipx, Int.MAX_VALUE.ipx)
+) = invokeOverPasses(listOf(pointerInputChange), pointerEventPasses.toList(), size).first()
+
 fun PointerInputHandler.invokeOverPasses(
     pointerInputChanges: List<PointerInputChange>,
-    vararg pointerEventPasses: PointerEventPass
+    pointerEventPasses: List<PointerEventPass>,
+    size: IntPxSize = IntPxSize(Int.MAX_VALUE.ipx, Int.MAX_VALUE.ipx)
 ): List<PointerInputChange> {
+    require(pointerInputChanges.isNotEmpty())
+    require(pointerEventPasses.isNotEmpty())
     var localPointerInputChanges = pointerInputChanges
     pointerEventPasses.forEach {
-        localPointerInputChanges = this.invoke(localPointerInputChanges, it)
+        localPointerInputChanges = this.invoke(localPointerInputChanges, it, size)
     }
     return localPointerInputChanges
 }
 
-fun PointerInputHandler.invokeOverAllPasses(
-    pointerInputChanges: List<PointerInputChange>
-) = invokeOverPasses(
-    pointerInputChanges,
-    PointerEventPass.InitialDown,
-    PointerEventPass.PreUp,
-    PointerEventPass.PreDown,
-    PointerEventPass.PostUp,
-    PointerEventPass.PostDown
-)
+/**
+ * Simulates the dispatching of [event] to [this] on all [PointerEventPass]es in their standard
+ * order.
+ *
+ * @param event The event to dispatch.
+ */
+fun ((CustomEvent, PointerEventPass) -> Unit).invokeOverAllPasses(
+    event: CustomEvent
+) {
+    invokeOverPasses(
+        event,
+        listOf(
+            PointerEventPass.InitialDown,
+            PointerEventPass.PreUp,
+            PointerEventPass.PreDown,
+            PointerEventPass.PostUp,
+            PointerEventPass.PostDown
+        )
+    )
+}
 
-fun PointerInputHandler.invokeOverAllPasses(
-    vararg pointerInputChanges: PointerInputChange
-) = invokeOverPasses(
-    pointerInputChanges.toList(),
-    PointerEventPass.InitialDown,
-    PointerEventPass.PreUp,
-    PointerEventPass.PreDown,
-    PointerEventPass.PostUp,
-    PointerEventPass.PostDown
-)
+/**
+ * Simulates the dispatching of [event] to [this] on all [PointerEventPass]es in their standard
+ * order.
+ *
+ * @param event The event to dispatch.
+ * @param pointerEventPasses The [PointerEventPass]es to pass to each call to [this].
+ */
+fun ((CustomEvent, PointerEventPass) -> Unit).invokeOverPasses(
+    event: CustomEvent,
+    pointerEventPasses: List<PointerEventPass>
+) {
+    pointerEventPasses.forEach { pass ->
+        this.invoke(event, pass)
+    }
+}

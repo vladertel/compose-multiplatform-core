@@ -35,6 +35,7 @@ import androidx.room.solver.binderprovider.DataSourceQueryResultBinderProvider
 import androidx.room.solver.binderprovider.GuavaListenableFutureQueryResultBinderProvider
 import androidx.room.solver.binderprovider.InstantQueryResultBinderProvider
 import androidx.room.solver.binderprovider.LiveDataQueryResultBinderProvider
+import androidx.room.solver.binderprovider.PagingSourceQueryResultBinderProvider
 import androidx.room.solver.binderprovider.RxFlowableQueryResultBinderProvider
 import androidx.room.solver.binderprovider.RxMaybeQueryResultBinderProvider
 import androidx.room.solver.binderprovider.RxObservableQueryResultBinderProvider
@@ -54,6 +55,7 @@ import androidx.room.solver.query.parameter.QueryParameterAdapter
 import androidx.room.solver.query.result.ArrayQueryResultAdapter
 import androidx.room.solver.query.result.EntityRowAdapter
 import androidx.room.solver.query.result.GuavaOptionalQueryResultAdapter
+import androidx.room.solver.query.result.ImmutableListQueryResultAdapter
 import androidx.room.solver.query.result.InstantQueryResultBinder
 import androidx.room.solver.query.result.ListQueryResultAdapter
 import androidx.room.solver.query.result.OptionalQueryResultAdapter
@@ -98,6 +100,7 @@ import asTypeElement
 import com.google.auto.common.MoreElements
 import com.google.auto.common.MoreTypes
 import com.google.common.annotations.VisibleForTesting
+import com.google.common.collect.ImmutableList
 import java.util.LinkedList
 import javax.lang.model.type.ArrayType
 import javax.lang.model.type.TypeKind
@@ -176,6 +179,7 @@ class TypeAdapterStore private constructor(
             RxSingleQueryResultBinderProvider(context),
             DataSourceQueryResultBinderProvider(context),
             DataSourceFactoryQueryResultBinderProvider(context),
+            PagingSourceQueryResultBinderProvider(context),
             CoroutineFlowResultBinderProvider(context),
             InstantQueryResultBinderProvider(context)
     )
@@ -409,6 +413,10 @@ class TypeAdapterStore private constructor(
                 val typeArg = declared.typeArguments.first()
                 val rowAdapter = findRowAdapter(typeArg, query) ?: return null
                 return OptionalQueryResultAdapter(SingleEntityQueryResultAdapter(rowAdapter))
+            } else if (MoreTypes.isTypeOf(ImmutableList::class.java, typeMirror)) {
+                val typeArg = declared.typeArguments.first().extendsBoundOrSelf()
+                val rowAdapter = findRowAdapter(typeArg, query) ?: return null
+                return ImmutableListQueryResultAdapter(rowAdapter)
             } else if (MoreTypes.isTypeOf(java.util.List::class.java, typeMirror)) {
                 val typeArg = declared.typeArguments.first().extendsBoundOrSelf()
                 val rowAdapter = findRowAdapter(typeArg, query) ?: return null
@@ -453,6 +461,7 @@ class TypeAdapterStore private constructor(
                     ).process()
                     PojoRowAdapter(
                             context = subContext,
+                            info = resultInfo,
                             pojo = pojo,
                             out = typeMirror)
                 }
@@ -471,6 +480,11 @@ class TypeAdapterStore private constructor(
                 }
             }
 
+            if (rowAdapter != null && rowAdapterLogs?.hasErrors() != true) {
+                rowAdapterLogs?.writeTo(context)
+                return rowAdapter
+            }
+
             if ((resultInfo?.columns?.size ?: 1) == 1) {
                 val singleColumn = findCursorValueReader(typeMirror,
                         resultInfo?.columns?.get(0)?.type)
@@ -480,7 +494,7 @@ class TypeAdapterStore private constructor(
             }
             // if we tried, return its errors
             if (rowAdapter != null) {
-                rowAdapterLogs?.writeTo(context.processingEnv)
+                rowAdapterLogs?.writeTo(context)
                 return rowAdapter
             }
             if (query.runtimeQueryPlaceholder) {
@@ -494,6 +508,7 @@ class TypeAdapterStore private constructor(
                 ).process()
                 return PojoRowAdapter(
                         context = context,
+                        info = null,
                         pojo = pojo,
                         out = typeMirror)
             }

@@ -16,6 +16,7 @@
 
 package androidx.camera.integration.core;
 
+import static androidx.camera.testing.CoreAppTestUtil.clearDeviceUI;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
@@ -30,9 +31,10 @@ import static org.junit.Assume.assumeTrue;
 
 import android.content.Intent;
 
-import androidx.camera.core.FlashMode;
+import androidx.camera.core.CameraInfo;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.Preview;
+import androidx.camera.core.TorchState;
 import androidx.camera.integration.core.idlingresource.ElapsedTimeIdlingResource;
 import androidx.camera.integration.core.idlingresource.WaitForViewToShow;
 import androidx.camera.testing.CameraUtil;
@@ -46,9 +48,7 @@ import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.rule.ActivityTestRule;
 import androidx.test.rule.GrantPermissionRule;
-import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.UiDevice;
-import androidx.test.uiautomator.Until;
 
 import junit.framework.AssertionFailedError;
 
@@ -68,7 +68,6 @@ public final class ToggleButtonUITest {
 
     private final UiDevice mDevice =
             UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
-    private final String mLauncherPackageName = mDevice.getLauncherPackageName();
     private final Intent mIntent = ApplicationProvider.getApplicationContext().getPackageManager()
             .getLaunchIntentForPackage(BASIC_SAMPLE_PACKAGE);
 
@@ -98,14 +97,23 @@ public final class ToggleButtonUITest {
         assumeTrue(CameraUtil.deviceHasCamera());
         CoreAppTestUtil.assumeCompatibleDevice();
 
+        // Clear the device UI before start each test.
+        clearDeviceUI(InstrumentationRegistry.getInstrumentation());
+
         // Launch Activity
         mActivityRule.launchActivity(mIntent);
     }
 
     @After
     public void tearDown() {
-        pressBackAndReturnHome();
+        // Idles Espresso thread and make activity complete each action.
+        waitFor(new ElapsedTimeIdlingResource(IDLE_TIMEOUT_MS));
+
         mActivityRule.finishActivity();
+
+        // Returns to Home to restart next test.
+        mDevice.pressHome();
+        mDevice.waitForIdle(IDLE_TIMEOUT_MS);
     }
 
     @Test
@@ -119,42 +127,40 @@ public final class ToggleButtonUITest {
         // There are 3 different states of flash mode: ON, OFF and AUTO.
         // By pressing flash mode toggle button, the flash mode would switch to the next state.
         // The flash mode would loop in following sequence: OFF -> AUTO -> ON -> OFF.
-        FlashMode mode1 = useCase.getFlashMode();
+        @ImageCapture.FlashMode int mode1 = useCase.getFlashMode();
 
         onView(withId(R.id.flash_toggle)).perform(click());
-        FlashMode mode2 = useCase.getFlashMode();
+        @ImageCapture.FlashMode int mode2 = useCase.getFlashMode();
         // After the switch, the mode2 should be different from mode1.
         assertNotEquals(mode2, mode1);
 
         onView(withId(R.id.flash_toggle)).perform(click());
-        FlashMode mode3 = useCase.getFlashMode();
+        @ImageCapture.FlashMode int mode3 = useCase.getFlashMode();
         // The mode3 should be different from first and second time.
         assertNotEquals(mode3, mode2);
         assertNotEquals(mode3, mode1);
-
-        waitForIdlingRegistryAndPressBackAndHomeButton();
     }
 
     @Test
     public void testTorchToggleButton() {
-        waitFor(new WaitForViewToShow(R.id.torch_toggle));
+        waitFor(new WaitForViewToShow(R.id.constraintLayout));
+        assumeTrue(detectButtonVisibility(R.id.torch_toggle));
 
-        Preview useCase = mActivityRule.getActivity().getPreview();
-        assertNotNull(useCase);
-        boolean isTorchOn = useCase.isTorchOn();
+        CameraInfo cameraInfo = mActivityRule.getActivity().getCameraInfo();
+        assertNotNull(cameraInfo);
+        boolean isTorchOn = isTorchOn(cameraInfo);
 
         onView(withId(R.id.torch_toggle)).perform(click());
-        assertNotEquals(useCase.isTorchOn(), isTorchOn);
+        assertNotEquals(isTorchOn(cameraInfo), isTorchOn);
 
         // By pressing the torch toggle button two times, it should switch back to original state.
         onView(withId(R.id.torch_toggle)).perform(click());
-        assertEquals(useCase.isTorchOn(), isTorchOn);
-
-        waitForIdlingRegistryAndPressBackAndHomeButton();
+        assertEquals(isTorchOn(cameraInfo), isTorchOn);
     }
 
     @Test
     public void testSwitchCameraToggleButton() {
+        assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_FRONT));
         waitFor(new WaitForViewToShow(R.id.direction_toggle));
 
         boolean isPreviewExist = mActivityRule.getActivity().getPreview() != null;
@@ -178,26 +184,10 @@ public final class ToggleButtonUITest {
                 assertNotNull(mActivityRule.getActivity().getPreview());
             }
         }
-
-        waitForIdlingRegistryAndPressBackAndHomeButton();
     }
 
-    private void waitForIdlingRegistryAndPressBackAndHomeButton() {
-        // Idles Espresso thread and make activity complete each action.
-        waitFor(new ElapsedTimeIdlingResource(IDLE_TIMEOUT_MS));
-
-        mDevice.pressBack();
-
-        // Returns to Home to restart next test.
-        mDevice.pressHome();
-        mDevice.wait(Until.hasObject(By.pkg(mLauncherPackageName).depth(0)), IDLE_TIMEOUT_MS);
-    }
-
-    private void pressBackAndReturnHome() {
-        mDevice.pressBack();
-
-        // Returns to Home to restart next test.
-        mDevice.pressHome();
+    private boolean isTorchOn(CameraInfo cameraInfo) {
+        return cameraInfo.getTorchState().getValue() == TorchState.ON;
     }
 
     private boolean detectButtonVisibility(int resource) {

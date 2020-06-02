@@ -16,73 +16,48 @@
 
 package androidx.ui.material.studies.rally
 
-import android.app.Activity
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.compose.Composable
-import androidx.compose.composer
+import androidx.compose.getValue
+import androidx.compose.setValue
 import androidx.compose.state
-import androidx.compose.unaryPlus
-import androidx.ui.core.dp
+import androidx.ui.core.Modifier
 import androidx.ui.core.setContent
-import androidx.ui.foundation.VerticalScroller
-import androidx.ui.layout.Column
-import androidx.ui.layout.HeightSpacer
-import androidx.ui.layout.LayoutSize
+import androidx.ui.foundation.Box
 import androidx.ui.layout.padding
-import androidx.ui.material.Tab
-import androidx.ui.material.TabRow
-import androidx.ui.material.studies.Scaffold
+import androidx.ui.material.Scaffold
 
 /**
  * This Activity recreates the Rally Material Study from
  * https://material.io/design/material-studies/rally.html
  */
-class RallyActivity : Activity() {
+class RallyActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             RallyApp()
         }
     }
+}
 
-    @Composable
-    fun RallyApp() {
-        RallyTheme {
-            val allScreens = RallyScreenState.values().toList()
-            var currentScreen by +state { RallyScreenState.Overview }
-            Scaffold(appBar = {
-                TabRow(allScreens, selectedIndex = currentScreen.ordinal) { i, screen ->
-                    Tab(text = screen.name, selected = currentScreen.ordinal == i) {
-                        currentScreen = screen
-                    }
-                }
-            }) {
+@Composable
+fun RallyApp() {
+    RallyTheme {
+        val allScreens = RallyScreenState.values().toList()
+        var currentScreen by state { RallyScreenState.Overview }
+        Scaffold(
+            topBar = {
+                RallyTopAppBar(
+                    allScreens = allScreens,
+                    onTabSelected = { screen -> currentScreen = screen },
+                    currentScreen = currentScreen
+                )
+            }
+        ) { innerPadding ->
+            Box(Modifier.padding(innerPadding)) {
                 currentScreen.body()
             }
         }
     }
-}
-
-@Composable
-fun RallyBody() {
-    VerticalScroller {
-        Column(modifier = padding(16.dp), mainAxisSize = LayoutSize.Expand) {
-            RallyAlertCard()
-            HeightSpacer(height = 10.dp)
-            RallyAccountsOverviewCard()
-            HeightSpacer(height = 10.dp)
-            RallyBillsOverviewCard()
-        }
-    }
-}
-
-private enum class RallyScreenState {
-    Overview, Accounts, Bills
-}
-
-@Composable
-private fun RallyScreenState.body() = when (this) {
-    RallyScreenState.Overview -> RallyBody()
-    RallyScreenState.Accounts -> RallyAccountsCard()
-    RallyScreenState.Bills -> RallyBillsCard()
 }

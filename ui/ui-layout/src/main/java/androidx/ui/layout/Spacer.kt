@@ -16,40 +16,30 @@
 
 package androidx.ui.layout
 
-import androidx.ui.core.Dp
-import androidx.ui.core.dp
 import androidx.compose.Composable
-import androidx.compose.composer
+import androidx.compose.emptyContent
+import androidx.ui.core.Layout
+import androidx.ui.core.Modifier
+import androidx.ui.core.hasFixedHeight
+import androidx.ui.core.hasFixedWidth
+import androidx.ui.unit.ipx
+import androidx.ui.unit.isFinite
 
 /**
- * Component that represents an empty space with given width and height.
+ * Component that represents an empty space layout, whose size can be defined using the [LayoutWidth],
+ * [LayoutHeight] and [LayoutSize] modifiers.
  *
- * @param width width of the empty space
- * @param height height of the empty space
+ * @sample androidx.ui.layout.samples.SpacerExample
+ *
+ * @param modifier modifiers to set to this spacer
  */
 @Composable
-fun FixedSpacer(width: Dp, height: Dp) {
-    ConstrainedBox(constraints = DpConstraints.tightConstraints(width, height)) {
-        // no children as we only need space
+fun Spacer(modifier: Modifier) {
+    Layout(emptyContent(), modifier) { _, constraints, _ ->
+        with(constraints) {
+            val width = if (hasFixedWidth && maxWidth.isFinite()) maxWidth else 0.ipx
+            val height = if (hasFixedHeight && maxHeight.isFinite()) maxHeight else 0.ipx
+            layout(width, height) {}
+        }
     }
-}
-
-/**
- * Component that represents an empty space with fixed width and zero height.
- *
- * @param width width of the empty space
- */
-@Composable
-fun WidthSpacer(width: Dp) {
-    FixedSpacer(width = width, height = 0.dp)
-}
-
-/**
- * Component that represents an empty space with fixed height and zero width.
- *
- * @param height height of the empty space
- */
-@Composable
-fun HeightSpacer(height: Dp) {
-    FixedSpacer(height = height, width = 0.dp)
 }

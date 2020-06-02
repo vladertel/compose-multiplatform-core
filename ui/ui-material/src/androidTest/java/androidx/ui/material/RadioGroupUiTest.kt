@@ -16,31 +16,26 @@
 
 package androidx.ui.material
 
-import androidx.compose.composer
 import androidx.compose.Composable
-import androidx.compose.Model
+import androidx.compose.mutableStateOf
 import androidx.test.filters.MediumTest
-import androidx.ui.core.TestTag
-import androidx.ui.core.dp
+import androidx.ui.core.Modifier
+import androidx.ui.core.testTag
 import androidx.ui.foundation.Strings
 import androidx.ui.layout.Column
-import androidx.ui.semantics.accessibilityValue
+import androidx.ui.test.SemanticsNodeInteraction
 import androidx.ui.test.assertIsInMutuallyExclusiveGroup
 import androidx.ui.test.assertIsSelected
-import androidx.ui.test.assertSemanticsIsEqualTo
-import androidx.ui.test.copyWith
+import androidx.ui.test.assertIsUnselected
+import androidx.ui.test.assertValueEquals
 import androidx.ui.test.createComposeRule
-import androidx.ui.test.createFullSemantics
 import androidx.ui.test.doClick
 import androidx.ui.test.findByTag
-import androidx.ui.test.assertIsUnselected
+import androidx.ui.unit.dp
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-
-@Model
-internal class RadioGroupSelectedState<T>(var selected: T)
 
 @MediumTest
 @RunWith(JUnit4::class)
@@ -53,147 +48,136 @@ class RadioGroupUiTest {
     private val itemTwo = "Foo"
     private val itemThree = "Sap"
 
-    private val unselectedRadioGroupItemSemantics = createFullSemantics(
-        value = Strings.NotSelected
-    )
+    private fun SemanticsNodeInteraction.assertHasSelectedSemantics(): SemanticsNodeInteraction =
+        assertIsInMutuallyExclusiveGroup()
+            .assertIsSelected()
+            .assertValueEquals(Strings.Selected)
 
-    private val selectedRadioGroupItemSemantics = unselectedRadioGroupItemSemantics.copyWith {
-        accessibilityValue = Strings.Selected
-    }
+    private fun SemanticsNodeInteraction.assertHasUnSelectedSemantics(): SemanticsNodeInteraction =
+        assertIsInMutuallyExclusiveGroup()
+            .assertIsUnselected()
+            .assertValueEquals(Strings.NotSelected)
+
     private val options = listOf(itemOne, itemTwo, itemThree)
 
     @Composable
-    fun VerticalRadioGroupforTests(children: @Composable() RadioGroupScope.() -> Unit) {
+    fun VerticalRadioGroupforTests(children: @Composable RadioGroupScope.() -> Unit) {
         RadioGroup {
             Column {
-                children(p1 = this)
+                children(p1 = this@RadioGroup)
             }
         }
     }
 
     @Test
     fun radioGroupTest_defaultSemantics() {
-        val select = RadioGroupSelectedState(itemOne)
+        val selected = mutableStateOf(itemOne)
 
         composeTestRule.setMaterialContent {
             VerticalRadioGroupforTests {
                 options.forEach { item ->
-                    TestTag(tag = item) {
-                        RadioGroupTextItem(
-                            text = item,
-                            selected = (select.selected == item),
-                            onSelect = { select.selected = item })
-                    }
+                    RadioGroupTextItem(
+                        modifier = Modifier.testTag(item),
+                        text = item,
+                        selected = (selected.value == item),
+                        onSelect = { selected.value = item })
                 }
             }
         }
 
-        findByTag(itemOne).assertSemanticsIsEqualTo(selectedRadioGroupItemSemantics)
-        findByTag(itemTwo).assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
-        findByTag(itemThree).assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
-
-        findByTag(itemOne)
-            .assertIsInMutuallyExclusiveGroup()
-            .assertIsSelected()
-        findByTag(itemTwo)
-            .assertIsInMutuallyExclusiveGroup()
-            .assertIsUnselected()
-        findByTag(itemThree)
-            .assertIsInMutuallyExclusiveGroup()
-            .assertIsUnselected()
+        findByTag(itemOne).assertHasSelectedSemantics()
+        findByTag(itemTwo).assertHasUnSelectedSemantics()
+        findByTag(itemThree).assertHasUnSelectedSemantics()
     }
 
     @Test
     fun radioGroupTest_ensureUnselectable() {
-        val select = RadioGroupSelectedState(itemOne)
+        val selected = mutableStateOf(itemOne)
 
         composeTestRule.setMaterialContent {
             VerticalRadioGroupforTests {
                 options.forEach { item ->
-                    TestTag(tag = item) {
-                        RadioGroupTextItem(
-                            text = item,
-                            selected = (select.selected == item),
-                            onSelect = { select.selected = item })
-                    }
+                    RadioGroupTextItem(
+                        modifier = Modifier.testTag(item),
+                        text = item,
+                        selected = (selected.value == item),
+                        onSelect = { selected.value = item })
                 }
             }
         }
 
         findByTag(itemOne)
-            .assertSemanticsIsEqualTo(selectedRadioGroupItemSemantics)
+            .assertHasSelectedSemantics()
             .doClick()
-            .assertSemanticsIsEqualTo(selectedRadioGroupItemSemantics)
+            .assertHasSelectedSemantics()
 
         findByTag(itemTwo)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
 
         findByTag(itemThree)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
     }
 
     @Test
     fun radioGroupTest_clickSelect() {
-        val select = RadioGroupSelectedState(itemOne)
+        val selected = mutableStateOf(itemOne)
         composeTestRule.setMaterialContent {
             VerticalRadioGroupforTests {
                 options.forEach { item ->
-                    TestTag(tag = item) {
-                        RadioGroupTextItem(
-                            text = item,
-                            selected = (select.selected == item),
-                            onSelect = { select.selected = item })
-                    }
+                    RadioGroupTextItem(
+                        modifier = Modifier.testTag(item),
+                        text = item,
+                        selected = (selected.value == item),
+                        onSelect = { selected.value = item })
                 }
             }
         }
         findByTag(itemTwo)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
             .doClick()
-            .assertSemanticsIsEqualTo(selectedRadioGroupItemSemantics)
+            .assertHasSelectedSemantics()
 
         findByTag(itemOne)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
 
         findByTag(itemThree)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
     }
 
     @Test
     fun radioGroupTest_clickSelectTwoDifferentItems() {
-        val select = RadioGroupSelectedState(itemOne)
+        val selected = mutableStateOf(itemOne)
 
         composeTestRule.setMaterialContent {
             VerticalRadioGroupforTests {
                 options.forEach { item ->
-                    TestTag(tag = item) {
-                        RadioGroupTextItem(
-                            text = item,
-                            selected = (select.selected == item),
-                            onSelect = { select.selected = item })
-                    }
+                    RadioGroupTextItem(
+                        modifier = Modifier.testTag(item),
+                        text = item,
+                        selected = (selected.value == item),
+                        onSelect = { selected.value = item })
                 }
             }
         }
 
         findByTag(itemTwo)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
             .doClick()
-            .assertSemanticsIsEqualTo(selectedRadioGroupItemSemantics)
+            .assertHasSelectedSemantics()
 
         findByTag(itemOne)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
 
         findByTag(itemThree)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
             .doClick()
-            .assertSemanticsIsEqualTo(selectedRadioGroupItemSemantics)
+            .assertHasSelectedSemantics()
 
         findByTag(itemOne)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
 
         findByTag(itemTwo)
-            .assertSemanticsIsEqualTo(unselectedRadioGroupItemSemantics)
+            .assertHasUnSelectedSemantics()
     }
 
     @Test

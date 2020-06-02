@@ -16,6 +16,7 @@
 
 package com.example.androidx.webkit;
 
+import android.annotation.SuppressLint;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
@@ -40,6 +41,7 @@ public class AssetLoaderAjaxActivity extends AppCompatActivity {
 
     private class MyWebViewClient extends WebViewClient {
         @Override
+        @SuppressWarnings("deprecation") // use the old one for compatibility with all API levels.
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             return false;
         }
@@ -52,6 +54,7 @@ public class AssetLoaderAjaxActivity extends AppCompatActivity {
         }
 
         @Override
+        @SuppressWarnings("deprecation") // use the old one for compatibility with all API levels.
         public WebResourceResponse shouldInterceptRequest(WebView view, String request) {
             return mAssetLoader.shouldInterceptRequest(Uri.parse(request));
         }
@@ -60,6 +63,7 @@ public class AssetLoaderAjaxActivity extends AppCompatActivity {
     private WebViewAssetLoader mAssetLoader;
     private WebView mWebView;
 
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

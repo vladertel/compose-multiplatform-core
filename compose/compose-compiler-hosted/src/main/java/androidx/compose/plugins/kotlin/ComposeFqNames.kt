@@ -23,8 +23,8 @@ import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.descriptors.findClassAcrossModuleDependencies
 import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.resolve.annotations.argumentValue
 import org.jetbrains.kotlin.resolve.constants.ConstantValue
 import org.jetbrains.kotlin.resolve.descriptorUtil.annotationClass
 import org.jetbrains.kotlin.types.KotlinType
@@ -34,13 +34,24 @@ import org.jetbrains.kotlin.types.typeUtil.replaceAnnotations
 
 object ComposeFqNames {
     val Composable = ComposeUtils.composeFqName("Composable")
-    val Pivotal = ComposeUtils.composeFqName("Pivotal")
-    val Children = ComposeUtils.composeFqName("Children")
-    val Stateful = ComposeUtils.composeFqName("Stateful")
+    val CurrentComposerIntrinsic = ComposeUtils.composeFqName("<get-currentComposer>")
+    val Direct = ComposeUtils.composeFqName("Direct")
+    val restartableFunction = FqName.fromSegments(listOf(
+        "androidx",
+        "compose",
+        "internal",
+        "restartableFunction"
+    ))
+    val remember = ComposeUtils.composeFqName("remember")
+    val key = ComposeUtils.composeFqName("key")
     val StableMarker = ComposeUtils.composeFqName("StableMarker")
-    val Emittable = ComposeUtils.composeFqName("Emittable")
-    val HiddenAttribute = ComposeUtils.composeFqName("HiddenAttribute")
-
+    val Stable = ComposeUtils.composeFqName("Stable")
+    val Composer = ComposeUtils.composeFqName("Composer")
+    val Untracked = ComposeUtils.composeFqName("Untracked")
+    val UiComposer = FqName.fromSegments(listOf("androidx", "ui", "node", "UiComposer"))
+    val Package = FqName.fromSegments(listOf("androidx", "compose"))
+    val Function0 = FqName.fromSegments(listOf("kotlin", "jvm", "functions", "Function0"))
+    val Function1 = FqName.fromSegments(listOf("kotlin", "jvm", "functions", "Function1"))
     fun makeComposableAnnotation(module: ModuleDescriptor): AnnotationDescriptor =
         object : AnnotationDescriptor {
             override val type: KotlinType
@@ -67,33 +78,15 @@ fun KotlinType.isMarkedStable(): Boolean =
                     (constructor.declarationDescriptor?.annotations?.hasStableMarker() ?: false))
 fun Annotated.hasComposableAnnotation(): Boolean =
     annotations.findAnnotation(ComposeFqNames.Composable) != null
-fun Annotated.hasPivotalAnnotation(): Boolean =
-    annotations.findAnnotation(ComposeFqNames.Pivotal) != null
-fun Annotated.hasChildrenAnnotation(): Boolean =
-    annotations.findAnnotation(ComposeFqNames.Children) != null
-fun Annotated.hasStatefulAnnotation(): Boolean =
-    annotations.findAnnotation(ComposeFqNames.Stateful) != null
-fun Annotated.hasEmittableAnnotation(): Boolean =
-    annotations.findAnnotation(ComposeFqNames.Emittable) != null
-fun Annotated.hasHiddenAttributeAnnotation(): Boolean =
-    annotations.findAnnotation(ComposeFqNames.HiddenAttribute) != null
-
-fun Annotated.isComposableFromChildrenAnnotation(): Boolean {
-    val childrenAnnotation = annotations.findAnnotation(ComposeFqNames.Children) ?: return false
-    return childrenAnnotation.isComposableChildrenAnnotation
-}
+fun Annotated.hasDirectAnnotation(): Boolean =
+    annotations.findAnnotation(ComposeFqNames.Direct) != null
+fun Annotated.hasUntrackedAnnotation(): Boolean =
+    annotations.findAnnotation(ComposeFqNames.Untracked) != null
 
 internal val KotlinType.isSpecialType: Boolean get() =
     this === NO_EXPECTED_TYPE || this === UNIT_EXPECTED_TYPE
 
 val AnnotationDescriptor.isComposableAnnotation: Boolean get() = fqName == ComposeFqNames.Composable
-val AnnotationDescriptor.isChildrenAnnotation: Boolean get() = fqName == ComposeFqNames.Children
-val AnnotationDescriptor.isComposableChildrenAnnotation: Boolean
-    get() {
-        if (fqName != ComposeFqNames.Children) return false
-        val composableValueArgument = argumentValue("composable")?.value
-        return composableValueArgument == null || composableValueArgument == true
-    }
 
 fun Annotations.hasStableMarker(): Boolean = any(AnnotationDescriptor::isStableMarker)
 

@@ -16,21 +16,20 @@
 
 package androidx.ui.core
 
-import android.app.Activity
-import androidx.benchmark.junit4.BenchmarkRule
 import androidx.compose.Composable
-import androidx.compose.FrameManager
-import androidx.compose.State
-import androidx.compose.composer
+import androidx.compose.MutableState
 import androidx.compose.state
-import androidx.compose.unaryPlus
 import androidx.test.filters.LargeTest
-import androidx.test.rule.ActivityTestRule
-import androidx.ui.benchmark.toggleStateMeasureLayout
-import androidx.ui.layout.Center
-import androidx.ui.layout.Container
+import androidx.ui.benchmark.ComposeBenchmarkRule
+import androidx.ui.benchmark.toggleStateBenchmarkLayout
+import androidx.ui.foundation.Box
+import androidx.ui.foundation.ContentGravity
+import androidx.ui.integration.test.ToggleableTestCase
+import androidx.ui.layout.Stack
+import androidx.ui.layout.preferredSize
 import androidx.ui.test.ComposeTestCase
-import androidx.ui.test.ToggleableTestCase
+import androidx.ui.unit.Dp
+import androidx.ui.unit.dp
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,51 +40,47 @@ import org.junit.runners.JUnit4
 class OnPositionedBenchmark {
 
     @get:Rule
-    val benchmarkRule = BenchmarkRule()
-
-    @get:Rule
-    val activityRule = ActivityTestRule(Activity::class.java)
-
-    private val activity: Activity get() = activityRule.activity
+    val benchmarkRule = ComposeBenchmarkRule()
 
     @Test
     fun deepHierarchyOnPositioned_layout() {
-        benchmarkRule.toggleStateMeasureLayout(
-            activity,
-            DeepHierarchyOnPositionedTestCase(activity)
-        )
+        benchmarkRule.toggleStateBenchmarkLayout({
+            DeepHierarchyOnPositionedTestCase()
+        })
     }
 }
 
-private class DeepHierarchyOnPositionedTestCase(
-    activity: Activity
-) : ComposeTestCase(activity), ToggleableTestCase {
+private class DeepHierarchyOnPositionedTestCase :
+    ComposeTestCase, ToggleableTestCase {
 
-    private lateinit var state: State<Dp>
+    private lateinit var state: MutableState<Dp>
 
-    override fun setComposeContent(activity: Activity) = activity.setContent {
-        val size = +state { 200.dp }
+    @Composable
+    override fun emitContent() {
+        val size = state { 200.dp }
         this.state = size
-        Center {
-            Container(width = size.value, height = size.value) {
+        Stack {
+            Box(Modifier.preferredSize(size.value), gravity = ContentGravity.Center) {
                 StaticChildren(100)
             }
         }
-    }!!
+    }
 
     @Composable
     private fun StaticChildren(count: Int) {
         if (count > 0) {
-            Container(width = 100.dp, height = 100.dp) {
+            val modifier = if (count == 1) {
+                Modifier.onPositioned { it.size }
+            } else {
+                Modifier
+            }
+            Box(Modifier.preferredSize(100.dp) + modifier, gravity = ContentGravity.Center) {
                 StaticChildren(count - 1)
             }
-        } else {
-            OnPositioned { coordinates -> coordinates.position }
         }
     }
 
     override fun toggleState() {
         state.value = if (state.value == 200.dp) 150.dp else 200.dp
-        FrameManager.nextFrame()
     }
 }

@@ -16,26 +16,24 @@
 
 package androidx.ui.core
 
-import android.app.Activity
-import androidx.benchmark.junit4.BenchmarkRule
 import androidx.test.filters.LargeTest
-import androidx.test.rule.ActivityTestRule
-import androidx.ui.benchmark.measureDrawPerf
-import androidx.ui.benchmark.measureFirstCompose
-import androidx.ui.benchmark.measureFirstDraw
-import androidx.ui.benchmark.measureFirstLayout
-import androidx.ui.benchmark.measureFirstMeasure
-import androidx.ui.benchmark.measureLayoutPerf
-import androidx.ui.test.DisableTransitions
-import androidx.ui.test.TextBenchmarkTestRule
-import androidx.ui.test.cartesian
+import androidx.ui.benchmark.ComposeBenchmarkRule
+import androidx.ui.benchmark.benchmarkDrawPerf
+import androidx.ui.benchmark.benchmarkFirstCompose
+import androidx.ui.benchmark.benchmarkFirstDraw
+import androidx.ui.benchmark.benchmarkFirstLayout
+import androidx.ui.benchmark.benchmarkFirstMeasure
+import androidx.ui.benchmark.benchmarkLayoutPerf
+import androidx.ui.integration.test.core.text.TextMultiStyleTestCase
+import androidx.ui.integration.test.TextBenchmarkTestRule
+import androidx.ui.integration.test.cartesian
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 /**
- * The benchmark for [Text] widget with the input being a styled text in the form of
+ * The benchmark for [Text] composable with the input being a styled text in the form of
  * AnnotatedString.
  */
 @LargeTest
@@ -45,139 +43,119 @@ class TextMultiStyleBenchmark(
     private val styleCount: Int
 ) {
     @get:Rule
-    val benchmarkRule = BenchmarkRule()
-
-    @get:Rule
-    val activityRule = ActivityTestRule(Activity::class.java)
-
-    @get:Rule
-    val disableAnimationRule = DisableTransitions()
-
-    @get:Rule
     val textBenchmarkRule = TextBenchmarkTestRule()
 
-    private val activity: Activity get() = activityRule.activity
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "length={0} styleCount={1}")
         fun initParameters() = cartesian(
-                arrayOf(32, 512),
-                arrayOf(0, 32)
-            )
+            arrayOf(32, 512),
+            arrayOf(0, 32)
+        )
     }
 
     /**
-     * Measure the time taken to compose a [Text] widget from scratch with styled text as input.
+     * Measure the time taken to compose a [Text] composable from scratch with styled text as input.
      * This is the time taken to call the [Text] composable function.
      */
     @Test
     fun first_compose() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureFirstCompose(
-                activity,
+            benchmarkRule.benchmarkFirstCompose {
                 TextMultiStyleTestCase(
-                    activity,
                     textLength,
                     styleCount,
                     textGenerator
                 )
-            )
+            }
         }
     }
 
     /**
-     * Measure the time taken by first time measure the Text widget with styled text as input.
-     * This is mainly the time used to measure all the [Measurable]s in the [Text] widget.
+     * Measure the time taken by first time measure the Text composable with styled text as input.
+     * This is mainly the time used to measure all the [Measurable]s in the [Text] composable.
      */
     @Test
     fun first_measure() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureFirstMeasure(
-                activity,
+            benchmarkRule.benchmarkFirstMeasure {
                 TextMultiStyleTestCase(
-                    activity,
                     textLength,
                     styleCount,
                     textGenerator
                 )
-            )
+            }
         }
     }
 
     /**
-     * Measure the time taken by first time layout the Text widget with styled text as input.
-     * This is mainly the time used to place [Placeable]s in [Text] widget.
+     * Measure the time taken by first time layout the Text composable with styled text as input.
+     * This is mainly the time used to place [Placeable]s in [Text] composable.
      */
     @Test
     fun first_layout() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureFirstLayout(
-                activity,
+            benchmarkRule.benchmarkFirstLayout {
                 TextMultiStyleTestCase(
-                    activity,
                     textLength,
                     styleCount,
                     textGenerator
                 )
-            )
+            }
         }
     }
 
     /**
-     * Measure the time taken by first time draw the Text widget with styled text
+     * Measure the time taken by first time draw the Text composable with styled text
      * as input.
      */
     @Test
     fun first_draw() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureFirstDraw(
-                activity,
+            benchmarkRule.benchmarkFirstDraw {
                 TextMultiStyleTestCase(
-                    activity,
                     textLength,
                     styleCount,
                     textGenerator
                 )
-            )
+            }
         }
     }
 
     /**
-     * Measure the time taken by layout a Text widget with styled text input, when
+     * Measure the time taken by layout a Text composable with styled text input, when
      * layout constrains changed.
-     * This is mainly the time used to re-measure and re-layout the widget.
+     * This is mainly the time used to re-measure and re-layout the composable.
      */
     @Test
     fun layout() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureLayoutPerf(
-                activity,
+            benchmarkRule.benchmarkLayoutPerf {
                 TextMultiStyleTestCase(
-                    activity,
                     textLength,
                     styleCount,
                     textGenerator
                 )
-            )
+            }
         }
     }
 
     /**
-     * Measure the time taken by re-draw a Text widget with styled text input.
+     * Measure the time taken by re-draw a Text composable with styled text input.
      */
     @Test
     fun draw() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureDrawPerf(
-                activity,
+            benchmarkRule.benchmarkDrawPerf {
                 TextMultiStyleTestCase(
-                    activity,
                     textLength,
                     styleCount,
                     textGenerator
                 )
-            )
+            }
         }
     }
 }

@@ -17,17 +17,21 @@
 package androidx.build.metalava
 
 import androidx.build.AndroidXExtension
-import androidx.build.AndroidXPlugin.Companion.BUILD_ON_SERVER_TASK
-import androidx.build.checkapi.ApiLocation
-import androidx.build.checkapi.ApiViolationBaselines
-import androidx.build.checkapi.getApiLocation
+import androidx.build.addToBuildOnServer
+import androidx.build.checkapi.ApiBaselinesLocation
+import androidx.build.checkapi.getBuiltApiLocation
+import androidx.build.checkapi.getVersionedApiLocation
+import androidx.build.checkapi.getCurrentApiLocation
 import androidx.build.checkapi.getRequiredCompatibilityApiLocation
-import androidx.build.checkapi.hasApiFolder
+import androidx.build.checkapi.hasApiFileDirectory
 import androidx.build.checkapi.hasApiTasks
 import androidx.build.defaultPublishVariant
 import androidx.build.java.JavaCompileInputs
+import androidx.build.isVersionedApiFileWritingEnabled
+import androidx.build.uptodatedness.cacheEvenIfNoOutputs
 import com.android.build.gradle.LibraryExtension
 import com.android.build.gradle.api.LibraryVariant
+import com.android.build.gradle.tasks.ProcessLibraryManifest
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.TaskProvider
@@ -50,7 +54,7 @@ object MetalavaTasks {
             }
 
             library.defaultPublishVariant { variant ->
-                if (!hasApiFolder()) {
+                if (!project.hasApiFileDirectory()) {
                     logger.info(
                         "Project $name doesn't have an api folder, ignoring API tasks."
                     )
@@ -58,8 +62,11 @@ object MetalavaTasks {
                 }
 
                 val javaInputs = JavaCompileInputs.fromLibraryVariant(library, variant, project)
-                setupProject(this, javaInputs, extension)
-                setupStubs(this, javaInputs, variant)
+                val processManifest = library.buildOutputs.getByName(variant.name)
+                    .processManifestProvider.get() as ProcessLibraryManifest
+                setupProject(this, javaInputs, extension, processManifest)
+                // TODO(aurimas): reenable this when kotlin stubs generation is working.
+                // setupStubs(this, javaInputs, variant)
             }
         }
     }
@@ -71,7 +78,7 @@ object MetalavaTasks {
             if (!hasApiTasks(this, extension)) {
                 return@afterEvaluate
             }
-            if (!hasApiFolder()) {
+            if (!project.hasApiFileDirectory()) {
                 logger.info(
                     "Project $name doesn't have an api folder, ignoring API tasks."
                 )
@@ -95,43 +102,50 @@ object MetalavaTasks {
     fun setupProject(
         project: Project,
         javaCompileInputs: JavaCompileInputs,
-        extension: AndroidXExtension
+        extension: AndroidXExtension,
+        processManifest: ProcessLibraryManifest? = null
     ) {
         val metalavaConfiguration = project.getMetalavaConfiguration()
+        val versionedApiLocation = project.getVersionedApiLocation()
+        val currentApiLocation = project.getCurrentApiLocation()
+        val builtApiLocation = project.getBuiltApiLocation()
 
-        // the api files whose file names contain the version of the library
-        val libraryVersionApi = project.getApiLocation()
-        // the api files whose file names contain "current.txt"
-        val currentTxtApi = ApiLocation.fromPublicApiFile(File(
-            libraryVersionApi.publicApiFile.parentFile, "current.txt"))
+        val outputApiLocations = if (project.isVersionedApiFileWritingEnabled()) {
+            listOf(
+                versionedApiLocation,
+                currentApiLocation
+            )
+        } else {
+            listOf(
+                currentApiLocation
+            )
+        }
 
-        // make sure to update current.txt if it wasn't previously planned to be updated
-        val outputApiLocations =
-            if (libraryVersionApi.publicApiFile.path.equals(currentTxtApi.publicApiFile.path)) {
-                listOf(libraryVersionApi)
-            } else {
-                listOf(libraryVersionApi, currentTxtApi)
-            }
+        val baselines = ApiBaselinesLocation.fromApiLocation(versionedApiLocation)
 
-        val builtApiLocation = ApiLocation.fromPublicApiFile(
-            File(project.buildDir, "api/current.txt"))
-
-        val baselines = ApiViolationBaselines.fromApiLocation(libraryVersionApi)
-
+        // Policy: If the artifact belongs to an atomic (e.g. same-version) group, we don't enforce
+        // binary compatibility for APIs annotated with @RestrictTo(LIBRARY_GROUP). This is
+        // implemented by excluding APIs with this annotation from the restricted API file.
+        val generateRestrictToLibraryGroupAPIs = !extension.mavenGroup!!.requireSameVersion
         val generateApi = project.tasks.register("generateApi", GenerateApiTask::class.java) {
                 task ->
             task.group = "API"
             task.description = "Generates API files from source"
             task.apiLocation.set(builtApiLocation)
             task.configuration = metalavaConfiguration
-            task.generateRestrictedAPIs = extension.trackRestrictedAPIs
+            task.generateRestrictToLibraryGroupAPIs = generateRestrictToLibraryGroupAPIs
             task.baselines.set(baselines)
             task.dependsOn(metalavaConfiguration)
+            processManifest?.let {
+                task.manifestPath.set(processManifest.manifestOutputFile)
+            }
             applyInputs(javaCompileInputs, task)
         }
 
+        // Policy: If the artifact has previously been released, e.g. has a beta or later API file
+        // checked in, then we must verify "release compatibility" against the work-in-progress
+        // API file.
         var checkApiRelease: TaskProvider<CheckApiCompatibilityTask>? = null
-
         project.getRequiredCompatibilityApiLocation()?.let { lastReleasedApiFile ->
             checkApiRelease = project.tasks.register(
                 "checkApiRelease",
@@ -141,7 +155,6 @@ object MetalavaTasks {
                 task.referenceApi.set(lastReleasedApiFile)
                 task.baselines.set(baselines)
                 task.dependsOn(metalavaConfiguration)
-                task.checkRestrictedAPIs = extension.trackRestrictedAPIs
                 task.api.set(builtApiLocation)
                 task.dependencyClasspath = javaCompileInputs.dependencyClasspath
                 task.bootClasspath = javaCompileInputs.bootClasspath
@@ -152,7 +165,6 @@ object MetalavaTasks {
                 task.configuration = metalavaConfiguration
                 task.referenceApi.set(checkApiRelease!!.flatMap { it.referenceApi })
                 task.baselines.set(checkApiRelease!!.flatMap { it.baselines })
-                task.processRestrictedApis = extension.trackRestrictedAPIs
                 task.api.set(builtApiLocation)
                 task.dependencyClasspath = javaCompileInputs.dependencyClasspath
                 task.bootClasspath = javaCompileInputs.bootClasspath
@@ -166,17 +178,23 @@ object MetalavaTasks {
         ) { task ->
             task.configuration = metalavaConfiguration
             task.baselines.set(baselines)
+            processManifest?.let {
+                task.manifestPath.set(processManifest.manifestOutputFile)
+            }
             applyInputs(javaCompileInputs, task)
         }
 
+        // Policy: All changes to API surfaces for which compatibility is enforced must be
+        // explicitly confirmed by running the updateApi task. To enforce this, the implementation
+        // checks the "work-in-progress" built API file against the checked in current API file.
         val checkApi =
             project.tasks.register("checkApi", CheckApiEquivalenceTask::class.java) { task ->
                 task.group = "API"
                 task.description = "Checks that the API generated from source code matches the " +
                         "checked in API file"
                 task.builtApi.set(generateApi.flatMap { it.apiLocation })
+                task.cacheEvenIfNoOutputs()
                 task.checkedInApis.set(outputApiLocations)
-                task.checkRestrictedAPIs = extension.trackRestrictedAPIs
                 task.dependsOn(generateApi)
                 checkApiRelease?.let {
                     task.dependsOn(checkApiRelease)
@@ -188,6 +206,7 @@ object MetalavaTasks {
             task.group = "API"
             task.description = "Regenerates historic API .txt files using the " +
                 "corresponding prebuilt and the latest Metalava"
+            task.generateRestrictToLibraryGroupAPIs = generateRestrictToLibraryGroupAPIs
             // if checkApiRelease and regenerateOldApis both run, then checkApiRelease must
             // be the second one run of the two (because checkApiRelease validates
             // files modified by regenerateOldApis)
@@ -202,7 +221,6 @@ object MetalavaTasks {
             task.description = "Updates the checked in API files to match source code API"
             task.inputApiLocation.set(generateApi.flatMap { it.apiLocation })
             task.outputApiLocations.set(checkApi.flatMap { it.checkedInApis })
-            task.updateRestrictedAPIs = extension.trackRestrictedAPIs
             task.dependsOn(generateApi)
             if (checkApiRelease != null) {
                 // If a developer (accidentally) makes a non-backwards compatible change to an
@@ -225,11 +243,10 @@ object MetalavaTasks {
         project.tasks.named("check").configure {
             it.dependsOn(checkApi)
         }
-        project.rootProject.tasks.named(BUILD_ON_SERVER_TASK).configure {
-            it.dependsOn(checkApi)
-        }
+        project.addToBuildOnServer(checkApi)
     }
 
+    @Suppress("unused")
     private fun setupStubs(
         project: Project,
         javaCompileInputs: JavaCompileInputs,
@@ -267,14 +284,17 @@ object MetalavaTasks {
             task.dependsOn(compileTask)
         }
 
-        project.tasks.register(CREATE_STUB_API_JAR_TASK, Zip::class.java) { task ->
+        val apiStubsJar = project.tasks.register(
+            CREATE_STUB_API_JAR_TASK,
+            Zip::class.java
+        ) { task ->
             task.from(apiStubClassesDirectory)
             task.destinationDirectory.set(project.buildDir)
             task.archiveFileName.set("api.jar")
-
             task.dependsOn(compileStubClasses)
         }
 
+        project.addToBuildOnServer(apiStubsJar)
         /*
             TODO: Enable packaging api.jar inside aars.
             project.tasks.withType(BundleAar::class.java) { task ->

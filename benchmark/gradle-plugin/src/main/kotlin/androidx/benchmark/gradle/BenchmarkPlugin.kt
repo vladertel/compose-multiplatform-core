@@ -71,14 +71,23 @@ class BenchmarkPlugin : Plugin<Project> {
 
     private fun configureWithAndroidExtension(project: Project, extension: TestedExtension) {
         val defaultConfig = extension.defaultConfig
+        val testBuildType = "release"
         val testInstrumentationArgs = defaultConfig.testInstrumentationRunnerArguments
 
         defaultConfig.testInstrumentationRunner = "androidx.benchmark.junit4.AndroidBenchmarkRunner"
 
-        // Disable overhead from test coverage by default, even if we use a debug variant.
-        extension.buildTypes.configureEach { it.isTestCoverageEnabled = false }
+        extension.buildTypes.configureEach {
+            // Disable overhead from test coverage by default, even if we use a debug variant.
+            it.isTestCoverageEnabled = false
 
-        extension.configureTestBuildType("release")
+            // Reduce setup friction by setting signingConfig to debug for buildType benchmarks
+            // will run in.
+            if (it.name == testBuildType) {
+                it.signingConfig = extension.signingConfigs.getByName("debug")
+            }
+        }
+
+        extension.configureTestBuildType(testBuildType)
 
         // Registering this block as a configureEach callback is only necessary because Studio skips
         // Gradle if there are no changes, which stops this plugin from being re-applied.
@@ -136,8 +145,8 @@ class BenchmarkPlugin : Plugin<Project> {
                 applied = true
 
                 if (!project.properties[ADDITIONAL_TEST_OUTPUT_KEY].toString().toBoolean()) {
-                    // Only enable pulling benchmark data through this plugin on older versions of AGP
-                    // that do not yet enable this flag.
+                    // Only enable pulling benchmark data through this plugin on older versions of
+                    // AGP that do not yet enable this flag.
                     project.tasks.register("benchmarkReport", BenchmarkReportTask::class.java)
                         .configure {
                             it.adbPath.set(extension.adbExecutable.absolutePath)
@@ -145,9 +154,9 @@ class BenchmarkPlugin : Plugin<Project> {
                         }
 
                     project.tasks.named("connectedAndroidTest").configure {
-                        // The task benchmarkReport must be registered by this point, and is responsible
-                        // for pulling report data from all connected devices onto host machine through
-                        // adb.
+                        // The task benchmarkReport must be registered by this point, and is
+                        // responsible for pulling report data from all connected devices onto host
+                        // machine through adb.
                         it.finalizedBy("benchmarkReport")
                     }
                 } else {
@@ -191,7 +200,7 @@ class BenchmarkPlugin : Plugin<Project> {
         val minorVersion = agpVersionTokens[1].toInt()
         if (majorVersion > 3 || (majorVersion == 3 && minorVersion >= 6)) {
             testBuildType = buildType
-            buildTypes.named(buildType).configure { it.isDefault.set(true) }
+            buildTypes.named(buildType).configure { it.isDefault = true }
         }
     }
 }

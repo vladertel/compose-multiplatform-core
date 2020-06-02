@@ -16,17 +16,16 @@
 
 package androidx.ui.material.ripple
 
+import androidx.compose.Composable
+import androidx.compose.staticAmbientOf
+import androidx.ui.foundation.contentColor
 import androidx.ui.graphics.Color
-import androidx.compose.Ambient
-import androidx.compose.Effect
 import androidx.ui.material.MaterialTheme
 
 /**
- * Defines the appearance and the behavior for [Ripple]s.
+ * Defines the appearance and the behavior for [ripple]s.
  *
- * To change some parameter and apply it to descendants modify the [CurrentRippleTheme] ambient.
- *
- * To apply the default values based on the Material Design guidelines use [MaterialTheme].
+ * You can define new theme and apply it via [RippleThemeAmbient].
  */
 data class RippleTheme(
     /**
@@ -34,17 +33,29 @@ data class RippleTheme(
      */
     val factory: RippleEffectFactory,
     /**
-     * The effect that will be used to calculate the [Ripple] color when it is not explicitly
-     * set in a [Ripple].
+     * The effect that will be used to calculate the [ripple] color when it is not explicitly
+     * set in a [ripple].
      */
-    val defaultColor: Effect<Color>,
+    val defaultColor: @Composable () -> Color,
     /**
-     * The effect that will be used to calculate the opacity applied to the [Ripple] color.
+     * The effect that will be used to calculate the opacity applied to the [ripple] color.
      * For example, it can be different in dark and light modes.
      */
-    val opacity: Effect<Float>
+    val opacity: @Composable () -> Float
 )
 
-val CurrentRippleTheme = Ambient.of<RippleTheme> {
-    error("No RippleTheme provided. Please add MaterialTheme as an ancestor.")
-}
+/**
+ * Ambient used for providing [RippleTheme] down the tree.
+ */
+val RippleThemeAmbient = staticAmbientOf { DefaultRippleTheme }
+
+private val DefaultRippleTheme = RippleTheme(
+    factory = DefaultRippleEffectFactory,
+    defaultColor = { contentColor() },
+    opacity = {
+        if (MaterialTheme.colors.isLight) LightRippleOpacity else DarkRippleOpacity
+    }
+)
+
+private const val LightRippleOpacity = 0.12f
+private const val DarkRippleOpacity = 0.24f

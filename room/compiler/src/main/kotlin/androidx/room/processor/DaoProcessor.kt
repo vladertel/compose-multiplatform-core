@@ -29,7 +29,7 @@ import androidx.room.ext.hasAnyOf
 import androidx.room.ext.typeName
 import androidx.room.verifier.DatabaseVerifier
 import androidx.room.vo.Dao
-import com.google.auto.common.MoreElements
+import androidx.room.vo.KotlinDefaultMethodDelegate
 import com.google.auto.common.MoreTypes
 import com.squareup.javapoet.TypeName
 import javax.lang.model.element.ElementKind
@@ -37,13 +37,13 @@ import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.Modifier.ABSTRACT
 import javax.lang.model.element.TypeElement
 import javax.lang.model.type.DeclaredType
+import javax.lang.model.util.ElementFilter
 
 class DaoProcessor(
     baseContext: Context,
     val element: TypeElement,
     val dbType: DeclaredType,
-    val dbVerifier: DatabaseVerifier?,
-    val queryInterpreter: QueryInterpreter
+    val dbVerifier: DatabaseVerifier?
 ) {
     val context = baseContext.fork(element)
 
@@ -60,12 +60,10 @@ class DaoProcessor(
 
         val declaredType = MoreTypes.asDeclared(element.asType())
         val allMembers = context.processingEnv.elementUtils.getAllMembers(element)
-        val methods = allMembers
+        val methods = ElementFilter.methodsIn(allMembers)
             .filter {
-                it.hasAnyOf(ABSTRACT) && it.kind == ElementKind.METHOD &&
+                it.hasAnyOf(ABSTRACT) &&
                         it.findKotlinDefaultImpl(context.processingEnv.typeUtils) == null
-            }.map {
-                MoreElements.asExecutable(it)
             }.groupBy { method ->
                 context.checker.check(
                         PROCESSED_ANNOTATIONS.count { method.hasAnnotation(it) } == 1, method,
@@ -97,7 +95,6 @@ class DaoProcessor(
                     baseContext = context,
                     containing = declaredType,
                     executableElement = it,
-                    queryInterpreter = queryInterpreter,
                     dbVerifier = processorVerifier).process()
         } ?: emptyList()
 
@@ -130,20 +127,34 @@ class DaoProcessor(
                     executableElement = it).process()
         } ?: emptyList()
 
-        val transactionMethods = allMembers.filter { member ->
+        val transactionMethods = ElementFilter.methodsIn(allMembers).filter { member ->
             member.hasAnnotation(Transaction::class) &&
-                    member.kind == ElementKind.METHOD &&
                     PROCESSED_ANNOTATIONS.none { member.hasAnnotation(it) }
         }.map {
             TransactionMethodProcessor(
                     baseContext = context,
                     containing = declaredType,
-                    executableElement = MoreElements.asExecutable(it)).process()
+                    executableElement = it).process()
         }
 
-        val constructors = allMembers
-                .filter { it.kind == ElementKind.CONSTRUCTOR }
-                .map { MoreElements.asExecutable(it) }
+        val kotlinDefaultMethodDelegates = if (element.kind == ElementKind.INTERFACE) {
+            val allProcessedMethods =
+                methods.values.flatten() + transactionMethods.map { it.element }
+            ElementFilter.methodsIn(allMembers).filterNot {
+                allProcessedMethods.contains(it)
+            }.mapNotNull { method ->
+                method.findKotlinDefaultImpl(context.processingEnv.typeUtils)?.let { delegate ->
+                    KotlinDefaultMethodDelegate(
+                        element = method,
+                        delegateElement = delegate
+                    )
+                }
+            }
+        } else {
+            emptyList()
+        }
+
+        val constructors = ElementFilter.constructorsIn(allMembers)
         val typeUtils = context.processingEnv.typeUtils
         val goodConstructor = constructors.firstOrNull {
             it.parameters.size == 1 &&
@@ -171,6 +182,7 @@ class DaoProcessor(
                 deletionMethods = deletionMethods,
                 updateMethods = updateMethods,
                 transactionMethods = transactionMethods,
+                kotlinDefaultMethodDelegates = kotlinDefaultMethodDelegates,
                 constructorParamType = constructorParamType)
     }
 

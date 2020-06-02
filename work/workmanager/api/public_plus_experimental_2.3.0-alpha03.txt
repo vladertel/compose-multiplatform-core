@@ -64,7 +64,7 @@ package androidx.work {
 
   public final class Data {
     ctor public Data(androidx.work.Data);
-    method public static androidx.work.Data fromByteArray(byte[]);
+    method @androidx.room.TypeConverter public static androidx.work.Data fromByteArray(byte[]);
     method public boolean getBoolean(String, boolean);
     method public boolean[]? getBooleanArray(String);
     method public byte getByte(String, byte);
@@ -127,8 +127,8 @@ package androidx.work {
   public final class ForegroundInfo {
     ctor public ForegroundInfo(android.app.Notification);
     ctor public ForegroundInfo(android.app.Notification, int);
+    method public int getForegroundServiceType();
     method public android.app.Notification getNotification();
-    method public int getNotificationType();
   }
 
   public interface ForegroundUpdater {
@@ -266,6 +266,7 @@ package androidx.work {
     method public abstract androidx.work.Operation cancelAllWorkByTag(String);
     method public abstract androidx.work.Operation cancelUniqueWork(String);
     method public abstract androidx.work.Operation cancelWorkById(java.util.UUID);
+    method public abstract android.app.PendingIntent createCancelPendingIntent(java.util.UUID);
     method public final androidx.work.Operation enqueue(androidx.work.WorkRequest);
     method public abstract androidx.work.Operation enqueue(java.util.List<? extends androidx.work.WorkRequest>);
     method public abstract androidx.work.Operation enqueueUniquePeriodicWork(String, androidx.work.ExistingPeriodicWorkPolicy, androidx.work.PeriodicWorkRequest);

@@ -21,11 +21,10 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.core.CameraDeviceSurfaceManager;
-import androidx.camera.core.ImageOutputConfig;
-import androidx.camera.core.SurfaceConfig;
-import androidx.camera.core.UseCase;
-import androidx.camera.core.UseCaseConfig;
+import androidx.camera.core.impl.CameraDeviceSurfaceManager;
+import androidx.camera.core.impl.ImageOutputConfig;
+import androidx.camera.core.impl.SurfaceConfig;
+import androidx.camera.core.impl.UseCaseConfig;
 
 import java.util.HashMap;
 import java.util.List;
@@ -34,38 +33,25 @@ import java.util.Map;
 /** A CameraDeviceSurfaceManager which has no supported SurfaceConfigs. */
 public final class FakeCameraDeviceSurfaceManager implements CameraDeviceSurfaceManager {
 
-    private static final Size MAX_OUTPUT_SIZE = new Size(4032, 3024); // 12.2 MP
+    public static final Size MAX_OUTPUT_SIZE = new Size(4032, 3024); // 12.2 MP
     private static final Size PREVIEW_SIZE = new Size(1920, 1080);
 
-    private Map<String, Map<Class<? extends UseCase>, Size>> mDefinedResolutions = new HashMap<>();
-    private boolean mInitialized = false;
-
-    public FakeCameraDeviceSurfaceManager() {
-        init();
-    }
+    private Map<String, Map<Class<? extends UseCaseConfig<?>>, Size>> mDefinedResolutions =
+            new HashMap<>();
 
     /**
      * Sets the given suggested resolutions for the specified camera Id and use case type.
      */
-    public void setSuggestedResolution(String cameraId, Class<? extends UseCase> type, Size size) {
-        Map<Class<? extends UseCase>, Size> useCaseTypeToSizeMap =
+    public void setSuggestedResolution(String cameraId, Class<? extends UseCaseConfig<?>> type,
+            Size size) {
+        Map<Class<? extends UseCaseConfig<?>>, Size> useCaseConfigTypeToSizeMap =
                 mDefinedResolutions.get(cameraId);
-        if (useCaseTypeToSizeMap == null) {
-            useCaseTypeToSizeMap = new HashMap<>();
-            mDefinedResolutions.put(cameraId, useCaseTypeToSizeMap);
+        if (useCaseConfigTypeToSizeMap == null) {
+            useCaseConfigTypeToSizeMap = new HashMap<>();
+            mDefinedResolutions.put(cameraId, useCaseConfigTypeToSizeMap);
         }
 
-        useCaseTypeToSizeMap.put(type, size);
-    }
-
-    @Override
-    public void init() {
-        mInitialized = true;
-    }
-
-    @Override
-    public boolean isInitialized() {
-        return mInitialized;
+        useCaseConfigTypeToSizeMap.put(type, size);
     }
 
     @Override
@@ -85,21 +71,24 @@ public final class FakeCameraDeviceSurfaceManager implements CameraDeviceSurface
     }
 
     @Override
-    public Map<UseCase, Size> getSuggestedResolutions(
-            String cameraId, List<UseCase> originalUseCases, List<UseCase> newUseCases) {
-        Map<UseCase, Size> suggestedSizes = new HashMap<>();
-        for (UseCase useCase : newUseCases) {
+    @NonNull
+    public Map<UseCaseConfig<?>, Size> getSuggestedResolutions(
+            @NonNull String cameraId,
+            @NonNull List<SurfaceConfig> existingSurfaces,
+            @NonNull List<UseCaseConfig<?>> newUseCaseConfigs) {
+        Map<UseCaseConfig<?>, Size> suggestedSizes = new HashMap<>();
+        for (UseCaseConfig<?> useCaseConfig : newUseCaseConfigs) {
             Size resolution = MAX_OUTPUT_SIZE;
-            Map<Class<? extends UseCase>, Size> definedResolutions =
+            Map<Class<? extends UseCaseConfig<?>>, Size> definedResolutions =
                     mDefinedResolutions.get(cameraId);
             if (definedResolutions != null) {
-                Size definedResolution = definedResolutions.get(useCase.getClass());
+                Size definedResolution = definedResolutions.get(useCaseConfig.getClass());
                 if (definedResolution != null) {
                     resolution = definedResolution;
                 }
             }
 
-            suggestedSizes.put(useCase, resolution);
+            suggestedSizes.put(useCaseConfig, resolution);
         }
 
         return suggestedSizes;
@@ -111,15 +100,14 @@ public final class FakeCameraDeviceSurfaceManager implements CameraDeviceSurface
     }
 
     @Override
-    public boolean requiresCorrectedAspectRatio(@NonNull UseCaseConfig<?> useCaseConfig) {
-        return true;
+    public boolean requiresCorrectedAspectRatio(@NonNull String cameraId) {
+        return false;
     }
 
     @Nullable
     @Override
-    public Rational getCorrectedAspectRatio(@NonNull UseCaseConfig<?> useCaseConfig) {
-        ImageOutputConfig config = (ImageOutputConfig) useCaseConfig;
-        Rational aspectRatio = config.getTargetAspectRatioCustom(null);
-        return aspectRatio;
+    public Rational getCorrectedAspectRatio(@NonNull String cameraId,
+            @ImageOutputConfig.RotationValue int rotation) {
+        return null;
     }
 }

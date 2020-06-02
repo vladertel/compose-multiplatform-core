@@ -27,12 +27,6 @@ plugins {
 }
 
 android {
-    buildTypes {
-        debug {
-            testCoverageEnabled = false // Breaks Kotlin compiler.
-        }
-    }
-
     buildTypes.all {
         consumerProguardFiles 'proguard-rules.pro'
     }
@@ -40,7 +34,8 @@ android {
 
 dependencies {
     api(project(":navigation:navigation-common"))
-    implementation("androidx.collection:collection:1.0.0")
+    implementation("androidx.core:core-ktx:1.1.0")
+    implementation("androidx.collection:collection:1.1.0")
 
     api(KOTLIN_STDLIB)
     testImplementation(JUNIT)
@@ -57,7 +52,6 @@ dependencies {
 androidx {
     name = "Android Navigation Common Kotlin Extensions"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.NAVIGATION
     mavenGroup = LibraryGroups.NAVIGATION
     inceptionYear = "2018"
     description = "Android Navigation-Common-Ktx"

@@ -30,9 +30,10 @@ import static android.app.slice.SliceItem.FORMAT_SLICE;
 import static android.app.slice.SliceItem.FORMAT_TEXT;
 
 import static androidx.slice.Slice.EXTRA_SELECTION;
+import static androidx.slice.Slice.SUBTYPE_RANGE_MODE;
+import static androidx.slice.core.SliceHints.HINT_RAW;
 import static androidx.slice.core.SliceHints.HINT_SELECTION_OPTION;
-import static androidx.slice.core.SliceHints.ICON_IMAGE;
-import static androidx.slice.core.SliceHints.SMALL_IMAGE;
+import static androidx.slice.core.SliceHints.INDETERMINATE_RANGE;
 import static androidx.slice.core.SliceHints.SUBTYPE_MIN;
 import static androidx.slice.core.SliceHints.SUBTYPE_SELECTION_OPTION_KEY;
 import static androidx.slice.core.SliceHints.SUBTYPE_SELECTION_OPTION_VALUE;
@@ -78,6 +79,7 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.graphics.drawable.IconCompat;
+import androidx.core.view.ViewCompat;
 import androidx.slice.SliceItem;
 import androidx.slice.SliceStructure;
 import androidx.slice.core.SliceAction;
@@ -117,6 +119,7 @@ public class RowView extends SliceChildView implements View.OnClickListener,
     private LinearLayout mRootView;
     private LinearLayout mStartContainer;
     private LinearLayout mContent;
+    private LinearLayout mSubContent;
     private TextView mPrimaryText;
     private TextView mSecondaryText;
     private TextView mLastUpdatedText;
@@ -187,6 +190,7 @@ public class RowView extends SliceChildView implements View.OnClickListener,
 
         mStartContainer = (LinearLayout) findViewById(R.id.icon_frame);
         mContent = (LinearLayout) findViewById(android.R.id.content);
+        mSubContent = (LinearLayout) findViewById(R.id.subcontent);
         mPrimaryText = (TextView) findViewById(android.R.id.title);
         mSecondaryText = (TextView) findViewById(android.R.id.summary);
         mLastUpdatedText = (TextView) findViewById(R.id.last_updated);
@@ -195,6 +199,9 @@ public class RowView extends SliceChildView implements View.OnClickListener,
         mActionSpinner = findViewById(R.id.action_sent_indicator);
         SliceViewUtil.tintIndeterminateProgressBar(getContext(), mActionSpinner);
         mEndContainer = (LinearLayout) findViewById(android.R.id.widget_frame);
+        ViewCompat.setImportantForAccessibility(this, ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        ViewCompat.setImportantForAccessibility(
+                mContent, ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_NO);
     }
 
     @Override
@@ -213,6 +220,10 @@ public class RowView extends SliceChildView implements View.OnClickListener,
                 rowStyle.getTitleItemStartPadding(), rowStyle.getTitleItemEndPadding());
         setViewSidePaddings(mContent,
                 rowStyle.getContentStartPadding(), rowStyle.getContentEndPadding());
+        setViewSidePaddings(mPrimaryText,
+                rowStyle.getTitleStartPadding(), rowStyle.getTitleEndPadding());
+        setViewSidePaddings(mSubContent,
+                rowStyle.getSubContentStartPadding(), rowStyle.getSubContentEndPadding());
         setViewSidePaddings(mEndContainer,
                 rowStyle.getEndItemStartPadding(), rowStyle.getEndItemEndPadding());
         setViewSideMargins(mBottomDivider,
@@ -257,6 +268,14 @@ public class RowView extends SliceChildView implements View.OnClickListener,
         }
     }
 
+    private void setViewWidth(View v, int width) {
+        if (v != null && width >= 0) {
+            final ViewGroup.LayoutParams params = v.getLayoutParams();
+            params.width = width;
+            v.setLayoutParams(params);
+        }
+    }
+
     @Override
     public void setInsets(int l, int t, int r, int b) {
         super.setInsets(l, t, r, b);
@@ -268,7 +287,7 @@ public class RowView extends SliceChildView implements View.OnClickListener,
      */
     private int getRowContentHeight() {
         int rowHeight = mRowContent.getHeight(mSliceStyle, mViewPolicy);
-        if (mRangeBar != null) {
+        if (mRangeBar != null && mStartItem == null) {
             rowHeight -= mSliceStyle.getRowRangeHeight();
         }
         if (mSelectionSpinner != null) {
@@ -335,7 +354,7 @@ public class RowView extends SliceChildView implements View.OnClickListener,
         } else {
             mRootView.setVisibility(View.GONE);
         }
-        if (mRangeBar != null) {
+        if (mRangeBar != null && mStartItem == null) {
             // If we're on a platform where SeekBar can't be stretched vertically, find out the
             // exact size it would like to be so we can honor that in onLayout.
             if (sCanSpecifyLargerRangeBarHeight) {
@@ -366,7 +385,7 @@ public class RowView extends SliceChildView implements View.OnClickListener,
         int leftPadding = getPaddingLeft();
         mRootView.layout(leftPadding, mInsetTop, mRootView.getMeasuredWidth() + leftPadding,
                 getRowContentHeight() + mInsetTop);
-        if (mRangeBar != null) {
+        if (mRangeBar != null && mStartItem == null) {
             // If we're on a platform where SeekBar can't be stretched vertically, then
             // mMeasuredRangeHeight can (and probably will) be smaller than the ideal height, so we
             // need to add some padding to make mRangeBar look like it's the larger size.
@@ -470,7 +489,10 @@ public class RowView extends SliceChildView implements View.OnClickListener,
                 setRangeBounds();
                 addRange();
             }
-            return;
+            // if mStartItem is not null, then RowView should update end items.
+            if (mStartItem == null) {
+                return;
+            }
         }
 
         final SliceItem selection = mRowContent.getSelection();
@@ -486,7 +508,7 @@ public class RowView extends SliceChildView implements View.OnClickListener,
 
     @SuppressWarnings("unchecked")
     private void updateEndItems() {
-        if (mRowContent == null) {
+        if (mRowContent == null || (mRowContent.getRange() != null && mStartItem == null)) {
             return;
         }
         mEndContainer.removeAllViews();
@@ -557,6 +579,12 @@ public class RowView extends SliceChildView implements View.OnClickListener,
                 && mLoadingActions.contains(mRowAction.getSliceItem())) {
             mShowActionSpinner = true;
         }
+
+        ViewCompat.setImportantForAccessibility(mRootView,
+                (mRootView.isClickable() && mToggles.isEmpty() && mActions.isEmpty())
+                        ? ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+                        : ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_NO
+        );
     }
 
     @Override
@@ -569,7 +597,7 @@ public class RowView extends SliceChildView implements View.OnClickListener,
     }
 
     private void addSubtitle(boolean hasTitle) {
-        if (mRowContent == null) {
+        if (mRowContent == null || (mRowContent.getRange() != null && mStartItem != null)) {
             return;
         }
         final SliceItem subtitleItem = getMode() == MODE_SMALL
@@ -675,21 +703,56 @@ public class RowView extends SliceChildView implements View.OnClickListener,
             mHandler = new Handler();
         }
 
+        SliceItem style = SliceQuery.findSubtype(mRangeItem, FORMAT_INT, SUBTYPE_RANGE_MODE);
+        final boolean isIndeterminate = style != null && style.getInt() == INDETERMINATE_RANGE;
         final boolean isSeekBar = FORMAT_ACTION.equals(mRangeItem.getFormat());
-        final ProgressBar progressBar = isSeekBar
-                ? new SeekBar(getContext())
-                : new ProgressBar(getContext(), null, android.R.attr.progressBarStyleHorizontal);
-        Drawable progressDrawable = DrawableCompat.wrap(progressBar.getProgressDrawable());
+        final boolean renderInNewLine = mStartItem == null;
+        final ProgressBar progressBar;
+        if (isSeekBar) {
+            if (renderInNewLine) {
+                progressBar = new SeekBar(getContext());
+            } else {
+                progressBar = (SeekBar) LayoutInflater.from(getContext()).inflate(
+                        R.layout.abc_slice_seekbar_view, this, false);
+                if (mSliceStyle != null && mSliceStyle.getRowStyle() != null) {
+                    setViewWidth(progressBar, mSliceStyle.getRowStyle().getSeekBarInlineWidth());
+                }
+            }
+        } else {
+            if (renderInNewLine) {
+                progressBar = new ProgressBar(getContext(), null,
+                        android.R.attr.progressBarStyleHorizontal);
+            } else {
+                progressBar = (ProgressBar) LayoutInflater.from(getContext()).inflate(
+                        R.layout.abc_slice_progress_inline_view, this, false);
+            }
+            if (isIndeterminate) {
+                progressBar.setIndeterminate(true);
+            }
+        }
+        Drawable progressDrawable = isIndeterminate ? DrawableCompat.wrap(
+                progressBar.getIndeterminateDrawable()) :
+                DrawableCompat.wrap(progressBar.getProgressDrawable());
         if (mTintColor != -1 && progressDrawable != null) {
             DrawableCompat.setTint(progressDrawable, mTintColor);
-            progressBar.setProgressDrawable(progressDrawable);
+            if (isIndeterminate) {
+                progressBar.setIndeterminateDrawable(progressDrawable);
+            } else {
+                progressBar.setProgressDrawable(progressDrawable);
+            }
         }
         // N.B. We don't use progressBar.setMin because it doesn't work properly in backcompat
         //      and/or sliders.
         progressBar.setMax(mRangeMaxValue - mRangeMinValue);
         progressBar.setProgress(mRangeValue);
         progressBar.setVisibility(View.VISIBLE);
-        addView(progressBar);
+        if (mStartItem == null) {
+            addView(progressBar,
+                    new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        } else {
+            mSubContent.setVisibility(GONE);
+            mContent.addView(progressBar, 1);
+        }
         mRangeBar = progressBar;
         if (isSeekBar) {
             SliceItem thumb = mRowContent.getInputRangeThumb();
@@ -807,7 +870,6 @@ public class RowView extends SliceChildView implements View.OnClickListener,
      */
     private boolean addItem(SliceItem sliceItem, int color, boolean isStart) {
         IconCompat icon = null;
-        int imageMode = 0;
         SliceItem timeStamp = null;
         ViewGroup container = isStart ? mStartContainer : mEndContainer;
         if (FORMAT_SLICE.equals(sliceItem.getFormat())
@@ -825,22 +887,31 @@ public class RowView extends SliceChildView implements View.OnClickListener,
 
         if (FORMAT_IMAGE.equals(sliceItem.getFormat())) {
             icon = sliceItem.getIcon();
-            imageMode = sliceItem.hasHint(HINT_NO_TINT) ? SMALL_IMAGE : ICON_IMAGE;
         } else if (FORMAT_LONG.equals(sliceItem.getFormat())) {
             timeStamp = sliceItem;
         }
         View addedView = null;
         if (icon != null) {
-            boolean isIcon = imageMode == ICON_IMAGE;
+            boolean isIcon = !sliceItem.hasHint(HINT_NO_TINT);
+            boolean useIntrinsicSize = sliceItem.hasHint(HINT_RAW);
+            final float density = getResources().getDisplayMetrics().density;
             ImageView iv = new ImageView(getContext());
-            iv.setImageDrawable(icon.loadDrawable(getContext()));
+            Drawable d = icon.loadDrawable(getContext());
+            iv.setImageDrawable(d);
             if (isIcon && color != -1) {
                 iv.setColorFilter(color);
             }
-            container.addView(iv);
+            // Because of sliding, the title icon is added many times.
+            if (mIsRangeSliding) {
+                container.removeAllViews();
+                container.addView(iv);
+            } else {
+                container.addView(iv);
+            }
             LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) iv.getLayoutParams();
-            lp.width = mImageSize;
-            lp.height = mImageSize;
+            lp.width = useIntrinsicSize ? Math.round(d.getIntrinsicWidth() / density) : mImageSize;
+            lp.height = useIntrinsicSize ? Math.round(d.getIntrinsicHeight() / density) :
+                    mImageSize;
             iv.setLayoutParams(lp);
             int p = isIcon ? mIconSize / 2 : 0;
             iv.setPadding(p, p, p, p);
@@ -1023,7 +1094,6 @@ public class RowView extends SliceChildView implements View.OnClickListener,
         mToggles.clear();
         mActions.clear();
         mRowAction = null;
-        mStartItem = null;
         mBottomDivider.setVisibility(GONE);
         mActionDivider.setVisibility(GONE);
         if (mSeeMoreView != null) {
@@ -1039,9 +1109,15 @@ public class RowView extends SliceChildView implements View.OnClickListener,
         mLastSentRangeUpdate = 0;
         mHandler = null;
         if (mRangeBar != null) {
-            removeView(mRangeBar);
+            if (mStartItem == null) {
+                removeView(mRangeBar);
+            } else {
+                mContent.removeView(mRangeBar);
+            }
             mRangeBar = null;
         }
+        mSubContent.setVisibility(VISIBLE);
+        mStartItem = null;
         mActionSpinner.setVisibility(GONE);
         if (mSelectionSpinner != null) {
             removeView(mSelectionSpinner);

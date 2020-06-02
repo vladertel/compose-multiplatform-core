@@ -29,19 +29,20 @@ plugins {
 }
 
 dependencies {
-    kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
+    kotlinPlugin project(path: ":compose:compose-compiler")
 
-    implementation(KOTLIN_COMPOSE_STDLIB)
+    implementation(KOTLIN_STDLIB)
 
-    implementation "androidx.annotation:annotation:1.1.0"
+    api "androidx.annotation:annotation:1.1.0"
 
     api project(":compose:compose-runtime")
     api project(":ui:ui-core")
     api project(":ui:ui-animation")
-    implementation project(':ui:ui-framework')
     implementation project(':ui:ui-layout')
-    implementation project(':ui:ui-platform')
+    api project(":ui:ui-saved-instance-state")
+    implementation project(':ui:ui-text-core')
     implementation project(':ui:ui-text')
+    implementation project(':ui:ui-util')
 
     testImplementation(ANDROIDX_TEST_RULES)
     testImplementation(ANDROIDX_TEST_RUNNER)
@@ -55,6 +56,11 @@ dependencies {
     androidTestImplementation(ESPRESSO_CORE)
     androidTestImplementation(JUNIT)
     androidTestImplementation(TRUTH)
+    androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
+    androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy) // DexMaker has it"s own MockMaker
+    androidTestImplementation MOCKITO_KOTLIN, {
+        exclude group: 'org.mockito' // to keep control on the mockito version
+    }
 }
 
 androidx {
@@ -69,5 +75,6 @@ androidx {
 tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
         useIR = true
+        freeCompilerArgs += ["-XXLanguage:+InlineClasses"]
     }
 }

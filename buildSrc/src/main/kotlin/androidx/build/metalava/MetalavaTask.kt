@@ -20,11 +20,21 @@ import java.io.File
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
+import org.gradle.workers.WorkerExecutor
+import javax.inject.Inject
 
 /** Base class for invoking Metalava. */
-abstract class MetalavaTask : DefaultTask() {
+abstract class MetalavaTask @Inject constructor(
+    @Internal
+    protected val workerExecutor: WorkerExecutor
+) : DefaultTask() {
+
     /** Configuration containing Metalava and its dependencies. */
     @get:Classpath
     @get:InputFiles
@@ -42,7 +52,11 @@ abstract class MetalavaTask : DefaultTask() {
     @get:InputFiles
     var sourcePaths: Collection<File> = emptyList()
 
-    protected fun runWithArgs(args: List<String>) {
-        project.runMetalavaWithArgs(configuration, args)
+    @get:InputFile
+    @get:Optional
+    abstract val manifestPath: RegularFileProperty
+
+    fun runWithArgs(args: List<String>) {
+        runMetalavaWithArgs(configuration, args, workerExecutor)
     }
 }

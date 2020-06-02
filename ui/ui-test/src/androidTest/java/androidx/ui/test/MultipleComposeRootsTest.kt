@@ -19,37 +19,35 @@ package androidx.ui.test
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.compose.Model
-import androidx.compose.composer
+import androidx.activity.ComponentActivity
+import androidx.compose.MutableState
+import androidx.compose.Recomposer
+import androidx.compose.mutableStateOf
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.filters.MediumTest
-import androidx.test.rule.ActivityTestRule
-import androidx.ui.core.TestTag
+import androidx.ui.core.Modifier
+import androidx.ui.core.testTag
 import androidx.ui.core.setContent
 import androidx.ui.foundation.selection.ToggleableState
 import androidx.ui.material.MaterialTheme
+import androidx.ui.material.Surface
+import androidx.ui.test.android.AndroidComposeTestRule
 import androidx.ui.material.TriStateCheckbox
-import androidx.ui.material.surface.Surface
-import androidx.ui.test.android.DefaultTestActivity
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
-// TODO: Make this inner class once @Model gets fixed.
-@Model
-class CheckboxState(var value: ToggleableState = ToggleableState.Unchecked) {
-    fun toggle() {
-        value =
-            if (value == ToggleableState.Checked) {
-                ToggleableState.Unchecked
-            } else {
-                ToggleableState.Checked
-            }
-    }
+fun MutableState<ToggleableState>.toggle() {
+    value =
+        if (value == ToggleableState.On) {
+            ToggleableState.Off
+        } else {
+            ToggleableState.On
+        }
 }
 
 /**
@@ -61,9 +59,7 @@ class CheckboxState(var value: ToggleableState = ToggleableState.Unchecked) {
 class MultipleComposeRootsTest {
 
     @get:Rule
-    val activityTestRule = ActivityTestRule<DefaultTestActivity>(
-        DefaultTestActivity::class.java
-    )
+    val composeTestRule = AndroidComposeTestRule<ComponentActivity>()
 
     @get:Rule
     val disableTransitions = DisableTransitions()
@@ -83,12 +79,12 @@ class MultipleComposeRootsTest {
      */
     @Test
     fun twoHierarchiesSharingTheSameModel() {
-        val activity = activityTestRule.activity
+        val activity = composeTestRule.activityTestRule.activity
 
         activity.runOnUiThread(object : Runnable { // Workaround for lambda bug in IR
             override fun run() {
-                val state1 = CheckboxState(value = ToggleableState.Unchecked)
-                val state2 = CheckboxState(value = ToggleableState.Checked)
+                val state1 = mutableStateOf(value = ToggleableState.Off)
+                val state2 = mutableStateOf(value = ToggleableState.On)
 
                 val linearLayout = LinearLayout(activity)
                     .apply { orientation = LinearLayout.VERTICAL }
@@ -113,36 +109,34 @@ class MultipleComposeRootsTest {
                     textView2.text = "Compose 2 - ${state2.value}"
                 }
 
-                frameLayout1.setContent {
+                frameLayout1.setContent(Recomposer.current()) {
                     MaterialTheme {
                         Surface {
-                            TestTag(tag = "checkbox1") {
-                                TriStateCheckbox(
-                                    value = state1.value,
-                                    onClick = {
-                                        state1.toggle()
-                                        state2.toggle()
-                                        updateTitle1()
-                                        updateTitle2()
-                                    })
-                            }
+                            TriStateCheckbox(
+                                modifier = Modifier.testTag("checkbox1"),
+                                state = state1.value,
+                                onClick = {
+                                    state1.toggle()
+                                    state2.toggle()
+                                    updateTitle1()
+                                    updateTitle2()
+                                })
                         }
                     }
                 }
 
-                frameLayout2.setContent {
+                frameLayout2.setContent(Recomposer.current()) {
                     MaterialTheme {
                         Surface {
-                            TestTag(tag = "checkbox2") {
-                                TriStateCheckbox(
-                                    value = state2.value,
-                                    onClick = {
-                                        state1.toggle()
-                                        state2.toggle()
-                                        updateTitle1()
-                                        updateTitle2()
-                                    })
-                            }
+                            TriStateCheckbox(
+                                modifier = Modifier.testTag("checkbox2"),
+                                state = state2.value,
+                                onClick = {
+                                    state1.toggle()
+                                    state2.toggle()
+                                    updateTitle1()
+                                    updateTitle2()
+                                })
                         }
                     }
                 }
@@ -154,22 +148,22 @@ class MultipleComposeRootsTest {
 
         findByTag("checkbox1")
             .doClick()
-            .assertIsChecked()
+            .assertIsOn()
 
         findByTag("checkbox2")
-            .assertIsUnchecked()
+            .assertIsOff()
 
-        Espresso.onView(withText("Compose 1 - Checked")).check(matches(isDisplayed()))
-        Espresso.onView(withText("Compose 2 - Unchecked")).check(matches(isDisplayed()))
+        Espresso.onView(withText("Compose 1 - On")).check(matches(isDisplayed()))
+        Espresso.onView(withText("Compose 2 - Off")).check(matches(isDisplayed()))
 
         findByTag("checkbox2")
             .doClick()
-            .assertIsUnchecked()
+            .assertIsOn()
 
         findByTag("checkbox1")
-            .assertIsChecked()
+            .assertIsOff()
 
-        Espresso.onView(withText("Compose 1 - Checked")).check(matches(isDisplayed()))
-        Espresso.onView(withText("Compose 2 - Unchecked")).check(matches(isDisplayed()))
+        Espresso.onView(withText("Compose 1 - Off")).check(matches(isDisplayed()))
+        Espresso.onView(withText("Compose 2 - On")).check(matches(isDisplayed()))
     }
 }

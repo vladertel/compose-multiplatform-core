@@ -18,7 +18,9 @@ package androidx.camera.extensions;
 
 import android.util.Log;
 
-import androidx.camera.core.PreviewConfig;
+import androidx.annotation.NonNull;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.Preview;
 import androidx.camera.extensions.ExtensionsManager.EffectMode;
 import androidx.camera.extensions.impl.AutoPreviewExtenderImpl;
 
@@ -32,9 +34,9 @@ public class AutoPreviewExtender extends PreviewExtender {
      * Create a new instance of the auto extender.
      *
      * @param builder Builder that will be used to create the configurations for the
-     * {@link androidx.camera.core.Preview}.
+     *                {@link androidx.camera.core.Preview}.
      */
-    public static AutoPreviewExtender create(PreviewConfig.Builder builder) {
+    public static AutoPreviewExtender create(Preview.Builder builder) {
         if (ExtensionVersion.isExtensionVersionSupported()) {
             try {
                 return new VendorAutoPreviewExtender(builder);
@@ -52,12 +54,12 @@ public class AutoPreviewExtender extends PreviewExtender {
         }
 
         @Override
-        public boolean isExtensionAvailable() {
+        public boolean isExtensionAvailable(@NonNull CameraSelector selector) {
             return false;
         }
 
         @Override
-        public void enableExtension() {
+        public void enableExtension(@NonNull CameraSelector selector) {
         }
     }
 
@@ -65,11 +67,12 @@ public class AutoPreviewExtender extends PreviewExtender {
     static class VendorAutoPreviewExtender extends AutoPreviewExtender {
         private final AutoPreviewExtenderImpl mImpl;
 
-        VendorAutoPreviewExtender(PreviewConfig.Builder builder) {
+        VendorAutoPreviewExtender(Preview.Builder builder) {
             mImpl = new AutoPreviewExtenderImpl();
             init(builder, mImpl, EffectMode.AUTO);
         }
     }
 
-    private AutoPreviewExtender() {}
+    private AutoPreviewExtender() {
+    }
 }

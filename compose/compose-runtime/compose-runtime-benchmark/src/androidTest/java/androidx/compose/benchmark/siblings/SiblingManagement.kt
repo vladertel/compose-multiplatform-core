@@ -16,60 +16,52 @@
 
 package androidx.compose.benchmark.siblings
 
-import androidx.compose.Children
 import androidx.compose.Composable
-import androidx.compose.Key
-import androidx.compose.composer
-import androidx.compose.Pivotal
-import androidx.ui.core.Text
-import androidx.ui.core.dp
-import androidx.ui.foundation.ColoredRect
+import androidx.compose.key
+import androidx.ui.core.Modifier
+import androidx.ui.foundation.Box
+import androidx.ui.foundation.Text
+import androidx.ui.foundation.drawBackground
 import androidx.ui.graphics.Color
 import androidx.ui.layout.Column
-import androidx.ui.layout.LayoutSize
 import androidx.ui.layout.Row
+import androidx.ui.layout.fillMaxHeight
+import androidx.ui.layout.fillMaxSize
+import androidx.ui.layout.fillMaxWidth
 import androidx.ui.text.TextStyle
 import kotlin.random.Random
 
-@Composable
-fun Stack(children: @Composable() () -> Unit) {
-    Column(mainAxisSize = LayoutSize.Expand) {
-        children()
-    }
-}
-
-@Composable
-fun PivotalItemRow(@Pivotal item: Item) {
-    val color = when (item.id % 3) {
-        0 -> Color.Blue
-        1 -> Color.Black
-        else -> Color.Magenta
-    }
-    Row(mainAxisSize = LayoutSize.Expand) {
-        ColoredRect(color = color, width = 16.dp, height = 16.dp)
-        Text(text = "${item.id}", style = TextStyle(color = color))
-    }
-}
+val blackBackground = Modifier.drawBackground(Color.Black)
+val blueBackground = Modifier.drawBackground(Color.Blue)
+val magentaBackground = Modifier.drawBackground(Color.Magenta)
+val blackStyle = TextStyle(color = Color.Black)
+val blueStyle = TextStyle(color = Color.Blue)
+val magentaStyle = TextStyle(color = Color.Magenta)
 
 @Composable
 fun ItemRow(item: Item) {
     // the complexity of this will influence the benchmark a lot because if
     // identity doesn't influence what the component looks like, it's not
     // very important to track it.
-    val color = when (item.id % 3) {
-        0 -> Color.Blue
-        1 -> Color.Black
-        else -> Color.Magenta
+    val background = when (item.id % 3) {
+        0 -> blueBackground
+        1 -> blackBackground
+        else -> magentaBackground
     }
-    Row(mainAxisSize = LayoutSize.Expand) {
-        ColoredRect(color = color, width = 16.dp, height = 16.dp)
-        Text(text = "${item.id}", style = TextStyle(color = color))
+    val style = when (item.id % 3) {
+        0 -> blackStyle
+        1 -> blueStyle
+        else -> magentaStyle
+    }
+    Row(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxSize() + background)
+        Text(text = "${item.id}", style = style)
     }
 }
 
 data class Item(val id: Int)
 
-enum class IdentityType { Pivotal, Index, Key }
+enum class IdentityType { Index, Key }
 
 enum class ReorderType {
     Shuffle, ShiftRight, ShiftLeft, Swap,
@@ -110,13 +102,8 @@ fun <T> List<T>.update(reorderType: ReorderType, random: Random, factory: (Int) 
 
 @Composable
 fun SiblingManagement(identity: IdentityType, items: List<Item>) {
-    Stack {
+    Column(Modifier.fillMaxHeight()) {
         when (identity) {
-            IdentityType.Pivotal -> {
-                for (item in items) {
-                    PivotalItemRow(item = item)
-                }
-            }
             IdentityType.Index -> {
                 for (item in items) {
                     ItemRow(item = item)
@@ -124,7 +111,7 @@ fun SiblingManagement(identity: IdentityType, items: List<Item>) {
             }
             IdentityType.Key -> {
                 for (item in items) {
-                    Key(key = item.id) {
+                    key(item.id) {
                         ItemRow(item = item)
                     }
                 }

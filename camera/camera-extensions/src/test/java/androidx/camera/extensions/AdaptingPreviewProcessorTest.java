@@ -24,8 +24,8 @@ import android.os.Build;
 import android.util.Size;
 import android.view.Surface;
 
-import androidx.camera.core.ImageProxyBundle;
-import androidx.camera.core.SingleImageProxyBundle;
+import androidx.camera.core.impl.ImageProxyBundle;
+import androidx.camera.core.impl.SingleImageProxyBundle;
 import androidx.camera.extensions.impl.PreviewImageProcessorImpl;
 import androidx.camera.testing.fakes.FakeImageInfo;
 import androidx.camera.testing.fakes.FakeImageProxy;
@@ -49,13 +49,11 @@ public class AdaptingPreviewProcessorTest {
     public void setup() {
         mImpl = mock(PreviewImageProcessorImpl.class);
 
-        FakeImageProxy fakeImageProxy = new FakeImageProxy();
-        fakeImageProxy.setImage(mock(Image.class));
-
         FakeImageInfo fakeImageInfo = new FakeImageInfo();
         fakeImageInfo.setTag(1);
 
-        fakeImageProxy.setImageInfo(fakeImageInfo);
+        FakeImageProxy fakeImageProxy = new FakeImageProxy(fakeImageInfo);
+        fakeImageProxy.setImage(mock(Image.class));
 
         mImageProxyBundle = new SingleImageProxyBundle(fakeImageProxy);
         mAdaptingPreviewProcessor = new AdaptingPreviewProcessor(mImpl);

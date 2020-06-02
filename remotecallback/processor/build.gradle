@@ -23,18 +23,18 @@ import androidx.build.Publish
 
 plugins {
     id("AndroidXPlugin")
-    id("java")
+    id("java-library")
 }
 
 dependencies {
-    compile(JAVAPOET)
+    api("androidx.annotation:annotation:1.1.0")
+    implementation(JAVAPOET)
 }
 
 androidx {
     name = "Remote Callback Compiler"
     publish = Publish.SNAPSHOT_AND_RELEASE
     toolingProject = true
-    mavenVersion = LibraryVersions.REMOTECALLBACK
     mavenGroup = LibraryGroups.REMOTECALLBACK
     inceptionYear = "2018"
     description = "Compiler for RemoteCallback implementations"

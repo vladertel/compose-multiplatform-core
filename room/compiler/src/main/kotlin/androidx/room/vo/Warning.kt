@@ -36,7 +36,12 @@ enum class Warning(val publicKey: String) {
     DEFAULT_CONSTRUCTOR("ROOM_DEFAULT_CONSTRUCTOR"),
     MISSING_COPY_ANNOTATIONS("MISSING_COPY_ANNOTATIONS"),
     MISSING_INDEX_ON_JUNCTION("MISSING_INDEX_ON_JUNCTION"),
-    JDK_VERSION_HAS_BUG("JDK_VERSION_HAS_BUG");
+    JDK_VERSION_HAS_BUG("JDK_VERSION_HAS_BUG"),
+    MISMATCHED_GETTER_TYPE("ROOM_MISMATCHED_GETTER_TYPE"),
+    MISMATCHED_SETTER_TYPE("ROOM_MISMATCHED_SETTER_TYPE"),
+    // NOTE there is no constant for this in RoomWarnings since this is a temporary case until
+    // expand projection is removed.
+    EXPAND_PROJECTION_WITH_REMOVE_UNUSED_COLUMNS("ROOM_EXPAND_PROJECTION_WITH_UNUSED_COLUMNS");
 
     companion object {
         val PUBLIC_KEY_MAP = Warning.values().associateBy { it.publicKey }

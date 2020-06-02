@@ -27,10 +27,10 @@ import android.content.Context;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
-import androidx.camera.camera2.Camera2AppConfig;
-import androidx.camera.core.AppConfig;
+import androidx.camera.camera2.Camera2Config;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraX;
-import androidx.camera.core.CameraX.LensFacing;
+import androidx.camera.core.CameraXConfig;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.Preview;
 import androidx.camera.core.UseCase;
@@ -77,7 +77,8 @@ public final class ExtensionsErrorListenerTest {
     }
 
     private EffectMode mEffectMode;
-    private LensFacing mLensFacing;
+    @CameraSelector.LensFacing
+    private int mLensFacing;
     private CountDownLatch mLatch;
 
     final AtomicReference<ExtensionsErrorCode> mErrorCode = new AtomicReference<>();
@@ -89,7 +90,8 @@ public final class ExtensionsErrorListenerTest {
         }
     };
 
-    public ExtensionsErrorListenerTest(EffectMode effectMode, LensFacing lensFacing) {
+    public ExtensionsErrorListenerTest(EffectMode effectMode,
+            @CameraSelector.LensFacing int lensFacing) {
         mEffectMode = effectMode;
         mLensFacing = lensFacing;
     }
@@ -99,8 +101,8 @@ public final class ExtensionsErrorListenerTest {
         assumeTrue(CameraUtil.deviceHasCamera());
 
         Context context = ApplicationProvider.getApplicationContext();
-        AppConfig appConfig = Camera2AppConfig.create(context);
-        CameraX.init(context, appConfig);
+        CameraXConfig cameraXConfig = Camera2Config.defaultConfig();
+        CameraX.initialize(context, cameraXConfig).get();
 
         assumeTrue(CameraUtil.hasCameraWithLensFacing(mLensFacing));
         assumeTrue(ExtensionsTestUtil.initExtensions());
@@ -111,8 +113,7 @@ public final class ExtensionsErrorListenerTest {
 
     @After
     public void tearDown() throws ExecutionException, InterruptedException {
-        // Wait for CameraX to finish deinitializing before the next test.
-        CameraX.deinit().get();
+        CameraX.shutdown().get();
     }
 
     @Test

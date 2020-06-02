@@ -1,3 +1,4 @@
+
 import static androidx.build.dependencies.DependenciesKt.*
 import androidx.build.CompilationTarget
 import androidx.build.LibraryGroups
@@ -10,10 +11,6 @@ plugins {
     id("kotlin")
 }
 
-sourceSets {
-    test.java.srcDirs += 'src/tests/kotlin'
-}
-
 // Temporary hack to stop AS to adding two guavas into test's classpath
 configurations.all {
     resolutionStrategy {
@@ -22,18 +19,17 @@ configurations.all {
 }
 
 dependencies {
-    compile(project(":lifecycle:lifecycle-common"))
-    compile(KOTLIN_STDLIB)
-    compile(AUTO_COMMON)
-    compile(JAVAPOET)
-    testCompile(GOOGLE_COMPILE_TESTING)
-    testCompile(JSR250)
-    testCompile files(org.gradle.internal.jvm.Jvm.current().getToolsJar())
+    implementation(project(":lifecycle:lifecycle-common"))
+    implementation(KOTLIN_STDLIB)
+    implementation(AUTO_COMMON)
+    implementation(JAVAPOET)
+    testImplementation(GOOGLE_COMPILE_TESTING)
+    testImplementation(JSR250)
 }
 
 // we actually need to compile :lifecycle:lifecycle-common, but compileJava is easier
 task compileTestLibrarySource(type: JavaCompile, dependsOn: compileJava) {
-    source "src/tests/test-data/lib/src"
+    source "src/test/test-data/lib/src"
     classpath = project.compileJava.classpath
     destinationDir = new File(project.buildDir, 'test-data/lib/classes')
 }
@@ -41,7 +37,7 @@ task compileTestLibrarySource(type: JavaCompile, dependsOn: compileJava) {
 task jarTestLibrarySource(type: Jar, dependsOn: compileTestLibrarySource) {
     from compileTestLibrarySource.destinationDir
     archiveName = "test-library.jar"
-    destinationDir = file("src/tests/test-data/lib/")
+    destinationDir = file("src/test/test-data/lib/")
 }
 
 androidx {

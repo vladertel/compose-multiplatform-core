@@ -18,30 +18,63 @@ package androidx.build.metalava
 
 import androidx.build.checkapi.ApiLocation
 import androidx.build.java.JavaCompileInputs
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.SetProperty
+import org.gradle.process.ExecOperations
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkerExecutor
 import java.io.File
+import javax.inject.Inject
 
 // MetalavaRunner stores common configuration for executing Metalava
 
-fun Project.getMetalavaConfiguration(): Configuration {
-    return configurations.findByName("metalava") ?: configurations.create("metalava") {
-        val dependency = dependencies.create("com.android:metalava:1.3.0:shadow@jar")
-        it.dependencies.add(dependency)
+fun runMetalavaWithArgs(
+    metalavaConfiguration: Configuration,
+    args: List<String>,
+    workerExecutor: WorkerExecutor
+) {
+    val allArgs = listOf(
+        "--no-banner",
+        "--hide",
+        "HiddenSuperclass" // We allow having a hidden parent class
+    ) + args
+
+    val workQueue = workerExecutor.noIsolation()
+    workQueue.submit(MetalavaWorkAction::class.java) { parameters ->
+        parameters.getArgs().set(allArgs)
+        parameters.getMetalavaClasspath().set(metalavaConfiguration.files)
     }
 }
 
-fun Project.runMetalavaWithArgs(configuration: Configuration, args: List<String>) {
-    javaexec {
-        it.classpath = checkNotNull(configuration) { "Configuration not set." }
-        it.main = "com.android.tools.metalava.Driver"
-        it.args = listOf(
-            "--no-banner",
-            "--hide",
-            "HiddenSuperclass" // We allow having a hidden parent class
-        ) + args
+interface MetalavaParams : WorkParameters {
+    fun getArgs(): ListProperty<String>
+    fun getMetalavaClasspath(): SetProperty<File>
+}
+
+abstract class MetalavaWorkAction @Inject constructor (
+    private val execOperations: ExecOperations
+) : WorkAction<MetalavaParams> {
+
+    override fun execute() {
+        val allArgs = getParameters().getArgs().get()
+        val metalavaJar = getParameters().getMetalavaClasspath().get()
+
+        execOperations.javaexec {
+            it.classpath(metalavaJar)
+            it.main = "com.android.tools.metalava.Driver"
+            it.args = allArgs
+        }
+    }
+}
+
+fun Project.getMetalavaConfiguration(): Configuration {
+    return configurations.findByName("metalava") ?: configurations.create("metalava") {
+        val dependency = dependencies.create("com.android:metalava:1.3.0")
+        it.dependencies.add(dependency)
     }
 }
 
@@ -65,6 +98,8 @@ val API_LINT_ARGS: List<String> = listOf(
         "ManagerConstructor",
         "RethrowRemoteException", // This check is for calls into system_server
         "PackageLayering", // This check is not relevant to androidx.* code.
+        "UserHandle", // This check is not relevant to androidx.* code.
+        "ParcelableList", // This check is only relevant to android platform that has managers.
 
         // List of checks that have bugs, but should be enabled once fixed.
         "GetterSetterNames", // b/135498039
@@ -73,41 +108,44 @@ val API_LINT_ARGS: List<String> = listOf(
         "StartWithLower", // b/135710527
 
         // The list of checks that are API lint warnings and are yet to be enabled
-        "TopLevelBuilder",
-        "BuilderSetStyle",
         "ExecutorRegistration",
-        "StreamFiles",
-        "ParcelableList",
-        "AbstractInner",
         "NotCloseable",
-        "ArrayReturn",
-        "UserHandle",
-        "UserHandleName",
-        "MethodNameTense",
-        "UseIcu",
-        "NoByteOrShort",
-        "CommonArgsFirst",
         "SamShouldBeLast",
-        "MissingJvmStatic",
+        "MissingJvmstatic",
+        "CallbackMethodName",
+        "GetterOnBuilder",
+        "StaticFinalBuilder",
+        "MissingGetterMatchingBuilder",
 
         // We should only treat these as warnings
         "IntentBuilderName",
-        "OnNameExpected"
+        "OnNameExpected",
+        "UserHandleName"
     ).joinToString(),
     "--error",
     listOf(
         "MinMaxConstant",
-        "MissingBuild",
+        "TopLevelBuilder",
+        "BuilderSetStyle",
+        "MissingBuildMethod",
         "SetterReturnsThis",
         "OverlappingConstants",
         "IllegalStateException",
-        "ListenerLast"
+        "ListenerLast",
+        "StreamFiles",
+        "AbstractInner",
+        "ArrayReturn",
+        "MethodNameTense",
+        "UseIcu",
+        "NoByteOrShort",
+        "CommonArgsFirst"
     ).joinToString()
 )
 
 sealed class GenerateApiMode {
     object PublicApi : GenerateApiMode()
-    object RestrictedApi : GenerateApiMode()
+    object AllRestrictedApis : GenerateApiMode()
+    object RestrictToLibraryGroupPrefixApis : GenerateApiMode()
     object ExperimentalApi : GenerateApiMode()
 }
 
@@ -120,36 +158,54 @@ sealed class ApiLintMode {
 fun Project.generateApi(
     files: JavaCompileInputs,
     apiLocation: ApiLocation,
-    tempDir: File,
     apiLintMode: ApiLintMode,
-    includeRestrictedApis: Boolean
+    includeRestrictToLibraryGroupApis: Boolean,
+    workerExecutor: WorkerExecutor,
+    pathToManifest: String? = null
 ) {
     generateApi(files.bootClasspath, files.dependencyClasspath, files.sourcePaths.files,
-        apiLocation.publicApiFile, tempDir, GenerateApiMode.PublicApi, apiLintMode)
+        apiLocation.publicApiFile, GenerateApiMode.PublicApi, apiLintMode, workerExecutor,
+        pathToManifest)
     generateApi(files.bootClasspath, files.dependencyClasspath, files.sourcePaths.files,
-        apiLocation.experimentalApiFile, tempDir, GenerateApiMode.ExperimentalApi, apiLintMode)
-    if (includeRestrictedApis) {
-        generateApi(files.bootClasspath, files.dependencyClasspath, files.sourcePaths.files,
-            apiLocation.restrictedApiFile, tempDir, GenerateApiMode.RestrictedApi, ApiLintMode.Skip)
+        apiLocation.experimentalApiFile, GenerateApiMode.ExperimentalApi, apiLintMode,
+        workerExecutor, pathToManifest)
+
+    val restrictedAPIMode = if (includeRestrictToLibraryGroupApis) {
+        GenerateApiMode.AllRestrictedApis
+    } else {
+        GenerateApiMode.RestrictToLibraryGroupPrefixApis
     }
+    generateApi(files.bootClasspath, files.dependencyClasspath, files.sourcePaths.files,
+        apiLocation.restrictedApiFile, restrictedAPIMode, ApiLintMode.Skip,
+        workerExecutor)
 }
 
-// Generates the specified api file
+// Gets arguments for generating the specified api file
 fun Project.generateApi(
     bootClasspath: Collection<File>,
     dependencyClasspath: FileCollection,
     sourcePaths: Collection<File>,
     outputFile: File,
-    tempDir: File,
     generateApiMode: GenerateApiMode,
-    apiLintMode: ApiLintMode
+    apiLintMode: ApiLintMode,
+    workerExecutor: WorkerExecutor,
+    pathToManifest: String? = null
 ) {
-    val tempOutputFile = if (generateApiMode is GenerateApiMode.RestrictedApi) {
-        File(tempDir, outputFile.name + ".tmp")
-    } else {
-        outputFile
-    }
+    val args = getGenerateApiArgs(bootClasspath, dependencyClasspath, sourcePaths, outputFile,
+        generateApiMode, apiLintMode, pathToManifest)
+    runMetalavaWithArgs(getMetalavaConfiguration(), args, workerExecutor)
+}
 
+// Generates the specified api file
+fun Project.getGenerateApiArgs(
+    bootClasspath: Collection<File>,
+    dependencyClasspath: FileCollection,
+    sourcePaths: Collection<File>,
+    outputFile: File?,
+    generateApiMode: GenerateApiMode,
+    apiLintMode: ApiLintMode,
+    pathToManifest: String? = null
+): List<String> {
     // generate public API txt
     val args = mutableListOf(
         "--classpath",
@@ -158,23 +214,45 @@ fun Project.generateApi(
         "--source-path",
         sourcePaths.filter { it.exists() }.joinToString(File.pathSeparator),
 
-        "--api",
-        tempOutputFile.toString(),
-
         "--format=v3",
         "--output-kotlin-nulls=yes"
     )
 
+    pathToManifest?.let {
+        args += listOf("--manifest", pathToManifest)
+    }
+
+    if (outputFile != null) {
+        args += listOf("--api", outputFile.toString())
+    }
+
     when (generateApiMode) {
         is GenerateApiMode.PublicApi -> {
             args += HIDE_EXPERIMENTAL_ARGS
+            args += listOf(
+                "--hide-annotation", "androidx.annotation.RestrictTo"
+            )
+            args += listOf("--show-unannotated")
         }
-        is GenerateApiMode.RestrictedApi -> {
+        is GenerateApiMode.AllRestrictedApis, GenerateApiMode.RestrictToLibraryGroupPrefixApis -> {
             // Show restricted APIs despite @hide.
             args += listOf(
-                "--show-annotation", "androidx.annotation.RestrictTo",
+                "--show-annotation",
+                "androidx.annotation.RestrictTo(androidx.annotation.RestrictTo.Scope." +
+                    "LIBRARY_GROUP_PREFIX)",
+                "--show-annotation",
+                "kotlin.PublishedApi",
                 "--show-unannotated"
             )
+            if (generateApiMode is GenerateApiMode.AllRestrictedApis) {
+                args += listOf("--show-annotation",
+                "androidx.annotation.RestrictTo(androidx.annotation.RestrictTo.Scope." +
+                    "LIBRARY_GROUP)")
+            } else {
+                args += listOf("--hide-annotation",
+                "androidx.annotation.RestrictTo(androidx.annotation.RestrictTo.Scope." +
+                    "LIBRARY_GROUP)")
+            }
             args += HIDE_EXPERIMENTAL_ARGS
         }
         is GenerateApiMode.ExperimentalApi -> {
@@ -190,7 +268,9 @@ fun Project.generateApi(
             }
             args.addAll(listOf(
                 "--error",
-                "DeprecationMismatch" // Enforce deprecation mismatch
+                "DeprecationMismatch", // Enforce deprecation mismatch
+                "--error",
+                "ReferencesDeprecated"
             ))
         }
         is ApiLintMode.Skip -> {
@@ -200,39 +280,12 @@ fun Project.generateApi(
                 "--hide",
                 "UnhiddenSystemApi",
                 "--hide",
-                "ReferencesHidden"
+                "ReferencesHidden",
+                "--hide",
+                "ReferencesDeprecated"
             ))
         }
     }
 
-    val metalavaConfiguration = getMetalavaConfiguration()
-    runMetalavaWithArgs(metalavaConfiguration, args)
-
-    if (generateApiMode is GenerateApiMode.RestrictedApi) {
-        removeRestrictToLibraryLines(tempOutputFile, outputFile)
-    }
-}
-
-// until b/119617147 is done, remove lines containing "@RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY)"
-private fun removeRestrictToLibraryLines(inputFile: File, outputFile: File) {
-    val outputBuilder = StringBuilder()
-    val lines = inputFile.readLines()
-    var skipScopeUntil: String? = null
-    for (line in lines) {
-        val skip = line.contains("@RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY)")
-        if (skip && line.endsWith("{")) {
-            skipScopeUntil = line.commonPrefixWith("    ") + "}"
-        }
-        if (!skip && skipScopeUntil == null) {
-            outputBuilder.append(line)
-            outputBuilder.append("\n")
-        }
-        if (line == skipScopeUntil) {
-            skipScopeUntil = null
-        }
-    }
-    if (skipScopeUntil != null) {
-        throw GradleException("Skipping until `$skipScopeUntil`, but found EOF")
-    }
-    outputFile.writeText(outputBuilder.toString())
+    return args
 }

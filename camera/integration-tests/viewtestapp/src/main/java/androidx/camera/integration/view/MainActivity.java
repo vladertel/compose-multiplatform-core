@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_PERMISSIONS = 10;
 
     private boolean mCheckedPermissions = false;
+    private boolean mUsePreviewView = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,13 +51,13 @@ public class MainActivity extends AppCompatActivity {
         if (null == savedInstanceState) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (allPermissionsGranted()) {
-                    startCameraView();
+                    startCamera();
                 } else if (!mCheckedPermissions) {
                     requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
                     mCheckedPermissions = true;
                 }
             } else {
-                startCameraView();
+                startCamera();
             }
         }
     }
@@ -66,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
             int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
-                startCameraView();
+                startCamera();
             } else {
                 report("Permissions not granted by the user.");
             }
@@ -84,9 +85,11 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()) {
             case R.id.camera_view:
+                mUsePreviewView = false;
                 startCameraView();
                 return true;
             case R.id.preview_view:
+                mUsePreviewView = true;
                 startPreviewView();
                 return true;
             default:
@@ -102,6 +105,14 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return true;
+    }
+
+    private void startCamera() {
+        if (mUsePreviewView) {
+            startPreviewView();
+        } else {
+            startCameraView();
+        }
     }
 
     private void startCameraView() {

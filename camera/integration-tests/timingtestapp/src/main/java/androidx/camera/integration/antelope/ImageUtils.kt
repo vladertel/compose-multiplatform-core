@@ -29,6 +29,7 @@ import android.os.Environment
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.exifinterface.media.ExifInterface
 import androidx.camera.integration.antelope.MainActivity.Companion.PHOTOS_DIR
@@ -280,11 +281,11 @@ class CameraXImageAvailableListener(
 ) : ImageCapture.OnImageCapturedCallback() {
 
     /** Image was captured successfully */
-    override fun onCaptureSuccess(image: ImageProxy?, rotationDegrees: Int) {
+    override fun onCaptureSuccess(image: ImageProxy) {
         logd("CameraXImageAvailableListener onCaptureSuccess. Current test: " +
             testConfig.currentRunningTest)
 
-        when (image?.format) {
+        when (image.format) {
             ImageFormat.JPEG -> {
                 params.timer.imageReaderEnd = System.currentTimeMillis()
 
@@ -320,16 +321,12 @@ class CameraXImageAvailableListener(
             }
         }
 
-        image?.close()
+        image.close()
     }
 
     /** Camera X was unable to capture a still image and threw an error */
-    override fun onError(
-        imageCaptureError: ImageCapture.ImageCaptureError,
-        message: String,
-        cause: Throwable?
-    ) {
-        logd("CameraX ImageCallback onError. Error: " + message)
+    override fun onError(exception: ImageCaptureException) {
+        logd("CameraX ImageCallback onError. Error: " + exception.message)
         params.timer.imageReaderEnd = System.currentTimeMillis()
         params.timer.imageSaveStart = System.currentTimeMillis()
         params.timer.imageSaveEnd = System.currentTimeMillis()

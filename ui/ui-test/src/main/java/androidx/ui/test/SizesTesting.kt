@@ -17,19 +17,19 @@
 package androidx.ui.test
 
 import androidx.compose.Composable
-import androidx.compose.composer
-import androidx.ui.core.Density
-import androidx.ui.core.DensityScope
-import androidx.ui.core.Dp
-import androidx.ui.core.IntPx
-import androidx.ui.core.OnChildPositioned
-import androidx.ui.core.PxSize
-import androidx.ui.core.dp
-import androidx.ui.core.round
-import androidx.ui.core.withDensity
-import androidx.ui.layout.ConstrainedBox
+import androidx.ui.core.Modifier
+import androidx.ui.core.onChildPositioned
 import androidx.ui.layout.DpConstraints
-import androidx.ui.layout.Wrap
+import androidx.ui.layout.Stack
+import androidx.ui.layout.preferredSizeIn
+import androidx.ui.unit.Density
+import androidx.ui.unit.Dp
+import androidx.ui.unit.IntPx
+import androidx.ui.unit.PxSize
+import androidx.ui.unit.dp
+import androidx.ui.unit.toPxSize
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Constant to emulate very big but finite constraints
@@ -47,18 +47,17 @@ val BigTestConstraints = DpConstraints(maxWidth = 5000.dp, maxHeight = 5000.dp)
 fun ComposeTestRule.setContentAndGetPixelSize(
     parentConstraints: DpConstraints = BigTestConstraints,
     // TODO : figure out better way to make it flexible
-    performSetContent: (@Composable() () -> Unit) -> Unit = { setContent(it) },
-    children: @Composable() () -> Unit
+    performSetContent: (@Composable () -> Unit) -> Unit = { setContent(it) },
+    children: @Composable () -> Unit
 ): PxSize {
     var realSize: PxSize? = null
     performSetContent {
-        Wrap {
-            ConstrainedBox(constraints = parentConstraints) {
-                OnChildPositioned(onPositioned = { coordinates ->
-                    realSize = coordinates.size
-                }) {
-                    children()
-                }
+        Stack {
+            Stack(
+                Modifier.preferredSizeIn(parentConstraints)
+                    .onChildPositioned { coordinates -> realSize = coordinates.size.toPxSize() }
+            ) {
+                children()
             }
         }
     }
@@ -74,7 +73,7 @@ fun ComposeTestRule.setContentAndGetPixelSize(
  */
 fun ComposeTestRule.setContentAndCollectSizes(
     parentConstraints: DpConstraints = BigTestConstraints,
-    children: @Composable() () -> Unit
+    children: @Composable () -> Unit
 ): CollectedSizes {
     val size = setContentAndGetPixelSize(parentConstraints, { setContent(it) }, children)
     return CollectedSizes(size, density)
@@ -82,7 +81,7 @@ fun ComposeTestRule.setContentAndCollectSizes(
 
 /**
  * Small utility class to provide convenient assertion for width and height for some [PxSize].
- * It also provides [DensityScope] while asserting.
+ * It also provides [Density] while asserting.
  *
  * @see ComposeTestRule.setContentAndCollectSizes
  */
@@ -95,34 +94,35 @@ class CollectedSizes(private val size: PxSize, private val density: Density) {
 
     fun assertIsSquareWithSize(expectedSize: Dp) = assertIsSquareWithSize { expectedSize.toIntPx() }
 
-    fun assertWidthEqualsTo(expectedWidthPx: DensityScope.() -> IntPx): CollectedSizes {
-        val widthPx = withDensity(density) {
-            expectedWidthPx()
+    fun assertWidthEqualsTo(expectedWidthPx: Density.() -> IntPx): CollectedSizes {
+        val widthPx = with(density) {
+            expectedWidthPx().value
         }
-        assertSize(size.width.round(), widthPx)
+        assertSize(size.width.roundToInt(), widthPx)
         return this
     }
 
-    fun assertHeightEqualsTo(expectedHeightPx: DensityScope.() -> IntPx): CollectedSizes {
-        val heightPx = withDensity(density) {
-            expectedHeightPx()
+    fun assertHeightEqualsTo(expectedHeightPx: Density.() -> IntPx): CollectedSizes {
+        val heightPx = with(density) {
+            expectedHeightPx().value
         }
-        assertSize(size.height.round(), heightPx)
+        assertSize(size.height.roundToInt(), heightPx)
         return this
     }
 
-    fun assertIsSquareWithSize(expectedSquarePx: DensityScope.() -> IntPx): CollectedSizes {
-        val squarePx = withDensity(density) {
-            expectedSquarePx()
+    fun assertIsSquareWithSize(expectedSquarePx: Density.() -> IntPx): CollectedSizes {
+        val squarePx = with(density) {
+            expectedSquarePx().value
         }
-        assertSize(size.width.round(), squarePx)
-        assertSize(size.height.round(), squarePx)
+        assertSize(size.width.roundToInt(), squarePx)
+        assertSize(size.height.roundToInt(), squarePx)
         return this
     }
 }
 
-private fun assertSize(actual: IntPx, expected: IntPx) {
-    if (actual != expected) {
+private fun assertSize(actual: Int, expected: Int) {
+    // TODO: because if dp and ipx collision. Remove dp assertion later
+    if (abs(actual - expected) > 1) {
         throw AssertionError("Found size: $actual pixels.\nExpected size $expected pixels")
     }
 }

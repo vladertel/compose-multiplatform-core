@@ -4,8 +4,10 @@ package androidx.ui.graphics.vector {
   public final class GroupComponent extends androidx.ui.graphics.vector.VNode {
     ctor public GroupComponent(String name);
     ctor public GroupComponent();
+    method public String component1();
+    method public androidx.ui.graphics.vector.GroupComponent copy(String name);
     method public void draw(androidx.ui.graphics.Canvas canvas);
-    method public androidx.ui.graphics.vector.PathNode![] getClipPathData();
+    method public java.util.List<androidx.ui.graphics.vector.PathNode> getClipPathData();
     method public String getName();
     method public float getPivotX();
     method public float getPivotY();
@@ -18,7 +20,7 @@ package androidx.ui.graphics.vector {
     method public void insertAt(int index, androidx.ui.graphics.vector.VNode instance);
     method public void move(int from, int to, int count);
     method public void remove(int index, int count);
-    method public void setClipPathData(androidx.ui.graphics.vector.PathNode![] value);
+    method public void setClipPathData(java.util.List<? extends androidx.ui.graphics.vector.PathNode> value);
     method public void setPivotX(float value);
     method public void setPivotY(float value);
     method public void setRotation(float value);
@@ -26,7 +28,8 @@ package androidx.ui.graphics.vector {
     method public void setScaleY(float value);
     method public void setTranslationX(float value);
     method public void setTranslationY(float value);
-    property public final androidx.ui.graphics.vector.PathNode![] clipPathData;
+    property public final java.util.List<androidx.ui.graphics.vector.PathNode> clipPathData;
+    property public kotlin.jvm.functions.Function0<kotlin.Unit>? invalidateListener;
     property public final float pivotX;
     property public final float pivotY;
     property public final float rotation;
@@ -39,11 +42,13 @@ package androidx.ui.graphics.vector {
 
   public final class PathComponent extends androidx.ui.graphics.vector.VNode {
     ctor public PathComponent(String name);
+    method public String component1();
+    method public androidx.ui.graphics.vector.PathComponent copy(String name);
     method public void draw(androidx.ui.graphics.Canvas canvas);
     method public androidx.ui.graphics.Brush? getFill();
     method public float getFillAlpha();
     method public String getName();
-    method public androidx.ui.graphics.vector.PathNode![] getPathData();
+    method public java.util.List<androidx.ui.graphics.vector.PathNode> getPathData();
     method public androidx.ui.graphics.Brush? getStroke();
     method public float getStrokeAlpha();
     method public androidx.ui.graphics.StrokeCap getStrokeLineCap();
@@ -52,7 +57,7 @@ package androidx.ui.graphics.vector {
     method public float getStrokeLineWidth();
     method public void setFill(androidx.ui.graphics.Brush? value);
     method public void setFillAlpha(float value);
-    method public void setPathData(androidx.ui.graphics.vector.PathNode![] value);
+    method public void setPathData(java.util.List<? extends androidx.ui.graphics.vector.PathNode> value);
     method public void setStroke(androidx.ui.graphics.Brush? value);
     method public void setStrokeAlpha(float value);
     method public void setStrokeLineCap(androidx.ui.graphics.StrokeCap value);
@@ -61,7 +66,7 @@ package androidx.ui.graphics.vector {
     method public void setStrokeLineWidth(float value);
     property public final androidx.ui.graphics.Brush? fill;
     property public final float fillAlpha;
-    property public final androidx.ui.graphics.vector.PathNode![] pathData;
+    property public final java.util.List<androidx.ui.graphics.vector.PathNode> pathData;
     property public final androidx.ui.graphics.Brush? stroke;
     property public final float strokeAlpha;
     property public final androidx.ui.graphics.StrokeCap strokeLineCap;
@@ -72,20 +77,25 @@ package androidx.ui.graphics.vector {
 
   public abstract sealed class VNode {
     method public abstract void draw(androidx.ui.graphics.Canvas canvas);
+    method public kotlin.jvm.functions.Function0<kotlin.Unit>? getInvalidateListener();
+    method public final void invalidate();
+    method public void setInvalidateListener(kotlin.jvm.functions.Function0<kotlin.Unit>? p);
+    property public kotlin.jvm.functions.Function0<kotlin.Unit>? invalidateListener;
   }
 
   public final class VectorComponent extends androidx.ui.graphics.vector.VNode {
-    ctor public VectorComponent(String name, float viewportWidth, float viewportHeight, androidx.ui.core.Px defaultWidth, androidx.ui.core.Px defaultHeight);
+    ctor public VectorComponent(float viewportWidth, float viewportHeight, float defaultWidth, float defaultHeight, String name);
+    method public void draw(androidx.ui.graphics.Canvas canvas, float alpha, androidx.ui.graphics.ColorFilter? colorFilter);
     method public void draw(androidx.ui.graphics.Canvas canvas);
-    method public androidx.ui.core.Px getDefaultHeight();
-    method public androidx.ui.core.Px getDefaultWidth();
+    method public float getDefaultHeight();
+    method public float getDefaultWidth();
     method public String getName();
     method public androidx.ui.graphics.vector.GroupComponent getRoot();
     method public int getSize();
     method public float getViewportHeight();
     method public float getViewportWidth();
-    method public void setDefaultHeight(androidx.ui.core.Px p);
-    method public void setDefaultWidth(androidx.ui.core.Px p);
+    method public void setDefaultHeight(float p);
+    method public void setDefaultWidth(float p);
     method public void setViewportHeight(float p);
     method public void setViewportWidth(float p);
     property public final androidx.ui.graphics.vector.GroupComponent root;
@@ -93,34 +103,25 @@ package androidx.ui.graphics.vector {
   }
 
   public final class VectorComposeNonIRKt {
-    ctor public VectorComposeNonIRKt();
-    method public static void composeVector(androidx.ui.graphics.vector.VectorComponent container, androidx.compose.CompositionReference? parent = null, kotlin.jvm.functions.Function3<? super androidx.ui.graphics.vector.VectorScope,? super java.lang.Float,? super java.lang.Float,kotlin.Unit> composable);
-    method public static void disposeVector(androidx.ui.graphics.vector.VectorComponent container, androidx.compose.CompositionReference? parent = null);
+    method public static androidx.compose.Composition composeVector(androidx.ui.graphics.vector.VectorComponent container, androidx.compose.Recomposer recomposer, androidx.compose.CompositionReference? parent = null, kotlin.jvm.functions.Function3<? super androidx.ui.graphics.vector.VectorScope,? super java.lang.Float,? super java.lang.Float,kotlin.Unit> composable);
+    method @Deprecated public static androidx.compose.Composition composeVector(androidx.ui.graphics.vector.VectorComponent container, androidx.compose.CompositionReference? parent = null, kotlin.jvm.functions.Function3<? super androidx.ui.graphics.vector.VectorScope,? super java.lang.Float,? super java.lang.Float,kotlin.Unit> composable);
   }
 
   public final class VectorComposer extends androidx.compose.Composer<androidx.ui.graphics.vector.VNode> {
-    ctor public VectorComposer(androidx.ui.graphics.vector.VNode root, androidx.compose.Recomposer recomposer);
+    ctor public VectorComposer(androidx.ui.graphics.vector.VNode root, androidx.compose.SlotTable slotTable, androidx.compose.Recomposer recomposer);
+    method public inline <T extends androidx.ui.graphics.vector.VNode> void emit(Object key, kotlin.jvm.functions.Function0<? extends T> ctor, kotlin.jvm.functions.Function1<? super androidx.compose.ComposerUpdater<androidx.ui.graphics.vector.VNode,androidx.ui.graphics.vector.VNode>,kotlin.Unit> update);
+    method public inline void emit(Object key, kotlin.jvm.functions.Function0<androidx.ui.graphics.vector.GroupComponent> ctor, kotlin.jvm.functions.Function1<? super androidx.compose.ComposerUpdater<androidx.ui.graphics.vector.VNode,androidx.ui.graphics.vector.GroupComponent>,kotlin.Unit> update, kotlin.jvm.functions.Function0<kotlin.Unit> children);
     method public androidx.ui.graphics.vector.VNode getRoot();
   }
 
-  public final class VectorComposition {
-    ctor public VectorComposition(androidx.ui.graphics.vector.VectorComposer composer);
-    method public inline void call(Object key, kotlin.jvm.functions.Function1<? super androidx.compose.ViewValidator,java.lang.Boolean> invalid, kotlin.jvm.functions.Function0<kotlin.Unit> block);
-    method public inline <T> void call(Object key, kotlin.jvm.functions.Function0<? extends T> ctor, kotlin.jvm.functions.Function2<? super androidx.compose.ViewValidator,? super T,java.lang.Boolean> invalid, kotlin.jvm.functions.Function1<? super T,kotlin.Unit> block);
-    method public inline <T extends androidx.ui.graphics.vector.VNode> void emit(Object key, kotlin.jvm.functions.Function0<? extends T> ctor, kotlin.jvm.functions.Function1<? super androidx.compose.ComposerUpdater<androidx.ui.graphics.vector.VNode,androidx.ui.graphics.vector.VNode>,kotlin.Unit> update);
-    method public inline void emit(Object key, kotlin.jvm.functions.Function0<androidx.ui.graphics.vector.GroupComponent> ctor, kotlin.jvm.functions.Function1<? super androidx.compose.ComposerUpdater<androidx.ui.graphics.vector.VNode,androidx.ui.graphics.vector.GroupComponent>,kotlin.Unit> update, kotlin.jvm.functions.Function0<kotlin.Unit> children);
-    method public androidx.ui.graphics.vector.VectorComposer getComposer();
-    method public inline Object joinKey(Object left, Object? right);
-    method public inline operator <V> V! unaryPlus(androidx.compose.Effect<V>);
-  }
-
   public final class VectorKt {
-    ctor public VectorKt();
-    method public static inline androidx.ui.graphics.vector.PathNode![] PathData(kotlin.jvm.functions.Function1<? super androidx.ui.graphics.vector.PathBuilder,kotlin.Unit> block);
-    method public static androidx.ui.graphics.vector.PathNode![] addPathNodes(String? pathStr);
+    method public static inline java.util.List<androidx.ui.graphics.vector.PathNode> PathData(kotlin.jvm.functions.Function1<? super androidx.ui.graphics.vector.PathBuilder,kotlin.Unit> block);
+    method public static java.util.List<androidx.ui.graphics.vector.PathNode> addPathNodes(String? pathStr);
     method public static androidx.ui.graphics.StrokeCap getDefaultStrokeLineCap();
     method public static androidx.ui.graphics.StrokeJoin getDefaultStrokeLineJoin();
-    method public static androidx.ui.graphics.vector.PathNode![] getEmptyPath();
+    method public static androidx.ui.graphics.BlendMode getDefaultTintBlendMode();
+    method public static long getDefaultTintColor();
+    method public static java.util.List<androidx.ui.graphics.vector.PathNode> getEmptyPath();
     field public static final float DefaultAlpha = 1.0f;
     field public static final String DefaultGroupName = "";
     field public static final String DefaultPathName = "";
@@ -136,8 +137,8 @@ package androidx.ui.graphics.vector {
   }
 
   public final class VectorScope {
-    ctor public VectorScope(androidx.ui.graphics.vector.VectorComposition composer);
-    method public androidx.ui.graphics.vector.VectorComposition getComposer();
+    ctor public VectorScope(androidx.ui.graphics.vector.VectorComposer composer);
+    method public androidx.ui.graphics.vector.VectorComposer getComposer();
   }
 
 }

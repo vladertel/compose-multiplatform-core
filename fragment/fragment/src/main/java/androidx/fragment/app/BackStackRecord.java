@@ -20,7 +20,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.util.LogWriter;
 import androidx.lifecycle.Lifecycle;
 
 import java.io.PrintWriter;
@@ -136,8 +135,8 @@ final class BackStackRecord extends FragmentTransaction implements
     }
 
     BackStackRecord(@NonNull FragmentManager manager) {
-        super(manager.getFragmentFactory(), manager.mHost != null
-                ? manager.mHost.getContext().getClassLoader()
+        super(manager.getFragmentFactory(), manager.getHost() != null
+                ? manager.getHost().getContext().getClassLoader()
                 : null);
         mManager = manager;
     }
@@ -147,30 +146,34 @@ final class BackStackRecord extends FragmentTransaction implements
         return mIndex;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public int getBreadCrumbTitleRes() {
         return mBreadCrumbTitleRes;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public int getBreadCrumbShortTitleRes() {
         return mBreadCrumbShortTitleRes;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     @Nullable
     public CharSequence getBreadCrumbTitle() {
         if (mBreadCrumbTitleRes != 0) {
-            return mManager.mHost.getContext().getText(mBreadCrumbTitleRes);
+            return mManager.getHost().getContext().getText(mBreadCrumbTitleRes);
         }
         return mBreadCrumbTitleText;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     @Nullable
     public CharSequence getBreadCrumbShortTitle() {
         if (mBreadCrumbShortTitleRes != 0) {
-            return mManager.mHost.getContext().getText(mBreadCrumbShortTitleRes);
+            return mManager.getHost().getContext().getText(mBreadCrumbShortTitleRes);
         }
         return mBreadCrumbShortTitleText;
     }
@@ -397,6 +400,7 @@ final class BackStackRecord extends FragmentTransaction implements
             final Fragment f = op.mFragment;
             if (f != null) {
                 f.setNextTransition(mTransition);
+                f.setSharedElementNames(mSharedElementSourceNames, mSharedElementTargetNames);
             }
             switch (op.mCmd) {
                 case OP_ADD:
@@ -439,7 +443,11 @@ final class BackStackRecord extends FragmentTransaction implements
                     throw new IllegalArgumentException("Unknown cmd: " + op.mCmd);
             }
             if (!mReorderingAllowed && op.mCmd != OP_ADD && f != null) {
-                mManager.moveFragmentToExpectedState(f);
+                if (FragmentManager.USE_STATE_MANAGER) {
+                    mManager.createOrGetFragmentStateManager(f).moveToExpectedState();
+                } else {
+                    mManager.moveFragmentToExpectedState(f);
+                }
             }
         }
         if (!mReorderingAllowed) {
@@ -461,6 +469,8 @@ final class BackStackRecord extends FragmentTransaction implements
             Fragment f = op.mFragment;
             if (f != null) {
                 f.setNextTransition(FragmentManager.reverseTransit(mTransition));
+                // Reverse the target and source names for pop operations
+                f.setSharedElementNames(mSharedElementTargetNames, mSharedElementSourceNames);
             }
             switch (op.mCmd) {
                 case OP_ADD:
@@ -503,7 +513,11 @@ final class BackStackRecord extends FragmentTransaction implements
                     throw new IllegalArgumentException("Unknown cmd: " + op.mCmd);
             }
             if (!mReorderingAllowed && op.mCmd != OP_REMOVE && f != null) {
-                mManager.moveFragmentToExpectedState(f);
+                if (FragmentManager.USE_STATE_MANAGER) {
+                    mManager.createOrGetFragmentStateManager(f).moveToExpectedState();
+                } else {
+                    mManager.moveFragmentToExpectedState(f);
+                }
             }
         }
         if (!mReorderingAllowed && moveToState) {

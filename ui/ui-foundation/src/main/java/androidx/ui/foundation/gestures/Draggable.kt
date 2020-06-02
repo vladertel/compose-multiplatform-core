@@ -16,99 +16,104 @@
 
 package androidx.ui.foundation.gestures
 
-import androidx.compose.Composable
-import androidx.compose.composer
-import androidx.compose.memo
-import androidx.compose.unaryPlus
-import androidx.ui.core.PxPosition
-import androidx.ui.foundation.animation.AnimatedFloatDragController
-import androidx.ui.foundation.animation.AnchorsFlingConfig
-import androidx.ui.core.gesture.TouchSlopDragGestureDetector
+import androidx.animation.AnimatedFloat
+import androidx.compose.onDispose
+import androidx.compose.remember
+import androidx.ui.core.Modifier
+import androidx.ui.core.composed
 import androidx.ui.core.gesture.DragObserver
-import androidx.ui.core.px
+import androidx.ui.core.gesture.dragGestureFilter
+import androidx.ui.foundation.Interaction
+import androidx.ui.foundation.InteractionState
+import androidx.ui.unit.PxPosition
 
 /**
- * Component that provides high-level drag functionality reflected in one value
+ * Configure touch dragging for the UI element in a single [DragDirection]. The drag distance is
+ * reported to [onDragDeltaConsumptionRequested] as a single [Float] value in pixels.
  *
- * The common usecase for this component is when you need to be able to drag/scroll something
- * on the screen and represent it as one value via [DragValueController].
+ * The common usecase for this component is when you need to be able to drag something
+ * inside the component on the screen and represent this state via one float value
  *
- * If you need to control the whole dragging flow, consider using [TouchSlopDragGestureDetector] instead.
+ * If you need to control the whole dragging flow, consider using [dragGestureFilter] instead.
+ *
+ * If you are implementing scroll/fling behavior, consider using [scrollable].
  *
  * @sample androidx.ui.foundation.samples.DraggableSample
  *
- * By using [AnimatedFloatDragController] with [AnchorsFlingConfig] you can achieve behaviour
- * when value is gravitating to predefined set of points after drag has ended.
+ * [AnimatedFloat] offers a standard implementation of flinging behavior:
  *
  * @sample androidx.ui.foundation.samples.AnchoredDraggableSample
  *
- * @param dragDirection direction in which drag should be happening.
- * Either [DragDirection.Vertical] or [DragDirection.Horizontal]
- * @param minValue lower bound for draggable value in this component
- * @param maxValue upper bound for draggable value in this component
- * @param valueController controller to control value and how it will consume drag events,
- * such as drag, fling or change of dragging bounds. The default is [FloatDragValueController],
- * which provides simple move-as-much-as-user-drags login with no fling support.
- * @param callback callback to react to drag events
+ * @param dragDirection direction in which drag should be happening
+ * @param onDragStarted callback that will be invoked when drag has been started after touch slop
+ * has been passed, with starting position provided
+ * @param onDragStopped callback that will be invoked when drag stops, with velocity provided
+ * @param enabled whether or not drag is enabled
+ * @param interactionState [InteractionState] that will be updated when this draggable is
+ * being dragged, using [Interaction.Dragged].
+ * @param startDragImmediately when set to true, draggable will start dragging immediately and
+ * prevent other gesture detectors from reacting to "down" events (in order to block composed
+ * press-based gestures).  This is intended to allow end users to "catch" an animating widget by
+ * pressing on it. It's useful to set it when value you're dragging is settling / animating.
+ * @param onDragDeltaConsumptionRequested callback to be invoked when drag occurs. Users must
+ * update their state in this lambda and return amount of delta consumed
  */
-@Composable
-fun Draggable(
+fun Modifier.draggable(
     dragDirection: DragDirection,
-    minValue: Float = Float.MIN_VALUE,
-    maxValue: Float = Float.MAX_VALUE,
-    valueController: DragValueController = +memo(minValue) { FloatDragValueController(minValue) },
-    callback: DraggableCallback? = null,
-    children: @Composable() (Float) -> Unit
-) {
-    fun current() = valueController.currentValue
-    +memo(valueController, minValue, maxValue) {
-        valueController.setBounds(minValue, maxValue)
+    onDragStarted: (startedPosition: PxPosition) -> Unit = {},
+    onDragStopped: (velocity: Float) -> Unit = {},
+    enabled: Boolean = true,
+    interactionState: InteractionState? = null,
+    startDragImmediately: Boolean = false,
+    onDragDeltaConsumptionRequested: (Float) -> Float
+): Modifier = composed {
+    val dragState = remember { DraggableState() }
+    onDispose {
+        interactionState?.removeInteraction(Interaction.Dragged)
     }
-    TouchSlopDragGestureDetector(
+    dragGestureFilter(
         dragObserver = object : DragObserver {
 
+            override fun onStart(downPosition: PxPosition) {
+                if (enabled) {
+                    interactionState?.addInteraction(Interaction.Dragged)
+                    onDragStarted(downPosition)
+                }
+            }
+
             override fun onDrag(dragDistance: PxPosition): PxPosition {
-                callback?.notifyDrag()
+                if (!enabled) return dragDistance
                 val projected = dragDirection.project(dragDistance)
-                val newValue = (current() + projected).coerceIn(minValue, maxValue)
-                val consumed = newValue - current()
-                valueController.onDrag(newValue)
+                val consumed = onDragDeltaConsumptionRequested(projected)
+                dragState.value = dragState.value + consumed
                 val fractionConsumed = if (projected == 0f) 0f else consumed / projected
                 return PxPosition(
-                    dragDirection.xProjection(dragDistance.x).px * fractionConsumed,
-                    dragDirection.yProjection(dragDistance.y).px * fractionConsumed
+                    dragDirection.xProjection(dragDistance.x) * fractionConsumed,
+                    dragDirection.yProjection(dragDistance.y) * fractionConsumed
                 )
             }
 
+            override fun onCancel() {
+                if (enabled) {
+                    interactionState?.removeInteraction(Interaction.Dragged)
+                    onDragStopped(0f)
+                }
+            }
+
             override fun onStop(velocity: PxPosition) {
-                val projected = dragDirection.project(velocity)
-                valueController.onDragEnd(projected) {
-                    callback?.notifyFinished(it)
+                if (enabled) {
+                    interactionState?.removeInteraction(Interaction.Dragged)
+                    onDragStopped(dragDirection.project(velocity))
                 }
             }
         },
         canDrag = { direction ->
-            dragDirection.isDraggableInDirection(direction, minValue, current(), maxValue)
-        }
-    ) {
-        children(current())
-    }
+            enabled && dragDirection.isDraggableInDirection(direction, dragState.value)
+        },
+        startDragImmediately = startDragImmediately
+    )
 }
 
-class DraggableCallback(
-    private val onDragStarted: () -> Unit = {},
-    private val onDragSettled: (Float) -> Unit = {}
-) {
-    private var startNotified: Boolean = false
-    internal fun notifyDrag() {
-        if (!startNotified) {
-            startNotified = true
-            onDragStarted()
-        }
-    }
-
-    internal fun notifyFinished(final: Float) {
-        startNotified = false
-        onDragSettled(final)
-    }
+private class DraggableState {
+    var value: Float = 0f
 }

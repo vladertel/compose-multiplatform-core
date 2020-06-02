@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import android.os.Bundle;
 import android.util.SparseBooleanArray;
 
+import androidx.annotation.NonNull;
 import androidx.recyclerview.selection.SelectionTracker.SelectionPredicate;
 import androidx.recyclerview.selection.testing.Bundles;
 import androidx.recyclerview.selection.testing.SelectionProbe;
@@ -68,7 +69,7 @@ public class DefaultSelectionTrackerTest {
         mSelectionPredicate = new SelectionPredicate<String>() {
 
             @Override
-            public boolean canSetStateForKey(String id, boolean nextState) {
+            public boolean canSetStateForKey(@NonNull String id, boolean nextState) {
                 return !nextState || !mIgnored.contains(id);
             }
 
@@ -147,11 +148,29 @@ public class DefaultSelectionTrackerTest {
     }
 
     @Test
-    public void testDeselect_NotifiesSelectionChanged() {
+    public void testDeselect_SelectionChange_Notifies() {
         mTracker.select(mItems.get(7));
         mTracker.deselect(mItems.get(7));
 
         mListener.assertSelectionChanged();
+    }
+
+    @Test
+    public void testClearSelection_ClearSelection_Notifies() {
+        mTracker.select(mItems.get(7));
+        mTracker.clearSelection();
+
+        mListener.assertSelectionCleared();
+    }
+
+    // This test is important as failure to short circuit
+    // would result in infinte recursion during reset operations.
+    @Test
+    public void testClearSelection_ClearSelection_EmptyDoesNotNotify() {
+        // Already empty...but we'll try anyway.
+        mTracker.clearSelection();
+
+        assertFalse(mListener.wasSelectionCleared());
     }
 
     @Test
@@ -198,6 +217,70 @@ public class DefaultSelectionTrackerTest {
 
         assertFalse(mTracker.clearSelection());
         assertFalse(mTracker.hasSelection());
+    }
+
+    @Test
+    public void testRequiresReset_ForSelection() {
+        mTracker.select(mItems.get(1));
+
+        assertTrue(mTracker.isResetRequired());
+    }
+
+    @Test
+    public void testRequiresReset_ForProvisionalSelection() {
+        Set<String> items = new HashSet<>();
+        items.add(mItems.get(1));
+
+        mTracker.setProvisionalSelection(items);
+
+        assertTrue(mTracker.isResetRequired());
+    }
+
+    @Test
+    public void testRequiresReset_ForEstablishedRange() {
+        mTracker.startRange(15);
+
+        assertTrue(mTracker.isResetRequired());
+    }
+
+    @Test
+    public void testReset_ForSelection() {
+        mTracker.select(mItems.get(1));
+
+        mTracker.reset();
+        assertFalse(mTracker.isResetRequired());
+    }
+
+    @Test
+    public void testReset_ForProvisionalSelection() {
+        Set<String> items = new HashSet<>();
+        items.add(mItems.get(1));
+        mTracker.setProvisionalSelection(items);
+
+        mTracker.reset();
+        assertFalse(mTracker.isResetRequired());
+    }
+
+    @Test
+    public void testReset_Combined() {
+        mTracker.select(mItems.get(1));
+
+        Set<String> items = new HashSet<>();
+        items.add(mItems.get(1));
+        mTracker.setProvisionalSelection(items);
+
+        mTracker.startRange(15);
+
+        mTracker.reset();
+        assertFalse(mTracker.isResetRequired());
+    }
+
+    @Test
+    public void testReset_ForEstablishedRange() {
+        mTracker.startRange(15);
+
+        mTracker.reset();
+        assertFalse(mTracker.isResetRequired());
     }
 
     @Test

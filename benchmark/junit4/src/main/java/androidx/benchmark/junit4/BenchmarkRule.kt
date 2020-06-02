@@ -20,9 +20,9 @@ import android.Manifest
 import android.util.Log
 import androidx.annotation.RestrictTo
 import androidx.benchmark.BenchmarkState
-import androidx.benchmark.beginTraceSection
-import androidx.benchmark.endTraceSection
 import androidx.test.rule.GrantPermissionRule
+import androidx.tracing.Trace
+import androidx.tracing.trace
 import org.junit.Assert.assertTrue
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
@@ -73,23 +73,18 @@ import org.junit.runners.model.Statement
  *
  * Every test in the Class using this @Rule must contain a single benchmark.
  */
-class BenchmarkRule : TestRule {
-    constructor() {
-        this.enableReport = true
-    }
-
-    internal constructor(enableReport: Boolean) {
-        this.enableReport = enableReport
-    }
-
-    internal // synthetic access
-    val internalState = BenchmarkState()
-
+class BenchmarkRule internal constructor(
     /**
      * Used to disable reporting, for correctness tests that shouldn't report values
      * (and would trigger warnings if they did, e.g. debuggable=true)
+     * Is always true when called non-internally.
      */
     private val enableReport: Boolean
+) : TestRule {
+    constructor() : this(true)
+
+    internal // synthetic access
+    val internalState = BenchmarkState()
 
     /**
      * Object used for benchmarking in Java.
@@ -126,7 +121,7 @@ class BenchmarkRule : TestRule {
     internal // synthetic access
     var applied = false
 
-    /** @hide */
+    /** @suppress */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     val scope = Scope()
 
@@ -152,7 +147,17 @@ class BenchmarkRule : TestRule {
          */
         inline fun <T> runWithTimingDisabled(block: () -> T): T {
             getOuterState().pauseTiming()
-            val ret = block()
+            // Note: we only bother with tracing for the runWithTimingDisabled function for
+            // Kotlin callers, as it's more difficult to corrupt the trace with incorrectly
+            // paired BenchmarkState pause/resume calls
+            val ret: T = try {
+                // TODO: use `trace() {}` instead of this manual try/finally,
+                //  once the block parameter is marked crossinline.
+                Trace.beginSection("runWithTimingDisabled")
+                block()
+            } finally {
+                Trace.endSection()
+            }
             getOuterState().resumeTiming()
             return ret
         }
@@ -190,12 +195,11 @@ class BenchmarkRule : TestRule {
                 invokeMethodName = invokeMethodName.substring(4, 5).toLowerCase() +
                         invokeMethodName.substring(5)
             }
+            internalState.traceUniqueName = description.testClass.simpleName + "_" +
+                    invokeMethodName
 
-            try {
-                beginTraceSection(description.displayName)
+            trace(description.displayName) {
                 base.evaluate()
-            } finally {
-                endTraceSection()
             }
 
             if (enableReport) {
@@ -243,6 +247,6 @@ inline fun BenchmarkRule.measureRepeated(crossinline block: BenchmarkRule.Scope.
     }
 }
 
-internal fun Statement(evaluate: () -> Unit) = object : Statement() {
+internal inline fun Statement(crossinline evaluate: () -> Unit) = object : Statement() {
     override fun evaluate() = evaluate()
 }

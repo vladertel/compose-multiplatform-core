@@ -141,10 +141,92 @@ ActionValue: androidx.core.view.accessibility.AccessibilityNodeInfoCompat#ACTION
     Inconsistent action value; expected `androidx.core.view.accessibility.action.ARGUMENT_SET_TEXT_CHARSEQUENCE`, was `ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE`
 
 
+ArrayReturn: androidx.core.app.FrameMetricsAggregator#getMetrics():
+    Method should return Collection<SparseIntArray> (or subclass) instead of raw array; was `android.util.SparseIntArray[]`
+ArrayReturn: androidx.core.app.FrameMetricsAggregator#remove(android.app.Activity):
+    Method should return Collection<SparseIntArray> (or subclass) instead of raw array; was `android.util.SparseIntArray[]`
+ArrayReturn: androidx.core.app.FrameMetricsAggregator#reset():
+    Method should return Collection<SparseIntArray> (or subclass) instead of raw array; was `android.util.SparseIntArray[]`
+ArrayReturn: androidx.core.app.FrameMetricsAggregator#stop():
+    Method should return Collection<SparseIntArray> (or subclass) instead of raw array; was `android.util.SparseIntArray[]`
+ArrayReturn: androidx.core.app.NotificationCompat.Action#getDataOnlyRemoteInputs():
+    Method should return Collection<RemoteInput> (or subclass) instead of raw array; was `androidx.core.app.RemoteInput[]`
+ArrayReturn: androidx.core.app.NotificationCompat.Action#getRemoteInputs():
+    Method should return Collection<RemoteInput> (or subclass) instead of raw array; was `androidx.core.app.RemoteInput[]`
+ArrayReturn: androidx.core.app.NotificationCompat.Builder#setRemoteInputHistory(CharSequence[]) parameter #0:
+    Method parameter should be Collection<CharSequence> (or subclass) instead of raw array; was `java.lang.CharSequence[]`
+ArrayReturn: androidx.core.app.RemoteInput#addResultsToIntent(androidx.core.app.RemoteInput[], android.content.Intent, android.os.Bundle) parameter #0:
+    Method parameter should be Collection<RemoteInput> (or subclass) instead of raw array; was `androidx.core.app.RemoteInput[]`
+ArrayReturn: androidx.core.app.RemoteInput#getChoices():
+    Method should return Collection<CharSequence> (or subclass) instead of raw array; was `java.lang.CharSequence[]`
+ArrayReturn: androidx.core.app.RemoteInput.Builder#setChoices(CharSequence[]) parameter #0:
+    Method parameter should be Collection<CharSequence> (or subclass) instead of raw array; was `java.lang.CharSequence[]`
+ArrayReturn: androidx.core.app.TaskStackBuilder#getIntents():
+    Method should return Collection<Intent> (or subclass) instead of raw array; was `android.content.Intent[]`
+ArrayReturn: androidx.core.content.ContextCompat#getExternalCacheDirs(android.content.Context):
+    Method should return Collection<File> (or subclass) instead of raw array; was `java.io.File[]`
+ArrayReturn: androidx.core.content.ContextCompat#getExternalFilesDirs(android.content.Context, String):
+    Method should return Collection<File> (or subclass) instead of raw array; was `java.io.File[]`
+ArrayReturn: androidx.core.content.ContextCompat#getObbDirs(android.content.Context):
+    Method should return Collection<File> (or subclass) instead of raw array; was `java.io.File[]`
+ArrayReturn: androidx.core.content.ContextCompat#startActivities(android.content.Context, android.content.Intent[]) parameter #1:
+    Method parameter should be Collection<Intent> (or subclass) instead of raw array; was `android.content.Intent[]`
+ArrayReturn: androidx.core.content.ContextCompat#startActivities(android.content.Context, android.content.Intent[], android.os.Bundle) parameter #1:
+    Method parameter should be Collection<Intent> (or subclass) instead of raw array; was `android.content.Intent[]`
+ArrayReturn: androidx.core.content.pm.ShortcutInfoCompat#getIntents():
+    Method should return Collection<Intent> (or subclass) instead of raw array; was `android.content.Intent[]`
+ArrayReturn: androidx.core.content.pm.ShortcutInfoCompat.Builder#setIntents(android.content.Intent[]) parameter #0:
+    Method parameter should be Collection<Intent> (or subclass) instead of raw array; was `android.content.Intent[]`
+ArrayReturn: androidx.core.content.pm.ShortcutInfoCompat.Builder#setPersons(androidx.core.app.Person[]) parameter #0:
+    Method parameter should be Collection<Person> (or subclass) instead of raw array; was `androidx.core.app.Person[]`
+ArrayReturn: androidx.core.hardware.display.DisplayManagerCompat#getDisplays():
+    Method should return Collection<Display> (or subclass) instead of raw array; was `android.view.Display[]`
+ArrayReturn: androidx.core.hardware.display.DisplayManagerCompat#getDisplays(String):
+    Method should return Collection<Display> (or subclass) instead of raw array; was `android.view.Display[]`
+ArrayReturn: androidx.core.os.ParcelableCompatCreatorCallbacks#newArray(int):
+    Method should return Collection<T> (or subclass) instead of raw array; was `T[]`
+ArrayReturn: androidx.core.provider.FontsContractCompat#buildTypeface(android.content.Context, android.os.CancellationSignal, androidx.core.provider.FontsContractCompat.FontInfo[]) parameter #2:
+    Method parameter should be Collection<FontInfo> (or subclass) instead of raw array; was `androidx.core.provider.FontsContractCompat.FontInfo[]`
+ArrayReturn: androidx.core.provider.FontsContractCompat.FontFamilyResult#getFonts():
+    Method should return Collection<FontInfo> (or subclass) instead of raw array; was `androidx.core.provider.FontsContractCompat.FontInfo[]`
+ArrayReturn: androidx.core.text.PrecomputedTextCompat#getSpans(int, int, Class<T>):
+    Method should return Collection<T> (or subclass) instead of raw array; was `T[]`
+ArrayReturn: androidx.core.widget.TextViewCompat#getCompoundDrawablesRelative(android.widget.TextView):
+    Method should return Collection<Drawable> (or subclass) instead of raw array; was `android.graphics.drawable.Drawable[]`
+
+
+BadFuture: androidx.core.text.PrecomputedTextCompat#getTextFuture(CharSequence, androidx.core.text.PrecomputedTextCompat.Params, java.util.concurrent.Executor):
+    Use ListenableFuture (library), or a combination of Consumer<T>, Executor, and CancellationSignal (platform) instead of java.util.concurrent.Future (method androidx.core.text.PrecomputedTextCompat.getTextFuture(CharSequence,androidx.core.text.PrecomputedTextCompat.Params,java.util.concurrent.Executor))
+
+
 BannedThrow: androidx.core.widget.TextViewCompat#setAutoSizeTextTypeUniformWithConfiguration(android.widget.TextView, int, int, int, int):
     Methods must not mention RuntimeException subclasses in throws clauses (was `java.lang.IllegalArgumentException`)
 BannedThrow: androidx.core.widget.TextViewCompat#setAutoSizeTextTypeUniformWithPresetSizes(android.widget.TextView, int[], int):
     Methods must not mention RuntimeException subclasses in throws clauses (was `java.lang.IllegalArgumentException`)
+
+
+BuilderSetStyle: androidx.core.app.NotificationCompat.Action.Builder#extend(androidx.core.app.NotificationCompat.Action.Extender):
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.NotificationCompat.Action.Builder.extend(androidx.core.app.NotificationCompat.Action.Extender)
+BuilderSetStyle: androidx.core.app.NotificationCompat.Builder#extend(androidx.core.app.NotificationCompat.Extender):
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.NotificationCompat.Builder.extend(androidx.core.app.NotificationCompat.Extender)
+BuilderSetStyle: androidx.core.app.NotificationCompat.Builder#limitCharSequenceLength(CharSequence):
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.NotificationCompat.Builder.limitCharSequenceLength(CharSequence)
+BuilderSetStyle: androidx.core.app.ShareCompat.IntentBuilder#createChooserIntent():
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.ShareCompat.IntentBuilder.createChooserIntent()
+BuilderSetStyle: androidx.core.app.ShareCompat.IntentBuilder#from(android.app.Activity):
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.ShareCompat.IntentBuilder.from(android.app.Activity)
+BuilderSetStyle: androidx.core.app.ShareCompat.IntentBuilder#startChooser():
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.ShareCompat.IntentBuilder.startChooser()
+BuilderSetStyle: androidx.core.app.TaskStackBuilder#create(android.content.Context):
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.TaskStackBuilder.create(android.content.Context)
+BuilderSetStyle: androidx.core.app.TaskStackBuilder#editIntentAt(int):
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.TaskStackBuilder.editIntentAt(int)
+BuilderSetStyle: androidx.core.app.TaskStackBuilder#startActivities():
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.TaskStackBuilder.startActivities()
+BuilderSetStyle: androidx.core.app.TaskStackBuilder#startActivities(android.os.Bundle):
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.app.TaskStackBuilder.startActivities(android.os.Bundle)
+BuilderSetStyle: androidx.core.text.BidiFormatter.Builder#stereoReset(boolean):
+    Builder methods names should use setFoo() / addFoo() / clearFoo() style: method androidx.core.text.BidiFormatter.Builder.stereoReset(boolean)
 
 
 ContextFirst: androidx.core.view.LayoutInflaterFactory#onCreateView(android.view.View, String, android.content.Context, android.util.AttributeSet) parameter #2:
@@ -175,10 +257,10 @@ ListenerLast: androidx.core.view.GestureDetectorCompat#GestureDetectorCompat(and
     Listeners should always be at end of argument list (method `GestureDetectorCompat`)
 
 
-MissingBuild: androidx.core.app.ShareCompat.IntentBuilder:
-    Missing `build()` method in androidx.core.app.ShareCompat.IntentBuilder
-MissingBuild: androidx.core.app.TaskStackBuilder:
-    Missing `build()` method in androidx.core.app.TaskStackBuilder
+MissingBuildMethod: androidx.core.app.ShareCompat.IntentBuilder:
+    androidx.core.app.ShareCompat.IntentBuilder does not declare a `build()` method, but builder classes are expected to
+MissingBuildMethod: androidx.core.app.TaskStackBuilder:
+    androidx.core.app.TaskStackBuilder does not declare a `build()` method, but builder classes are expected to
 
 
 MissingNullability: androidx.core.app.ActivityCompat#invalidateOptionsMenu(android.app.Activity) parameter #0:
@@ -537,16 +619,12 @@ MissingNullability: androidx.core.app.NotificationCompat.CarExtender#extend(andr
     Missing nullability on parameter `builder` in method `extend`
 MissingNullability: androidx.core.app.NotificationCompat.CarExtender#getLargeIcon():
     Missing nullability on method `getLargeIcon` return
-MissingNullability: androidx.core.app.NotificationCompat.CarExtender#getUnreadConversation():
-    Missing nullability on method `getUnreadConversation` return
 MissingNullability: androidx.core.app.NotificationCompat.CarExtender#setColor(int):
     Missing nullability on method `setColor` return
 MissingNullability: androidx.core.app.NotificationCompat.CarExtender#setLargeIcon(android.graphics.Bitmap):
     Missing nullability on method `setLargeIcon` return
 MissingNullability: androidx.core.app.NotificationCompat.CarExtender#setLargeIcon(android.graphics.Bitmap) parameter #0:
     Missing nullability on parameter `largeIcon` in method `setLargeIcon`
-MissingNullability: androidx.core.app.NotificationCompat.CarExtender#setUnreadConversation(androidx.core.app.NotificationCompat.CarExtender.UnreadConversation):
-    Missing nullability on method `setUnreadConversation` return
 MissingNullability: androidx.core.app.NotificationCompat.CarExtender#setUnreadConversation(androidx.core.app.NotificationCompat.CarExtender.UnreadConversation) parameter #0:
     Missing nullability on parameter `unreadConversation` in method `setUnreadConversation`
 MissingNullability: androidx.core.app.NotificationCompat.CarExtender.UnreadConversation#getMessages():
@@ -829,14 +907,6 @@ MissingNullability: androidx.core.database.DatabaseUtilsCompat#concatenateWhere(
     Missing nullability on parameter `a` in method `concatenateWhere`
 MissingNullability: androidx.core.database.DatabaseUtilsCompat#concatenateWhere(String, String) parameter #1:
     Missing nullability on parameter `b` in method `concatenateWhere`
-MissingNullability: androidx.core.graphics.Insets#equals(Object) parameter #0:
-    Missing nullability on parameter `o` in method `equals`
-MissingNullability: androidx.core.graphics.Insets#toString():
-    Missing nullability on method `toString` return
-MissingNullability: androidx.core.graphics.PathSegment#equals(Object) parameter #0:
-    Missing nullability on parameter `o` in method `equals`
-MissingNullability: androidx.core.graphics.PathSegment#toString():
-    Missing nullability on method `toString` return
 MissingNullability: androidx.core.graphics.drawable.DrawableCompat#getColorFilter(android.graphics.drawable.Drawable):
     Missing nullability on method `getColorFilter` return
 MissingNullability: androidx.core.graphics.drawable.DrawableCompat#wrap(android.graphics.drawable.Drawable):
@@ -865,10 +935,6 @@ MissingNullability: androidx.core.graphics.drawable.IconCompat#createWithResourc
     Missing nullability on method `createWithResource` return
 MissingNullability: androidx.core.graphics.drawable.IconCompat#createWithResource(android.content.Context, int) parameter #0:
     Missing nullability on parameter `context` in method `createWithResource`
-MissingNullability: androidx.core.graphics.drawable.IconCompat#loadDrawable(android.content.Context):
-    Missing nullability on method `loadDrawable` return
-MissingNullability: androidx.core.graphics.drawable.IconCompat#loadDrawable(android.content.Context) parameter #0:
-    Missing nullability on parameter `context` in method `loadDrawable`
 MissingNullability: androidx.core.graphics.drawable.IconCompat#setTint(int):
     Missing nullability on method `setTint` return
 MissingNullability: androidx.core.graphics.drawable.IconCompat#setTintList(android.content.res.ColorStateList):
@@ -879,10 +945,6 @@ MissingNullability: androidx.core.graphics.drawable.IconCompat#setTintMode(andro
     Missing nullability on method `setTintMode` return
 MissingNullability: androidx.core.graphics.drawable.IconCompat#setTintMode(android.graphics.PorterDuff.Mode) parameter #0:
     Missing nullability on parameter `mode` in method `setTintMode`
-MissingNullability: androidx.core.graphics.drawable.IconCompat#toBundle():
-    Missing nullability on method `toBundle` return
-MissingNullability: androidx.core.graphics.drawable.IconCompat#toIcon():
-    Missing nullability on method `toIcon` return
 MissingNullability: androidx.core.graphics.drawable.RoundedBitmapDrawable#getColorFilter():
     Missing nullability on method `getColorFilter` return
 MissingNullability: androidx.core.graphics.drawable.RoundedBitmapDrawable#onBoundsChange(android.graphics.Rect) parameter #0:
@@ -903,16 +965,10 @@ MissingNullability: androidx.core.net.TrafficStatsCompat#tagSocket(java.net.Sock
     Missing nullability on parameter `socket` in method `tagSocket`
 MissingNullability: androidx.core.net.TrafficStatsCompat#untagSocket(java.net.Socket) parameter #0:
     Missing nullability on parameter `socket` in method `untagSocket`
-MissingNullability: androidx.core.os.EnvironmentCompat#getStorageState(java.io.File):
-    Missing nullability on method `getStorageState` return
-MissingNullability: androidx.core.os.LocaleListCompat#equals(Object) parameter #0:
-    Missing nullability on parameter `other` in method `equals`
 MissingNullability: androidx.core.os.LocaleListCompat#get(int):
     Missing nullability on method `get` return
 MissingNullability: androidx.core.os.LocaleListCompat#indexOf(java.util.Locale) parameter #0:
     Missing nullability on parameter `locale` in method `indexOf`
-MissingNullability: androidx.core.os.LocaleListCompat#toString():
-    Missing nullability on method `toString` return
 MissingNullability: androidx.core.os.LocaleListCompat#wrap(Object) parameter #0:
     Missing nullability on parameter `localeList` in method `wrap`
 MissingNullability: androidx.core.os.ParcelableCompat#newCreator(androidx.core.os.ParcelableCompatCreatorCallbacks<T>) parameter #0:
@@ -921,8 +977,6 @@ MissingNullability: androidx.core.os.ParcelableCompatCreatorCallbacks#createFrom
     Missing nullability on parameter `in` in method `createFromParcel`
 MissingNullability: androidx.core.os.ParcelableCompatCreatorCallbacks#createFromParcel(android.os.Parcel, ClassLoader) parameter #1:
     Missing nullability on parameter `loader` in method `createFromParcel`
-MissingNullability: androidx.core.provider.FontRequest#toString():
-    Missing nullability on method `toString` return
 MissingNullability: androidx.core.provider.FontsContractCompat.FontFamilyResult#getFonts():
     Missing nullability on method `getFonts` return
 MissingNullability: androidx.core.provider.FontsContractCompat.FontRequestCallback#onTypefaceRetrieved(android.graphics.Typeface) parameter #0:
@@ -1011,8 +1065,6 @@ MissingNullability: androidx.core.text.PrecomputedTextCompat#setSpan(Object, int
     Missing nullability on parameter `what` in method `setSpan`
 MissingNullability: androidx.core.text.PrecomputedTextCompat#subSequence(int, int):
     Missing nullability on method `subSequence` return
-MissingNullability: androidx.core.text.PrecomputedTextCompat.Params#toString():
-    Missing nullability on method `toString` return
 MissingNullability: androidx.core.text.PrecomputedTextCompat.Params.Builder#setBreakStrategy(int):
     Missing nullability on method `setBreakStrategy` return
 MissingNullability: androidx.core.text.PrecomputedTextCompat.Params.Builder#setHyphenationFrequency(int):
@@ -1035,8 +1087,6 @@ MissingNullability: androidx.core.text.TextDirectionHeuristicsCompat#LTR:
     Missing nullability on field `LTR` in class `class androidx.core.text.TextDirectionHeuristicsCompat`
 MissingNullability: androidx.core.text.TextDirectionHeuristicsCompat#RTL:
     Missing nullability on field `RTL` in class `class androidx.core.text.TextDirectionHeuristicsCompat`
-MissingNullability: androidx.core.util.Pair#equals(Object) parameter #0:
-    Missing nullability on parameter `o` in method `equals`
 MissingNullability: androidx.core.util.PatternsCompat#DOMAIN_NAME:
     Missing nullability on field `DOMAIN_NAME` in class `class androidx.core.util.PatternsCompat`
 MissingNullability: androidx.core.util.PatternsCompat#EMAIL_ADDRESS:
@@ -1099,12 +1149,8 @@ MissingNullability: androidx.core.view.DisplayCutoutCompat#DisplayCutoutCompat(a
     Missing nullability on parameter `safeInsets` in method `DisplayCutoutCompat`
 MissingNullability: androidx.core.view.DisplayCutoutCompat#DisplayCutoutCompat(android.graphics.Rect, java.util.List<android.graphics.Rect>) parameter #1:
     Missing nullability on parameter `boundingRects` in method `DisplayCutoutCompat`
-MissingNullability: androidx.core.view.DisplayCutoutCompat#equals(Object) parameter #0:
-    Missing nullability on parameter `o` in method `equals`
 MissingNullability: androidx.core.view.DisplayCutoutCompat#getBoundingRects():
     Missing nullability on method `getBoundingRects` return
-MissingNullability: androidx.core.view.DisplayCutoutCompat#toString():
-    Missing nullability on method `toString` return
 MissingNullability: androidx.core.view.DragStartHelper#DragStartHelper(android.view.View, androidx.core.view.DragStartHelper.OnDragStartListener) parameter #0:
     Missing nullability on parameter `view` in method `DragStartHelper`
 MissingNullability: androidx.core.view.DragStartHelper#DragStartHelper(android.view.View, androidx.core.view.DragStartHelper.OnDragStartListener) parameter #1:
@@ -1317,10 +1363,6 @@ MissingNullability: androidx.core.view.ViewCompat#canScrollHorizontally(android.
     Missing nullability on parameter `view` in method `canScrollHorizontally`
 MissingNullability: androidx.core.view.ViewCompat#canScrollVertically(android.view.View, int) parameter #0:
     Missing nullability on parameter `view` in method `canScrollVertically`
-MissingNullability: androidx.core.view.ViewCompat#dispatchApplyWindowInsets(android.view.View, androidx.core.view.WindowInsetsCompat):
-    Missing nullability on method `dispatchApplyWindowInsets` return
-MissingNullability: androidx.core.view.ViewCompat#dispatchApplyWindowInsets(android.view.View, androidx.core.view.WindowInsetsCompat) parameter #1:
-    Missing nullability on parameter `insets` in method `dispatchApplyWindowInsets`
 MissingNullability: androidx.core.view.ViewCompat#enableAccessibleClickableSpanSupport(android.view.View) parameter #0:
     Missing nullability on parameter `view` in method `enableAccessibleClickableSpanSupport`
 MissingNullability: androidx.core.view.ViewCompat#getAccessibilityNodeProvider(android.view.View):
@@ -1383,10 +1425,6 @@ MissingNullability: androidx.core.view.ViewCompat#keyboardNavigationClusterSearc
     Missing nullability on method `keyboardNavigationClusterSearch` return
 MissingNullability: androidx.core.view.ViewCompat#keyboardNavigationClusterSearch(android.view.View, android.view.View, int) parameter #1:
     Missing nullability on parameter `currentCluster` in method `keyboardNavigationClusterSearch`
-MissingNullability: androidx.core.view.ViewCompat#onApplyWindowInsets(android.view.View, androidx.core.view.WindowInsetsCompat):
-    Missing nullability on method `onApplyWindowInsets` return
-MissingNullability: androidx.core.view.ViewCompat#onApplyWindowInsets(android.view.View, androidx.core.view.WindowInsetsCompat) parameter #1:
-    Missing nullability on parameter `insets` in method `onApplyWindowInsets`
 MissingNullability: androidx.core.view.ViewCompat#onInitializeAccessibilityEvent(android.view.View, android.view.accessibility.AccessibilityEvent) parameter #0:
     Missing nullability on parameter `v` in method `onInitializeAccessibilityEvent`
 MissingNullability: androidx.core.view.ViewCompat#onInitializeAccessibilityEvent(android.view.View, android.view.accessibility.AccessibilityEvent) parameter #1:
@@ -1431,8 +1469,6 @@ MissingNullability: androidx.core.view.ViewCompat#setLayerType(android.view.View
     Missing nullability on parameter `view` in method `setLayerType`
 MissingNullability: androidx.core.view.ViewCompat#setLayerType(android.view.View, int, android.graphics.Paint) parameter #2:
     Missing nullability on parameter `paint` in method `setLayerType`
-MissingNullability: androidx.core.view.ViewCompat#setOnApplyWindowInsetsListener(android.view.View, androidx.core.view.OnApplyWindowInsetsListener) parameter #1:
-    Missing nullability on parameter `listener` in method `setOnApplyWindowInsetsListener`
 MissingNullability: androidx.core.view.ViewCompat#setOverScrollMode(android.view.View, int) parameter #0:
     Missing nullability on parameter `v` in method `setOverScrollMode`
 MissingNullability: androidx.core.view.ViewCompat#setPivotX(android.view.View, float) parameter #0:
@@ -1659,22 +1695,6 @@ MissingNullability: androidx.core.view.ViewPropertyAnimatorListenerAdapter#onAni
     Missing nullability on parameter `view` in method `onAnimationStart`
 MissingNullability: androidx.core.view.ViewPropertyAnimatorUpdateListener#onAnimationUpdate(android.view.View) parameter #0:
     Missing nullability on parameter `view` in method `onAnimationUpdate`
-MissingNullability: androidx.core.view.WindowInsetsCompat#WindowInsetsCompat(androidx.core.view.WindowInsetsCompat) parameter #0:
-    Missing nullability on parameter `src` in method `WindowInsetsCompat`
-MissingNullability: androidx.core.view.WindowInsetsCompat#consumeDisplayCutout():
-    Missing nullability on method `consumeDisplayCutout` return
-MissingNullability: androidx.core.view.WindowInsetsCompat#consumeStableInsets():
-    Missing nullability on method `consumeStableInsets` return
-MissingNullability: androidx.core.view.WindowInsetsCompat#consumeSystemWindowInsets():
-    Missing nullability on method `consumeSystemWindowInsets` return
-MissingNullability: androidx.core.view.WindowInsetsCompat#equals(Object) parameter #0:
-    Missing nullability on parameter `o` in method `equals`
-MissingNullability: androidx.core.view.WindowInsetsCompat#replaceSystemWindowInsets(android.graphics.Rect):
-    Missing nullability on method `replaceSystemWindowInsets` return
-MissingNullability: androidx.core.view.WindowInsetsCompat#replaceSystemWindowInsets(android.graphics.Rect) parameter #0:
-    Missing nullability on parameter `systemWindowInsets` in method `replaceSystemWindowInsets`
-MissingNullability: androidx.core.view.WindowInsetsCompat#replaceSystemWindowInsets(int, int, int, int):
-    Missing nullability on method `replaceSystemWindowInsets` return
 MissingNullability: androidx.core.view.accessibility.AccessibilityEventCompat#appendRecord(android.view.accessibility.AccessibilityEvent, androidx.core.view.accessibility.AccessibilityRecordCompat) parameter #0:
     Missing nullability on parameter `event` in method `appendRecord`
 MissingNullability: androidx.core.view.accessibility.AccessibilityEventCompat#appendRecord(android.view.accessibility.AccessibilityEvent, androidx.core.view.accessibility.AccessibilityRecordCompat) parameter #1:
@@ -1727,8 +1747,6 @@ MissingNullability: androidx.core.view.accessibility.AccessibilityNodeInfoCompat
     Missing nullability on parameter `child` in method `addChild`
 MissingNullability: androidx.core.view.accessibility.AccessibilityNodeInfoCompat#addChild(android.view.View, int) parameter #0:
     Missing nullability on parameter `root` in method `addChild`
-MissingNullability: androidx.core.view.accessibility.AccessibilityNodeInfoCompat#equals(Object) parameter #0:
-    Missing nullability on parameter `obj` in method `equals`
 MissingNullability: androidx.core.view.accessibility.AccessibilityNodeInfoCompat#findAccessibilityNodeInfosByText(String):
     Missing nullability on method `findAccessibilityNodeInfosByText` return
 MissingNullability: androidx.core.view.accessibility.AccessibilityNodeInfoCompat#findAccessibilityNodeInfosByText(String) parameter #0:
@@ -1943,8 +1961,6 @@ MissingNullability: androidx.core.view.accessibility.AccessibilityNodeProviderCo
     Missing nullability on parameter `arguments` in method `performAction`
 MissingNullability: androidx.core.view.accessibility.AccessibilityRecordCompat#AccessibilityRecordCompat(Object) parameter #0:
     Missing nullability on parameter `record` in method `AccessibilityRecordCompat`
-MissingNullability: androidx.core.view.accessibility.AccessibilityRecordCompat#equals(Object) parameter #0:
-    Missing nullability on parameter `obj` in method `equals`
 MissingNullability: androidx.core.view.accessibility.AccessibilityRecordCompat#getMaxScrollX(android.view.accessibility.AccessibilityRecord) parameter #0:
     Missing nullability on parameter `record` in method `getMaxScrollX`
 MissingNullability: androidx.core.view.accessibility.AccessibilityRecordCompat#getMaxScrollY(android.view.accessibility.AccessibilityRecord) parameter #0:
@@ -1973,8 +1989,6 @@ MissingNullability: androidx.core.view.accessibility.AccessibilityViewCommand.Mo
     Missing nullability on method `getHTMLElement` return
 MissingNullability: androidx.core.view.accessibility.AccessibilityViewCommand.SetTextArguments#getText():
     Missing nullability on method `getText` return
-MissingNullability: androidx.core.view.accessibility.AccessibilityWindowInfoCompat#equals(Object) parameter #0:
-    Missing nullability on parameter `obj` in method `equals`
 MissingNullability: androidx.core.view.accessibility.AccessibilityWindowInfoCompat#getAnchor():
     Missing nullability on method `getAnchor` return
 MissingNullability: androidx.core.view.accessibility.AccessibilityWindowInfoCompat#getBoundsInScreen(android.graphics.Rect) parameter #0:
@@ -2087,18 +2101,44 @@ MissingNullability: androidx.core.widget.ScrollerCompat#create(android.content.C
     Missing nullability on parameter `interpolator` in method `create`
 
 
+MutableBareField: androidx.core.app.NotificationCompat.Action#actionIntent:
+    Bare field actionIntent must be marked final, or moved behind accessors if mutable
+MutableBareField: androidx.core.app.NotificationCompat.Action#title:
+    Bare field title must be marked final, or moved behind accessors if mutable
+
+
 NoClone: androidx.core.app.NotificationCompat.Action.WearableExtender#clone():
     Provide an explicit copy constructor instead of implementing `clone()`
 NoClone: androidx.core.app.NotificationCompat.WearableExtender#clone():
     Provide an explicit copy constructor instead of implementing `clone()`
 
 
+OptionalBuilderConstructorAgrument: androidx.core.app.NotificationCompat.Action.Builder#Builder(androidx.core.graphics.drawable.IconCompat, CharSequence, android.app.PendingIntent) parameter #0:
+    Builder constructor arguments must be mandatory (i.e. not @Nullable): parameter icon in androidx.core.app.NotificationCompat.Action.Builder(androidx.core.graphics.drawable.IconCompat icon, CharSequence title, android.app.PendingIntent intent)
+OptionalBuilderConstructorAgrument: androidx.core.app.NotificationCompat.Action.Builder#Builder(androidx.core.graphics.drawable.IconCompat, CharSequence, android.app.PendingIntent) parameter #1:
+    Builder constructor arguments must be mandatory (i.e. not @Nullable): parameter title in androidx.core.app.NotificationCompat.Action.Builder(androidx.core.graphics.drawable.IconCompat icon, CharSequence title, android.app.PendingIntent intent)
+OptionalBuilderConstructorAgrument: androidx.core.app.NotificationCompat.Action.Builder#Builder(androidx.core.graphics.drawable.IconCompat, CharSequence, android.app.PendingIntent) parameter #2:
+    Builder constructor arguments must be mandatory (i.e. not @Nullable): parameter intent in androidx.core.app.NotificationCompat.Action.Builder(androidx.core.graphics.drawable.IconCompat icon, CharSequence title, android.app.PendingIntent intent)
+
+
 PairedRegistration: androidx.core.view.OneShotPreDrawListener#removeListener():
     Found removeListener but not addListener in androidx.core.view.OneShotPreDrawListener
 
 
-ServiceName: androidx.core.app.NotificationCompat#CATEGORY_SERVICE:
-    Inconsistent service value; expected `CATEGORY`, was `service`
+PublicTypedef: androidx.core.app.NotificationCompat.Action.SemanticAction:
+    Don't expose @IntDef: SemanticAction must be hidden.
+
+
+StreamFiles: androidx.core.content.FileProvider#getUriForFile(android.content.Context, String, java.io.File):
+    Methods accepting `File` should also accept `FileDescriptor` or streams: method androidx.core.content.FileProvider.getUriForFile(android.content.Context,String,java.io.File)
+StreamFiles: androidx.core.os.EnvironmentCompat#getStorageState(java.io.File):
+    Methods accepting `File` should also accept `FileDescriptor` or streams: method androidx.core.os.EnvironmentCompat.getStorageState(java.io.File)
+StreamFiles: androidx.core.util.AtomicFile#AtomicFile(java.io.File):
+    Methods accepting `File` should also accept `FileDescriptor` or streams: constructor androidx.core.util.AtomicFile(java.io.File)
+
+
+TopLevelBuilder: androidx.core.app.TaskStackBuilder:
+    Builder should be defined as inner class: androidx.core.app.TaskStackBuilder
 
 
 VisiblySynchronized: androidx.core.os.CancellationSignal#cancel():

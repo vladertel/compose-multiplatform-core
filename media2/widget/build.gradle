@@ -43,7 +43,7 @@ dependencies {
 
 android {
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 16
     }
     sourceSets {
         main.res.srcDirs += 'src/main/res-public'
@@ -59,10 +59,7 @@ android {
 androidx {
     name = "AndroidX media2 widget library"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.MEDIA2_WIDGET
     mavenGroup = LibraryGroups.MEDIA2
     inceptionYear = "2018"
     description = "AndroidX Media2 Widget"
-    // TODO: Remove these (b/130838274)
-    failOnDeprecationWarnings = false
 }

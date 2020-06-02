@@ -41,9 +41,6 @@ android {
         release {
             minifyEnabled false
         }
-        debug {
-            testCoverageEnabled true
-        }
     }
     testOptions {
         animationsDisabled = true
@@ -54,15 +51,19 @@ dependencies {
     // Internal library
     implementation(project(":camera:camera-camera2"))
     implementation(project(":camera:camera-core"))
+    implementation(project(":camera:camera-lifecycle"))
 
     // Android support library
-    implementation(project(":fragment:fragment"))
+    implementation(project(":concurrent:concurrent-futures-ktx"))
+    implementation(project(":fragment:fragment-ktx"))
     implementation("androidx.appcompat:appcompat:1.1.0")
     implementation("androidx.collection:collection:1.0.0")
     implementation("androidx.preference:preference:1.1.0")
     implementation("androidx.exifinterface:exifinterface:1.0.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.2.0-rc02")
     implementation(CONSTRAINT_LAYOUT, { transitive = true })
     implementation(KOTLIN_STDLIB)
+    implementation(KOTLIN_COROUTINES_ANDROID)
 
     // Testing framework
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)

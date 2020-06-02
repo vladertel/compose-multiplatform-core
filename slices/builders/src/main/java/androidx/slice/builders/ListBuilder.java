@@ -146,7 +146,7 @@ public class ListBuilder extends TemplateSliceBuilder {
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @IntDef({
-            LARGE_IMAGE, SMALL_IMAGE, ICON_IMAGE, UNKNOWN_IMAGE
+            LARGE_IMAGE, SMALL_IMAGE, ICON_IMAGE, RAW_IMAGE_SMALL, RAW_IMAGE_LARGE, UNKNOWN_IMAGE
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface ImageMode{}
@@ -163,6 +163,16 @@ public class ListBuilder extends TemplateSliceBuilder {
      * Indicates that an image presented in a larger size and it shouldn't be tinted.
      */
     public static final int LARGE_IMAGE = SliceHints.LARGE_IMAGE;
+    /**
+     * Indicates that an image should be presented in its intrinsic size and shouldn't be tinted.
+     * If SliceView in the call-site doesn't support RAW_IMAGE, fallback to SMALL_IMAGE instead.
+     */
+    public static final int RAW_IMAGE_SMALL = SliceHints.RAW_IMAGE_SMALL;
+    /**
+     * Indicates that an image should be presented in its intrinsic size and shouldn't be tinted.
+     * If SliceView in the call-site doesn't support RAW_IMAGE, fallback to LARGE_IMAGE instead.
+     */
+    public static final int RAW_IMAGE_LARGE = SliceHints.RAW_IMAGE_LARGE;
     /**
      * Indicates that an image mode is unknown.
      */
@@ -183,6 +193,25 @@ public class ListBuilder extends TemplateSliceBuilder {
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface LayoutDirection{}
+
+    /**
+     * @hide
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @IntDef({
+            RANGE_MODE_DETERMINATE, RANGE_MODE_INDETERMINATE
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface RangeMode{}
+
+    /**
+     * Indicates that the progress bar should be presented in determinate mode.
+     */
+    public static final int RANGE_MODE_DETERMINATE = SliceHints.DETERMINATE_RANGE;
+    /**
+     * Indicates that the progress bar should be presented in indeterminate mode.
+     */
+    public static final int RANGE_MODE_INDETERMINATE = SliceHints.INDETERMINATE_RANGE;
 
     /**
      * Create a ListBuilder for constructing slice content.
@@ -505,15 +534,64 @@ public class ListBuilder extends TemplateSliceBuilder {
         private SliceAction mPrimaryAction;
         private CharSequence mContentDescription;
         private int mLayoutDirection = -1;
+        private int mMode = RANGE_MODE_DETERMINATE;
+        private IconCompat mTitleIcon;
+        private int mTitleImageMode;
+        private boolean mTitleItemLoading;
 
         /**
          * Builder to construct a range row which can be added to a {@link ListBuilder}.
          * <p>
-         * A range row supports displaying a horizontal progress indicator.
+         * A range row supports displaying a horizontal progress indicator. It supports two modes
+         * to represent progress: determinate and indeterminate, see {@link #setMode(int)}.
+         * Determinate mode is the default for progress indicator.
          *
          * @see ListBuilder#addRange(RangeBuilder)
          */
         public RangeBuilder() {
+        }
+
+        /**
+         * Sets the title item to be the provided icon. There can only be one title item, this
+         * will replace any other title items that may have been set using this method or its
+         * overload {@link #setTitleItem(IconCompat, int, boolean)}.
+         *
+         * @param icon the image to display.
+         * @param imageMode the mode that image should be displayed in.
+         *
+         * @see #ICON_IMAGE
+         * @see #SMALL_IMAGE
+         * @see #LARGE_IMAGE
+         */
+        @NonNull
+        public RangeBuilder setTitleItem(@NonNull IconCompat icon, @ImageMode int imageMode) {
+            return setTitleItem(icon, imageMode, false /* isLoading */);
+        }
+
+        /**
+         * Sets the title item to be the provided icon. There can only be one title item, this
+         * will replace any other title items that may have been set using this method or its
+         * overload {@link #setTitleItem(IconCompat, int)}.
+         * <p>
+         * When set to true, the parameter {@code isLoading} indicates that the app is doing work
+         * to load this content in the background, in this case the template displays a placeholder
+         * until updated.
+         *
+         * @param icon the image to display.
+         * @param imageMode the mode that image should be displayed in.
+         * @param isLoading whether this content is being loaded in the background.
+         *
+         * @see #ICON_IMAGE
+         * @see #SMALL_IMAGE
+         * @see #LARGE_IMAGE
+         */
+        @NonNull
+        public RangeBuilder setTitleItem(@NonNull IconCompat icon, @ImageMode int imageMode,
+                boolean isLoading) {
+            mTitleIcon = icon;
+            mTitleImageMode = imageMode;
+            mTitleItemLoading = isLoading;
+            return this;
         }
 
         /**
@@ -589,6 +667,44 @@ public class ListBuilder extends TemplateSliceBuilder {
         }
 
         /**
+         * Sets the progress bar mode, it could be the determinate or indeterminate mode.
+         *
+         * @param mode the mode that progress bar should represent progress.
+         *
+         * @see #RANGE_MODE_DETERMINATE
+         * @see #RANGE_MODE_INDETERMINATE
+         */
+        @NonNull
+        public RangeBuilder setMode(@RangeMode int mode) {
+            mMode = mode;
+            return this;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public boolean isTitleItemLoading() {
+            return mTitleItemLoading;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public int getTitleImageMode() {
+            return mTitleImageMode;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public IconCompat getTitleIcon() {
+            return mTitleIcon;
+        }
+
+        /**
          * @hide
          */
         @RestrictTo(LIBRARY)
@@ -651,6 +767,14 @@ public class ListBuilder extends TemplateSliceBuilder {
         public int getLayoutDirection() {
             return mLayoutDirection;
         }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public int getMode() {
+            return mMode;
+        }
     }
 
     /**
@@ -674,6 +798,13 @@ public class ListBuilder extends TemplateSliceBuilder {
         private SliceAction mPrimaryAction;
         private CharSequence mContentDescription;
         private int mLayoutDirection = -1;
+        private IconCompat mTitleIcon;
+        private int mTitleImageMode;
+        private boolean mTitleItemLoading;
+        private boolean mHasDefaultToggle;
+        private List<Object> mEndItems = new ArrayList<>();
+        private List<Integer> mEndTypes = new ArrayList<>();
+        private List<Boolean> mEndLoads = new ArrayList<>();
 
         /**
          * Builder to construct a input range row.
@@ -683,6 +814,83 @@ public class ListBuilder extends TemplateSliceBuilder {
          * @see ListBuilder#addInputRange(InputRangeBuilder)
          */
         public InputRangeBuilder() {
+        }
+
+        /**
+         * Sets the title item to be the provided icon. There can only be one title item, this
+         * will replace any other title items that may have been set.
+         *
+         * @param icon the image to display.
+         * @param imageMode the mode that image should be displayed in.
+         *
+         * @see #ICON_IMAGE
+         * @see #SMALL_IMAGE
+         * @see #LARGE_IMAGE
+         */
+        @NonNull
+        public InputRangeBuilder setTitleItem(@NonNull IconCompat icon,
+                @ImageMode int imageMode) {
+            return setTitleItem(icon, imageMode, false /* isLoading */);
+        }
+
+        /**
+         * Adds an action to the end items of the input range builder. Only one non-custom toggle
+         * can be added. If a non-custom toggle has already been added, this will throw
+         * {@link IllegalStateException}.
+         */
+        @NonNull
+        public InputRangeBuilder addEndItem(@NonNull SliceAction action) {
+            return addEndItem(action, false /* isLoading */);
+        }
+
+        /**
+         * Adds an action to the end items of the input range builder. Only one non-custom toggle
+         * can be added. If a non-custom toggle has already been added, this will throw
+         * {@link IllegalStateException}.
+         * <p>
+         * Use this method to specify content that will appear in the template once it's been
+         * loaded.
+         * </p>
+         * @param isLoading indicates whether the app is doing work to load the added content in the
+         *                  background or not.
+         */
+        @NonNull
+        public InputRangeBuilder addEndItem(@NonNull SliceAction action, boolean isLoading) {
+            if (mHasDefaultToggle) {
+                throw new IllegalStateException("Only one non-custom toggle can be added "
+                        + "in a single row. If you would like to include multiple toggles "
+                        + "in a row, set a custom icon for each toggle.");
+            }
+            mEndItems.add(action);
+            mEndTypes.add(TYPE_ACTION);
+            mEndLoads.add(isLoading);
+            mHasDefaultToggle = action.getImpl().isDefaultToggle();
+            return this;
+        }
+
+        /**
+         * Sets the title item to be the provided icon. There can only be one title item, this
+         * will replace any other title items that may have been set.
+         * <p>
+         * When set to true, the parameter {@code isLoading} indicates that the app is doing work
+         * to load this content in the background, in this case the template displays a placeholder
+         * until updated.
+         *
+         * @param icon the image to display.
+         * @param imageMode the mode that image should be displayed in.
+         * @param isLoading whether this content is being loaded in the background.
+         *
+         * @see #ICON_IMAGE
+         * @see #SMALL_IMAGE
+         * @see #LARGE_IMAGE
+         */
+        @NonNull
+        public InputRangeBuilder setTitleItem(@NonNull IconCompat icon, @ImageMode int imageMode,
+                boolean isLoading) {
+            mTitleIcon = icon;
+            mTitleImageMode = imageMode;
+            mTitleItemLoading = isLoading;
+            return this;
         }
 
         /**
@@ -794,6 +1002,60 @@ public class ListBuilder extends TemplateSliceBuilder {
         public InputRangeBuilder setLayoutDirection(@LayoutDirection int layoutDirection) {
             mLayoutDirection = layoutDirection;
             return this;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public boolean isTitleItemLoading() {
+            return mTitleItemLoading;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public int getTitleImageMode() {
+            return mTitleImageMode;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public IconCompat getTitleIcon() {
+            return mTitleIcon;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public static final int TYPE_ACTION = 2;
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public List<Object> getEndItems() {
+            return mEndItems;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public List<Integer> getEndTypes() {
+            return mEndTypes;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY)
+        public List<Boolean> getEndLoads() {
+            return mEndLoads;
         }
 
         /**
@@ -1603,6 +1865,7 @@ public class ListBuilder extends TemplateSliceBuilder {
          * @hide
          */
         @RestrictTo(LIBRARY)
+        @Nullable
         public CharSequence getTitle() {
             return mTitle;
         }
@@ -1619,6 +1882,7 @@ public class ListBuilder extends TemplateSliceBuilder {
          * @hide
          */
         @RestrictTo(LIBRARY)
+        @Nullable
         public CharSequence getSubtitle() {
             return mSubtitle;
         }
@@ -1635,6 +1899,7 @@ public class ListBuilder extends TemplateSliceBuilder {
          * @hide
          */
         @RestrictTo(LIBRARY)
+        @Nullable
         public CharSequence getSummary() {
             return mSummary;
         }
@@ -1651,6 +1916,7 @@ public class ListBuilder extends TemplateSliceBuilder {
          * @hide
          */
         @RestrictTo(LIBRARY)
+        @Nullable
         public SliceAction getPrimaryAction() {
             return mPrimaryAction;
         }
@@ -1659,6 +1925,7 @@ public class ListBuilder extends TemplateSliceBuilder {
          * @hide
          */
         @RestrictTo(LIBRARY)
+        @Nullable
         public CharSequence getContentDescription() {
             return mContentDescription;
         }

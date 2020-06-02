@@ -9,6 +9,9 @@ Our official AARs and JARs binaries are distributed through [Google Maven](https
 You can learn more about using it from [Android Jetpack landing page](https://developer.android.com/jetpack).
 
 # Contribution Guide
+## Code Review Etiquette
+When contributing to Jetpack, follow the [code review etiquette](code-review.md).
+
 ## Accepted Types of Contributions
 * Bug fixes - needs a corresponding bug report in the [Android Issue Tracker](https://issuetracker.google.com/issues/new?component=192731&template=842428)
 * Each bug fix is expected to come with tests
@@ -113,7 +116,7 @@ maven { url '/path/to/checkout/out/androidx/build/support_repo/' }
 ## Running Sample Apps
 The AndroidX repository has a set of Android applications that exercise AndroidX code. These applications can be useful when you want to debug a real running application, or reproduce a problem interactively, before writing test code.
 
-These applications are named either `<libraryname>-integration-tests-testapp`, or `support-\*-demos` (e.g. `support-4v-demos` or `support-leanback-demos`). You can run them by clicking `Run > Run ...` and choosing the desired application.
+These applications are named either `<libraryname>-integration-tests-testapp`, or `support-\*-demos` (e.g. `support-v4-demos` or `support-leanback-demos`). You can run them by clicking `Run > Run ...` and choosing the desired application.
 
 ## Password and Contributor Agreement before making a change
 Before uploading your first contribution, you will need setup a password and agree to the contribution agreement:

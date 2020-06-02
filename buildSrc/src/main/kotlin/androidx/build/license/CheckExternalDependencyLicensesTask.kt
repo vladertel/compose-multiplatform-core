@@ -15,13 +15,14 @@
  */
 package androidx.build.license
 
-import androidx.build.gradle.isRoot
+import androidx.build.getCheckoutRoot
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalDependency
-import org.gradle.api.plugins.ExtraPropertiesExtension
+import org.gradle.api.attributes.Usage
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.named
 import java.io.File
 
 /**
@@ -33,10 +34,7 @@ import java.io.File
 open class CheckExternalDependencyLicensesTask : DefaultTask() {
     @TaskAction
     fun checkDependencies() {
-        val supportRoot = (project.rootProject.property("ext") as ExtraPropertiesExtension)
-                .get("supportRootFolder") as File
-        val prebuiltsRoot = File(supportRoot, "../../prebuilts").canonicalFile
-
+        val prebuiltsRoot = File(project.getCheckoutRoot(), "prebuilts")
         val checkerConfig = project.configurations.getByName(CONFIGURATION_NAME)
 
         project
@@ -108,16 +106,11 @@ open class CheckExternalDependencyLicensesTask : DefaultTask() {
 }
 
 fun Project.configureExternalDependencyLicenseCheck() {
-    if (isRoot) {
-        // Create an empty task in the root which will depend on all the per-project child tasks.
-        // TODO have the normal license check run here so it catches the buildscript classpath.
-        tasks.register(CheckExternalDependencyLicensesTask.TASK_NAME)
-    } else {
-        val task = tasks.register(CheckExternalDependencyLicensesTask.TASK_NAME,
-                CheckExternalDependencyLicensesTask::class.java)
-        configurations.create(CheckExternalDependencyLicensesTask.CONFIGURATION_NAME)
-        rootProject.tasks.named(CheckExternalDependencyLicensesTask.TASK_NAME).configure {
-            it.dependsOn(task)
+    tasks.register(CheckExternalDependencyLicensesTask.TASK_NAME,
+            CheckExternalDependencyLicensesTask::class.java)
+    configurations.create(CheckExternalDependencyLicensesTask.CONFIGURATION_NAME) {
+        it.attributes {
+            it.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
         }
     }
 }

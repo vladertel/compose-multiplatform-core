@@ -30,10 +30,10 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.core.CameraX.LensFacing;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.view.CameraView;
 import androidx.camera.view.CameraView.CaptureMode;
-import androidx.camera.view.CameraView.ScaleType;
+import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -45,7 +45,7 @@ import java.io.PrintStream;
 public class CameraViewFragment extends Fragment {
     private static final String TAG = "CameraViewFragment";
 
-    // Possible values for this intent key are the name values of CameraX.LensFacing encoded as
+    // Possible values for this intent key are the name values of LensFacing encoded as
     // strings (case-insensitive): "back", "front".
     private static final String INTENT_EXTRA_CAMERA_DIRECTION = "camera_direction";
 
@@ -95,9 +95,14 @@ public class CameraViewFragment extends Fragment {
         // Get extra option for setting initial camera direction
         Bundle bundle = getActivity().getIntent().getExtras();
         if (bundle != null) {
-            String cameraDirectionString = bundle.getString(INTENT_EXTRA_CAMERA_DIRECTION);
-            if (cameraDirectionString != null) {
-                LensFacing lensFacing = LensFacing.valueOf(cameraDirectionString.toUpperCase());
+            final String cameraDirectionString = bundle.getString(INTENT_EXTRA_CAMERA_DIRECTION);
+            final boolean isCameraDirectionValid =
+                    cameraDirectionString != null && (cameraDirectionString.equalsIgnoreCase("BACK")
+                            || cameraDirectionString.equalsIgnoreCase("FRONT"));
+            if (isCameraDirectionValid) {
+                @CameraSelector.LensFacing int lensFacing = cameraDirectionString.equalsIgnoreCase(
+                        "BACK")
+                        ? CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT;
                 mCameraView.setCameraLensFacing(lensFacing);
             }
 
@@ -129,11 +134,13 @@ public class CameraViewFragment extends Fragment {
 
         if (mToggleCameraButton != null) {
             mToggleCameraButton.setVisibility(
-                    (mCameraView.hasCameraWithLensFacing(LensFacing.BACK)
-                            && mCameraView.hasCameraWithLensFacing(LensFacing.FRONT))
+                    (mCameraView.hasCameraWithLensFacing(CameraSelector.LENS_FACING_BACK)
+                            && mCameraView.hasCameraWithLensFacing(
+                            CameraSelector.LENS_FACING_FRONT))
                             ? View.VISIBLE
                             : View.INVISIBLE);
-            mToggleCameraButton.setChecked(mCameraView.getCameraLensFacing() == LensFacing.FRONT);
+            mToggleCameraButton.setChecked(
+                    mCameraView.getCameraLensFacing() == CameraSelector.LENS_FACING_FRONT);
         }
 
         // Set listeners here, or else restoring state will trigger them.
@@ -143,23 +150,21 @@ public class CameraViewFragment extends Fragment {
                         @Override
                         public void onCheckedChanged(CompoundButton b, boolean checked) {
                             mCameraView.setCameraLensFacing(
-                                    checked ? LensFacing.FRONT : LensFacing.BACK);
+                                    checked ? CameraSelector.LENS_FACING_FRONT
+                                            : CameraSelector.LENS_FACING_BACK);
                         }
                     });
         }
 
-        mToggleCropButton.setChecked(mCameraView.getScaleType() == ScaleType.CENTER_CROP);
-        mToggleCropButton.setOnCheckedChangeListener(
-                new CompoundButton.OnCheckedChangeListener() {
-                    @Override
-                    public void onCheckedChanged(CompoundButton b, boolean checked) {
-                        if (checked) {
-                            mCameraView.setScaleType(ScaleType.CENTER_CROP);
-                        } else {
-                            mCameraView.setScaleType(ScaleType.CENTER_INSIDE);
-                        }
-                    }
-                });
+        mToggleCropButton.setChecked(
+                mCameraView.getScaleType() == PreviewView.ScaleType.FILL_CENTER);
+        mToggleCropButton.setOnCheckedChangeListener((b, checked) -> {
+            if (checked) {
+                mCameraView.setScaleType(PreviewView.ScaleType.FILL_CENTER);
+            } else {
+                mCameraView.setScaleType(PreviewView.ScaleType.FIT_CENTER);
+            }
+        });
 
         if (mModeButton != null) {
             updateModeButtonIcon();

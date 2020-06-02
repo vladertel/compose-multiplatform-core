@@ -18,7 +18,9 @@ package androidx.camera.extensions;
 
 import android.util.Log;
 
-import androidx.camera.core.PreviewConfig;
+import androidx.annotation.NonNull;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.Preview;
 import androidx.camera.extensions.ExtensionsManager.EffectMode;
 import androidx.camera.extensions.impl.HdrPreviewExtenderImpl;
 
@@ -32,9 +34,9 @@ public class HdrPreviewExtender extends PreviewExtender {
      * Create a new instance of the HDR extender.
      *
      * @param builder Builder that will be used to create the configurations for the
-     * {@link androidx.camera.core.Preview}.
+     *                {@link androidx.camera.core.Preview}.
      */
-    public static HdrPreviewExtender create(PreviewConfig.Builder builder) {
+    public static HdrPreviewExtender create(Preview.Builder builder) {
         if (ExtensionVersion.isExtensionVersionSupported()) {
             try {
                 return new VendorHdrPreviewExtender(builder);
@@ -52,12 +54,12 @@ public class HdrPreviewExtender extends PreviewExtender {
         }
 
         @Override
-        public boolean isExtensionAvailable() {
+        public boolean isExtensionAvailable(@NonNull CameraSelector selector) {
             return false;
         }
 
         @Override
-        public void enableExtension() {
+        public void enableExtension(@NonNull CameraSelector selector) {
         }
     }
 
@@ -65,11 +67,12 @@ public class HdrPreviewExtender extends PreviewExtender {
     static class VendorHdrPreviewExtender extends HdrPreviewExtender {
         private final HdrPreviewExtenderImpl mImpl;
 
-        VendorHdrPreviewExtender(PreviewConfig.Builder builder) {
+        VendorHdrPreviewExtender(Preview.Builder builder) {
             mImpl = new HdrPreviewExtenderImpl();
             init(builder, mImpl, EffectMode.HDR);
         }
     }
 
-    private HdrPreviewExtender() {}
+    private HdrPreviewExtender() {
+    }
 }

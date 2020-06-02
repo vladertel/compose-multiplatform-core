@@ -16,8 +16,8 @@
 
 package androidx.build.metalava
 
+import androidx.build.checkapi.ApiBaselinesLocation
 import androidx.build.checkapi.ApiLocation
-import androidx.build.checkapi.ApiViolationBaselines
 import androidx.build.java.JavaCompileInputs
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -25,19 +25,23 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
+import org.gradle.workers.WorkerExecutor
 import java.io.File
+import javax.inject.Inject
 
 /** Generate an API signature text file from a set of source files. */
-abstract class GenerateApiTask : MetalavaTask() {
+abstract class GenerateApiTask @Inject constructor(
+    workerExecutor: WorkerExecutor
+) : MetalavaTask(workerExecutor) {
     /** Text file to which API signatures will be written. */
     @get:Input
     abstract val apiLocation: Property<ApiLocation>
 
     @get:Input
-    abstract val baselines: Property<ApiViolationBaselines>
+    abstract val baselines: Property<ApiBaselinesLocation>
 
     @get:Input
-    var generateRestrictedAPIs = false
+    var generateRestrictToLibraryGroupAPIs = true
 
     @Optional
     @InputFile
@@ -52,7 +56,7 @@ abstract class GenerateApiTask : MetalavaTask() {
         return listOfNotNull(
             prop.publicApiFile,
             prop.experimentalApiFile,
-            if (generateRestrictedAPIs) prop.restrictedApiFile else null
+            prop.restrictedApiFile
         )
     }
 
@@ -69,9 +73,10 @@ abstract class GenerateApiTask : MetalavaTask() {
         project.generateApi(
             inputs,
             apiLocation.get(),
-            apiLocation.get().publicApiFile.parentFile,
             ApiLintMode.CheckBaseline(baselines.get().apiLintFile),
-            generateRestrictedAPIs
+            generateRestrictToLibraryGroupAPIs,
+            workerExecutor,
+            manifestPath.orNull?.asFile?.absolutePath
         )
     }
 }

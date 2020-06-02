@@ -15,39 +15,36 @@
  */
 
 
+import androidx.build.LibraryGroups
+import androidx.build.LibraryVersions
+import androidx.build.Publish
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 import static androidx.build.dependencies.DependenciesKt.*
 
 plugins {
     id("AndroidXPlugin")
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id("com.android.library")
     id("AndroidXUiPlugin")
+    id("org.jetbrains.kotlin.android")
 }
 
 dependencies {
-    kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
+    kotlinPlugin project(path: ":compose:compose-compiler")
 
-    implementation(KOTLIN_COMPOSE_STDLIB)
-
-    implementation "androidx.activity:activity:1.0.0-alpha01"
-    implementation "androidx.annotation:annotation:1.1.0"
+    implementation(KOTLIN_STDLIB)
 
     implementation project(":compose:compose-runtime")
+    implementation project(":ui:integration-tests:demos:common")
     implementation project(":ui:ui-core")
     implementation project(":ui:ui-foundation")
-    implementation project(":ui:ui-framework")
     implementation project(":ui:ui-layout")
     implementation project(":ui:ui-animation")
-    implementation project(":ui:ui-text")
+    implementation project(":ui:ui-text-core")
     implementation project(':ui:ui-material')
 }
 
 android {
-    defaultConfig {
-        minSdkVersion 21
-    }
     tasks.withType(KotlinCompile).configureEach {
         kotlinOptions {
             useIR = true

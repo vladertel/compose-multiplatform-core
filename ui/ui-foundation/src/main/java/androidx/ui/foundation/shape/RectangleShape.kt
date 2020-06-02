@@ -16,16 +16,16 @@
 
 package androidx.ui.foundation.shape
 
-import androidx.ui.core.Density
-import androidx.ui.core.PxSize
-import androidx.ui.core.toRect
-import androidx.ui.engine.geometry.Outline
-import androidx.ui.engine.geometry.Shape
+import androidx.ui.graphics.Shape
 
 /**
  * A shape describing the rectangle.
  */
-val RectangleShape: Shape = object : Shape {
-    override fun createOutline(size: PxSize, density: Density) =
-        Outline.Rectangle(size.toRect())
-}
+@Deprecated(
+    "Use RectangleShape",
+    replaceWith = ReplaceWith(
+        "RectangleShape",
+        "androidx.ui.graphics.RectangleShape"
+    )
+)
+val RectangleShape: Shape = androidx.ui.graphics.RectangleShape

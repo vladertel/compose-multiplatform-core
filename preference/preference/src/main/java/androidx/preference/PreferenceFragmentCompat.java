@@ -424,7 +424,7 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
                         // Attempt to replace this fragment in its root view - developers should
                         // implement onPreferenceStartFragment in their activity so that they can
                         // customize this behaviour and handle any transitions between fragments
-                        .replace((((View) getView().getParent()).getId()), fragment)
+                        .replace(((View) getView().getParent()).getId(), fragment)
                         .addToBackStack(null)
                         .commit();
             }
@@ -526,6 +526,7 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
      *                           saved state as given here.
      * @return A new {@link RecyclerView} object to be placed into the view hierarchy
      */
+    @SuppressWarnings("deprecation")
     public RecyclerView onCreateRecyclerView(LayoutInflater inflater, ViewGroup parent,
             Bundle savedInstanceState) {
         // If device detected is Auto, use Auto's custom layout that contains a custom ViewGroup
@@ -592,7 +593,7 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
         }
 
         // check if dialog is already showing
-        if (getFragmentManager().findFragmentByTag(DIALOG_FRAGMENT_TAG) != null) {
+        if (getParentFragmentManager().findFragmentByTag(DIALOG_FRAGMENT_TAG) != null) {
             return;
         }
 
@@ -611,7 +612,7 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
                             + "displaying a custom dialog for this Preference.");
         }
         f.setTargetFragment(this, 0);
-        f.show(getFragmentManager(), DIALOG_FRAGMENT_TAG);
+        f.show(getParentFragmentManager(), DIALOG_FRAGMENT_TAG);
     }
 
     /**

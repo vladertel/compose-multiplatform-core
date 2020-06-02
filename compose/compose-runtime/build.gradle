@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 import static androidx.build.dependencies.DependenciesKt.*
 import androidx.build.LibraryGroups
 import androidx.build.LibraryVersions
@@ -25,25 +28,45 @@ plugins {
     id("com.android.library")
     id("kotlin-multiplatform")
 }
-
+dependencies {
+    kotlinPlugin project(path: ":compose:compose-compiler")
+}
 kotlin {
     android()
+    jvm("desktop")
 
     sourceSets {
         commonMain.dependencies {
-            implementation(KOTLIN_COMPOSE_STDLIB)
-            implementation(KOTLIN_COMPOSE_REFLECT)
+            implementation(KOTLIN_STDLIB_COMMON)
+            implementation(KOTLIN_COROUTINES_CORE_COMMON)
         }
+        jvmMain.dependencies {
+            implementation(KOTLIN_STDLIB)
+            api(KOTLIN_COROUTINES_CORE)
+            implementation "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3"
+        }
+        androidMain {
+            dependencies {
+                api(KOTLIN_COROUTINES_ANDROID)
+                api "androidx.annotation:annotation:1.1.0"
+            }
+            dependsOn jvmMain
+        }
+        desktopMain {
+            dependsOn jvmMain
+        }
+
         commonTest.dependencies {
             implementation kotlin("test-junit")
-        }
-        androidMain.dependencies {
-            implementation "androidx.annotation:annotation:1.0.0"
+            implementation project(":ui:ui-core")
         }
         androidAndroidTest.dependencies {
-            implementation(KOTLIN_COMPOSE_REFLECT)
             implementation(ANDROIDX_TEST_EXT_JUNIT)
             implementation(ANDROIDX_TEST_RULES)
+            implementation(ANDROIDX_TEST_RUNNER)
+            implementation(TRUTH)
+            implementation project(':ui:ui-test')
+            implementation project(':ui:ui-core')
         }
     }
 }
@@ -66,4 +89,10 @@ androidx {
     mavenGroup = LibraryGroups.COMPOSE
     inceptionYear = "2019"
     description = "Contains support code for tree composition"
+}
+
+tasks.withType(KotlinCompile).configureEach {
+    kotlinOptions {
+        useIR = true
+    }
 }

@@ -16,6 +16,8 @@
 
 package androidx.camera.camera2;
 
+import static androidx.camera.testing.SurfaceTextureProvider.createSurfaceTextureProvider;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assume.assumeTrue;
@@ -24,21 +26,19 @@ import android.Manifest;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
+import android.util.Size;
 
 import androidx.annotation.NonNull;
-import androidx.camera.core.AppConfig;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraX;
-import androidx.camera.core.CameraX.LensFacing;
+import androidx.camera.core.CameraXConfig;
 import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.ImageAnalysisConfig;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCaptureConfig;
-import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
-import androidx.camera.core.PreviewConfig;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.GLUtil;
+import androidx.camera.testing.SurfaceTextureProvider;
 import androidx.camera.testing.fakes.FakeLifecycleOwner;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
@@ -64,7 +64,7 @@ import java.util.concurrent.Semaphore;
 @LargeTest
 @RunWith(AndroidJUnit4.class)
 public final class UseCaseCombinationTest {
-    private static final LensFacing DEFAULT_LENS_FACING = LensFacing.BACK;
+    private static final CameraSelector DEFAULT_SELECTOR = CameraSelector.DEFAULT_BACK_CAMERA;
     private final MutableLiveData<Long> mAnalysisResult = new MutableLiveData<>();
     @Rule
     public GrantPermissionRule mRuntimePermissionRule = GrantPermissionRule.grant(
@@ -72,45 +72,25 @@ public final class UseCaseCombinationTest {
     private final Instrumentation mInstrumentation = InstrumentationRegistry.getInstrumentation();
     private Semaphore mSemaphore;
     private FakeLifecycleOwner mLifecycle;
-    private ImageCapture mImageCapture;
-    private ImageAnalysis mImageAnalysis;
-    private Preview mPreview;
-    private ImageAnalysis.Analyzer mImageAnalyzer;
-
-    private Observer<Long> createCountIncrementingObserver() {
-        return new Observer<Long>() {
-            @Override
-            public void onChanged(Long value) {
-                mSemaphore.release();
-            }
-        };
-    }
 
     @Before
     public void setUp() {
         assumeTrue(CameraUtil.deviceHasCamera());
 
-        Context context = ApplicationProvider.getApplicationContext();
-        AppConfig config = Camera2AppConfig.create(context);
-
-        CameraX.init(context, config);
+        final Context context = ApplicationProvider.getApplicationContext();
+        final CameraXConfig config = Camera2Config.defaultConfig();
+        CameraX.initialize(context, config);
 
         mLifecycle = new FakeLifecycleOwner();
-
         mSemaphore = new Semaphore(0);
     }
 
     @After
     public void tearDown() throws InterruptedException, ExecutionException {
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.unbindAll();
-            }
-        });
-
-        // Wait for deinit to finish.
-        CameraX.deinit().get();
+        if (CameraX.isInitialized()) {
+            mInstrumentation.runOnMainSync(CameraX::unbindAll);
+        }
+        CameraX.shutdown().get();
     }
 
     /**
@@ -118,40 +98,21 @@ public final class UseCaseCombinationTest {
      */
     @Test
     public void previewCombinesImageCapture() throws InterruptedException {
-        initPreview();
-        initImageCapture();
+        final Preview preview = initPreview();
+        final ImageCapture imageCapture = initImageCapture();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, mPreview, mImageCapture);
-                mPreview.setOnPreviewOutputUpdateListener(
-                        new Preview.OnPreviewOutputUpdateListener() {
-                            @Override
-                            public void onUpdated(@NonNull Preview.PreviewOutput output) {
-                                output.getSurfaceTexture().attachToGLContext(
-                                        GLUtil.getTexIdFromGLContext());
-                                output.getSurfaceTexture().setOnFrameAvailableListener(
-                                        new SurfaceTexture.OnFrameAvailableListener() {
-                                            @Override
-                                            public void onFrameAvailable(
-                                                    SurfaceTexture surfaceTexture) {
-                                                surfaceTexture.updateTexImage();
-                                                mSemaphore.release();
-                                            }
-                                        });
-                            }
-                        });
-                mLifecycle.startAndResume();
-            }
+        mInstrumentation.runOnMainSync(() -> {
+            preview.setSurfaceProvider(getSurfaceProvider(true));
+            CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, preview, imageCapture);
+            mLifecycle.startAndResume();
         });
 
         // Wait for the frame available update.
         mSemaphore.acquire(10);
 
         assertThat(mLifecycle.getObserverCount()).isEqualTo(2);
-        assertThat(CameraX.isBound(mPreview)).isTrue();
-        assertThat(CameraX.isBound(mImageCapture)).isTrue();
+        assertThat(CameraX.isBound(preview)).isTrue();
+        assertThat(CameraX.isBound(imageCapture)).isTrue();
     }
 
     /**
@@ -159,84 +120,108 @@ public final class UseCaseCombinationTest {
      */
     @Test
     public void previewCombinesImageAnalysis() throws InterruptedException {
-        initImageAnalysis();
-        initPreview();
+        final Preview preview = initPreview();
+        final ImageAnalysis imageAnalysis = initImageAnalysis();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, mPreview, mImageAnalysis);
-                mImageAnalysis.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
-                mAnalysisResult.observe(mLifecycle,
-                        createCountIncrementingObserver());
-                mLifecycle.startAndResume();
-            }
+        mInstrumentation.runOnMainSync(() -> {
+            CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, preview, imageAnalysis);
+            preview.setSurfaceProvider(getSurfaceProvider(false));
+            imageAnalysis.setAnalyzer(CameraXExecutors.mainThreadExecutor(), initImageAnalyzer());
+            mAnalysisResult.observe(mLifecycle, createCountIncrementingObserver());
+            mLifecycle.startAndResume();
         });
 
         // Wait for 10 frames to be analyzed.
         mSemaphore.acquire(10);
 
-        assertThat(CameraX.isBound(mPreview)).isTrue();
-        assertThat(CameraX.isBound(mImageAnalysis)).isTrue();
+        assertThat(CameraX.isBound(preview)).isTrue();
+        assertThat(CameraX.isBound(imageAnalysis)).isTrue();
     }
 
-    /**
-     * Test Combination: Preview + ImageAnalysis + ImageCapture
-     */
+    /** Test Combination: Preview + ImageAnalysis + ImageCapture */
     @Test
     public void previewCombinesImageAnalysisAndImageCapture() throws InterruptedException {
-        initPreview();
-        initImageAnalysis();
-        initImageCapture();
+        final Preview preview = initPreview();
+        final ImageAnalysis imageAnalysis = initImageAnalysis();
+        final ImageCapture imageCapture = initImageCapture();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, mPreview, mImageAnalysis, mImageCapture);
-                mImageAnalysis.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
-                mAnalysisResult.observe(mLifecycle,
-                        createCountIncrementingObserver());
-                mLifecycle.startAndResume();
-            }
+        mInstrumentation.runOnMainSync(() -> {
+            CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, preview, imageAnalysis,
+                    imageCapture);
+            preview.setSurfaceProvider(getSurfaceProvider(false));
+            imageAnalysis.setAnalyzer(CameraXExecutors.mainThreadExecutor(), initImageAnalyzer());
+            mAnalysisResult.observe(mLifecycle, createCountIncrementingObserver());
+            mLifecycle.startAndResume();
         });
 
         // Wait for 10 frames to be analyzed.
         mSemaphore.acquire(10);
 
         assertThat(mLifecycle.getObserverCount()).isEqualTo(3);
-        assertThat(CameraX.isBound(mPreview)).isTrue();
-        assertThat(CameraX.isBound(mImageAnalysis)).isTrue();
-        assertThat(CameraX.isBound(mImageCapture)).isTrue();
+        assertThat(CameraX.isBound(preview)).isTrue();
+        assertThat(CameraX.isBound(imageAnalysis)).isTrue();
+        assertThat(CameraX.isBound(imageCapture)).isTrue();
     }
 
-    private void initImageAnalysis() {
-        ImageAnalysisConfig imageAnalysisConfig =
-                new ImageAnalysisConfig.Builder()
-                        .setLensFacing(DEFAULT_LENS_FACING)
-                        .setTargetName("ImageAnalysis")
-                        .build();
-        mImageAnalyzer =
-                new ImageAnalysis.Analyzer() {
+    private Preview initPreview() {
+        return new Preview.Builder().setTargetName("Preview").build();
+    }
+
+    private ImageAnalysis initImageAnalysis() {
+        return new ImageAnalysis.Builder()
+                .setTargetName("ImageAnalysis")
+                .build();
+    }
+
+    private ImageAnalysis.Analyzer initImageAnalyzer() {
+        return (image) -> {
+            mAnalysisResult.postValue(image.getImageInfo().getTimestamp());
+            image.close();
+        };
+    }
+
+    private ImageCapture initImageCapture() {
+        return new ImageCapture.Builder().build();
+    }
+
+    private Observer<Long> createCountIncrementingObserver() {
+        return value -> mSemaphore.release();
+    }
+
+    @NonNull
+    private Preview.SurfaceProvider getSurfaceProvider(final boolean addFrameListener) {
+        return createSurfaceTextureProvider(
+                new SurfaceTextureProvider.SurfaceTextureCallback() {
+                    final Object mIsSurfaceTextureReleasedLock = new Object();
+                    boolean mIsSurfaceTextureReleased = false;
+
                     @Override
-                    public void analyze(ImageProxy image, int rotationDegrees) {
-                        mAnalysisResult.postValue(image.getTimestamp());
+                    public void onSurfaceTextureReady(@NonNull SurfaceTexture surfaceTexture,
+                            @NonNull Size resolution) {
+                        if (addFrameListener) {
+                            surfaceTexture.attachToGLContext(GLUtil.getTexIdFromGLContext());
+                            surfaceTexture.setOnFrameAvailableListener(st -> {
+                                synchronized (mIsSurfaceTextureReleasedLock) {
+                                    if (!mIsSurfaceTextureReleased) {
+                                        surfaceTexture.updateTexImage();
+                                    }
+                                }
+                                mSemaphore.release();
+                            });
+                        }
                     }
-                };
-        mImageAnalysis = new ImageAnalysis(imageAnalysisConfig);
-    }
 
-    private void initImageCapture() {
-        ImageCaptureConfig imageCaptureConfig =
-                new ImageCaptureConfig.Builder().setLensFacing(LensFacing.BACK).build();
-
-        mImageCapture = new ImageCapture(imageCaptureConfig);
-    }
-
-    private void initPreview() {
-        PreviewConfig.Builder configBuilder =
-                new PreviewConfig.Builder()
-                        .setTargetName("Preview")
-                        .setLensFacing(DEFAULT_LENS_FACING);
-        mPreview = new Preview(configBuilder.build());
+                    @Override
+                    public void onSafeToRelease(@NonNull SurfaceTexture surfaceTexture) {
+                        if (addFrameListener) {
+                            synchronized (mIsSurfaceTextureReleasedLock) {
+                                mIsSurfaceTextureReleased = true;
+                                surfaceTexture.release();
+                            }
+                        } else {
+                            surfaceTexture.release();
+                        }
+                    }
+                });
     }
 }

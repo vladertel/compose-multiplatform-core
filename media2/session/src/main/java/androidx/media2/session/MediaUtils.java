@@ -35,9 +35,11 @@ import static androidx.media2.common.MediaMetadata.METADATA_KEY_MEDIA_ID;
 import static androidx.media2.common.MediaMetadata.METADATA_KEY_MEDIA_URI;
 import static androidx.media2.common.MediaMetadata.METADATA_KEY_PLAYABLE;
 import static androidx.media2.common.MediaMetadata.METADATA_KEY_TITLE;
+import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_DESELECT_TRACK;
+import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_SELECT_TRACK;
 import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_SET_SPEED;
+import static androidx.media2.session.SessionCommand.COMMAND_CODE_PLAYER_SET_SURFACE;
 import static androidx.media2.session.SessionCommand.COMMAND_VERSION_1;
-import static androidx.media2.session.SessionCommand.COMMAND_VERSION_CURRENT;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -101,6 +103,9 @@ public class MediaUtils {
         }
     };
 
+    // UNKNOWN version for legacy support
+    public static final int VERSION_UNKNOWN = -1;
+
     // Initial version for all Media2 APIs.
     public static final int VERSION_0 = 0;
 
@@ -135,9 +140,8 @@ public class MediaUtils {
      * {@link MediaItem}'s subclass object cannot be parceled due to the security issue.
      *
      * @param item an item
-     * @return
+     * @return upcasted item
      */
-    // TODO(b/139255697): Provide the functionality in the media2-common.
     @Nullable
     public static MediaItem upcastForPreparceling(@Nullable MediaItem item) {
         if (item == null || item.getClass() == MediaItem.class) {
@@ -151,11 +155,11 @@ public class MediaUtils {
 
     /**
      * Upcasts a {@link VideoSize} subclass to the {@link MediaItem} type for pre-parceling.
-     * Note that {@link VideoSize}'s subclass object cannot be parceled due to security issue
-     * and the issue that remote apps may not have the subclass.
+     * Note that {@link VideoSize}'s subclass object cannot be parceled due the issue that remote
+     * apps may not have the subclass.
      *
-     * @param size
-     * @return
+     * @param size a size
+     * @return upcasted size
      */
     @Nullable
     public static VideoSize upcastForPreparceling(@Nullable VideoSize size) {
@@ -167,11 +171,11 @@ public class MediaUtils {
 
     /**
      * Upcasts a {@link TrackInfo} subclass to the {@link TrackInfo} type for pre-parceling.
-     * Note that {@link TrackInfo}'s subclass object cannot be parceled due to security issue
-     * and the issue that remote apps may not have the subclass.
+     * Note that {@link TrackInfo}'s subclass object cannot be parceled due to the issue that remote
+     * apps may not have the subclass.
      *
-     * @param track
-     * @return
+     * @param track a track
+     * @return upcasted track
      */
     @Nullable
     public static TrackInfo upcastForPreparceling(@Nullable TrackInfo track) {
@@ -184,10 +188,10 @@ public class MediaUtils {
     /**
      * Upcasts a list of {@link TrackInfo} subclass objects to a List of {@link TrackInfo} type
      * for pre-parceling. Note that {@link TrackInfo}'s subclass object cannot be parceled due
-     * to security issue and the issue that remote apps may not have the subclass.
+     * to the issue that remote apps may not have the subclass.
      *
-     * @param tracks
-     * @return
+     * @param tracks a list of tracks
+     * @return list of upcasted tracks
      */
     @Nullable
     public static List<TrackInfo> upcastForPreparceling(@Nullable List<TrackInfo> tracks) {
@@ -442,18 +446,21 @@ public class MediaUtils {
         }
         List<T> result = new ArrayList<>();
         Parcel parcel = Parcel.obtain();
-        for (int i = 0; i < list.size(); i++) {
-            // Calculate the size.
-            T item = list.get(i);
-            parcel.writeParcelable(item, 0);
-            if (parcel.dataSize() < sizeLimitInBytes) {
-                result.add(item);
-            } else {
-                break;
+        try {
+            for (int i = 0; i < list.size(); i++) {
+                // Calculate the size.
+                T item = list.get(i);
+                parcel.writeParcelable(item, 0);
+                if (parcel.dataSize() < sizeLimitInBytes) {
+                    result.add(item);
+                } else {
+                    break;
+                }
             }
+            return result;
+        } finally {
+            parcel.recycle();
         }
-        parcel.recycle();
-        return result;
     }
 
     /**
@@ -750,8 +757,8 @@ public class MediaUtils {
     public static MediaController.PlaybackInfo toPlaybackInfo2(
             MediaControllerCompat.PlaybackInfo info) {
         return MediaController.PlaybackInfo.createPlaybackInfo(info.getPlaybackType(),
-                new AudioAttributesCompat.Builder()
-                        .setLegacyStreamType(info.getAudioStream()).build(),
+                new AudioAttributesCompat.Builder().setLegacyStreamType(
+                        info.getAudioAttributes().getLegacyStreamType()).build(),
                 info.getVolumeControl(), info.getMaxVolume(), info.getCurrentVolume());
     }
 
@@ -886,17 +893,20 @@ public class MediaUtils {
     public static SessionCommandGroup convertToSessionCommandGroup(long sessionFlags,
             @Nullable PlaybackStateCompat state) {
         SessionCommandGroup.Builder commandsBuilder = new SessionCommandGroup.Builder();
-        commandsBuilder.addAllPlayerBasicCommands(COMMAND_VERSION_CURRENT);
+
+        // MediaSessionCompat only support COMMAND_VERSION_1.
+        commandsBuilder.addAllPlayerBasicCommands(COMMAND_VERSION_1);
         boolean includePlaylistCommands = (sessionFlags & FLAG_HANDLES_QUEUE_COMMANDS) != 0;
         if (includePlaylistCommands) {
-            // MediaSessionCompat only support playlist COMMAND_VERSION_1.
             commandsBuilder.addAllPlayerPlaylistCommands(COMMAND_VERSION_1);
         }
-        commandsBuilder.addAllVolumeCommands(COMMAND_VERSION_CURRENT);
-        commandsBuilder.addAllSessionCommands(COMMAND_VERSION_CURRENT);
+        commandsBuilder.addAllVolumeCommands(COMMAND_VERSION_1);
+        commandsBuilder.addAllSessionCommands(COMMAND_VERSION_1);
 
-        commandsBuilder.removeCommand(new SessionCommand(
-                COMMAND_CODE_PLAYER_SET_SPEED));
+        commandsBuilder.removeCommand(new SessionCommand(COMMAND_CODE_PLAYER_SET_SPEED));
+        commandsBuilder.removeCommand(new SessionCommand(COMMAND_CODE_PLAYER_SET_SURFACE));
+        commandsBuilder.removeCommand(new SessionCommand(COMMAND_CODE_PLAYER_SELECT_TRACK));
+        commandsBuilder.removeCommand(new SessionCommand(COMMAND_CODE_PLAYER_DESELECT_TRACK));
 
         if (state != null && state.getCustomActions() != null) {
             for (CustomAction customAction : state.getCustomActions()) {

@@ -16,6 +16,8 @@
 
 package androidx.ui.core
 
+import androidx.ui.unit.IntPx
+
 /**
  * A part of the composition that can be measured. This represents a layout.
  * The instance should never be stored.
@@ -30,28 +32,29 @@ interface IntrinsicMeasurable {
      * Calculates the minimum width that the layout can be such that
      * the content of the layout will be painted correctly.
      */
-    fun minIntrinsicWidth(height: IntPx): IntPx
+    fun minIntrinsicWidth(height: IntPx, layoutDirection: LayoutDirection): IntPx
 
     /**
      * Calculates the smallest width beyond which increasing the width never
      * decreases the height.
      */
-    fun maxIntrinsicWidth(height: IntPx): IntPx
+    fun maxIntrinsicWidth(height: IntPx, layoutDirection: LayoutDirection): IntPx
 
     /**
      * Calculates the minimum height that the layout can be such that
      * the content of the layout will be painted correctly.
      */
-    fun minIntrinsicHeight(width: IntPx): IntPx
+    fun minIntrinsicHeight(width: IntPx, layoutDirection: LayoutDirection): IntPx
 
     /**
      * Calculates the smallest height beyond which increasing the height never
      * decreases the width.
      */
-    fun maxIntrinsicHeight(width: IntPx): IntPx
+    fun maxIntrinsicHeight(width: IntPx, layoutDirection: LayoutDirection): IntPx
 }
 
 /**
  * A function for performing intrinsic measurement.
  */
-typealias IntrinsicMeasureBlock = DensityScope.(List<IntrinsicMeasurable>, IntPx) -> IntPx
+typealias IntrinsicMeasureBlock =
+        IntrinsicMeasureScope.(List<IntrinsicMeasurable>, IntPx, LayoutDirection) -> IntPx

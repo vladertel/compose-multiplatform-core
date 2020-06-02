@@ -16,18 +16,15 @@
 
 package androidx.ui.benchmark.test.view
 
-import android.app.Activity
-import androidx.benchmark.junit4.BenchmarkRule
 import androidx.test.filters.LargeTest
-import androidx.test.rule.ActivityTestRule
-import androidx.ui.benchmark.measureDrawPerf
-import androidx.ui.benchmark.measureFirstDraw
-import androidx.ui.benchmark.measureFirstLayout
-import androidx.ui.benchmark.measureFirstMeasure
-import androidx.ui.benchmark.measureFirstSetContent
-import androidx.ui.benchmark.measureLayoutPerf
-import androidx.ui.test.DisableTransitions
-import androidx.ui.test.cases.view.AndroidCheckboxesInLinearLayoutTestCase
+import androidx.ui.benchmark.AndroidBenchmarkRule
+import androidx.ui.benchmark.benchmarkDrawPerf
+import androidx.ui.benchmark.benchmarkFirstDraw
+import androidx.ui.benchmark.benchmarkFirstLayout
+import androidx.ui.benchmark.benchmarkFirstMeasure
+import androidx.ui.benchmark.benchmarkFirstSetContent
+import androidx.ui.benchmark.benchmarkLayoutPerf
+import androidx.ui.integration.test.view.AndroidCheckboxesInLinearLayoutTestCase
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,49 +44,39 @@ class AndroidCheckboxesInLinearLayoutBenchmark(private val numberOfCheckboxes: I
     }
 
     @get:Rule
-    val benchmarkRule = BenchmarkRule()
+    val benchmarkRule = AndroidBenchmarkRule()
 
-    @get:Rule
-    val activityRule = ActivityTestRule(Activity::class.java)
-
-    @get:Rule
-    val disableAnimationRule = DisableTransitions()
-
-    private val activity: Activity get() = activityRule.activity
+    private val checkboxesCaseFactory = {
+        AndroidCheckboxesInLinearLayoutTestCase(numberOfCheckboxes)
+    }
 
     @Test
     fun first_setContent() {
-        benchmarkRule.measureFirstSetContent(activity,
-            AndroidCheckboxesInLinearLayoutTestCase(activity, numberOfCheckboxes))
+        benchmarkRule.benchmarkFirstSetContent(checkboxesCaseFactory)
     }
 
     @Test
     fun first_measure() {
-        benchmarkRule.measureFirstMeasure(activity,
-            AndroidCheckboxesInLinearLayoutTestCase(activity, numberOfCheckboxes))
+        benchmarkRule.benchmarkFirstMeasure(checkboxesCaseFactory)
     }
 
     @Test
     fun first_layout() {
-        benchmarkRule.measureFirstLayout(activity,
-            AndroidCheckboxesInLinearLayoutTestCase(activity, numberOfCheckboxes))
+        benchmarkRule.benchmarkFirstLayout(checkboxesCaseFactory)
     }
 
     @Test
     fun first_draw() {
-        benchmarkRule.measureFirstDraw(activity,
-            AndroidCheckboxesInLinearLayoutTestCase(activity, numberOfCheckboxes))
+        benchmarkRule.benchmarkFirstDraw(checkboxesCaseFactory)
     }
 
     @Test
     fun layout() {
-        benchmarkRule.measureLayoutPerf(activity,
-            AndroidCheckboxesInLinearLayoutTestCase(activity, numberOfCheckboxes))
+        benchmarkRule.benchmarkLayoutPerf(checkboxesCaseFactory)
     }
 
     @Test
     fun draw() {
-        benchmarkRule.measureDrawPerf(activity,
-            AndroidCheckboxesInLinearLayoutTestCase(activity, numberOfCheckboxes))
+        benchmarkRule.benchmarkDrawPerf(checkboxesCaseFactory)
     }
 }

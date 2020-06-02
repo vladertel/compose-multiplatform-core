@@ -19,14 +19,13 @@ package androidx.ui.text
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.filters.LargeTest
-import androidx.ui.core.Density
-import androidx.ui.core.PxPosition
-import androidx.ui.core.px
-import androidx.ui.core.sp
-import androidx.ui.test.RandomTextGenerator
-import androidx.ui.test.TextBenchmarkTestRule
-import androidx.ui.test.TextType
-import androidx.ui.test.cartesian
+import androidx.ui.unit.Density
+import androidx.ui.unit.PxPosition
+import androidx.ui.unit.sp
+import androidx.ui.integration.test.RandomTextGenerator
+import androidx.ui.integration.test.TextBenchmarkTestRule
+import androidx.ui.integration.test.TextType
+import androidx.ui.integration.test.cartesian
 import androidx.ui.text.font.Font
 import androidx.ui.text.style.TextDirectionAlgorithm
 import org.junit.Rule
@@ -67,7 +66,7 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
         textLength: Int
     ): ParagraphIntrinsics {
         val text = textGenerator.nextParagraph(textLength)
-        val textStyles = if (textType == TextType.StyledText) {
+        val spanStyles = if (textType == TextType.StyledText) {
             textGenerator.createStyles(text)
         } else {
             listOf()
@@ -75,12 +74,12 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
         return ParagraphIntrinsics(
             text = text,
             density = Density(density = 1f),
-            style = TextStyle(fontSize = 12.sp),
-            paragraphStyle = ParagraphStyle(
+            style = TextStyle(
+                fontSize = 12.sp,
                 textDirectionAlgorithm = TextDirectionAlgorithm.ContentOrLtr
             ),
             resourceLoader = resourceLoader,
-            textStyles = textStyles
+            spanStyles = spanStyles
         )
     }
 
@@ -152,21 +151,11 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
     }
 
     @Test
-    fun getPrimaryHorizontal() {
+    fun getHorizontalPosition() {
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
             benchmarkRule.measureRepeated {
-                paragraph.getPrimaryHorizontal(textLength / 2)
-            }
-        }
-    }
-
-    @Test
-    fun getSecondaryHorizontal() {
-        textBenchmarkRule.generator { generator ->
-            val paragraph = paragraph(generator)
-            benchmarkRule.measureRepeated {
-                paragraph.getSecondaryHorizontal(textLength / 2)
+                paragraph.getHorizontalPosition(textLength / 2, true)
             }
         }
     }
@@ -175,7 +164,7 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
     fun getOffsetForPosition() {
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
-            val centerPosition = PxPosition((paragraph.width / 2).px, (paragraph.height / 2).px)
+            val centerPosition = PxPosition((paragraph.width / 2), (paragraph.height / 2))
             benchmarkRule.measureRepeated {
                 paragraph.getOffsetForPosition(centerPosition)
             }

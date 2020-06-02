@@ -53,7 +53,6 @@ import androidx.media2.test.common.TestUtils;
 import androidx.media2.test.service.MediaTestUtils;
 import androidx.media2.test.service.RemoteMediaController;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.After;
@@ -69,7 +68,6 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Tests {@link MediaController}.
  */
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.JELLY_BEAN)
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class MediaSessionCompatCallbackTestWithMediaController extends MediaSessionTestBase {
@@ -115,14 +113,10 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<SessionToken> sessionToken2 = new AtomicReference<>();
         SessionToken.createSessionToken(mContext, mSession.getSessionToken(),
-                sHandlerExecutor, new SessionToken.OnSessionTokenCreatedListener() {
-                    @Override
-                    public void onSessionTokenCreated(
-                            MediaSessionCompat.Token token, SessionToken token2) {
-                        assertTrue(token2.isLegacySession());
-                        sessionToken2.set(token2);
-                        latch.countDown();
-                    }
+                (compatToken, sessionToken) -> {
+                    assertTrue(sessionToken.isLegacySession());
+                    sessionToken2.set(sessionToken);
+                    latch.countDown();
                 });
         assertTrue(latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
         return createRemoteController(sessionToken2.get(), true, null);
@@ -130,7 +124,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testPlay() throws Exception {
-        prepareLooper();
         RemoteMediaController controller = createControllerAndWaitConnection();
         mSessionCallback.reset(1);
 
@@ -141,7 +134,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testPause() throws Exception {
-        prepareLooper();
         RemoteMediaController controller = createControllerAndWaitConnection();
         mSessionCallback.reset(1);
 
@@ -152,7 +144,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testPrepare() throws Exception {
-        prepareLooper();
         RemoteMediaController controller = createControllerAndWaitConnection();
         mSessionCallback.reset(1);
 
@@ -163,7 +154,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSeekTo() throws Exception {
-        prepareLooper();
         RemoteMediaController controller = createControllerAndWaitConnection();
         mSessionCallback.reset(1);
 
@@ -176,7 +166,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSetPlaybackSpeed() throws Exception {
-        prepareLooper();
         RemoteMediaController controller = createControllerAndWaitConnection();
         mSessionCallback.reset(1);
 
@@ -189,7 +178,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testAddPlaylistItem() throws Exception {
-        prepareLooper();
         final List<MediaItem> testList = MediaTestUtils.createPlaylist(2);
         final List<QueueItem> testQueue = MediaUtils.convertToQueueItemList(testList);
         final String testMediaId = "testAddPlaylistItem";
@@ -210,7 +198,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testRemovePlaylistItem() throws Exception {
-        prepareLooper();
         final List<MediaItem> testList = MediaTestUtils.createPlaylist(2);
         final List<QueueItem> testQueue = MediaUtils.convertToQueueItemList(testList);
 
@@ -230,7 +217,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testReplacePlaylistItem() throws Exception {
-        prepareLooper();
         final int testReplaceIndex = 1;
         // replace = remove + add
         final List<MediaItem> testList = MediaTestUtils.createPlaylist(2);
@@ -257,7 +243,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSkipToPreviousItem() throws Exception {
-        prepareLooper();
         RemoteMediaController controller = createControllerAndWaitConnection();
         mSessionCallback.reset(1);
 
@@ -268,7 +253,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSkipToNextItem() throws Exception {
-        prepareLooper();
         RemoteMediaController controller = createControllerAndWaitConnection();
         mSessionCallback.reset(1);
 
@@ -279,8 +263,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSkipToPlaylistItem() throws Exception {
-        prepareLooper();
-
         final int testSkipToIndex = 1;
         final List<MediaItem> testList = MediaTestUtils.createPlaylist(2);
         final List<QueueItem> testQueue = MediaUtils.convertToQueueItemList(testList);
@@ -298,7 +280,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSetShuffleMode() throws Exception {
-        prepareLooper();
         final int testShuffleMode = SessionPlayer.SHUFFLE_MODE_GROUP;
 
         mSession.setShuffleMode(PlaybackStateCompat.SHUFFLE_MODE_NONE);
@@ -313,7 +294,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSetRepeatMode() throws Exception {
-        prepareLooper();
         final int testRepeatMode = SessionPlayer.REPEAT_MODE_ALL;
 
         mSession.setRepeatMode(PlaybackStateCompat.REPEAT_MODE_NONE);
@@ -328,7 +308,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSetVolumeTo() throws Exception {
-        prepareLooper();
         final int maxVolume = 100;
         final int currentVolume = 23;
         final int volumeControlType = VolumeProviderCompat.VOLUME_CONTROL_ABSOLUTE;
@@ -346,7 +325,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testAdjustVolume() throws Exception {
-        prepareLooper();
         final int maxVolume = 100;
         final int currentVolume = 23;
         final int volumeControlType = VolumeProviderCompat.VOLUME_CONTROL_ABSOLUTE;
@@ -364,7 +342,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSetVolumeWithLocalVolume() throws Exception {
-        prepareLooper();
         if (Build.VERSION.SDK_INT >= 21 && mAudioManager.isVolumeFixed()) {
             // This test is not eligible for this device.
             return;
@@ -402,7 +379,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testAdjustVolumeWithLocalVolume() throws Exception {
-        prepareLooper();
         if (Build.VERSION.SDK_INT >= 21 && mAudioManager.isVolumeFixed()) {
             // This test is not eligible for this device.
             return;
@@ -442,7 +418,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testSendCustomCommand() throws Exception {
-        prepareLooper();
         final String command = "test_custom_command";
         final Bundle testArgs = new Bundle();
         testArgs.putString("args", "test_args");
@@ -459,7 +434,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testFastForward() throws Exception {
-        prepareLooper();
         RemoteMediaController controller = createControllerAndWaitConnection();
         mSessionCallback.reset(1);
 
@@ -470,7 +444,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
 
     @Test
     public void testRewind() throws Exception {
-        prepareLooper();
         RemoteMediaController controller = createControllerAndWaitConnection();
         mSessionCallback.reset(1);
 
@@ -480,104 +453,7 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
     }
 
     @Test
-    public void testPlayFromSearch() throws Exception {
-        prepareLooper();
-        final String request = "random query";
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.playFromSearch(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPlayFromSearchCalled);
-        assertEquals(request, mSessionCallback.mQuery);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPlayFromUri() throws Exception {
-        prepareLooper();
-        final Uri request = Uri.parse("foo://boo");
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.playFromUri(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPlayFromUriCalled);
-        assertEquals(request, mSessionCallback.mUri);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPlayFromMediaId() throws Exception {
-        prepareLooper();
-        final String request = "media_id";
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.playFromMediaId(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPlayFromMediaIdCalled);
-        assertEquals(request, mSessionCallback.mMediaId);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPrepareFromSearch() throws Exception {
-        prepareLooper();
-        final String request = "random query";
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.prepareFromSearch(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPrepareFromSearchCalled);
-        assertEquals(request, mSessionCallback.mQuery);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPrepareFromUri() throws Exception {
-        prepareLooper();
-        final Uri request = Uri.parse("foo://boo");
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.prepareFromUri(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPrepareFromUriCalled);
-        assertEquals(request, mSessionCallback.mUri);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPrepareFromMediaId() throws Exception {
-        prepareLooper();
-        final String request = "media_id";
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.prepareFromMediaId(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPrepareFromMediaIdCalled);
-        assertEquals(request, mSessionCallback.mMediaId);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
     public void testSetRating() throws Exception {
-        prepareLooper();
         final float ratingValue = 3.5f;
         final Rating rating2 = new StarRating(5, ratingValue);
         final String mediaId = "media_id";

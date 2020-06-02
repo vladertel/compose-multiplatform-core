@@ -16,7 +16,6 @@
 
 package androidx.build
 
-import androidx.build.SupportConfig.getSupportRoot
 import androidx.build.gitclient.Commit
 import androidx.build.gitclient.GitClientImpl
 import androidx.build.gitclient.GitCommitRange
@@ -46,43 +45,41 @@ open class CreateLibraryBuildInfoFileTask : DefaultTask() {
     @OutputFile
     val outputFile: Property<File> = project.objects.property(File::class.java)
 
-    private fun getLibraryBuildInfoFilename(): String {
-        return "${project.group}_${project.name}_build_info.txt"
-    }
-
-    /* Returns the local project directory without the full framework/support root directory path
-    * Note: `project.projectDir.toString().removePrefix(project.rootDir.toString())` does not work
-    * because the project rootDir is not guaranteed to be a substring of the projectDir
-    */
+    /**
+     * Returns the local project directory without the full framework/support root directory path
+     * <p>
+     * Note: `project.projectDir.toString().removePrefix(project.rootDir.toString())` does not work
+     * because the project rootDir is not guaranteed to be a substring of the projectDir
+     */
     private fun getProjectSpecificDirectory(): String {
-        return project.projectDir.toString().removePrefix(
-            getSupportRoot(project).toString())
+        return project.projectDir.absolutePath.removePrefix(
+            project.getSupportRootFolder().absolutePath)
     }
 
-    /* Returns whether or not the groupId of the project requires the same version for all
-     * artifactIds.  See CheckSameVersionLibraryGroupsTask.kt
+    /**
+     * Returns whether or not the groupId of the project requires the same version for all
+     * artifactIds.
      */
     private fun requiresSameVersion(): Boolean {
-        val library =
-            project.extensions.findByType(AndroidXExtension::class.java)
+        val library = project.extensions.findByType(AndroidXExtension::class.java)
         return library?.mavenGroup?.requireSameVersion ?: false
     }
 
     /* For androidx release notes, the most common use case is to track and publish the last sha
      * of the build that is released.  Thus, we use frameworks/support to get the sha
      */
-    private fun getCommitShaAtHead(): String {
-        val supportRoot = getSupportRoot(project)
-        val commitList: List<Commit> = GitClientImpl(supportRoot).getGitLog(
-            GitCommitRange(
-                fromExclusive = "",
-                untilInclusive = "HEAD",
-                n = 1
-            ),
-            keepMerges = true,
-            fullProjectDir = supportRoot
-        )
-        if (commitList.size < 1) {
+    private fun getFrameworksSupportCommitShaAtHead(): String {
+        val commitList: List<Commit> = GitClientImpl(project.getSupportRootFolder(), logger)
+            .getGitLog(
+                GitCommitRange(
+                    fromExclusive = "",
+                    untilInclusive = "HEAD",
+                    n = 1
+                ),
+                keepMerges = true,
+                fullProjectDir = project.getSupportRootFolder()
+            )
+        if (commitList.isEmpty()) {
             throw RuntimeException("Failed to find git commit for HEAD!")
         }
         return commitList.first().sha
@@ -95,7 +92,7 @@ open class CreateLibraryBuildInfoFileTask : DefaultTask() {
                         "output directory: ${project.getBuildInfoDirectory()}")
             }
         }
-        var resolvedOutputFile: File = outputFile.get()
+        val resolvedOutputFile: File = outputFile.get()
         if (!resolvedOutputFile.exists()) {
             if (!resolvedOutputFile.createNewFile()) {
                 throw RuntimeException("Failed to create " +
@@ -115,7 +112,7 @@ open class CreateLibraryBuildInfoFileTask : DefaultTask() {
         libraryBuildInfoFile.groupId = project.group.toString()
         libraryBuildInfoFile.version = project.version.toString()
         libraryBuildInfoFile.path = getProjectSpecificDirectory()
-        libraryBuildInfoFile.sha = getCommitShaAtHead()
+        libraryBuildInfoFile.sha = getFrameworksSupportCommitShaAtHead()
         libraryBuildInfoFile.groupIdRequiresSameVersion = requiresSameVersion()
         val libraryDependencies = ArrayList<LibraryBuildInfoFile.Dependency>()
         val checks = ArrayList<LibraryBuildInfoFile.Check>()
@@ -124,7 +121,10 @@ open class CreateLibraryBuildInfoFileTask : DefaultTask() {
         val versionChecker = project.property("versionChecker") as GMavenVersionChecker
         project.configurations.filter {
             /* Ignore test configuration dependencies */
-            !it.name.contains("test", ignoreCase = true)
+            !it.name.contains("test", ignoreCase = true) &&
+            /* Ignore compile configuration dependencies */
+            !it.name.contains("compileClasspath", ignoreCase = true) &&
+            !it.name.contains("compileOnly", ignoreCase = true)
         }.forEach { configuration ->
             configuration.allDependencies.forEach { dep ->
                 // Only consider androidx dependencies

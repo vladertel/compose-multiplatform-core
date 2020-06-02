@@ -16,6 +16,8 @@
 
 package androidx.camera.view;
 
+import static androidx.camera.testing.SurfaceTextureProvider.createSurfaceTextureProvider;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assume.assumeTrue;
@@ -25,21 +27,25 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
+import android.util.Size;
+import android.view.Display;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
-import androidx.camera.camera2.Camera2AppConfig;
-import androidx.camera.core.AppConfig;
+import androidx.camera.camera2.Camera2Config;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraX;
+import androidx.camera.core.CameraXConfig;
 import androidx.camera.core.DisplayOrientedMeteringPointFactory;
 import androidx.camera.core.MeteringPoint;
 import androidx.camera.core.MeteringPointFactory;
 import androidx.camera.core.Preview;
-import androidx.camera.core.PreviewConfig;
 import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.CoreAppTestUtil;
+import androidx.camera.testing.SurfaceTextureProvider;
 import androidx.camera.testing.fakes.FakeActivity;
 import androidx.camera.testing.fakes.FakeLifecycleOwner;
 import androidx.test.core.app.ApplicationProvider;
@@ -64,6 +70,11 @@ import java.util.concurrent.TimeUnit;
 @RunWith(AndroidJUnit4.class)
 public class TextureViewMeteringPointFactoryTest {
     public static final float TOLERANCE = 0.000001f;
+    private static final CameraSelector FRONT_CAM =
+            new CameraSelector.Builder().requireLensFacing(
+                    CameraSelector.LENS_FACING_FRONT).build();
+    private static final CameraSelector BACK_CAM =
+            new CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build();
     @Rule
     public GrantPermissionRule mRuntimePermissionRule = GrantPermissionRule.grant(
             Manifest.permission.CAMERA);
@@ -81,11 +92,11 @@ public class TextureViewMeteringPointFactoryTest {
         });
     }
 
-    private static final int WAIT_FRAMECOUNT = 1;
+    private static final int WAIT_FRAMECOUNT = 3;
     private final Instrumentation mInstrumentation = InstrumentationRegistry.getInstrumentation();
     private FakeLifecycleOwner mLifecycle;
     private CountDownLatch mLatchForFrameReady;
-    private Context mContext;
+    private Display mDisplay;
     private TextureView mTextureView;
     private int mWidth;
     private int mHeight;
@@ -95,32 +106,37 @@ public class TextureViewMeteringPointFactoryTest {
         assumeTrue(CameraUtil.deviceHasCamera());
         CoreAppTestUtil.assumeCompatibleDevice();
 
-        mContext = ApplicationProvider.getApplicationContext();
-        AppConfig config = Camera2AppConfig.create(mContext);
-        CameraX.init(mContext, config);
+        Context context = ApplicationProvider.getApplicationContext();
+        WindowManager windowManager =
+                ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE));
+        mDisplay = windowManager.getDefaultDisplay();
+        CameraXConfig config = Camera2Config.defaultConfig();
+        CameraX.initialize(context, config);
         mLifecycle = new FakeLifecycleOwner();
         mLatchForFrameReady = new CountDownLatch(1);
-        mTextureView = new TextureView(mContext);
+        mTextureView = new TextureView(context);
         setContentView(mTextureView);
     }
 
     @After
     public void tearDown() throws InterruptedException, ExecutionException {
-        mInstrumentation.runOnMainSync(CameraX::unbindAll);
-        CameraX.deinit().get();
+        if (CameraX.isInitialized()) {
+            mInstrumentation.runOnMainSync(CameraX::unbindAll);
+        }
+        CameraX.shutdown().get();
     }
 
     @Test
     public void backCamera_translatedPoint_SameAsDisplayOriented() throws Throwable {
-        assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraX.LensFacing.BACK));
+        assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_BACK));
 
-        startAndWaitForCameraReady(CameraX.LensFacing.BACK);
+        startAndWaitForCameraReady(CameraSelector.LENS_FACING_BACK);
 
         TextureViewMeteringPointFactory factory = new TextureViewMeteringPointFactory(mTextureView);
 
         // Creates the DisplayOrientedMeteringPointFactory with same width / height as TextureView
         DisplayOrientedMeteringPointFactory displayFactory =
-                new DisplayOrientedMeteringPointFactory(mContext, CameraX.LensFacing.BACK,
+                new DisplayOrientedMeteringPointFactory(mDisplay, BACK_CAM,
                         mTextureView.getWidth(), mTextureView.getHeight());
 
         // Uses DisplayOrientedMeteringPointFactory to verify if coordinates are correct.
@@ -131,15 +147,15 @@ public class TextureViewMeteringPointFactoryTest {
 
     @Test
     public void frontCamera_translatedPoint_SameAsDisplayOriented() throws Throwable {
-        assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraX.LensFacing.FRONT));
+        assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_FRONT));
 
-        startAndWaitForCameraReady(CameraX.LensFacing.FRONT);
+        startAndWaitForCameraReady(CameraSelector.LENS_FACING_FRONT);
 
         TextureViewMeteringPointFactory factory = new TextureViewMeteringPointFactory(mTextureView);
 
         // Creates the DisplayOrientedMeteringPointFactory with same width / height as TextureView
         DisplayOrientedMeteringPointFactory displayFactory =
-                new DisplayOrientedMeteringPointFactory(mContext, CameraX.LensFacing.FRONT,
+                new DisplayOrientedMeteringPointFactory(mDisplay, FRONT_CAM,
                         mWidth, mHeight);
 
         // Uses DisplayOrientedMeteringPointFactory to verify if coordinates are correct.
@@ -152,7 +168,7 @@ public class TextureViewMeteringPointFactoryTest {
 
     @Test
     public void xy_OutOfRange() throws Throwable {
-        startAndWaitForCameraReady(CameraX.LensFacing.BACK);
+        startAndWaitForCameraReady(CameraSelector.LENS_FACING_BACK);
 
         TextureViewMeteringPointFactory factory = new TextureViewMeteringPointFactory(mTextureView);
 
@@ -182,55 +198,66 @@ public class TextureViewMeteringPointFactoryTest {
     }
 
     private boolean isValid(MeteringPoint pt) {
-        boolean xValid = pt.getNormalizedCropRegionX() >= 0 && pt.getNormalizedCropRegionX() <= 1f;
-        boolean yValid = pt.getNormalizedCropRegionY() >= 0 && pt.getNormalizedCropRegionY() <= 1f;
+        boolean xValid = pt.getX() >= 0 && pt.getX() <= 1f;
+        boolean yValid = pt.getY() >= 0 && pt.getY() <= 1f;
         return xValid && yValid;
     }
 
-    private void startAndWaitForCameraReady(CameraX.LensFacing lensFacing)
+    private void startAndWaitForCameraReady(@CameraSelector.LensFacing int lensFacing)
             throws InterruptedException {
-        PreviewConfig.Builder previewConfigBuilder =
-                new PreviewConfig.Builder()
-                        .setLensFacing(lensFacing);
+        Preview preview = new Preview.Builder().build();
+        mInstrumentation.runOnMainSync(() -> {
+            preview.setSurfaceProvider(createSurfaceTextureProvider(
+                    new SurfaceTextureProvider.SurfaceTextureCallback() {
+                        @Override
+                        public void onSurfaceTextureReady(@NonNull SurfaceTexture surfaceTexture,
+                                @NonNull Size resolution) {
+                            ViewGroup viewGroup = (ViewGroup) mTextureView.getParent();
+                            viewGroup.removeView(mTextureView);
+                            viewGroup.addView(mTextureView);
+                            mTextureView.setSurfaceTexture(surfaceTexture);
+                        }
 
-        Preview preview = new Preview(previewConfigBuilder.build());
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                preview.setOnPreviewOutputUpdateListener(
-                        new Preview.OnPreviewOutputUpdateListener() {
-                            @Override
-                            public void onUpdated(@NonNull Preview.PreviewOutput output) {
-                                mActivityRule.getActivity().runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        ViewGroup viewGroup = (ViewGroup) mTextureView.getParent();
-                                        viewGroup.removeView(mTextureView);
-                                        viewGroup.addView(mTextureView);
+                        @Override
+                        public void onSafeToRelease(@NonNull SurfaceTexture surfaceTexture) {
+                            surfaceTexture.release();
+                        }
+                    }));
 
-                                        mTextureView.setSurfaceTexture(output.getSurfaceTexture());
-                                        output.getSurfaceTexture().setOnFrameAvailableListener(
-                                                new SurfaceTexture.OnFrameAvailableListener() {
-                                                    int mFrameCount = 0;
-                                                    @Override
-                                                    public void onFrameAvailable(
-                                                            SurfaceTexture surfaceTexture) {
-                                                        mFrameCount++;
-                                                        if (mFrameCount == WAIT_FRAMECOUNT) {
-                                                            mLatchForFrameReady.countDown();
-                                                        }
-                                                    }
-                                                });
-                                    }
-                                });
-                            }
-                        });
+            mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+                int mFrameCount = 0;
+                @Override
+                public void onSurfaceTextureAvailable(SurfaceTexture surface, int width,
+                        int height) {
 
-                // SurfaceTexture#getTransformMatrix is initialized properly when camera starts
-                // to output.
-                CameraX.bindToLifecycle(mLifecycle, preview);
-                mLifecycle.startAndResume();
-            }
+                }
+
+                @Override
+                public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width,
+                        int height) {
+
+                }
+
+                @Override
+                public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                    return true;
+                }
+
+                @Override
+                public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+                    mFrameCount++;
+                    if (mFrameCount == WAIT_FRAMECOUNT) {
+                        mLatchForFrameReady.countDown();
+                    }
+                }
+            });
+            CameraSelector cameraSelector =
+                    new CameraSelector.Builder().requireLensFacing(lensFacing).build();
+
+            // SurfaceTexture#getTransformMatrix is initialized properly when camera starts
+            // to output.
+            CameraX.bindToLifecycle(mLifecycle, cameraSelector, preview);
+            mLifecycle.startAndResume();
         });
 
         mLatchForFrameReady.await(3, TimeUnit.SECONDS);
@@ -247,9 +274,9 @@ public class TextureViewMeteringPointFactoryTest {
         point1 = factory1.createPoint(0f, 0f);
         point2 = factory2.createPoint(0f, 0f);
         assertThat(isValid(point1)).isTrue();
-        Assert.assertEquals(point1.getNormalizedCropRegionX(), point2.getNormalizedCropRegionX(),
+        Assert.assertEquals(point1.getX(), point2.getX(),
                 TOLERANCE);
-        Assert.assertEquals(point1.getNormalizedCropRegionY(), point2.getNormalizedCropRegionY(),
+        Assert.assertEquals(point1.getY(), point2.getY(),
                 TOLERANCE);
 
         // left-bottom corner
@@ -257,9 +284,9 @@ public class TextureViewMeteringPointFactoryTest {
         point2 = factory2.createPoint(0f, mHeight);
 
         assertThat(isValid(point1)).isTrue();
-        Assert.assertEquals(point1.getNormalizedCropRegionX(), point2.getNormalizedCropRegionX(),
+        Assert.assertEquals(point1.getX(), point2.getX(),
                 TOLERANCE);
-        Assert.assertEquals(point1.getNormalizedCropRegionY(), point2.getNormalizedCropRegionY(),
+        Assert.assertEquals(point1.getY(), point2.getY(),
                 TOLERANCE);
 
         // right-top corner
@@ -267,9 +294,9 @@ public class TextureViewMeteringPointFactoryTest {
         point2 = factory2.createPoint(mWidth, 0f);
 
         assertThat(isValid(point1)).isTrue();
-        Assert.assertEquals(point1.getNormalizedCropRegionX(), point2.getNormalizedCropRegionX(),
+        Assert.assertEquals(point1.getX(), point2.getX(),
                 TOLERANCE);
-        Assert.assertEquals(point1.getNormalizedCropRegionY(), point2.getNormalizedCropRegionY(),
+        Assert.assertEquals(point1.getY(), point2.getY(),
                 TOLERANCE);
 
         // right-bottom corner
@@ -277,9 +304,9 @@ public class TextureViewMeteringPointFactoryTest {
         point2 = factory2.createPoint(mWidth, mHeight);
 
         assertThat(isValid(point1)).isTrue();
-        Assert.assertEquals(point1.getNormalizedCropRegionX(), point2.getNormalizedCropRegionX(),
+        Assert.assertEquals(point1.getX(), point2.getX(),
                 TOLERANCE);
-        Assert.assertEquals(point1.getNormalizedCropRegionY(), point2.getNormalizedCropRegionY(),
+        Assert.assertEquals(point1.getY(), point2.getY(),
                 TOLERANCE);
 
         // some random point
@@ -287,9 +314,9 @@ public class TextureViewMeteringPointFactoryTest {
         point2 = factory2.createPoint(100, 120);
 
         assertThat(isValid(point1)).isTrue();
-        Assert.assertEquals(point1.getNormalizedCropRegionX(), point2.getNormalizedCropRegionX(),
+        Assert.assertEquals(point1.getX(), point2.getX(),
                 TOLERANCE);
-        Assert.assertEquals(point1.getNormalizedCropRegionY(), point2.getNormalizedCropRegionY(),
+        Assert.assertEquals(point1.getY(), point2.getY(),
                 TOLERANCE);
     }
 }

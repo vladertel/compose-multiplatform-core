@@ -20,12 +20,18 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.core.CameraInfoInternal;
-import androidx.camera.core.CameraOrientationUtil;
-import androidx.camera.core.CameraX.LensFacing;
-import androidx.camera.core.ImageOutputConfig.RotationValue;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.TorchState;
+import androidx.camera.core.ZoomState;
+import androidx.camera.core.impl.CameraCaptureCallback;
+import androidx.camera.core.impl.CameraInfoInternal;
+import androidx.camera.core.impl.ImageOutputConfig.RotationValue;
+import androidx.camera.core.impl.utils.CameraOrientationUtil;
+import androidx.camera.core.internal.ImmutableZoomState;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+
+import java.util.concurrent.Executor;
 
 /**
  * Information for a fake camera.
@@ -33,26 +39,45 @@ import androidx.lifecycle.MutableLiveData;
  * <p>This camera info can be constructed with fake values.
  */
 public final class FakeCameraInfoInternal implements CameraInfoInternal {
-
+    private final String mCameraId;
     private final int mSensorRotation;
-    private final LensFacing mLensFacing;
-    private MutableLiveData<Boolean> mFlashAvailability;
+    @CameraSelector.LensFacing
+    private final int mLensFacing;
+    private final boolean mHasFlashUnit = true;
+    private MutableLiveData<Integer> mTorchState = new MutableLiveData<>(TorchState.OFF);
+
+    private final MutableLiveData<ZoomState> mZoomLiveData;
 
     public FakeCameraInfoInternal() {
-        this(/*sensorRotation=*/ 0, /*lensFacing=*/ LensFacing.BACK);
-        mFlashAvailability = new MutableLiveData<>(Boolean.TRUE);
+        this(/*sensorRotation=*/ 0, /*lensFacing=*/ CameraSelector.LENS_FACING_BACK);
     }
 
-    public FakeCameraInfoInternal(int sensorRotation, @NonNull LensFacing lensFacing) {
+    public FakeCameraInfoInternal(@NonNull String cameraId) {
+        this(cameraId, 0, CameraSelector.LENS_FACING_BACK);
+    }
+
+    public FakeCameraInfoInternal(int sensorRotation, @CameraSelector.LensFacing int lensFacing) {
+        this("0", sensorRotation, lensFacing);
+    }
+
+    public FakeCameraInfoInternal(@NonNull String cameraId, int sensorRotation,
+            @CameraSelector.LensFacing int lensFacing) {
+        mCameraId = cameraId;
         mSensorRotation = sensorRotation;
         mLensFacing = lensFacing;
-        mFlashAvailability = new MutableLiveData<>(Boolean.TRUE);
+        mZoomLiveData = new MutableLiveData<>(ImmutableZoomState.create(1.0f, 4.0f, 1.0f, 0.0f));
     }
 
     @Nullable
     @Override
-    public LensFacing getLensFacing() {
+    public Integer getLensFacing() {
         return mLensFacing;
+    }
+
+    @NonNull
+    @Override
+    public String getCameraId() {
+        return mCameraId;
     }
 
     @Override
@@ -62,7 +87,7 @@ public final class FakeCameraInfoInternal implements CameraInfoInternal {
         // Currently this assumes that a back-facing camera is always opposite to the screen.
         // This may not be the case for all devices, so in the future we may need to handle that
         // scenario.
-        boolean isOppositeFacingScreen = LensFacing.BACK.equals(getLensFacing());
+        boolean isOppositeFacingScreen = (CameraSelector.LENS_FACING_BACK == getLensFacing());
         return CameraOrientationUtil.getRelativeImageRotation(
                 relativeRotationDegrees,
                 mSensorRotation,
@@ -74,9 +99,37 @@ public final class FakeCameraInfoInternal implements CameraInfoInternal {
         return getSensorRotationDegrees(Surface.ROTATION_0);
     }
 
+    @Override
+    public boolean hasFlashUnit() {
+        return mHasFlashUnit;
+    }
+
     @NonNull
     @Override
-    public LiveData<Boolean> isFlashAvailable() {
-        return mFlashAvailability;
+    public LiveData<Integer> getTorchState() {
+        return mTorchState;
+    }
+
+    @NonNull
+    @Override
+    public LiveData<ZoomState> getZoomState() {
+        return mZoomLiveData;
+    }
+
+    @NonNull
+    @Override
+    public String getImplementationType() {
+        return IMPLEMENTATION_TYPE_FAKE;
+    }
+
+    @Override
+    public void addSessionCaptureCallback(@NonNull Executor executor,
+            @NonNull CameraCaptureCallback callback) {
+        throw new UnsupportedOperationException("Not Implemented");
+    }
+
+    @Override
+    public void removeSessionCaptureCallback(@NonNull CameraCaptureCallback callback) {
+        throw new UnsupportedOperationException("Not Implemented");
     }
 }

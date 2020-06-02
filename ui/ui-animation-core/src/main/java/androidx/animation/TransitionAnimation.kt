@@ -17,15 +17,19 @@
 package androidx.animation
 
 import android.util.Log
-import android.view.Choreographer
 import androidx.animation.InterruptionHandling.UNINTERRUPTIBLE
+import androidx.annotation.RestrictTo
 
 /**
- * [TransitionAnimation] is responsible for animating from one set of property values (i.e. one
- * [TransitionState]) to another. More specifically, it reads the property values out of the new
- * state that it is going to, as well as the animations defined for the properties, and run these
- * animations until all properties have reached their pre-defined values in the new state. When no
- * animation is specified for a property, a default [Physics] animation will be used.
+ * [TransitionAnimation] is the underlying animation used in [androidx.ui.animation.Transition] for
+ * animating from one set of property values (i.e. one [TransitionState]) to another. In compose,
+ * it is recommended to create such an animation using [androidx.ui.animation.Transition],
+ * instead of instantiating [TransitionAnimation] directly.
+ *
+ * [TransitionAnimation] reads the property values out of the start and end state,  as well as the
+ * animations defined for each state pair for each property, and run these animations until all
+ * properties have reached their pre-defined values in the new state. When no animation is specified
+ * for a property, a default [SpringAnimation] animation will be used.
  *
  * [TransitionAnimation] may be interrupted while the animation is on-going by a request to go
  * to another state. [TransitionAnimation] ensures that all the animating properties preserve their
@@ -33,32 +37,65 @@ import androidx.animation.InterruptionHandling.UNINTERRUPTIBLE
  *
  * Once a [TransitionDefinition] is instantiated, a [TransitionAnimation] can be created via
  * [TransitionDefinition.createAnimation].
+ *
+ * @see [androidx.ui.animation.Transition]
  */
-// TODO: refactor out dependency on choreographer
-class TransitionAnimation<T> : Choreographer.FrameCallback {
+class TransitionAnimation<T>(
+    internal val def: TransitionDefinition<T>,
+    private val clock: AnimationClockObservable,
+    initState: T? = null
+) : TransitionState {
 
     var onUpdate: (() -> Unit)? = null
     var onStateChangeFinished: ((T) -> Unit)? = null
+    var isRunning = false
+        private set
+
     private val UNSET = -1L
-    private var def: TransitionDefinition<T>
     private var fromState: StateImpl<T>
     private var toState: StateImpl<T>
     private val currentState: AnimationState<T>
     private var startTime: Long = UNSET
     private var lastFrameTime: Long = UNSET
     private var pendingState: StateImpl<T>? = null
-    private var currentAnimations: MutableMap<PropKey<Any>, Animation<Any>> = mutableMapOf()
-    private var startVelocityMap: MutableMap<PropKey<Any>, Float> = mutableMapOf()
-    private var isRunning = false
+
+    // These animation wrappers contains the start/end value and start velocities for each animation
+    // run, to make it convenient to query current values/velocities based on play time. They will
+    // be thrown away after each animation run, as we expect start/end value and start
+    // velocities to be dynamic. The stateless animation that the wrapper wraps around will be
+    // re-used as they are stateless.
+    private var currentAnimWrappers: MutableMap<
+            PropKey<Any, AnimationVector>,
+            AnimationWrapper<Any, AnimationVector>
+            > = mutableMapOf()
+    private var startVelocityMap: MutableMap<PropKey<Any, AnimationVector>, Any> = mutableMapOf()
+
+    // Named class for animation clock observer to help with tools' reflection.
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    inner class TransitionAnimationClockObserver : AnimationClockObserver {
+        // This API is intended for tools' use only. Hence the @RestrictTo.
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        val animation: TransitionAnimation<T> = this@TransitionAnimation
+        override fun onAnimationFrame(frameTimeMillis: Long) {
+            doAnimationFrame(frameTimeMillis)
+        }
+    }
+    private val animationClockObserver: AnimationClockObserver = TransitionAnimationClockObserver()
 
     // TODO("Create a more efficient code path for default only transition def")
 
-    internal constructor(def: TransitionDefinition<T>) {
-        this.def = def
-        currentState = AnimationState(def.defaultState, def.defaultState.name)
+    init {
+        // If an initial state is specified in the ctor, use that instead of the default state.
+        val defaultState: StateImpl<T>
+        if (initState == null) {
+            defaultState = def.defaultState
+        } else {
+            defaultState = def.states[initState]!!
+        }
+        currentState = AnimationState(defaultState, defaultState.name)
         // Need to come up with a better plan to avoid the foot gun of accidentally modifying state
-        fromState = def.defaultState
-        toState = def.defaultState
+        fromState = defaultState
+        toState = defaultState
     }
 
     // Interpolate current state and the new state
@@ -79,24 +116,24 @@ class TransitionAnimation<T> : Choreographer.FrameCallback {
         // TODO: Support different interruption types
         // For now assume continuing with the same value,  and for floats the same velocity
         for ((prop, _) in newState.props) {
-            val startVelocity = startVelocityMap[prop] ?: 0f
-            val currentVelocity = currentAnimations[prop]?.getVelocity(
-                playTime, fromState[prop], toState[prop], startVelocity,
-                prop::interpolate
-            ) ?: 0f
-            startVelocityMap[prop] = currentVelocity
-            currentAnimations[prop] = transitionSpec.getAnimationForProp(prop)
+            val currentVelocity = currentAnimWrappers[prop]?.getVelocity(playTime)
+            currentAnimWrappers[prop] = prop.createAnimationWrapper(
+                transitionSpec.getAnimationForProp(prop), currentState[prop], currentVelocity,
+                newState[prop]
+            )
+
             // TODO: Will need to track a few timelines if we support partially defined list of
             // props in each state.
         }
-
-        startAnimation()
 
         fromState = AnimationState(currentState, toState.name)
         toState = newState
         if (DEBUG) {
             Log.w("TransAnim", "Animating to new state: ${toState.name}")
         }
+
+        // Start animation should be called after all the setup has been done
+        startAnimation()
     }
 
     private fun getPlayTime(): Long {
@@ -130,24 +167,15 @@ class TransitionAnimation<T> : Choreographer.FrameCallback {
      *
      * @param propKey Property key (defined in [TransitionDefinition]) for a specific property
      */
-    operator fun <T> get(propKey: PropKey<T>): T {
+    override operator fun <T, V : AnimationVector> get(propKey: PropKey<T, V>): T {
         return currentState[propKey]
-    }
-
-    // TODO: Make this internal
-    override fun doFrame(frameTimeNanos: Long) {
-        if (isRunning) {
-            doAnimationFrame(frameTimeNanos / 1000000L)
-            // TODO: Use refactor out all the dependencies on Choreographer
-            Choreographer.getInstance().postFrameCallback(this)
-        }
     }
 
     // Start animation if not running, otherwise reset start time
     private fun startAnimation() {
         if (!isRunning) {
             isRunning = true
-            Choreographer.getInstance().postFrameCallback(this)
+            clock.subscribe(animationClockObserver)
         } else {
             startTime = lastFrameTime
         }
@@ -161,24 +189,19 @@ class TransitionAnimation<T> : Choreographer.FrameCallback {
         }
 
         val playTime = getPlayTime()
-        for ((prop, animation) in currentAnimations) {
-            val velocity: Float = startVelocityMap[prop] ?: 0f
-            currentState[prop] =
-                animation.getValue(playTime, fromState[prop], toState[prop], velocity,
-                    prop::interpolate)
+        for ((prop, animation) in currentAnimWrappers) {
+            currentState[prop] = animation.getValue(playTime)
         }
 
         // Prune the finished animations
-        currentAnimations.entries.removeAll {
-            val prop = it.key
-            val velocity: Float = startVelocityMap[prop] ?: 0f
-            it.value.isFinished(playTime, fromState[prop], toState[prop], velocity)
+        currentAnimWrappers.entries.removeAll {
+            it.value.isFinished(playTime)
         }
 
         onUpdate?.invoke()
 
         // call end animation when all animations end
-        if (currentAnimations.isEmpty()) {
+        if (currentAnimWrappers.isEmpty()) {
             // All animations have finished. Snap all values to end value
             for (prop in toState.props.keys) {
                 currentState[prop] = toState[prop]
@@ -205,11 +228,21 @@ class TransitionAnimation<T> : Choreographer.FrameCallback {
     }
 
     private fun endAnimation() {
-        Choreographer.getInstance().removeFrameCallback(this)
+        clock.unsubscribe(animationClockObserver)
         startTime = UNSET
         lastFrameTime = UNSET
         isRunning = false
     }
+}
+
+internal fun <T, V : AnimationVector> PropKey<T, V>.createAnimationWrapper(
+    anim: Animation<V>,
+    start: T,
+    startVelocity: V?,
+    end: T
+): AnimationWrapper<T, V> {
+    val velocity: V = startVelocity ?: typeConverter.convertToVector(start).newInstance()
+    return TargetBasedAnimationWrapper(start, velocity, end, anim, typeConverter)
 }
 
 /**
@@ -220,14 +253,13 @@ private class AnimationState<T>(state: StateImpl<T>, name: T) : StateImpl<T>(nam
     init {
         for ((prop, value) in state.props) {
             // Make a copy of the new values
-            val newValue = prop.interpolate(value, value, 0f)
-            props[prop] = newValue
+            props[prop] = value
         }
     }
 
-    override operator fun <T> set(propKey: PropKey<T>, prop: T) {
+    override operator fun <T, V : AnimationVector> set(propKey: PropKey<T, V>, prop: T) {
         @Suppress("UNCHECKED_CAST")
-        propKey as PropKey<Any>
+        propKey as PropKey<Any, AnimationVector>
         props[propKey] = prop as Any
     }
 }

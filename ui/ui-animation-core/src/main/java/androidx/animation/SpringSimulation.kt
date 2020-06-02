@@ -16,6 +16,10 @@
 
 package androidx.animation
 
+import androidx.ui.util.packFloats
+import androidx.ui.util.unpackFloat1
+import androidx.ui.util.unpackFloat2
+
 /**
  * Spring Simulation simulates spring physics, and allows you to query the motion (i.e. value and
  * velocity) at certain time in the future based on the starting velocity and value.
@@ -33,8 +37,15 @@ package androidx.animation
  * damping (i.e. damping ratio = 0), the mass will oscillate forever.
  */
 
-// TODO(tianliu): make this inline when inline classes are supported
-internal data class Motion(val value: Float, val velocity: Float)
+@Suppress("EXPERIMENTAL_FEATURE_WARNING")
+internal inline class Motion(val packedValue: Long) {
+    val value: Float
+        get() = unpackFloat1(packedValue)
+    val velocity: Float
+        get() = unpackFloat2(packedValue)
+}
+
+internal fun Motion(value: Float, velocity: Float) = Motion(packFloats(value, velocity))
 
 // This multiplier is used to calculate the velocity threshold given a certain value threshold.
 // The idea is that if it takes >= 1 frame to move the value threshold amount, then the velocity
@@ -47,15 +58,10 @@ internal val UNSET = Float.MAX_VALUE
 internal class SpringSimulation(var finalPosition: Float) {
 
     // Natural frequency
-    private var naturalFreq = Math.sqrt(Physics.StiffnessVeryLow.toDouble())
+    private var naturalFreq = Math.sqrt(Spring.StiffnessVeryLow.toDouble())
 
     // Indicates whether the spring has been initialized
     private var initialized = false
-
-    // Threshold for velocity and value to determine when it's reasonable to assume that the spring
-    // is approximately at rest.
-    private var valueThreshold: Double = 0.005
-    private var velocityThreshold: Double = 0.3125
 
     // Intermediate values to simplify the spring function calculation per frame.
     private var gammaPlus: Double = 0.0
@@ -83,7 +89,7 @@ internal class SpringSimulation(var finalPosition: Float) {
      *
      * @return damping ratio of the spring
      */
-    var dampingRatio: Float = Physics.DampingRatioNoBouncy
+    var dampingRatio: Float = Spring.DampingRatioNoBouncy
         set(value) {
             if (value < 0) {
                 throw IllegalArgumentException("Damping ratio must be non-negative")
@@ -102,24 +108,6 @@ internal class SpringSimulation(var finalPosition: Float) {
         val c = 2.0 * naturalFreq * dampingRatio
 
         return (-k * adjustedDisplacement - c * lastVelocity).toFloat()
-    }
-
-    fun isAtEquilibrium(value: Float, velocity: Float, timeElapsed: Long = 0): Boolean {
-        if (timeElapsed > 0) {
-            val (endValue, endVelocity) = updateValues(value, velocity, timeElapsed)
-            return isAtEquilibrium(endValue, endVelocity)
-        } else {
-            return isAtEquilibrium(value, velocity)
-        }
-    }
-
-    private fun isAtEquilibrium(value: Float, velocity: Float): Boolean {
-
-        if ((Math.abs(velocity) < velocityThreshold &&
-                    Math.abs(value - finalPosition) < valueThreshold)) {
-            return true
-        }
-        return false
     }
 
     /**
@@ -200,28 +188,9 @@ internal class SpringSimulation(var finalPosition: Float) {
                     Math.cos(dampedFreq * deltaT)))))
         }
 
-        var newValue = (displacement + finalPosition).toFloat()
-        var newVelocity = currentVelocity.toFloat()
-        if (isAtEquilibrium(newValue, newVelocity)) {
-            newValue = finalPosition
-            newVelocity = 0f
-        }
+        val newValue = (displacement + finalPosition).toFloat()
+        val newVelocity = currentVelocity.toFloat()
 
         return Motion(newValue, newVelocity)
-    }
-
-    /**
-     * This threshold defines how close the animation value needs to be before the animation can
-     * finish. This default value is based on the property being animated, e.g. animations on alpha,
-     * scale, translation or rotation would have different thresholds. This value should be small
-     * enough to avoid visual glitch of "jumping to the end". But it shouldn't be so small that
-     * animations take seconds to finish.
-     *
-     * @param threshold the difference between the animation value and final spring position that
-     * is allowed to end the animation when velocity is very low
-     */
-    internal fun setValueThreshold(threshold: Double) {
-        valueThreshold = Math.abs(threshold)
-        velocityThreshold = valueThreshold * VelocityThresholdMultiplier
     }
 }

@@ -17,8 +17,6 @@
 package androidx.benchmark
 
 import android.os.Build
-import android.os.Environment.DIRECTORY_DOWNLOADS
-import android.os.Environment.getExternalStoragePublicDirectory
 import android.util.JsonWriter
 import androidx.annotation.VisibleForTesting
 import androidx.test.platform.app.InstrumentationRegistry
@@ -38,10 +36,7 @@ internal object ResultWriter {
             val packageName =
                 InstrumentationRegistry.getInstrumentation().targetContext!!.packageName
 
-            @Suppress("DEPRECATION") // Legacy code path for versions of agp older than 3.6
-            val filePath = Arguments.additionalTestOutputDir?.let { File(it) }
-                ?: getExternalStoragePublicDirectory(DIRECTORY_DOWNLOADS)
-            val file = File(filePath, "$packageName-benchmarkData.json")
+            val file = File(Arguments.testOutputDir, "$packageName-benchmarkData.json")
             writeReport(file, reports)
         }
     }
@@ -109,10 +104,35 @@ internal object ResultWriter {
             .name("params").paramsObject(report)
             .name("className").value(report.className)
             .name("totalRunTimeNs").value(report.totalRunTimeNs)
-            .name("metrics").metricsObject(report)
+            .name("metrics").metricsContainerObject(report.stats, report.data)
             .name("warmupIterations").value(report.warmupIterations)
             .name("repeatIterations").value(report.repeatIterations)
             .name("thermalThrottleSleepSeconds").value(report.thermalThrottleSleepSeconds)
+        return endObject()
+    }
+
+    private fun JsonWriter.statsObject(
+        stats: Stats
+    ): JsonWriter {
+        name("minimum").value(stats.min)
+        name("maximum").value(stats.max)
+        name("median").value(stats.median)
+        return this
+    }
+
+    private fun JsonWriter.metricsContainerObject(
+        stats: List<Stats>,
+        data: List<List<Long>>
+    ): JsonWriter {
+        beginObject()
+        for (i in 0..stats.lastIndex) {
+            name(stats[i].name).beginObject()
+            statsObject(stats[i])
+            name("runs").beginArray()
+            data[i].forEach { value(it) }
+            endArray()
+            endObject()
+        }
         return endObject()
     }
 
@@ -139,22 +159,5 @@ internal object ResultWriter {
             }
         }
         return params
-    }
-
-    private fun JsonWriter.metricsObject(report: BenchmarkState.Report): JsonWriter {
-        beginObject()
-
-        name("timeNs").beginObject()
-            .name("minimum").value(report.stats.min)
-            .name("maximum").value(report.stats.max)
-            .name("median").value(report.stats.median)
-
-        name("runs").beginArray()
-        report.data.forEach { value(it) }
-        endArray()
-
-        endObject() // timeNs
-
-        return endObject()
     }
 }

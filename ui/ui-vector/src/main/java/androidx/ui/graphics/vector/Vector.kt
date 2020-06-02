@@ -17,17 +17,20 @@
 package androidx.ui.graphics.vector
 
 import android.graphics.Matrix
-import androidx.ui.engine.geometry.Offset
+import androidx.ui.geometry.Offset
+import androidx.ui.graphics.BlendMode
+import androidx.ui.graphics.Brush
 import androidx.ui.graphics.Canvas
-import androidx.ui.graphics.Image
+import androidx.ui.graphics.Color
+import androidx.ui.graphics.ColorFilter
+import androidx.ui.graphics.ImageAsset
 import androidx.ui.graphics.Paint
 import androidx.ui.graphics.PaintingStyle
 import androidx.ui.graphics.Path
 import androidx.ui.graphics.StrokeCap
 import androidx.ui.graphics.StrokeJoin
-import androidx.ui.core.Px
-import androidx.ui.graphics.Brush
 import androidx.ui.graphics.withSave
+import androidx.ui.util.fastForEach
 import kotlin.math.ceil
 
 const val DefaultGroupName = ""
@@ -39,7 +42,7 @@ const val DefaultScaleY = 1.0f
 const val DefaultTranslationX = 0.0f
 const val DefaultTranslationY = 0.0f
 
-val EmptyPath = emptyArray<PathNode>()
+val EmptyPath = emptyList<PathNode>()
 
 /**
  * paint used to draw the cached vector graphic to the provided canvas
@@ -47,7 +50,7 @@ val EmptyPath = emptyArray<PathNode>()
 // TODO (njawad) Can we update the Compose Canvas API to make this paint optional?
 internal val EmptyPaint = Paint()
 
-inline fun PathData(block: PathBuilder.() -> Unit): Array<PathNode> =
+inline fun PathData(block: PathBuilder.() -> Unit): List<PathNode> =
     with(PathBuilder()) {
         block()
         getNodes()
@@ -60,8 +63,10 @@ const val DefaultStrokeLineMiter = 4.0f
 
 val DefaultStrokeLineCap = StrokeCap.butt
 val DefaultStrokeLineJoin = StrokeJoin.miter
+val DefaultTintBlendMode = BlendMode.srcIn
+val DefaultTintColor = Color.Transparent
 
-fun addPathNodes(pathStr: String?): Array<PathNode> =
+fun addPathNodes(pathStr: String?): List<PathNode> =
     if (pathStr == null) {
         EmptyPath
     } else {
@@ -69,45 +74,72 @@ fun addPathNodes(pathStr: String?): Array<PathNode> =
     }
 
 sealed class VNode {
+
+    /**
+     * Callback invoked whenever the node in the vector tree is modified in a way that would
+     * change the output of the Vector
+     */
+    // TODO (b/144849567) don't make this publicly accessible after the vector graphics modules
+    //  are merged
+    open var invalidateListener: (() -> Unit)? = null
+
+    fun invalidate() {
+        invalidateListener?.invoke()
+    }
+
     abstract fun draw(canvas: Canvas)
 }
 
 class VectorComponent(
-    val name: String = "",
     var viewportWidth: Float,
     var viewportHeight: Float,
-    var defaultWidth: Px,
-    var defaultHeight: Px
+    var defaultWidth: Float,
+    var defaultHeight: Float,
+    val name: String = ""
 ) : VNode() {
 
     val root = GroupComponent(this@VectorComponent.name).apply {
         pivotX = 0.0f
         pivotY = 0.0f
-        scaleX = defaultWidth.value / viewportWidth
-        scaleY = defaultHeight.value / viewportHeight
+        scaleX = defaultWidth / viewportWidth
+        scaleY = defaultHeight / viewportHeight
+        invalidateListener = {
+            isDirty = true
+        }
     }
+
+    private var isDirty: Boolean = true
+
+    private var vectorPaint: Paint? = null
 
     /**
      * Cached Image of the Vector Graphic to be re-used across draw calls
      * if the Vector graphic is not dirty
      */
     // TODO (njawad) add invalidation logic to re-draw into the offscreen Image
-    private var cachedImage: Image? = null
+    private var cachedImage: ImageAsset? = null
 
     val size: Int
         get() = root.size
 
-    override fun draw(canvas: Canvas) {
+    fun draw(canvas: Canvas, alpha: Float, colorFilter: ColorFilter?) {
         var targetImage = cachedImage
         if (targetImage == null) {
-            targetImage = Image(
-                ceil(defaultWidth.value).toInt(),
-                ceil(defaultHeight.value).toInt()
+            targetImage = ImageAsset(
+                ceil(defaultWidth).toInt(),
+                ceil(defaultHeight).toInt()
             )
             cachedImage = targetImage
-            root.draw(Canvas(targetImage))
         }
-        canvas.drawImage(targetImage, Offset.zero, EmptyPaint)
+        if (isDirty) {
+            root.draw(Canvas(targetImage))
+            isDirty = false
+        }
+        canvas.drawImage(targetImage, Offset.zero, obtainVectorPaint(alpha, colorFilter))
+    }
+
+    override fun draw(canvas: Canvas) {
+        draw(canvas, DefaultAlpha, null)
     }
 
     override fun toString(): String {
@@ -120,77 +152,120 @@ class VectorComponent(
             append("\tviewportHeight: ").append(viewportHeight).append("\n")
         }
     }
+
+    private fun obtainVectorPaint(alpha: Float, colorFilter: ColorFilter?): Paint {
+        return if (colorFilter == null && alpha == DefaultAlpha) {
+            EmptyPaint
+        } else {
+            val targetPaint = vectorPaint ?: Paint().also { vectorPaint = it }
+            val currentColorFilter = targetPaint.colorFilter
+            if (currentColorFilter != colorFilter) {
+                targetPaint.colorFilter = colorFilter
+            }
+            if (targetPaint.alpha != alpha) {
+                targetPaint.alpha = alpha
+            }
+            targetPaint
+        }
+    }
 }
 
-class PathComponent(val name: String) : VNode() {
+data class PathComponent(val name: String) : VNode() {
 
     var fill: Brush? = null
         set(value) {
-            field = value
-            updateFillPaint {
-                field?.applyTo(this)
+            if (field != value) {
+                field = value
+                updateFillPaint {
+                    field?.applyTo(this, fillAlpha)
+                }
+                invalidate()
             }
         }
 
     var fillAlpha: Float = DefaultAlpha
         set(value) {
-            field = value
-            updateFillPaint {
-                alpha = field
+            if (field != value) {
+                field = value
+                updateFillPaint {
+                    alpha = field
+                }
+                invalidate()
             }
         }
 
-    var pathData: Array<PathNode> = emptyArray()
+    var pathData: List<PathNode> = EmptyPath
         set(value) {
-            field = value
-            isPathDirty = true
+            if (field != value) {
+                field = value
+                isPathDirty = true
+                invalidate()
+            }
         }
 
     var strokeAlpha: Float = DefaultAlpha
         set(value) {
-            field = value
-            updateStrokePaint {
-                alpha = field
+            if (field != value) {
+                field = value
+                updateStrokePaint {
+                    alpha = field
+                }
+                invalidate()
             }
         }
 
     var strokeLineWidth: Float = DefaultStrokeLineWidth
         set(value) {
-            field = value
-            updateStrokePaint {
-                strokeWidth = field
+            if (field != value) {
+                field = value
+                updateStrokePaint {
+                    strokeWidth = field
+                }
+                invalidate()
             }
         }
 
     var stroke: Brush? = null
         set(value) {
-            field = value
-            updateStrokePaint {
-                field?.applyTo(this)
+            if (field != value) {
+                field = value
+                updateStrokePaint {
+                    field?.applyTo(this, strokeAlpha)
+                }
+                invalidate()
             }
         }
 
     var strokeLineCap: StrokeCap = DefaultStrokeLineCap
         set(value) {
-            field = value
-            updateStrokePaint {
-                strokeCap = field
+            if (field != value) {
+                field = value
+                updateStrokePaint {
+                    strokeCap = field
+                }
+                invalidate()
             }
         }
 
     var strokeLineJoin: StrokeJoin = DefaultStrokeLineJoin
         set(value) {
-            field = value
-            updateStrokePaint {
-                strokeJoin = field
+            if (field != value) {
+                field = value
+                updateStrokePaint {
+                    strokeJoin = field
+                }
+                invalidate()
             }
         }
 
     var strokeLineMiter: Float = DefaultStrokeLineMiter
         set(value) {
-            field = value
-            updateStrokePaint {
-                strokeMiterLimit = field
+            if (field != value) {
+                field = value
+                updateStrokePaint {
+                    strokeMiterLimit = field
+                }
+                invalidate()
             }
         }
 
@@ -214,12 +289,11 @@ class PathComponent(val name: String) : VNode() {
     private fun createStrokePaint(): Paint = Paint().apply {
         isAntiAlias = true
         style = PaintingStyle.stroke
-        alpha = strokeAlpha
         strokeWidth = strokeLineWidth
         strokeCap = strokeLineCap
         strokeJoin = strokeLineJoin
         strokeMiterLimit = strokeLineMiter
-        stroke?.applyTo(this)
+        stroke?.applyTo(this, strokeAlpha)
     }
 
     private fun updateFillPaint(fillPaintUpdater: Paint.() -> Unit) {
@@ -232,9 +306,8 @@ class PathComponent(val name: String) : VNode() {
 
     private fun createFillPaint(): Paint = Paint().apply {
         isAntiAlias = true
-        alpha = fillAlpha
         style = PaintingStyle.fill
-        fill?.applyTo(this)
+        fill?.applyTo(this, fillAlpha)
     }
 
     private fun updatePath() {
@@ -275,16 +348,19 @@ class PathComponent(val name: String) : VNode() {
     }
 }
 
-class GroupComponent(val name: String = DefaultGroupName) : VNode() {
+data class GroupComponent(val name: String = DefaultGroupName) : VNode() {
 
     private var groupMatrix: Matrix? = null
 
     private val children = mutableListOf<VNode>()
 
-    var clipPathData: Array<PathNode> = EmptyPath
+    var clipPathData: List<PathNode> = EmptyPath
         set(value) {
-            field = value
-            isClipPathDirty = true
+            if (field != value) {
+                field = value
+                isClipPathDirty = true
+                invalidate()
+            }
         }
 
     private val willClipPath: Boolean
@@ -294,6 +370,14 @@ class GroupComponent(val name: String = DefaultGroupName) : VNode() {
 
     private var clipPath: Path? = null
     private var parser: PathParser? = null
+
+    override var invalidateListener: (() -> Unit)? = null
+        set(value) {
+            field = value
+            children.fastForEach { child ->
+                child.invalidateListener = value
+            }
+        }
 
     private fun updateClipPath() {
         if (willClipPath) {
@@ -319,44 +403,65 @@ class GroupComponent(val name: String = DefaultGroupName) : VNode() {
 
     var rotation: Float = DefaultRotation
         set(value) {
-            field = value
-            isMatrixDirty = true
+            if (field != value) {
+                field = value
+                isMatrixDirty = true
+                invalidate()
+            }
         }
 
     var pivotX: Float = DefaultPivotX
         set(value) {
-            field = value
-            isMatrixDirty = true
+            if (field != value) {
+                field = value
+                isMatrixDirty = true
+                invalidate()
+            }
         }
 
     var pivotY: Float = DefaultPivotY
         set(value) {
-            field = value
-            isMatrixDirty = true
+            if (field != value) {
+                field = value
+                isMatrixDirty = true
+                invalidate()
+            }
         }
 
     var scaleX: Float = DefaultScaleX
         set(value) {
-            field = value
-            isMatrixDirty = true
+            if (field != value) {
+                field = value
+                isMatrixDirty = true
+                invalidate()
+            }
         }
 
     var scaleY: Float = DefaultScaleY
         set(value) {
-            field = value
-            isMatrixDirty = true
+            if (field != value) {
+                field = value
+                isMatrixDirty = true
+                invalidate()
+            }
         }
 
     var translationX: Float = DefaultTranslationX
         set(value) {
-            field = value
-            isMatrixDirty = true
+            if (field != value) {
+                field = value
+                isMatrixDirty = true
+                invalidate()
+            }
         }
 
     var translationY: Float = DefaultTranslationY
         set(value) {
-            field = value
-            isMatrixDirty = true
+            if (field != value) {
+                field = value
+                isMatrixDirty = true
+                invalidate()
+            }
         }
 
     private var isMatrixDirty = true
@@ -386,6 +491,8 @@ class GroupComponent(val name: String = DefaultGroupName) : VNode() {
         } else {
             children.add(instance)
         }
+        instance.invalidateListener = invalidateListener
+        invalidate()
     }
 
     fun move(from: Int, to: Int, count: Int) {
@@ -404,12 +511,15 @@ class GroupComponent(val name: String = DefaultGroupName) : VNode() {
                 children.add(to - 1, node)
             }
         }
+        invalidate()
     }
 
     fun remove(index: Int, count: Int) {
         repeat(count) {
+            children[index].invalidateListener = null
             children.removeAt(index)
         }
+        invalidate()
     }
 
     override fun draw(canvas: Canvas) {
@@ -435,7 +545,7 @@ class GroupComponent(val name: String = DefaultGroupName) : VNode() {
                 canvas.nativeCanvas.concat(matrix)
             }
 
-            for (node in children) {
+            children.fastForEach { node ->
                 node.draw(canvas)
             }
         }
@@ -446,7 +556,7 @@ class GroupComponent(val name: String = DefaultGroupName) : VNode() {
 
     override fun toString(): String {
         val sb = StringBuilder().append("VGroup: ").append(name)
-        for (node in children) {
+        children.fastForEach { node ->
             sb.append("\t").append(node.toString()).append("\n")
         }
         return sb.toString()

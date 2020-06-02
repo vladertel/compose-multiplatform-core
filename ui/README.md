@@ -40,9 +40,6 @@ To build the Material Rally app via the command line run:
 Library code for Jetpack Compose lives under the `frameworks/support/ui` directory. Additionally, sample code can be found within each module in the `integration-tests` subdirectories and the compiler and runtime code can be found in `frameworks/support/compose`.
 
 The modules within UI are structured as follows:
-* `ui-android-text/`
-
-   Android specific text stack dependent implementations
 * `ui-android-view/`
 
    Wrappers and adapters for existing Android Views
@@ -54,28 +51,30 @@ The modules within UI are structured as follows:
    Internal declarations for the animations system
 * `ui-core/`
 
-   Base classes used across the system covering primitives, graphics and drawing
+   Classes and components used across the system for layout, drawing, root
+   views, etc.
+
 * `integration-tests/demos/`
 
    Module that collects all demos across ui and packages them into one demo APK
-* `ui-framework/`
-
-   Base components exposed by the system as building blocks. This includes Draw, Layout, Text, etc.
 * `ui-layout/`
 
    Basic layout components
 * `ui-material/`
 
    Set of UI components built according to the Material spec
-* `ui-platform/`
-
-   Internal implementation that allows separation of android implementation from host-side tests
 * `ui-test/`
 
    Testing framework
 * `ui-text/`
 
-   Text engine
+   Base Text composables
+* `ui-text-core/`
+
+   Text engine that contains base text components
+* `ui-text-android/`
+
+   Android specific text stack dependent implementations
 
 ## Feedback
 To provide feedback or report bugs, please refer to the main [AndroidX contribution guide](https://android.googlesource.com/platform/frameworks/support/+/androidx-master-dev/README.md) and report your bugs [here](https://issuetracker.google.com/issues/new?component=612128)

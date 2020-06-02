@@ -39,11 +39,11 @@ android {
     }
 
     buildTypes {
-        debug {
-            testCoverageEnabled true
-        }
-
         release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),
+                    'proguard-rules.pro')
         }
     }
 }
@@ -51,12 +51,25 @@ android {
 dependencies {
     // Internal library
     implementation(project(":camera:camera-camera2"))
+    implementation(project(":camera:camera-lifecycle"))
     implementation(project(":camera:camera-view"))
+    implementation(GUAVA_ANDROID)
 
     // Lifecycle and LiveData
     implementation("androidx.lifecycle:lifecycle-livedata:2.1.0")
 
     // Android Support Library
     implementation("androidx.appcompat:appcompat:1.1.0")
+
+    // Testing framework
+    androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
+    androidTestImplementation(ANDROIDX_TEST_CORE)
+    androidTestImplementation(ANDROIDX_TEST_RUNNER)
+    androidTestImplementation(ANDROIDX_TEST_RULES)
+    androidTestImplementation(ANDROIDX_TEST_UIAUTOMATOR)
+    androidTestImplementation(ESPRESSO_CORE)
+    androidTestImplementation(project(":camera:camera-testing"))
+    androidTestImplementation(TRUTH)
+    debugImplementation("androidx.fragment:fragment-testing:1.2.3")
 }
 

@@ -20,16 +20,12 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.os.Build
-import android.os.Bundle
 import android.transition.ChangeBounds
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.view.animation.Animation
-import android.view.animation.TranslateAnimation
+import android.view.animation.AnimationUtils
 import androidx.annotation.AnimRes
 import androidx.fragment.test.R
-import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
@@ -53,12 +49,13 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
         onBackStackChangedTimes = 0
     }
 
-    // Ensure when transition duration is longer than animation duration, we will get both end
+    // Ensure when transition duration is shorter than animation duration, we will get both end
     // callbacks
     @Test
     fun transitionShorterThanAnimation() {
         with(ActivityScenario.launch(SimpleContainerActivity::class.java)) {
             val fragment = TransitionAnimationFragment()
+            fragment.exitTransition.duration = 100
 
             val fragmentManager = withActivity { supportFragmentManager }
 
@@ -66,20 +63,21 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
 
             fragmentManager.beginTransaction()
                 .setReorderingAllowed(reorderingAllowed)
-                .setCustomAnimations(ENTER, EXIT)
+                .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
                 .add(R.id.fragmentContainer, fragment)
                 .addToBackStack(null)
                 .commit()
             executePendingTransactions()
 
             assertThat(onBackStackChangedTimes).isEqualTo(1)
-
             fragment.waitForTransition()
 
             val blue = withActivity { findViewById<View>(R.id.blueSquare) }
             val green = withActivity { findViewById<View>(R.id.greenSquare) }
 
-            verifyAndClearTransition(fragment.enterTransition, null, blue, green)
+            fragment.enterTransition.verifyAndClearTransition {
+                enteringViews += listOf(blue, green)
+            }
             verifyNoOtherTransitions(fragment)
 
             val changeBoundsExitTransition = ChangeBounds().apply {
@@ -91,24 +89,26 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
             // exit transition
             fragmentManager.beginTransaction()
                 .setReorderingAllowed(reorderingAllowed)
-                .setCustomAnimations(ENTER, EXIT)
+                .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
                 .remove(fragment)
                 .addToBackStack(null)
                 .commit()
             executePendingTransactions()
 
+            assertThat(fragment.startAnimationLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
             fragment.waitForTransition()
             assertThat(fragment.exitAnimationLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
             assertThat(onBackStackChangedTimes).isEqualTo(2)
         }
     }
 
-    // Ensure when transition duration is shorter than animation duration, we will get both end
+    // Ensure when transition duration is longer than animation duration, we will get both end
     // callbacks
     @Test
     fun transitionLongerThanAnimation() {
         with(ActivityScenario.launch(SimpleContainerActivity::class.java)) {
             val fragment = TransitionAnimationFragment()
+            fragment.exitTransition.duration = 1000
 
             val fragmentManager = withActivity { supportFragmentManager }
 
@@ -116,20 +116,21 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
 
             fragmentManager.beginTransaction()
                 .setReorderingAllowed(reorderingAllowed)
-                .setCustomAnimations(ENTER, EXIT)
+                .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
                 .add(R.id.fragmentContainer, fragment)
                 .addToBackStack(null)
                 .commit()
             executePendingTransactions()
 
             assertThat(onBackStackChangedTimes).isEqualTo(1)
-
             fragment.waitForTransition()
 
             val blue = withActivity { findViewById<View>(R.id.blueSquare) }
             val green = withActivity { findViewById<View>(R.id.greenSquare) }
 
-            verifyAndClearTransition(fragment.enterTransition, null, blue, green)
+            fragment.enterTransition.verifyAndClearTransition {
+                enteringViews += listOf(blue, green)
+            }
             verifyNoOtherTransitions(fragment)
 
             val changeBoundsExitTransition = ChangeBounds().apply {
@@ -141,12 +142,13 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
             // exit transition
             fragmentManager.beginTransaction()
                 .setReorderingAllowed(reorderingAllowed)
-                .setCustomAnimations(ENTER, EXIT)
+                .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
                 .remove(fragment)
                 .addToBackStack(null)
                 .commit()
             executePendingTransactions()
 
+            assertThat(fragment.startAnimationLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
             fragment.waitForTransition()
             assertThat(fragment.exitAnimationLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
             assertThat(onBackStackChangedTimes).isEqualTo(2)
@@ -179,7 +181,9 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
             val blue = withActivity { findViewById<View>(R.id.blueSquare) }
             val green = withActivity { findViewById<View>(R.id.greenSquare) }
 
-            verifyAndClearTransition(fragment.enterTransition, null, blue, green)
+            fragment.enterTransition.verifyAndClearTransition {
+                enteringViews += listOf(blue, green)
+            }
             verifyNoOtherTransitions(fragment)
 
             val changeBoundsExitTransition = ChangeBounds().apply {
@@ -229,7 +233,9 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
             val blue = withActivity { findViewById<View>(R.id.blueSquare) }
             val green = withActivity { findViewById<View>(R.id.greenSquare) }
 
-            verifyAndClearTransition(fragment.enterTransition, null, blue, green)
+            fragment.enterTransition.verifyAndClearTransition {
+                enteringViews += listOf(blue, green)
+            }
             verifyNoOtherTransitions(fragment)
 
             val changeBoundsExitTransition = ChangeBounds().apply {
@@ -254,35 +260,23 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
     }
 
     class TransitionAnimationFragment : TransitionFragment(R.layout.scene1) {
-        lateinit var createdView: View
+        val startAnimationLatch = CountDownLatch(1)
         val exitAnimationLatch = CountDownLatch(1)
-
-        override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
-        ) = super.onCreateView(inflater, container, savedInstanceState)?.apply {
-            createdView = this
-        }
 
         override fun onCreateAnimation(transit: Int, enter: Boolean, nextAnim: Int): Animation? {
             if (nextAnim == 0) {
                 return null
             }
 
-            return TranslateAnimation(-10f, 0f, 0f, 0f).apply {
-                duration = 300
+            return AnimationUtils.loadAnimation(activity, nextAnim).apply {
                 setAnimationListener(object : Animation.AnimationListener {
-                    override fun onAnimationStart(animation: Animation) { }
+                    override fun onAnimationStart(animation: Animation) {
+                        startAnimationLatch.countDown()
+                    }
 
                     override fun onAnimationEnd(animation: Animation) {
-                        if (viewLifecycleOwner.lifecycle.currentState != Lifecycle.State.DESTROYED
-                        ) {
-                            if (!enter) {
-                                // When exiting, the view is detached after onAnimationEnd,
-                                // so wait one frame to count down the latch
-                                createdView.post { exitAnimationLatch.countDown() }
-                            }
+                        if (!enter) {
+                            exitAnimationLatch.countDown()
                         }
                     }
                     override fun onAnimationRepeat(animation: Animation) {}

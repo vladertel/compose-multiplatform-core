@@ -17,7 +17,10 @@
 package androidx.ads.identifier.benchmark;
 
 import static androidx.ads.identifier.AdvertisingIdUtils.GET_AD_ID_ACTION;
+import static androidx.ads.identifier.benchmark.SampleAdvertisingIdProvider.DUMMY_AD_ID;
 import static androidx.ads.identifier.testing.MockPackageManagerHelper.createServiceResolveInfo;
+
+import static com.google.common.truth.Truth.assertThat;
 
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -52,6 +55,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.CountDownLatch;
 
 @LargeTest
@@ -64,15 +68,21 @@ public class AdvertisingIdBenchmark {
     @Rule
     public BenchmarkRule mBenchmarkRule = new BenchmarkRule();
 
-    private MockPackageManagerHelper mMockPackageManagerHelper = new MockPackageManagerHelper();
-
     private Context mContext;
 
     @Before
     public void setUp() throws Exception {
         Context applicationContext = ApplicationProvider.getApplicationContext();
 
-        mContext = new ContextWrapper(applicationContext) {
+        mContext = mockContext(applicationContext);
+    }
+
+    private static Context mockContext(Context context) throws Exception {
+        MockPackageManagerHelper mockPackageManagerHelper = new MockPackageManagerHelper();
+        mockPackageManagerHelper.mockQueryGetAdIdServices(Lists.newArrayList(
+                createServiceResolveInfo(context.getPackageName(), SERVICE_NAME)));
+
+        return new ContextWrapper(context) {
             @Override
             public Context getApplicationContext() {
                 return this;
@@ -80,17 +90,21 @@ public class AdvertisingIdBenchmark {
 
             @Override
             public PackageManager getPackageManager() {
-                return mMockPackageManagerHelper.getMockPackageManager();
+                return mockPackageManagerHelper.getMockPackageManager();
             }
         };
-
-        mMockPackageManagerHelper.mockQueryGetAdIdServices(Lists.newArrayList(
-                createServiceResolveInfo(mContext.getPackageName(), SERVICE_NAME)));
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
+        clearAdvertisingIdConnection();
         stopAdvertisingIdService();
+    }
+
+    private void clearAdvertisingIdConnection() throws Exception {
+        Method method = AdvertisingIdClient.class.getDeclaredMethod("clearConnectionClient");
+        method.setAccessible(true);
+        method.invoke(null);
     }
 
     private void stopAdvertisingIdService() {
@@ -116,6 +130,7 @@ public class AdvertisingIdBenchmark {
                 new FutureCallback<AdvertisingIdInfo>() {
                     @Override
                     public void onSuccess(AdvertisingIdInfo advertisingIdInfo) {
+                        assertThat(advertisingIdInfo.getId()).isEqualTo(DUMMY_AD_ID);
                         countDownLatch.countDown();
                     }
 
@@ -137,8 +152,8 @@ public class AdvertisingIdBenchmark {
     }
 
     /** Get the Advertising ID on a worker thread. */
-    private class GetAdInfoWorker extends Worker {
-        GetAdInfoWorker(@NonNull Context context, @NonNull WorkerParameters params) {
+    public static class GetAdInfoWorker extends Worker {
+        public GetAdInfoWorker(@NonNull Context context, @NonNull WorkerParameters params) {
             super(context, params);
         }
 
@@ -146,7 +161,10 @@ public class AdvertisingIdBenchmark {
         @Override
         public Result doWork() {
             try {
-                AdvertisingIdClient.getAdvertisingIdInfo(mContext).get();
+                Context context = mockContext(getApplicationContext());
+                AdvertisingIdInfo advertisingIdInfo =
+                        AdvertisingIdClient.getAdvertisingIdInfo(context).get();
+                assertThat(advertisingIdInfo.getId()).isEqualTo(DUMMY_AD_ID);
             } catch (Exception e) {
                 return Result.failure();
             }
@@ -158,7 +176,7 @@ public class AdvertisingIdBenchmark {
     public void getAdvertisingIdInfo_asyncTask() throws Exception {
         final BenchmarkState state = mBenchmarkRule.getState();
         while (state.keepRunning()) {
-            new AsyncTask<Void, Void, AdvertisingIdInfo>() {
+            AdvertisingIdInfo advertisingIdInfo = new AsyncTask<Void, Void, AdvertisingIdInfo>() {
                 @Override
                 protected AdvertisingIdInfo doInBackground(Void... voids) {
                     try {
@@ -168,6 +186,7 @@ public class AdvertisingIdBenchmark {
                     }
                 }
             }.execute().get();
+            assertThat(advertisingIdInfo.getId()).isEqualTo(DUMMY_AD_ID);
         }
     }
 
@@ -177,7 +196,9 @@ public class AdvertisingIdBenchmark {
         while (state.keepRunning()) {
             Thread thread = new Thread(() -> {
                 try {
-                    AdvertisingIdClient.getAdvertisingIdInfo(mContext).get();
+                    AdvertisingIdInfo advertisingIdInfo =
+                            AdvertisingIdClient.getAdvertisingIdInfo(mContext).get();
+                    assertThat(advertisingIdInfo.getId()).isEqualTo(DUMMY_AD_ID);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

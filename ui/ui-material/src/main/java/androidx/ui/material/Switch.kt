@@ -16,64 +16,70 @@
 
 package androidx.ui.material
 
+import androidx.animation.AnimatedFloat
 import androidx.animation.TweenBuilder
 import androidx.compose.Composable
-import androidx.compose.composer
-import androidx.compose.memo
-import androidx.compose.unaryPlus
-import androidx.ui.core.DensityScope
-import androidx.ui.core.Draw
-import androidx.ui.core.PxSize
-import androidx.ui.core.dp
-import androidx.ui.core.px
-import androidx.ui.core.withDensity
-import androidx.ui.engine.geometry.Offset
+import androidx.ui.core.DensityAmbient
+import androidx.ui.core.Modifier
+import androidx.ui.foundation.Canvas
 import androidx.ui.foundation.gestures.DragDirection
-import androidx.ui.foundation.gestures.Draggable
 import androidx.ui.foundation.selection.Toggleable
-import androidx.ui.foundation.selection.ToggleableState
+import androidx.ui.geometry.Offset
 import androidx.ui.graphics.Color
-import androidx.ui.layout.Container
-import androidx.ui.layout.Padding
-import androidx.ui.layout.Wrap
-import androidx.ui.material.ripple.Ripple
-import androidx.ui.graphics.Canvas
-import androidx.ui.graphics.Paint
 import androidx.ui.graphics.StrokeCap
+import androidx.ui.graphics.drawscope.DrawScope
+import androidx.ui.graphics.drawscope.Stroke
+import androidx.ui.layout.Stack
+import androidx.ui.layout.padding
+import androidx.ui.layout.preferredSize
 import androidx.ui.material.internal.StateDraggable
-import androidx.ui.material.internal.ValueModel
+import androidx.ui.material.ripple.ripple
+import androidx.ui.semantics.Semantics
+import androidx.ui.unit.dp
 
 /**
  * A Switch is a two state toggleable component that provides on/off like options
  *
+ * @sample androidx.ui.material.samples.SwitchSample
+ *
  * @param checked whether or not this components is checked
  * @param onCheckedChange callback to be invoked when Switch is being clicked,
  * therefore the change of checked state is requested.
- * if [null], Switch appears in [checked] state and remains disabled
- * @param color optional active color for Switch,
- * by default [MaterialColors.secondaryVariant] will be used
+ * @param modifier Modifier to be applied to the switch layout
+ * @param enabled whether or not components is enabled and can be clicked to request state change
+ * @param color active color for Switch
  */
 @Composable
 fun Switch(
     checked: Boolean,
-    onCheckedChange: ((Boolean) -> Unit)?,
-    color: Color = +themeColor { secondaryVariant }
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    color: Color = MaterialTheme.colors.secondaryVariant
 ) {
-    Wrap {
-        Ripple(bounded = false) {
-            Toggleable(checked = checked, onCheckedChange = onCheckedChange) {
-                Padding(padding = DefaultSwitchPadding) {
-                    SwitchImpl(checked, onCheckedChange, color)
-                }
+    Semantics(container = true, mergeAllDescendants = true) {
+        Stack(modifier) {
+            Toggleable(
+                value = checked,
+                onValueChange = onCheckedChange,
+                enabled = enabled,
+                modifier = Modifier.ripple(bounded = false, enabled = enabled)
+            ) {
+                SwitchImpl(checked, onCheckedChange, color, Modifier.padding(DefaultSwitchPadding))
             }
         }
     }
 }
 
 @Composable
-private fun SwitchImpl(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, color: Color) {
+private fun SwitchImpl(
+    checked: Boolean,
+    onCheckedChange: ((Boolean) -> Unit)?,
+    color: Color,
+    modifier: Modifier
+) {
     val minBound = 0f
-    val maxBound = +withDensity { ThumbPathLength.toPx().value }
+    val maxBound = with(DensityAmbient.current) { ThumbPathLength.toPx() }
     StateDraggable(
         state = checked,
         onStateChange = onCheckedChange ?: {},
@@ -83,72 +89,57 @@ private fun SwitchImpl(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, 
         minValue = minBound,
         maxValue = maxBound
     ) { model ->
-        val thumbPosition = model.value
-        Container(width = SwitchWidth, height = SwitchHeight, expanded = true) {
-            DrawSwitch(
-                checked = checked,
-                checkedThumbColor = color,
-                thumbPosition = thumbPosition
-            )
-        }
+        DrawSwitch(
+            checked = checked,
+            checkedThumbColor = color,
+            thumbValue = model,
+            modifier = modifier
+        )
     }
 }
 
 @Composable
-private fun DrawSwitch(checked: Boolean, checkedThumbColor: Color, thumbPosition: Float) {
-    val thumbColor = if (checked) checkedThumbColor else +themeColor { surface }
+private fun DrawSwitch(
+    checked: Boolean,
+    checkedThumbColor: Color,
+    thumbValue: AnimatedFloat,
+    modifier: Modifier
+) {
+    val thumbColor = if (checked) checkedThumbColor else MaterialTheme.colors.surface
     val trackColor = if (checked) {
         checkedThumbColor.copy(alpha = CheckedTrackOpacity)
     } else {
-        (+themeColor { onSurface }).copy(alpha = UncheckedTrackOpacity)
+        MaterialTheme.colors.onSurface.copy(alpha = UncheckedTrackOpacity)
     }
-    Draw { canvas, parentSize ->
-        drawTrack(canvas, parentSize, trackColor)
-        drawThumb(canvas, parentSize, thumbPosition, thumbColor)
+
+    val trackStroke: Stroke
+    with(DensityAmbient.current) {
+        trackStroke = Stroke(width = TrackStrokeWidth.toPx(), cap = StrokeCap.round)
+    }
+    Canvas(modifier.preferredSize(SwitchWidth, SwitchHeight)) {
+        drawTrack(trackColor, TrackWidth.toPx(), trackStroke)
+        drawThumb(thumbValue.value, ThumbDiameter.toPx(), thumbColor)
     }
 }
 
-private fun DensityScope.drawTrack(
-    canvas: Canvas,
-    parentSize: PxSize,
-    trackColor: Color
-) {
-    val paint = Paint().apply {
-        isAntiAlias = true
-        color = trackColor
-        strokeCap = StrokeCap.round
-        strokeWidth = TrackStrokeWidth.toPx().value
-    }
-
-    val strokeRadius = TrackStrokeWidth / 2
-    val centerHeight = parentSize.height / 2
-
-    canvas.drawLine(
-        Offset(strokeRadius.toPx().value, centerHeight.value),
-        Offset((TrackWidth - strokeRadius).toPx().value, centerHeight.value),
-        paint
+private fun DrawScope.drawTrack(trackColor: Color, trackWidth: Float, stroke: Stroke) {
+    val strokeRadius = stroke.width / 2
+    drawLine(
+        trackColor,
+        Offset(strokeRadius, center.dy),
+        Offset(trackWidth - strokeRadius, center.dy),
+        stroke
     )
 }
 
-private fun DensityScope.drawThumb(
-    canvas: Canvas,
-    parentSize: PxSize,
-    position: Float,
-    thumbColor: Color
-) {
-    val paint = Paint().apply {
-        isAntiAlias = true
-        color = thumbColor
-    }
-    val centerHeight = parentSize.height / 2
-    val thumbRadius = (ThumbDiameter / 2).toPx().value
-    val x = position.px.value + thumbRadius
-
-    canvas.drawCircle(Offset(x, centerHeight.value), thumbRadius, paint)
+private fun DrawScope.drawThumb(position: Float, thumbDiameter: Float, thumbColor: Color) {
+    val thumbRadius = thumbDiameter / 2
+    val x = position + thumbRadius
+    drawCircle(thumbColor, thumbRadius, Offset(x, center.dy))
 }
 
-private val CheckedTrackOpacity = 0.54f
-private val UncheckedTrackOpacity = 0.38f
+private const val CheckedTrackOpacity = 0.54f
+private const val UncheckedTrackOpacity = 0.38f
 
 private val TrackWidth = 34.dp
 private val TrackStrokeWidth = 14.dp

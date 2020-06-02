@@ -16,28 +16,29 @@
 
 package androidx.ui.layout.test
 
+import androidx.compose.Composable
 import androidx.test.filters.SmallTest
-import androidx.ui.core.Constraints
-import androidx.ui.core.OnChildPositioned
-import androidx.ui.core.IntPx
-import androidx.ui.core.PxPosition
-import androidx.ui.core.PxSize
+import androidx.ui.core.Alignment
+import androidx.ui.core.LayoutCoordinates
+import androidx.ui.core.Modifier
 import androidx.ui.core.Ref
-import androidx.ui.core.WithConstraints
-import androidx.ui.core.dp
-import androidx.ui.core.ipx
-import androidx.ui.core.px
-import androidx.ui.core.withDensity
-import androidx.ui.layout.Align
-import androidx.ui.layout.ConstrainedBox
-import androidx.ui.layout.Container
+import androidx.ui.core.onPositioned
 import androidx.ui.layout.DpConstraints
 import androidx.ui.layout.Stack
-import androidx.compose.Composable
-import androidx.compose.composer
-import androidx.ui.core.Alignment
-import androidx.ui.layout.AspectRatio
+import androidx.ui.layout.aspectRatio
+import androidx.ui.layout.fillMaxSize
+import androidx.ui.layout.padding
+import androidx.ui.layout.preferredSize
+import androidx.ui.layout.rtl
+import androidx.ui.layout.wrapContentSize
+import androidx.ui.unit.IntPx
+import androidx.ui.unit.IntPxSize
+import androidx.ui.unit.PxPosition
+import androidx.ui.unit.dp
+import androidx.ui.unit.ipx
+import androidx.ui.unit.toPx
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -48,354 +49,329 @@ import java.util.concurrent.TimeUnit
 @RunWith(JUnit4::class)
 class StackTest : LayoutTest() {
     @Test
-    fun testStack() = withDensity(density) {
+    fun testStack() = with(density) {
         val sizeDp = 50.dp
         val size = sizeDp.toIntPx()
 
         val positionedLatch = CountDownLatch(3)
-        val stackSize = Ref<PxSize>()
-        val alignedChildSize = Ref<PxSize>()
+        val stackSize = Ref<IntPxSize>()
+        val alignedChildSize = Ref<IntPxSize>()
         val alignedChildPosition = Ref<PxPosition>()
-        val positionedChildSize = Ref<PxSize>()
+        val positionedChildSize = Ref<IntPxSize>()
         val positionedChildPosition = Ref<PxPosition>()
         show {
-            Align(alignment = Alignment.TopLeft) {
-                OnChildPositioned(onPositioned = { coordinates ->
-                    stackSize.value = coordinates.size
-                    positionedLatch.countDown()
-                }) {
-                    Stack {
-                        aligned(Alignment.BottomRight) {
-                            Container(width = sizeDp, height = sizeDp) {
-                                SaveLayoutInfo(
-                                    size = alignedChildSize,
-                                    position = alignedChildPosition,
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(
-                            leftInset = 10.dp,
-                            topInset = 10.dp,
-                            rightInset = 10.dp,
-                            bottomInset = 10.dp
-                        ) {
-                            Container {
-                                SaveLayoutInfo(
-                                    size = positionedChildSize,
-                                    position = positionedChildPosition,
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
+            Container(alignment = Alignment.TopStart) {
+                Stack {
+                    Container(
+                        Modifier.gravity(Alignment.BottomEnd)
+                            .saveLayoutInfo(alignedChildSize, alignedChildPosition, positionedLatch)
+                            .onPositioned { coordinates: LayoutCoordinates ->
+                                stackSize.value = coordinates.size
+                                positionedLatch.countDown()
+                            },
+                        width = sizeDp,
+                        height = sizeDp
+                    ) {
+                    }
+
+                    Container(
+                        Modifier.matchParentSize()
+                            .padding(10.dp)
+                            .saveLayoutInfo(
+                                positionedChildSize,
+                                positionedChildPosition,
+                                positionedLatch
+                            )
+                    ) {
                     }
                 }
             }
         }
-        positionedLatch.await(1, TimeUnit.SECONDS)
+        assertTrue(positionedLatch.await(1, TimeUnit.SECONDS))
 
-        assertEquals(PxSize(size, size), stackSize.value)
-        assertEquals(PxSize(size, size), alignedChildSize.value)
-        assertEquals(PxPosition(0.px, 0.px), alignedChildPosition.value)
-        assertEquals(PxSize(30.dp.toIntPx(), 30.dp.toIntPx()), positionedChildSize.value)
+        assertEquals(IntPxSize(size, size), stackSize.value)
+        assertEquals(IntPxSize(size, size), alignedChildSize.value)
+        assertEquals(PxPosition(0f, 0f), alignedChildPosition.value)
+        assertEquals(IntPxSize(30.dp.toIntPx(), 30.dp.toIntPx()), positionedChildSize.value)
         assertEquals(PxPosition(10.dp.toIntPx(), 10.dp.toIntPx()), positionedChildPosition.value)
     }
 
     @Test
-    fun testStack_withMultipleAlignedChildren() = withDensity(density) {
-        val size = 250.ipx
+    fun testStack_withMultipleAlignedChildren() = with(density) {
+        val size = 200.ipx
         val sizeDp = size.toDp()
         val doubleSizeDp = sizeDp * 2
         val doubleSize = (sizeDp * 2).toIntPx()
 
         val positionedLatch = CountDownLatch(3)
-        val stackSize = Ref<PxSize>()
-        val childSize = arrayOf(Ref<PxSize>(), Ref<PxSize>())
+        val stackSize = Ref<IntPxSize>()
+        val childSize = arrayOf(Ref<IntPxSize>(), Ref<IntPxSize>())
         val childPosition = arrayOf(Ref<PxPosition>(), Ref<PxPosition>())
         show {
-            Align(alignment = Alignment.TopLeft) {
-                OnChildPositioned(onPositioned = { coordinates ->
+            Container(alignment = Alignment.TopStart) {
+                Stack(Modifier.onPositioned { coordinates: LayoutCoordinates ->
                     stackSize.value = coordinates.size
                     positionedLatch.countDown()
                 }) {
-                    Stack {
-                        aligned(Alignment.BottomRight) {
-                            Container(width = sizeDp, height = sizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[0],
-                                    position = childPosition[0],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                            Container(width = doubleSizeDp, height = doubleSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[1],
-                                    position = childPosition[1],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
+                    Container(
+                        modifier = Modifier.gravity(Alignment.BottomEnd)
+                            .saveLayoutInfo(
+                                childSize[0],
+                                childPosition[0],
+                                positionedLatch
+                            ),
+                        width = sizeDp,
+                        height = sizeDp
+                    ) {
+                    }
+                    Container(
+                        modifier = Modifier.gravity(Alignment.BottomEnd)
+                            .saveLayoutInfo(
+                                size = childSize[1],
+                                position = childPosition[1],
+                                positionedLatch = positionedLatch
+                            ),
+                        width = doubleSizeDp,
+                        height = doubleSizeDp
+                    ) {
                     }
                 }
             }
         }
-        positionedLatch.await(1, TimeUnit.SECONDS)
+        assertTrue(positionedLatch.await(1, TimeUnit.SECONDS))
 
-        assertEquals(PxSize(doubleSize, doubleSize), stackSize.value)
-        assertEquals(PxSize(size, size), childSize[0].value)
+        assertEquals(IntPxSize(doubleSize, doubleSize), stackSize.value)
+        assertEquals(IntPxSize(size, size), childSize[0].value)
         assertEquals(PxPosition(size, size), childPosition[0].value)
-        assertEquals(PxSize(doubleSize, doubleSize), childSize[1].value)
-        assertEquals(PxPosition(0.px, 0.px), childPosition[1].value)
+        assertEquals(IntPxSize(doubleSize, doubleSize), childSize[1].value)
+        assertEquals(PxPosition(0f, 0f), childPosition[1].value)
     }
 
     @Test
-    fun testStack_withPositionedChildren() = withDensity(density) {
+    fun testStack_withStretchChildren() = with(density) {
         val size = 250.ipx
         val sizeDp = size.toDp()
         val halfSizeDp = sizeDp / 2
-        val halfSize = (sizeDp / 2).toIntPx()
-        val inset = 50.ipx
-        val insetDp = inset.toDp()
-
-        val positionedLatch = CountDownLatch(8)
-        val stackSize = Ref<PxSize>()
-        val childSize = Array(7) { Ref<PxSize>() }
-        val childPosition = Array(7) { Ref<PxPosition>() }
-        show {
-            Align(alignment = Alignment.TopLeft) {
-                OnChildPositioned(onPositioned = { coordinates ->
-                    stackSize.value = coordinates.size
-                    positionedLatch.countDown()
-                }) {
-                    Stack {
-                        aligned(Alignment.Center) {
-                            Container(width = sizeDp, height = sizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[0],
-                                    position = childPosition[0],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(leftInset = insetDp, topInset = insetDp) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[1],
-                                    position = childPosition[1],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(rightInset = insetDp, bottomInset = insetDp) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[2],
-                                    position = childPosition[2],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(leftInset = insetDp, fallbackAlignment = Alignment.BottomRight) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[3],
-                                    position = childPosition[3],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(topInset = insetDp, fallbackAlignment = Alignment.BottomRight) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[4],
-                                    position = childPosition[4],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(
-                            rightInset = insetDp,
-                            fallbackAlignment = Alignment.BottomRight
-                        ) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[5],
-                                    position = childPosition[5],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(
-                            bottomInset = insetDp,
-                            fallbackAlignment = Alignment.BottomRight
-                        ) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[6],
-                                    position = childPosition[6],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        positionedLatch.await(1, TimeUnit.SECONDS)
-
-        assertEquals(PxSize(size, size), stackSize.value)
-        assertEquals(PxSize(size, size), childSize[0].value)
-        assertEquals(PxPosition(0.px, 0.px), childPosition[0].value)
-        assertEquals(PxSize(halfSize, halfSize), childSize[1].value)
-        assertEquals(PxPosition(inset, inset), childPosition[1].value)
-        assertEquals(PxSize(halfSize, halfSize), childSize[2].value)
-        assertEquals(
-            PxPosition(size - inset - halfSize, size - inset - halfSize),
-            childPosition[2].value
-        )
-        assertEquals(PxSize(halfSize, halfSize), childSize[3].value)
-        assertEquals(PxPosition(inset, halfSize), childPosition[3].value)
-        assertEquals(PxSize(halfSize, halfSize), childSize[4].value)
-        assertEquals(PxPosition(halfSize, inset), childPosition[4].value)
-        assertEquals(PxSize(halfSize, halfSize), childSize[5].value)
-        assertEquals(PxPosition(size - inset - halfSize, halfSize), childPosition[5].value)
-        assertEquals(PxSize(halfSize, halfSize), childSize[6].value)
-        assertEquals(PxPosition(halfSize, size - inset - halfSize), childPosition[6].value)
-    }
-
-    @Test
-    fun testStack_withPositionedChildren_fallbackAlignment() = withDensity(density) {
-        val size = 250.ipx
-        val sizeDp = size.toDp()
-        val halfSizeDp = sizeDp / 2
-        val halfSize = (sizeDp / 2).toIntPx()
         val inset = 50.ipx
         val insetDp = inset.toDp()
 
         val positionedLatch = CountDownLatch(6)
-        val stackSize = Ref<PxSize>()
-        val childSize = Array(5) { Ref<PxSize>() }
+        val stackSize = Ref<IntPxSize>()
+        val childSize = Array(5) { Ref<IntPxSize>() }
         val childPosition = Array(5) { Ref<PxPosition>() }
         show {
-            Align(alignment = Alignment.TopLeft) {
-                OnChildPositioned(onPositioned = { coordinates ->
+            Container(alignment = Alignment.TopStart) {
+                Stack(Modifier.onPositioned { coordinates: LayoutCoordinates ->
+                    stackSize.value = coordinates.size
+                    positionedLatch.countDown()
+                }) {
+                    Container(
+                        Modifier.gravity(Alignment.Center)
+                            .saveLayoutInfo(
+                                childSize[0],
+                                childPosition[0],
+                                positionedLatch
+                            ),
+                        width = sizeDp,
+                        height = sizeDp
+                    ) {
+                    }
+                    Container(
+                        Modifier.matchParentSize()
+                            .padding(start = insetDp, top = insetDp)
+                            .saveLayoutInfo(childSize[1], childPosition[1], positionedLatch),
+                        width = halfSizeDp,
+                        height = halfSizeDp
+                    ) {
+                    }
+                    Container(
+                        Modifier.matchParentSize()
+                            .padding(end = insetDp, bottom = insetDp)
+                            .saveLayoutInfo(childSize[2], childPosition[2], positionedLatch),
+                        width = halfSizeDp,
+                        height = halfSizeDp
+                    ) {
+                    }
+                    Container(
+                        Modifier.matchParentSize()
+                            .padding(start = insetDp, end = insetDp)
+                            .saveLayoutInfo(childSize[3], childPosition[3], positionedLatch),
+                        width = halfSizeDp,
+                        height = halfSizeDp) {
+                    }
+                    Container(
+                        Modifier.matchParentSize()
+                            .padding(top = insetDp, bottom = insetDp)
+                            .saveLayoutInfo(childSize[4], childPosition[4], positionedLatch),
+                        width = halfSizeDp,
+                        height = halfSizeDp
+                    ) {
+                    }
+                }
+            }
+        }
+        assertTrue(positionedLatch.await(1, TimeUnit.SECONDS))
+
+        assertEquals(IntPxSize(size, size), stackSize.value)
+        assertEquals(IntPxSize(size, size), childSize[0].value)
+        assertEquals(PxPosition(0f, 0f), childPosition[0].value)
+        assertEquals(IntPxSize(size - inset, size - inset), childSize[1].value)
+        assertEquals(PxPosition(inset, inset), childPosition[1].value)
+        assertEquals(IntPxSize(size - inset, size - inset), childSize[2].value)
+        assertEquals(PxPosition(0f, 0f), childPosition[2].value)
+        assertEquals(IntPxSize(size - inset * 2, size), childSize[3].value)
+        assertEquals(PxPosition(inset, 0.ipx), childPosition[3].value)
+        assertEquals(IntPxSize(size, size - inset * 2), childSize[4].value)
+        assertEquals(PxPosition(0.ipx, inset), childPosition[4].value)
+    }
+
+    @Test
+    fun testStack_Rtl() = with(density) {
+        val sizeDp = 48.ipx.toDp()
+        val size = sizeDp.toIntPx()
+        val tripleSizeDp = sizeDp * 3
+        val tripleSize = (sizeDp * 3).toIntPx()
+
+        val positionedLatch = CountDownLatch(10)
+        val stackSize = Ref<IntPxSize>()
+        val childSize = Array(9) { Ref<IntPxSize>() }
+        val childPosition = Array(9) { Ref<PxPosition>() }
+        show {
+            Stack(Modifier.wrapContentSize(Alignment.TopStart)) {
+                Stack(
+                    Modifier.rtl
+                        .preferredSize(tripleSizeDp)
+                        .onPositioned { coordinates: LayoutCoordinates ->
+                            stackSize.value = coordinates.size
+                            positionedLatch.countDown()
+                        }
+                ) {
+                    Stack(
+                        Modifier.gravity(Alignment.TopStart)
+                            .preferredSize(sizeDp, sizeDp)
+                            .saveLayoutInfo(childSize[0], childPosition[0], positionedLatch)
+                    ) {
+                    }
+                    Stack(
+                        Modifier.gravity(Alignment.TopCenter)
+                            .preferredSize(sizeDp)
+                            .saveLayoutInfo(childSize[1], childPosition[1], positionedLatch)
+                    ) {
+                    }
+                    Stack(
+                        Modifier.gravity(Alignment.TopEnd)
+                            .preferredSize(sizeDp)
+                            .saveLayoutInfo(childSize[2], childPosition[2], positionedLatch)
+                    ) {
+                    }
+                    Stack(
+                        Modifier.gravity(Alignment.CenterStart)
+                            .preferredSize(sizeDp)
+                            .saveLayoutInfo(childSize[3], childPosition[3], positionedLatch)
+                    ) {
+                    }
+                    Stack(
+                        Modifier.gravity(Alignment.Center)
+                            .preferredSize(sizeDp)
+                            .saveLayoutInfo(childSize[4], childPosition[4], positionedLatch)
+                    ) {
+                    }
+                    Stack(
+                        Modifier.gravity(Alignment.CenterEnd)
+                            .preferredSize(sizeDp)
+                            .saveLayoutInfo(childSize[5], childPosition[5], positionedLatch)
+                    ) {
+                    }
+                    Stack(
+                        Modifier.gravity(Alignment.BottomStart)
+                            .preferredSize(sizeDp)
+                            .saveLayoutInfo(childSize[6], childPosition[6], positionedLatch)
+                    ) {
+                    }
+                    Stack(
+                        Modifier.gravity(Alignment.BottomCenter)
+                            .preferredSize(sizeDp)
+                            .saveLayoutInfo(childSize[7], childPosition[7], positionedLatch)
+                    ) {
+                    }
+                    Stack(
+                        Modifier.gravity(Alignment.BottomEnd)
+                            .preferredSize(sizeDp)
+                            .saveLayoutInfo(childSize[8], childPosition[8], positionedLatch)
+                    ) {
+                    }
+                }
+            }
+        }
+        assertTrue(positionedLatch.await(1, TimeUnit.SECONDS))
+
+        assertEquals(IntPxSize(tripleSize, tripleSize), stackSize.value)
+        assertEquals(PxPosition((size * 2).value.toFloat(), 0f), childPosition[0].value)
+        assertEquals(PxPosition(size, 0.ipx), childPosition[1].value)
+        assertEquals(PxPosition(0.ipx, 0.ipx), childPosition[2].value)
+        assertEquals(PxPosition((size * 2).toPx().value, size.toPx().value), childPosition[3].value)
+        assertEquals(PxPosition(size, size), childPosition[4].value)
+        assertEquals(PxPosition(0.ipx, size), childPosition[5].value)
+        assertEquals(
+            PxPosition(
+                (size * 2).toPx().value,
+                (size * 2).toPx().value
+            ),
+            childPosition[6].value
+        )
+        assertEquals(PxPosition(size, size * 2), childPosition[7].value)
+        assertEquals(PxPosition(0.ipx, size * 2), childPosition[8].value)
+    }
+
+    @Test
+    fun testStack_expanded() = with(density) {
+        val size = 250.ipx
+        val sizeDp = size.toDp()
+        val halfSize = 125.ipx
+        val halfSizeDp = halfSize.toDp()
+
+        val positionedLatch = CountDownLatch(3)
+        val stackSize = Ref<IntPxSize>()
+        val childSize = Array(2) { Ref<IntPxSize>() }
+        val childPosition = Array(2) { Ref<PxPosition>() }
+        show {
+            Container(alignment = Alignment.TopStart) {
+                Container(
+                    Modifier.preferredSize(
+                        sizeDp,
+                        sizeDp
+                    ) + Modifier.onPositioned { coordinates: LayoutCoordinates ->
                     stackSize.value = coordinates.size
                     positionedLatch.countDown()
                 }) {
                     Stack {
-                        aligned(Alignment.Center) {
-                            Container(width = sizeDp, height = sizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[0],
-                                    position = childPosition[0],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
+                        Container(
+                            Modifier.fillMaxSize()
+                                .saveLayoutInfo(childSize[0], childPosition[0], positionedLatch)
+                        ) {
                         }
-                        positioned(leftInset = insetDp) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[1],
-                                    position = childPosition[1],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(leftInset = insetDp, fallbackAlignment = Alignment.Center) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[2],
-                                    position = childPosition[2],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(leftInset = insetDp, fallbackAlignment = Alignment.TopLeft) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[3],
-                                    position = childPosition[3],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
-                        }
-                        positioned(leftInset = insetDp, fallbackAlignment = Alignment.BottomRight) {
-                            Container(width = halfSizeDp, height = halfSizeDp) {
-                                SaveLayoutInfo(
-                                    size = childSize[4],
-                                    position = childPosition[4],
-                                    positionedLatch = positionedLatch
-                                )
-                            }
+                        Container(
+                            Modifier.gravity(Alignment.BottomEnd)
+                                .saveLayoutInfo(childSize[1], childPosition[1], positionedLatch),
+                            width = halfSizeDp,
+                            height = halfSizeDp
+                        ) {
                         }
                     }
                 }
             }
         }
-        positionedLatch.await(1, TimeUnit.SECONDS)
+        assertTrue(positionedLatch.await(1, TimeUnit.SECONDS))
 
-        assertEquals(PxSize(size, size), stackSize.value)
-        assertEquals(PxSize(size, size), childSize[0].value)
-        assertEquals(PxPosition(0.px, 0.px), childPosition[0].value)
-        assertEquals(PxSize(halfSize, halfSize), childSize[1].value)
-        assertEquals(PxPosition(inset, (size - halfSize) / 2), childPosition[1].value)
-        assertEquals(PxSize(halfSize, halfSize), childSize[2].value)
-        assertEquals(PxPosition(inset, (size - halfSize) / 2), childPosition[2].value)
-        assertEquals(PxSize(halfSize, halfSize), childSize[3].value)
-        assertEquals(PxPosition(inset, 0.ipx), childPosition[3].value)
-        assertEquals(PxSize(halfSize, halfSize), childSize[4].value)
-        assertEquals(PxPosition(inset, halfSize), childPosition[4].value)
+        assertEquals(IntPxSize(size, size), stackSize.value)
+        assertEquals(IntPxSize(size, size), childSize[0].value)
+        assertEquals(PxPosition(0f, 0f), childPosition[0].value)
+        assertEquals(IntPxSize(halfSize, halfSize), childSize[1].value)
+        assertEquals(PxPosition(size - halfSize, size - halfSize), childPosition[1].value)
     }
 
     @Test
-    fun testStack_fit() = withDensity(density) {
-        val sizeDp = 50.dp
-        val size = sizeDp.toIntPx()
-        val halfSizeDp = sizeDp / 2
-        val halfSize = (sizeDp / 2).toIntPx()
-
-        val constraintsLatch = CountDownLatch(3)
-        val childConstraints = Array(3) { Constraints() }
-        show {
-            Align(alignment = Alignment.TopLeft) {
-                ConstrainedBox(
-                    constraints = DpConstraints(
-                        minWidth = halfSizeDp, maxWidth = sizeDp,
-                        minHeight = halfSizeDp, maxHeight = sizeDp
-                    )
-                ) {
-                    Stack {
-                        aligned(Alignment.Center, loose = true) {
-                            WithConstraints { constraints ->
-                                childConstraints[0] = constraints
-                                constraintsLatch.countDown()
-                            }
-                        }
-                        expanded {
-                            WithConstraints { constraints ->
-                                childConstraints[1] = constraints
-                                constraintsLatch.countDown()
-                            }
-                        }
-                        aligned(Alignment.Center, loose = false) {
-                            WithConstraints { constraints ->
-                                childConstraints[2] = constraints
-                                constraintsLatch.countDown()
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        constraintsLatch.await(1, TimeUnit.SECONDS)
-
-        assertEquals(Constraints(0.ipx, size, 0.ipx, size), childConstraints[0])
-        assertEquals(Constraints(size, size, size, size), childConstraints[1])
-        assertEquals(Constraints(halfSize, size, halfSize, size), childConstraints[2])
-    }
-
-    @Test
-    fun testStack_hasCorrectIntrinsicMeasurements() = withDensity(density) {
+    fun testStack_hasCorrectIntrinsicMeasurements() = with(density) {
         val testWidth = 90.ipx.toDp()
         val testHeight = 80.ipx.toDp()
 
@@ -407,15 +383,15 @@ class StackTest : LayoutTest() {
 
         testIntrinsics(@Composable {
             Stack {
-                aligned(Alignment.TopLeft) {
-                    Container(AspectRatio(2f)) { }
-                }
-                aligned(Alignment.BottomCenter) {
-                    ConstrainedBox(DpConstraints.tightConstraints(testWidth, testHeight)) { }
-                }
-                positioned(10.dp, 10.dp, 10.dp, 10.dp) {
-                    ConstrainedBox(DpConstraints.tightConstraints(200.dp, 200.dp)) { }
-                }
+                Container(Modifier.gravity(Alignment.TopStart).aspectRatio(2f)) { }
+                ConstrainedBox(
+                    DpConstraints.fixed(testWidth, testHeight),
+                    Modifier.gravity(Alignment.BottomCenter)
+                ) { }
+                ConstrainedBox(
+                    DpConstraints.fixed(200.dp, 200.dp),
+                    Modifier.matchParentSize().padding(10.dp)
+                ) { }
             }
         }) { minIntrinsicWidth, minIntrinsicHeight, maxIntrinsicWidth, maxIntrinsicHeight ->
             // Min width.
@@ -438,12 +414,13 @@ class StackTest : LayoutTest() {
     }
 
     @Test
-    fun testStack_hasCorrectIntrinsicMeasurements_withNoAlignedChildren() = withDensity(density) {
+    fun testStack_hasCorrectIntrinsicMeasurements_withNoAlignedChildren() = with(density) {
         testIntrinsics(@Composable {
             Stack {
-                positioned(10.dp, 10.dp, 10.dp, 10.dp) {
-                    ConstrainedBox(DpConstraints.tightConstraints(200.dp, 200.dp)) { }
-                }
+                ConstrainedBox(
+                    modifier = Modifier.matchParentSize().padding(10.dp),
+                    constraints = DpConstraints.fixed(200.dp, 200.dp)
+                ) { }
             }
         }) { minIntrinsicWidth, minIntrinsicHeight, maxIntrinsicWidth, maxIntrinsicHeight ->
             // Min width.

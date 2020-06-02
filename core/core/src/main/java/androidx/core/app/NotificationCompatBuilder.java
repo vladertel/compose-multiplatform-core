@@ -60,6 +60,7 @@ class NotificationCompatBuilder implements NotificationBuilderWithBuilderAccesso
     // @RequiresApi(21) - uncomment when lint bug is fixed.
     private RemoteViews mHeadsUpContentView;
 
+    @SuppressWarnings("deprecation")
     NotificationCompatBuilder(NotificationCompat.Builder b) {
         mBuilderCompat = b;
         if (Build.VERSION.SDK_INT >= 26) {
@@ -95,7 +96,6 @@ class NotificationCompatBuilder implements NotificationBuilderWithBuilderAccesso
             mBuilder.setSubText(b.mSubText)
                     .setUsesChronometer(b.mUseChronometer)
                     .setPriority(b.mPriority);
-
             for (NotificationCompat.Action action : b.mActions) {
                 addAction(action);
             }
@@ -212,6 +212,30 @@ class NotificationCompatBuilder implements NotificationBuilderWithBuilderAccesso
             // TODO: Consider roundtripping NotificationCompat.BubbleMetadata on pre-Q platforms.
             mBuilder.setBubbleMetadata(
                     NotificationCompat.BubbleMetadata.toPlatform(b.mBubbleMetadata));
+            if (b.mLocusId != null) {
+                mBuilder.setLocusId(b.mLocusId.toLocusId());
+            }
+        }
+
+        if (b.mSilent) {
+            if (mBuilderCompat.mGroupSummary) {
+                mGroupAlertBehavior = GROUP_ALERT_CHILDREN;
+            } else {
+                mGroupAlertBehavior = GROUP_ALERT_SUMMARY;
+            }
+
+            mBuilder.setVibrate(null);
+            mBuilder.setSound(null);
+            n.defaults &= ~DEFAULT_SOUND;
+            n.defaults &= ~DEFAULT_VIBRATE;
+            mBuilder.setDefaults(n.defaults);
+
+            if (Build.VERSION.SDK_INT >= 26) {
+                if (TextUtils.isEmpty(mBuilderCompat.mGroupKey)) {
+                    mBuilder.setGroup(NotificationCompat.GROUP_KEY_SILENT);
+                }
+                mBuilder.setGroupAlertBehavior(mGroupAlertBehavior);
+            }
         }
     }
 
@@ -262,14 +286,17 @@ class NotificationCompatBuilder implements NotificationBuilderWithBuilderAccesso
     private void addAction(NotificationCompat.Action action) {
         if (Build.VERSION.SDK_INT >= 20) {
             Notification.Action.Builder actionBuilder;
+            IconCompat iconCompat = action.getIconCompat();
             if (Build.VERSION.SDK_INT >= 23) {
-                IconCompat iconCompat = action.getIconCompat();
                 actionBuilder = new Notification.Action.Builder(
-                        iconCompat == null ? null : iconCompat.toIcon(), action.getTitle(),
-                                action.getActionIntent());
+                        iconCompat != null ? iconCompat.toIcon() : null,
+                        action.getTitle(),
+                        action.getActionIntent());
             } else {
                 actionBuilder = new Notification.Action.Builder(
-                        action.getIcon(), action.getTitle(), action.getActionIntent());
+                        iconCompat != null ? iconCompat.getResId() : 0,
+                        action.getTitle(),
+                        action.getActionIntent());
             }
             if (action.getRemoteInputs() != null) {
                 for (android.app.RemoteInput remoteInput : RemoteInput.fromCompat(

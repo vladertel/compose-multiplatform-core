@@ -23,19 +23,20 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.CoreJavadocOptions
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import java.io.File
 
 // external/doclava/src/com/google/doclava/Errors.java
 val DEFAULT_DOCLAVA_CONFIG = ChecksConfig(
         errors = listOf(
-                101,  // unresolved link
-                103,  // unknown tag
-                104   // unknown param name
+                101, // unresolved link
+                103, // unknown tag
+                104 // unknown param name
         ),
         warnings = listOf(121 /* hidden type param */),
         hidden = listOf(
-                111,  // hidden super class
-                113   // @deprecation mismatch
+                111, // hidden super class
+                113 // @deprecation mismatch
         )
 )
 
@@ -145,7 +146,7 @@ open class DoclavaTask : Javadoc() {
      * "Configures" this DoclavaTask with parameters that might not be at their final values
      * until this task is run.
      */
-    private fun configureDoclava() = (options as CoreJavadocOptions).apply {
+    private fun configureDoclava() = (options as StandardJavadocDocletOptions).apply {
 
         docletpath = this@DoclavaTask.docletpath
 
@@ -181,6 +182,9 @@ open class DoclavaTask : Javadoc() {
         }
         // Always treat this as an Android docs task.
         addBooleanOption("android", true)
+
+        // Doclava does not understand -notimestamp option that is default since Gradle 6.0
+        isNoTimestamp = false
     }
 
     fun coreJavadocOptions(configure: CoreJavadocOptions.() -> Unit) =

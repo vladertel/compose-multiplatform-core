@@ -17,13 +17,12 @@
 package androidx.camera.testing.fakes;
 
 import android.graphics.ImageFormat;
-import android.os.Handler;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.camera.core.ImageProxy;
-import androidx.camera.core.ImageReaderProxy;
+import androidx.camera.core.impl.ImageReaderProxy;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -44,16 +43,21 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
     private int mImageFormat = ImageFormat.JPEG;
     private final int mMaxImages;
     private Surface mSurface;
+
+    @Nullable
     private Executor mExecutor;
+
+    private boolean mIsClosed = false;
 
     // Queue of all futures for ImageProxys which have not yet been closed.
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
-    BlockingQueue<ListenableFuture<Void>> mImageProxyBlockingQueue;
+            BlockingQueue<ListenableFuture<Void>> mImageProxyBlockingQueue;
 
     // Queue of ImageProxys which have not yet been acquired.
     private BlockingQueue<ImageProxy> mImageProxyAcquisitionQueue;
 
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
+    @Nullable
     ImageReaderProxy.OnImageAvailableListener mListener;
 
     /**
@@ -65,6 +69,21 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
         mMaxImages = maxImages;
         mImageProxyBlockingQueue = new LinkedBlockingQueue<>(maxImages);
         mImageProxyAcquisitionQueue = new LinkedBlockingQueue<>(maxImages);
+    }
+
+    /**
+     * Create a new {@link FakeImageReaderProxy} instance.
+     *
+     * @param maxImages The maximum number of images that can be acquired at once
+     */
+    @NonNull
+    public static FakeImageReaderProxy newInstance(int width, int height, int format,
+            int maxImages, long usage) {
+        FakeImageReaderProxy fakeImageReaderProxy = new FakeImageReaderProxy(maxImages);
+        fakeImageReaderProxy.mWidth = width;
+        fakeImageReaderProxy.mHeight = height;
+        fakeImageReaderProxy.setImageFormat(format);
+        return fakeImageReaderProxy;
     }
 
     @Override
@@ -101,7 +120,7 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
 
     @Override
     public void close() {
-
+        mIsClosed = true;
     }
 
     @Override
@@ -124,17 +143,10 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
         return mMaxImages;
     }
 
+    @NonNull
     @Override
-    @Nullable
     public Surface getSurface() {
         return mSurface;
-    }
-
-    @Override
-    public void setOnImageAvailableListener(
-            @NonNull final ImageReaderProxy.OnImageAvailableListener listener,
-            @Nullable Handler handler) {
-        setOnImageAvailableListener(mListener, CameraXExecutors.newHandlerExecutor(handler));
     }
 
     @Override
@@ -144,8 +156,22 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
         mExecutor = executor;
     }
 
+    @Override
+    public void clearOnImageAvailableListener() {
+        mListener = null;
+        mExecutor = null;
+    }
+
     public void setSurface(Surface surface) {
         mSurface = surface;
+    }
+
+    public void setImageFormat(int imageFormat) {
+        mImageFormat = imageFormat;
+    }
+
+    public boolean isClosed() {
+        return mIsClosed;
     }
 
     /**
@@ -160,12 +186,7 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
 
         final ListenableFuture<Void> future = fakeImageProxy.getCloseFuture();
         mImageProxyBlockingQueue.put(future);
-        future.addListener(new Runnable() {
-            @Override
-            public void run() {
-                mImageProxyBlockingQueue.remove(future);
-            }
-            },
+        future.addListener(() -> mImageProxyBlockingQueue.remove(future),
                 CameraXExecutors.directExecutor()
         );
 
@@ -191,13 +212,7 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
 
         final ListenableFuture<Void> future = fakeImageProxy.getCloseFuture();
         if (mImageProxyBlockingQueue.offer(future, timeout, timeUnit)) {
-
-            future.addListener(new Runnable() {
-                @Override
-                public void run() {
-                    mImageProxyBlockingQueue.remove(future);
-                }
-                },
+            future.addListener(() -> mImageProxyBlockingQueue.remove(future),
                     CameraXExecutors.directExecutor()
             );
 
@@ -212,32 +227,22 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
     }
 
     private FakeImageProxy generateFakeImageProxy(Object tag, long timestamp) {
-        FakeImageProxy fakeImageProxy = new FakeImageProxy();
+        FakeImageInfo fakeImageInfo = new FakeImageInfo();
+        fakeImageInfo.setTag(tag);
+        fakeImageInfo.setTimestamp(timestamp);
+
+        FakeImageProxy fakeImageProxy = new FakeImageProxy(fakeImageInfo);
         fakeImageProxy.setFormat(mImageFormat);
         fakeImageProxy.setHeight(mHeight);
         fakeImageProxy.setWidth(mWidth);
-        fakeImageProxy.setTimestamp(timestamp);
-
-        if (tag != null) {
-            FakeImageInfo fakeImageInfo = new FakeImageInfo();
-            fakeImageInfo.setTag(tag);
-            fakeImageInfo.setTimestamp(timestamp);
-            fakeImageProxy.setImageInfo(fakeImageInfo);
-        }
 
         return fakeImageProxy;
     }
 
     private void triggerImageAvailableListener() {
         if (mListener != null) {
-            Runnable listenerRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    mListener.onImageAvailable(FakeImageReaderProxy.this);
-                }
-            };
             if (mExecutor != null) {
-                mExecutor.execute(listenerRunnable);
+                mExecutor.execute(() -> mListener.onImageAvailable(FakeImageReaderProxy.this));
             } else {
                 mListener.onImageAvailable(FakeImageReaderProxy.this);
             }

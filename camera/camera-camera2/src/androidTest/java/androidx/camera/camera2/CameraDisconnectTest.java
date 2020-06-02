@@ -17,12 +17,15 @@
 package androidx.camera.camera2;
 
 
+import static androidx.camera.testing.CoreAppTestUtil.clearDeviceUI;
+
 import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
 
 import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 
 import androidx.camera.core.CameraX;
 import androidx.camera.testing.CameraUtil;
@@ -35,10 +38,10 @@ import androidx.test.espresso.IdlingRegistry;
 import androidx.test.espresso.IdlingResource;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.rule.ActivityTestRule;
 import androidx.test.rule.GrantPermissionRule;
-import androidx.test.uiautomator.UiDevice;
 
 import org.junit.After;
 import org.junit.Before;
@@ -51,8 +54,6 @@ import java.util.concurrent.ExecutionException;
 @RunWith(AndroidJUnit4.class)
 @LargeTest
 public class CameraDisconnectTest {
-
-    private static final int DISMISS_LOCK_SCREEN_CODE = 82;
 
     @Rule
     public GrantPermissionRule mCameraPermissionRule =
@@ -73,14 +74,10 @@ public class CameraDisconnectTest {
         CoreAppTestUtil.assumeCompatibleDevice();
 
         Context context = ApplicationProvider.getApplicationContext();
-        CameraX.init(context, Camera2AppConfig.create(context));
+        CameraX.initialize(context, Camera2Config.defaultConfig());
 
-        // In case the lock screen on top, the action to dismiss it.
-        UiDevice.getInstance(mInstrumentation).pressKeyCode(DISMISS_LOCK_SCREEN_CODE);
-
-        // Close system dialogs first to avoid interrupt.
-        ApplicationProvider.getApplicationContext().sendBroadcast(
-                new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+        // Clear the device UI before start each test.
+        clearDeviceUI(InstrumentationRegistry.getInstrumentation());
 
         mCameraXTestActivityRule.launchActivity(new Intent());
         mCameraXTestActivity = mCameraXTestActivityRule.getActivity();
@@ -92,15 +89,18 @@ public class CameraDisconnectTest {
         mCamera2ActivityRule.finishActivity();
 
         // Actively unbind all use cases to avoid lifecycle callback later to stop/clear use case
-        // after deinit() is complete.
-        mInstrumentation.runOnMainSync(CameraX::unbindAll);
+        // after shutdown() is complete.
+        if (CameraX.isInitialized()) {
+            mInstrumentation.runOnMainSync(CameraX::unbindAll);
+        }
 
-        CameraX.deinit().get();
+        CameraX.shutdown().get();
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.M) // Known issue, checkout b/147393563.
     public void testDisconnect_launchCamera2App() {
-        // TODO(b/141656413): Remove after the issue fixed.
+        // Specific compatibility check for the test.
         CoreAppTestUtil.assumeCanTestCameraDisconnect();
 
         waitFor(mCameraXTestActivity.mPreviewReady);

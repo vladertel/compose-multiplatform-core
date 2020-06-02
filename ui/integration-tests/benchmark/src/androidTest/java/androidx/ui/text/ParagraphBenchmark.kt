@@ -19,15 +19,15 @@ package androidx.ui.text
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.filters.LargeTest
-import androidx.ui.core.Density
-import androidx.ui.core.sp
+import androidx.ui.unit.Density
+import androidx.ui.unit.sp
 import androidx.ui.graphics.Canvas
-import androidx.ui.graphics.Image
-import androidx.ui.test.Alphabet
-import androidx.ui.test.RandomTextGenerator
-import androidx.ui.test.TextBenchmarkTestRule
-import androidx.ui.test.TextType
-import androidx.ui.test.cartesian
+import androidx.ui.graphics.ImageAsset
+import androidx.ui.integration.test.Alphabet
+import androidx.ui.integration.test.RandomTextGenerator
+import androidx.ui.integration.test.TextBenchmarkTestRule
+import androidx.ui.integration.test.TextType
+import androidx.ui.integration.test.cartesian
 import androidx.ui.text.font.Font
 import androidx.ui.text.style.TextDirectionAlgorithm
 import org.junit.Rule
@@ -69,21 +69,21 @@ class ParagraphBenchmark(
 
     private fun text(textGenerator: RandomTextGenerator): AnnotatedString {
         val text = textGenerator.nextParagraph(textLength)
-        val textStyles = if (textType == TextType.StyledText) {
+        val spanStyles = if (textType == TextType.StyledText) {
             textGenerator.createStyles(text)
         } else {
             listOf()
         }
-        return AnnotatedString(text = text, textStyles = textStyles)
+        return AnnotatedString(text = text, spanStyles = spanStyles)
     }
 
     private fun paragraph(
         text: String,
-        textStyles: List<AnnotatedString.Item<TextStyle>>,
+        spanStyles: List<AnnotatedString.Range<SpanStyle>>,
         constraints: ParagraphConstraints
     ): Paragraph {
         return Paragraph(
-            paragraphIntrinsics = paragraphIntrinsics(text, textStyles),
+            paragraphIntrinsics = paragraphIntrinsics(text, spanStyles),
             constraints = constraints
         )
     }
@@ -94,23 +94,23 @@ class ParagraphBenchmark(
         val annotatedString = text(textGenerator)
         return paragraphIntrinsics(
             text = annotatedString.text,
-            textStyles = annotatedString.textStyles
+            spanStyles = annotatedString.spanStyles
         )
     }
 
     private fun paragraphIntrinsics(
         text: String,
-        textStyles: List<AnnotatedString.Item<TextStyle>>
+        spanStyles: List<AnnotatedString.Range<SpanStyle>>
     ): ParagraphIntrinsics {
         return ParagraphIntrinsics(
             text = text,
             density = Density(density = 1f),
-            style = TextStyle(fontSize = 12.sp),
-            paragraphStyle = ParagraphStyle(
+            style = TextStyle(
+                fontSize = 12.sp,
                 textDirectionAlgorithm = TextDirectionAlgorithm.ContentOrLtr
             ),
             resourceLoader = resourceLoader,
-            textStyles = textStyles
+            spanStyles = spanStyles
         )
     }
 
@@ -156,7 +156,7 @@ class ParagraphBenchmark(
 
                 paragraph(
                     text = textAndWidth.first.text,
-                    textStyles = textAndWidth.first.textStyles,
+                    spanStyles = textAndWidth.first.spanStyles,
                     constraints = ParagraphConstraints(textAndWidth.second)
                 )
             }
@@ -177,7 +177,7 @@ class ParagraphBenchmark(
                     // some line breaking in the result
                     val paragraph = paragraph(text, style, ParagraphConstraints(width))
                     val canvas = Canvas(
-                        Image(paragraph.width.roundToInt(), paragraph.height.roundToInt())
+                        ImageAsset(paragraph.width.roundToInt(), paragraph.height.roundToInt())
                     )
                     Pair(paragraph, canvas)
                 }
@@ -198,7 +198,7 @@ class ParagraphBenchmark(
             // some line breaking in the result
             val paragraph = paragraph(text, style, ParagraphConstraints(width))
             val canvas = Canvas(
-                Image(paragraph.width.roundToInt(), paragraph.height.roundToInt())
+                ImageAsset(paragraph.width.roundToInt(), paragraph.height.roundToInt())
             )
             // Paint for the first time, so that we only benchmark repaint.
             paragraph.paint(canvas)

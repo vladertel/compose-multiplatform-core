@@ -19,12 +19,9 @@ package com.example.android.supportv7.widget.selection.simple;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.widget.Toast;
 
-import androidx.annotation.CallSuper;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.selection.ItemDetailsLookup.ItemDetails;
 import androidx.recyclerview.selection.ItemKeyProvider;
@@ -57,7 +54,7 @@ public class SimpleSelectionDemoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.selection_demo_layout);
-        RecyclerView recView = (RecyclerView) findViewById(R.id.list);
+        RecyclerView recView = findViewById(R.id.list);
 
         // keyProvider depends on mAdapter.setHasStableIds(true).
         ItemKeyProvider<Long> keyProvider = new StableIdKeyProvider(recView);
@@ -65,7 +62,7 @@ public class SimpleSelectionDemoActivity extends AppCompatActivity {
         mLayout = new GridLayoutManager(this, mColumnCount);
         recView.setLayoutManager(mLayout);
 
-        mAdapter = new SimpleSelectionDemoAdapter(this, keyProvider);
+        mAdapter = new SimpleSelectionDemoAdapter(this);
         // The adapter is paired with a key provider that supports
         // the native RecyclerView stableId. For this to work correctly
         // the adapter must report that it supports stable ids.
@@ -124,39 +121,6 @@ public class SimpleSelectionDemoActivity extends AppCompatActivity {
                 mColumnCount = state.getInt(EXTRA_COLUMN_COUNT);
                 mLayout.setSpanCount(mColumnCount);
             }
-        }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        boolean showMenu = super.onCreateOptionsMenu(menu);
-        getMenuInflater().inflate(R.menu.selection_demo_actions, menu);
-        return showMenu;
-    }
-
-    @Override
-    @CallSuper
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        super.onPrepareOptionsMenu(menu);
-        menu.findItem(R.id.option_menu_add_column).setEnabled(mColumnCount <= 3);
-        menu.findItem(R.id.option_menu_remove_column).setEnabled(mColumnCount > 1);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.option_menu_add_column:
-                // TODO: Add columns
-                mLayout.setSpanCount(++mColumnCount);
-                return true;
-
-            case R.id.option_menu_remove_column:
-                mLayout.setSpanCount(--mColumnCount);
-                return true;
-
-            default:
-                return super.onOptionsItemSelected(item);
         }
     }
 

@@ -30,7 +30,7 @@ import org.jetbrains.kotlin.resolve.calls.callUtil.getCall
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.diagnostics.DiagnosticSuppressor
 
-class ComposeDiagnosticSuppressor : DiagnosticSuppressor {
+open class ComposeDiagnosticSuppressor : DiagnosticSuppressor {
 
     companion object {
         fun registerExtension(
@@ -70,10 +70,9 @@ class ComposeDiagnosticSuppressor : DiagnosticSuppressor {
                     "trace to resolve ktx call",
                     functionCall
                 )
-                if (call != null) return ComposableAnnotationChecker.get(
-                    diagnostic.psiElement.project
-                ).shouldInvokeAsTag(temporaryTrace, call)
-                return false
+                if (call != null) {
+                    return ComposableAnnotationChecker().shouldInvokeAsTag(temporaryTrace, call)
+                }
             }
         }
         return false

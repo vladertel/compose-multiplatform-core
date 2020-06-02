@@ -26,18 +26,20 @@ plugins {
     id("com.android.library")
     id("AndroidXUiPlugin")
     id("org.jetbrains.kotlin.android")
+    id("kotlin-android-extensions")
 }
 
 dependencies {
-    implementation(KOTLIN_COMPOSE_STDLIB)
+    implementation(KOTLIN_STDLIB)
 
-    implementation "androidx.annotation:annotation:1.1.0"
-    implementation "androidx.dynamicanimation:dynamicanimation:1.0.0"
+    api "androidx.annotation:annotation:1.1.0"
+    implementation project(":ui:ui-util")
 
     testImplementation(ANDROIDX_TEST_RULES)
     testImplementation(ANDROIDX_TEST_RUNNER)
     testImplementation(JUNIT)
     testImplementation(TRUTH)
+    testImplementation(KOTLIN_COROUTINES_CORE)
 
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)

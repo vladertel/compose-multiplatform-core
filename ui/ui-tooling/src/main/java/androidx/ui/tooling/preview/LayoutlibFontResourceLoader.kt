@@ -20,26 +20,19 @@ import android.content.Context
 import android.graphics.Typeface
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.annotation.RestrictTo
 import androidx.ui.text.font.Font
+import androidx.ui.text.font.font
+import androidx.ui.text.font.ResourceFont
 
 /**
  * Layoutlib implementation for [Font.ResourceLoader]
- *
- * @hide
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal class LayoutlibFontResourceLoader(private val context: Context) : Font.ResourceLoader {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun load(font: Font): Typeface {
-        // TODO(siyamed): This is an expensive operation and discouraged in the API Docs
-        // remove when alternative resource loading system is defined.
-        val resId = context.resources.getIdentifier(
-            font.name.substringBefore("."),
-            "font",
-            context.packageName
-        )
-
-        return context.resources.getFont(resId)
+        return when (font) {
+            is ResourceFont -> context.resources.getFont(font.resId)
+            else -> throw IllegalArgumentException("Unknown font type: ${font.javaClass.name}")
+        }
     }
 }

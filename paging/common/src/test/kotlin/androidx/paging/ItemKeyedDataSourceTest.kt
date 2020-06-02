@@ -16,8 +16,7 @@
 
 package androidx.paging
 
-import androidx.paging.PagedSource.LoadResult.Page.Companion.COUNT_UNDEFINED
-import androidx.paging.futures.DirectDispatcher
+import androidx.paging.PagingSource.LoadResult.Page.Companion.COUNT_UNDEFINED
 import com.nhaarman.mockitokotlin2.capture
 import com.nhaarman.mockitokotlin2.mock
 import kotlinx.coroutines.runBlocking
@@ -32,6 +31,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoMoreInteractions
 import kotlin.test.assertFailsWith
 
+@Suppress("DEPRECATION")
 @RunWith(JUnit4::class)
 class ItemKeyedDataSourceTest {
 
@@ -286,6 +286,7 @@ class ItemKeyedDataSourceTest {
             }
         }
 
+        @Suppress("DEPRECATION")
         PagedList.Builder(dataSource, 10)
             .setNotifyDispatcher(FailDispatcher())
             .setFetchDispatcher(DirectDispatcher)

@@ -20,6 +20,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.RawQuery
+import androidx.room.RewriteQueriesToDropUnusedColumns
 import androidx.room.Update
 import androidx.room.ext.KotlinTypeNames
 import androidx.room.ext.RoomTypeNames
@@ -43,8 +44,8 @@ object ProcessorErrors {
     val MISSING_RAWQUERY_ANNOTATION = "RawQuery methods must be annotated with" +
             " ${RawQuery::class.java}"
     val INVALID_ON_CONFLICT_VALUE = "On conflict value must be one of @OnConflictStrategy values."
-    val TRANSACTION_REFERENCE_DOCS = "https://developer.android.com/reference/android/arch/" +
-            "persistence/room/Transaction.html"
+    val TRANSACTION_REFERENCE_DOCS = "https://developer.android.com/reference/androidx/" +
+            "room/Transaction.html"
 
     val ABSTRACT_METHOD_IN_DAO_MISSING_ANY_ANNOTATION = "Abstract method in DAO must be annotated" +
             " with ${Query::class.java} AND ${Insert::class.java}"
@@ -261,6 +262,9 @@ object ProcessorErrors {
                 The query returns some columns [${unusedColumns.joinToString(", ")}] which are not
                 used by $pojoTypeName. You can use @ColumnInfo annotation on the fields to specify
                 the mapping.
+                You can annotate the method with @RewriteQueriesToDropUnusedColumns to direct Room
+                to rewrite your query to avoid fetching unused columns.
+        ""${'"'}.trimIndent()
             """.trim()
         } else {
             ""
@@ -275,6 +279,7 @@ object ProcessorErrors {
         } else {
             ""
         }
+
         return """
             $unusedColumnsWarning
             $unusedFieldsWarning
@@ -595,6 +600,9 @@ object ProcessorErrors {
 
     val PAGING_SPECIFY_DATA_SOURCE_TYPE = "For now, Room only supports PositionalDataSource class."
 
+    val PAGING_SPECIFY_PAGING_SOURCE_TYPE = "For now, Room only supports PagingSource with Key of" +
+            " type Int."
+
     fun primaryKeyNull(field: String): String {
         return "You must annotate primary keys with @NonNull. \"$field\" is nullable. SQLite " +
                 "considers this a " +
@@ -684,6 +692,12 @@ object ProcessorErrors {
 
     val INVALID_RELATION_IN_PARTIAL_ENTITY = "Partial entities cannot have relations."
 
+    val EXPAND_PROJECTION_ALONG_WITH_REMOVE_UNUSED = """
+        Using @${RewriteQueriesToDropUnusedColumns::class.simpleName} annotation when
+        room.expandProjection compiler flag is enabled will disable expandProjection for queries
+        covered with @${RewriteQueriesToDropUnusedColumns::class.simpleName}.
+    """.trim()
+
     fun missingPrimaryKeysInPartialEntityForInsert(
         partialEntityName: String,
         primaryKeyNames: List<String>
@@ -730,4 +744,26 @@ object ProcessorErrors {
     fun invalidChannelType(typeName: String) = "'$typeName' is not supported as a return type. " +
             "Instead declare return type as ${KotlinTypeNames.FLOW} and use Flow transforming " +
             "functions that converts the Flow into a Channel."
+
+    fun mismatchedGetter(
+        fieldName: String,
+        ownerType: TypeName,
+        getterType: TypeName,
+        fieldType: TypeName
+    ) = """
+            $ownerType's $fieldName field has type $fieldType but its getter returns $getterType.
+            This mismatch might cause unexpected $fieldName values in the database when $ownerType
+            is inserted into database.
+        """.trim()
+
+    fun mismatchedSetter(
+        fieldName: String,
+        ownerType: TypeName,
+        setterType: TypeName,
+        fieldType: TypeName
+    ) = """
+            $ownerType's $fieldName field has type $fieldType but its setter accepts $setterType.
+            This mismatch might cause unexpected $fieldName values when $ownerType is read from the
+            database.
+        """.trim()
 }
