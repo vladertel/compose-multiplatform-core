@@ -22,15 +22,16 @@ import android.Manifest;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 
-import androidx.camera.camera2.Camera2AppConfig;
+import androidx.camera.camera2.Camera2Config;
 import androidx.camera.core.CameraInfoUnavailableException;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraX;
 import androidx.camera.extensions.impl.PreviewExtenderImpl;
 import androidx.camera.extensions.util.ExtensionsTestUtil;
 import androidx.camera.testing.CameraUtil;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.test.filters.SmallTest;
+import androidx.test.filters.LargeTest;
 import androidx.test.rule.GrantPermissionRule;
 
 import org.junit.After;
@@ -52,19 +53,18 @@ public class PreviewExtenderValidationTest {
     public void setUp() throws InterruptedException, ExecutionException, TimeoutException {
         assumeTrue(CameraUtil.deviceHasCamera());
         Context context = ApplicationProvider.getApplicationContext();
-        CameraX.init(context, Camera2AppConfig.create(context));
+        CameraX.initialize(context, Camera2Config.defaultConfig());
 
         assumeTrue(ExtensionsTestUtil.initExtensions());
     }
 
     @After
     public void tearDown() throws ExecutionException, InterruptedException {
-        // Wait for CameraX to finish deinitializing before the next test.
-        CameraX.deinit().get();
+        CameraX.shutdown().get();
     }
 
     @Test
-    @SmallTest
+    @LargeTest
     public void getSupportedResolutionsImplementationTest()
             throws CameraInfoUnavailableException, CameraAccessException {
         // getSupportedResolutions supported since version 1.1
@@ -75,7 +75,7 @@ public class PreviewExtenderValidationTest {
                 ExtensionsTestUtil.getAllEffectLensFacingCombinations()) {
             ExtensionsManager.EffectMode effectMode =
                     (ExtensionsManager.EffectMode) EffectLensFacingPair[0];
-            CameraX.LensFacing lensFacing = (CameraX.LensFacing) EffectLensFacingPair[1];
+            @CameraSelector.LensFacing int lensFacing = (int) EffectLensFacingPair[1];
 
             assumeTrue(CameraUtil.hasCameraWithLensFacing(lensFacing));
             assumeTrue(ExtensionsManager.isExtensionAvailable(effectMode, lensFacing));

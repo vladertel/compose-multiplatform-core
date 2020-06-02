@@ -45,6 +45,7 @@ import static androidx.annotation.RestrictTo.Scope.LIBRARY;
 import static androidx.slice.SliceConvert.unwrap;
 import static androidx.slice.core.SliceHints.HINT_ACTIVITY;
 import static androidx.slice.core.SliceHints.HINT_CACHED;
+import static androidx.slice.core.SliceHints.HINT_RAW;
 import static androidx.slice.core.SliceHints.HINT_SELECTION_OPTION;
 
 import android.app.PendingIntent;
@@ -95,6 +96,15 @@ public final class Slice extends CustomVersionedParcelable implements VersionedP
      */
     public static final String EXTRA_SELECTION = "android.app.slice.extra.SELECTION";
 
+    /**
+     * Subtype to tag an item as representing the progress bar mode for a
+     * {@link android.app.slice.Slice#SUBTYPE_RANGE}
+     *
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static final String SUBTYPE_RANGE_MODE = "range_mode";
+
     private static final String HINTS = "hints";
     private static final String ITEMS = "items";
     private static final String URI = "uri";
@@ -129,6 +139,7 @@ public final class Slice extends CustomVersionedParcelable implements VersionedP
             HINT_ACTIVITY,
             HINT_CACHED,
             HINT_SELECTION_OPTION,
+            HINT_RAW,
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface SliceHint{ }

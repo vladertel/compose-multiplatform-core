@@ -16,37 +16,54 @@
 
 package androidx.ui.tooling
 
-import androidx.compose.Children
 import androidx.compose.Composable
+import androidx.compose.Providers
 import androidx.compose.SlotTable
-import androidx.compose.ambient
-import androidx.compose.composer
-import androidx.compose.unaryPlus
+import androidx.compose.currentComposer
 import java.util.Collections
 import java.util.WeakHashMap
 
 /**
- * A wrapper for compositions in inspection mode. The composition inside the Inspectable component
- * is in inspection mode.
+ * Storage for the preview generated [SlotTable]s.
  */
-@Composable
-fun Inspectable(@Children children: @Composable() () -> Unit) {
-    composer.composer.collectKeySourceInformation()
-    tables.add(composer.composer.slotTable)
-    InspectionMode.Provider(true) {
-        children()
+internal interface SlotTableRecord {
+    val store: Set<SlotTable>
+
+    companion object {
+        fun create(): SlotTableRecord = SlotTableRecordImpl()
     }
 }
 
-val tables = Collections.newSetFromMap(WeakHashMap<SlotTable, Boolean>())
+private class SlotTableRecordImpl : SlotTableRecord {
+    override val store: MutableSet<SlotTable> =
+        Collections.newSetFromMap(WeakHashMap<SlotTable, Boolean>())
+}
+
+/**
+ * A wrapper for compositions in inspection mode. The composition inside the Inspectable component
+ * is in inspection mode.
+ *
+ * @param slotTableRecord [SlotTableRecord] to record the SlotTable used in the composition of [children]
+ *
+ * @suppress
+ */
+@Composable
+internal fun Inspectable(
+    slotTableRecord: SlotTableRecord,
+    children: @Composable () -> Unit
+) {
+    currentComposer.collectKeySourceInformation()
+    (slotTableRecord as SlotTableRecordImpl).store.add(currentComposer.slotTable)
+    Providers(InspectionMode provides true, children = children)
+}
 
 /**
  * A wrapper for inspection-mode-only behavior. The children of this component will only be included
  * in the composition when the composition is in inspection mode.
  */
 @Composable
-fun InInspectionModeOnly(@Children children: @Composable() () -> Unit) {
-    if (+ambient(InspectionMode)) {
+fun InInspectionModeOnly(children: @Composable () -> Unit) {
+    if (InspectionMode.current) {
         children()
     }
 }

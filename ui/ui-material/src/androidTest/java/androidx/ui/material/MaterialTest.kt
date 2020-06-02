@@ -17,43 +17,49 @@
 package androidx.ui.material
 
 import androidx.compose.Composable
-import androidx.compose.composer
-import androidx.ui.core.PxSize
+import androidx.ui.core.Modifier
+import androidx.ui.layout.DpConstraints
 import androidx.ui.test.BigTestConstraints
 import androidx.ui.test.CollectedSizes
-import androidx.ui.test.setContentAndGetPixelSize
-import androidx.ui.layout.DpConstraints
-import androidx.ui.material.surface.Surface
 import androidx.ui.test.ComposeTestRule
+import androidx.ui.test.runOnIdleCompose
+import androidx.ui.test.setContentAndGetPixelSize
+import androidx.ui.unit.Density
+import androidx.ui.unit.PxSize
 
-fun ComposeTestRule.setMaterialContent(composable: @Composable() () -> Unit) {
+fun ComposeTestRule.setMaterialContent(
+    modifier: Modifier = Modifier,
+    composable: @Composable () -> Unit
+) {
     setContent {
         MaterialTheme {
-            Surface {
-                composable()
-            }
+            Surface(modifier = modifier, content = composable)
         }
     }
 }
-
+fun <T> ComposeTestRule.runOnIdleComposeWithDensity(action: Density.() -> T): T {
+    return runOnIdleCompose {
+        density.action()
+    }
+}
 fun ComposeTestRule.setMaterialContentAndCollectSizes(
+    modifier: Modifier = Modifier,
     parentConstraints: DpConstraints = BigTestConstraints,
-    children: @Composable() () -> Unit
+    children: @Composable () -> Unit
 ): CollectedSizes {
-    val sizes = setMaterialContentAndGetPixelSize(parentConstraints, children)
+    val sizes = setMaterialContentAndGetPixelSize(modifier, parentConstraints, children)
     return CollectedSizes(sizes, density)
 }
 
 fun ComposeTestRule.setMaterialContentAndGetPixelSize(
+    modifier: Modifier = Modifier,
     parentConstraints: DpConstraints = BigTestConstraints,
-    children: @Composable() () -> Unit
+    children: @Composable () -> Unit
 ): PxSize = setContentAndGetPixelSize(
     parentConstraints,
-    { setMaterialContent(it) }
+    { setMaterialContent(composable = it) }
 ) {
     MaterialTheme {
-        Surface {
-            children()
-        }
+        Surface(modifier = modifier, content = children)
     }
 }

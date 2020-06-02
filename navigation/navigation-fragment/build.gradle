@@ -30,7 +30,6 @@ dependencies {
     api("androidx.fragment:fragment:1.2.4")
     api(project(":navigation:navigation-runtime"))
 
-    androidTestImplementation(project(":navigation:navigation-testing"))
     androidTestImplementation(project(":navigation:navigation-runtime-ktx"))
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
     androidTestImplementation(ANDROIDX_TEST_CORE)
@@ -41,12 +40,12 @@ dependencies {
     androidTestImplementation project(':internal-testutils-runtime'), {
         exclude group: 'androidx.fragment', module: 'fragment'
     }
+    androidTestImplementation(project(':internal-testutils-navigation'))
 }
 
 androidx {
     name = "Android Navigation Fragment"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.NAVIGATION
     mavenGroup = LibraryGroups.NAVIGATION
     inceptionYear = "2017"
     description = "Android Navigation-Fragment"

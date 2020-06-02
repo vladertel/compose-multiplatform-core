@@ -19,6 +19,7 @@ import android.net.Uri;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.selection.ItemDetailsLookup;
 import androidx.recyclerview.widget.RecyclerView;
@@ -36,13 +37,15 @@ final class FancyDetailsLookup extends ItemDetailsLookup<Uri> {
     }
 
     @Override
-    public ItemDetails<Uri> getItemDetails(MotionEvent e) {
+    public ItemDetails<Uri> getItemDetails(@NonNull MotionEvent e) {
         @Nullable View view = mRecView.findChildViewUnder(e.getX(), e.getY());
         if (view != null) {
             ViewHolder holder = mRecView.getChildViewHolder(view);
-            if (holder instanceof FancyHolder) {
-                return ((FancyHolder) holder).getItemDetails();
+            if (holder instanceof FancyItemHolder) {
+                return ((FancyItemHolder) holder).getItemDetails();
             }
+            // FancyHeaderHolder doesn't hold a selectable item,
+            // so it doesn't support getItemDetails.
         }
         return null;
     }

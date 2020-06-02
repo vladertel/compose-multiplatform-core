@@ -17,13 +17,12 @@
 package androidx.ui.foundation.shape.corner
 
 import androidx.annotation.IntRange
-import androidx.ui.core.Dp
-import androidx.ui.core.Px
-import androidx.ui.core.PxSize
-import androidx.ui.core.dp
-import androidx.ui.core.px
-import androidx.ui.engine.geometry.Outline
+import androidx.ui.geometry.Size
+import androidx.ui.geometry.toRect
+import androidx.ui.graphics.Outline
 import androidx.ui.graphics.Path
+import androidx.ui.unit.Dp
+import androidx.ui.unit.dp
 
 /**
  * A shape describing the rectangle with cut corners.
@@ -34,58 +33,81 @@ import androidx.ui.graphics.Path
  * @param bottomRight a size of the bottom left corner
  * @param bottomLeft a size of the bottom right corner
  */
-data class CutCornerShape(
-    val topLeft: CornerSize,
-    val topRight: CornerSize,
-    val bottomRight: CornerSize,
-    val bottomLeft: CornerSize
+class CutCornerShape(
+    topLeft: CornerSize,
+    topRight: CornerSize,
+    bottomRight: CornerSize,
+    bottomLeft: CornerSize
 ) : CornerBasedShape(topLeft, topRight, bottomRight, bottomLeft) {
 
     override fun createOutline(
-        size: PxSize,
-        topLeft: Px,
-        topRight: Px,
-        bottomRight: Px,
-        bottomLeft: Px
-    ) = Outline.Generic(Path().apply {
-        var cornerSize = topLeft.value
+        size: Size,
+        topLeft: Float,
+        topRight: Float,
+        bottomRight: Float,
+        bottomLeft: Float
+    ) = if (topLeft + topRight + bottomLeft + bottomRight == 0.0f) {
+        Outline.Rectangle(size.toRect())
+    } else Outline.Generic(Path().apply {
+        var cornerSize = topLeft
         moveTo(0f, cornerSize)
         lineTo(cornerSize, 0f)
-        cornerSize = topRight.value
-        lineTo(size.width.value - cornerSize, 0f)
-        lineTo(size.width.value, cornerSize)
-        cornerSize = bottomRight.value
-        lineTo(size.width.value, size.height.value - cornerSize)
-        lineTo(size.width.value - cornerSize, size.height.value)
-        cornerSize = bottomLeft.value
-        lineTo(cornerSize, size.height.value)
-        lineTo(0f, size.height.value - cornerSize)
+        cornerSize = topRight
+        lineTo(size.width - cornerSize, 0f)
+        lineTo(size.width, cornerSize)
+        cornerSize = bottomRight
+        lineTo(size.width, size.height - cornerSize)
+        lineTo(size.width - cornerSize, size.height)
+        cornerSize = bottomLeft
+        lineTo(cornerSize, size.height)
+        lineTo(0f, size.height - cornerSize)
         close()
     })
+
+    override fun copy(
+        topLeft: CornerSize,
+        topRight: CornerSize,
+        bottomRight: CornerSize,
+        bottomLeft: CornerSize
+    ) = CutCornerShape(
+        topLeft = topLeft,
+        topRight = topRight,
+        bottomRight = bottomRight,
+        bottomLeft = bottomLeft
+    )
+
+    override fun toString(): String {
+        return "CutCornerShape(topLeft = $topLeft, topRight = $topRight, bottomRight = " +
+                "$bottomRight, bottomLeft = $bottomLeft)"
+    }
 }
 
 /**
  * Creates [CutCornerShape] with the same size applied for all four corners.
+ * @param corner [CornerSize] to apply.
  */
 /*inline*/ fun CutCornerShape(corner: CornerSize) = CutCornerShape(corner, corner, corner, corner)
 
 /**
  * Creates [CutCornerShape] with the same size applied for all four corners.
+ * @param size Size in [Dp] to apply.
  */
 /*inline*/ fun CutCornerShape(size: Dp) = CutCornerShape(CornerSize(size))
 
 /**
  * Creates [CutCornerShape] with the same size applied for all four corners.
+ * @param size Size in pixels to apply.
  */
-/*inline*/ fun CutCornerShape(size: Px) = CutCornerShape(CornerSize(size))
+/*inline*/ fun CutCornerShape(size: Float) = CutCornerShape(CornerSize(size))
 
 /**
  * Creates [CutCornerShape] with the same size applied for all four corners.
+ * @param percent Size in percents to apply.
  */
 /*inline*/ fun CutCornerShape(percent: Int) = CutCornerShape(CornerSize(percent))
 
 /**
- * Creates [CutCornerShape] with sizes defined by [Dp].
+ * Creates [CutCornerShape] with sizes defined in [Dp].
  */
 /*inline*/ fun CutCornerShape(
     topLeft: Dp = 0.dp,
@@ -100,13 +122,13 @@ data class CutCornerShape(
 )
 
 /**
- * Creates [CutCornerShape] with sizes defined by [Px].
+ * Creates [CutCornerShape] with sizes defined in float.
  */
 /*inline*/ fun CutCornerShape(
-    topLeft: Px = 0.px,
-    topRight: Px = 0.px,
-    bottomRight: Px = 0.px,
-    bottomLeft: Px = 0.px
+    topLeft: Float = 0.0f,
+    topRight: Float = 0.0f,
+    bottomRight: Float = 0.0f,
+    bottomLeft: Float = 0.0f
 ) = CutCornerShape(
     CornerSize(topLeft),
     CornerSize(topRight),
@@ -115,7 +137,7 @@ data class CutCornerShape(
 )
 
 /**
- * Creates [CutCornerShape] with sizes defined by percents of the shape's smaller side.
+ * Creates [CutCornerShape] with sizes defined in percents of the shape's smaller side.
  */
 /*inline*/ fun CutCornerShape(
     @IntRange(from = 0, to = 50) topLeftPercent: Int = 0,

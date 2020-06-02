@@ -16,18 +16,19 @@
 
 package androidx.ui.animation
 
+import androidx.animation.AnimatedFloat
+import androidx.animation.AnimationBuilder
 import androidx.animation.AnimationEndReason
 import androidx.animation.TweenBuilder
 import androidx.compose.Composable
-import androidx.compose.Key
-import androidx.compose.composer
-import androidx.compose.effectOf
-import androidx.compose.memo
+import androidx.compose.invalidate
+import androidx.compose.key
 import androidx.compose.onCommit
-import androidx.compose.unaryPlus
-import androidx.ui.core.Alignment
-import androidx.ui.core.Opacity
+import androidx.compose.remember
+import androidx.ui.core.Modifier
+import androidx.ui.core.drawOpacity
 import androidx.ui.layout.Stack
+import androidx.ui.util.fastForEach
 
 /**
  * [Crossfade] allows to switch between two layouts with a crossfade animation.
@@ -37,40 +38,47 @@ import androidx.ui.layout.Stack
  * @param current is a key representing your current layout state. every time you change a key
  * the animation will be triggered. The [children] called with the old key will be faded out while
  * the [children] called with the new key will be faded in.
+ * @param animation the [AnimationBuilder] to configure the animation.
  */
 @Composable
-fun <T> Crossfade(current: T, children: @Composable() (T) -> Unit) {
-    val state = +memo { CrossfadeState<T>() }
+fun <T> Crossfade(
+    current: T,
+    animation: AnimationBuilder<Float> = TweenBuilder(),
+    children: @Composable (T) -> Unit
+) {
+    val state = remember { CrossfadeState<T>() }
     if (current != state.current) {
         state.current = current
-        val keys = state.items.map { it.first }.toMutableList()
+        val keys = state.items.map { it.key }.toMutableList()
         if (!keys.contains(current)) {
             keys.add(current)
         }
         state.items.clear()
-        keys.forEach { key ->
-            state.items.add(key to @Composable() { children ->
-                Opacity(
-                    opacity = +animatedOpacity(
-                        visible = (key == current),
-                        onAnimationFinish = {
-                            if (key == state.current) {
-                                // leave only the current in the list
-                                state.items.removeAll { it.first != state.current }
-                            }
-                        }),
-                    children = children
+        keys.mapTo(state.items) { key ->
+            CrossfadeAnimationItem(key) { children ->
+                val opacity = animatedOpacity(
+                    animation = animation,
+                    visible = key == current,
+                    onAnimationFinish = {
+                        if (key == state.current) {
+                            // leave only the current in the list
+                            state.items.removeAll { it.key != state.current }
+                            state.invalidate()
+                        }
+                    }
                 )
-            })
+                Stack(Modifier.drawOpacity(opacity.value)) {
+                    children()
+                }
+            }
         }
     }
     Stack {
-        aligned(Alignment.TopLeft) {
-            state.items.forEach { (key, opacity) ->
-                Key(key = key) {
-                    opacity {
-                        children(key)
-                    }
+        state.invalidate = invalidate
+        state.items.fastForEach { (item, opacity) ->
+            key(item) {
+                opacity {
+                    children(item)
                 }
             }
         }
@@ -79,23 +87,33 @@ fun <T> Crossfade(current: T, children: @Composable() (T) -> Unit) {
 
 private class CrossfadeState<T> {
     var current: T? = null
-    val items = mutableListOf<Pair<T, @Composable() (@Composable() () -> Unit) -> Unit>>()
+    var items = mutableListOf<CrossfadeAnimationItem<T>>()
+    var invalidate: () -> Unit = { }
 }
 
+private data class CrossfadeAnimationItem<T>(
+    val key: T,
+    val transition: CrossfadeTransition
+)
+
+private typealias CrossfadeTransition = @Composable (children: @Composable () -> Unit) -> Unit
+
+@Composable
 private fun animatedOpacity(
+    animation: AnimationBuilder<Float>,
     visible: Boolean,
     onAnimationFinish: () -> Unit = {}
-) = effectOf<Float> {
-    val animatedFloat = +animatedFloat(if (!visible) 1f else 0f)
-    +onCommit(visible) {
+): AnimatedFloat {
+    val animatedFloat = animatedFloat(if (!visible) 1f else 0f)
+    onCommit(visible) {
         animatedFloat.animateTo(
             if (visible) 1f else 0f,
-            anim = TweenBuilder<Float>().apply { duration = 300 },
+            anim = animation,
             onEnd = { reason, _ ->
                 if (reason == AnimationEndReason.TargetReached) {
                     onAnimationFinish()
                 }
             })
     }
-    animatedFloat.value
+    return animatedFloat
 }

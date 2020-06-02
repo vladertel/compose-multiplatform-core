@@ -17,9 +17,10 @@
 package androidx.ui.test
 
 import android.util.DisplayMetrics
+import androidx.activity.ComponentActivity
 import androidx.compose.Composable
-import androidx.test.rule.ActivityTestRule
-import androidx.ui.core.Density
+import androidx.compose.Recomposer
+import androidx.ui.unit.Density
 import androidx.ui.test.android.AndroidComposeTestRule
 import org.junit.rules.TestRule
 
@@ -32,41 +33,66 @@ import org.junit.rules.TestRule
  * you can still create [AndroidComposeTestRule] directly and access its underlying ActivityTestRule
  */
 interface ComposeTestRule : TestRule {
-
     /**
      * Current device screen's density.
      */
-    val density: Density get
+    val density: Density
+
+    /**
+     * A test rule that allows you to control the animation clock
+     */
+    val clockTestRule: AnimationClockTestRule
 
     /**
      * Sets the given composable as a content of the current screen.
+     *
+     * Use this in your tests to setup the UI content to be tested. This should be called exactly
+     * once per test.
+     *
+     * @throws IllegalStateException if called more than once per test.
      */
-    fun setContent(composable: @Composable() () -> Unit)
+    fun setContent(composable: @Composable () -> Unit)
 
     /**
-     * Runs action on UI thread with a guarantee that any operations modifying Compose data model
-     * are safe to do in this block.
+     * Takes the given content and prepares it for execution-controlled test via
+     * [ComposeTestCaseSetup].
      */
-    fun runOnUiThread(action: () -> Unit)
+    fun forGivenContent(composable: @Composable () -> Unit): ComposeTestCaseSetup
+
+    /**
+     * Takes the given test case and prepares it for execution-controlled test via
+     * [ComposeTestCaseSetup].
+     */
+    fun forGivenTestCase(testCase: ComposeTestCase): ComposeTestCaseSetup
 
     // TODO(pavlis): Provide better abstraction for host side reusability
     val displayMetrics: DisplayMetrics get
 }
 
 /**
- * Factory method to provide implementation of [ComposeTestRule].
+ * Helper interface to run execution-controlled test via [ComposeTestRule].
  */
-fun createComposeRule(disableTransitions: Boolean = false): ComposeTestRule {
-    return createComposeRule(disableTransitions, throwOnRecomposeTimeout = false)
+interface ComposeTestCaseSetup {
+    /**
+     * Takes the content provided via [ComposeTestRule#setContent] and runs the given test
+     * instruction. The test is executed on the main thread and prevents interference from Activity
+     * so the frames can be controlled manually. See [ComposeExecutionControl] for available
+     * methods.
+     */
+    fun performTestWithEventsControl(block: ComposeExecutionControl.() -> Unit)
 }
 
 /**
- * Internal factory method to provide implementation of [ComposeTestRule].
+ * Factory method to provide implementation of [ComposeTestRule].
+ *
+ * This method is useful for tests in compose libraries where no custom Activity is usually
+ * needed. For app tests or launching custom activities, see [AndroidComposeTestRule].
+ *
+ * For Android this will use the default Activity (android.app.Activity). You need to add a
+ * reference to this activity into the manifest file of the corresponding tests (usually in
+ * androidTest/AndroidManifest.xml).
  */
-internal fun createComposeRule(
-    disableTransitions: Boolean = false,
-    throwOnRecomposeTimeout: Boolean = false
-): ComposeTestRule {
-    // TODO(pavlis): Plug-in host side rule here in the future.
-    return AndroidComposeTestRule(disableTransitions, throwOnRecomposeTimeout)
-}
+fun createComposeRule(
+    recomposer: Recomposer? = null,
+    disableTransitions: Boolean = false
+): ComposeTestRule = AndroidComposeTestRule<ComponentActivity>(recomposer, disableTransitions)

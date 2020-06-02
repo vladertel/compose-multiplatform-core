@@ -43,21 +43,25 @@ abstract class UpdateApiTask : DefaultTask() {
     @get:Internal // outputs are declared in getTaskOutputs()
     abstract val outputApiLocations: ListProperty<ApiLocation>
 
-    /** Whether to update restricted API files too */
-    @get:Input
-    var updateRestrictedAPIs = false
-
     @InputFiles
     fun getTaskInputs(): List<File>? {
-        return inputApiLocation.get().files()
+        val inputApi = inputApiLocation.get()
+        return listOf(
+            inputApi.publicApiFile,
+            inputApi.restrictedApiFile,
+            inputApi.experimentalApiFile
+        )
     }
 
     @OutputFiles
     fun getTaskOutputs(): List<File> {
-        if (updateRestrictedAPIs) {
-            return outputApiLocations.get().flatMap { it.files() }
+        return outputApiLocations.get().flatMap { outputApiLocation ->
+            listOf(
+                outputApiLocation.publicApiFile,
+                outputApiLocation.restrictedApiFile,
+                outputApiLocation.experimentalApiFile
+            )
         }
-        return outputApiLocations.get().flatMap { it.nonRestrictedFiles() }
     }
 
     @TaskAction
@@ -82,17 +86,17 @@ abstract class UpdateApiTask : DefaultTask() {
             copy(
                 inputApi.experimentalApiFile,
                 outputApi.experimentalApiFile,
+                // Experimental APIs are never locked down,
+                // so it's always okay to overwrite them.
                 true,
                 project.logger
             )
-            if (updateRestrictedAPIs) {
-                copy(
-                    inputApi.restrictedApiFile,
-                    outputApi.restrictedApiFile,
-                    permitOverwriting,
-                    project.logger
-                )
-            }
+            copy(
+                inputApi.restrictedApiFile,
+                outputApi.restrictedApiFile,
+                permitOverwriting,
+                project.logger
+            )
         }
     }
 

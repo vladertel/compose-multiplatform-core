@@ -49,7 +49,7 @@ import androidx.annotation.RequiresApi
  * @param autofillHints The autofill hint. If this value not specified, we use heuristics to
  * determine what data to use while performing autofill.
  *
- * @hide
+ * @suppress
  */
 @RequiresApi(Build.VERSION_CODES.O)
 data class FakeViewStructure(
@@ -75,6 +75,7 @@ data class FakeViewStructure(
             useParcel { parcel ->
                 parcel.writeInt(++previousId) // View Id.
                 parcel.writeInt(NO_SESSION) // Flag.
+                parcel.setDataPosition(0)
                 autofillId = AutofillId.CREATOR.createFromParcel(parcel)
             }
             return autofillId ?: error("Could not generate autofill id")

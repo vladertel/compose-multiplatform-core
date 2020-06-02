@@ -30,21 +30,24 @@ plugins {
 }
 
 dependencies {
-    kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
+    kotlinPlugin project(path: ":compose:compose-compiler")
 
-    implementation(KOTLIN_COMPOSE_STDLIB)
+    implementation(KOTLIN_STDLIB)
 
-    implementation "androidx.annotation:annotation:1.1.0"
+    api "androidx.annotation:annotation:1.1.0"
 
     implementation project(":compose:compose-runtime")
     api project(":ui:ui-core")
-    implementation project(":ui:ui-framework")
+    implementation project(":ui:ui-text")
+    implementation project(":ui:ui-util")
+    implementation(CONSTRAINT_LAYOUT_CORE)
 
     testImplementation(ANDROIDX_TEST_RULES)
     testImplementation(ANDROIDX_TEST_RUNNER)
     testImplementation(JUNIT)
 
-    androidTestImplementation project(":ui:ui-platform")
+    androidTestImplementation project(":ui:ui-foundation")
+    androidTestImplementation project(":ui:ui-test")
 
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)

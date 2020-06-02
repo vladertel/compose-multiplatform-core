@@ -29,18 +29,20 @@ plugins {
 }
 
 dependencies {
-    kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
+    kotlinPlugin project(path: ":compose:compose-compiler")
 
-    implementation(KOTLIN_COMPOSE_STDLIB)
+    implementation(KOTLIN_STDLIB)
+    implementation "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.3"
 
-    implementation "androidx.annotation:annotation:1.1.0"
+    api "androidx.annotation:annotation:1.1.0"
 
     api project(":ui:ui-animation-core")
 
     api project(":compose:compose-runtime")
+    implementation project(":ui:ui-util")
     api project(":ui:ui-core")
-    api project(":ui:ui-framework")
     api project(":ui:ui-layout")
+    api project(":ui:ui-geometry")
 
     testImplementation(ANDROIDX_TEST_RULES)
     testImplementation(ANDROIDX_TEST_RUNNER)
@@ -49,6 +51,8 @@ dependencies {
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
     androidTestImplementation(JUNIT)
+    androidTestImplementation project(":ui:ui-foundation")
+    androidTestImplementation project(":ui:ui-test")
 }
 
 androidx {

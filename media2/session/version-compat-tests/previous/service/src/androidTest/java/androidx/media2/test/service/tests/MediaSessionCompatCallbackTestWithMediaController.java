@@ -53,7 +53,6 @@ import androidx.media2.test.common.TestUtils;
 import androidx.media2.test.service.MediaTestUtils;
 import androidx.media2.test.service.RemoteMediaController;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import org.junit.After;
@@ -69,7 +68,6 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Tests {@link MediaController}.
  */
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.JELLY_BEAN)
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class MediaSessionCompatCallbackTestWithMediaController extends MediaSessionTestBase {
@@ -464,102 +462,6 @@ public class MediaSessionCompatCallbackTestWithMediaController extends MediaSess
         controller.rewind();
         assertTrue(mSessionCallback.await(TIME_OUT_MS));
         assertEquals(true, mSessionCallback.mOnRewindCalled);
-    }
-
-    @Test
-    public void testPlayFromSearch() throws Exception {
-        prepareLooper();
-        final String request = "random query";
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.playFromSearch(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPlayFromSearchCalled);
-        assertEquals(request, mSessionCallback.mQuery);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPlayFromUri() throws Exception {
-        prepareLooper();
-        final Uri request = Uri.parse("foo://boo");
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.playFromUri(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPlayFromUriCalled);
-        assertEquals(request, mSessionCallback.mUri);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPlayFromMediaId() throws Exception {
-        prepareLooper();
-        final String request = "media_id";
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.playFromMediaId(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPlayFromMediaIdCalled);
-        assertEquals(request, mSessionCallback.mMediaId);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPrepareFromSearch() throws Exception {
-        prepareLooper();
-        final String request = "random query";
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.prepareFromSearch(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPrepareFromSearchCalled);
-        assertEquals(request, mSessionCallback.mQuery);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPrepareFromUri() throws Exception {
-        prepareLooper();
-        final Uri request = Uri.parse("foo://boo");
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.prepareFromUri(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPrepareFromUriCalled);
-        assertEquals(request, mSessionCallback.mUri);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
-    }
-
-    @Test
-    public void testPrepareFromMediaId() throws Exception {
-        prepareLooper();
-        final String request = "media_id";
-        final Bundle bundle = new Bundle();
-        bundle.putString("key", "value");
-        RemoteMediaController controller = createControllerAndWaitConnection();
-        mSessionCallback.reset(1);
-
-        controller.prepareFromMediaId(request, bundle);
-        assertTrue(mSessionCallback.await(TIME_OUT_MS));
-        assertEquals(true, mSessionCallback.mOnPrepareFromMediaIdCalled);
-        assertEquals(request, mSessionCallback.mMediaId);
-        assertTrue(TestUtils.equals(bundle, mSessionCallback.mExtras));
     }
 
     @Test

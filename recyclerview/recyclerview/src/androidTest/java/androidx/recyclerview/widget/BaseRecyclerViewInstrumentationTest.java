@@ -45,13 +45,15 @@ import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
 import androidx.recyclerview.test.R;
 import androidx.test.platform.app.InstrumentationRegistry;
-import androidx.test.rule.ActivityTestRule;
+import androidx.testutils.ActivityScenarioResetRule;
 import androidx.testutils.PollingCheck;
+import androidx.testutils.ResettableActivityScenarioRule;
 
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 
 import java.lang.reflect.InvocationTargetException;
@@ -81,9 +83,13 @@ abstract public class BaseRecyclerViewInstrumentationTest {
 
     Thread mInstrumentationThread;
 
+    // One activity launch per test class
+    @ClassRule
+    public static ResettableActivityScenarioRule<TestActivity> mActivityRule =
+            new ResettableActivityScenarioRule<>(TestActivity.class);
     @Rule
-    public ActivityTestRule<TestActivity> mActivityRule =
-            new ActivityTestRule<>(TestActivity.class);
+    public ActivityScenarioResetRule<TestActivity> mActivityResetRule =
+            new TestActivity.ResetRule(mActivityRule.getScenario());
 
     public BaseRecyclerViewInstrumentationTest() {
         this(false);
@@ -381,6 +387,7 @@ abstract public class BaseRecyclerViewInstrumentationTest {
                 @Override
                 public void putRecycledView(RecyclerView.ViewHolder scrap) {
                     assertNull(scrap.mOwnerRecyclerView);
+                    assertNull(scrap.getBindingAdapter());
                     super.putRecycledView(scrap);
                 }
             };
@@ -395,7 +402,7 @@ abstract public class BaseRecyclerViewInstrumentationTest {
                     if (!vh.isRemoved()) {
                         assertNotSame("If getItemOffsets is called, child should have a valid"
                                         + " adapter position unless it is removed : " + vh,
-                                vh.getAdapterPosition(), RecyclerView.NO_POSITION);
+                                vh.getAbsoluteAdapterPosition(), RecyclerView.NO_POSITION);
                     }
                 }
             });
@@ -911,7 +918,8 @@ abstract public class BaseRecyclerViewInstrumentationTest {
         @Override
         public void onBindViewHolder(@NonNull TestViewHolder holder, int position) {
             assertNotNull(holder.mOwnerRecyclerView);
-            assertEquals(position, holder.getAdapterPosition());
+            assertSame(this, holder.getBindingAdapter());
+            assertEquals(position, holder.getAbsoluteAdapterPosition());
             final Item item = mItems.get(position);
             getTextViewInHolder(holder).setText(item.getDisplayText());
             holder.itemView.setBackgroundColor(position % 2 == 0 ? 0xFFFF0000 : 0xFF0000FF);
@@ -932,7 +940,7 @@ abstract public class BaseRecyclerViewInstrumentationTest {
         @Override
         public void onViewRecycled(@NonNull TestViewHolder holder) {
             super.onViewRecycled(holder);
-            final int adapterPosition = holder.getAdapterPosition();
+            final int adapterPosition = holder.getAbsoluteAdapterPosition();
             final boolean shouldHavePosition = !holder.isRemoved() && holder.isBound() &&
                     !holder.isAdapterPositionUnknown() && !holder.isInvalid();
             String log = "Position check for " + holder.toString();

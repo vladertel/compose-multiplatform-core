@@ -16,9 +16,7 @@
 
 package sample;
 
-import kotlin.UseExperimental;
-
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 class UseKtExperimentalFromJava {
     /**
      * Unsafe call into an experimental class.
@@ -34,7 +32,8 @@ class UseKtExperimentalFromJava {
         return dateProvider.getDate();
     }
 
-    @UseExperimental(markerClass = ExperimentalDateTimeKt.class)
+    @SuppressWarnings("deprecation")
+    @kotlin.UseExperimental(markerClass = ExperimentalDateTimeKt.class)
     int getDateUseExperimental() {
         DateProviderKt dateProvider = new DateProviderKt();
         return dateProvider.getDate();
@@ -42,5 +41,59 @@ class UseKtExperimentalFromJava {
 
     void displayDate() {
         System.out.println("" + getDateUnsafe());
+    }
+
+    // Tests involving multiple experimental markers.
+
+    /**
+     * Unsafe call into an experimental class.
+     */
+    @ExperimentalDateTimeKt
+    int getDateExperimentalLocationUnsafe() {
+        DateProviderKt dateProvider = new DateProviderKt();
+        LocationProviderKt locationProvider = new LocationProviderKt();
+        return dateProvider.getDate() + locationProvider.getLocation();
+    }
+
+    @ExperimentalDateTimeKt
+    @ExperimentalLocationKt
+    int getDateAndLocationExperimental() {
+        DateProviderKt dateProvider = new DateProviderKt();
+        LocationProviderKt locationProvider = new LocationProviderKt();
+        return dateProvider.getDate() + locationProvider.getLocation();
+    }
+
+    @SuppressWarnings("deprecation")
+    @kotlin.UseExperimental(markerClass = ExperimentalDateTimeKt.class)
+    @ExperimentalLocationKt
+    int getDateUseExperimentalLocationExperimental() {
+        DateProviderKt dateProvider = new DateProviderKt();
+        LocationProviderKt locationProvider = new LocationProviderKt();
+        return dateProvider.getDate() + locationProvider.getLocation();
+    }
+
+    @SuppressWarnings("deprecation")
+    @kotlin.UseExperimental(markerClass = {ExperimentalDateTimeKt.class,
+            ExperimentalLocationKt.class})
+    int getDateAndLocationUseExperimental() {
+        DateProviderKt dateProvider = new DateProviderKt();
+        LocationProviderKt locationProvider = new LocationProviderKt();
+        return dateProvider.getDate() + locationProvider.getLocation();
+    }
+
+    /**
+     * Regression test for issue reported in b/140637106, which passes here but fails in Studio.
+     */
+    void regressionTestStaticUsage() {
+        TimeProviderKt.getTimeStatically();
+        TimeProviderKt.Companion.getTimeStatically();
+    }
+
+    /**
+     * Regression test for issue reported in b/140637106, which passes here but fails in Studio.
+     */
+    void regressionTestInlineUsage() {
+        new TimeProviderKt().getTime();
+        new TimeProviderKt().getTimeJava();
     }
 }

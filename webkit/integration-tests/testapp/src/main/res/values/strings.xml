@@ -31,7 +31,7 @@
     <string name="loud_interstitial_activity_title">Loud (Red) Interstitials</string>
     <string name="giant_interstitial_activity_title">Giant Interstitial</string>
     <string name="per_web_view_enable_activity_title">Per-WebView Enable APIs</string>
-    <string name="cannot_start_safe_browsing">Unable to start Safe Browsing, this is unexpected.</string>
+    <string name="cannot_start_safe_browsing">Unable to start Safe Browsing, this is unexpected. Tap for more info.</string>
     <string name="safebrowsing_enabled_caption">Safe Browsing enabled</string>
     <string name="safebrowsing_disabled_caption">Safe Browsing disabled</string>
     <string name="default_safebrowsing_caption">Default Safe Browsing setting</string>
@@ -55,7 +55,7 @@
     <string name="multi_process_enabled_activity_title">Multi Process Enabled</string>
     <string name="multi_process_enabled">Multi Process is enabled</string>
     <string name="multi_process_disabled">Multi Process is disabled</string>
-    <string name="multi_process_query_unavailable">Multi Process query not available</string>
+    <string name="multi_process_unavailable">Multi Process not available</string>
     <string name="tracing_controller_activity_title">Tracing Controller Demo</string>
     <string name="tracing_controller_start_tracing">Start tracing</string>
     <string name="tracing_controller_stop_tracing">Stop tracing</string>
@@ -69,4 +69,15 @@
     <string name="renderer_termination_button_unblock_text">Unblock</string>
     <string name="renderer_terminated_description">WebView renderer was terminated.</string>
     <string name="renderer_unresponsive_description">WebView renderer has become unresponsive.</string>
+    <string name="fullscreen_activity_title">Fullscreen web contents Demo</string>
+    <string name="js_java_interaction_activity_title">JavaScript - Java communication</string>
+    <string name="web_message_listener_activity_title">WebMessageListener Demo</string>
+    <string name="web_message_listener_malicious_website_activity_title">Malicious Website Demo</string>
+    <string name="force_dark_strategy_activity_title">Force Dark Strategy Demo</string>
+    <string name="force_dark_strategy_switch_title">Force Dark</string>
+    <string-array name="force_dark_strategy_selection">
+        <item>UA darkening only</item>
+        <item>Web theme darkening only</item>
+        <item>Prefer Web theme over UA darkening</item>
+    </string-array>
 </resources>

@@ -16,13 +16,12 @@
 
 package androidx.camera.core;
 
-import android.os.Handler;
 import android.view.Surface;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.core.impl.utils.executor.CameraXExecutors;
+import androidx.camera.core.impl.ImageReaderProxy;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -212,6 +211,7 @@ final class QueuedImageReaderProxy
         return mMaxImages;
     }
 
+    @NonNull
     @Override
     public synchronized Surface getSurface() {
         throwExceptionIfClosed();
@@ -221,19 +221,16 @@ final class QueuedImageReaderProxy
     @Override
     public synchronized void setOnImageAvailableListener(
             @NonNull OnImageAvailableListener onImageAvailableListener,
-            @Nullable Handler onImageAvailableHandler) {
-        setOnImageAvailableListener(onImageAvailableListener,
-                onImageAvailableHandler == null ? null :
-                        CameraXExecutors.newHandlerExecutor(onImageAvailableHandler));
-    }
-
-    @Override
-    public synchronized void setOnImageAvailableListener(
-            @NonNull OnImageAvailableListener onImageAvailableListener,
             @NonNull Executor executor) {
         throwExceptionIfClosed();
         mOnImageAvailableListener = onImageAvailableListener;
         mOnImageAvailableExecutor = executor;
+    }
+
+    @Override
+    public synchronized void clearOnImageAvailableListener() {
+        mOnImageAvailableListener = null;
+        mOnImageAvailableExecutor = null;
     }
 
     @Override

@@ -22,13 +22,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import android.graphics.ImageFormat;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.view.Surface;
 
+import androidx.camera.core.impl.ImageReaderProxy;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 
@@ -39,7 +39,7 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
@@ -52,9 +52,7 @@ public final class QueuedImageReaderProxyTest {
     private static final int MAX_IMAGES = 10;
 
     private final Surface mSurface = mock(Surface.class);
-    private HandlerThread mHandlerThread;
-    private Handler mHandler;
-    private Executor mExecutor;
+    private ExecutorService mExecutor;
     private QueuedImageReaderProxy mImageReaderProxy;
 
     private static ImageProxy createMockImageProxy() {
@@ -84,9 +82,6 @@ public final class QueuedImageReaderProxyTest {
 
     @Before
     public void setUp() {
-        mHandlerThread = new HandlerThread("background");
-        mHandlerThread.start();
-        mHandler = new Handler(mHandlerThread.getLooper());
         mExecutor = Executors.newSingleThreadExecutor();
         mImageReaderProxy =
                 new QueuedImageReaderProxy(
@@ -95,7 +90,7 @@ public final class QueuedImageReaderProxyTest {
 
     @After
     public void tearDown() {
-        mHandlerThread.quitSafely();
+        mExecutor.shutdown();
     }
 
     @Test
@@ -172,14 +167,6 @@ public final class QueuedImageReaderProxyTest {
     }
 
     @Test
-    public void enqueueImage_invokesListenerCallbackOnHandler() {
-        ImageReaderProxy.OnImageAvailableListener listener =
-                mock(ImageReaderProxy.OnImageAvailableListener.class);
-        mImageReaderProxy.setOnImageAvailableListener(listener, mHandler);
-        enqueueImage_invokesListenerCallback(listener);
-    }
-
-    @Test
     public void enqueueImage_invokesListenerCallbackOnExecutor() {
         ImageReaderProxy.OnImageAvailableListener listener =
                 mock(ImageReaderProxy.OnImageAvailableListener.class);
@@ -193,6 +180,18 @@ public final class QueuedImageReaderProxyTest {
         mImageReaderProxy.enqueueImage(createForwardingImageProxy());
 
         verify(listener, timeout(2000).times(2)).onImageAvailable(mImageReaderProxy);
+    }
+
+    @Test
+    public void listenerNotInvoked_afterItIsCleared() {
+        ImageReaderProxy.OnImageAvailableListener listener =
+                mock(ImageReaderProxy.OnImageAvailableListener.class);
+        mImageReaderProxy.setOnImageAvailableListener(listener, mExecutor);
+
+        mImageReaderProxy.clearOnImageAvailableListener();
+        mImageReaderProxy.enqueueImage(createForwardingImageProxy());
+
+        verifyZeroInteractions(listener);
     }
 
     @Test

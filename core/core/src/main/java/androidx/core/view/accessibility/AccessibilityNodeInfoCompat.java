@@ -675,7 +675,7 @@ public class AccessibilityNodeInfoCompat {
             if (obj == null) {
                 return false;
             }
-            if (getClass() != obj.getClass()) {
+            if (!(obj instanceof AccessibilityNodeInfoCompat.AccessibilityActionCompat)) {
                 return false;
             }
             AccessibilityNodeInfoCompat.AccessibilityActionCompat other =
@@ -745,8 +745,8 @@ public class AccessibilityNodeInfoCompat {
         /**
          * Returns a cached instance if such is available otherwise a new one.
          *
-         * @param rowCount The number of rows.
-         * @param columnCount The number of columns.
+         * @param rowCount The number of rows, or -1 if count is unknown.
+         * @param columnCount The number of columns , or -1 if count is unknown.
          * @param hierarchical Whether the collection is hierarchical.
          *
          * @return An instance.
@@ -768,26 +768,26 @@ public class AccessibilityNodeInfoCompat {
         /**
          * Gets the number of columns.
          *
-         * @return The column count.
+         * @return The column count, or -1 if count is unknown.
          */
         public int getColumnCount() {
             if (Build.VERSION.SDK_INT >= 19) {
                 return ((AccessibilityNodeInfo.CollectionInfo) mInfo).getColumnCount();
             } else {
-                return 0;
+                return -1;
             }
         }
 
         /**
          * Gets the number of rows.
          *
-         * @return The row count.
+         * @return The row count, or -1 if count is unknown.
          */
         public int getRowCount() {
             if (Build.VERSION.SDK_INT >= 19) {
                 return ((AccessibilityNodeInfo.CollectionInfo) mInfo).getRowCount();
             } else {
-                return 0;
+                return -1;
             }
         }
 
@@ -948,6 +948,7 @@ public class AccessibilityNodeInfoCompat {
          * @return If the item is a heading.
          * @deprecated Use {@link AccessibilityNodeInfoCompat#isHeading()}
          */
+        @SuppressWarnings("deprecation")
         @Deprecated
         public boolean isHeading() {
             if (Build.VERSION.SDK_INT >= 19) {
@@ -1612,6 +1613,7 @@ public class AccessibilityNodeInfoCompat {
      * @param object The info to wrap.
      * @return A wrapper for if the object is not null, null otherwise.
      */
+    @SuppressWarnings("deprecation")
     static AccessibilityNodeInfoCompat wrapNonNullInstance(Object object) {
         if (object != null) {
             return new AccessibilityNodeInfoCompat(object);
@@ -1930,19 +1932,6 @@ public class AccessibilityNodeInfoCompat {
      */
     public void addAction(int action) {
         mInfo.addAction(action);
-    }
-
-    private List<CharSequence> extrasCharSequenceList(String key) {
-        if (Build.VERSION.SDK_INT < 19) {
-            return new ArrayList<CharSequence>();
-        }
-        ArrayList<CharSequence> list = mInfo.getExtras()
-                .getCharSequenceArrayList(key);
-        if (list == null) {
-            list = new ArrayList<CharSequence>();
-            mInfo.getExtras().putCharSequenceArrayList(key, list);
-        }
-        return list;
     }
 
     private List<Integer> extrasIntList(String key) {
@@ -3817,13 +3806,14 @@ public class AccessibilityNodeInfoCompat {
      *
      * @return {@code true} if the node is a heading, {@code false} otherwise.
      */
+    @SuppressWarnings("deprecation")
     public boolean isHeading() {
         if (Build.VERSION.SDK_INT >= 28) {
             return mInfo.isHeading();
         }
         if (getBooleanProperty(BOOLEAN_PROPERTY_IS_HEADING)) return true;
         CollectionItemInfoCompat collectionItemInfo = getCollectionItemInfo();
-        return (collectionItemInfo != null) && (collectionItemInfo.isHeading());
+        return (collectionItemInfo != null) && collectionItemInfo.isHeading();
     }
 
     /**
@@ -3997,7 +3987,7 @@ public class AccessibilityNodeInfoCompat {
         if (obj == null) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
+        if (!(obj instanceof AccessibilityNodeInfoCompat)) {
             return false;
         }
         AccessibilityNodeInfoCompat other = (AccessibilityNodeInfoCompat) obj;
@@ -4017,6 +4007,7 @@ public class AccessibilityNodeInfoCompat {
         return true;
     }
 
+    @SuppressWarnings("deprecation")
     @NonNull
     @Override
     public String toString() {
@@ -4082,7 +4073,7 @@ public class AccessibilityNodeInfoCompat {
         if (extras != null) {
             int booleanProperties = extras.getInt(BOOLEAN_PROPERTY_KEY, 0);
             booleanProperties &= ~property;
-            booleanProperties |= (value) ? property : 0;
+            booleanProperties |= value ? property : 0;
             extras.putInt(BOOLEAN_PROPERTY_KEY, booleanProperties);
         }
     }

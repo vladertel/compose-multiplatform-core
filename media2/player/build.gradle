@@ -10,7 +10,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":media"))
+    api(project(":media:media"))
     api(project(":media2:media2-common"))
     api(GUAVA_LISTENABLE_FUTURE)
     implementation("androidx.concurrent:concurrent-futures:1.0.0")
@@ -25,7 +25,7 @@ dependencies {
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ESPRESSO_CORE, libs.exclude_for_espresso)
     androidTestImplementation project(':internal-testutils-runtime')
-    annotationProcessor(project(":versionedparcelable-annotation"))
+    annotationProcessor(project(":versionedparcelable:versionedparcelable-compiler"))
 }
 
 android {
@@ -35,17 +35,15 @@ android {
         disable("BanTargetApiAnnotation")
     }
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 16
     }
 }
 
 androidx {
     name = "AndroidX media2 player library"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.MEDIA2_PLAYER
     mavenGroup = LibraryGroups.MEDIA2
     inceptionYear = "2018"
     description = "Media2 Player"
-    // TODO: Remove these (b/130838274)
     failOnDeprecationWarnings = false
 }

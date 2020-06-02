@@ -8,16 +8,16 @@ plugins {
 
 dependencies {
     api 'com.google.android.material:material:1.0.0'
-    implementation(project(":appcompat"))
-    implementation(project(":cardview"))
+    implementation(project(":appcompat:appcompat"))
+    implementation(project(":cardview:cardview"))
     implementation(project(":core:core"))
-    implementation(project(":gridlayout"))
-    implementation(project(":mediarouter"))
+    implementation(project(":gridlayout:gridlayout"))
+    implementation(project(":mediarouter:mediarouter"))
     implementation(project(":palette:palette"))
     implementation(project(":recyclerview:recyclerview"))
     implementation project(":recyclerview:recyclerview-selection")
     implementation(project(":core:core"))
-    implementation project(':drawerlayout')
+    implementation project(':drawerlayout:drawerlayout')
     api(KOTLIN_STDLIB)
 }
 

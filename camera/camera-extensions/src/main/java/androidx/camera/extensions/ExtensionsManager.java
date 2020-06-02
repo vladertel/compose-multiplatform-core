@@ -22,12 +22,10 @@ import android.util.Log;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraX;
-import androidx.camera.core.CameraX.LensFacing;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCaptureConfig;
 import androidx.camera.core.Preview;
-import androidx.camera.core.PreviewConfig;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.camera.extensions.impl.InitializerImpl;
@@ -143,14 +141,15 @@ public final class ExtensionsManager {
     }
 
     /**
-     * Indicates whether the camera device with the {@link LensFacing} can support the specific
+     * Indicates whether the camera device with the lensFacing can support the specific
      * extension function.
      *
      * @param effectMode The extension function to be checked.
-     * @param lensFacing The {@link LensFacing} of the camera device to be checked.
+     * @param lensFacing The lensFacing of the camera device to be checked.
      * @return True if the specific extension function is supported for the camera device.
      */
-    public static boolean isExtensionAvailable(EffectMode effectMode, LensFacing lensFacing) {
+    public static boolean isExtensionAvailable(EffectMode effectMode,
+            @CameraSelector.LensFacing int lensFacing) {
         boolean isImageCaptureAvailable = checkImageCaptureExtensionCapability(effectMode,
                 lensFacing);
         boolean isPreviewAvailable = checkPreviewExtensionCapability(effectMode, lensFacing);
@@ -164,16 +163,16 @@ public final class ExtensionsManager {
     }
 
     /**
-     * Indicates whether the camera device with the {@link LensFacing} can support the specific
+     * Indicates whether the camera device with the lensFacing can support the specific
      * extension function for specific use case.
      *
      * @param klass      The {@link ImageCapture} or {@link Preview} class to be checked.
      * @param effectMode The extension function to be checked.
-     * @param lensFacing The {@link LensFacing} of the camera device to be checked.
+     * @param lensFacing The lensFacing of the camera device to be checked.
      * @return True if the specific extension function is supported for the camera device.
      */
     public static boolean isExtensionAvailable(
-            Class<?> klass, EffectMode effectMode, LensFacing lensFacing) {
+            Class<?> klass, EffectMode effectMode, @CameraSelector.LensFacing int lensFacing) {
         boolean isAvailable = false;
 
         if (klass == ImageCapture.class) {
@@ -186,9 +185,10 @@ public final class ExtensionsManager {
     }
 
     private static boolean checkImageCaptureExtensionCapability(EffectMode effectMode,
-            LensFacing lensFacing) {
-        ImageCaptureConfig.Builder builder = new ImageCaptureConfig.Builder();
-        builder.setLensFacing(lensFacing);
+            @CameraSelector.LensFacing int lensFacing) {
+        ImageCapture.Builder builder = new ImageCapture.Builder();
+        CameraSelector selector =
+                new CameraSelector.Builder().requireLensFacing(lensFacing).build();
         ImageCaptureExtender extender;
 
         switch (effectMode) {
@@ -213,7 +213,7 @@ public final class ExtensionsManager {
                 return false;
         }
 
-        return extender.isExtensionAvailable();
+        return extender.isExtensionAvailable(selector);
     }
 
     /**
@@ -243,9 +243,10 @@ public final class ExtensionsManager {
     }
 
     private static boolean checkPreviewExtensionCapability(EffectMode effectMode,
-            LensFacing lensFacing) {
-        PreviewConfig.Builder builder = new PreviewConfig.Builder();
-        builder.setLensFacing(lensFacing);
+            @CameraSelector.LensFacing int lensFacing) {
+        Preview.Builder builder = new Preview.Builder();
+        CameraSelector cameraSelector =
+                new CameraSelector.Builder().requireLensFacing(lensFacing).build();
         PreviewExtender extender;
 
         switch (effectMode) {
@@ -270,7 +271,7 @@ public final class ExtensionsManager {
                 return false;
         }
 
-        return extender.isExtensionAvailable();
+        return extender.isExtensionAvailable(cameraSelector);
     }
 
     private ExtensionsManager() {

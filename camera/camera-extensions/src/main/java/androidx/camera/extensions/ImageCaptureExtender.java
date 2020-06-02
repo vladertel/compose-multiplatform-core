@@ -25,19 +25,17 @@ import android.util.Size;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
-import androidx.camera.camera2.Camera2Config;
+import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.impl.CameraEventCallback;
 import androidx.camera.camera2.impl.CameraEventCallbacks;
-import androidx.camera.core.CameraIdFilter;
-import androidx.camera.core.CameraIdFilterSet;
-import androidx.camera.core.CameraInfoUnavailableException;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraX;
-import androidx.camera.core.CaptureBundle;
-import androidx.camera.core.CaptureConfig;
-import androidx.camera.core.CaptureStage;
-import androidx.camera.core.Config;
-import androidx.camera.core.ImageCaptureConfig;
+import androidx.camera.core.ImageCapture;
 import androidx.camera.core.UseCase;
+import androidx.camera.core.impl.CaptureBundle;
+import androidx.camera.core.impl.CaptureConfig;
+import androidx.camera.core.impl.CaptureStage;
+import androidx.camera.core.impl.Config;
 import androidx.camera.extensions.ExtensionsErrorListener.ExtensionsErrorCode;
 import androidx.camera.extensions.ExtensionsManager.EffectMode;
 import androidx.camera.extensions.impl.CaptureProcessorImpl;
@@ -47,7 +45,6 @@ import androidx.camera.extensions.impl.ImageCaptureExtenderImpl;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -58,62 +55,75 @@ public abstract class ImageCaptureExtender {
     static final Config.Option<EffectMode> OPTION_IMAGE_CAPTURE_EXTENDER_MODE =
             Config.Option.create("camerax.extensions.imageCaptureExtender.mode", EffectMode.class);
 
-    private ImageCaptureConfig.Builder mBuilder;
+    private ImageCapture.Builder mBuilder;
     private ImageCaptureExtenderImpl mImpl;
     private EffectMode mEffectMode;
+    private ExtensionCameraFilter mExtensionCameraFilter;
 
-    void init(ImageCaptureConfig.Builder builder, ImageCaptureExtenderImpl implementation,
+    void init(ImageCapture.Builder builder, ImageCaptureExtenderImpl implementation,
             EffectMode effectMode) {
         mBuilder = builder;
         mImpl = implementation;
         mEffectMode = effectMode;
+        mExtensionCameraFilter = new ExtensionCameraFilter(mImpl);
     }
 
     /**
-     * Indicates whether extension function can support with {@link ImageCaptureConfig.Builder}
+     * Indicates whether extension function can support with the given {@link CameraSelector}.
      *
+     * @param cameraSelector The selector that determines a camera that will be checked for the
+     *                       availability of extensions.
      * @return True if the specific extension function is supported for the camera device.
      */
-    public boolean isExtensionAvailable() {
-        CameraX.LensFacing lensFacing = mBuilder.build().getLensFacing();
-        Set<String> availableCameraIds = null;
-        try {
-            availableCameraIds = CameraUtil.getCameraIdSetWithLensFacing(lensFacing);
-        } catch (CameraInfoUnavailableException e) {
-            // Returns false if camera info is unavailable.
-            return false;
-        }
-        ExtensionCameraIdFilter extensionCameraIdFilter = new ExtensionCameraIdFilter(mImpl);
-        availableCameraIds = extensionCameraIdFilter.filter(availableCameraIds);
-
-        return !availableCameraIds.isEmpty();
+    public boolean isExtensionAvailable(@NonNull CameraSelector cameraSelector) {
+        return getCameraWithExtension(cameraSelector) != null;
     }
 
     /**
-     * Enables the derived image capture extension feature.
+     * Returns the camera specified with the given camera selector and this extension, null if
+     * there's no available can be found.
+     */
+    private String getCameraWithExtension(@NonNull CameraSelector cameraSelector) {
+        CameraSelector.Builder extensionCameraSelectorBuilder =
+                CameraSelector.Builder.fromSelector(cameraSelector);
+        extensionCameraSelectorBuilder.appendFilter(mExtensionCameraFilter);
+
+        return CameraUtil.getCameraIdUnchecked(extensionCameraSelectorBuilder.build());
+    }
+
+    /**
+     * Enables the derived image capture extension feature. If the extension can't be
+     * applied on any of the cameras specified with the given {@link CameraSelector}, it will be
+     * no-ops.
+     *
+     * <p>Enabling extensions on {@link ImageCapture} may limit the number of cameras which can
+     * be selected when the {@link ImageCapture} is used as a parameter to bindToLifecycle.
+     * BindToLifecycle will throw an exception if no cameras are found that support the extension.
      *
      * <p>Image capture extension has dependence on preview extension. A
      * PREVIEW_EXTENSION_REQUIRED error will be thrown if corresponding preview extension is not
      * enabled together.
+     *
+     * @param cameraSelector The selector used to determine the camera for which to enable
+     *                       extensions.
      */
-    public void enableExtension() {
-        // Add extension camera id filter to config.
-        ExtensionCameraIdFilter extensionCameraIdFilter = new ExtensionCameraIdFilter(mImpl);
-        CameraIdFilter currentCameraIdFilter = mBuilder.build().getCameraIdFilter(null);
-        if (currentCameraIdFilter == null) {
-            mBuilder.setCameraIdFilter(extensionCameraIdFilter);
-        } else {
-            CameraIdFilterSet cameraIdFilterSet = new CameraIdFilterSet();
-            cameraIdFilterSet.addCameraIdFilter(currentCameraIdFilter);
-            cameraIdFilterSet.addCameraIdFilter(extensionCameraIdFilter);
-            mBuilder.setCameraIdFilter(cameraIdFilterSet);
-        }
-
-        String cameraId = CameraUtil.getCameraId(mBuilder.build());
+    public void enableExtension(@NonNull CameraSelector cameraSelector) {
+        String cameraId = getCameraWithExtension(cameraSelector);
         if (cameraId == null) {
             // If there's no available camera id for the extender to function, just return here
             // and it will be no-ops.
             return;
+        }
+
+        // TODO: This will be move to a single place for enabling extensions. See b/135434036
+        // Sets the extension camera id filter to the config.
+        CameraSelector originalSelector = mBuilder.getUseCaseConfig().getCameraSelector(null);
+        if (originalSelector == null) {
+            mBuilder.setCameraSelector(
+                    new CameraSelector.Builder().appendFilter(mExtensionCameraFilter).build());
+        } else {
+            mBuilder.setCameraSelector(CameraSelector.Builder.fromSelector(
+                    originalSelector).appendFilter(mExtensionCameraFilter).build());
         }
 
         CameraCharacteristics cameraCharacteristics = CameraUtil.getCameraCharacteristics(cameraId);
@@ -129,9 +139,9 @@ public abstract class ImageCaptureExtender {
         }
 
         ImageCaptureAdapter imageCaptureAdapter = new ImageCaptureAdapter(mImpl, mEffectMode);
-        new Camera2Config.Extender(mBuilder).setCameraEventCallback(
+        new Camera2ImplConfig.Extender<>(mBuilder).setCameraEventCallback(
                 new CameraEventCallbacks(imageCaptureAdapter));
-        mBuilder.setUseCaseEventListener(imageCaptureAdapter);
+        mBuilder.setUseCaseEventCallback(imageCaptureAdapter);
         mBuilder.setCaptureBundle(imageCaptureAdapter);
         mBuilder.getMutableConfig().insertOption(OPTION_IMAGE_CAPTURE_EXTENDER_MODE, mEffectMode);
         setSupportedResolutions();
@@ -187,7 +197,7 @@ public abstract class ImageCaptureExtender {
     /**
      * An implementation to adapt the OEM provided implementation to core.
      */
-    static class ImageCaptureAdapter extends CameraEventCallback implements UseCase.EventListener,
+    static class ImageCaptureAdapter extends CameraEventCallback implements UseCase.EventCallback,
             CaptureBundle {
         final EffectMode mEffectMode;
         private final ImageCaptureExtenderImpl mImpl;
@@ -236,7 +246,12 @@ public abstract class ImageCaptureExtender {
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        checkPreviewEnabled(mEffectMode, CameraX.getActiveUseCases());
+                        try {
+                            checkPreviewEnabled(mEffectMode, CameraX.getActiveUseCases());
+                        } catch (IllegalStateException e) {
+                            Log.e(TAG, "CameraX has been shutdown. Don't need to check for "
+                                    + "active use cases.");
+                        }
                     }
                 });
                 CaptureStageImpl captureStageImpl = mImpl.onPresetSession();

@@ -34,11 +34,13 @@ android {
 
 dependencies {
     api(project(":navigation:navigation-runtime"))
+    api("androidx.customview:customview:1.1.0-rc01")
+    api("androidx.drawerlayout:drawerlayout:1.1.0-rc01")
     api(MATERIAL)
-    implementation('androidx.transition:transition:1.0.1')
+    implementation('androidx.transition:transition:1.3.0')
 
     androidTestImplementation(project(":navigation:navigation-runtime-ktx"))
-    androidTestImplementation(project(":navigation:navigation-testing"))
+    androidTestImplementation(project(":internal-testutils-navigation"))
     androidTestImplementation(KOTLIN_STDLIB)
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
     androidTestImplementation(ANDROIDX_TEST_CORE)
@@ -49,7 +51,6 @@ dependencies {
 androidx {
     name = "Android Navigation UI"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.NAVIGATION
     mavenGroup = LibraryGroups.NAVIGATION
     inceptionYear = "2018"
     description = "Android Navigation-UI"

@@ -16,7 +16,75 @@
 
 package androidx.compose.plugins.kotlin
 
+import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
+import org.jetbrains.kotlin.descriptors.PropertyDescriptor
+import org.jetbrains.kotlin.descriptors.SimpleFunctionDescriptor
+import org.jetbrains.kotlin.descriptors.SourceElement
+import org.jetbrains.kotlin.serialization.deserialization.descriptors.DescriptorWithContainerSource
+import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedContainerSource
+import org.jetbrains.kotlin.types.TypeSubstitutor
 
-class ComposableFunctionDescriptor(val underlyingDescriptor: FunctionDescriptor) :
-    FunctionDescriptor by underlyingDescriptor
+interface ComposableCallableDescriptor : CallableDescriptor {
+    val underlyingDescriptor: CallableDescriptor
+}
+
+interface ComposableFunctionDescriptor : FunctionDescriptor, ComposableCallableDescriptor {
+    override val underlyingDescriptor: FunctionDescriptor
+}
+
+interface ComposablePropertyDescriptor : PropertyDescriptor, ComposableCallableDescriptor {
+    override val underlyingDescriptor: PropertyDescriptor
+}
+
+class ComposablePropertyDescriptorImpl(
+    override val underlyingDescriptor: PropertyDescriptor
+) : PropertyDescriptor by underlyingDescriptor, ComposablePropertyDescriptor {
+    override fun substitute(substitutor: TypeSubstitutor): PropertyDescriptor? {
+        return underlyingDescriptor.substitute(substitutor)?.let {
+            ComposablePropertyDescriptorImpl(it)
+        }
+    }
+}
+
+fun ComposableFunctionDescriptor(
+    underlyingDescriptor: FunctionDescriptor
+): ComposableFunctionDescriptor {
+    return if (underlyingDescriptor is SimpleFunctionDescriptor) {
+        ComposableSimpleFunctionDescriptorImpl(underlyingDescriptor)
+    } else {
+        ComposableFunctionDescriptorImpl(underlyingDescriptor)
+    }
+}
+
+class ComposableFunctionDescriptorImpl(
+    override val underlyingDescriptor: FunctionDescriptor
+) : FunctionDescriptor by underlyingDescriptor, ComposableFunctionDescriptor {
+    override fun substitute(substitutor: TypeSubstitutor): FunctionDescriptor? {
+        return underlyingDescriptor.substitute(substitutor)?.let {
+            ComposableFunctionDescriptor(it)
+        }
+    }
+}
+
+class ComposableSimpleFunctionDescriptorImpl(
+    override val underlyingDescriptor: SimpleFunctionDescriptor
+) : SimpleFunctionDescriptor by underlyingDescriptor, ComposableFunctionDescriptor,
+    DescriptorWithContainerSource {
+    override fun substitute(substitutor: TypeSubstitutor): FunctionDescriptor? {
+        return underlyingDescriptor.substitute(substitutor)?.let {
+            ComposableFunctionDescriptor(it)
+        }
+    }
+
+    override fun getSource(): SourceElement {
+        return underlyingDescriptor.source
+    }
+
+    override val containerSource: DeserializedContainerSource?
+        get() = (underlyingDescriptor as DescriptorWithContainerSource).containerSource
+
+    override fun toString(): String {
+        return "ComposableSimpleFunctionDescriptorImpl(${this.underlyingDescriptor.name})"
+    }
+}

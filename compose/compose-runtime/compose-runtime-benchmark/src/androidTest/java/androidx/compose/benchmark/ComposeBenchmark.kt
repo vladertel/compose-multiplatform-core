@@ -17,16 +17,20 @@
 package androidx.compose.benchmark
 
 import androidx.compose.Composable
-import androidx.compose.Model
 import androidx.compose.Observe
 import androidx.compose.benchmark.realworld4.RealWorld4_FancyWidget_000
-import androidx.compose.composer
+import androidx.compose.getValue
+import androidx.compose.mutableStateOf
+import androidx.compose.setValue
 import androidx.test.annotation.UiThreadTest
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
-import androidx.ui.core.dp
-import androidx.ui.foundation.ColoredRect
+import androidx.ui.core.Modifier
+import androidx.ui.core.drawBehind
+import androidx.ui.foundation.Box
+import androidx.ui.foundation.drawBackground
 import androidx.ui.graphics.Color
+import androidx.ui.layout.fillMaxSize
 import org.junit.FixMethodOrder
 import org.junit.Ignore
 import org.junit.Test
@@ -151,31 +155,47 @@ class ComposeBenchmark : ComposeBenchmarkBase() {
     }
 }
 
-private val color = Color.Yellow
+private fun background(color: Color) = Modifier.drawBehind { drawRect(color) }
+private val redBackground = background(Color.Red)
+private val blackBackground = background(Color.Black)
+private val yellowBackground = background(Color.Yellow)
 
-@Model
-class ColorModel(var color: Color = Color.Black) {
+private val redModifier = Modifier.fillMaxSize() + redBackground
+private val blackModifier = Modifier.fillMaxSize() + blackBackground
+private val yellowModifier = Modifier.fillMaxSize() + yellowBackground
+private val defaultModifier = yellowModifier
+
+class ColorModel(color: Color = Color.Black) {
+    private var color: Color by mutableStateOf(color)
     fun toggle() {
         color = if (color == Color.Black) Color.Red else Color.Black
     }
+
+    val modifier
+        get() = when (color) {
+            Color.Red -> redModifier
+            Color.Black -> blackModifier
+            Color.Yellow -> yellowModifier
+            else -> Modifier.fillMaxSize().drawBackground(color)
+        }
 }
 
 @Composable
 fun OneRect(model: ColorModel) {
-    ColoredRect(color = model.color, width = 10.dp, height = 10.dp)
+    Box(modifier = model.modifier)
 }
 
 @Composable
 fun TenRects(model: ColorModel, narrow: Boolean = false) {
     if (narrow) {
         Observe {
-            ColoredRect(color = model.color, width = 10.dp, height = 10.dp)
+            Box(modifier = model.modifier)
         }
     } else {
-        ColoredRect(color = model.color, width = 10.dp, height = 10.dp)
+        Box(modifier = model.modifier)
     }
     repeat(9) {
-        ColoredRect(color = color, width = 10.dp, height = 10.dp)
+        Box(modifier = defaultModifier)
     }
 }
 
@@ -185,12 +205,12 @@ fun HundredRects(model: ColorModel, narrow: Boolean = false) {
         if (it % 10 == 0)
             if (narrow) {
                 Observe {
-                    ColoredRect(color = model.color, width = 10.dp, height = 10.dp)
+                    Box(modifier = model.modifier)
                 }
             } else {
-                ColoredRect(color = model.color, width = 10.dp, height = 10.dp)
+                Box(modifier = model.modifier)
             }
         else
-            ColoredRect(color = color, width = 10.dp, height = 10.dp)
+            Box(modifier = defaultModifier)
     }
 }

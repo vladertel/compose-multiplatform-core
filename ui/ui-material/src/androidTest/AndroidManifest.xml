@@ -14,10 +14,4 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<manifest package="androidx.ui.material" xmlns:android="http://schemas.android.com/apk/res/android">
-     <application>
-        <activity
-            android:name="androidx.ui.test.android.DefaultTestActivity"
-            android:theme="@style/TestTheme"/>
-    </application>
-</manifest>
+<manifest package="androidx.ui.material.test" />

@@ -17,16 +17,14 @@
 package androidx.ui.foundation.shape.corner
 
 import androidx.annotation.IntRange
-import androidx.ui.core.Dp
-import androidx.ui.core.Px
-import androidx.ui.core.PxSize
-import androidx.ui.core.dp
-import androidx.ui.core.px
-import androidx.ui.core.toRect
-import androidx.ui.engine.geometry.Outline
-import androidx.ui.engine.geometry.RRect
-import androidx.ui.engine.geometry.Radius
-import androidx.ui.engine.geometry.Shape
+import androidx.ui.geometry.RRect
+import androidx.ui.geometry.Radius
+import androidx.ui.geometry.Size
+import androidx.ui.geometry.toRect
+import androidx.ui.graphics.Outline
+import androidx.ui.graphics.Shape
+import androidx.ui.unit.Dp
+import androidx.ui.unit.dp
 
 /**
  * A shape describing the rectangle with rounded corners.
@@ -36,20 +34,23 @@ import androidx.ui.engine.geometry.Shape
  * @param bottomRight a size of the bottom left corner
  * @param bottomLeft a size of the bottom right corner
  */
-data class RoundedCornerShape(
-    val topLeft: CornerSize,
-    val topRight: CornerSize,
-    val bottomRight: CornerSize,
-    val bottomLeft: CornerSize
+class RoundedCornerShape(
+    topLeft: CornerSize,
+    topRight: CornerSize,
+    bottomRight: CornerSize,
+    bottomLeft: CornerSize
 ) : CornerBasedShape(topLeft, topRight, bottomRight, bottomLeft) {
 
     override fun createOutline(
-        size: PxSize,
-        topLeft: Px,
-        topRight: Px,
-        bottomRight: Px,
-        bottomLeft: Px
-    ) = Outline.Rounded(
+        size: Size,
+        topLeft: Float,
+        topRight: Float,
+        bottomRight: Float,
+        bottomLeft: Float
+    ) = if (topLeft + topRight + bottomLeft + bottomRight == 0.0f) {
+        Outline.Rectangle(size.toRect())
+    } else {
+        Outline.Rounded(
             RRect(
                 rect = size.toRect(),
                 topLeft = topLeft.toRadius(),
@@ -58,8 +59,26 @@ data class RoundedCornerShape(
                 bottomLeft = bottomLeft.toRadius()
             )
         )
+    }
 
-    private /*inline*/ fun Px.toRadius() = Radius.circular(this.value)
+    override fun copy(
+        topLeft: CornerSize,
+        topRight: CornerSize,
+        bottomRight: CornerSize,
+        bottomLeft: CornerSize
+    ) = RoundedCornerShape(
+        topLeft = topLeft,
+        topRight = topRight,
+        bottomRight = bottomRight,
+        bottomLeft = bottomLeft
+    )
+
+    override fun toString(): String {
+        return "RoundedCornerShape(topLeft = $topLeft, topRight = $topRight, bottomRight = " +
+                "$bottomRight, bottomLeft = $bottomLeft)"
+    }
+
+    private /*inline*/ fun Float.toRadius() = Radius.circular(this)
 }
 
 /**
@@ -69,27 +88,32 @@ val CircleShape = RoundedCornerShape(50)
 
 /**
  * Creates [RoundedCornerShape] with the same size applied for all four corners.
+ * @param corner [CornerSize] to apply.
  */
 /*inline*/ fun RoundedCornerShape(corner: CornerSize) =
     RoundedCornerShape(corner, corner, corner, corner)
 
 /**
  * Creates [RoundedCornerShape] with the same size applied for all four corners.
+ * @param size Size in [Dp] to apply.
  */
 /*inline*/ fun RoundedCornerShape(size: Dp) = RoundedCornerShape(CornerSize(size))
 
 /**
  * Creates [RoundedCornerShape] with the same size applied for all four corners.
+ * @param size Size in pixels to apply.
  */
-/*inline*/ fun RoundedCornerShape(size: Px) = RoundedCornerShape(CornerSize(size))
+/*inline*/ fun RoundedCornerShape(size: Float) = RoundedCornerShape(CornerSize(size))
 
 /**
  * Creates [RoundedCornerShape] with the same size applied for all four corners.
+ * @param percent Size in percents to apply.
  */
-/*inline*/ fun RoundedCornerShape(percent: Int) = RoundedCornerShape(CornerSize(percent))
+/*inline*/ fun RoundedCornerShape(percent: Int) =
+    RoundedCornerShape(CornerSize(percent))
 
 /**
- * Creates [RoundedCornerShape] with sizes defined by [Dp].
+ * Creates [RoundedCornerShape] with sizes defined in [Dp].
  */
 /*inline*/ fun RoundedCornerShape(
     topLeft: Dp = 0.dp,
@@ -104,13 +128,13 @@ val CircleShape = RoundedCornerShape(50)
 )
 
 /**
- * Creates [RoundedCornerShape] with sizes defined by [Px].
+ * Creates [RoundedCornerShape] with sizes defined in pixels.
  */
 /*inline*/ fun RoundedCornerShape(
-    topLeft: Px = 0.px,
-    topRight: Px = 0.px,
-    bottomRight: Px = 0.px,
-    bottomLeft: Px = 0.px
+    topLeft: Float = 0.0f,
+    topRight: Float = 0.0f,
+    bottomRight: Float = 0.0f,
+    bottomLeft: Float = 0.0f
 ) = RoundedCornerShape(
     CornerSize(topLeft),
     CornerSize(topRight),
@@ -119,7 +143,7 @@ val CircleShape = RoundedCornerShape(50)
 )
 
 /**
- * Creates [RoundedCornerShape] with sizes defined by percents of the shape's smaller side.
+ * Creates [RoundedCornerShape] with sizes defined in percents of the shape's smaller side.
  */
 /*inline*/ fun RoundedCornerShape(
     @IntRange(from = 0, to = 50) topLeftPercent: Int = 0,

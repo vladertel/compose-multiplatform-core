@@ -29,17 +29,18 @@ plugins {
 }
 
 dependencies {
-    kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
+    kotlinPlugin project(path: ":compose:compose-compiler")
 
-    implementation(KOTLIN_COMPOSE_COROUTINES)
-    implementation(KOTLIN_COMPOSE_STDLIB)
+    // TODO: remove / refactor out reflection dependencies, this is a large dependency to bundle
+    // with a library.
+    implementation(KOTLIN_REFLECT)
+    implementation(KOTLIN_STDLIB)
 
-    implementation "androidx.activity:activity:1.0.0-alpha01"
-    implementation "androidx.annotation:annotation:1.1.0"
+    api "androidx.annotation:annotation:1.1.0"
 
     implementation project(":compose:compose-runtime")
-    implementation project(":ui:ui-android-view-non-ir")
     implementation project(":ui:ui-core")
+    implementation project(":ui:ui-test")
 
     testImplementation(ANDROIDX_TEST_RULES)
     testImplementation(ANDROIDX_TEST_RUNNER)
@@ -48,6 +49,7 @@ dependencies {
     androidTestImplementation(ANDROIDX_TEST_RULES)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
     androidTestImplementation(JUNIT)
+    androidTestImplementation(ESPRESSO_CORE)
 }
 
 android {

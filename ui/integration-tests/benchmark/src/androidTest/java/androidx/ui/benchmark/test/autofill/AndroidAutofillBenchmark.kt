@@ -16,19 +16,20 @@
 
 package androidx.ui.benchmark.test.autofill
 
-import android.app.Activity
 import android.graphics.Rect
 import android.util.SparseArray
+import android.view.ViewGroup
 import android.view.autofill.AutofillValue
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.annotation.UiThreadTest
 import androidx.test.filters.LargeTest
-import androidx.test.rule.ActivityTestRule
 import androidx.ui.autofill.AutofillNode
 import androidx.test.filters.SdkSuppress
 import androidx.ui.autofill.AutofillType
-import androidx.ui.core.AndroidComposeView
+import androidx.ui.core.Owner
+import androidx.ui.core.OwnerAmbient
+import androidx.ui.test.createComposeRule
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -40,16 +41,21 @@ import org.junit.runners.JUnit4
 class AndroidAutofillBenchmark {
 
     @get:Rule
-    val activityRule = ActivityTestRule(Activity::class.java)
+    val composeTestRule = createComposeRule()
 
     @get:Rule
     val benchmarkRule = BenchmarkRule()
 
-    private lateinit var composeView: AndroidComposeView
+    private lateinit var owner: Owner
+    private lateinit var composeView: ViewGroup
 
     @Before
     fun setup() {
-        composeView = AndroidComposeView(activityRule.activity)
+        composeTestRule.setContent {
+            @Suppress("DEPRECATION") // Owner Ambient will be removed by b/139866476.
+            owner = OwnerAmbient.current
+            composeView = owner as ViewGroup
+        }
     }
 
     @Test
@@ -60,13 +66,13 @@ class AndroidAutofillBenchmark {
         // Arrange.
         val autofillNode = AutofillNode(
             onFill = {},
-            autofillTypes = listOf(AutofillType.Name),
+            autofillTypes = listOf(AutofillType.PersonFullName),
             boundingBox = Rect(0, 0, 0, 0)
         )
         val autofillValues = SparseArray<AutofillValue>().apply {
             append(autofillNode.id, AutofillValue.forText("Name"))
         }
-        composeView.autofillTree += autofillNode
+        owner.autofillTree += autofillNode
 
         // Assess.
         benchmarkRule.measureRepeated {

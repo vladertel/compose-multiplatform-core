@@ -16,23 +16,28 @@
 
 package androidx.ui.layout
 
+import androidx.compose.Immutable
+import androidx.compose.Stable
 import androidx.ui.core.Constraints
-import androidx.ui.core.DensityScope
-import androidx.ui.core.Dp
-import androidx.ui.core.coerceAtLeast
-import androidx.ui.core.coerceIn
-import androidx.ui.core.dp
-import androidx.ui.core.isFinite
+import androidx.ui.unit.Density
+import androidx.ui.unit.Dp
+import androidx.ui.unit.coerceAtLeast
+import androidx.ui.unit.coerceIn
+import androidx.ui.unit.dp
+import androidx.ui.unit.isFinite
 
 /**
  * Similar to [Constraints], but with constraint values expressed in [Dp].
- * They are used in the APIs of certain layout models such as [Container] or [ConstrainedBox],
- * and will be translated to [Constraints] before being used by the core measuring and layout steps.
  */
+@Immutable
 data class DpConstraints(
+    @Stable
     val minWidth: Dp = 0.dp,
+    @Stable
     val maxWidth: Dp = Dp.Infinity,
+    @Stable
     val minHeight: Dp = 0.dp,
+    @Stable
     val maxHeight: Dp = Dp.Infinity
 ) {
     init {
@@ -58,12 +63,14 @@ data class DpConstraints(
         /**
          * Creates constraints tight in both dimensions.
          */
-        fun tightConstraints(width: Dp, height: Dp) = DpConstraints(width, width, height, height)
+        @Stable
+        fun fixed(width: Dp, height: Dp) = DpConstraints(width, width, height, height)
 
         /**
          * Creates constraints with tight width and loose height.
          */
-        fun tightConstraintsForWidth(width: Dp) = DpConstraints(
+        @Stable
+        fun fixedWidth(width: Dp) = DpConstraints(
             minWidth = width,
             maxWidth = width,
             minHeight = 0.dp,
@@ -73,7 +80,8 @@ data class DpConstraints(
         /**
          * Creates constraints with tight height and loose width.
          */
-        fun tightConstraintsForHeight(height: Dp) = DpConstraints(
+        @Stable
+        fun fixedHeight(height: Dp) = DpConstraints(
             minWidth = 0.dp,
             maxWidth = Dp.Infinity,
             minHeight = height,
@@ -86,44 +94,45 @@ data class DpConstraints(
  * Whether or not the upper bound on the maximum height.
  * @see hasBoundedWidth
  */
+@Stable
 val DpConstraints.hasBoundedHeight get() = maxHeight.isFinite()
 
 /**
  * Whether or not the upper bound on the maximum width.
  * @see hasBoundedHeight
  */
+@Stable
 val DpConstraints.hasBoundedWidth get() = maxWidth.isFinite()
-
-/**
- * Whether there is exactly one size that satisfies the constraints.
- * @see hasTightHeight
- * @see hasTightWidth
- */
-val DpConstraints.isTight get() = minWidth == maxWidth && minHeight == maxHeight
 
 /**
  * Whether there is exactly one width value that satisfies the constraints.
  */
-val DpConstraints.hasTightWidth get() = maxWidth == minWidth
+@Stable
+val DpConstraints.hasFixedWidth get() = maxWidth == minWidth
 
 /**
  * Whether there is exactly one height value that satisfies the constraints.
  */
-val DpConstraints.hasTightHeight get() = maxHeight == minHeight
+@Stable
+val DpConstraints.hasFixedHeight get() = maxHeight == minHeight
 
 /**
- * Whether there is exactly one height value that satisfies the constraints.
+ * Whether the area of a component respecting these constraints will definitely be 0.
+ * This is true when at least one of maxWidth and maxHeight are 0.
  */
+@Stable
 val DpConstraints.isZero get() = maxWidth == 0.dp || maxHeight == 0.dp
 
 /**
  * Whether there is any size that satisfies the current constraints.
  */
+@Stable
 val DpConstraints.satisfiable get() = minWidth <= maxWidth && minHeight <= maxHeight
 
 /**
  * Returns the result of coercing the current constraints in a different set of constraints.
  */
+@Stable
 fun DpConstraints.enforce(otherConstraints: DpConstraints) = DpConstraints(
     minWidth = minWidth.coerceIn(otherConstraints.minWidth, otherConstraints.maxWidth),
     maxWidth = maxWidth.coerceIn(otherConstraints.minWidth, otherConstraints.maxWidth),
@@ -132,42 +141,9 @@ fun DpConstraints.enforce(otherConstraints: DpConstraints) = DpConstraints(
 )
 
 /**
- * Returns a copy of the current instance, overriding the specified values to be tight.
- */
-fun DpConstraints.withTight(width: Dp? = null, height: Dp? = null) = DpConstraints(
-    minWidth = width ?: this.minWidth,
-    maxWidth = width ?: this.maxWidth,
-    minHeight = height ?: this.minHeight,
-    maxHeight = height ?: this.maxHeight
-)
-
-/**
- * Returns a copy of the current instance with no min constraints.
- */
-fun DpConstraints.looseMin() = this.copy(minWidth = 0.dp, minHeight = 0.dp)
-
-/**
- * Returns a copy of the current instance with no max constraints.
- */
-fun DpConstraints.looseMax() = this.copy(maxWidth = Dp.Infinity, maxHeight = Dp.Infinity)
-
-/**
- * Returns a copy of the current instance with the constraints tightened to their smallest size.
- */
-fun DpConstraints.tightMin() = this.withTight(width = minWidth, height = minHeight)
-
-/**
- * Returns a copy of the current instance with the constraints tightened to their largest size.
- * Note that if any of the constraints are unbounded, they will be left unchanged.
- */
-fun DpConstraints.tightMax() = this.copy(
-    minWidth = if (hasBoundedWidth) maxWidth else minWidth,
-    minHeight = if (hasBoundedHeight) maxHeight else minHeight
-)
-
-/**
  * Returns the DpConstraints obtained by offsetting the current instance with the given values.
  */
+@Stable
 fun DpConstraints.offset(horizontal: Dp = 0.dp, vertical: Dp = 0.dp) = DpConstraints(
     (minWidth + horizontal).coerceAtLeast(0.dp),
     (maxWidth + horizontal).coerceAtLeast(0.dp),
@@ -178,7 +154,8 @@ fun DpConstraints.offset(horizontal: Dp = 0.dp, vertical: Dp = 0.dp) = DpConstra
 /**
  * Creates the [Constraints] corresponding to the current [DpConstraints].
  */
-fun DensityScope.Constraints(dpConstraints: DpConstraints) = Constraints(
+@Stable
+fun Density.Constraints(dpConstraints: DpConstraints) = Constraints(
     minWidth = dpConstraints.minWidth.toIntPx(),
     maxWidth = dpConstraints.maxWidth.toIntPx(),
     minHeight = dpConstraints.minHeight.toIntPx(),
@@ -188,7 +165,8 @@ fun DensityScope.Constraints(dpConstraints: DpConstraints) = Constraints(
 /**
  * Creates the [DpConstraints] corresponding to the current [Constraints].
  */
-fun DensityScope.DpConstraints(constraints: Constraints) = DpConstraints(
+@Stable
+fun Density.DpConstraints(constraints: Constraints) = DpConstraints(
     minWidth = constraints.minWidth.toDp(),
     maxWidth = constraints.maxWidth.toDp(),
     minHeight = constraints.minHeight.toDp(),

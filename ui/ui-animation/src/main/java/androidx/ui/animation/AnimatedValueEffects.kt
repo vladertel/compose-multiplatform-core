@@ -18,14 +18,20 @@ package androidx.ui.animation
 
 import androidx.animation.AnimatedFloat
 import androidx.animation.AnimatedValue
-import androidx.compose.Model
-import androidx.animation.ValueHolder
-import androidx.annotation.CheckResult
-import androidx.compose.Effect
-import androidx.compose.memo
+import androidx.animation.AnimationClockObservable
+import androidx.animation.AnimationVector
+import androidx.animation.AnimationVector4D
+import androidx.animation.Spring
+import androidx.animation.TwoWayConverter
+import androidx.compose.Composable
+import androidx.compose.Stable
+import androidx.compose.StructurallyEqual
+import androidx.compose.getValue
+import androidx.compose.mutableStateOf
+import androidx.compose.remember
+import androidx.compose.setValue
+import androidx.ui.core.AnimationClockAmbient
 import androidx.ui.graphics.Color
-import androidx.ui.graphics.lerp
-import androidx.ui.lerp
 
 /**
  * The animatedValue effect creates an [AnimatedValue] and positionally memoizes it. When the
@@ -33,11 +39,22 @@ import androidx.ui.lerp
  * automatically recomposed.
  *
  * @param initVal Initial value to set [AnimatedValue] to.
- * @param interpolator A value interpolator for interpolating two values of type [T]
+ * @param converter A value type converter for transforming any type T to an animatable type (i.e.
+ *                  Floats, Vector2D, Vector3D, etc)
+ * @param visibilityThreshold Visibility threshold for the animatedValue to consider itself
+ * finished.
  */
-@CheckResult(suggest = "+")
-fun <T> animatedValue(initVal: T, interpolator: (T, T, Float) -> T): Effect<AnimatedValue<T>> =
-    memo { AnimatedValue(AnimValueHolder(initVal, interpolator)) }
+@Composable
+fun <T, V : AnimationVector> animatedValue(
+    initVal: T,
+    converter: TwoWayConverter<T, V>,
+    visibilityThreshold: V? = null,
+    clock: AnimationClockObservable = AnimationClockAmbient.current
+): AnimatedValue<T, V> = clock.asDisposableClock().let { disposableClock ->
+    remember(disposableClock) {
+        AnimatedValueModel(initVal, converter, disposableClock, visibilityThreshold)
+    }
+}
 
 /**
  * The animatedValue effect creates an [AnimatedFloat] and positionally memoizes it. When the
@@ -46,9 +63,14 @@ fun <T> animatedValue(initVal: T, interpolator: (T, T, Float) -> T): Effect<Anim
  *
  * @param initVal Initial value to set [AnimatedFloat] to.
  */
-@CheckResult(suggest = "+")
-fun animatedFloat(initVal: Float): Effect<AnimatedFloat> =
-    memo { AnimatedFloat(AnimValueHolder(initVal, ::lerp)) }
+@Composable
+fun animatedFloat(
+    initVal: Float,
+    visibilityThreshold: Float = Spring.DefaultDisplacementThreshold,
+    clock: AnimationClockObservable = AnimationClockAmbient.current
+): AnimatedFloat = clock.asDisposableClock().let { disposableClock ->
+    remember(disposableClock) { AnimatedFloatModel(initVal, disposableClock, visibilityThreshold) }
+}
 
 /**
  * The animatedValue effect creates an [AnimatedValue] of [Color] and positionally memoizes it. When
@@ -57,12 +79,51 @@ fun animatedFloat(initVal: Float): Effect<AnimatedFloat> =
  *
  * @param initVal Initial value to set [AnimatedValue] to.
  */
-@CheckResult(suggest = "+")
-fun animatedColor(initVal: Color): Effect<AnimatedValue<Color>> =
-    memo { AnimatedValue(AnimValueHolder(initVal, ::lerp)) }
+@Composable
+fun animatedColor(
+    initVal: Color,
+    clock: AnimationClockObservable = AnimationClockAmbient.current
+): AnimatedValue<Color, AnimationVector4D> = clock.asDisposableClock().let { disposableClock ->
+    remember(disposableClock) {
+        AnimatedValueModel(
+            initialValue = initVal,
+            typeConverter = ColorToVectorConverter(initVal.colorSpace),
+            clock = disposableClock
+        )
+    }
+}
 
-@Model
-private class AnimValueHolder<T>(
-    override var value: T,
-    override val interpolator: (T, T, Float) -> T
-) : ValueHolder<T>
+/**
+ * Model class for [AnimatedValue]. This class tracks the value field change, so that composables
+ * that read from this field can get promptly recomposed as the animation updates the value.
+ *
+ * @param initialValue The overridden value field that can only be mutated by animation
+ * @param typeConverter The converter for converting any value of type [T] to an
+ *                      [AnimationVector] type
+ * @param clock The animation clock that will be used to drive the animation
+ */
+@Stable
+class AnimatedValueModel<T, V : AnimationVector>(
+    initialValue: T,
+    typeConverter: TwoWayConverter<T, V>,
+    clock: AnimationClockObservable,
+    visibilityThreshold: V? = null
+) : AnimatedValue<T, V>(typeConverter, clock, visibilityThreshold) {
+    override var value: T by mutableStateOf(initialValue, StructurallyEqual)
+}
+
+/**
+ * Model class for [AnimatedFloat]. This class tracks the value field change, so that composables
+ * that read from this field can get promptly recomposed as the animation updates the value.
+ *
+ * @param initialValue The overridden value field that can only be mutated by animation
+ * @param clock The animation clock that will be used to drive the animation
+ */
+@Stable
+class AnimatedFloatModel(
+    initialValue: Float,
+    clock: AnimationClockObservable,
+    visibilityThreshold: Float = Spring.DefaultDisplacementThreshold
+) : AnimatedFloat(clock, visibilityThreshold) {
+    override var value: Float by mutableStateOf(initialValue, StructurallyEqual)
+}

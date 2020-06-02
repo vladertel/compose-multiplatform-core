@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,31 +14,47 @@
  * limitations under the License.
  */
 
+@file:Suppress("Deprecation")
+
 package androidx.ui.material.ripple
 
-import androidx.compose.Composable
-import androidx.compose.Recompose
-import androidx.compose.ambient
-import androidx.compose.composer
-import androidx.compose.memo
-import androidx.compose.onDispose
-import androidx.compose.unaryPlus
+import androidx.animation.AnimationClockObservable
+import androidx.compose.CompositionLifecycleObserver
+import androidx.compose.StructurallyEqual
+import androidx.compose.frames.modelListOf
+import androidx.compose.getValue
+import androidx.compose.mutableStateOf
+import androidx.compose.remember
+import androidx.compose.setValue
+import androidx.ui.animation.asDisposableClock
 import androidx.ui.animation.transitionsEnabled
-import androidx.ui.core.Density
-import androidx.ui.core.Dp
-import androidx.ui.core.Draw
-import androidx.ui.core.LayoutCoordinates
-import androidx.ui.core.OnChildPositioned
-import androidx.ui.core.PxPosition
-import androidx.ui.core.ambientDensity
-import androidx.ui.core.center
-import androidx.ui.core.gesture.PressIndicatorGestureDetector
+import androidx.ui.core.AnimationClockAmbient
+import androidx.ui.core.Constraints
+import androidx.ui.core.ContentDrawScope
+import androidx.ui.core.DensityAmbient
+import androidx.ui.core.DrawModifier
+import androidx.ui.core.LayoutDirection
+import androidx.ui.core.LayoutModifier
+import androidx.ui.core.Measurable
+import androidx.ui.core.MeasureScope
+import androidx.ui.core.Modifier
+import androidx.ui.core.composed
+import androidx.ui.core.gesture.pressIndicatorGestureFilter
 import androidx.ui.graphics.Color
+import androidx.ui.graphics.useOrElse
+import androidx.ui.unit.Density
+import androidx.ui.unit.Dp
+import androidx.ui.unit.IntPxSize
+import androidx.ui.unit.PxPosition
+import androidx.ui.unit.center
+import androidx.ui.unit.ipx
+import androidx.ui.unit.toPxSize
+import androidx.ui.util.fastForEach
 
 /**
- * Ripple is a visual indicator for a pressed state.
+ * Ripple is a [Modifier] which draws the visual indicator for a pressed state.
  *
- * A [Ripple] component responds to a tap by starting a new [RippleEffect] animation.
+ * Ripple responds to a tap by starting a new [RippleEffect] animation.
  * For creating an effect it uses the [RippleTheme.factory].
  *
  * @sample androidx.ui.material.samples.RippleSample
@@ -49,72 +65,66 @@ import androidx.ui.graphics.Color
  * @param radius Effects grow up to this size. If null is provided the size would be calculated
  * based on the target layout size.
  * @param color The Ripple color is usually the same color used by the text or iconography in the
- * component. If null is provided the color will be calculated by [RippleTheme.defaultColor].
+ * component. If [Color.Unset] is provided the color will be calculated by
+ * [RippleTheme.defaultColor].
+ * @param clock The animation clock observable that will drive this ripple effect
  * @param enabled The ripple effect will not start if false is provided.
  */
-@Composable
-fun Ripple(
-    bounded: Boolean,
+fun Modifier.ripple(
+    bounded: Boolean = true,
     radius: Dp? = null,
-    color: Color? = null,
+    color: Color = Color.Unset,
     enabled: Boolean = true,
-    children: @Composable() () -> Unit
-) {
-    val density = +ambientDensity()
-    val state = +memo { RippleState() }
-    val theme = +ambient(CurrentRippleTheme)
+    clock: AnimationClockObservable? = null
+): Modifier = composed {
+    @Suppress("NAME_SHADOWING") // don't allow usage of the parameter clock, only the disposable
+    val clock = (clock ?: AnimationClockAmbient.current).asDisposableClock()
+    val density = DensityAmbient.current
+    val rippleModifier = remember { RippleModifier() }
+    val theme = RippleThemeAmbient.current
+    rippleModifier.color = (color.useOrElse { theme.defaultColor() }).copy(alpha = theme.opacity())
 
-    OnChildPositioned(onPositioned = { state.coordinates = it }) {
-        PressIndicatorGestureDetector(
-            onStart = { position ->
-                if (enabled && transitionsEnabled) {
-                    state.handleStart(position, theme.factory, density, bounded, radius)
-                }
-            },
-            onStop = { state.handleFinish(false) },
-            onCancel = { state.handleFinish(true) },
-            children = children
-        )
-    }
-
-    Recompose { recompose ->
-        state.recompose = recompose
-        val finalColor = (color ?: +theme.defaultColor).copy(alpha = +theme.opacity)
-        Draw { canvas, _ ->
-            if (state.effects.isNotEmpty()) {
-                val position = state.coordinates!!.position
-                canvas.translate(position.x.value, position.y.value)
-                state.effects.forEach { it.draw(canvas, finalColor) }
-                canvas.translate(-position.x.value, -position.y.value)
+    val pressIndicator = Modifier.pressIndicatorGestureFilter(
+        onStart = { position ->
+            if (enabled && transitionsEnabled) {
+                rippleModifier.handleStart(position, theme.factory, density, bounded, radius, clock)
             }
-        }
-    }
-
-    +onDispose {
-        state.effects.forEach { it.dispose() }
-        state.effects.clear()
-        state.currentEffect = null
-    }
+        },
+        onStop = { rippleModifier.handleFinish(false) },
+        onCancel = { rippleModifier.handleFinish(true) }
+    )
+    pressIndicator + rippleModifier
 }
 
-private class RippleState {
+private class RippleModifier : DrawModifier, LayoutModifier, CompositionLifecycleObserver {
 
-    var coordinates: LayoutCoordinates? = null
-    var effects = mutableListOf<RippleEffect>()
-    var currentEffect: RippleEffect? = null
-    var recompose: () -> Unit = {}
+    var color: Color by mutableStateOf(Color.Transparent, StructurallyEqual)
+
+    private var size: IntPxSize = IntPxSize(0.ipx, 0.ipx)
+    private var effects = modelListOf<RippleEffect>()
+    private var currentEffect: RippleEffect? = null
+
+    override fun MeasureScope.measure(
+        measurable: Measurable,
+        constraints: Constraints,
+        layoutDirection: LayoutDirection
+    ): MeasureScope.MeasureResult {
+        val placeable = measurable.measure(constraints)
+        size = IntPxSize(placeable.width, placeable.height)
+        return layout(placeable.width, placeable.height) {
+            placeable.place(0.ipx, 0.ipx)
+        }
+    }
 
     fun handleStart(
         touchPosition: PxPosition,
         factory: RippleEffectFactory,
         density: Density,
         bounded: Boolean,
-        radius: Dp?
+        radius: Dp?,
+        clock: AnimationClockObservable
     ) {
-        val coordinates = checkNotNull(coordinates) {
-            "handleStart() called before the layout coordinates were provided!"
-        }
-        val position = if (bounded) touchPosition else coordinates.size.center()
+        val position = if (bounded) touchPosition else size.toPxSize().center()
         val onAnimationFinished = { effect: RippleEffect ->
             effects.remove(effect)
             if (currentEffect == effect) {
@@ -122,22 +132,40 @@ private class RippleState {
             }
         }
         val effect = factory.create(
-            coordinates,
+            size.toPxSize(),
             position,
             density,
             radius,
             bounded,
-            { recompose() },
+            clock,
             onAnimationFinished
         )
 
         effects.add(effect)
         currentEffect = effect
-        recompose()
     }
 
     fun handleFinish(canceled: Boolean) {
         currentEffect?.finish(canceled)
+        currentEffect = null
+    }
+
+    override fun ContentDrawScope.draw() {
+        drawContent()
+        effects.fastForEach {
+            with(it) {
+                draw(color)
+            }
+        }
+    }
+
+    override fun onEnter() {
+        // do nothing
+    }
+
+    override fun onLeave() {
+        effects.fastForEach { it.dispose() }
+        effects.clear()
         currentEffect = null
     }
 }

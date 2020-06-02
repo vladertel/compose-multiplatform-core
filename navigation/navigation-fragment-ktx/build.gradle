@@ -26,14 +26,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-android {
-    buildTypes {
-        debug {
-            testCoverageEnabled = false // Breaks Kotlin compiler.
-        }
-    }
-}
-
 dependencies {
     api(project(":navigation:navigation-fragment"))
     // Ensure that the -ktx dependency graph mirrors the Java dependency graph
@@ -42,7 +34,6 @@ dependencies {
     api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0")
     api(KOTLIN_STDLIB)
     androidTestImplementation(project(":fragment:fragment-testing"))
-    androidTestImplementation(project(":navigation:navigation-testing"))
     androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
     androidTestImplementation(ANDROIDX_TEST_CORE)
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
@@ -51,13 +42,13 @@ dependencies {
     androidTestImplementation(TRUTH)
     androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy)
     androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy)
-    androidTestImplementation project(':internal-testutils-runtime')
+    androidTestImplementation(project(":internal-testutils-runtime"))
+    androidTestImplementation(project(":internal-testutils-navigation"))
 }
 
 androidx {
     name = "Android Navigation Fragment Kotlin Extensions"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.NAVIGATION
     mavenGroup = LibraryGroups.NAVIGATION
     inceptionYear = "2018"
     description = "Android Navigation-Fragment-Ktx"

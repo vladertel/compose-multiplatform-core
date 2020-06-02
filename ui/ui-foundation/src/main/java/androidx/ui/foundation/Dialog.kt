@@ -22,15 +22,16 @@ import android.view.MotionEvent
 import android.view.Window
 import android.widget.FrameLayout
 import androidx.compose.Composable
-import androidx.compose.ambient
-import androidx.compose.disposeComposition
-import androidx.compose.memo
+import androidx.compose.Composition
+import androidx.compose.Recomposer
+import androidx.compose.currentComposer
 import androidx.compose.onActive
 import androidx.compose.onCommit
-import androidx.compose.onDispose
-import androidx.compose.unaryPlus
+import androidx.compose.remember
 import androidx.ui.core.ContextAmbient
 import androidx.ui.core.setContent
+import androidx.ui.foundation.semantics.dialog
+import androidx.ui.semantics.Semantics
 
 /**
  * Opens a dialog with the given content.
@@ -47,12 +48,15 @@ import androidx.ui.core.setContent
  * @param children The content to be displayed inside the dialog.
  */
 @Composable
-fun Dialog(onCloseRequest: () -> Unit, children: @Composable() () -> Unit) {
-    val context = +ambient(ContextAmbient)
+fun Dialog(onCloseRequest: () -> Unit, children: @Composable () -> Unit) {
+    val context = ContextAmbient.current
 
-    val dialog = +memo { DialogWrapper(context, onCloseRequest) }
+    val recomposer = currentComposer.recomposer
+    // The recomposer can't change.
+    val dialog = remember(context) { DialogWrapper(context, recomposer) }
+    dialog.onCloseRequest = onCloseRequest
 
-    +onActive {
+    onActive {
         dialog.show()
 
         onDispose {
@@ -61,25 +65,35 @@ fun Dialog(onCloseRequest: () -> Unit, children: @Composable() () -> Unit) {
         }
     }
 
-    +onCommit {
-        dialog.setContent(children)
+    onCommit {
+        dialog.setContent {
+            Semantics(container = true, properties = { this.dialog = true }, children = children)
+        }
     }
 }
 
-private class DialogWrapper(context: Context, val onCloseRequest: () -> Unit) : Dialog(context) {
-    val frameLayout = FrameLayout(context)
+private class DialogWrapper(
+    context: Context,
+    private val recomposer: Recomposer
+) : Dialog(context) {
+    lateinit var onCloseRequest: () -> Unit
+
+    private val frameLayout = FrameLayout(context)
+    private var composition: Composition? = null
+
     init {
-        window?.requestFeature(Window.FEATURE_NO_TITLE)
-        window?.setBackgroundDrawableResource(android.R.color.transparent)
+        window!!.requestFeature(Window.FEATURE_NO_TITLE)
+        window!!.setBackgroundDrawableResource(android.R.color.transparent)
         setContentView(frameLayout)
     }
 
-    fun setContent(children: @Composable() () -> Unit) {
-        frameLayout.setContent(children)
+    fun setContent(children: @Composable () -> Unit) {
+        // TODO: This should probably create a child composition of the original
+        composition = frameLayout.setContent(recomposer, children)
     }
 
     fun disposeComposition() {
-        frameLayout.disposeComposition()
+        composition?.dispose()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

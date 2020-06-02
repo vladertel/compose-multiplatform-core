@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package androidx.ui.text
+package androidx.ui.input
 
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.filters.LargeTest
-import androidx.ui.input.PartialGapBuffer
-import androidx.ui.test.RandomTextGenerator
+import androidx.ui.integration.test.RandomTextGenerator
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -17,6 +17,7 @@
 package androidx.navigation
 
 import androidx.annotation.IdRes
+import androidx.core.os.bundleOf
 
 @DslMarker
 annotation class NavDestinationDsl
@@ -43,7 +44,7 @@ open class NavDestinationBuilder<out D : NavDestination>(
         arguments[name] = NavArgumentBuilder().apply(argumentBuilder).build()
     }
 
-    private var deepLinks = mutableListOf<String>()
+    private var deepLinks = mutableListOf<NavDeepLink>()
 
     /**
      * Add a deep link to this destination.
@@ -61,9 +62,31 @@ open class NavDestinationBuilder<out D : NavDestination>(
      * *    The `.*` wildcard can be used to match 0 or more characters.
      *
      * @param uriPattern The uri pattern to add as a deep link
+     * @see deepLink
      */
     fun deepLink(uriPattern: String) {
-        deepLinks.add(uriPattern)
+        deepLinks.add(NavDeepLink(uriPattern))
+    }
+
+    /**
+     * Add a deep link to this destination.
+     *
+     * In addition to a direct Uri match, the following features are supported:
+     *
+     * *    Uris without a scheme are assumed as http and https. For example,
+     *      `www.example.com` will match `http://www.example.com` and
+     *      `https://www.example.com`.
+     * *    Placeholders in the form of `{placeholder_name}` matches 1 or more
+     *      characters. The String value of the placeholder will be available in the arguments
+     *      [Bundle] with a key of the same name. For example,
+     *      `http://www.example.com/users/{id}` will match
+     *      `http://www.example.com/users/4`.
+     * *    The `.*` wildcard can be used to match 0 or more characters.
+     *
+     * @param navDeepLink the NavDeepLink to be added to this destination
+     */
+    fun deepLink(navDeepLink: NavDeepLinkDslBuilder.() -> Unit) {
+        deepLinks.add(NavDeepLinkDslBuilder().apply(navDeepLink).build())
     }
 
     private var actions = mutableMapOf<Int, NavAction>()
@@ -105,6 +128,17 @@ class NavActionBuilder {
      */
     var destinationId: Int = 0
 
+    /**
+     * The set of default arguments that should be passed to the destination. The keys
+     * used here should be the same as those used on the [NavDestinationBuilder.argument]
+     * for the destination.
+     *
+     * All values added here should be able to be added to a [android.os.Bundle].
+     *
+     * @see NavAction.getDefaultArguments
+     */
+    val defaultArguments = mutableMapOf<String, Any?>()
+
     private var navOptions: NavOptions? = null
 
     /**
@@ -114,7 +148,11 @@ class NavActionBuilder {
         navOptions = NavOptionsBuilder().apply(optionsBuilder).build()
     }
 
-    internal fun build() = NavAction(destinationId, navOptions)
+    internal fun build() = NavAction(destinationId, navOptions,
+        if (defaultArguments.isEmpty())
+            null
+        else
+            bundleOf(*defaultArguments.toList().toTypedArray()))
 }
 
 /**

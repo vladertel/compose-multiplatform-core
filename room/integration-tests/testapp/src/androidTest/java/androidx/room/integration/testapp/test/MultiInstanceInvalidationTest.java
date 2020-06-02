@@ -26,8 +26,10 @@ import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.SystemClock;
 
+import androidx.annotation.NonNull;
 import androidx.collection.SimpleArrayMap;
 import androidx.core.util.Pair;
 import androidx.lifecycle.LiveData;
@@ -39,11 +41,14 @@ import androidx.room.integration.testapp.ISampleDatabaseService;
 import androidx.room.integration.testapp.SampleDatabaseService;
 import androidx.room.integration.testapp.database.Customer;
 import androidx.room.integration.testapp.database.CustomerDao;
+import androidx.room.integration.testapp.database.Description;
 import androidx.room.integration.testapp.database.Product;
 import androidx.room.integration.testapp.database.SampleDatabase;
+import androidx.room.integration.testapp.database.SampleFtsDatabase;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.rule.ServiceTestRule;
 
@@ -64,6 +69,7 @@ import java.util.concurrent.TimeoutException;
 
 @LargeTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.JELLY_BEAN)
 public class MultiInstanceInvalidationTest {
 
     private static final Customer CUSTOMER_1 = new Customer();
@@ -121,6 +127,31 @@ public class MultiInstanceInvalidationTest {
 
         assertTrue(invalidated1.await(3, TimeUnit.SECONDS));
         assertTrue(changed1.await(3, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void invalidateInAnotherInstanceFts() throws Exception {
+        final SampleFtsDatabase db1 = openFtsDatabase(true);
+        final SampleFtsDatabase db2 = openFtsDatabase(true);
+
+        Product theProduct = new Product(1, "Candy");
+        db2.getProductDao().insert(theProduct);
+        db2.getProductDao().addDescription(new Description(1, "Delicious candy."));
+
+        final CountDownLatch changed = new CountDownLatch(1);
+        db1.getInvalidationTracker().addObserver(new InvalidationTracker.Observer("Description") {
+            @Override
+            public void onInvalidated(@NonNull Set<String> tables) {
+                changed.countDown();
+            }
+        });
+
+        db2.getProductDao().addDescription(new Description(1, "Wonderful candy."));
+
+        assertTrue(changed.await(3, TimeUnit.SECONDS));
+        List<Product> result = db1.getProductDao().getProductsWithDescription("candy");
+        assertThat(result.size(), is(1));
+        assertThat(result.get(0), is(theProduct));
     }
 
     @Test
@@ -348,6 +379,19 @@ public class MultiInstanceInvalidationTest {
             builder.enableMultiInstanceInvalidation();
         }
         final SampleDatabase db = builder.build();
+        mDatabases.add(db);
+        return db;
+    }
+
+    private SampleFtsDatabase openFtsDatabase(boolean multiInstanceInvalidation) {
+        final Context context = ApplicationProvider.getApplicationContext();
+        final RoomDatabase.Builder<SampleFtsDatabase> builder = Room
+                .databaseBuilder(context, SampleFtsDatabase.class,
+                        SampleDatabaseService.DATABASE_NAME);
+        if (multiInstanceInvalidation) {
+            builder.enableMultiInstanceInvalidation();
+        }
+        final SampleFtsDatabase db = builder.build();
         mDatabases.add(db);
         return db;
     }

@@ -18,24 +18,24 @@
 // TODO: after DiffAndDocs and Doclava are fully obsoleted and removed, rename this from DokkaPublicDocs to just publicDocs
 package androidx.build.dokka
 
-import java.io.File
-import androidx.build.androidJarFile
 import androidx.build.AndroidXExtension
 import androidx.build.RELEASE_RULE
 import androidx.build.Strategy.Ignore
 import androidx.build.Strategy.Prebuilts
-import org.gradle.api.artifacts.ResolveException
+import androidx.build.androidJarFile
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.artifacts.ResolveException
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFiles
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskCollection
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.util.PatternFilterable
 import org.jetbrains.dokka.gradle.DokkaTask
+import java.io.File
 
 object DokkaPublicDocs {
     private const val DOCS_TYPE = "Public"
@@ -44,13 +44,16 @@ object DokkaPublicDocs {
 
     val hiddenPackages = listOf(
         "androidx.camera.camera2.impl",
-        "androidx.camera.camera2.impl.compat",
-        "androidx.camera.camera2.impl.compat.params",
+        "androidx.camera.camera2.internal",
+        "androidx.camera.camera2.internal.compat",
+        "androidx.camera.camera2.internal.compat.params",
         "androidx.camera.core.impl",
+        "androidx.camera.core.impl.annotation",
         "androidx.camera.core.impl.utils",
         "androidx.camera.core.impl.utils.executor",
         "androidx.camera.core.impl.utils.futures",
-        "androidx.camera.core.impl.utils.futures.internal",
+        "androidx.camera.core.internal",
+        "androidx.camera.core.internal.utils",
         "androidx.core.internal",
         "androidx.preference.internal",
         "androidx.wear.internal.widget.drawer",
@@ -65,7 +68,9 @@ object DokkaPublicDocs {
         "androidx.work.impl.model",
         "androidx.work.impl.utils",
         "androidx.work.impl.utils.futures",
-        "androidx.work.impl.utils.taskexecutor")
+        "androidx.work.impl.utils.taskexecutor",
+        "sample",
+        "sample.foo")
 
     fun tryGetRunnerProject(project: Project): Project? {
         return project.rootProject.findProject(":docs-runner")
@@ -81,10 +86,9 @@ object DokkaPublicDocs {
         return docsTasks
     }
 
-    fun getUnzipDepsTask(project: Project): LocateJarsTask {
+    fun getUnzipDepsTask(project: Project): TaskProvider<LocateJarsTask> {
         val runnerProject = getRunnerProject(project)
-        val unzipTask = runnerProject.tasks.getByName(UNZIP_DEPS_TASK_NAME) as LocateJarsTask
-        return unzipTask
+        return runnerProject.tasks.named(UNZIP_DEPS_TASK_NAME, LocateJarsTask::class.java)
     }
 
     @Synchronized fun TaskContainer.getOrCreateDocsTask(runnerProject: Project):
@@ -101,7 +105,7 @@ object DokkaPublicDocs {
             dokkaTasks = runnerProject.tasks.withType(DokkaTask::class.java)
                 .matching { it.name.contains(DOCS_TYPE) }
 
-            tasks.create(UNZIP_DEPS_TASK_NAME, LocateJarsTask::class.java) { unzipTask ->
+            tasks.register(UNZIP_DEPS_TASK_NAME, LocateJarsTask::class.java) { unzipTask ->
                 unzipTask.doLast {
                     for (jar in unzipTask.outputJars) {
                         dokkaTasks.forEach {
@@ -127,6 +131,12 @@ object DokkaPublicDocs {
         extension: AndroidXExtension
     ) {
         if (tryGetRunnerProject(project) == null) {
+            return
+        }
+        if (!extension.generateDocs) {
+            project.logger.info(
+                "Project ${project.name} has docs generation disabled, ignoring docs tasks."
+            )
             return
         }
         val projectSourcesLocationType = RELEASE_RULE.resolve(extension)?.strategy
@@ -160,8 +170,9 @@ object DokkaPublicDocs {
         }
 
         // also make a note to unzip any dependencies too
-        getUnzipDepsTask(runnerProject).inputDependencies.add(dependency)
-
+        getUnzipDepsTask(runnerProject).configure {
+            it.inputDependencies.add(dependency)
+        }
         return unzipTask
     }
 
@@ -170,42 +181,58 @@ object DokkaPublicDocs {
         runnerProject: Project,
         mavenId: String
     ): TaskProvider<Copy> {
-        val configuration = runnerProject.configurations.detachedConfiguration(
-            runnerProject.dependencies.create(mavenId)
-        )
-        configuration.isTransitive = false
-        try {
-            configuration.resolvedConfiguration.resolvedArtifacts
-        } catch (e: ResolveException) {
-            runnerProject.logger.error("DokkaPublicDocs failed to find prebuilts for $mavenId. " +
-                    "specified in PublishDocsRules.kt ." +
-                    "You should either add a prebuilt sources jar, " +
-                    "or add an overriding \"ignore\" rule into PublishDocsRules.kt")
-            throw e
-        }
-
         val sanitizedMavenId = mavenId.replace(":", "-")
         val buildDir = runnerProject.buildDir
         val destDir = runnerProject.file("$buildDir/sources-unzipped/$sanitizedMavenId")
-        return runnerProject.tasks.register("unzip$sanitizedMavenId", Copy::class.java) {
-            it.from(runnerProject.zipTree(configuration.singleFile)
-                .matching {
-                    it.exclude("**/*.MF")
-                    it.exclude("**/*.aidl")
-                    it.exclude("**/META-INF/**")
-                }
+
+        return runnerProject.tasks.register("unzip$sanitizedMavenId", Copy::class.java) { task ->
+            task.from(
+                // Create a provider that will resolve mavenId
+                runnerProject.provider({
+                    val configuration =
+                        runnerProject.configurations.detachedConfiguration(
+                            runnerProject.dependencies.create(mavenId)
+                        )
+                    configuration.isTransitive = false
+
+                    try {
+                        configuration.resolvedConfiguration.resolvedArtifacts
+                    } catch (e: ResolveException) {
+                        runnerProject.logger.error("DokkaPublicDocs failed to find prebuilts for " +
+                                "$mavenId. specified in PublishDocsRules.kt ." +
+                                "You should either add a prebuilt sources jar, " +
+                                "or add an overriding \"ignore\" rule into PublishDocsRules.kt")
+                        throw e
+                    }
+
+                    runnerProject.zipTree(configuration.singleFile)
+                        .matching {
+                            it.exclude("**/*.MF")
+                            it.exclude("**/*.aidl")
+                            it.exclude("**/META-INF/**")
+                        }
+                })
             )
-            it.destinationDir = destDir
+
+            task.destinationDir = destDir
             // TODO(123020809) remove this filter once it is no longer necessary to prevent Dokka from failing
             val regex = Regex("@attr ref ([^*]*)styleable#([^_*]*)_([^*]*)$")
-            it.filter { line ->
+            task.filter { line ->
                 regex.replace(line, "{@link $1attr#$3}")
             }
         }
     }
 }
 
+// TODO(b/143243490): can this be made to run more quickly, cleanly and clearly via some other
+// approach, such as maybe with an ArtifactTransform?
 open class LocateJarsTask : DefaultTask() {
+    init {
+        // This task does not correctly model inputs and outputs.
+        // Mark it to be never up to date
+        outputs.upToDateWhen { false }
+    }
+
     // dependencies to search for .jar files
     @get:Input
     val inputDependencies = mutableListOf<String>()
@@ -215,7 +242,7 @@ open class LocateJarsTask : DefaultTask() {
     val outputJars = mutableListOf<File>()
 
     @TaskAction
-    fun Extract() {
+    fun extract() {
         // setup
         val inputDependencies = checkNotNull(inputDependencies) { "inputDependencies not set" }
         val project = this.project

@@ -16,31 +16,33 @@
 
 package androidx.ui.core
 
+import androidx.compose.Stable
+
 /**
- * An immutable chain of [modifier elements][Modifier.Element] for use with Composables.
- * A Composable that has a `Modifier` can be considered decorated or wrapped by that `Modifier`.
+ * An ordered, immutable collection of [modifier elements][Modifier.Element] that decorate or add
+ * behavior to Compose UI elements. For example, backgrounds, padding and click event listeners
+ * decorate or add behavior to rows, text or buttons.
  *
- * Modifiers may be compared for equality provided that all of their [elements][Element] are
- * `object`s, `data class`es or otherwise implement [equals][Any.equals]. A correct implementation
- * of an [Element] must meet this requirement.
+ * @sample androidx.ui.core.samples.ModifierUsageSample
  *
- * Modifier elements may be combined using [wraps]. Order is significant; modifier elements wrap
- * the modifiers to their right
+ * Modifier implementations should offer a fluent factory extension function on [Modifier] for
+ * creating combined modifiers by starting from existing modifiers:
+ *
+ * @sample androidx.ui.core.samples.ModifierFactorySample
+ *
+ * Modifier elements may be combined using [the + operator][plus]. Order is significant; modifier
+ * elements that appear first will be applied first.
  *
  * Composables that accept a [Modifier] as a parameter to be applied to the whole component
  * represented by the composable function should name the parameter `modifier` and
- * assign the parameter a default value of [Modifier.None]. It should appear as the first
+ * assign the parameter a default value of [Modifier]. It should appear as the first
  * optional parameter in the parameter list; after all required parameters (except for trailing
  * lambda parameters) but before any other parameters with default values. Any default modifiers
- * desired by a composable function should be concatenated to the right or left of the `modifier`
- * parameter's value in the composable function's implementation, keeping [Modifier.None] as the
- * default parameter value. For example:
+ * desired by a composable function should come after the `modifier` parameter's value in the
+ * composable function's implementation, keeping [Modifier] as the default parameter value.
+ * For example:
  *
- *     @Composable fun Foo(modifier: Modifier = Modifier.None) {
- *         Column(modifier wraps defaultFooModifier) {
- *             // ...
- *         }
- *     }
+ * @sample androidx.ui.core.samples.ModifierParameterSample
  *
  * The pattern above allows default modifiers to still be applied as part of the chain
  * if a caller also supplies unrelated modifiers.
@@ -50,18 +52,9 @@ package androidx.ui.core
  * and behavior. Subcomponent modifiers should be grouped together and follow the parent
  * composable's modifier. For example:
  *
- *     @Composable fun ButtonBar(
- *         onOk: () -> Unit,
- *         onCancel: () -> Unit,
- *         modifier: Modifier = Modifier.None,
- *         buttonModifier: Modifier = Modifier.None
- *     ) {
- *         Row(modifier) {
- *             Button("Cancel", buttonModifier, onClick = onCancel)
- *             Button("Ok", buttonModifier, onClick = onOk)
- *         }
- *     }
+ * @sample androidx.ui.core.samples.SubcomponentModifierSample
  */
+@Stable
 interface Modifier {
 
     /**
@@ -69,7 +62,7 @@ interface Modifier {
      * and each element from outside in.
      *
      * Elements wrap one another in a chain from left to right; an [Element] that appears to the
-     * left of another in a [wraps] expression or in [operation]'s parameter order affects all
+     * left of another in a `+` expression or in [operation]'s parameter order affects all
      * of the elements that appear after it. [foldIn] may be used to accumulate a value starting
      * from the parent or head of the modifier chain to the final wrapped child.
      */
@@ -80,28 +73,30 @@ interface Modifier {
      * and each element from inside out.
      *
      * Elements wrap one another in a chain from left to right; an [Element] that appears to the
-     * left of another in a [wraps] expression or in [operation]'s parameter order affects all
+     * left of another in a `+` expression or in [operation]'s parameter order affects all
      * of the elements that appear after it. [foldOut] may be used to accumulate a value starting
      * from the child or tail of the modifier chain up to the parent or head of the chain.
      */
     fun <R> foldOut(initial: R, operation: (Element, R) -> R): R
 
     /**
-     * Wraps another [Modifier] with this one, returning the new chain.
+     * Returns `true` if [predicate] returns true for any [Element] in this [Modifier].
      */
-    infix fun wraps(other: Modifier): Modifier =
-        if (other === None) this else other.foldOut(this, ::CombinedModifier)
+    fun any(predicate: (Element) -> Boolean): Boolean
 
     /**
-     * An empty [Modifier] that contains no [elements][Element].
-     * Suitable for use as a sentinel or default parameter.
+     * Returns `true` if [predicate] returns true for all [Element]s in this [Modifier] or if
+     * this [Modifier] contains no [Element]s.
      */
-    object None : Modifier {
-        override fun <R> foldIn(initial: R, operation: (R, Element) -> R): R = initial
-        override fun <R> foldOut(initial: R, operation: (Element, R) -> R): R = initial
-        override fun wraps(other: Modifier): Modifier = other
-        override fun toString() = "Modifier.None"
-    }
+    fun all(predicate: (Element) -> Boolean): Boolean
+
+    /**
+     * Concatenates this modifier with another.
+     *
+     * Returns a [Modifier] representing this modifier followed by [other] in sequence.
+     */
+    operator fun plus(other: Modifier): Modifier =
+        if (other === Modifier) this else CombinedModifier(this, other)
 
     /**
      * A single element contained within a [Modifier] chain.
@@ -112,28 +107,74 @@ interface Modifier {
 
         override fun <R> foldOut(initial: R, operation: (Element, R) -> R): R =
             operation(this, initial)
+
+        override fun any(predicate: (Element) -> Boolean): Boolean = predicate(this)
+
+        override fun all(predicate: (Element) -> Boolean): Boolean = predicate(this)
+    }
+
+    /**
+     * The companion object `Modifier` is the empty, default, or starter [Modifier]
+     * that contains no [elements][Element]. Use it to create a new [Modifier] using
+     * modifier extension factory functions:
+     *
+     * @sample androidx.ui.core.samples.ModifierUsageSample
+     *
+     * or as the default value for [Modifier] parameters:
+     *
+     * @sample androidx.ui.core.samples.ModifierParameterSample
+     */
+    // The companion object implements `Modifier` so that it may be used  as the start of a
+    // modifier extension factory expression.
+    companion object : Modifier {
+        override fun <R> foldIn(initial: R, operation: (R, Element) -> R): R = initial
+        override fun <R> foldOut(initial: R, operation: (Element, R) -> R): R = initial
+        override fun any(predicate: (Element) -> Boolean): Boolean = false
+        override fun all(predicate: (Element) -> Boolean): Boolean = true
+        override operator fun plus(other: Modifier): Modifier = other
+        override fun toString() = "Modifier"
+
+        /**
+         * An empty [Modifier] that contains no [elements][Element].
+         * Suitable for use as a sentinel or default parameter.
+         *
+         * @deprecated Use the [Modifier] companion object instead
+         */
+        @Deprecated(
+            "use the Modifier companion object instead",
+            replaceWith = ReplaceWith(
+                "Modifier",
+                "androidx.ui.core.Modifier"
+            )
+        )
+        val None: Modifier get() = this
     }
 }
 
 /**
  * A node in a [Modifier] chain. A CombinedModifier always contains at least two elements;
- * a Modifier of one is always just the [Modifier.Element] itself, and a Modifier of zero is always
- * [Modifier.None].
+ * a Modifier [outer] that wraps around the Modifier [inner].
  */
-private class CombinedModifier(
-    private val element: Modifier.Element,
-    private val wrapped: Modifier
+class CombinedModifier(
+    private val outer: Modifier,
+    private val inner: Modifier
 ) : Modifier {
     override fun <R> foldIn(initial: R, operation: (R, Modifier.Element) -> R): R =
-        wrapped.foldIn(operation(initial, element), operation)
+        inner.foldIn(outer.foldIn(initial, operation), operation)
 
     override fun <R> foldOut(initial: R, operation: (Modifier.Element, R) -> R): R =
-        operation(element, wrapped.foldOut(initial, operation))
+        outer.foldOut(inner.foldOut(initial, operation), operation)
+
+    override fun any(predicate: (Modifier.Element) -> Boolean): Boolean =
+        outer.any(predicate) || inner.any(predicate)
+
+    override fun all(predicate: (Modifier.Element) -> Boolean): Boolean =
+        outer.all(predicate) && inner.all(predicate)
 
     override fun equals(other: Any?): Boolean =
-        other is CombinedModifier && element == other.element && wrapped == other.wrapped
+        other is CombinedModifier && outer == other.outer && inner == other.inner
 
-    override fun hashCode(): Int = wrapped.hashCode() + 31 * element.hashCode()
+    override fun hashCode(): Int = outer.hashCode() + 31 * inner.hashCode()
 
     override fun toString() = "[" + foldIn("") { acc, element ->
         if (acc.isEmpty()) element.toString() else "$acc, $element"

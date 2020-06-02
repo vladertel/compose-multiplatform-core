@@ -44,7 +44,7 @@ import androidx.recyclerview.widget.RecyclerView;
  *       mRecyclerView = recyclerView;
  *   }
  *
- *   public ItemDetails<Uri> getItemDetails(MotionEvent e) {
+ *   public @Nullable ItemDetails<Uri> getItemDetails(@NonNull MotionEvent e) {
  *       View view = mRecyclerView.findChildViewUnder(e.getX(), e.getY());
  *       if (view != null) {
  *           ViewHolder holder = mRecyclerView.getChildViewHolder(view);
@@ -108,10 +108,6 @@ public abstract class ItemDetailsLookup<K> {
 
     private static boolean hasSelectionKey(@Nullable ItemDetails<?> item) {
         return item != null && item.getSelectionKey() != null;
-    }
-
-    private static boolean hasPosition(@Nullable ItemDetails<?> item) {
-        return item != null && item.getPosition() != RecyclerView.NO_POSITION;
     }
 
     /**

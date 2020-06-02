@@ -33,6 +33,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.util.TypedValue;
 
+import androidx.annotation.AnyRes;
 import androidx.annotation.ColorInt;
 import androidx.annotation.ColorRes;
 import androidx.annotation.DimenRes;
@@ -40,6 +41,7 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.FontRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.core.content.res.FontResourcesParserCompat.FamilyResourceEntry;
 import androidx.core.graphics.TypefaceCompat;
@@ -50,12 +52,21 @@ import androidx.core.util.Preconditions;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 /**
  * Helper for accessing features in {@link android.content.res.Resources}.
  */
 public final class ResourcesCompat {
     private static final String TAG = "ResourcesCompat";
+
+    /**
+     * The {@code null} resource ID. This denotes an invalid resource ID that is returned by the
+     * system when a resource is not found or the value is set to {@code @null} in XML.
+     */
+    @AnyRes
+    public static final int ID_NULL = 0;
 
     /**
      * Return a drawable object associated with a particular resource ID and
@@ -439,4 +450,71 @@ public final class ResourcesCompat {
     }
 
     private ResourcesCompat() {}
+
+    /**
+     * Provides backward-compatible implementations for new {@link Theme} APIs.
+     */
+    public static final class ThemeCompat {
+        private ThemeCompat() { }
+        /**
+         * Rebases the theme against the parent Resource object's current configuration by
+         * re-applying the styles passed to {@link Theme#applyStyle(int, boolean)}.
+         * <p>
+         * Compatibility behavior:
+         * <ul>
+         * <li>API 29 and above, this method matches platform behavior.
+         * <li>API 23 through 28, this method attempts to match platform behavior by calling into
+         *     hidden platform APIs, but is not guaranteed to succeed.
+         * <li>API 22 and earlier, this method does nothing.
+         * </ul>
+         *
+         * @param theme the theme to rebase
+         */
+        public static void rebase(@NonNull Theme theme) {
+            if (SDK_INT >= 29) {
+                ImplApi29.rebase(theme);
+            } else if (SDK_INT >= 23) {
+                ImplApi23.rebase(theme);
+            }
+        }
+
+        @RequiresApi(29)
+        static class ImplApi29 {
+            private ImplApi29() { }
+            static void rebase(@NonNull Theme theme) {
+                theme.rebase();
+            }
+        }
+
+        @RequiresApi(23)
+        static class ImplApi23 {
+            private ImplApi23() { }
+            private static final Object sRebaseMethodLock = new Object();
+
+            private static Method sRebaseMethod;
+            private static boolean sRebaseMethodFetched;
+
+            static void rebase(@NonNull Theme theme) {
+                synchronized (sRebaseMethodLock) {
+                    if (!sRebaseMethodFetched) {
+                        try {
+                            sRebaseMethod = Theme.class.getDeclaredMethod("rebase");
+                            sRebaseMethod.setAccessible(true);
+                        } catch (NoSuchMethodException e) {
+                            Log.i(TAG, "Failed to retrieve rebase() method", e);
+                        }
+                        sRebaseMethodFetched = true;
+                    }
+                    if (sRebaseMethod != null) {
+                        try {
+                            sRebaseMethod.invoke(theme);
+                        } catch (IllegalAccessException | InvocationTargetException e) {
+                            Log.i(TAG, "Failed to invoke rebase() method via reflection", e);
+                            sRebaseMethod = null;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

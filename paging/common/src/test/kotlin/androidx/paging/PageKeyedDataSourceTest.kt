@@ -16,7 +16,6 @@
 
 package androidx.paging
 
-import androidx.paging.futures.DirectDispatcher
 import androidx.testutils.TestDispatcher
 import kotlinx.coroutines.CoroutineScope
 import org.junit.Assert.assertEquals
@@ -42,6 +41,7 @@ class PageKeyedDataSourceTest {
 
     internal data class Page(val prev: String?, val data: List<Item>, val next: String?)
 
+    @Suppress("DEPRECATION")
     internal class ItemDataSource(val data: Map<String, Page> = PAGE_MAP) :
         PageKeyedDataSource<String, Item>() {
         private var error = false
@@ -91,6 +91,7 @@ class PageKeyedDataSourceTest {
         // validate paging entire ItemDataSource results in full, correctly ordered data
         val testCoroutineScope = CoroutineScope(EmptyCoroutineContext)
 
+        @Suppress("DEPRECATION")
         val pagedList = PagedList.Builder(ItemDataSource(), 100)
             .setCoroutineScope(testCoroutineScope)
             .setNotifyDispatcher(mainThread)
@@ -111,6 +112,7 @@ class PageKeyedDataSourceTest {
         assertEquals(ITEM_LIST, pagedList)
     }
 
+    @Suppress("DEPRECATION")
     private fun performLoadInitial(
         invalidateDataSource: Boolean = false,
         callbackInvoker:
@@ -143,6 +145,7 @@ class PageKeyedDataSourceTest {
             }
         }
 
+        @Suppress("DEPRECATION")
         PagedList.Builder(dataSource, 10)
             .setNotifyDispatcher(FailDispatcher())
             .setFetchDispatcher(DirectDispatcher)
@@ -209,6 +212,7 @@ class PageKeyedDataSourceTest {
 
     @Test
     fun testBoundaryCallback() {
+        @Suppress("DEPRECATION")
         val dataSource = object : PageKeyedDataSource<String, String>() {
             override fun loadInitial(
                 params: LoadInitialParams<String>,
@@ -234,12 +238,13 @@ class PageKeyedDataSourceTest {
             }
         }
 
-        @Suppress("UNCHECKED_CAST")
+        @Suppress("UNCHECKED_CAST", "DEPRECATION")
         val boundaryCallback =
             mock(PagedList.BoundaryCallback::class.java) as PagedList.BoundaryCallback<String>
         val dispatcher = TestDispatcher()
 
         val testCoroutineScope = CoroutineScope(EmptyCoroutineContext)
+        @Suppress("DEPRECATION")
         val pagedList = PagedList.Builder(dataSource, 10)
             .setBoundaryCallback(boundaryCallback)
             .setCoroutineScope(testCoroutineScope)
@@ -261,6 +266,7 @@ class PageKeyedDataSourceTest {
 
     @Test
     fun testBoundaryCallbackJustInitial() {
+        @Suppress("DEPRECATION")
         val dataSource = object : PageKeyedDataSource<String, String>() {
             override fun loadInitial(
                 params: LoadInitialParams<String>,
@@ -285,12 +291,13 @@ class PageKeyedDataSourceTest {
             }
         }
 
-        @Suppress("UNCHECKED_CAST")
+        @Suppress("UNCHECKED_CAST", "DEPRECATION")
         val boundaryCallback =
             mock(PagedList.BoundaryCallback::class.java) as PagedList.BoundaryCallback<String>
         val dispatcher = TestDispatcher()
 
         val testCoroutineScope = CoroutineScope(EmptyCoroutineContext)
+        @Suppress("DEPRECATION")
         val pagedList = PagedList.Builder(dataSource, 10)
             .setBoundaryCallback(boundaryCallback)
             .setCoroutineScope(testCoroutineScope)
@@ -310,6 +317,7 @@ class PageKeyedDataSourceTest {
         verifyNoMoreInteractions(boundaryCallback)
     }
 
+    @Suppress("DEPRECATION")
     private abstract class WrapperDataSource<K : Any, A : Any, B : Any>(
         private val source: PageKeyedDataSource<K, A>
     ) : PageKeyedDataSource<K, B>() {
@@ -374,6 +382,7 @@ class PageKeyedDataSourceTest {
         protected abstract fun convert(source: List<A>): List<B>
     }
 
+    @Suppress("DEPRECATION")
     private class StringWrapperDataSource<K : Any, V : Any>(source: PageKeyedDataSource<K, V>) :
         WrapperDataSource<K, V, String>(source) {
         override fun convert(source: List<V>): List<String> {
@@ -381,6 +390,7 @@ class PageKeyedDataSourceTest {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun verifyWrappedDataSource(
         createWrapper: (PageKeyedDataSource<String, Item>) -> PageKeyedDataSource<String, String>
     ) {

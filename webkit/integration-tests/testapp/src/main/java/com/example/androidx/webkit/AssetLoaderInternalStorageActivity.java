@@ -43,7 +43,7 @@ import java.io.IOException;
  */
 public class AssetLoaderInternalStorageActivity extends AppCompatActivity {
     private static final String DEMO_HTML_CONTENT =
-            "<h3>Successfully loaded html from app files dir!</h3>";
+            "<h3 id=\"data_success_msg\">Successfully loaded html from app files dir!</h3>";
 
     @NonNull private File mPublicDir;
     @NonNull private File mDemoFile;
@@ -53,6 +53,7 @@ public class AssetLoaderInternalStorageActivity extends AppCompatActivity {
 
     private class MyWebViewClient extends WebViewClient {
         @Override
+        @SuppressWarnings("deprecation") // use the old one for compatibility with all API levels.
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             return false;
         }
@@ -65,6 +66,7 @@ public class AssetLoaderInternalStorageActivity extends AppCompatActivity {
         }
 
         @Override
+        @SuppressWarnings("deprecation") // use the old one for compatibility with all API levels.
         public WebResourceResponse shouldInterceptRequest(WebView view, String request) {
             return mAssetLoader.shouldInterceptRequest(Uri.parse(request));
         }

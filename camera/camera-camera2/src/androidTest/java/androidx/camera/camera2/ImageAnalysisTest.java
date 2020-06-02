@@ -19,38 +19,34 @@ package androidx.camera.camera2;
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assume.assumeTrue;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import android.Manifest;
 import android.app.Instrumentation;
 import android.content.Context;
-import android.graphics.ImageFormat;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Rational;
 import android.util.Size;
+import android.view.Surface;
 
 import androidx.annotation.GuardedBy;
-import androidx.camera.core.AppConfig;
-import androidx.camera.core.BaseCamera;
-import androidx.camera.core.CameraFactory;
 import androidx.camera.core.CameraInfoUnavailableException;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraX;
-import androidx.camera.core.CameraX.LensFacing;
+import androidx.camera.core.CameraXConfig;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageAnalysis.Analyzer;
-import androidx.camera.core.ImageAnalysis.ImageReaderMode;
-import androidx.camera.core.ImageAnalysisConfig;
+import androidx.camera.core.ImageAnalysis.BackpressureStrategy;
 import androidx.camera.core.ImageProxy;
-import androidx.camera.core.UseCase.StateChangeListener;
+import androidx.camera.core.impl.ImageAnalysisConfig;
+import androidx.camera.core.impl.ImageOutputConfig;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.testing.CameraUtil;
+import androidx.camera.testing.fakes.FakeLifecycleOwner;
 import androidx.test.annotation.UiThreadTest;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
-import androidx.test.filters.MediumTest;
-import androidx.test.filters.Suppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.rule.GrantPermissionRule;
 
@@ -59,11 +55,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
@@ -72,23 +65,18 @@ import java.util.concurrent.TimeUnit;
 @LargeTest
 @RunWith(AndroidJUnit4.class)
 public final class ImageAnalysisTest {
-    // Use most supported resolution for different supported hardware level devices,
-    // especially for legacy devices.
-    private static final Size DEFAULT_RESOLUTION = new Size(640, 480);
-    private static final Size SECONDARY_RESOLUTION = new Size(320, 240);
+    private static final Size GUARANTEED_RESOLUTION = new Size(640, 480);
     private final Instrumentation mInstrumentation = InstrumentationRegistry.getInstrumentation();
     private final ImageAnalysisConfig mDefaultConfig = ImageAnalysis.DEFAULT_CONFIG.getConfig(null);
-    private final StateChangeListener mMockListener = Mockito.mock(StateChangeListener.class);
-    private final Analyzer mMockAnalyzer = Mockito.mock(Analyzer.class);
     private final Object mAnalysisResultLock = new Object();
     @GuardedBy("mAnalysisResultLock")
     private Set<ImageProperties> mAnalysisResults;
     private Analyzer mAnalyzer;
-    private BaseCamera mCamera;
     private HandlerThread mHandlerThread;
     private Handler mHandler;
     private Semaphore mAnalysisResultsSemaphore;
-    private String mCameraId;
+    private CameraSelector mCameraSelector;
+    private FakeLifecycleOwner mLifecycleOwner;
 
     @Rule
     public GrantPermissionRule mRuntimePermissionRule = GrantPermissionRule.grant(
@@ -102,140 +90,121 @@ public final class ImageAnalysisTest {
         }
         mAnalysisResultsSemaphore = new Semaphore(/*permits=*/ 0);
         mAnalyzer =
-                new Analyzer() {
-                    @Override
-                    public void analyze(ImageProxy image, int rotationDegrees) {
-                        synchronized (mAnalysisResultLock) {
-                            mAnalysisResults.add(new ImageProperties(image, rotationDegrees));
-                        }
-                        mAnalysisResultsSemaphore.release();
+                (image) -> {
+                    synchronized (mAnalysisResultLock) {
+                        mAnalysisResults.add(new ImageProperties(image,
+                                image.getImageInfo().getRotationDegrees()));
                     }
+                    mAnalysisResultsSemaphore.release();
+                    image.close();
                 };
         Context context = ApplicationProvider.getApplicationContext();
-        AppConfig config = Camera2AppConfig.create(context);
-        CameraFactory cameraFactory = config.getCameraFactory(/*valueIfMissing=*/ null);
-        try {
-            mCameraId = cameraFactory.cameraIdForLensFacing(LensFacing.BACK);
-        } catch (Exception e) {
-            throw new IllegalArgumentException(
-                    "Unable to attach to camera with LensFacing " + LensFacing.BACK, e);
-        }
-        mCamera = cameraFactory.getCamera(mCameraId);
+        CameraXConfig config = Camera2Config.defaultConfig();
 
-        CameraX.init(context, config);
+        CameraX.initialize(context, config);
 
         mHandlerThread = new HandlerThread("AnalysisThread");
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
+        mCameraSelector = new CameraSelector.Builder().requireLensFacing(
+                CameraSelector.LENS_FACING_BACK).build();
+        mLifecycleOwner = new FakeLifecycleOwner();
     }
 
     @After
     public void tearDown() throws ExecutionException, InterruptedException {
-        if (mHandlerThread != null && mCamera != null) {
-            mHandlerThread.quitSafely();
-            mCamera.release();
+        if (CameraX.isInitialized()) {
+            mInstrumentation.runOnMainSync(CameraX::unbindAll);
         }
-        CameraX.deinit().get();
+
+        CameraX.shutdown().get();
+
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+        }
     }
 
     @Test
-    @UiThreadTest
-    public void analyzerCanBeSetAndRetrieved() {
-        ImageAnalysis useCase = new ImageAnalysis(mDefaultConfig);
-        Map<String, Size> suggestedResolutionMap = new HashMap<>();
-        suggestedResolutionMap.put(mCameraId, DEFAULT_RESOLUTION);
-        useCase.updateSuggestedResolution(suggestedResolutionMap);
-
-        Analyzer initialAnalyzer = useCase.getAnalyzer();
-
-        useCase.setAnalyzer(CameraXExecutors.newHandlerExecutor(mHandler), mMockAnalyzer);
-
-        Analyzer retrievedAnalyzer = useCase.getAnalyzer();
-
-        // The observer is bound to the lifecycle.
-        assertThat(initialAnalyzer).isNull();
-        assertThat(retrievedAnalyzer).isSameInstanceAs(mMockAnalyzer);
-    }
-
-    @Test
-    @UiThreadTest
-    public void becomesActive_whenHasAnalyzer() {
-        ImageAnalysis useCase = new ImageAnalysis(mDefaultConfig);
-        Map<String, Size> suggestedResolutionMap = new HashMap<>();
-        suggestedResolutionMap.put(mCameraId, DEFAULT_RESOLUTION);
-        useCase.updateSuggestedResolution(suggestedResolutionMap);
-        useCase.addStateChangeListener(mMockListener);
-
-        useCase.setAnalyzer(CameraXExecutors.newHandlerExecutor(mHandler), mMockAnalyzer);
-
-        verify(mMockListener, times(1)).onUseCaseActive(useCase);
-    }
-
-    @Test
-    @UiThreadTest
-    public void becomesInactive_whenNoAnalyzer() {
-        ImageAnalysis useCase = new ImageAnalysis(mDefaultConfig);
-        Map<String, Size> suggestedResolutionMap = new HashMap<>();
-        suggestedResolutionMap.put(mCameraId, DEFAULT_RESOLUTION);
-        useCase.updateSuggestedResolution(suggestedResolutionMap);
-        useCase.addStateChangeListener(mMockListener);
-        useCase.setAnalyzer(CameraXExecutors.newHandlerExecutor(mHandler), mMockAnalyzer);
-        useCase.removeAnalyzer();
-
-        verify(mMockListener, times(1)).onUseCaseInactive(useCase);
-    }
-
-    @Test
-    public void analyzesImages_withAcquireLatest_whenCameraIsOpen()
+    public void canSupportGuaranteedSize()
             throws InterruptedException, CameraInfoUnavailableException {
-        analyzerAnalyzesImagesWithMode(ImageReaderMode.ACQUIRE_LATEST_IMAGE);
-    }
-
-    @Test
-    public void analyzesImages_withAcquireNext_whenCameraIsOpen()
-            throws InterruptedException, CameraInfoUnavailableException {
-        analyzerAnalyzesImagesWithMode(ImageReaderMode.ACQUIRE_NEXT_IMAGE);
-    }
-
-    private void analyzerAnalyzesImagesWithMode(ImageReaderMode imageReaderMode)
-            throws InterruptedException, CameraInfoUnavailableException {
-        final int imageFormat = ImageFormat.YUV_420_888;
-        ImageAnalysisConfig config = new ImageAnalysisConfig.Builder().setImageReaderMode(
-                imageReaderMode).build();
-        ImageAnalysis useCase = new ImageAnalysis(config);
-        Map<String, Size> suggestedResolutionMap = new HashMap<>();
-        suggestedResolutionMap.put(mCameraId, DEFAULT_RESOLUTION);
-        mInstrumentation.runOnMainSync(() ->
-                useCase.updateSuggestedResolution(suggestedResolutionMap));
-        CameraUtil.openCameraWithUseCase(mCameraId, mCamera, useCase);
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                useCase.setAnalyzer(CameraXExecutors.newHandlerExecutor(mHandler), mAnalyzer);
+        // CameraSelector.LENS_FACING_FRONT/LENS_FACING_BACK are defined as constant int 0 and 1.
+        // Using for-loop to check both front and back device cameras can support the guaranteed
+        // 640x480 size.
+        for (int i = 0; i <= 1; i++) {
+            final int lensFacing = i;
+            if (!CameraUtil.hasCameraWithLensFacing(lensFacing)) {
+                continue;
             }
+
+            // Checks camera device sensor degrees to set correct target rotation value to make sure
+            // the exactly matching result size 640x480 can be selected if the device supports it.
+            Integer sensorOrientation = CameraUtil.getSensorOrientation(
+                    CameraSelector.LENS_FACING_BACK);
+            boolean isRotateNeeded = (sensorOrientation % 180) != 0;
+            ImageAnalysis useCase = new ImageAnalysis.Builder().setTargetResolution(
+                    GUARANTEED_RESOLUTION).setTargetRotation(
+                    isRotateNeeded ? Surface.ROTATION_90 : Surface.ROTATION_0).build();
+            mInstrumentation.runOnMainSync(() -> {
+                CameraSelector cameraSelector = new CameraSelector.Builder().requireLensFacing(
+                        lensFacing).build();
+                CameraX.bindToLifecycle(mLifecycleOwner, cameraSelector, useCase);
+                mLifecycleOwner.startAndResume();
+                useCase.setAnalyzer(CameraXExecutors.newHandlerExecutor(mHandler), mAnalyzer);
+            });
+
+            assertThat(mAnalysisResultsSemaphore.tryAcquire(5, TimeUnit.SECONDS)).isTrue();
+
+            synchronized (mAnalysisResultLock) {
+                // Check the analyzed image exactly matches 640x480 size. This test can also check
+                // whether the guaranteed resolution 640x480 is really supported for YUV_420_888
+                // format on the devices when running the test.
+                assertThat(GUARANTEED_RESOLUTION).isEqualTo(
+                        mAnalysisResults.iterator().next().mResolution);
+            }
+
+            // Reset the environment to run test for the other lens facing camera device.
+            mInstrumentation.runOnMainSync(() -> {
+                CameraX.unbindAll();
+                mLifecycleOwner.pauseAndStop();
+            });
+        }
+    }
+
+    @Test
+    public void analyzesImages_withKEEP_ONLY_LATEST_whenCameraIsOpen()
+            throws InterruptedException {
+        analyzerAnalyzesImagesWithStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST);
+    }
+
+    @Test
+    public void analyzesImages_withBLOCK_PRODUCER_whenCameraIsOpen()
+            throws InterruptedException {
+        analyzerAnalyzesImagesWithStrategy(ImageAnalysis.STRATEGY_BLOCK_PRODUCER);
+    }
+
+    private void analyzerAnalyzesImagesWithStrategy(@BackpressureStrategy int backpressureStrategy)
+            throws InterruptedException {
+        ImageAnalysis useCase = new ImageAnalysis.Builder().setBackpressureStrategy(
+                backpressureStrategy).build();
+        mInstrumentation.runOnMainSync(() -> {
+            CameraX.bindToLifecycle(mLifecycleOwner, mCameraSelector, useCase);
+            mLifecycleOwner.startAndResume();
+            useCase.setAnalyzer(CameraXExecutors.newHandlerExecutor(mHandler), mAnalyzer);
         });
 
         mAnalysisResultsSemaphore.tryAcquire(5, TimeUnit.SECONDS);
 
-        int sensorRotation = CameraX.getCameraInfo(mCameraId).getSensorRotationDegrees();
-        // The frames should have properties which match the configuration.
         synchronized (mAnalysisResultLock) {
-            for (ImageProperties properties : mAnalysisResults) {
-                assertThat(properties.mResolution).isEqualTo(DEFAULT_RESOLUTION);
-                assertThat(properties.mFormat).isEqualTo(imageFormat);
-                assertThat(properties.mRotationDegrees).isEqualTo(sensorRotation);
-            }
+            assertThat(mAnalysisResults).isNotEmpty();
         }
     }
 
     @Test
     @UiThreadTest
     public void analyzerDoesNotAnalyzeImages_whenCameraIsNotOpen() throws InterruptedException {
-        ImageAnalysisConfig config = new ImageAnalysisConfig.Builder().build();
-        ImageAnalysis useCase = new ImageAnalysis(config);
-        Map<String, Size> suggestedResolutionMap = new HashMap<>();
-        suggestedResolutionMap.put(mCameraId, DEFAULT_RESOLUTION);
-        useCase.updateSuggestedResolution(suggestedResolutionMap);
+        ImageAnalysis useCase = new ImageAnalysis.Builder().build();
+        // Bind but do not start lifecycle
+        CameraX.bindToLifecycle(mLifecycleOwner, mCameraSelector, useCase);
         useCase.setAnalyzer(CameraXExecutors.newHandlerExecutor(mHandler), mAnalyzer);
         // Keep the lifecycle in an inactive state.
         // Wait a little while for frames to be analyzed.
@@ -247,53 +216,15 @@ public final class ImageAnalysisTest {
         }
     }
 
-    @Suppress // TODO(b/133171096): Remove once this no longer throws an IllegalStateException
-    @MediumTest
     @Test
-    @UiThreadTest
-    public void updateSessionConfigWithSuggestedResolution() throws InterruptedException {
-        final int imageFormat = ImageFormat.YUV_420_888;
-        final Size[] sizes = {SECONDARY_RESOLUTION, DEFAULT_RESOLUTION};
-
-        ImageAnalysisConfig config = new ImageAnalysisConfig.Builder().build();
-        ImageAnalysis useCase = new ImageAnalysis(config);
-        useCase.setAnalyzer(CameraXExecutors.newHandlerExecutor(mHandler), mAnalyzer);
-
-        for (Size size : sizes) {
-            Map<String, Size> suggestedResolutionMap = new HashMap<>();
-            suggestedResolutionMap.put(mCameraId, size);
-            useCase.updateSuggestedResolution(suggestedResolutionMap);
-            CameraUtil.openCameraWithUseCase(mCameraId, mCamera, useCase);
-
-            // Clear previous results
-            synchronized (mAnalysisResultLock) {
-                mAnalysisResults.clear();
-            }
-            // Wait a little while for frames to be analyzed.
-            mAnalysisResultsSemaphore.tryAcquire(5, TimeUnit.SECONDS);
-
-            synchronized (mAnalysisResultLock) {
-                // The frames should have properties which match the configuration.
-                for (ImageProperties properties : mAnalysisResults) {
-                    assertThat(properties.mResolution).isEqualTo(size);
-                    assertThat(properties.mFormat).isEqualTo(imageFormat);
-                }
-            }
-
-            // Detach use case from camera device to run next resolution setting
-            CameraUtil.detachUseCaseFromCamera(mCamera, useCase);
-        }
-    }
-
-    @Test
-    public void defaultsIncludeImageReaderMode() {
+    public void defaultsIncludeBackpressureStrategy() {
         ImageAnalysisConfig defaultConfig = ImageAnalysis.DEFAULT_CONFIG.getConfig(null);
 
-        // Will throw if mode does not exist
-        ImageReaderMode mode = defaultConfig.getImageReaderMode();
+        // Will throw if strategy does not exist
+        @BackpressureStrategy int strategy = defaultConfig.getBackpressureStrategy();
 
         // Should not be null
-        assertThat(mode).isNotNull();
+        assertThat(strategy).isNotNull();
     }
 
     @Test
@@ -307,6 +238,37 @@ public final class ImageAnalysisTest {
         assertThat(depth).isAtLeast(1);
     }
 
+    @Test
+    public void targetRotationCanBeUpdatedAfterUseCaseIsCreated() {
+        ImageAnalysis imageAnalysis =
+                new ImageAnalysis.Builder().setTargetRotation(Surface.ROTATION_0).build();
+        imageAnalysis.setTargetRotation(Surface.ROTATION_90);
+
+        assertThat(imageAnalysis.getTargetRotation()).isEqualTo(Surface.ROTATION_90);
+    }
+
+    @Test
+    public void targetResolutionIsUpdatedAfterTargetRotationIsUpdated() {
+        // setTargetResolution will also set corresponding value to targetAspectRatioCustom.
+        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().setTargetResolution(
+                GUARANTEED_RESOLUTION).setTargetRotation(Surface.ROTATION_0).build();
+
+        // Updates target rotation from ROTATION_0 to ROTATION_90.
+        imageAnalysis.setTargetRotation(Surface.ROTATION_90);
+
+        ImageOutputConfig newConfig = (ImageOutputConfig) imageAnalysis.getUseCaseConfig();
+        Size expectedTargetResolution = new Size(GUARANTEED_RESOLUTION.getHeight(),
+                GUARANTEED_RESOLUTION.getWidth());
+        Rational expectedTargetAspectRatioCustom = new Rational(GUARANTEED_RESOLUTION.getHeight(),
+                GUARANTEED_RESOLUTION.getWidth());
+
+        // Expected targetResolution and targetAspectRatioCustom will be reversed from original
+        // target resolution.
+        assertThat(newConfig.getTargetResolution().equals(expectedTargetResolution)).isTrue();
+        assertThat(newConfig.getTargetAspectRatioCustom().equals(
+                expectedTargetAspectRatioCustom)).isTrue();
+    }
+
     private static class ImageProperties {
         final Size mResolution;
         final int mFormat;
@@ -316,7 +278,7 @@ public final class ImageAnalysisTest {
         ImageProperties(ImageProxy image, int rotationDegrees) {
             this.mResolution = new Size(image.getWidth(), image.getHeight());
             this.mFormat = image.getFormat();
-            this.mTimestamp = image.getTimestamp();
+            this.mTimestamp = image.getImageInfo().getTimestamp();
             this.mRotationDegrees = rotationDegrees;
         }
 

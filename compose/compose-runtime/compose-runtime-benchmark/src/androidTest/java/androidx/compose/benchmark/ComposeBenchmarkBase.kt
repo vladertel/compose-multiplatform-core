@@ -16,15 +16,20 @@
 
 package androidx.compose.benchmark
 
+import android.app.Activity
+import android.util.SparseArray
+import android.view.View
+import android.view.ViewGroup
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.compose.Composable
 import androidx.compose.Composer
+import androidx.compose.Composition
 import androidx.compose.FrameManager
-import androidx.compose.composer
-import androidx.compose.disposeComposition
-import androidx.compose.runWithCurrent
+import androidx.compose.Recomposer
+import androidx.compose.currentComposer
 import androidx.test.rule.ActivityTestRule
+import androidx.ui.core.AndroidOwner
 import androidx.ui.core.setContent
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -36,18 +41,22 @@ abstract class ComposeBenchmarkBase {
     @get:Rule
     val activityRule = ActivityTestRule(ComposeActivity::class.java)
 
-    fun measureCompose(block: @Composable() () -> Unit) {
+    fun measureCompose(block: @Composable () -> Unit) {
         val activity = activityRule.activity
+        var composition: Composition? = null
         benchmarkRule.measureRepeated {
-            activity.setContent {
-                block()
-            }
+            composition = activity.setContent(Recomposer.current(), block)
+
+            // AndroidComposeView is postponing the composition till the saved state will be restored.
+            // We will emulate the restoration of the empty state to trigger the real composition.
+            val composeView = (findComposeView(activity) as ViewGroup?)!!
+            composeView.restoreHierarchyState(SparseArray())
 
             runWithTimingDisabled {
-                activity.setContent { }
+                composition?.dispose()
             }
         }
-        activity.disposeComposition()
+        composition?.dispose()
     }
 
     fun measureRecompose(block: RecomposeReceiver.() -> Unit) {
@@ -57,10 +66,15 @@ abstract class ComposeBenchmarkBase {
 
         val activity = activityRule.activity
 
-        activity.setContent {
-            activeComposer = composer.composer
+        val composition = activity.setContent {
+            activeComposer = currentComposer
             receiver.composeCb()
         }
+
+        // AndroidOwner is postponing the composition till the saved state will be restored.
+        // We will emulate the restoration of the empty state to trigger the real composition.
+        val ownerView = findComposeView(activity)!!.view
+        ownerView.restoreHierarchyState(SparseArray())
 
         benchmarkRule.measureRepeated {
             runWithTimingDisabled {
@@ -69,26 +83,46 @@ abstract class ComposeBenchmarkBase {
             }
 
             val didSomething = activeComposer?.let { composer ->
-                composer.runWithCurrent {
-                    composer.recompose().also { composer.applyChanges() }
-                }
+                composer.recompose().also { composer.applyChanges() }
             } ?: false
             assertTrue(didSomething)
         }
 
-        activity.disposeComposition()
+        composition.dispose()
     }
 }
 
 class RecomposeReceiver {
-    var composeCb: @Composable() () -> Unit = @Composable { }
+    var composeCb: @Composable () -> Unit = @Composable { }
     var updateModelCb: () -> Unit = { }
 
-    fun compose(block: @Composable() () -> Unit) {
+    fun compose(block: @Composable () -> Unit) {
         composeCb = block
     }
 
     fun update(block: () -> Unit) {
         updateModelCb = block
     }
+}
+
+// TODO(chuckj): Consider refacgtoring to use AndroidTestCaseRunner from UI
+// This code is copied from AndroidTestCaseRunner.kt
+private fun findComposeView(activity: Activity): AndroidOwner? {
+    return findComposeView(activity.findViewById(android.R.id.content) as ViewGroup)
+}
+
+private fun findComposeView(view: View): AndroidOwner? {
+    if (view is AndroidOwner) {
+        return view
+    }
+
+    if (view is ViewGroup) {
+        for (i in 0 until view.childCount) {
+            val composeView = findComposeView(view.getChildAt(i))
+            if (composeView != null) {
+                return composeView
+            }
+        }
+    }
+    return null
 }

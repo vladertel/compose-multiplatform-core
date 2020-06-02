@@ -24,6 +24,7 @@ class ComposeRobolectricTestRunner(testClass: Class<*>) : RobolectricTestRunner(
     override fun createClassLoaderConfig(method: FrameworkMethod?): InstrumentationConfiguration {
         val builder = InstrumentationConfiguration.Builder(super.createClassLoaderConfig(method))
         builder.doNotInstrumentPackage("androidx.compose")
+        builder.doNotInstrumentPackage("androidx.ui")
         return builder.build()
     }
 }

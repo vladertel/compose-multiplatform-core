@@ -29,17 +29,12 @@ plugins {
 }
 
 dependencies {
-    kotlinPlugin project(path: ":compose:compose-compiler", configuration: "embeddablePlugin")
+    kotlinPlugin project(path: ":compose:compose-compiler")
 
-    api project(':ui:ui-core')
-    implementation "androidx.collection:collection:1.0.0"
+    api project(':ui:ui-graphics')
     api project(":compose:compose-runtime")
-    implementation (KOTLIN_COMPOSE_STDLIB)
-
-    // TODO: Non-Kotlin dependency, move to Android-specific code
-//    implementation "androidx.collection:collection:1.0.0-alpha01"
-    // TODO: Non-Kotlin dependency, move to Android-specific code
-    implementation "androidx.core:core:1.0.0"
+    implementation project(":ui:ui-util")
+    implementation (KOTLIN_STDLIB)
 }
 
 androidx {
@@ -53,7 +48,6 @@ androidx {
 
 tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
-        // TODO(njawad): Temporary disabled, make it true when IR bug b/129076229 is fixed.
-        useIR = false
+        useIR = true
     }
 }

@@ -19,12 +19,11 @@ package androidx.camera.testing.fakes;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
-import androidx.camera.core.CameraX.LensFacing;
-import androidx.camera.core.SessionConfig;
+import androidx.annotation.Nullable;
+import androidx.camera.core.CameraInfo;
 import androidx.camera.core.UseCase;
-import androidx.camera.core.UseCaseConfig;
-
-import java.util.Map;
+import androidx.camera.core.impl.SessionConfig;
+import androidx.camera.core.impl.UseCaseConfig;
 
 /**
  * A fake {@link UseCase}.
@@ -35,7 +34,7 @@ public class FakeUseCase extends UseCase {
     /**
      * Creates a new instance of a {@link FakeUseCase} with a given configuration.
      */
-    public FakeUseCase(FakeUseCaseConfig config) {
+    public FakeUseCase(@NonNull FakeUseCaseConfig config) {
         super(config);
     }
 
@@ -43,13 +42,13 @@ public class FakeUseCase extends UseCase {
      * Creates a new instance of a {@link FakeUseCase} with a default configuration.
      */
     public FakeUseCase() {
-        this(new FakeUseCaseConfig.Builder().build());
+        this(new FakeUseCaseConfig.Builder().getUseCaseConfig());
     }
 
     @Override
-    protected UseCaseConfig.Builder<?, ?, ?> getDefaultBuilder(LensFacing lensFacing) {
+    @Nullable
+    protected UseCaseConfig.Builder<?, ?, ?> getDefaultBuilder(@Nullable CameraInfo cameraInfo) {
         return new FakeUseCaseConfig.Builder()
-                .setLensFacing(lensFacing)
                 .setSessionOptionUnpacker(new SessionConfig.OptionUnpacker() {
                     @Override
                     public void unpack(@NonNull UseCaseConfig<?> useCaseConfig,
@@ -65,9 +64,9 @@ public class FakeUseCase extends UseCase {
     }
 
     @Override
-    protected Map<String, Size> onSuggestedResolutionUpdated(
-            Map<String, Size> suggestedResolutionMap) {
-        return suggestedResolutionMap;
+    @NonNull
+    protected Size onSuggestedResolutionUpdated(@NonNull Size suggestedResolution) {
+        return suggestedResolution;
     }
 
     /**

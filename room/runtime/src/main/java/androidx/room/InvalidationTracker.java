@@ -83,7 +83,6 @@ public class InvalidationTracker {
             + " WHERE " + INVALIDATED_COLUMN_NAME + " = 1;";
 
     @NonNull
-    @VisibleForTesting
     final HashMap<String, Integer> mTableIdLookup;
     final String[] mTableNames;
 
@@ -361,8 +360,8 @@ public class InvalidationTracker {
         public void run() {
             final Lock closeLock = mDatabase.getCloseLock();
             Set<Integer> invalidatedTableIds = null;
+            closeLock.lock();
             try {
-                closeLock.lock();
 
                 if (!ensureInitialization()) {
                     return;

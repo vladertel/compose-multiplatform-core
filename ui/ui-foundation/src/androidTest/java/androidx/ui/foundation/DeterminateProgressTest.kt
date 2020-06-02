@@ -16,26 +16,23 @@
 
 package androidx.ui.foundation
 
-import androidx.compose.Model
-import androidx.compose.State
-import androidx.compose.composer
+import androidx.compose.mutableStateOf
 import androidx.test.filters.MediumTest
-import androidx.ui.core.TestTag
-import androidx.ui.core.dp
+import androidx.ui.core.Modifier
+import androidx.ui.core.testTag
 import androidx.ui.graphics.Color
-import androidx.ui.test.assertIsVisible
+import androidx.ui.layout.preferredSize
+import androidx.ui.semantics.AccessibilityRangeInfo
+import androidx.ui.test.assertRangeInfoEquals
 import androidx.ui.test.assertValueEquals
 import androidx.ui.test.createComposeRule
 import androidx.ui.test.findByTag
+import androidx.ui.test.runOnUiThread
+import androidx.ui.unit.dp
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-
-@Model
-private class State {
-    var progress = 0f
-}
 
 @MediumTest
 @RunWith(JUnit4::class)
@@ -47,27 +44,35 @@ class DeterminateProgressTest {
     @Test
     fun determinateProgress_testSemantics() {
         val tag = "linear"
-        val state = State()
+        val progress = mutableStateOf(0f)
 
         composeTestRule
             .setContent {
-                TestTag(tag = tag) {
-                    DeterminateProgressIndicator(progress = state.progress) {
-                        ColoredRect(Color.Cyan, width = 50.dp, height = 50.dp)
-                    }
-                }
+                Box(Modifier
+                    .testTag(tag)
+                    .determinateProgressIndicator(progress.value)
+                    .preferredSize(50.dp)
+                    .drawBackground(Color.Cyan))
             }
 
         findByTag(tag)
-            .assertIsVisible()
-            .assertValueEquals("0.0")
+            .assertValueEquals("0 percent")
+            .assertRangeInfoEquals(AccessibilityRangeInfo(0f, 0f..1f))
 
-        composeTestRule.runOnUiThread {
-            state.progress = 0.5f
+        runOnUiThread {
+            progress.value = 0.005f
         }
 
         findByTag(tag)
-            .assertIsVisible()
-            .assertValueEquals("0.5")
+            .assertValueEquals("1 percent")
+            .assertRangeInfoEquals(AccessibilityRangeInfo(0.005f, 0f..1f))
+
+        runOnUiThread {
+            progress.value = 0.5f
+        }
+
+        findByTag(tag)
+            .assertValueEquals("50 percent")
+            .assertRangeInfoEquals(AccessibilityRangeInfo(0.5f, 0f..1f))
     }
 }

@@ -15,11 +15,10 @@
  */
 package androidx.ui.material.ripple
 
-import androidx.ui.core.Density
-import androidx.ui.core.PxSize
-import androidx.ui.core.dp
-import androidx.ui.core.px
-import androidx.ui.core.withDensity
+import androidx.ui.unit.Density
+import androidx.ui.unit.PxSize
+import androidx.ui.unit.dp
+import androidx.ui.unit.px
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,7 +31,7 @@ class DefaultRippleEffectTest {
     @Test
     fun testStartRadius() {
         val size = PxSize(10.px, 30.px)
-        val expectedRadius = 9.px // 30% of 30
+        val expectedRadius = 9.0f // 30% of 30
 
         // Top-level functions are not resolved properly in IR modules
         val result = getRippleStartRadius(size)
@@ -40,17 +39,27 @@ class DefaultRippleEffectTest {
     }
 
     @Test
-    fun testTargetRadius() {
+    fun testEndRadiusBounded() {
         val width = 100f
         val height = 160f
         val size = PxSize(width.px, height.px)
         val density = Density(2f)
-        val expectedRadius = withDensity(density) {
+        val expectedRadius = with(density) {
             // 10 is an extra offset from spec
-            halfDistance(width, height) + 10.dp.toPx().value
+            halfDistance(width, height) + 10.dp.toPx()
         }
-        val result = withDensity(density) { getRippleTargetRadius(size) }
-        assertThat(result).isEqualTo(expectedRadius.px)
+        val result = with(density) { getRippleEndRadius(true, size) }
+        assertThat(result).isEqualTo(expectedRadius)
+    }
+
+    @Test
+    fun testEndRadiusUnbounded() {
+        val width = 140f
+        val height = 100f
+        val size = PxSize(width.px, height.px)
+        val expectedRadius = halfDistance(width, height)
+        val result = with(Density(1f)) { getRippleEndRadius(false, size) }
+        assertThat(result).isEqualTo(expectedRadius)
     }
 
     private fun halfDistance(width: Float, height: Float) =

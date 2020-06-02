@@ -24,7 +24,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.Upload
 import org.gradle.api.tasks.bundling.Zip
 import java.io.File
 import java.util.TreeSet
@@ -86,7 +85,7 @@ open class GMavenZipTask : Zip() {
              */
             var includeMetadata: Boolean,
             /**
-             * The out folder for uploadArchives.
+             * The out folder for publishing libraries.
              */
             val supportRepoOut: File,
             /**
@@ -213,9 +212,12 @@ object Release {
         val mavenGroup = extension.mavenGroup?.group ?: throw IllegalArgumentException(
                 "Cannot register a project to release if it does not have a mavenGroup set up"
         )
-        val version = extension.mavenVersion ?: throw IllegalArgumentException(
+        if (!extension.isVersionSet()) {
+            throw IllegalArgumentException(
                 "Cannot register a project to release if it does not have a mavenVersion set up"
-        )
+            )
+        }
+        val version = project.version
 
         var zipTasks: MutableList<TaskProvider<GMavenZipTask>> = mutableListOf()
         if (!extension.mavenGroup!!.requireSameVersion) {
@@ -230,11 +232,11 @@ object Release {
                 projectName = project.name,
                 version = version.toString()
         )
-        val uploadTask = project.tasks.named("uploadArchives", Upload::class.java)
+        val publishTask = project.tasks.named("publish")
         zipTasks.forEach {
             it.configure {
                 it.candidates.add(artifact)
-                it.dependsOn(uploadTask)
+                it.dependsOn(publishTask)
             }
         }
     }
@@ -275,9 +277,8 @@ object Release {
      * Creates and returns the task that generates the combined gmaven diff file for all projects.
      */
     private fun getGlobalReleaseZipTask(project: Project): TaskProvider<GMavenZipTask> {
-        val taskName = "${DIFF_TASK_PREFIX}ForAll"
-        return project.rootProject.maybeRegister(
-            name = taskName,
+        val taskProvider: TaskProvider<GMavenZipTask> = project.rootProject.maybeRegister(
+            name = "${DIFF_TASK_PREFIX}ForAll",
             onConfigure = {
                 GMavenZipTask.ConfigAction(
                     getParams(
@@ -289,6 +290,8 @@ object Release {
             onRegister = {
             }
         )
+        project.addToBuildOnServer(taskProvider)
+        return taskProvider
     }
 
     /**
@@ -321,9 +324,8 @@ object Release {
         project: Project,
         group: String
     ): TaskProvider<GMavenZipTask> {
-        val taskName = "${DIFF_TASK_PREFIX}For${groupToTaskNameSuffix(group)}"
-        return project.rootProject.maybeRegister(
-            name = taskName,
+        val taskProvider: TaskProvider<GMavenZipTask> = project.rootProject.maybeRegister(
+            name = "${DIFF_TASK_PREFIX}For${groupToTaskNameSuffix(group)}",
             onConfigure = {
                 GMavenZipTask.ConfigAction(
                     getParams(project,
@@ -335,13 +337,15 @@ object Release {
             onRegister = {
             }
         )
+        project.addToBuildOnServer(taskProvider)
+        return taskProvider
     }
 
     private fun getProjectZipTask(
         project: Project
     ): TaskProvider<GMavenZipTask> {
         val taskName = "$PROJECT_ARCHIVE_ZIP_TASK_NAME"
-        return project.maybeRegister(
+        val taskProvider: TaskProvider<GMavenZipTask> = project.maybeRegister(
             name = taskName,
             onConfigure = {
                 GMavenZipTask.ConfigAction(
@@ -355,6 +359,8 @@ object Release {
             onRegister = {
             }
         )
+        project.addToBuildOnServer(taskProvider)
+        return taskProvider
     }
 }
 

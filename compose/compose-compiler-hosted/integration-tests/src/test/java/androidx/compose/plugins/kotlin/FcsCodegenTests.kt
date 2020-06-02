@@ -22,6 +22,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.Composer
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RuntimeEnvironment
@@ -37,6 +38,134 @@ private val noParameters = { emptyMap<String, String>() }
     maxSdk = 23
 )
 class FcsCodegenTests : AbstractCodegenTest() {
+
+    @Test
+    fun testReturnValue(): Unit = ensureSetup {
+        compose("""
+            var a = 0
+            var b = 0
+
+            @Composable
+            fun SimpleComposable() {
+                a++
+                val c = state { 0 }
+                val d = remember(c.value) { b++; b }
+                val recompose = invalidate
+                Button(
+                  text=listOf(a, b, c.value, d).joinToString(", "),
+                  onClick={ c.value += 1 },
+                  id=42
+                )
+                Button(
+                  text="Recompose",
+                  onClick={ recompose() },
+                  id=43
+                )
+            }
+        """,
+            noParameters,
+            "SimpleComposable()"
+        ).then { activity ->
+            val button = activity.findViewById(42) as Button
+            assertEquals(
+                button.text,
+                listOf(
+                    1, // SimpleComposable has run once
+                    1, // memo has been called once because of initial mount
+                    0, // state was in itialized at 0
+                    1 // memo should return b
+                ).joinToString(", ")
+            )
+            button.performClick()
+        }.then { activity ->
+            val button = activity.findViewById(42) as Button
+            val recompose = activity.findViewById(43) as Button
+            assertEquals(
+                button.text,
+                listOf(
+                    2, // SimpleComposable has run twice
+                    2, // memo has been called twice, because state input has changed
+                    1, // state was changed to 1
+                    2 // memo should return b
+                ).joinToString(", ")
+            )
+            recompose.performClick()
+        }.then { activity ->
+            val button = activity.findViewById(42) as Button
+            assertEquals(
+                button.text,
+                listOf(
+                    3, // SimpleComposable has run three times
+                    2, // memo was not called this time, because input didn't change
+                    1, // state stayed at 1
+                    2 // memo should return b
+                ).joinToString(", ")
+            )
+        }
+    }
+
+    @Test
+    fun testReorderedArgsReturnValue(): Unit = ensureSetup {
+        compose(
+            """
+            @Composable
+            fun SimpleComposable() {
+                val x = remember(calculation = { "abc" }, v1 = "def")
+                TextView(
+                  text=x,
+                  id=42
+                )
+            }
+        """,
+            noParameters,
+            "SimpleComposable()"
+        ).then { activity ->
+            val button = activity.findViewById(42) as TextView
+            assertEquals(button.text, "abc")
+        }
+    }
+
+    @Test
+    fun testTrivialReturnValue(): Unit = ensureSetup {
+        compose("""
+        @Composable
+        fun <T> identity(value: T): T = value
+
+        @Composable
+        fun SimpleComposable() {
+            val x = identity("def")
+            TextView(
+              text=x,
+              id=42
+            )
+        }
+    """,
+            noParameters,
+            "SimpleComposable()"
+        ).then { activity ->
+            val button = activity.findViewById(42) as TextView
+            assertEquals(button.text, "def")
+        }
+    }
+
+    @Test
+    fun testForDevelopment(): Unit = ensureSetup {
+        codegen(
+            """
+            import androidx.compose.*
+
+            @Composable
+            fun bar() {
+
+            }
+
+            @Composable
+            fun foo() {
+                TextView(text="Hello World")
+            }
+            """
+        )
+    }
 
     @Test
     fun testSimpleFunctionResolution(): Unit = ensureSetup {
@@ -75,22 +204,10 @@ class FcsCodegenTests : AbstractCodegenTest() {
     }
 
     @Test
-    fun testModelOne(): Unit = ensureSetup {
-        codegen(
-            """
-                @Model
-                class ModelClass() {
-                    var x = 0
-                }
-            """, false
-        )
-    }
-
-    @Test
     fun testSetContent(): Unit = ensureSetup {
         codegen(
             """
-                fun fakeCompose(block: @Composable() ()->Unit) { }
+                fun fakeCompose(block: @Composable ()->Unit) { }
 
                 class Test {
                     fun test() {
@@ -107,7 +224,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
     fun testComposeWithResult(): Unit = ensureSetup {
         compose(
             """
-                fun <T> identity(block: @Composable() ()->T): T = block()
+                @Composable fun <T> identity(block: @Composable ()->T): T = block()
 
                 @Composable
                 fun TestCall() {
@@ -131,19 +248,14 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 import androidx.compose.*
                 import androidx.ui.androidview.adapters.setOnClick
 
-                @Model
-                class FancyButtonData() {
-                    var x = 0
-                }
-
                 @Composable
                 fun SimpleComposable() {
-                    FancyButton(state=FancyButtonData())
+                    FancyButton(state=mutableStateOf(0))
                 }
 
                 @Composable
-                fun FancyButton(state: FancyButtonData) {
-                    Button(text=("Clicked "+state.x+" times"), onClick={state.x++}, id=42)
+                fun FancyButton(state: MutableState<Int>) {
+                    Button(text=("Clicked "+state.value+" times"), onClick={state.value++}, id=42)
                 }
             """,
             noParameters,
@@ -163,29 +275,24 @@ class FcsCodegenTests : AbstractCodegenTest() {
     fun testObservableLambda(): Unit = ensureSetup {
         compose(
             """
-                @Model
-                class FancyButtonCount() {
-                    var count = 0
-                }
-
                 @Composable
-                fun SimpleComposable(state: FancyButtonCount) {
+                fun SimpleComposable(state: MutableState<Int>) {
                     FancyBox2 {
                         Button(
-                          text=("Button clicked "+state.count+" times"),
-                          onClick={state.count++},
+                          text=("Button clicked "+state.value+" times"),
+                          onClick={state.value++},
                           id=42
                         )
                     }
                 }
 
                 @Composable
-                fun FancyBox2(@Children children: @Composable() ()->Unit) {
+                fun FancyBox2(children: @Composable ()->Unit) {
                     children()
                 }
             """,
             noParameters,
-            "SimpleComposable(state=+memo { FancyButtonCount() })"
+            "SimpleComposable(state=state { 0 })"
         ).then { activity ->
             val button = activity.findViewById(42) as Button
             button.performClick()
@@ -200,22 +307,17 @@ class FcsCodegenTests : AbstractCodegenTest() {
     @Test
     fun testObservableGenericFunction(): Unit = ensureSetup {
         compose("""
-            @Model
-            class Counter() {
-                var count = 0
-            }
-
             @Composable
-            fun <T> SimpleComposable(state: Counter, value: T) {
+            fun <T> SimpleComposable(state: MutableState<Int>, value: T) {
                 Button(
-                  text=("Button clicked "+state.count+" times: " + value),
-                  onClick={state.count++},
+                  text=("Button clicked "+state.value+" times: " + value),
+                  onClick={state.value++},
                   id=42
                 )
             }
         """,
             noParameters,
-            "SimpleComposable(state=+memo { Counter() }, value=\"Value\")"
+            "SimpleComposable(state=state { 0 }, value=\"Value\")"
         ).then { activity ->
             val button = activity.findViewById(42) as Button
             button.performClick()
@@ -230,21 +332,17 @@ class FcsCodegenTests : AbstractCodegenTest() {
     @Test
     fun testObservableExtension(): Unit = ensureSetup {
         compose("""
-            @Model
-            class Counter() {
-                var count = 0
-            }
 
             @Composable
-            fun Counter.Composable() {
+            fun MutableState<Int>.Composable() {
                 Button(
-                    text="Button clicked "+count+" times",
-                    onClick={count++},
+                    text="Button clicked "+value+" times",
+                    onClick={value++},
                     id=42
                 )
             }
 
-            val myCounter = Counter()
+            val myCounter = mutableStateOf(0)
             """,
             noParameters,
             "myCounter.Composable()"
@@ -262,23 +360,18 @@ class FcsCodegenTests : AbstractCodegenTest() {
     @Test
     fun testObserverableExpressionBody(): Unit = ensureSetup {
         compose("""
-            @Model
-            class Counter() {
-                var count = 0
-            }
-
             @Composable
-            fun SimpleComposable(counter: Counter) =
+            fun SimpleComposable(counter: MutableState<Int>) =
                 Button(
-                    text="Button clicked "+counter.count+" times",
-                    onClick={counter.count++},
+                    text="Button clicked "+counter.value+" times",
+                    onClick={counter.value++},
                     id=42
                 )
 
             @Composable
-            fun SimpleWrapper(counter: Counter) = SimpleComposable(counter = counter)
+            fun SimpleWrapper(counter: MutableState<Int>) = SimpleComposable(counter = counter)
 
-            val myCounter = Counter()
+            val myCounter = mutableStateOf(0)
             """,
             noParameters,
             "SimpleWrapper(counter = myCounter)"
@@ -296,13 +389,8 @@ class FcsCodegenTests : AbstractCodegenTest() {
     @Test
     fun testObservableInlineWrapper(): Unit = ensureSetup {
         compose("""
-            @Model
-            class Counter() {
-                var count = 0
-            }
-
             var inWrapper = false
-            val counter = Counter()
+            val counter = mutableStateOf(0)
 
             inline fun wrapper(block: () -> Unit) {
               inWrapper = true
@@ -314,11 +402,11 @@ class FcsCodegenTests : AbstractCodegenTest() {
             }
 
             @Composable
-            fun SimpleComposable(state: Counter) {
+            fun SimpleComposable(state: MutableState<Int>) {
                 wrapper {
                     Button(
-                      text=("Button clicked "+state.count+" times"),
-                      onClick={state.count++},
+                      text=("Button clicked "+state.value+" times"),
+                      onClick={state.value++},
                       id=42
                     )
                 }
@@ -340,18 +428,13 @@ class FcsCodegenTests : AbstractCodegenTest() {
     @Test
     fun testObservableDefaultParameter(): Unit = ensureSetup {
         compose("""
-            @Model
-            class Counter() {
-                var count = 0
-            }
-
-            val counter = Counter()
+            val counter = mutableStateOf(0)
 
             @Composable
-            fun SimpleComposable(state: Counter, a: Int = 1, b: Int = 2) {
+            fun SimpleComposable(state: MutableState<Int>, a: Int = 1, b: Int = 2) {
                 Button(
-                  text=("State: ${'$'}{state.count} a = ${'$'}a b = ${'$'}b"),
-                  onClick={state.count++},
+                  text=("State: ${'$'}{state.value} a = ${'$'}a b = ${'$'}b"),
+                  onClick={state.value++},
                   id=42
                 )
             }
@@ -372,22 +455,18 @@ class FcsCodegenTests : AbstractCodegenTest() {
     @Test
     fun testObservableEarlyReturn(): Unit = ensureSetup {
         compose("""
-            @Model
-            class Counter() {
-                var count = 0
-            }
 
-            val counter = Counter()
+            val counter = mutableStateOf(0)
 
             @Composable
-            fun SimpleComposable(state: Counter) {
+            fun SimpleComposable(state: MutableState<Int>) {
                 Button(
-                  text=("State: ${'$'}{state.count}"),
-                  onClick={state.count++},
+                  text=("State: ${'$'}{state.value}"),
+                  onClick={state.value++},
                   id=42
                 )
 
-                if (state.count > 2) return
+                if (state.value > 2) return
 
                 TextView(
                   text="Included text",
@@ -564,7 +643,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
         compose(
             """
                 @Composable
-                fun Foo(x: Double, @Children children: Double.() -> Unit) {
+                fun Foo(x: Double, children: @Composable Double.() -> Unit) {
                   x.children()
                 }
             """,
@@ -628,43 +707,10 @@ class FcsCodegenTests : AbstractCodegenTest() {
         ).then {}
     }
 
-    // NOTE: DirectRuntime tests do not test compose. They test if the IR can handle the case
-    // compose generates. If a DirectRuntime test fails then the related tests will probably fail
-    // in a similar way and a fix will likely be required in IR.
-    //
-    // If they pass but the corresponding Composable or NonComposable test fails then the bug is
-    // in the rewrites made by compose. It is then useful to compare the how the IR inlines the
-    // DirectRuntime byte-code compared to how it inlines the byte-code generated from compose
-    // generated IR.
-
-    @Test
-    fun testInline_DirectRuntime_Identity(): Unit = ensureSetup {
-        compose("""
-            inline fun inlineWrapper(base: Int, children: () -> Unit) {
-              children()
-            }
-
-            fun example() {
-              inlineWrapper(200) {
-                composer.emit(
-                  12,
-                  { context -> TextView(context) },
-                  {
-                    set("Test") { text = it }
-                    set(101) { id = it }
-                  }
-                )
-              }
-            }
-        """, noParameters, "example()").then { activity ->
-            assertEquals("Test", activity.findViewById<TextView>(101).text)
-        }
-    }
-
     @Test
     fun testInline_NonComposable_Identity(): Unit = ensureSetup {
         compose("""
-            inline fun InlineWrapper(base: Int, children: @Composable() ()->Unit) {
+            @Composable inline fun InlineWrapper(base: Int, children: @Composable ()->Unit) {
               children()
             }
             """,
@@ -682,14 +728,14 @@ class FcsCodegenTests : AbstractCodegenTest() {
     fun testInline_Composable_Identity(): Unit = ensureSetup {
         compose("""
             @Composable
-            inline fun InlineWrapper(base: Int, children: @Composable() ()->Unit) {
+            inline fun InlineWrapper(base: Int, children: @Composable ()->Unit) {
               children()
             }
             """,
             noParameters,
             """
             InlineWrapper(200) {
-              TextView(text = "Test", id=101)
+                TextView(text = "Test", id=101)
             }
             """).then { activity ->
             assertEquals("Test", activity.findViewById<TextView>(101).text)
@@ -697,41 +743,10 @@ class FcsCodegenTests : AbstractCodegenTest() {
     }
 
     @Test
-    fun testInline_DirectRuntime_EmitChildren(): Unit = ensureSetup {
-        compose("""
-            inline fun InlineWrapper(base: Int, crossinline children: () -> Unit) {
-              val tmp = base + 0
-              composer.emit(
-                10,
-                { context -> LinearLayout(context) },
-                { set(tmp) { id = it } }
-              ) {
-                 children()
-              }
-            }
-
-        """, noParameters, """
-              InlineWrapper(200) {
-                composer.emit(
-                  12,
-                  { context -> TextView(context) },
-                  { set("Test") { text = it }; set(101) { id = it } }
-                )
-              }
-        """).then { activity ->
-            val tv = activity.findViewById<TextView>(101)
-            // Assert the TextView was created with the correct text
-            assertEquals("Test", tv.text)
-            // and it is the first child of the linear layout
-            assertEquals(tv, activity.findViewById<LinearLayout>(200).getChildAt(0))
-        }
-    }
-
-    @Test
     fun testInline_Composable_EmitChildren(): Unit = ensureSetup {
         compose("""
             @Composable
-            inline fun InlineWrapper(base: Int, crossinline children: @Composable() ()->Unit) {
+            inline fun InlineWrapper(base: Int, crossinline children: @Composable ()->Unit) {
               LinearLayout(id = base + 0) {
                 children()
               }
@@ -842,181 +857,18 @@ class FcsCodegenTests : AbstractCodegenTest() {
         compose(
             """
 
-            val StringAmbient = Ambient.of<String> { "default" }
+            val StringAmbient = ambientOf<String> { "default" }
 
             @Composable fun Foo() {
-                StringAmbient.Consumer { value ->
-                    TextView(id=$tvId, text=value)
-                }
+                TextView(id=$tvId, text=StringAmbient.current)
             }
 
         """,
             { mapOf("text" to text) },
             """
-            StringAmbient.Provider(value=text) {
+            Providers(StringAmbient provides text) {
                 Foo()
             }
-        """
-        ).then { activity ->
-            val textView = activity.findViewById(tvId) as TextView
-
-            assertEquals(text, textView.text)
-            text = "wat"
-        }.then { activity ->
-            val textView = activity.findViewById(tvId) as TextView
-
-            assertEquals(text, textView.text)
-        }
-    }
-
-    // @Test
-    fun testAmbientPortal1(): Unit = ensureSetup {
-        val llId = 123
-        val tvId = 345
-        var text = "Hello, world!"
-
-        // NOTE(lmr): The fact that "bust" is needed here is actually an issue with the fact that
-        // changes to providers don't invalidate consumers from other composers via Ambient.Portal.
-        // When that gets fixed, we should update this test to show that.
-        compose(
-            """
-            val StringAmbient = Ambient.of<String> { "default" }
-
-            fun buildPortal() = effectOf<Ambient.Reference> {
-                context.buildReference()
-            }
-
-            @Composable fun App(value: String) {
-                StringAmbient.Provider(value) {
-                    Parent(bust=Math.random())
-                }
-            }
-
-            @Composable fun Parent(bust: Double) {
-                val ambientRef = +buildPortal()
-                val viewRef = +memo { Ref<LinearLayout>() }
-
-                LinearLayout(id=$llId, ref=viewRef)
-
-                +onCommit {
-                    Compose.composeInto(
-                        container = viewRef.value ?: error("No View Ref!"),
-                        parent = ambientRef
-                    ) {
-                        Child(bust=Math.random())
-                    }
-                }
-            }
-
-            @Composable fun Child(bust: Double) {
-                StringAmbient.Consumer { value ->
-                    TextView(id=$tvId, text=value)
-                }
-            }
-
-            """,
-            { mapOf("text" to text) },
-            """
-            App(value=text)
-            """
-        ).then { activity ->
-            val textView = activity.findViewById(tvId) as TextView
-            val layout = activity.findViewById(llId) as LinearLayout
-
-            assertEquals(1, layout.childCount)
-            assertEquals(text, textView.text)
-            text = "wat"
-        }.then { activity ->
-            val textView = activity.findViewById(tvId) as TextView
-            val layout = activity.findViewById(llId) as LinearLayout
-
-            assertEquals(1, layout.childCount)
-            assertEquals(text, textView.text)
-        }
-    }
-
-    // @Test
-    fun testAmbientPortal2(): Unit = ensureSetup {
-        val llId = 123
-        val tvId = 345
-        var text = "Hello, world!"
-
-        // NOTE(lmr): The fact that "bust" is needed here is actually an issue with the fact that
-        // changes to providers don't invalidate consumers from other composers via Ambient.Portal.
-        // When that gets fixed, we should update this test to show that.
-        compose(
-            """
-            val StringAmbient = Ambient.of<String> { "default" }
-
-            @Composable fun App(value: String) {
-                StringAmbient.Provider(value) {
-                    Parent(bust=Math.random())
-                }
-            }
-
-            @Composable fun Parent(bust: Double) {
-                Ambient.Portal { ambientRef ->
-                    val viewRef = +memo { Ref<LinearLayout>() }
-
-                    LinearLayout(id=$llId, ref=viewRef)
-
-                    +onCommit {
-                        Compose.composeInto(
-                            container = viewRef.value ?: error("No View Ref!"),
-                            parent = ambientRef
-                        ) {
-                            Child(bust=Math.random())
-                        }
-                    }
-                }
-            }
-
-            @Composable fun Child(bust: Double) {
-                StringAmbient.Consumer { value ->
-                    TextView(id=$tvId, text=value)
-                }
-            }
-
-            """,
-            { mapOf("text" to text) },
-            """
-            App(value=text)
-            """
-        ).then { activity ->
-            val textView = activity.findViewById(tvId) as TextView
-            val layout = activity.findViewById(llId) as LinearLayout
-
-            assertEquals(1, layout.childCount)
-            assertEquals(text, textView.text)
-            text = "wat"
-        }.then { activity ->
-            val textView = activity.findViewById(tvId) as TextView
-            val layout = activity.findViewById(llId) as LinearLayout
-
-            assertEquals(1, layout.childCount)
-            assertEquals(text, textView.text)
-        }
-    }
-
-    // @Test
-    fun testCGNClassComponent(): Unit = ensureSetup {
-        var text = "Hello, world!"
-        val tvId = 123
-
-        compose(
-            """
-            class Foo {
-                var text = ""
-                @Composable
-                operator fun invoke(bar: Int) {
-                    TextView(id=$tvId, text=text)
-                }
-            }
-
-        """,
-            { mapOf("text" to text) },
-            """
-             Foo(text=text, bar=123)
         """
         ).then { activity ->
             val textView = activity.findViewById(tvId) as TextView
@@ -1076,7 +928,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 val textAmbient = Ambient.of { "default" }
 
                 @Composable fun DisplayTest(id: Int) {
-                    val text = +ambient(textAmbient)
+                    val text = ambient(textAmbient)
                     TextView(id=id, text=text)
                 }
 
@@ -1089,14 +941,14 @@ class FcsCodegenTests : AbstractCodegenTest() {
 
                     val root = ref.value ?: error("Expected a linear")
 
-                    Compose.composeInto(root, portal) {
+                    composeInto(root, portal) {
                         DisplayTest(id=$innerId)
                     }
                 }
 
                 @Composable
                 fun TestApp() {
-                    val inc = +state { 1 }
+                    val inc = state { 1 }
 
                     Button(id=$buttonId, text="Click Me", onClick={ inc.value += 1 })
 
@@ -1137,6 +989,48 @@ class FcsCodegenTests : AbstractCodegenTest() {
     }
 
     @Test
+    fun testAmbientConsumedFromDefaultParameter(): Unit = ensureSetup {
+        val initialText = "no text"
+        val helloWorld = "Hello World!"
+        compose("""
+            val TextAmbient = ambientOf { "$initialText" }
+
+            @Composable
+            fun Main() {
+                var text = state { "$initialText" }
+                Providers(TextAmbient provides text.value) {
+                    LinearLayout {
+                        ConsumesAmbientFromDefaultParameter()
+                        Button(
+                            text = "Change ambient value",
+                            onClick={ text.value = "$helloWorld" },
+                            id=101
+                        )
+                    }
+                }
+            }
+
+            @Composable
+            fun ConsumesAmbientFromDefaultParameter(text: String = TextAmbient.current) {
+                TextView(text = text, id = 42)
+            }
+        """,
+            noParameters,
+            "Main()"
+        ).then { activity ->
+            val textView = activity.findViewById(42) as TextView
+            assertEquals(initialText, textView.text)
+        }.then { activity ->
+            val button = activity.findViewById(101) as Button
+            button.performClick()
+        }
+        .then { activity ->
+            val textView = activity.findViewById(42) as TextView
+            assertEquals(helloWorld, textView.text)
+        }
+    }
+
+    @Test
     fun testCGNViewGroup(): Unit = ensureSetup {
         val tvId = 258
         val llId = 260
@@ -1172,13 +1066,8 @@ class FcsCodegenTests : AbstractCodegenTest() {
         val tvId = 258
         val tagId = (3 shl 24) or "composed_set".hashCode()
 
-        @Suppress("UNCHECKED_CAST")
-        fun View.getComposedSet(): Set<String>? = getTag(tagId) as? Set<String>
-
         compose(
             """
-                import android.view.View
-
                 var composedSet = mutableSetOf<String>()
                 var inc = 1
 
@@ -1211,7 +1100,8 @@ class FcsCodegenTests : AbstractCodegenTest() {
             """
         ).then { activity ->
             val textView = activity.findViewById(tvId) as TextView
-            val composedSet = textView.getComposedSet() ?: error("expected a compose set to exist")
+            val composedSet = textView.getComposedSet(tagId) ?: error(
+                "expected a compose set to exist")
 
             fun assertContains(contains: Boolean, key: String) {
                 assertEquals("composedSet contains key '$key'", contains, composedSet.contains(key))
@@ -1223,7 +1113,8 @@ class FcsCodegenTests : AbstractCodegenTest() {
             assertContains(true, "ComposeMutable(new)")
         }.then { activity ->
             val textView = activity.findViewById(tvId) as TextView
-            val composedSet = textView.getComposedSet() ?: error("expected a compose set to exist")
+            val composedSet = textView.getComposedSet(tagId)
+                ?: error("expected a compose set to exist")
 
             fun assertContains(contains: Boolean, key: String) {
                 assertEquals("composedSet contains key '$key'", contains, composedSet.contains(key))
@@ -1240,6 +1131,123 @@ class FcsCodegenTests : AbstractCodegenTest() {
 
             // since its a new one every time, we definitely don't skip
             assertContains(true, "ComposeMutable(new)")
+        }
+    }
+
+    @Test
+    fun testInlineClassMemoization(): Unit = ensureSetup {
+        val tvId = 258
+        val tagId = (3 shl 24) or "composed_set".hashCode()
+
+        compose(
+            """
+                inline class InlineInt(val value: Int)
+                inline class InlineInlineInt(val value: InlineInt)
+                inline class InlineMutableSet(val value: MutableSet<String>)
+                fun View.setComposed(composed: Set<String>) = setTag($tagId, composed)
+
+                val composedSet = mutableSetOf<String>()
+                val constInlineInt = InlineInt(0)
+                var inc = 2
+                val constInlineMutableSet = InlineMutableSet(mutableSetOf("a"))
+
+                @Composable fun ComposedInlineInt(value: InlineInt) {
+                  composedSet.add("ComposedInlineInt(" + value + ")")
+                }
+
+                @Composable fun ComposedInlineInlineInt(value: InlineInlineInt) {
+                  composedSet.add("ComposedInlineInlineInt(" + value + ")")
+                }
+
+                @Composable fun ComposedInlineMutableSet(value: InlineMutableSet) {
+                  composedSet.add("ComposedInlineMutableSet(" + value + ")")
+                }
+            """,
+            { mapOf("text" to "") },
+            """
+                composedSet.clear()
+
+                ComposedInlineInt(constInlineInt)
+                ComposedInlineInt(InlineInt(1))
+                ComposedInlineInt(InlineInt(inc))
+                ComposedInlineInlineInt(InlineInlineInt(InlineInt(2)))
+                ComposedInlineMutableSet(constInlineMutableSet)
+
+                TextView(id=$tvId, composed=composedSet)
+
+                inc++
+            """
+        ).then { activity ->
+            val textView = activity.findViewById(tvId) as TextView
+            val composedSet = textView.getComposedSet(tagId)
+                ?: error("expected a compose set to exist")
+
+            // All composables should execute since it's the first time.
+            assert(composedSet.contains("ComposedInlineInt(InlineInt(value=0))"))
+            assert(composedSet.contains("ComposedInlineInt(InlineInt(value=1))"))
+            assert(composedSet.contains("ComposedInlineInt(InlineInt(value=2))"))
+            assert(composedSet.contains(
+                "ComposedInlineInlineInt(InlineInlineInt(value=InlineInt(value=2)))"))
+            assert(composedSet.contains("ComposedInlineMutableSet(InlineMutableSet(value=[a]))"))
+        }.then { activity ->
+            val textView = activity.findViewById(tvId) as TextView
+            val composedSet = textView.getComposedSet(tagId)
+                ?: error("expected a compose set to exist")
+
+            // InlineInt and InlineInlineInt are stable, so the corresponding composables should
+            // not run for values equal to previous compositions.
+            assert(!composedSet.contains("ComposedInlineInt(InlineInt(value=0))"))
+            assert(!composedSet.contains("ComposedInlineInt(InlineInt(value=1))"))
+            assert(!composedSet.contains(
+                "ComposedInlineInlineInt(InlineInlineInt(value=InlineInt(value=2)))"))
+
+            // But if a stable composable is passed a new value, it should re-run.
+            assert(composedSet.contains("ComposedInlineInt(InlineInt(value=3))"))
+
+            // And composables for inline classes with non-stable underlying types should run.
+            assert(composedSet.contains("ComposedInlineMutableSet(InlineMutableSet(value=[a]))"))
+        }
+    }
+
+    @Test
+    fun testStringParameterMemoization(): Unit = ensureSetup {
+        val tvId = 258
+        val tagId = (3 shl 24) or "composed_set".hashCode()
+
+        compose(
+            """
+                fun View.setComposed(composed: Set<String>) = setTag($tagId, composed)
+
+                val composedSet = mutableSetOf<String>()
+                val FOO = "foo"
+
+                @Composable fun ComposedString(value: String) {
+                  composedSet.add("ComposedString(" + value + ")")
+                }
+            """,
+            { mapOf("text" to "") },
+            """
+                composedSet.clear()
+
+                ComposedString(FOO)
+                ComposedString("bar")
+
+                TextView(id=$tvId, composed=composedSet)
+            """
+        ).then { activity ->
+            val textView = activity.findViewById(tvId) as TextView
+            val composedSet = textView.getComposedSet(tagId)
+                ?: error("expected a compose set to exist")
+
+            // All composables should execute since it's the first time.
+            assert(composedSet.contains("ComposedString(foo)"))
+            assert(composedSet.contains("ComposedString(bar)"))
+        }.then { activity ->
+            val textView = activity.findViewById(tvId) as TextView
+            val composedSet = textView.getComposedSet(tagId)
+                ?: error("expected a compose set to exist")
+
+            assert(composedSet.isEmpty())
         }
     }
 
@@ -1304,40 +1312,6 @@ class FcsCodegenTests : AbstractCodegenTest() {
         }
     }
 
-    // @Test
-    fun testCGNSimpleCall3(): Unit = ensureSetup {
-        val tvId = 258
-        var text = "Hello, world!"
-        var someInt = 456
-
-        compose(
-            """
-                @Stateful
-                class SomeClassoawid(var x: String) {
-                    @Composable
-                    operator fun invoke(y: Int) {
-                        TextView(text="${"$"}x ${"$"}y", id=$tvId)
-                    }
-                }
-            """,
-            { mapOf("text" to text, "someInt" to someInt) },
-            """
-                SomeClassoawid(x=text, y=someInt)
-            """
-        ).then { activity ->
-            val textView = activity.findViewById(tvId) as TextView
-
-            assertEquals("Hello, world! 456", textView.text)
-
-            text = "Other value"
-            someInt = 123
-        }.then { activity ->
-            val textView = activity.findViewById(tvId) as TextView
-
-            assertEquals("Other value 123", textView.text)
-        }
-    }
-
     @Test
     fun testCGNCallWithChildren(): Unit = ensureSetup {
         val tvId = 258
@@ -1346,7 +1320,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
         compose(
             """
                 @Composable
-                fun Block(@Children children: () -> Unit) {
+                fun Block(children: @Composable () -> Unit) {
                     children()
                 }
             """,
@@ -1521,7 +1495,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
     fun testImplicitReceiverPassing1(): Unit = ensureSetup {
         compose(
             """
-                fun Int.Foo(x: @Composable() Int.() -> Unit) {
+                @Composable fun Int.Foo(x: @Composable Int.() -> Unit) {
                     x()
                 }
             """,
@@ -1543,8 +1517,12 @@ class FcsCodegenTests : AbstractCodegenTest() {
     fun testImplicitReceiverPassing2(): Unit = ensureSetup {
         compose(
             """
-                fun Int.Foo(x: @Composable() Int.(text: String) -> Unit, text: String) {
+                @Composable fun Int.Foo(x: @Composable Int.(text: String) -> Unit, text: String) {
                     x(text=text)
+                }
+
+                @Composable fun MyText(text: String, id: Int) {
+                    TextView(text=text, id=id)
                 }
             """,
             { mapOf<String, String>() },
@@ -1552,7 +1530,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 val id = 42
 
                 id.Foo(text="Hello, world!", x={ text ->
-                    TextView(text=text, id=this)
+                    MyText(text=text, id=this)
                 })
             """
         ).then { activity ->
@@ -1570,7 +1548,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 @Composable
                 fun Counter() {
                     Observe {
-                        var count = +state { 0 }
+                        var count = state { 0 }
                         TextView(
                             text=("Count: " + count.value),
                             onClick={
@@ -1601,12 +1579,10 @@ class FcsCodegenTests : AbstractCodegenTest() {
             """
                 import androidx.ui.androidview.adapters.*
 
-                @Model class MyState<T>(var value: T)
-
                 @Composable
                 fun Counter() {
                     Observe {
-                        var count = +memo { MyState(0) }
+                        var count = state { 0 }
                         TextView(
                             text=("Count: " + count.value),
                             onClick={
@@ -1641,11 +1617,11 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 @Composable
                 fun Counter(log: StringBuilder) {
                     Observe {
-                        var count = +state { 0 }
-                        +onCommit {
+                        var count = state { 0 }
+                        onCommit {
                             log.append("a")
                         }
-                        +onActive {
+                        onActive {
                             log.append("b")
                         }
                         TextView(
@@ -1683,8 +1659,9 @@ class FcsCodegenTests : AbstractCodegenTest() {
             """
                 import androidx.ui.androidview.adapters.*
 
-                fun printer(log: StringBuilder, str: String) = effectOf<Unit> {
-                    +onCommit {
+                @Composable
+                fun printer(log: StringBuilder, str: String) {
+                    onCommit {
                         log.append(str)
                     }
                 }
@@ -1692,8 +1669,8 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 @Composable
                 fun Counter(log: StringBuilder) {
                     Observe {
-                        var count = +state { 0 }
-                        +printer(log, "" + count.value)
+                        var count = state { 0 }
+                        printer(log, "" + count.value)
                         TextView(
                             text=("Count: " + count.value),
                             onClick={
@@ -1722,71 +1699,6 @@ class FcsCodegenTests : AbstractCodegenTest() {
         }
     }
 
-    // b/118610495
-    // @Test
-    fun testCGChildCompose(): Unit = ensureSetup {
-        val tvId = 153
-
-        var text = "Test 1"
-
-        compose(
-            """
-            var called = 0
-
-            class TestContainer(@Children var children: @Composable() ()->Unit): Component() {
-              override fun compose() {
-                LinearLayout {
-                  children()
-                }
-              }
-            }
-
-            class TestClass(var text: String): Component() {
-              override fun compose() {
-                TestContainer {
-                  TextView(text=text, id=$tvId)
-                }
-              }
-            }
-        """, { mapOf("text" to text) }, """
-            TestClass(text=text)
-        """
-        ).then { activity ->
-            val tv = activity.findViewById(tvId) as TextView
-            assertEquals(text, tv.text)
-
-            text = "Test 2"
-        }.then { activity ->
-            val tv = activity.findViewById(tvId) as TextView
-            assertEquals(text, tv.text)
-        }
-    }
-
-    // @Test
-    fun testPrivatePivotalProperties(): Unit = ensureSetup {
-        val tvId = 153
-
-        compose(
-            """
-            class ClassComponent(@Children private val callback: () -> Unit) : Component() {
-                override fun compose() {
-                    callback()
-                }
-            }
-        """, { mapOf("text" to "") }, """
-            ClassComponent {
-                TextView(id=$tvId, text="Hello world!")
-            }
-        """
-        ).then { activity ->
-            val tv = activity.findViewById(tvId) as TextView
-            assertEquals("Hello world!", tv.text)
-        }.then { activity ->
-            val tv = activity.findViewById(tvId) as TextView
-            assertEquals("Hello world!", tv.text)
-        }
-    }
-
     @Test
     fun testVariableCalls1(): Unit = ensureSetup {
         compose(
@@ -1812,7 +1724,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 val component = @Composable {
                     TextView(text="Hello, world!", id=42)
                 }
-                class HolderA(val composable: @Composable() () -> Unit)
+                class HolderA(val composable: @Composable () -> Unit)
 
                 val holder = HolderA(component)
 
@@ -1834,7 +1746,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 val component = @Composable {
                     TextView(text="Hello, world!", id=42)
                 }
-                class HolderB(val composable: @Composable() () -> Unit) {
+                class HolderB(val composable: @Composable () -> Unit) {
                     @Composable
                     fun Foo() {
                         composable()
@@ -1842,34 +1754,6 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 }
 
                 val holder = HolderB(component)
-
-            """,
-            { mapOf<String, String>() },
-            """
-                holder.Foo()
-            """
-        ).then { activity ->
-            val textView = activity.findViewById(42) as TextView
-            assertEquals("Hello, world!", textView.text)
-        }
-    }
-
-    // @Test
-    fun testVariableCalls4(): Unit = ensureSetup {
-        compose(
-            """
-                val component = @Composable {
-                    TextView(text="Hello, world!", id=42)
-                }
-                class HolderC(val composable: @Composable() () -> Unit) {
-                    inner class Foo(): Component() {
-                        override fun compose() {
-                            composable()
-                        }
-                    }
-                }
-
-                val holder = HolderC(component)
 
             """,
             { mapOf<String, String>() },
@@ -1907,7 +1791,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
         compose(
             """
                 @Composable
-                fun Foo(a: Int = 42, b: String, @Children c: () -> Unit) {
+                fun Foo(a: Int = 42, b: String, c: @Composable () -> Unit) {
                     c()
                     TextView(text=b, id=a)
                 }
@@ -1921,57 +1805,6 @@ class FcsCodegenTests : AbstractCodegenTest() {
             assertEquals("Hello, world!", textView.text)
         }
     }
-
-    @Test
-    fun testPropertiesAndCtorParamsOnEmittables(): Unit = codegen(
-        """
-            class SimpleEmittable(label: String? = null) : Emittable {
-                var label: String? = null
-                override fun emitInsertAt(index: Int, instance: Emittable) {}
-                override fun emitMove(from: Int, to: Int, count: Int) {}
-                override fun emitRemoveAt(index: Int, count: Int) {}
-            }
-
-            @Composable
-            fun foo() {
-                SimpleEmittable(label="Foo")
-            }
-        """
-    )
-
-    @Test
-    fun testSimpleClassConstructor(): Unit = codegen(
-        """
-            import androidx.compose.Emittable
-
-            import androidx.compose.composer
-
-            class Path2() : Emittable {
-
-                private val path99 = Path3()
-
-                fun draw(canvas: Canvas2) {
-                    canvas.drawPath(path99)
-                }
-
-                override fun emitInsertAt(index: Int, instance: Emittable) { }
-                override fun emitMove(from: Int, to: Int, count: Int) { }
-                override fun emitRemoveAt(index: Int, count: Int) { }
-                override fun toString(): String = ""
-            }
-
-
-            class Canvas2() {
-                fun drawPath(path: Path3) {
-                    System.out.println(""+path)
-                }
-            }
-
-
-            class Path3(private val internalPath: android.graphics.Path = android.graphics.Path()) {
-            }
-        """
-    )
 
     @Test
     fun testMovement(): Unit = ensureSetup {
@@ -1996,28 +1829,31 @@ class FcsCodegenTests : AbstractCodegenTest() {
             @Composable
             fun Reordering() {
                 Observe {
-                    val items = +state { listOf(1, 2, 3, 4, 5) }
+                    val items = state { listOf(1, 2, 3, 4, 5) }
 
                     LinearLayout(orientation=LinearLayout.VERTICAL) {
                         items.value.forEachIndexed { index, id ->
-                            Item(
-                                id=id,
-                                onMove={ amount ->
-                                    val next = index + amount
-                                    if (next >= 0 && next < items.value.size) {
-                                        items.value = items.value.move(index, index + amount)
+                            key(id) {
+                                Item(
+                                    id=id,
+                                    onMove={ amount ->
+                                        val next = index + amount
+                                        if (next >= 0 && next < items.value.size) {
+                                            items.value = items.value.move(index, index + amount)
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
             }
 
             @Composable
-            private fun Item(@Pivotal id: Int, onMove: (Int) -> Unit) {
+            // TODO: Investigate making this private; looks like perhaps a compiler bug as of rebase
+            fun Item(id: Int, onMove: (Int) -> Unit) {
                 Observe {
-                    val count = +state { 0 }
+                    val count = state { 0 }
                     LinearLayout(orientation=LinearLayout.HORIZONTAL) {
                         TextView(id=(id+$tvId), text="id: ${'$'}id amt: ${'$'}{count.value}")
                         Button(id=(id+$btnIdAdd), text="+", onClick={ count.value++ })
@@ -2066,7 +1902,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
             """
                 @Composable
                 fun SimpleComposable() {
-                    val count = +state { 1 }
+                    val count = state { 1 }
                     Box {
                         repeat(count.value) {
                             Button(text="Increment", onClick={ count.value += 1 }, id=(41+it))
@@ -2075,7 +1911,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 }
 
                 @Composable
-                fun Box(@Children children: ()->Unit) {
+                fun Box(children: @Composable ()->Unit) {
                     LinearLayout(orientation=LinearLayout.VERTICAL) {
                         children()
                     }
@@ -2113,7 +1949,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
                         )
                         LinearLayout(id=100) {
                             for(id in list) {
-                                Key(key=id) {
+                                key(id) {
                                     StatefulButton()
                                 }
                             }
@@ -2123,8 +1959,9 @@ class FcsCodegenTests : AbstractCodegenTest() {
             }
 
             @Composable
-            private fun StatefulButton() {
-                val count = +state { 0 }
+            // TODO: Investigate making this private; looks like perhaps a compiler bug as of rebase
+            fun StatefulButton() {
+                val count = state { 0 }
                 Button(text="Clicked ${'$'}{count.value} times!", onClick={ count.value++ })
             }
             """, noParameters,
@@ -2175,7 +2012,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
                 @Composable
                 fun DefineAction(
                     onAction: Action = Action(param = 1) {},
-                    @Children children: ()->Unit
+                    children: @Composable ()->Unit
                  ) { }
             """
         )
@@ -2185,9 +2022,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
     fun testStableParameters_Various(): Unit = ensureSetup {
         val output = ArrayList<String>()
         compose("""
-            @Model
-            class M { var count = 0 }
-            val m = M()
+            val m = mutableStateOf(0)
 
             @Immutable
             data class ValueHolder(val value: Int)
@@ -2196,10 +2031,23 @@ class FcsCodegenTests : AbstractCodegenTest() {
 
             class NotStable { val value = 10 }
 
+            @Stable
+            class StableClass {
+                override fun equals(other: Any?) = true
+            }
+
+            enum class EnumState {
+              One,
+              Two
+            }
+
+            val mutableStateType = mutableStateOf(1)
+            val stateType: State<Int> = mutableStateType
+
             @Composable
             fun MemoInt(a: Int) {
               output.add("MemoInt a=${'$'}a")
-              Button(id=101, text="memo ${'$'}a", onClick={ m.count++ })
+              Button(id=101, text="memo ${'$'}a", onClick={ m.value++ })
             }
 
             @Composable
@@ -2227,25 +2075,67 @@ class FcsCodegenTests : AbstractCodegenTest() {
             }
 
             @Composable
+            fun MemoEnum(a: EnumState) {
+              output.add("MemoEnum")
+              Button(text="memo ${'$'}{a}")
+            }
+
+            @Composable
+            fun MemoStable(a: StableClass) {
+              output.add("MemoStable")
+              Button(text="memo stable")
+            }
+
+            @Composable
+            fun MemoMutableState(a: MutableState<Int>) {
+              output.add("MemoMutableState")
+              Button(text="memo ${'$'}{a.value}")
+            }
+
+            @Composable
+            fun MemoState(a: State<Int>) {
+              output.add("MemoState")
+              Button(text="memo ${'$'}{a.value}")
+            }
+
+            @Composable
             fun TestSkipping(
                 a: Int,
                 b: Float,
                 c: Double,
                 d: NotStable,
-                e: ValueHolder
+                e: ValueHolder,
+                f: EnumState,
+                g: StableClass,
+                h: MutableState<Int>,
+                i: State<Int>
             ) {
-              val am = a + m.count
+              val am = a + m.value
               output.add("TestSkipping a=${'$'}a am=${'$'}am")
               MemoInt(a=am)
               MemoFloat(a=b)
               MemoDouble(a=c)
               MemoNotStable(a=d)
               MemoModel(a=e)
+              MemoEnum(a=f)
+              MemoStable(a=g)
+              MemoMutableState(h)
+              MemoState(i)
             }
 
             @Composable
-            fun Main(v: ValueHolder) {
-              TestSkipping(a=1, b=1f, c=2.0, d=NotStable(), e=v)
+            fun Main(v: ValueHolder, n: NotStable) {
+              TestSkipping(
+                a=1,
+                b=1f,
+                c=2.0,
+                d=NotStable(),
+                e=v,
+                f=EnumState.One,
+                g=StableClass(),
+                h=mutableStateType,
+                i=stateType
+              )
             }
         """, {
             mapOf(
@@ -2254,12 +2144,13 @@ class FcsCodegenTests : AbstractCodegenTest() {
         }, """
             output = outerOutput
             val v = ValueHolder(0)
-            Main(v)
+            Main(v, NotStable())
         """).then {
             // Expect that all the methods are called in order
             assertEquals(
                 "TestSkipping a=1 am=1, MemoInt a=1, MemoFloat, " +
-                        "MemoDouble, MemoNotStable, MemoModelHolder",
+                        "MemoDouble, MemoNotStable, MemoModelHolder, MemoEnum, MemoStable, " +
+                        "MemoMutableState, MemoState",
                 output.joinToString()
             )
             output.clear()
@@ -2286,9 +2177,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
     fun testStableParameters_Lambdas(): Unit = ensureSetup {
         val output = ArrayList<String>()
         compose("""
-            @Model
-            class M { var count = 0 }
-            val m = M()
+            val m = mutableStateOf(0)
 
             var output = ArrayList<String>()
             val unchanged: () -> Unit = { }
@@ -2296,7 +2185,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
             fun log(msg: String) { output.add(msg) }
 
             @Composable
-            fun Container(@Children children: () -> Unit) {
+            fun Container(children: @Composable () -> Unit) {
               log("Container")
               children()
             }
@@ -2318,10 +2207,12 @@ class FcsCodegenTests : AbstractCodegenTest() {
               }
             }
 
+            fun forceNewLambda(): () -> Unit = { }
+
             @Composable
             fun Main(unchanged: () -> Unit) {
-              Button(id=101, text="model ${'$'}{m.count}", onClick={ m.count++ })
-              TestSkipping(unchanged = unchanged, changed = { })
+              Button(id=101, text="model ${'$'}{m.value}", onClick={ m.value++ })
+              TestSkipping(unchanged = unchanged, changed = forceNewLambda())
             }
         """, {
             mapOf(
@@ -2349,24 +2240,139 @@ class FcsCodegenTests : AbstractCodegenTest() {
         }.then {
             // Expect only NormalLambda(4) to be called
             assertEquals(
-                "TestSkipping, Container, NormalLambda(4)",
+                "TestSkipping, NormalLambda(4)",
                 output.joinToString()
             )
         }
     }
 
-    override fun setUp() {
-        isSetup = true
-        super.setUp()
+    @Test
+    fun testRecomposeScope(): Unit = ensureSetup {
+        compose("""
+            val m = mutableStateOf(0)
+
+            @Composable
+            inline fun InlineContainer(children: @Composable () -> Unit) {
+                children()
+            }
+
+            @Composable
+            fun Container(children: @Composable () -> Unit) {
+                children()
+            }
+
+            @Composable
+            fun Leaf(v: Int) {}
+
+            @Composable
+            fun Inline() {
+                InlineContainer {
+                    Leaf(v = 1)
+                }
+            }
+
+            @Composable
+            fun Lambda() {
+                val a = 1
+                val b = 2
+                Container {
+                    TextView(text = "value = ${'$'}{m.value}", id = 100)
+                    Leaf(v = 1)
+                    Leaf(v = a)
+                    Leaf(v = b)
+                }
+            }
+            """,
+            noParameters,
+            """
+                Button(id=101, text="model ${'$'}{m.value}", onClick={ m.value++ })
+                Lambda()
+            """
+        ).then { activity ->
+            assertEquals(activity.findViewById<TextView>(100).text, "value = 0")
+            val button = activity.findViewById<Button>(101)
+            button.performClick()
+        }.then { activity ->
+            assertEquals(activity.findViewById<TextView>(100).text, "value = 1")
+        }
     }
 
-    private var isSetup = false
-    private inline fun <T> ensureSetup(block: () -> T): T {
-        if (!isSetup) setUp()
-        return block()
+    @Test
+    fun testRecomposeScope_ReceiverScope(): Unit = ensureSetup {
+        compose("""
+            val m = mutableStateOf(0)
+
+            class Receiver { var r: Int = 0 }
+
+            @Composable
+            fun Container(children: @Composable Receiver.() -> Unit) {
+                Receiver().children()
+            }
+
+            @Composable
+            fun Lambda() {
+                Container {
+                    TextView(text = "value = ${'$'}{m.value}", id = 100)
+                }
+            }
+            """,
+            noParameters,
+            """
+                Button(id=101, text="model ${'$'}{m.value}", onClick={ m.value++ })
+                Lambda()
+            """
+        ).then { activity ->
+            assertEquals(activity.findViewById<TextView>(100).text, "value = 0")
+            val button = activity.findViewById<Button>(101)
+            button.performClick()
+        }.then { activity ->
+            assertEquals(activity.findViewById<TextView>(100).text, "value = 1")
+        }
     }
 
-    fun codegen(text: String, dumpClasses: Boolean = false): Unit = ensureSetup {
+    @Test
+    fun testRecomposeScope_Method(): Unit = ensureSetup {
+        compose("""
+            val m = mutableStateOf(0)
+
+            @Composable
+            fun Leaf() { }
+
+            class SelfCompose {
+                var f1 = 0
+
+                @Composable
+                fun compose(f2: Int) {
+                    TextView(
+                      text = "f1=${'$'}f1, f2=${'$'}f2, m=${'$'}{m.value*f1*f2}",
+                      id = 100
+                    )
+                }
+            }
+
+            @Composable
+            fun InvokeSelfCompose() {
+                val r = remember() { SelfCompose() }
+                r.f1 = 1
+                r.compose(f2 = 10)
+                Leaf()
+            }
+            """,
+            noParameters,
+            """
+                Button(id=101, text="model ${'$'}{m.value}", onClick={ m.value++ })
+                InvokeSelfCompose()
+            """
+        ).then { activity ->
+            assertEquals(activity.findViewById<TextView>(100).text, "f1=1, f2=10, m=0")
+            val button = activity.findViewById<Button>(101)
+            button.performClick()
+        }.then { activity ->
+            assertEquals(activity.findViewById<TextView>(100).text, "f1=1, f2=10, m=10")
+        }
+    }
+
+    fun codegen(text: String, dumpClasses: Boolean = false) {
         val className = "Test_${uniqueNumber++}"
         val fileName = "$className.kt"
 
@@ -2382,7 +2388,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
         )
     }
 
-    fun compose(text: String, dumpClasses: Boolean = false): CompositionTest = compose(
+    fun compose(text: String, dumpClasses: Boolean = false): RobolectricComposeTester = compose(
         { mapOf<String, Any>() },
         text,
         dumpClasses
@@ -2406,7 +2412,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
         valuesFactory: () -> Map<String, T>,
         text: String,
         dumpClasses: Boolean = false
-    ): CompositionTest {
+    ): RobolectricComposeTester {
         val className = "Test_${uniqueNumber++}"
         val fileName = "$className.kt"
 
@@ -2426,6 +2432,7 @@ class FcsCodegenTests : AbstractCodegenTest() {
             """
            import android.content.Context
            import android.widget.*
+           import android.view.View
            import androidx.compose.*
            import androidx.ui.androidview.adapters.*
 
@@ -2461,12 +2468,21 @@ class FcsCodegenTests : AbstractCodegenTest() {
         }
 
         val instanceOfClass = instanceClass.newInstance()
-        val testMethod = instanceClass.getMethod("test", *parameterTypes)
+        val testMethod = instanceClass.getMethod(
+            "test",
+            *parameterTypes,
+            Composer::class.java,
+            Int::class.java,
+            Int::class.java
+        )
 
-        return compose {
+        return compose { composer, _, _ ->
             val values = valuesFactory()
             val arguments = values.map { it.value as Any }.toTypedArray()
-            testMethod.invoke(instanceOfClass, *arguments)
+            testMethod.invoke(instanceOfClass, *arguments, composer, 0, 1)
         }
     }
+
+    @Suppress("UNCHECKED_CAST")
+    fun View.getComposedSet(tagId: Int): Set<String>? = getTag(tagId) as? Set<String>
 }

@@ -18,7 +18,7 @@ package androidx.room.solver
 
 import COMMON
 import androidx.paging.DataSource
-import androidx.paging.PositionalDataSource
+import androidx.paging.PagingSource
 import androidx.room.Entity
 import androidx.room.ext.GuavaUtilConcurrentTypeNames
 import androidx.room.ext.L
@@ -35,6 +35,7 @@ import androidx.room.processor.ProcessorErrors
 import androidx.room.solver.binderprovider.DataSourceFactoryQueryResultBinderProvider
 import androidx.room.solver.binderprovider.DataSourceQueryResultBinderProvider
 import androidx.room.solver.binderprovider.LiveDataQueryResultBinderProvider
+import androidx.room.solver.binderprovider.PagingSourceQueryResultBinderProvider
 import androidx.room.solver.binderprovider.RxFlowableQueryResultBinderProvider
 import androidx.room.solver.binderprovider.RxObservableQueryResultBinderProvider
 import androidx.room.solver.shortcut.binderprovider.GuavaListenableFutureDeleteOrUpdateMethodBinderProvider
@@ -391,6 +392,40 @@ class TypeAdapterStoreTest {
     }
 
     @Test
+    fun findPagingSourceIntKey() {
+        simpleRun { invocation ->
+            val pagingSourceElement = invocation.processingEnv.elementUtils
+                .getTypeElement(PagingSource::class.java.canonicalName)
+            val intType = invocation.processingEnv.elementUtils
+                .getTypeElement(Integer::class.java.canonicalName)
+                .asType()
+            val pagingSourceIntIntType = invocation.processingEnv.typeUtils
+                .getDeclaredType(pagingSourceElement, intType, intType)
+
+            assertThat(pagingSourceIntIntType, notNullValue())
+            assertThat(PagingSourceQueryResultBinderProvider(invocation.context)
+                .matches(MoreTypes.asDeclared(pagingSourceIntIntType)), `is`(true))
+        }
+    }
+
+    @Test
+    fun findPagingSourceStringKey() {
+        simpleRun { invocation ->
+            val pagingSourceElement = invocation.processingEnv.elementUtils
+                .getTypeElement(PagingSource::class.java.canonicalName)
+            val stringType = invocation.processingEnv.elementUtils
+                .getTypeElement(String::class.java.canonicalName)
+                .asType()
+            val pagingSourceIntIntType = invocation.processingEnv.typeUtils
+                .getDeclaredType(pagingSourceElement, stringType, stringType)
+
+            assertThat(pagingSourceIntIntType, notNullValue())
+            assertThat(PagingSourceQueryResultBinderProvider(invocation.context)
+                .matches(MoreTypes.asDeclared(pagingSourceIntIntType)), `is`(true))
+        }.failsToCompile().withErrorContaining(ProcessorErrors.PAGING_SPECIFY_PAGING_SOURCE_TYPE)
+    }
+
+    @Test
     fun findDataSource() {
         simpleRun {
             invocation ->
@@ -406,8 +441,9 @@ class TypeAdapterStoreTest {
     fun findPositionalDataSource() {
         simpleRun {
             invocation ->
+            @Suppress("DEPRECATION")
             val dataSource = invocation.processingEnv.elementUtils
-                    .getTypeElement(PositionalDataSource::class.java.canonicalName)
+                    .getTypeElement(androidx.paging.PositionalDataSource::class.java.canonicalName)
             assertThat(dataSource, notNullValue())
             assertThat(DataSourceQueryResultBinderProvider(invocation.context).matches(
                     MoreTypes.asDeclared(dataSource.asType())), `is`(true))

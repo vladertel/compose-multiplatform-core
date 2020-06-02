@@ -16,44 +16,35 @@
 
 package androidx.ui.core
 
-import android.app.Activity
-import androidx.benchmark.junit4.BenchmarkRule
 import androidx.test.filters.LargeTest
-import androidx.test.rule.ActivityTestRule
-import androidx.ui.benchmark.measureDrawPerf
-import androidx.ui.benchmark.measureFirstCompose
-import androidx.ui.benchmark.measureFirstDraw
-import androidx.ui.benchmark.measureFirstLayout
-import androidx.ui.benchmark.measureFirstMeasure
-import androidx.ui.benchmark.measureLayoutPerf
-import androidx.ui.test.DisableTransitions
-import androidx.ui.test.TextBenchmarkTestRule
+import androidx.ui.benchmark.ComposeBenchmarkRule
+import androidx.ui.benchmark.benchmarkDrawPerf
+import androidx.ui.benchmark.benchmarkFirstCompose
+import androidx.ui.benchmark.benchmarkFirstDraw
+import androidx.ui.benchmark.benchmarkFirstLayout
+import androidx.ui.benchmark.benchmarkFirstMeasure
+import androidx.ui.benchmark.benchmarkLayoutPerf
+import androidx.ui.integration.test.core.text.TextBasicTestCase
+import androidx.ui.integration.test.TextBenchmarkTestRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 /**
- * The benchmark for [Text] widget with the input being a plain string.
+ * The benchmark for [Text] composable with the input being a plain string.
  */
 @LargeTest
 @RunWith(Parameterized::class)
 class TextBasicBenchmark(
     private val textLength: Int
 ) {
-    @get:Rule
-    val benchmarkRule = BenchmarkRule()
-
-    @get:Rule
-    val activityRule = ActivityTestRule(Activity::class.java)
-
-    @get:Rule
-    val disableAnimationRule = DisableTransitions()
 
     @get:Rule
     val textBenchmarkRule = TextBenchmarkTestRule()
 
-    private val activity: Activity get() = activityRule.activity
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     companion object {
         @JvmStatic
@@ -62,84 +53,78 @@ class TextBasicBenchmark(
     }
 
     /**
-     * Measure the time taken to compose a [Text] widget from scratch with the given input.
+     * Measure the time taken to compose a [Text] composable from scratch with the given input.
      * This is the time taken to call the [Text] composable function.
      */
     @Test
     fun first_compose() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureFirstCompose(
-                activity,
-                TextBasicTestCase(activity, textLength, textGenerator)
-            )
+            benchmarkRule.benchmarkFirstCompose {
+                TextBasicTestCase(textLength, textGenerator)
+            }
         }
     }
 
     /**
-     * Measure the time taken by the first time measure the [Text] widget with the given input.
-     * This is mainly the time used to measure all the [Measurable]s in the [Text] widget.
+     * Measure the time taken by the first time measure the [Text] composable with the given input.
+     * This is mainly the time used to measure all the [Measurable]s in the [Text] composable.
      */
     @Test
     fun first_measure() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureFirstMeasure(
-                activity,
-                TextBasicTestCase(activity, textLength, textGenerator)
-            )
+            benchmarkRule.benchmarkFirstMeasure {
+                TextBasicTestCase(textLength, textGenerator)
+            }
         }
     }
 
     /**
-     * Measure the time taken by the first time layout the [Text] widget with the given input.
-     * This is mainly the time used to place [Placeable]s in [Text] widget.
+     * Measure the time taken by the first time layout the [Text] composable with the given input.
+     * This is mainly the time used to place [Placeable]s in [Text] composable.
      */
     @Test
     fun first_layout() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureFirstLayout(
-                activity,
-                TextBasicTestCase(activity, textLength, textGenerator)
-            )
+            benchmarkRule.benchmarkFirstLayout {
+                TextBasicTestCase(textLength, textGenerator)
+            }
         }
     }
 
     /**
-     * Measure the time taken by first time draw the [Text] widget with the given input.
+     * Measure the time taken by first time draw the [Text] composable with the given input.
      */
     @Test
     fun first_draw() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureFirstDraw(
-                activity,
-                TextBasicTestCase(activity, textLength, textGenerator)
-            )
+            benchmarkRule.benchmarkFirstDraw {
+                TextBasicTestCase(textLength, textGenerator)
+            }
         }
     }
 
     /**
-     * Measure the time taken by layout the [Text] widget after the layout constrains changed.
-     * This is mainly the time used to re-measure and re-layout the widget.
+     * Measure the time taken by layout the [Text] composable after the layout constrains changed.
+     * This is mainly the time used to re-measure and re-layout the composable.
      */
     @Test
     fun layout() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureLayoutPerf(
-                activity,
-                TextBasicTestCase(activity, textLength, textGenerator)
-            )
+            benchmarkRule.benchmarkLayoutPerf {
+                TextBasicTestCase(textLength, textGenerator)
+            }
         }
     }
 
     /**
-     * Measure the time taken by redrawing the [Text] widget.
+     * Measure the time taken by redrawing the [Text] composable.
      */
     @Test
     fun draw() {
         textBenchmarkRule.generator { textGenerator ->
-            benchmarkRule.measureDrawPerf(
-                activity,
-                TextBasicTestCase(activity, textLength, textGenerator)
-            )
+            benchmarkRule.benchmarkDrawPerf {
+                TextBasicTestCase(textLength, textGenerator)
+            }
         }
     }
 }

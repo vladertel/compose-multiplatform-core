@@ -17,7 +17,7 @@
 package androidx.build.metalava
 
 import androidx.build.checkapi.ApiLocation
-import androidx.build.checkapi.ApiViolationBaselines
+import androidx.build.checkapi.ApiBaselinesLocation
 import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -25,11 +25,15 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
+import org.gradle.workers.WorkerExecutor
 import java.io.File
+import javax.inject.Inject
 
-abstract class UpdateApiLintBaselineTask : MetalavaTask() {
+abstract class UpdateApiLintBaselineTask @Inject constructor(
+    workerExecutor: WorkerExecutor
+) : MetalavaTask(workerExecutor) {
     init {
-        group = "Suppression"
+        group = "API"
         description = "Updates an API lint baseline file (api/api_lint.ignore) to match the " +
                 "current set of violations. Only use a baseline " +
                 "if you are in a library without Android dependencies, or when enabling a new " +
@@ -38,7 +42,7 @@ abstract class UpdateApiLintBaselineTask : MetalavaTask() {
     }
 
     @get:Input
-    abstract val baselines: Property<ApiViolationBaselines>
+    abstract val baselines: Property<ApiBaselinesLocation>
 
     @OutputFile
     fun getApiLintBaseline(): File = baselines.get().apiLintFile
@@ -46,21 +50,19 @@ abstract class UpdateApiLintBaselineTask : MetalavaTask() {
     @TaskAction
     fun updateBaseline() {
         check(bootClasspath.isNotEmpty()) { "Android boot classpath not set." }
-        val args = getCommonBaselineUpdateArgs(
-            bootClasspath,
-            dependencyClasspath,
-            baselines.get().apiLintFile
-        )
-        args.addAll(API_LINT_ARGS + listOf<String>(
-            "--source-path",
-            sourcePaths.filter { it.exists() }.joinToString(File.pathSeparator)
-        ))
+        val baselineFile = baselines.get().apiLintFile
+        val checkArgs = project.getGenerateApiArgs(bootClasspath, dependencyClasspath,
+            sourcePaths.filter { it.exists() }, null, GenerateApiMode.PublicApi,
+            ApiLintMode.CheckBaseline(baselineFile), manifestPath.orNull?.asFile?.absolutePath)
+        val args = checkArgs + getCommonBaselineUpdateArgs(baselineFile)
 
         runWithArgs(args)
     }
 }
 
-abstract class IgnoreApiChangesTask : MetalavaTask() {
+abstract class IgnoreApiChangesTask @Inject constructor(
+    workerExecutor: WorkerExecutor
+) : MetalavaTask(workerExecutor) {
     init {
         description = "Updates an API tracking baseline file (api/X.Y.Z.ignore) to match the " +
                 "current set of violations"
@@ -75,27 +77,25 @@ abstract class IgnoreApiChangesTask : MetalavaTask() {
 
     // The baseline files (api/*.*.*.ignore) to update
     @get:Input
-    abstract val baselines: Property<ApiViolationBaselines>
-
-    // Whether to update the file having restricted APIs too
-    @get:Input
-    var processRestrictedApis = false
+    abstract val baselines: Property<ApiBaselinesLocation>
 
     @InputFiles
     fun getTaskInputs(): List<File> {
-        if (processRestrictedApis) {
-            return referenceApi.get().files()
-        }
-        return listOf(referenceApi.get().publicApiFile)
+        val referenceApiLocation = referenceApi.get()
+        return listOf(
+            referenceApiLocation.publicApiFile,
+            referenceApiLocation.restrictedApiFile
+        )
     }
 
     // Declaring outputs prevents Gradle from rerunning this task if the inputs haven't changed
     @OutputFiles
     fun getTaskOutputs(): List<File>? {
-        if (processRestrictedApis) {
-            return listOf(baselines.get().publicApiFile, baselines.get().restrictedApiFile)
-        }
-        return listOf(baselines.get().publicApiFile)
+        val apiBaselinesLocation = baselines.get()
+        return listOf(
+            apiBaselinesLocation.publicApiFile,
+            apiBaselinesLocation.restrictedApiFile
+        )
     }
 
     @TaskAction
@@ -108,7 +108,7 @@ abstract class IgnoreApiChangesTask : MetalavaTask() {
             baselines.get().publicApiFile,
             false
         )
-        if (processRestrictedApis && referenceApi.get().restrictedApiFile.exists()) {
+        if (referenceApi.get().restrictedApiFile.exists()) {
             updateBaseline(
                 api.get().restrictedApiFile,
                 referenceApi.get().restrictedApiFile,
@@ -132,6 +132,8 @@ abstract class IgnoreApiChangesTask : MetalavaTask() {
             baselineFile
         )
         args += listOf(
+            "--baseline",
+            baselineFile.toString(),
             "--check-compatibility:api:released",
             prevApi.toString(),
             "--source-files",
@@ -139,9 +141,13 @@ abstract class IgnoreApiChangesTask : MetalavaTask() {
         )
         if (processRestrictedApis) {
             args += listOf(
-                "--show-unannotated",
                 "--show-annotation",
-                "androidx.annotation.RestrictTo"
+                "androidx.annotation.RestrictTo(androidx.annotation.RestrictTo.Scope." +
+                    "LIBRARY_GROUP)",
+                "--show-annotation",
+                "androidx.annotation.RestrictTo(androidx.annotation.RestrictTo.Scope." +
+                    "LIBRARY_GROUP_PREFIX)",
+                "--show-unannotated"
             )
         }
         runWithArgs(args)
@@ -153,18 +159,22 @@ private fun getCommonBaselineUpdateArgs(
     dependencyClasspath: FileCollection,
     baselineFile: File
 ): MutableList<String> {
+    val args = mutableListOf(
+        "--classpath",
+        (bootClasspath + dependencyClasspath.files).joinToString(File.pathSeparator)
+    )
+    args += getCommonBaselineUpdateArgs(baselineFile)
+    return args
+}
+
+private fun getCommonBaselineUpdateArgs(baselineFile: File): List<String> {
     // Create the baseline file if it does exist, as Metalava cannot handle non-existent files.
     baselineFile.createNewFile()
     return mutableListOf(
-        "--classpath",
-        (bootClasspath + dependencyClasspath.files).joinToString(File.pathSeparator),
-
         "--update-baseline",
         baselineFile.toString(),
-        "--baseline", baselineFile.toString(),
         "--pass-baseline-updates",
         "--delete-empty-baselines",
-
         "--format=v3",
         "--omit-common-packages=yes"
     )

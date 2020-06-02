@@ -29,9 +29,8 @@ import android.os.Build
 import android.util.SparseIntArray
 import android.view.Surface
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.CameraX
-import androidx.camera.core.ImageCaptureConfig
-import androidx.camera.core.PreviewConfig
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.Preview
 import androidx.camera.integration.antelope.MainActivity.Companion.FIXED_FOCUS_DISTANCE
 import androidx.camera.integration.antelope.MainActivity.Companion.cameraParams
 import androidx.camera.integration.antelope.MainActivity.Companion.logd
@@ -166,18 +165,9 @@ fun initializeCameras(activity: MainActivity) {
                 previewSurfaceView = activity.surface_preview
                 cameraXPreviewTexture = activity.texture_preview
 
-                // TODO: As of 0.3.0 CameraX only has front and back cameras. Update in the future
-                val cameraXcameraID = if (id.equals("1"))
-                    CameraX.LensFacing.BACK
-                else CameraX.LensFacing.FRONT
+                cameraXPreviewBuilder = Preview.Builder()
 
-                cameraXPreviewConfig = PreviewConfig.Builder()
-                    .setLensFacing(cameraXcameraID)
-                    .build()
-
-                cameraXCaptureConfig = ImageCaptureConfig.Builder()
-                    .setLensFacing(cameraXcameraID)
-                    .build()
+                cameraXCaptureBuilder = ImageCapture.Builder()
 
                 imageAvailableListener =
                     ImageAvailableListener(activity, this, TestConfig())
@@ -230,10 +220,13 @@ fun setupImageReader(activity: MainActivity, params: CameraParams, testConfig: T
             params.cam2MinSize
 
         params.imageReader?.close()
-        params.imageReader = ImageReader.newInstance(size.width, size.height,
-            ImageFormat.JPEG, 5)
+        params.imageReader = ImageReader.newInstance(
+            size.width, size.height,
+            ImageFormat.JPEG, 5
+        )
         params.imageReader?.setOnImageAvailableListener(
-            params.imageAvailableListener, params.backgroundHandler)
+            params.imageAvailableListener, params.backgroundHandler
+        )
     }
 }
 

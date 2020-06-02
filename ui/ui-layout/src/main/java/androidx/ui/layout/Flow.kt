@@ -17,20 +17,20 @@
 package androidx.ui.layout
 
 import androidx.compose.Composable
-import androidx.compose.composer
 import androidx.ui.core.Alignment
 import androidx.ui.core.Constraints
-import androidx.ui.core.Dp
-import androidx.ui.core.IntPx
-import androidx.ui.core.IntPxSize
 import androidx.ui.core.Layout
 import androidx.ui.core.Placeable
-import androidx.ui.core.dp
-import androidx.ui.core.isFinite
-import androidx.ui.core.max
+import androidx.ui.unit.Dp
+import androidx.ui.unit.IntPx
+import androidx.ui.unit.IntPxSize
+import androidx.ui.unit.dp
+import androidx.ui.unit.isFinite
+import androidx.ui.unit.max
+import androidx.ui.util.fastForEachIndexed
 
 /**
- * A widget that places its children in a horizontal flow. Unlike [Row] or [FlexRow], if the
+ * A composable that places its children in a horizontal flow. Unlike [Row], if the
  * horizontal space is too small to put all the children in one row, multiple rows may be used.
  *
  * Note that just like [Row], flex values cannot be used with [FlowRow].
@@ -46,15 +46,16 @@ import androidx.ui.core.max
  * @param crossAxisSpacing The cross axis spacing between the rows of the layout.
  * @param lastLineMainAxisAlignment Overrides the main axis alignment of the last row.
  */
+@ExperimentalLayout
 @Composable
 fun FlowRow(
-    mainAxisSize: LayoutSize = LayoutSize.Wrap,
+    mainAxisSize: SizeMode = SizeMode.Wrap,
     mainAxisAlignment: FlowMainAxisAlignment = FlowMainAxisAlignment.Start,
     mainAxisSpacing: Dp = 0.dp,
     crossAxisAlignment: FlowCrossAxisAlignment = FlowCrossAxisAlignment.Start,
     crossAxisSpacing: Dp = 0.dp,
     lastLineMainAxisAlignment: FlowMainAxisAlignment = mainAxisAlignment,
-    children: @Composable() () -> Unit
+    children: @Composable () -> Unit
 ) {
     Flow(
         orientation = LayoutOrientation.Horizontal,
@@ -69,7 +70,7 @@ fun FlowRow(
 }
 
 /**
- * A widget that places its children in a vertical flow. Unlike [Column] or [FlexColumn], if the
+ * A composable that places its children in a vertical flow. Unlike [Column], if the
  * vertical space is too small to put all the children in one column, multiple columns may be used.
  *
  * Note that just like [Column], flex values cannot be used with [FlowColumn].
@@ -85,15 +86,16 @@ fun FlowRow(
  * @param crossAxisSpacing The cross axis spacing between the columns of the layout.
  * @param lastLineMainAxisAlignment Overrides the main axis alignment of the last column.
  */
+@ExperimentalLayout
 @Composable
 fun FlowColumn(
-    mainAxisSize: LayoutSize = LayoutSize.Wrap,
+    mainAxisSize: SizeMode = SizeMode.Wrap,
     mainAxisAlignment: FlowMainAxisAlignment = FlowMainAxisAlignment.Start,
     mainAxisSpacing: Dp = 0.dp,
     crossAxisAlignment: FlowCrossAxisAlignment = FlowCrossAxisAlignment.Start,
     crossAxisSpacing: Dp = 0.dp,
     lastLineMainAxisAlignment: FlowMainAxisAlignment = mainAxisAlignment,
-    children: @Composable() () -> Unit
+    children: @Composable () -> Unit
 ) {
     Flow(
         orientation = LayoutOrientation.Vertical,
@@ -133,20 +135,20 @@ typealias FlowMainAxisAlignment = MainAxisAlignment
 @Composable
 private fun Flow(
     orientation: LayoutOrientation,
-    mainAxisSize: LayoutSize,
+    mainAxisSize: SizeMode,
     mainAxisAlignment: FlowMainAxisAlignment,
     mainAxisSpacing: Dp,
     crossAxisAlignment: FlowCrossAxisAlignment,
     crossAxisSpacing: Dp,
     lastLineMainAxisAlignment: FlowMainAxisAlignment,
-    children: @Composable() () -> Unit
+    children: @Composable () -> Unit
 ) {
     fun Placeable.mainAxisSize() =
         if (orientation == LayoutOrientation.Horizontal) width else height
     fun Placeable.crossAxisSize() =
         if (orientation == LayoutOrientation.Horizontal) height else width
 
-    Layout(children) { measurables, outerConstraints ->
+    Layout(children) { measurables, outerConstraints, layoutDirection ->
         val sequences = mutableListOf<List<Placeable>>()
         val crossAxisSizes = mutableListOf<IntPx>()
         val crossAxisPositions = mutableListOf<IntPx>()
@@ -207,7 +209,7 @@ private fun Flow(
         if (currentSequence.isNotEmpty()) startNewSequence()
 
         val mainAxisLayoutSize = if (constraints.mainAxisMax.isFinite() &&
-            mainAxisSize == LayoutSize.Expand
+            mainAxisSize == SizeMode.Expand
         ) {
             constraints.mainAxisMax
         } else {
@@ -227,18 +229,24 @@ private fun Flow(
         }
 
         layout(layoutWidth, layoutHeight) {
-            sequences.forEachIndexed { i, placeables ->
+            sequences.fastForEachIndexed { i, placeables ->
                 val childrenMainAxisSizes = placeables.mapIndexed { j, placeable ->
                     placeable.mainAxisSize() +
                         if (j < placeables.lastIndex) mainAxisSpacing.toIntPx() else IntPx.Zero
                 }
-                val aligner = if (i < sequences.lastIndex) {
-                    mainAxisAlignment.aligner
+                val arrangement = if (i < sequences.lastIndex) {
+                    mainAxisAlignment.arrangement
                 } else {
-                    lastLineMainAxisAlignment.aligner
+                    lastLineMainAxisAlignment.arrangement
                 }
-                val mainAxisPositions = aligner.align(mainAxisLayoutSize, childrenMainAxisSizes)
-                placeables.forEachIndexed { j, placeable ->
+                // TODO(soboleva): rtl support
+                // Handle vertical direction
+                val mainAxisPositions = arrangement.arrange(
+                    mainAxisLayoutSize,
+                    childrenMainAxisSizes,
+                    layoutDirection
+                )
+                placeables.fastForEachIndexed { j, placeable ->
                     val crossAxis = when (crossAxisAlignment) {
                         FlowCrossAxisAlignment.Start -> IntPx.Zero
                         FlowCrossAxisAlignment.End ->
@@ -252,12 +260,12 @@ private fun Flow(
                             ).y
                     }
                     if (orientation == LayoutOrientation.Horizontal) {
-                        placeable.place(
+                        placeable.placeAbsolute(
                             x = mainAxisPositions[j],
                             y = crossAxisPositions[i] + crossAxis
                         )
                     } else {
-                        placeable.place(
+                        placeable.placeAbsolute(
                             x = crossAxisPositions[i] + crossAxis,
                             y = mainAxisPositions[j]
                         )

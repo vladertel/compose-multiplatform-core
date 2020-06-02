@@ -18,7 +18,9 @@ package androidx.camera.extensions;
 
 import android.util.Log;
 
-import androidx.camera.core.ImageCaptureConfig;
+import androidx.annotation.NonNull;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageCapture;
 import androidx.camera.extensions.ExtensionsManager.EffectMode;
 import androidx.camera.extensions.impl.BeautyImageCaptureExtenderImpl;
 
@@ -34,7 +36,7 @@ public class BeautyImageCaptureExtender extends ImageCaptureExtender {
      * @param builder Builder that will be used to create the configurations for the
      * {@link androidx.camera.core.ImageCapture}.
      */
-    public static BeautyImageCaptureExtender create(ImageCaptureConfig.Builder builder) {
+    public static BeautyImageCaptureExtender create(ImageCapture.Builder builder) {
         if (ExtensionVersion.isExtensionVersionSupported()) {
             try {
                 return new VendorBeautyImageCaptureExtender(builder);
@@ -52,12 +54,12 @@ public class BeautyImageCaptureExtender extends ImageCaptureExtender {
         }
 
         @Override
-        public boolean isExtensionAvailable() {
+        public boolean isExtensionAvailable(@NonNull CameraSelector selector) {
             return false;
         }
 
         @Override
-        public void enableExtension() {
+        public void enableExtension(@NonNull CameraSelector selector) {
         }
     }
 
@@ -65,7 +67,7 @@ public class BeautyImageCaptureExtender extends ImageCaptureExtender {
     static class VendorBeautyImageCaptureExtender extends BeautyImageCaptureExtender {
         private final BeautyImageCaptureExtenderImpl mImpl;
 
-        VendorBeautyImageCaptureExtender(ImageCaptureConfig.Builder builder) {
+        VendorBeautyImageCaptureExtender(ImageCapture.Builder builder) {
             mImpl = new BeautyImageCaptureExtenderImpl();
             init(builder, mImpl, EffectMode.BEAUTY);
         }

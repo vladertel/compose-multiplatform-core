@@ -17,13 +17,8 @@
 package androidx.room.processor
 
 import COMMON
-import androidx.room.ColumnInfo
 import androidx.room.Dao
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 import androidx.room.Query
-import androidx.room.Relation
-import androidx.room.Transaction
 import androidx.room.ext.CommonTypeNames
 import androidx.room.ext.KotlinTypeNames
 import androidx.room.ext.LifecyclesTypeNames
@@ -48,6 +43,7 @@ import androidx.room.vo.WriteQueryMethod
 import com.google.auto.common.MoreElements
 import com.google.auto.common.MoreTypes
 import com.google.common.truth.Truth.assertAbout
+import com.google.common.truth.Truth.assertThat
 import com.google.testing.compile.CompileTester
 import com.google.testing.compile.JavaFileObjects
 import com.google.testing.compile.JavaSourcesSubjectFactory
@@ -56,7 +52,6 @@ import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeVariableName
-import createInterpreterFromEntitiesAndViews
 import createVerifierFromEntitiesAndViews
 import mockElementAndType
 import org.hamcrest.CoreMatchers.`is`
@@ -67,6 +62,7 @@ import org.hamcrest.CoreMatchers.notNullValue
 import org.hamcrest.CoreMatchers.nullValue
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Assert.assertEquals
+import org.junit.AssumptionViolatedException
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -650,13 +646,11 @@ class QueryMethodProcessorTest(val enableVerification: Boolean) {
                 @Query("SELECT uid from User")
                 abstract public int[] foo();
                 """) { method, invocation ->
-            val queryInterpreter = createInterpreterFromEntitiesAndViews(invocation)
             assertThat(
                 QueryMethodProcessor(
                     baseContext = invocation.context,
                     containing = Mockito.mock(DeclaredType::class.java),
                     executableElement = method.element,
-                    queryInterpreter = queryInterpreter,
                     dbVerifier = null
                 ).context.logger.suppressedWarnings,
                 `is`(setOf(Warning.CURSOR_MISMATCH))
@@ -731,6 +725,51 @@ class QueryMethodProcessorTest(val enableVerification: Boolean) {
     }
 
     @Test
+    fun pojo_removeUnusedColumns() {
+        if (!enableVerification) {
+            throw AssumptionViolatedException("nothing to test w/o db verification")
+        }
+        singleQueryMethod<ReadQueryMethod>(
+            """
+                public static class Pojo {
+                    public String name;
+                    public String lastName;
+                }
+                @RewriteQueriesToDropUnusedColumns
+                @Query("select * from user LIMIT 1")
+                abstract Pojo loadUsers();
+                """
+        ) { method, _ ->
+            val adapter = method.queryResultBinder.adapter?.rowAdapter
+            check(adapter is PojoRowAdapter)
+            assertThat(method.query.original)
+                .isEqualTo("SELECT `name`, `lastName` FROM (select * from user LIMIT 1)")
+        }.compilesWithoutError().withWarningCount(0)
+    }
+
+    @Test
+    fun pojo_dontRemoveUnusedColumnsWhenColumnNamesConflict() {
+        if (!enableVerification) {
+            throw AssumptionViolatedException("nothing to test w/o db verification")
+        }
+        singleQueryMethod<ReadQueryMethod>(
+            """
+                public static class Pojo {
+                    public String name;
+                    public String lastName;
+                }
+                @RewriteQueriesToDropUnusedColumns
+                @Query("select * from user u, user u2 LIMIT 1")
+                abstract Pojo loadUsers();
+                """
+        ) { method, _ ->
+            val adapter = method.queryResultBinder.adapter?.rowAdapter
+            check(adapter is PojoRowAdapter)
+            assertThat(method.query.original).isEqualTo("select * from user u, user u2 LIMIT 1")
+        }.compilesWithoutError().withWarningContaining("The query returns some columns [uid")
+    }
+
+    @Test
     fun pojo_nonJavaName() {
         pojoTest("""
             @ColumnInfo(name = "MAX(ageColumn)")
@@ -778,8 +817,8 @@ class QueryMethodProcessorTest(val enableVerification: Boolean) {
             """, listOf("MAX(age)", "name")) { _, _, _ ->
         }?.failsToCompile()
                 ?.withErrorContaining("no such column: age")
-                ?.and()
-                ?.withErrorCount(1)
+                ?.and()?.withErrorContaining(cannotFindQueryResultAdapter("foo.bar.MyClass.Pojo"))
+                ?.and()?.withErrorCount(2)
                 ?.withWarningCount(0)
     }
 
@@ -876,8 +915,8 @@ class QueryMethodProcessorTest(val enableVerification: Boolean) {
             options = listOf("-Aroom.expandProjection=true")
         ) { adapter, _, _ ->
             adapter!!
-            assertThat(adapter.mapping.unusedColumns.size, `is`(0))
-            assertThat(adapter.mapping.unusedFields.size, `is`(0))
+            assertThat(adapter.mapping.unusedColumns).isEmpty()
+            assertThat(adapter.mapping.unusedFields).isEmpty()
         }!!.compilesWithoutWarnings()
     }
 
@@ -933,11 +972,10 @@ class QueryMethodProcessorTest(val enableVerification: Boolean) {
                 ) + jfos
             )
             .withCompilerOptions(options)
+            .withCompilerOptions("-Xlint:-processing") // remove unclaimed annotation warnings
             .processedWith(TestProcessor.builder()
                 .forAnnotations(
-                    Query::class, Dao::class, ColumnInfo::class,
-                    Entity::class, PrimaryKey::class, Relation::class,
-                    Transaction::class
+                    Query::class
                 )
                 .nextRunHandler { invocation ->
                     val (owner, methods) = invocation.roundEnv
@@ -952,16 +990,16 @@ class QueryMethodProcessorTest(val enableVerification: Boolean) {
                             )
                         }.first { it.second.isNotEmpty() }
                     val verifier = if (enableVerification) {
-                        createVerifierFromEntitiesAndViews(invocation)
+                        createVerifierFromEntitiesAndViews(invocation).also(
+                            invocation.context::attachDatabaseVerifier
+                        )
                     } else {
                         null
                     }
-                    val queryInterpreter = createInterpreterFromEntitiesAndViews(invocation)
                     val parser = QueryMethodProcessor(
                         baseContext = invocation.context,
                         containing = MoreTypes.asDeclared(owner.asType()),
                         executableElement = MoreElements.asExecutable(methods.first()),
-                        queryInterpreter = queryInterpreter,
                         dbVerifier = verifier
                     )
                     val parsedQuery = parser.process()

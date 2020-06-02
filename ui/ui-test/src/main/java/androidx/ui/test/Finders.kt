@@ -16,63 +16,89 @@
 
 package androidx.ui.test
 
-import androidx.ui.core.semantics.SemanticsConfiguration
-import androidx.ui.core.semantics.getOrNull
-import androidx.ui.semantics.SemanticsProperties
-
-/**
- * Extension methods that provide the entry point for the testing APIs.
- */
+import androidx.ui.core.semantics.SemanticsNode
+import androidx.ui.test.android.SynchronizedTreeCollector
 
 /**
  * Finds a component identified by the given tag.
  *
  * For usage patterns see [SemanticsNodeInteraction]
+ *
+ * @see find for general find method.
  */
-fun findByTag(testTag: String): SemanticsNodeInteraction {
-    return find {
-        getOrNull(SemanticsProperties.TestTag) == testTag
-    }
-}
+fun findByTag(testTag: String): SemanticsNodeInteraction =
+    find(hasTestTag(testTag))
 
 /**
  * Finds all components identified by the given tag.
  *
  * For usage patterns see [SemanticsNodeInteraction]
  */
-fun findAllByTag(testTag: String): List<SemanticsNodeInteraction> {
-    return findAll {
-        getOrNull(SemanticsProperties.TestTag) == testTag
-    }
-}
+fun findAllByTag(testTag: String): SemanticsNodeInteractionCollection =
+    findAll(hasTestTag(testTag))
 
 /**
- * Finds a component by the given text.
+ * Finds a component with the given text as its accessibilityLabel.
+ *
+ * For usage patterns see [SemanticsNodeInteraction]
+ * @see findBySubstring to search by substring instead of via exact match.
+ * @see find for general find method.
+ */
+fun findByText(text: String, ignoreCase: Boolean = false): SemanticsNodeInteraction =
+    find(hasText(text, ignoreCase))
+
+/**
+ *  Finds a component with accessibilityLabel that contains the given substring.
+ *
+ * For usage patterns see [SemanticsNodeInteraction]
+ * @see findByText to perform exact matches.
+ * @see find for general find method.
+ */
+fun findBySubstring(text: String, ignoreCase: Boolean = false): SemanticsNodeInteraction =
+    find(hasSubstring(text, ignoreCase))
+
+/**
+ * Finds all components with the given text as their accessibility label.
  *
  * For usage patterns see [SemanticsNodeInteraction]
  */
-fun findByText(text: String, ignoreCase: Boolean = false): SemanticsNodeInteraction {
-    return find {
-        getOrNull(SemanticsProperties.AccessibilityLabel).equals(text, ignoreCase)
-    }
-}
+fun findAllByText(text: String, ignoreCase: Boolean = false): SemanticsNodeInteractionCollection =
+    findAll(hasText(text, ignoreCase))
+
+/**
+ * Finds the root semantics node of the Compose tree.  Useful for example for screenshot tests
+ * of the entire scene.
+ *
+ * For usage patterns see [SemanticsNodeInteraction]
+ */
+fun findRoot(): SemanticsNodeInteraction =
+    find(isRoot())
 
 /**
  * Finds a component that matches the given condition.
- * This tries to match exactly one element and throws [AssertionError] if more than one is matched.
+ *
+ * Any subsequent operation on its result will expect exactly one element found (unless
+ * [SemanticsNodeInteraction.assertDoesNotExist] is used) and will throw [AssertionError] if
+ * none or more than one element is found.
  *
  * For usage patterns see [SemanticsNodeInteraction]
+ * @see findAll to work with multiple elements
  */
-fun find(
-    selector: SemanticsConfiguration.() -> Boolean
-): SemanticsNodeInteraction {
-    return semanticsTreeInteractionFactory(selector)
-        .findOne()
+fun find(matcher: SemanticsMatcher): SemanticsNodeInteraction {
+    return SemanticsNodeInteraction(SemanticsSelector(matcher))
 }
 
-fun findAll(
-    selector: SemanticsConfiguration.() -> Boolean
-): List<SemanticsNodeInteraction> {
-    return semanticsTreeInteractionFactory(selector)
-        .findAllMatching()
+/**
+ * Finds all components that match the given condition.
+ *
+ * If you are working with elements that are not supposed to occur multiple times use [find]
+ * instead.
+ * @see find
+ */
+fun findAll(matcher: SemanticsMatcher): SemanticsNodeInteractionCollection {
+    return SemanticsNodeInteractionCollection(SemanticsSelector(matcher))
+}
+
+internal fun getAllSemanticsNodes(): List<SemanticsNode> {
+    return SynchronizedTreeCollector.collectAllSemanticsNodes()
 }

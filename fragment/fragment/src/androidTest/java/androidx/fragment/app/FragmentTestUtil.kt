@@ -108,59 +108,47 @@ fun ActivityTestRule<out FragmentActivity>.findRed(): View? {
     return activity.findViewById(R.id.redSquare)
 }
 
-fun verifyAndClearTransition(
-    transition: TargetTracking,
-    epicenter: Rect?,
-    vararg expected: View
-) {
-    if (epicenter == null) {
-        assertThat(transition.capturedEpicenter).isNull()
-    } else {
-        assertThat(transition.capturedEpicenter).isEqualTo(epicenter)
+val View.boundsOnScreen: Rect
+    get() {
+        val loc = IntArray(2)
+        getLocationOnScreen(loc)
+        return Rect(loc[0], loc[1], loc[0] + width, loc[1] + height)
     }
-    val targets = transition.trackedTargets
-    val sb = StringBuilder()
-    sb.append("Expected: [")
-        .append(expected.size)
-        .append("] {")
-    var isFirst = true
-    for (view in expected) {
-        if (isFirst) {
-            isFirst = false
-        } else {
-            sb.append(", ")
-        }
-        sb.append(view)
-    }
-    sb.append("}, but got: [")
-        .append(targets.size)
-        .append("] {")
-    isFirst = true
-    for (view in targets) {
-        if (isFirst) {
-            isFirst = false
-        } else {
-            sb.append(", ")
-        }
-        sb.append(view)
-    }
-    sb.append("}")
-    val errorMessage = sb.toString()
 
-    assertWithMessage(errorMessage).that(targets.size).isEqualTo(expected.size)
-    for (view in expected) {
-        assertWithMessage(errorMessage).that(targets.contains(view)).isTrue()
+data class TransitionVerificationInfo(
+    var epicenter: Rect? = null,
+    val exitingViews: MutableList<View> = mutableListOf(),
+    val enteringViews: MutableList<View> = mutableListOf()
+)
+
+fun TargetTracking.verifyAndClearTransition(block: TransitionVerificationInfo.() -> Unit) {
+    val (epicenter, exitingViews, enteringViews) = TransitionVerificationInfo().apply { block() }
+
+    assertThat(exitingTargets).containsExactlyElementsIn(exitingViews)
+    assertThat(enteringTargets).containsExactlyElementsIn(enteringViews)
+    if (epicenter == null) {
+        assertThat(capturedEpicenter).isNull()
+    } else {
+        assertThat(capturedEpicenter).isEqualTo(epicenter)
     }
-    transition.clearTargets()
+    clearTargets()
 }
 
 fun verifyNoOtherTransitions(fragment: TransitionFragment) {
-    assertThat(fragment.enterTransition.targets.size).isEqualTo(0)
-    assertThat(fragment.exitTransition.targets.size).isEqualTo(0)
-    assertThat(fragment.reenterTransition.targets.size).isEqualTo(0)
-    assertThat(fragment.returnTransition.targets.size).isEqualTo(0)
-    assertThat(fragment.sharedElementEnter.targets.size).isEqualTo(0)
-    assertThat(fragment.sharedElementReturn.targets.size).isEqualTo(0)
+    assertThat(fragment.enterTransition.enteringTargets.size).isEqualTo(0)
+    assertThat(fragment.enterTransition.exitingTargets.size).isEqualTo(0)
+    assertThat(fragment.exitTransition.enteringTargets.size).isEqualTo(0)
+    assertThat(fragment.exitTransition.exitingTargets.size).isEqualTo(0)
+
+    assertThat(fragment.reenterTransition.enteringTargets.size).isEqualTo(0)
+    assertThat(fragment.reenterTransition.exitingTargets.size).isEqualTo(0)
+    assertThat(fragment.returnTransition.enteringTargets.size).isEqualTo(0)
+    assertThat(fragment.returnTransition.exitingTargets.size).isEqualTo(0)
+
+    assertThat(fragment.sharedElementEnter.enteringTargets.size).isEqualTo(0)
+    assertThat(fragment.sharedElementEnter.exitingTargets.size).isEqualTo(0)
+    assertThat(fragment.sharedElementReturn.enteringTargets.size).isEqualTo(0)
+    assertThat(fragment.sharedElementReturn.exitingTargets.size).isEqualTo(0)
 }
 // Transition test methods end
 

@@ -22,7 +22,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
-private const val epsilon = 0.00001f
+const val epsilon = 0.00001f
 
 @RunWith(JUnit4::class)
 class DecayAnimationTest {
@@ -36,24 +36,28 @@ class DecayAnimationTest {
         val animWrapper = anim.createWrapper(startValue, startVelocity)
         // Obtain finish value by passing in an absurdly large playtime.
         val finishValue = animWrapper.getValue(Int.MAX_VALUE.toLong())
+        val finishTime = animWrapper.durationMillis
 
         for (playTime in 0L..4000L step 200L) {
             val value = anim.getValue(playTime, startValue, startVelocity)
             val velocity = anim.getVelocity(playTime, startValue, startVelocity)
-            val finished = anim.isFinished(playTime, startValue, startVelocity)
+            val finished = playTime >= finishTime
             assertTrue(finished == animWrapper.isFinished(playTime))
 
             if (!finished) {
                 // Before the animation finishes, absolute velocity is above the threshold
                 assertTrue(Math.abs(velocity) >= 2.0f)
                 assertEquals(value, animWrapper.getValue(playTime), epsilon)
-                assertEquals(velocity, animWrapper.getVelocity(playTime), epsilon)
+                assertEquals(velocity, animWrapper.getVelocity(playTime).value, epsilon)
+                assertTrue(playTime < finishTime)
             } else {
                 // When the animation is finished, expect absolute velocity < threshold
                 assertTrue(Math.abs(velocity) < 2.0f)
 
                 // Once the animation is finished, the value should not change any more
                 assertEquals(finishValue, animWrapper.getValue(playTime), epsilon)
+
+                assertTrue(playTime >= finishTime)
             }
         }
     }
@@ -80,7 +84,7 @@ class DecayAnimationTest {
             .getValue(Int.MAX_VALUE.toLong())
 
         val finishVelocity1 = anim1.createWrapper(startValue, startVelocity)
-            .getVelocity(Int.MAX_VALUE.toLong())
+            .getVelocity(Int.MAX_VALUE.toLong()).value
 
         // Verify that the finish velocity is at the threshold
         assertEquals(threshold, finishVelocity1, epsilon)

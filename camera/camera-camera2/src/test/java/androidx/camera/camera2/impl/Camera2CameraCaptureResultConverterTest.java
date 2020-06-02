@@ -21,7 +21,8 @@ import static com.google.common.truth.Truth.assertThat;
 import android.hardware.camera2.CaptureResult;
 import android.os.Build;
 
-import androidx.camera.core.CameraCaptureResult;
+import androidx.camera.camera2.internal.Camera2CameraCaptureResult;
+import androidx.camera.core.impl.CameraCaptureResult;
 import androidx.test.filters.SmallTest;
 
 import org.junit.Test;

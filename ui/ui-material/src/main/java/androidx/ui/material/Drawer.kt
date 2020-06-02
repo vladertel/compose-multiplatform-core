@@ -16,46 +16,33 @@
 
 package androidx.ui.material
 
+import androidx.animation.AnimatedFloat
 import androidx.animation.PhysicsBuilder
 import androidx.compose.Composable
-import androidx.compose.composer
-import androidx.compose.ambient
-import androidx.compose.memo
-import androidx.compose.state
-import androidx.compose.unaryPlus
-import androidx.ui.core.Alignment
-import androidx.ui.core.Constraints
-import androidx.ui.core.ContextAmbient
-import androidx.ui.core.Dp
-import androidx.ui.core.Draw
-import androidx.ui.core.IntPx
+import androidx.ui.core.DensityAmbient
 import androidx.ui.core.Layout
-import androidx.ui.core.Px
-import androidx.ui.core.RepaintBoundary
-import androidx.ui.core.dp
+import androidx.ui.core.Modifier
+import androidx.ui.core.WithConstraints
+import androidx.ui.core.clipToBounds
 import androidx.ui.core.hasBoundedHeight
 import androidx.ui.core.hasBoundedWidth
-import androidx.ui.core.ipx
-import androidx.ui.core.min
-import androidx.ui.core.px
-import androidx.ui.core.toRect
-import androidx.ui.core.withDensity
-import androidx.ui.foundation.Clickable
-import androidx.ui.foundation.ColoredRect
+import androidx.ui.foundation.Box
+import androidx.ui.foundation.Canvas
+import androidx.ui.foundation.clickable
 import androidx.ui.foundation.gestures.DragDirection
-import androidx.ui.foundation.gestures.DragValueController
-import androidx.ui.foundation.gestures.Draggable
-import androidx.ui.graphics.Paint
-import androidx.ui.graphics.PaintingStyle
-import androidx.ui.layout.Container
+import androidx.ui.graphics.Shape
 import androidx.ui.layout.DpConstraints
-import androidx.ui.layout.EdgeInsets
 import androidx.ui.layout.Stack
-import androidx.ui.lerp
+import androidx.ui.layout.fillMaxSize
+import androidx.ui.layout.preferredSizeIn
 import androidx.ui.material.internal.StateDraggable
-import androidx.ui.material.internal.ValueModel
-import androidx.ui.material.surface.Surface
-import kotlin.math.max
+import androidx.ui.unit.Dp
+import androidx.ui.unit.IntPx
+import androidx.ui.unit.dp
+import androidx.ui.unit.min
+import androidx.ui.unit.px
+import androidx.ui.unit.round
+import androidx.ui.util.lerp
 
 /**
  * Possible states of the drawer
@@ -75,32 +62,9 @@ enum class DrawerState {
 /**
  * Navigation drawers provide access to destinations in your app.
  *
- * Standard navigation drawers allow interaction with both screen content and the drawer
- * at the same time. They can be used on tablet and desktop,
- * but they are not suitable for mobile due to limited screen size.
- *
- * See [ModalDrawerLayout] and [BottomDrawerLayout] for more mobile friendly options.
- *
- * @sample androidx.ui.material.samples.StaticDrawerSample
- *
- * @param drawerContent composable that represents content inside the drawer
- */
-@Composable
-fun StaticDrawer(
-    drawerContent: @Composable() () -> Unit
-) {
-    Container(width = StaticDrawerWidth, expanded = true) {
-        drawerContent()
-    }
-}
-
-/**
- * Navigation drawers provide access to destinations in your app.
- *
  * Modal navigation drawers block interaction with the rest of an app’s content with a scrim.
  * They are elevated above most of the app’s UI and don’t affect the screen’s layout grid.
  *
- * See [StaticDrawer] for always visible drawer, suitable for tablet or desktop.
  * See [BottomDrawerLayout] for a layout that introduces a bottom drawer, suitable when
  * using bottom navigation.
  *
@@ -110,33 +74,37 @@ fun StaticDrawer(
  * @param onStateChange lambda to be invoked when the drawer requests to change its state,
  * e.g. when the drawer is being swiped to the new state or when the scrim is clicked
  * @param gesturesEnabled whether or not drawer can be interacted by gestures
+ * @param drawerShape shape of the drawer sheet
+ * @param drawerElevation drawer sheet elevation. This controls the size of the shadow below the
+ * drawer sheet
  * @param drawerContent composable that represents content inside the drawer
  * @param bodyContent content of the rest of the UI
  *
- * @throws IllegalStateException when parent has [Px.Infinity] width
+ * @throws IllegalStateException when parent has [Float.POSITIVE_INFINITY] width
  */
 @Composable
 fun ModalDrawerLayout(
     drawerState: DrawerState,
     onStateChange: (DrawerState) -> Unit,
     gesturesEnabled: Boolean = true,
-    drawerContent: @Composable() () -> Unit,
-    bodyContent: @Composable() () -> Unit
+    drawerShape: Shape = MaterialTheme.shapes.large,
+    drawerElevation: Dp = DrawerConstants.DefaultElevation,
+    drawerContent: @Composable () -> Unit,
+    bodyContent: @Composable () -> Unit
 ) {
-    Container(expanded = true) {
-        NoCompositionWithConstraints { pxConstraints ->
+    Box(Modifier.fillMaxSize()) {
+        WithConstraints {
             // TODO : think about Infinite max bounds case
-            if (!pxConstraints.hasBoundedWidth) {
+            if (!constraints.hasBoundedWidth) {
                 throw IllegalStateException("Drawer shouldn't have infinite width")
             }
-            val constraints = +withDensity {
-                DpConstraints(pxConstraints)
+            val dpConstraints = with(DensityAmbient.current) {
+                DpConstraints(constraints)
             }
-            val minValue = -pxConstraints.maxWidth.value.toFloat()
+            val minValue = -constraints.maxWidth.value.toFloat()
             val maxValue = 0f
 
             val anchors = listOf(minValue to DrawerState.Closed, maxValue to DrawerState.Opened)
-
             StateDraggable(
                 state = drawerState,
                 onStateChange = onStateChange,
@@ -148,13 +116,11 @@ fun ModalDrawerLayout(
                 enabled = gesturesEnabled
             ) { model ->
                 Stack {
-                    aligned(Alignment.TopLeft) {
-                        bodyContent()
-                        Scrim(drawerState, onStateChange, fraction = {
-                            calculateFraction(minValue, maxValue, model.value)
-                        })
-                        DrawerContent(model, constraints, drawerContent)
-                    }
+                    bodyContent()
+                    Scrim(drawerState, onStateChange, fraction = {
+                        calculateFraction(minValue, maxValue, model.value)
+                    })
+                    DrawerContent(model, dpConstraints, drawerShape, drawerElevation, drawerContent)
                 }
             }
         }
@@ -171,7 +137,6 @@ fun ModalDrawerLayout(
  * These drawers open upon tapping the navigation menu icon in the bottom app bar.
  * They are only for use on mobile.
  *
- * See [StaticDrawer] for always visible drawer, suitable for tablet or desktop
  * See [ModalDrawerLayout] for a layout that introduces a classic from-the-side drawer.
  *
  * @sample androidx.ui.material.samples.BottomDrawerSample
@@ -180,44 +145,53 @@ fun ModalDrawerLayout(
  * @param onStateChange lambda to be invoked when the drawer requests to change its state,
  * e.g. when the drawer is being swiped to the new state or when the scrim is clicked
  * @param gesturesEnabled whether or not drawer can be interacted by gestures
+ * @param drawerShape shape of the drawer sheet
+ * @param drawerElevation drawer sheet elevation. This controls the size of the shadow below the
+ * drawer sheet
  * @param drawerContent composable that represents content inside the drawer
  * @param bodyContent content of the rest of the UI
  *
- * @throws IllegalStateException when parent has [Px.Infinity] height
+ * @throws IllegalStateException when parent has [Float.POSITIVE_INFINITY] height
  */
 @Composable
 fun BottomDrawerLayout(
     drawerState: DrawerState,
     onStateChange: (DrawerState) -> Unit,
     gesturesEnabled: Boolean = true,
-    drawerContent: @Composable() () -> Unit,
-    bodyContent: @Composable() () -> Unit
+    drawerShape: Shape = MaterialTheme.shapes.large,
+    drawerElevation: Dp = DrawerConstants.DefaultElevation,
+    drawerContent: @Composable () -> Unit,
+    bodyContent: @Composable () -> Unit
 ) {
-    Container(expanded = true) {
-        NoCompositionWithConstraints { pxConstraints ->
+    Box(Modifier.fillMaxSize()) {
+        WithConstraints {
             // TODO : think about Infinite max bounds case
-            if (!pxConstraints.hasBoundedHeight) {
+            if (!constraints.hasBoundedHeight) {
                 throw IllegalStateException("Drawer shouldn't have infinite height")
             }
-            val constraints = +withDensity {
-                DpConstraints(pxConstraints)
+            val dpConstraints = with(DensityAmbient.current) {
+                DpConstraints(constraints)
             }
             val minValue = 0f
-            val maxValue = pxConstraints.maxHeight.value.toFloat()
+            val maxValue = constraints.maxHeight.value.toFloat()
 
             // TODO: add proper landscape support
             val isLandscape = constraints.maxWidth > constraints.maxHeight
-            val openedValue = if (isLandscape) maxValue else lerp(
+            val openedValue = if (isLandscape) minValue else lerp(
                 minValue,
                 maxValue,
                 BottomDrawerOpenFraction
             )
-            val anchors = listOf(
-                maxValue to DrawerState.Closed,
-                openedValue to DrawerState.Opened,
-                minValue to DrawerState.Opened
-            )
-
+            val anchors =
+                if (isLandscape) {
+                    listOf(maxValue to DrawerState.Closed, minValue to DrawerState.Opened)
+                } else {
+                    listOf(
+                        maxValue to DrawerState.Closed,
+                        openedValue to DrawerState.Opened,
+                        minValue to DrawerState.Opened
+                    )
+                }
             StateDraggable(
                 state = drawerState,
                 onStateChange = onStateChange,
@@ -229,47 +203,78 @@ fun BottomDrawerLayout(
                 enabled = gesturesEnabled
             ) { model ->
                 Stack {
-                    aligned(Alignment.TopLeft) {
-                        bodyContent()
-                        Scrim(drawerState, onStateChange, fraction = {
-                            // as we scroll "from height to 0" , need to reverse fraction
-                            1 - calculateFraction(openedValue, maxValue, model.value)
-                        })
-                        BottomDrawerContent(model, constraints, drawerContent)
-                    }
+                    bodyContent()
+                    Scrim(drawerState, onStateChange, fraction = {
+                        // as we scroll "from height to 0" , need to reverse fraction
+                        1 - calculateFraction(openedValue, maxValue, model.value)
+                    })
+                    BottomDrawerContent(
+                        model, dpConstraints, drawerShape, drawerElevation, drawerContent
+                    )
                 }
             }
         }
     }
 }
 
+/**
+ * Object to hold default values for [ModalDrawerLayout] and [BottomDrawerLayout]
+ */
+object DrawerConstants {
+
+    /**
+     * Default Elevation for drawer sheet as specified in material specs
+     */
+    val DefaultElevation = 16.dp
+}
+
 @Composable
 private fun DrawerContent(
-    xOffset: ValueModel,
+    xOffset: AnimatedFloat,
     constraints: DpConstraints,
-    children: @Composable() () -> Unit
+    shape: Shape,
+    elevation: Dp,
+    content: @Composable () -> Unit
 ) {
     WithOffset(xOffset = xOffset) {
-        Container(
-            constraints = constraints,
-            padding = EdgeInsets(right = VerticalDrawerPadding)
+        Box(
+            Modifier.preferredSizeIn(
+                constraints.minWidth,
+                constraints.minHeight,
+                constraints.maxWidth,
+                constraints.maxHeight
+            ),
+            paddingEnd = VerticalDrawerPadding
         ) {
             // remove Container when we will support multiply children
-            Surface { Container(expanded = true) { children() } }
+            Surface(shape = shape, elevation = elevation) {
+                Box(Modifier.fillMaxSize(), children = content)
+            }
         }
     }
 }
 
 @Composable
 private fun BottomDrawerContent(
-    yOffset: ValueModel,
+    yOffset: AnimatedFloat,
     constraints: DpConstraints,
-    children: @Composable() () -> Unit
+    shape: Shape,
+    elevation: Dp,
+    content: @Composable () -> Unit
 ) {
     WithOffset(yOffset = yOffset) {
-        Container(constraints = constraints) {
+        Box(
+            Modifier.preferredSizeIn(
+                constraints.minWidth,
+                constraints.minHeight,
+                constraints.maxWidth,
+                constraints.maxHeight
+            )
+        ) {
             // remove Container when we will support multiply children
-            Surface { Container(expanded = true) { children() } }
+            Surface(shape = shape, elevation = elevation) {
+                Box(Modifier.fillMaxSize(), children = content)
+            }
         }
     }
 }
@@ -284,36 +289,27 @@ private fun Scrim(
     fraction: () -> Float
 ) {
     // TODO: use enabled = false here when it will be available
-    val scrimContent = @Composable {
-        Container(expanded = true) {
-            val paint = +memo { Paint().apply { style = PaintingStyle.fill } }
-            val color = +themeColor { onSurface }
-            Draw { canvas, parentSize ->
-                val scrimAlpha = fraction() * ScrimDefaultOpacity
-                paint.color = color.copy(alpha = scrimAlpha)
-                canvas.drawRect(parentSize.toRect(), paint)
-            }
-        }
-    }
-    if (state == DrawerState.Opened) {
-        Clickable(onClick = { onStateChange(DrawerState.Closed) }, children = scrimContent)
-    } else {
-        scrimContent()
+    val enabled = state == DrawerState.Opened
+    val color = MaterialTheme.colors.onSurface
+    Canvas(
+        Modifier
+            .fillMaxSize()
+            .clickable(enabled = enabled, indication = null) { onStateChange(DrawerState.Closed) }
+    ) {
+        drawRect(color, alpha = fraction() * ScrimDefaultOpacity)
     }
 }
 
 // TODO: consider make pretty and move to public
 @Composable
 private fun WithOffset(
-    xOffset: ValueModel? = null,
-    yOffset: ValueModel? = null,
-    child: @Composable() () -> Unit
+    xOffset: AnimatedFloat? = null,
+    yOffset: AnimatedFloat? = null,
+    child: @Composable () -> Unit
 ) {
     Layout(children = {
-        RepaintBoundary {
-            child()
-        }
-    }) { measurables, constraints ->
+        Box(Modifier.clipToBounds(), children = child)
+    }) { measurables, constraints, _ ->
         if (measurables.size > 1) {
             throw IllegalStateException("Only one child is allowed")
         }
@@ -328,59 +324,22 @@ private fun WithOffset(
             width = min(placeable.width, constraints.maxWidth)
             height = min(placeable.height, constraints.maxHeight)
         }
-        val offX = xOffset?.value?.px ?: 0.px
-        val offY = yOffset?.value?.px ?: 0.px
         layout(width, height) {
-            placeable?.place(offX, offY)
+            val offX = xOffset?.value?.px ?: 0.px
+            val offY = yOffset?.value?.px ?: 0.px
+            placeable?.place(offX.round(), offY.round())
         }
     }
 }
 
-// TODO (malkov): This adhoc handmade WithConstrains is to ensure we work fast enough in
-//  DrawerAnimation as well as ensure that all the children will recompose/relayout properly
-// Remove when WithConstraints will be fast enough and work properly with relayouting on @
-@Composable
-private fun NoCompositionWithConstraints(children: @Composable() (Constraints) -> Unit) {
-    val dm = (+ambient(ContextAmbient)).resources.displayMetrics
-    // as a default, we emulate full-activity constraints (which is most cases will be exactly what
-    // we want) and then wait for layout to know proper constraints
-    var stateConstraints by +state {
-        Constraints(
-            minWidth = 0.ipx,
-            minHeight = 0.ipx,
-            maxWidth = dm.widthPixels.ipx,
-            maxHeight = dm.heightPixels.ipx
-        )
-    }
-    Layout({ children(stateConstraints) }) { measurables, constraints ->
-        if (measurables.size > 1) {
-            throw IllegalStateException(
-                "NoCompositionWithConstraints can have only one direct measurable child!"
-            )
-        }
-        val measurable = measurables.firstOrNull()
-        if (constraints != stateConstraints) stateConstraints = constraints
-        if (measurable == null) {
-            layout(constraints.minWidth, constraints.minHeight) {}
-        } else {
-            val placeable = measurable.measure(constraints)
-            layout(placeable.width, placeable.height) {
-                placeable.place(0.ipx, 0.ipx)
-            }
-        }
-    }
-}
-
-private val ScrimDefaultOpacity = 0.32f
+private const val ScrimDefaultOpacity = 0.32f
 private val VerticalDrawerPadding = 56.dp
 
-// drawer children specs
-private val StaticDrawerWidth = 256.dp
-private val DrawerStiffness = 1000f
+private const val DrawerStiffness = 1000f
 
 private val AnimationBuilder =
     PhysicsBuilder<Float>().apply {
         stiffness = DrawerStiffness
     }
 
-private val BottomDrawerOpenFraction = 0.5f
+internal const val BottomDrawerOpenFraction = 0.5f

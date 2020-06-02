@@ -16,8 +16,6 @@
 
 package androidx.core.app;
 
-import static android.graphics.drawable.Icon.TYPE_BITMAP;
-
 import static androidx.annotation.Dimension.DP;
 import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
 
@@ -36,7 +34,6 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.Icon;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -63,6 +60,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.core.R;
+import androidx.core.content.LocusIdCompat;
 import androidx.core.graphics.drawable.IconCompat;
 import androidx.core.text.BidiFormatter;
 import androidx.core.view.GravityCompat;
@@ -660,6 +658,13 @@ public class NotificationCompat {
     public static final int GROUP_ALERT_CHILDREN = Notification.GROUP_ALERT_CHILDREN;
 
     /**
+     * Constant for the {@link Builder#setGroup(String) group key} that's added to notifications
+     * that are not already grouped when {@link Builder#setNotificationSilent()} is used when
+     * {@link Build.VERSION#SDK_INT} is >= {@link Build.VERSION_CODES#O}.
+     */
+    public static final String GROUP_KEY_SILENT = "silent";
+
+    /**
      * Builder class for {@link NotificationCompat} objects.  Allows easier control over
      * all the flags, as well as help constructing the typical notification layouts.
      * <p>
@@ -739,11 +744,13 @@ public class NotificationCompat {
         String mChannelId;
         int mBadgeIcon = BADGE_ICON_NONE;
         String mShortcutId;
+        LocusIdCompat mLocusId;
         long mTimeout;
         @GroupAlertBehavior int mGroupAlertBehavior = GROUP_ALERT_ALL;
         boolean mAllowSystemGeneratedContextualActions;
         BubbleMetadata mBubbleMetadata;
         Notification mNotification = new Notification();
+        boolean mSilent;
 
         /**
          * @deprecated This field was not meant to be public.
@@ -764,6 +771,7 @@ public class NotificationCompat {
          * @param channelId The constructed Notification will be posted on this
          *      NotificationChannel.
          */
+        @SuppressWarnings("deprecation")
         public Builder(@NonNull Context context, @NonNull String channelId) {
             mContext = context;
             mChannelId = channelId;
@@ -772,13 +780,13 @@ public class NotificationCompat {
             mNotification.when = System.currentTimeMillis();
             mNotification.audioStreamType = Notification.STREAM_DEFAULT;
             mPriority = PRIORITY_DEFAULT;
-            mPeople = new ArrayList<String>();
+            mPeople = new ArrayList<>();
             mAllowSystemGeneratedContextualActions = true;
         }
 
         /**
-         * @deprecated use {@link #NotificationCompat.Builder(Context,String)} instead.
-         * All posted Notifications must specify a NotificationChannel Id.
+         * @deprecated use {@code Builder(Context, String)} instead. All posted notifications must
+         * specify a NotificationChannel ID.
          */
         @Deprecated
         public Builder(Context context) {
@@ -830,7 +838,7 @@ public class NotificationCompat {
         @RequiresApi(24)
         public @NonNull Builder setChronometerCountDown(boolean countsDown) {
             mChronometerCountDown = countsDown;
-            mExtras.putBoolean(EXTRA_CHRONOMETER_COUNT_DOWN, countsDown);
+            getExtras().putBoolean(EXTRA_CHRONOMETER_COUNT_DOWN, countsDown);
             return this;
         }
 
@@ -859,6 +867,15 @@ public class NotificationCompat {
         public Builder setSmallIcon(int icon, int level) {
             mNotification.icon = icon;
             mNotification.iconLevel = level;
+            return this;
+        }
+
+        /**
+         * Silences this instance of the notification, regardless of the sounds or vibrations set
+         * on the notification or notification channel.
+         */
+        public @NonNull Builder setNotificationSilent() {
+            mSilent = true;
             return this;
         }
 
@@ -991,6 +1008,7 @@ public class NotificationCompat {
          * @param highPriority Passing true will cause this notification to be sent
          *          even if other notifications are suppressed.
          */
+        @SuppressWarnings("deprecation")
         public Builder setFullScreenIntent(PendingIntent intent, boolean highPriority) {
             mFullScreenIntent = intent;
             setFlag(FLAG_HIGH_PRIORITY, highPriority);
@@ -1212,6 +1230,8 @@ public class NotificationCompat {
             return this;
         }
 
+        // TODO (b/149433438) support person field
+
         /**
          * Set the default notification options that will be used.
          * <p>
@@ -1282,6 +1302,7 @@ public class NotificationCompat {
          * @param uri A URI for the person.
          * @see Notification#EXTRA_PEOPLE
          */
+        @SuppressWarnings("deprecation")
         public Builder addPerson(String uri) {
             mPeople.add(uri);
             return this;
@@ -1577,6 +1598,20 @@ public class NotificationCompat {
          */
         public Builder setShortcutId(String shortcutId) {
             mShortcutId = shortcutId;
+            return this;
+        }
+
+        /**
+         * Sets the {@link LocusIdCompat} associated with this notification.
+         *
+         * <p>This method should be called when the {@link LocusIdCompat} is used in other places
+         * (such as {@link androidx.core.content.pm.ShortcutInfoCompat} and
+         * {@link android.view.contentcapture.ContentCaptureContext}) so the device's intelligence
+         * services can correlate them.
+         */
+        @NonNull
+        public Builder setLocusId(@Nullable final LocusIdCompat locusId) {
+            mLocusId = locusId;
             return this;
         }
 
@@ -2357,7 +2392,7 @@ public class NotificationCompat {
          * Should be unique amongst all individuals in the conversation, and should be
          * consistent during re-posts of the notification.
          *
-         * @see Message#NotificationCompat.MessagingStyle.Message(CharSequence, long, CharSequence)
+         * @see Message#Message(CharSequence, long, CharSequence)
          *
          * @return this object for method chaining
          *
@@ -2378,7 +2413,7 @@ public class NotificationCompat {
          * Adds a message for display by this notification. Convenience call for
          * {@link #addMessage(Message)}.
          *
-         * @see Message#NotificationCompat.MessagingStyle.Message(CharSequence, long, Person)
+         * @see Message#Message(CharSequence, long, Person)
          *
          * @return this for method chaining
          */
@@ -3306,13 +3341,14 @@ public class NotificationCompat {
         }
 
         // Package private access to avoid adding a SyntheticAccessor for the Action.Builder class.
+        @SuppressWarnings("deprecation")
         Action(@Nullable IconCompat icon, CharSequence title, PendingIntent intent,
                 Bundle extras,
                 RemoteInput[] remoteInputs, RemoteInput[] dataOnlyRemoteInputs,
                 boolean allowGeneratedReplies, @SemanticAction int semanticAction,
                 boolean showsUserInterface, boolean isContextual) {
             this.mIcon = icon;
-            if (icon != null && icon.getType() == Icon.TYPE_RESOURCE) {
+            if (icon != null && icon.getType() == IconCompat.TYPE_RESOURCE) {
                 this.icon = icon.getResId();
             }
             this.title = NotificationCompat.Builder.limitCharSequenceLength(title);
@@ -3329,6 +3365,7 @@ public class NotificationCompat {
         /**
          * @deprecated use {@link #getIconCompat()} instead.
          */
+        @SuppressWarnings("deprecation")
         @Deprecated
         public int getIcon() {
             return icon;
@@ -3337,6 +3374,7 @@ public class NotificationCompat {
         /**
          * Return the icon associated with this Action.
          */
+        @SuppressWarnings("deprecation")
         public @Nullable IconCompat getIconCompat() {
             if (mIcon == null && icon != 0) {
                 mIcon = IconCompat.createWithResource(null, "", icon);
@@ -4120,6 +4158,7 @@ public class NotificationCompat {
         private int mContentIcon;
         private int mContentIconGravity = DEFAULT_CONTENT_ICON_GRAVITY;
         private int mContentActionIndex = UNSET_ACTION_INDEX;
+        @SuppressWarnings("deprecation")
         private int mCustomSizePreset = SIZE_DEFAULT;
         private int mCustomContentHeight;
         private int mGravity = DEFAULT_GRAVITY;
@@ -4134,6 +4173,7 @@ public class NotificationCompat {
         public WearableExtender() {
         }
 
+        @SuppressWarnings("deprecation")
         public WearableExtender(Notification notification) {
             Bundle extras = getExtras(notification);
             Bundle wearableBundle = extras != null ? extras.getBundle(EXTRA_WEARABLE_EXTENSIONS)
@@ -4185,6 +4225,7 @@ public class NotificationCompat {
          * called by the {@link NotificationCompat.Builder#extend} method of
          * {@link NotificationCompat.Builder}.
          */
+        @SuppressWarnings("deprecation")
         @Override
         public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
             Bundle wearableBundle = new Bundle();
@@ -4260,9 +4301,13 @@ public class NotificationCompat {
                         iconCompat == null ? null : iconCompat.toIcon(), actionCompat.getTitle(),
                         actionCompat.getActionIntent());
             } else {
+                IconCompat icon = actionCompat.getIconCompat();
+                int iconResId = 0;
+                if (icon != null && icon.getType() == IconCompat.TYPE_RESOURCE) {
+                    iconResId = icon.getResId();
+                }
                 actionBuilder = new Notification.Action.Builder(
-                        actionCompat.getIcon(), actionCompat.getTitle(),
-                        actionCompat.getActionIntent());
+                        iconResId, actionCompat.getTitle(), actionCompat.getActionIntent());
             }
             Bundle actionExtras;
             if (actionCompat.getExtras() != null) {
@@ -5156,7 +5201,11 @@ public class NotificationCompat {
          *
          * @param unreadConversation The unread part of the conversation this notification conveys.
          * @return This object for method chaining.
+         *
+         * @deprecated {@link UnreadConversation} is no longer supported. Use {@link MessagingStyle}
+         * instead.
          */
+        @Deprecated
         public CarExtender setUnreadConversation(UnreadConversation unreadConversation) {
             mUnreadConversation = unreadConversation;
             return this;
@@ -5165,14 +5214,22 @@ public class NotificationCompat {
         /**
          * Returns the unread conversation conveyed by this notification.
          * @see #setUnreadConversation(UnreadConversation)
+         *
+         * @deprecated {@link UnreadConversation} is no longer supported. Use {@link MessagingStyle}
+         * instead.
          */
+        @Deprecated
         public UnreadConversation getUnreadConversation() {
             return mUnreadConversation;
         }
 
         /**
          * A class which holds the unread messages from a conversation.
+         *
+         * @deprecated {@link UnreadConversation} is no longer supported. Use {@link MessagingStyle}
+         * instead.
          */
+        @Deprecated
         public static class UnreadConversation {
             private final String[] mMessages;
             private final RemoteInput mRemoteInput;
@@ -5529,10 +5586,6 @@ public class NotificationCompat {
             return compatBuilder.build();
         }
 
-        private void setFlags(int flags) {
-            mFlags = flags;
-        }
-
         /**
          * Builder to construct a {@link BubbleMetadata} object.
          */
@@ -5584,7 +5637,7 @@ public class NotificationCompat {
                 if (icon == null) {
                     throw new IllegalArgumentException("Bubbles require non-null icon");
                 }
-                if (icon.getType() == TYPE_BITMAP) {
+                if (icon.getType() == IconCompat.TYPE_BITMAP) {
                     throw new IllegalArgumentException("When using bitmap based icons, Bubbles "
                             + "require TYPE_ADAPTIVE_BITMAP, please use"
                             + " IconCompat#createWithAdaptiveBitmap instead");
@@ -5755,6 +5808,7 @@ public class NotificationCompat {
      * @param notification The notification to inspect.
      * @param actionIndex The index of the action to retrieve.
      */
+    @SuppressWarnings("deprecation")
     public static Action getAction(Notification notification, int actionIndex) {
         if (Build.VERSION.SDK_INT >= 20) {
             return getActionCompatFromAction(notification.actions[actionIndex]);
@@ -5791,6 +5845,7 @@ public class NotificationCompat {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @RequiresApi(20)
     static Action getActionCompatFromAction(Notification.Action action) {
         final RemoteInput[] remoteInputs;
@@ -6017,6 +6072,22 @@ public class NotificationCompat {
     public static String getShortcutId(Notification notification) {
         if (Build.VERSION.SDK_INT >= 26) {
             return notification.getShortcutId();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Gets the {@link LocusIdCompat} associated with this notification.
+     *
+     * <p>Used by the Android system to correlate objects (such as
+     * {@link androidx.core.content.pm.ShortcutInfoCompat} and
+     * {@link android.view.contentcapture.ContentCaptureContext}).
+     */
+    @Nullable
+    public static LocusIdCompat getLocusId(@NonNull Notification notification) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            return LocusIdCompat.toLocusIdCompat(notification.getLocusId());
         } else {
             return null;
         }

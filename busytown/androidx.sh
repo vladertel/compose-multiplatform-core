@@ -1,11 +1,17 @@
 #!/bin/bash
 set -e
 
-SCRIPT_DIR="$(cd $(dirname $0) && pwd)"
-# TODO(b/141549086): move this mkdir logic and DIST_DIR logic into doAllTheBuild.py once this script (androidx.sh) is under presubmit testing
-if [ "$DIST_DIR" == "" ]; then
-  DIST_DIR="$SCRIPT_DIR/../../../out/dist"
-fi
-mkdir -p "$DIST_DIR"
+cd "$(dirname $0)"
 
-python "$SCRIPT_DIR/doAllTheBuild.py" DIST_DIR="$(cd $DIST_DIR && pwd)" --no-daemon
+# Run Gradle
+impl/build.sh --no-daemon listTaskOutputs "$@"
+impl/build.sh --no-daemon buildOnServer checkExternalLicenses \
+    -PverifyUpToDate \
+    -Pandroidx.coverageEnabled=true \
+    -Pandroidx.allWarningsAsErrors --profile "$@"
+
+# Merge some output files
+python3 impl/merge_outputs.py "mergeBuildInfo" "mergeLibraryMetrics" "mergeSourceJars"
+
+# Parse performance profile reports (generated with the --profile option above) and re-export the metrics in an easily machine-readable format for tracking
+impl/parse_profile_htmls.sh

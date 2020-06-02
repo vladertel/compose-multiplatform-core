@@ -23,6 +23,7 @@ import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.content.res.TypedArray;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
@@ -31,6 +32,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.Display;
@@ -487,6 +489,31 @@ public class ViewCompat {
         }
         rect.setEmpty();
         return rect;
+    }
+
+    /**
+     * Stores debugging information about attributes. This should be called in a constructor by
+     * every custom {@link View} that uses a custom styleable. If the custom view does not call it,
+     * then the custom attributes used by this view will not be visible in layout inspection tools.
+     *
+     * No-op before API 29.
+     *
+     *  @param context Context under which this view is created.
+     * @param styleable A reference to styleable array R.styleable.Foo
+     * @param attrs AttributeSet used to construct this view.
+     * @param t Resolved {@link TypedArray} returned by a call to
+     *        {@link android.content.res.Resources#obtainAttributes(AttributeSet, int[])}.
+     * @param defStyleAttr Default style attribute passed into the view constructor.
+     * @param defStyleRes Default style resource passed into the view constructor.
+     */
+    public static void saveAttributeDataForStyleable(@NonNull View view,
+            @SuppressLint("ContextFirst") @NonNull Context context, @NonNull int[] styleable,
+            @Nullable AttributeSet attrs, @NonNull TypedArray t, int defStyleAttr,
+            int defStyleRes) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            Api29Impl.saveAttributeDataForStyleable(
+                    view, context, styleable, attrs, t, defStyleAttr, defStyleRes);
+        }
     }
 
     /**
@@ -2432,7 +2459,7 @@ public class ViewCompat {
      * window insets to this view. This will only take effect on devices with API 21 or above.
      */
     public static void setOnApplyWindowInsetsListener(@NonNull View v,
-            final OnApplyWindowInsetsListener listener) {
+            @Nullable final OnApplyWindowInsetsListener listener) {
         if (Build.VERSION.SDK_INT >= 21) {
             if (listener == null) {
                 v.setOnApplyWindowInsetsListener(null);
@@ -2463,15 +2490,18 @@ public class ViewCompat {
      * @param insets Insets to apply
      * @return The supplied insets with any applied insets consumed
      */
+    @NonNull
     public static WindowInsetsCompat onApplyWindowInsets(@NonNull View view,
-            WindowInsetsCompat insets) {
+            @NonNull WindowInsetsCompat insets) {
         if (Build.VERSION.SDK_INT >= 21) {
-            WindowInsets unwrapped = insets.toWindowInsets();
-            WindowInsets result = view.onApplyWindowInsets(unwrapped);
-            if (!result.equals(unwrapped)) {
-                unwrapped = new WindowInsets(result);
+            final WindowInsets unwrapped = insets.toWindowInsets();
+            if (unwrapped != null) {
+                WindowInsets result = view.onApplyWindowInsets(unwrapped);
+                if (!result.equals(unwrapped)) {
+                    // If the value changed, return a newly wrapped instance
+                    return WindowInsetsCompat.toWindowInsetsCompat(result);
+                }
             }
-            return WindowInsetsCompat.toWindowInsetsCompat(unwrapped);
         }
         return insets;
     }
@@ -2488,15 +2518,18 @@ public class ViewCompat {
      * @param insets Insets to apply
      * @return The provided insets minus the insets that were consumed
      */
+    @NonNull
     public static WindowInsetsCompat dispatchApplyWindowInsets(@NonNull View view,
-            WindowInsetsCompat insets) {
+            @NonNull WindowInsetsCompat insets) {
         if (Build.VERSION.SDK_INT >= 21) {
-            WindowInsets unwrapped = insets.toWindowInsets();
-            WindowInsets result = view.dispatchApplyWindowInsets(unwrapped);
-            if (!result.equals(unwrapped)) {
-                unwrapped = new WindowInsets(result);
+            final WindowInsets unwrapped = insets.toWindowInsets();
+            if (unwrapped != null) {
+                final WindowInsets result = view.dispatchApplyWindowInsets(unwrapped);
+                if (!result.equals(unwrapped)) {
+                    // If the value changed, return a newly wrapped instance
+                    return WindowInsetsCompat.toWindowInsetsCompat(unwrapped);
+                }
             }
-            return WindowInsetsCompat.toWindowInsetsCompat(unwrapped);
         }
         return insets;
     }
@@ -2533,6 +2566,42 @@ public class ViewCompat {
             return view.getSystemGestureExclusionRects();
         }
         return Collections.emptyList();
+    }
+
+    /**
+     * Provide original {@link WindowInsetsCompat} that are dispatched to the view hierarchy.
+     * The insets are only available if the view is attached.
+     * <p>
+     * On devices running API 22 and below, this method always returns null.
+     *
+     * @return WindowInsetsCompat from the top of the view hierarchy or null if View is detached
+     */
+    @Nullable
+    public static WindowInsetsCompat getRootWindowInsets(@NonNull View view) {
+        if (Build.VERSION.SDK_INT >= 23) {
+            return WindowInsetsCompat.toWindowInsetsCompat(Api23Impl.getRootWindowInsets(view));
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Compute insets that should be consumed by this view and the ones that should propagate
+     * to those under it.
+     *
+     * @param insets Insets currently being processed by this View, likely received as a parameter
+     *           to {@link View#onApplyWindowInsets(WindowInsets)}.
+     * @param outLocalInsets A Rect that will receive the insets that should be consumed
+     *                       by this view
+     * @return Insets that should be passed along to views under this one
+     */
+    @NonNull
+    public static WindowInsetsCompat computeSystemWindowInsets(@NonNull View view,
+            @NonNull WindowInsetsCompat insets, @NonNull Rect outLocalInsets) {
+        if (Build.VERSION.SDK_INT >= 21) {
+            return Api21Impl.computeSystemWindowInsets(view, insets, outLocalInsets);
+        }
+        return insets;
     }
 
     /**
@@ -3700,21 +3769,18 @@ public class ViewCompat {
         }
     }
 
-    /**
-     * Adds a listener which will receive unhandled {@link KeyEvent}s. This must be called on the
-     * UI thread.
-     *
-     * @param listener a receiver of unhandled {@link KeyEvent}s.
-     * @see #removeOnUnhandledKeyEventListener
-     */
-    @SuppressWarnings("unchecked")
-    public static void addOnUnhandledKeyEventListener(@NonNull View v,
-            final @NonNull OnUnhandledKeyEventListenerCompat listener) {
-        if (Build.VERSION.SDK_INT >= 28) {
+    @RequiresApi(28)
+    static class CompatImplApi28 {
+        private CompatImplApi28() {
+        }
+
+        @SuppressWarnings("unchecked")
+        static void addOnUnhandledKeyEventListener(@NonNull View v,
+                final @NonNull OnUnhandledKeyEventListenerCompat listener) {
             SimpleArrayMap<OnUnhandledKeyEventListenerCompat, View.OnUnhandledKeyEventListener>
                     viewListeners = (SimpleArrayMap<OnUnhandledKeyEventListenerCompat,
-                            View.OnUnhandledKeyEventListener>)
-                            v.getTag(R.id.tag_unhandled_key_listeners);
+                    View.OnUnhandledKeyEventListener>)
+                    v.getTag(R.id.tag_unhandled_key_listeners);
             if (viewListeners == null) {
                 viewListeners = new SimpleArrayMap<>();
                 v.setTag(R.id.tag_unhandled_key_listeners, viewListeners);
@@ -3729,6 +3795,37 @@ public class ViewCompat {
 
             viewListeners.put(listener, fwListener);
             v.addOnUnhandledKeyEventListener(fwListener);
+        }
+
+        @SuppressWarnings("unchecked")
+        static void removeOnUnhandledKeyEventListener(@NonNull View v,
+                @NonNull OnUnhandledKeyEventListenerCompat listener) {
+            SimpleArrayMap<OnUnhandledKeyEventListenerCompat, View.OnUnhandledKeyEventListener>
+                    viewListeners = (SimpleArrayMap<OnUnhandledKeyEventListenerCompat,
+                    View.OnUnhandledKeyEventListener>)
+                    v.getTag(R.id.tag_unhandled_key_listeners);
+            if (viewListeners == null) {
+                return;
+            }
+            View.OnUnhandledKeyEventListener fwListener = viewListeners.get(listener);
+            if (fwListener != null) {
+                v.removeOnUnhandledKeyEventListener(fwListener);
+            }
+        }
+    }
+
+    /**
+     * Adds a listener which will receive unhandled {@link KeyEvent}s. This must be called on the
+     * UI thread.
+     *
+     * @param listener a receiver of unhandled {@link KeyEvent}s.
+     * @see #removeOnUnhandledKeyEventListener
+     */
+    @SuppressWarnings("unchecked")
+    public static void addOnUnhandledKeyEventListener(@NonNull View v,
+            final @NonNull OnUnhandledKeyEventListenerCompat listener) {
+        if (Build.VERSION.SDK_INT >= 28) {
+            CompatImplApi28.addOnUnhandledKeyEventListener(v, listener);
             return;
         }
         ArrayList<OnUnhandledKeyEventListenerCompat> viewListeners =
@@ -3755,17 +3852,7 @@ public class ViewCompat {
     public static void removeOnUnhandledKeyEventListener(@NonNull View v,
             @NonNull OnUnhandledKeyEventListenerCompat listener) {
         if (Build.VERSION.SDK_INT >= 28) {
-            SimpleArrayMap<OnUnhandledKeyEventListenerCompat, View.OnUnhandledKeyEventListener>
-                    viewListeners = (SimpleArrayMap<OnUnhandledKeyEventListenerCompat,
-                            View.OnUnhandledKeyEventListener>)
-                            v.getTag(R.id.tag_unhandled_key_listeners);
-            if (viewListeners == null) {
-                return;
-            }
-            View.OnUnhandledKeyEventListener fwListener = viewListeners.get(listener);
-            if (fwListener != null) {
-                v.removeOnUnhandledKeyEventListener(fwListener);
-            }
+            CompatImplApi28.removeOnUnhandledKeyEventListener(v, listener);
             return;
         }
         ArrayList<OnUnhandledKeyEventListenerCompat> viewListeners =
@@ -4011,7 +4098,6 @@ public class ViewCompat {
         private final int mTagKey;
         private final Class<T> mType;
         private final int mFrameworkMinimumSdk;
-        private final int mContentChangeType;
 
         AccessibilityViewProperty(int tagKey, Class<T> type, int frameworkMinimumSdk) {
             this(tagKey, type,
@@ -4022,7 +4108,6 @@ public class ViewCompat {
                 int tagKey, Class<T> type, int contentChangeType, int frameworkMinimumSdk) {
             mTagKey = tagKey;
             mType = type;
-            mContentChangeType = contentChangeType;
             mFrameworkMinimumSdk = frameworkMinimumSdk;
         }
 
@@ -4349,6 +4434,50 @@ public class ViewCompat {
                     }
                 }
             }
+        }
+    }
+
+    @RequiresApi(21)
+    private static class Api21Impl {
+        private Api21Impl() {
+            // private
+        }
+
+        static WindowInsetsCompat computeSystemWindowInsets(@NonNull View v,
+                @NonNull WindowInsetsCompat insets, @NonNull Rect outLocalInsets) {
+            WindowInsets platformInsets = insets.toWindowInsets();
+            if (platformInsets != null) {
+                return WindowInsetsCompat.toWindowInsetsCompat(
+                        v.computeSystemWindowInsets(platformInsets, outLocalInsets));
+            } else {
+                outLocalInsets.setEmpty();
+                return insets;
+            }
+        }
+    }
+
+    @RequiresApi(23)
+    private static class Api23Impl {
+        private Api23Impl() {
+            // privatex
+        }
+
+        public static WindowInsets getRootWindowInsets(View v) {
+            return v.getRootWindowInsets();
+        }
+    }
+
+    @RequiresApi(29)
+    private static class Api29Impl {
+        private Api29Impl() {
+            // private
+        }
+
+        static void saveAttributeDataForStyleable(@NonNull View view,
+                @NonNull Context context, @NonNull int[] styleable, @Nullable AttributeSet attrs,
+                @NonNull TypedArray t, int defStyleAttr, int defStyleRes) {
+            view.saveAttributeDataForStyleable(
+                    context, styleable, attrs, t, defStyleAttr, defStyleRes);
         }
     }
 }

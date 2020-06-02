@@ -17,64 +17,55 @@
 package androidx.ui.foundation.gestures
 
 import androidx.ui.core.Direction
-import androidx.ui.core.Px
-import androidx.ui.core.PxPosition
+import androidx.ui.unit.PxPosition
 
 /**
- * Draggable Direction specifies the direction in which you can drag an [Draggable].
+ * Draggable Direction specifies the direction in which you can drag an [draggable] or [scrollable].
  * It can be either [Horizontal] or [Vertical].
  */
 sealed class DragDirection {
 
     // TODO: remove internals for children when b/137357249 is ready
-    internal abstract val xProjection: (Px) -> Float
-    internal abstract val yProjection: (Px) -> Float
+    internal abstract val xProjection: (Float) -> Float
+    internal abstract val yProjection: (Float) -> Float
     internal abstract val isDraggableInDirection: (
         direction: Direction,
-        minValue: Float,
-        currentValue: Float,
-        maxValue: Float
+        currentValue: Float
     ) -> Boolean
 
     internal open fun project(pos: PxPosition) = xProjection(pos.x) + yProjection(pos.y)
 
     /**
-     * Horizontal direction of dragging in [Draggable].
+     * Horizontal direction of dragging in [draggable] or [scrollable].
      */
     object Horizontal : DragDirection() {
-        internal override val xProjection: (Px) -> Float = { it.value }
-        internal override val yProjection: (Px) -> Float = { 0f }
-        internal override val isDraggableInDirection: (
-            direction: Direction,
-            minValue: Float,
-            currentValue: Float,
-            maxValue: Float
-        ) -> Boolean =
-            { direction, minValue, currentValue, maxValue ->
+        internal override val xProjection: (Float) -> Float = { it }
+        internal override val yProjection: (Float) -> Float = { 0f }
+        internal override val isDraggableInDirection:
+                    (direction: Direction, currentValue: Float) -> Boolean =
+            { direction, _ ->
                 when (direction) {
-                    Direction.RIGHT -> currentValue <= maxValue
-                    Direction.LEFT -> currentValue >= minValue
+                    Direction.RIGHT -> true
+                    Direction.LEFT -> true
                     else -> false
                 }
             }
     }
 
     /**
-     * Vertical direction of dragging in [Draggable].
+     * Vertical direction of dragging in [draggable] or [scrollable].
      */
     object Vertical : DragDirection() {
-        internal override val xProjection: (Px) -> Float = { 0f }
-        internal override val yProjection: (Px) -> Float = { it.value }
+        internal override val xProjection: (Float) -> Float = { 0f }
+        internal override val yProjection: (Float) -> Float = { it }
         internal override val isDraggableInDirection: (
             direction: Direction,
-            minValue: Float,
-            currentValue: Float,
-            maxValue: Float
+            currentValue: Float
         ) -> Boolean =
-            { direction, minValue, currentValue, maxValue ->
+            { direction, _ ->
                 when (direction) {
-                    Direction.UP -> currentValue <= maxValue
-                    Direction.DOWN -> currentValue >= minValue
+                    Direction.UP -> true
+                    Direction.DOWN -> true
                     else -> false
                 }
             }

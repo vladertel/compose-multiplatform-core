@@ -30,6 +30,7 @@ import org.junit.Test
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.security.MessageDigest
 
 /**
  * Tests that transformed artifacts are properly marked as changed / unchanged base on whether there
@@ -179,25 +180,7 @@ class ChangeDetectionTest {
     }
 
     @Test
-    fun javaClass_androidXReferencesDetectionOn_archiveNotChanged() {
-        val inputFile =
-            File(javaClass.getResource("/changeDetectionTest/testPreference.class").file)
-        val inputFile2 =
-            File(javaClass.getResource("/classRewriteTest/ShareCompat.class").file)
-
-        testChange(
-            config = prefRewriteConfig,
-            files = listOf(
-                ArchiveFile(Paths.get("/", "preference.class"), inputFile.readBytes()),
-                ArchiveFile(Paths.get("/", "ShareCompat.class"), inputFile2.readBytes())
-            ),
-            areChangesExpected = false,
-            enableToSkipLibsWithAndroidXReferences = true
-        )
-    }
-
-    @Test
-    fun javaClass_androidXReferencesDetectionOff_archiveChanged() {
+    fun javaClass_referencesToBoth_androidXReferencesDetectionOn_archiveNotChanged() {
         val inputFile =
             File(javaClass.getResource("/changeDetectionTest/testPreference.class").file)
         val inputFile2 =
@@ -210,7 +193,55 @@ class ChangeDetectionTest {
                 ArchiveFile(Paths.get("/", "ShareCompat.class"), inputFile2.readBytes())
             ),
             areChangesExpected = true,
-            enableToSkipLibsWithAndroidXReferences = false
+            enableToSkipLibsWithAndroidXReferences = true
+        )
+    }
+
+    @Test
+    fun javaClass_referencesToAndroidXOnly_androidXReferencesDetectionOn_archiveNotChanged() {
+        val inputFile =
+            File(javaClass.getResource("/classRewriteTest/ShareCompat.class").file)
+
+        testChange(
+            config = prefRewriteConfig,
+            files = listOf(
+                ArchiveFile(Paths.get("/", "ShareCompat.class"), inputFile.readBytes())
+            ),
+            areChangesExpected = false,
+            enableToSkipLibsWithAndroidXReferences = true
+        )
+    }
+
+    @Test
+    fun javaClass_referencesToAndroidXOnly_androidXReferencesDetectionOff_archiveChanged() {
+        val inputFile =
+            File(javaClass.getResource("/classRewriteTest/ShareCompat.class").file)
+
+        testChange(
+            config = prefRewriteConfig,
+            files = listOf(
+                ArchiveFile(Paths.get("/", "ShareCompat.class"), inputFile.readBytes())
+            ),
+            areChangesExpected = false,
+            enableToSkipLibsWithAndroidXReferences = true
+        )
+    }
+
+    /** Regression test for b/142580430 */
+    @Test
+    fun archiveChangedDueToAsm_copyModifiedOn_shouldNotAffectChecksums() {
+        // File that causes ASM to reformat constants pool thus invalidating checksums of the file.
+        val inputFile =
+            File(javaClass.getResource("/changeDetectionTest/BCP.class").file)
+
+        testChange(
+            config = prefRewriteConfig,
+            files = listOf(
+                ArchiveFile(Paths.get("/", "BCP.class"), inputFile.readBytes())
+            ),
+            areChangesExpected = false,
+            enableToSkipLibsWithAndroidXReferences = false,
+            copyUnmodifiedLibsAlso = true
         )
     }
 
@@ -234,7 +265,8 @@ class ChangeDetectionTest {
         config: Config,
         files: List<ArchiveFile>,
         areChangesExpected: Boolean,
-        enableToSkipLibsWithAndroidXReferences: Boolean = false
+        enableToSkipLibsWithAndroidXReferences: Boolean = false,
+        copyUnmodifiedLibsAlso: Boolean = false
     ) {
         val archive = Archive(Paths.get("some/path"), files)
         val sourceArchive = archive.writeSelfToFile(Files.createTempFile("test", ".zip"))
@@ -244,16 +276,32 @@ class ChangeDetectionTest {
             config = config)
         val resultFiles = processor.transform2(
             input = setOf(FileMapping(sourceArchive, expectedFileIfRefactored.toFile())),
-            copyUnmodifiedLibsAlso = false,
+            copyUnmodifiedLibsAlso = copyUnmodifiedLibsAlso,
             skipLibsWithAndroidXReferences = enableToSkipLibsWithAndroidXReferences
         ).librariesMap
 
         if (areChangesExpected) {
             Truth.assertThat(resultFiles).containsExactly(
                 sourceArchive, expectedFileIfRefactored.toFile())
+            Truth.assertThat(sourceArchive.toMd5())
+                .isNotEqualTo(expectedFileIfRefactored.toFile().toMd5())
         } else {
-            Truth.assertThat(resultFiles).containsExactly(
-                sourceArchive, null)
+            if (copyUnmodifiedLibsAlso) {
+                Truth.assertThat(resultFiles).containsExactly(
+                    sourceArchive, expectedFileIfRefactored.toFile())
+                // Verifies that we actually copied the file from source instead of re-creating
+                // it as that could break checksums.
+                Truth.assertThat(sourceArchive.toMd5())
+                    .isEqualTo(expectedFileIfRefactored.toFile().toMd5())
+            } else {
+                Truth.assertThat(resultFiles).containsExactly(
+                    sourceArchive, null)
+            }
         }
+    }
+
+    private fun File.toMd5(): ByteArray {
+        val md = MessageDigest.getInstance("MD5")
+        return md.digest(readBytes())
     }
 }

@@ -54,6 +54,8 @@ interface IRemoteMediaSession {
             in ParcelImpl data);
 
     void setPlaylist(String sessionId, in List<ParcelImpl> playlist);
+    void setCurrentMediaItemMetadata(String sessionId, in ParcelImpl metadata);
+
     void createAndSetDummyPlaylist(String sessionId, int size);
     void setPlaylistWithDummyItem(String sessionId, in List<ParcelImpl> playlist);
     void setPlaylistMetadata(String sessionId, in ParcelImpl metadata);
@@ -69,4 +71,5 @@ interface IRemoteMediaSession {
     void notifyTrackInfoChanged(String sessionId, in List<ParcelImpl> trackInfos);
     void notifyTrackSelected(String sessionId, in ParcelImpl trackInfo);
     void notifyTrackDeselected(String sessionId, in ParcelImpl trackInfo);
+    void notifyVolumeChanged(String sessionId, int volume);
 }

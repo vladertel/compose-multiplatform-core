@@ -1,19 +1,16 @@
-import androidx.build.AndroidXPlugin
+import androidx.build.AndroidXRootPlugin
 import androidx.build.SdkHelperKt
 
 buildscript {
-    System.setProperty("DIST_SUBDIR", "/ui")
-    ext.supportRootFolder = file(project.projectDir.parent)
+    // Note this is different from the root project's `build.gradle`. We call this method to
+    // establish the "canonical" root project directory, e.g. `frameworks/support`.
+    SdkHelperKt.setSupportRootFolder(project, project.projectDir.parentFile)
+
     apply from: 'buildSrc/repos.gradle'
     apply from: 'buildSrc/build_dependencies.gradle'
     repos.addMavenRepositories(repositories)
-    SdkHelperKt.setSdkInLocalPropertiesFile(ext.supportRootFolder, project.projectDir)
 
-    dependencies {
-        classpath build_libs.gradle
-        classpath build_libs.kotlin.gradle_plugin
-        classpath build_libs.dokka_gradle
-    }
+    SdkHelperKt.writeSdkPathToLocalPropertiesFile(project)
 }
 
 allprojects {
@@ -24,4 +21,4 @@ apply from: "buildSrc/dependencies.gradle"
 apply from: "buildSrc/out.gradle"
 init.chooseOutDir("/ui")
 
-apply plugin: AndroidXPlugin
+apply plugin: AndroidXRootPlugin

@@ -18,9 +18,8 @@ package androidx.camera.core;
 
 import android.util.Size;
 
+import androidx.annotation.NonNull;
 import androidx.camera.testing.fakes.FakeUseCase;
-
-import java.util.Map;
 
 /**
  * A second fake {@link UseCase}.
@@ -28,17 +27,18 @@ import java.util.Map;
  * <p>This is used to complement the {@link FakeUseCase} for testing instances where a use case of
  * different type is created.
  */
-class FakeOtherUseCase extends UseCase {
+
+public class FakeOtherUseCase extends UseCase {
     private volatile boolean mIsCleared = false;
 
     /** Creates a new instance of a {@link FakeOtherUseCase} with a given configuration. */
-    FakeOtherUseCase(FakeOtherUseCaseConfig config) {
+    public FakeOtherUseCase(FakeOtherUseCaseConfig config) {
         super(config);
     }
 
     /** Creates a new instance of a {@link FakeOtherUseCase} with a default configuration. */
     FakeOtherUseCase() {
-        this(new FakeOtherUseCaseConfig.Builder().build());
+        this(new FakeOtherUseCaseConfig.Builder().getUseCaseConfig());
     }
 
     @Override
@@ -48,15 +48,9 @@ class FakeOtherUseCase extends UseCase {
     }
 
     @Override
-    protected UseCaseConfig.Builder<?, ?, ?> getDefaultBuilder(CameraX.LensFacing lensFacing) {
-        return new FakeOtherUseCaseConfig.Builder().setLensFacing(
-                lensFacing == null ? CameraX.LensFacing.BACK : lensFacing);
-    }
-
-    @Override
-    protected Map<String, Size> onSuggestedResolutionUpdated(
-            Map<String, Size> suggestedResolutionMap) {
-        return suggestedResolutionMap;
+    @NonNull
+    protected Size onSuggestedResolutionUpdated(@NonNull Size suggestedResolution) {
+        return suggestedResolution;
     }
 
     /** Returns true if {@link #clear()} has been called previously. */

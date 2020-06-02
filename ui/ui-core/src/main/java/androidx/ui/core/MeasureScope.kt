@@ -16,16 +16,43 @@
 
 package androidx.ui.core
 
+import androidx.ui.unit.IntPx
+
 /**
  * The receiver scope of a layout's measure lambda. The return value of the
- * measure lambda is [LayoutResult], which should be returned by [layout]
+ * measure lambda is [MeasureResult], which should be returned by [layout]
  */
-interface MeasureScope : DensityScope {
+abstract class MeasureScope : IntrinsicMeasureScope() {
     /**
-     * Sets the size and alignment lines of the measured layout, and assigns the positioning block.
-     * The [placementBlock] is a lambda used for positioning children. [Placeable.place] should
-     * be called on children inside [placementBlock].
+     * Measures the layout with [constraints], returning a [Placeable]
+     * layout that has its new size. A [Measurable] can only be measured
+     * once inside a layout pass. The layout will inherit the layout
+     * direction from its parent layout.
+     */
+    fun Measurable.measure(constraints: Constraints) = measure(constraints, layoutDirection)
+
+    /**
+     * Interface holding the size and alignment lines of the measured layout, as well as the
+     * children positioning logic.
+     * [placeChildren] is the function used for positioning children. [Placeable.place] should
+     * be called on children inside [placeChildren].
      * The alignment lines can be used by the parent layouts to decide layout, and can be queried
+     * using the [Placeable.get] operator. Note that alignment lines will be inherited by parent
+     * layouts, such that indirect parents will be able to query them as well.
+     */
+    interface MeasureResult {
+        val width: IntPx
+        val height: IntPx
+        val alignmentLines: Map<AlignmentLine, IntPx>
+        fun placeChildren(layoutDirection: LayoutDirection)
+    }
+
+    /**
+     * Sets the size and alignment lines of the measured layout, as well as
+     * the positioning block that defines the children positioning logic.
+     * The [placementBlock] is a lambda used for positioning children. [Placeable.place] should
+     * be called on children inside placementBlock.
+     * The [alignmentLines] can be used by the parent layouts to decide layout, and can be queried
      * using the [Placeable.get] operator. Note that alignment lines will be inherited by parent
      * layouts, such that indirect parents will be able to query them as well.
      *
@@ -34,21 +61,37 @@ interface MeasureScope : DensityScope {
      * @param alignmentLines the alignment lines defined by the layout
      * @param placementBlock block defining the children positioning of the current layout
      */
-    fun layout(
+    /*inline*/ fun layout(
         width: IntPx,
         height: IntPx,
         alignmentLines: Map<AlignmentLine, IntPx> = emptyMap(),
+        /*crossinline*/
         placementBlock: Placeable.PlacementScope.() -> Unit
-    ): LayoutResult
+    ) = object : MeasureResult {
+        override val width = width
+        override val height = height
+        override val alignmentLines = alignmentLines
+        override fun placeChildren(layoutDirection: LayoutDirection) {
+            with(InnerPlacementScope) {
+                this.parentLayoutDirection = layoutDirection
+                val previousParentWidth = parentWidth
+                parentWidth = width
+                placementBlock()
+                parentWidth = previousParentWidth
+            }
+        }
+    }
 
-    /**
-     * Value returned by [MeasureScope.layout] to encourage developers to call
-     * it during the measure pass.
-     */
-    object LayoutResult
+    internal companion object {
+        object InnerPlacementScope : Placeable.PlacementScope() {
+            override var parentLayoutDirection = LayoutDirection.Ltr
+            override var parentWidth = IntPx.Zero
+        }
+    }
 }
 
 /**
  * A function for performing layout measurement.
  */
-typealias MeasureBlock = MeasureScope.(List<Measurable>, Constraints) -> MeasureScope.LayoutResult
+typealias MeasureBlock =
+        MeasureScope.(List<Measurable>, Constraints, LayoutDirection) -> MeasureScope.MeasureResult

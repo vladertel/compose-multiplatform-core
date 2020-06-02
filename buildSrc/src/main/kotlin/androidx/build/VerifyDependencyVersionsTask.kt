@@ -18,6 +18,7 @@ package androidx.build
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.TaskAction
 
@@ -41,19 +42,14 @@ open class VerifyDependencyVersionsTask : DefaultTask() {
      */
     @TaskAction
     fun verifyDependencyVersions() {
-        project.configurations.all { configuration ->
-            if (!configuration.name.toLowerCase().contains("test")) {
-                configuration.allDependencies.forEach { dep ->
-                    if (dep.group != null && dep.group.toString().startsWith("androidx.") &&
-                        !dep.group.toString().startsWith("androidx.test")) {
-                        verifyDependencyVersion(dep)
-                    }
-                }
+        project.configurations.filter(::shouldVerifyConfiguration).forEach { configuration ->
+            configuration.allDependencies.filter(::shouldVerifyDependency).forEach { dependency ->
+                verifyDependencyVersion(configuration, dependency)
             }
         }
     }
 
-    fun verifyDependencyVersion(dependency: Dependency) {
+    private fun verifyDependencyVersion(configuration: Configuration, dependency: Dependency) {
         // If the version is unspecified then treat as an alpha version. If the depending project's
         // version is unspecified then it won't matter, and if the dependency's version is
         // unspecified then any non alpha project won't be able to depend on it to ensure safety.
@@ -66,7 +62,8 @@ open class VerifyDependencyVersionsTask : DefaultTask() {
         val projectReleasePhase = releasePhase(projectVersionExtra)
         if (projectReleasePhase < 0) {
             throw GradleException("Project ${project.name} has unexpected release phase " +
-                    "$projectVersionExtra")
+                    projectVersionExtra
+            )
         }
         val dependencyReleasePhase = releasePhase(dependencyVersionExtra)
         if (dependencyReleasePhase < 0) {
@@ -74,26 +71,55 @@ open class VerifyDependencyVersionsTask : DefaultTask() {
                     ":${dependency.version} has unexpected release phase $dependencyVersionExtra")
         }
         if (dependencyReleasePhase < projectReleasePhase) {
-            throw GradleException("Project ${project.name} is of version ${project.version} " +
-                    "and is incompatible with dependency ${dependency.group}:${dependency.name}:" +
-                    "${dependency.version}. Stable projects can only depend on stable version," +
-                    " rc versions can only depend on other rc or stable dependencies beta" +
-                    " versions can only depend on other beta, rc or stable versions.")
+            throw GradleException("Project ${project.name} with version ${project.version} may " +
+                    "not take a dependency on less-stable artifact ${dependency.group}:" +
+                    "${dependency.name}:${dependency.version} for configuration " +
+                    "${configuration.name}. Dependency versions must be at least as stable as " +
+                    "the project version.")
         }
     }
 
-    fun releasePhase(versionExtra: String): Int {
-        if (versionExtra == "") {
-            return 4
+    private fun releasePhase(versionExtra: String): Int {
+        return if (versionExtra == "") {
+            4
         } else if (versionExtra.startsWith("-rc")) {
-            return 3
+            3
         } else if (versionExtra.startsWith("-beta")) {
-            return 2
+            2
         } else if (versionExtra.startsWith("-alpha") || versionExtra.startsWith("-qpreview") ||
-                versionExtra.startsWith("-dev")) {
-            return 1
+            versionExtra.startsWith("-dev")) {
+            1
         } else {
-            return -1
+            -1
         }
     }
+}
+
+fun shouldVerifyConfiguration(configuration: Configuration): Boolean {
+    // Only verify configurations that are exported to POM. In an ideal world, this would be a
+    // whitelist derived from the mappings used by the Maven Publish Plugin; however, since we
+    // don't have direct access to those, this should remain a blacklist.
+    var name = configuration.name
+
+    // Don't check any Android-specific variants of Java plugin configurations -- releaseApi for
+    // api, debugImplementation for implementation, etc. -- or test configurations.
+    if (name.startsWith("androidTest")) return false
+    if (name.startsWith("debug")) return false
+    if (name.startsWith("release")) return false
+    if (name.startsWith("test")) return false
+
+    // Don't check any tooling configurations (except lint!).
+    if (name == "annotationProcessor") return false
+    if (name == "errorprone") return false
+    if (name.startsWith("jacoco")) return false
+    if (name == "metalava") return false
+
+    return true
+}
+
+fun shouldVerifyDependency(dependency: Dependency): Boolean {
+    // Only verify dependencies within the scope of our versioning policies.
+    if (dependency.group == null) return false
+    if (!dependency.group.toString().startsWith("androidx.")) return false
+    return true
 }

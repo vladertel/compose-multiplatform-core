@@ -16,23 +16,30 @@
 
 package androidx.ui.foundation
 
-import androidx.compose.composer
 import androidx.test.filters.MediumTest
-import androidx.ui.core.TestTag
-import androidx.ui.core.Text
+import androidx.ui.core.Modifier
+import androidx.ui.core.testTag
 import androidx.ui.foundation.selection.Toggleable
 import androidx.ui.foundation.selection.ToggleableState
 import androidx.ui.foundation.selection.TriStateToggleable
-import androidx.ui.layout.Center
+import androidx.ui.foundation.semantics.FoundationSemanticsProperties
 import androidx.ui.layout.Column
+import androidx.ui.layout.Stack
+import androidx.ui.test.SemanticsMatcher
+import androidx.ui.test.assert
 import androidx.ui.test.assertHasClickAction
 import androidx.ui.test.assertHasNoClickAction
-import androidx.ui.test.assertSemanticsIsEqualTo
+import androidx.ui.test.assertIsEnabled
+import androidx.ui.test.assertIsNotEnabled
+import androidx.ui.test.assertIsOff
+import androidx.ui.test.assertIsOn
 import androidx.ui.test.createComposeRule
-import androidx.ui.test.createFullSemantics
 import androidx.ui.test.doClick
+import androidx.ui.test.find
 import androidx.ui.test.findByTag
-import com.google.common.truth.Truth
+import androidx.ui.test.isToggleable
+import androidx.ui.test.runOnIdleCompose
+import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,47 +56,44 @@ class ToggleableTest {
     fun toggleableTest_defaultSemantics() {
         composeTestRule.setContent {
             Column {
-                TestTag(tag = "checkedToggleable") {
-                    TriStateToggleable(ToggleableState.Checked, onToggle = {}) {
-                        Text("ToggleableText")
-                    }
+                TriStateToggleable(
+                    modifier = Modifier.testTag("checkedToggleable"),
+                    state = ToggleableState.On,
+                    onClick = {}
+                ) {
+                    Text("ToggleableText")
                 }
-                TestTag(tag = "unCheckedToggleable") {
-                    TriStateToggleable(ToggleableState.Unchecked, onToggle = {}) {
-                        Text("ToggleableText")
-                    }
+                TriStateToggleable(
+                    modifier = Modifier.testTag("unCheckedToggleable"),
+                    state = ToggleableState.Off,
+                    onClick = {}
+                ) {
+                    Text("ToggleableText")
                 }
-                TestTag(tag = "indeterminateToggleable") {
-                    TriStateToggleable(ToggleableState.Indeterminate, onToggle = {}) {
-                        Text("ToggleableText")
-                    }
+                TriStateToggleable(
+                    modifier = Modifier.testTag("indeterminateToggleable"),
+                    state = ToggleableState.Indeterminate,
+                    onClick = {}
+                ) {
+                    Text("ToggleableText")
                 }
             }
         }
 
+        fun hasIndeterminateState(): SemanticsMatcher = SemanticsMatcher.expectValue(
+            FoundationSemanticsProperties.ToggleableState, ToggleableState.Indeterminate)
+
         findByTag("checkedToggleable")
-            .assertSemanticsIsEqualTo(
-                createFullSemantics(
-                    isEnabled = true,
-                    toggleableState = ToggleableState.Checked
-                )
-            )
+            .assertIsEnabled()
+            .assertIsOn()
             .assertHasClickAction()
         findByTag("unCheckedToggleable")
-            .assertSemanticsIsEqualTo(
-                createFullSemantics(
-                    isEnabled = true,
-                    toggleableState = ToggleableState.Unchecked
-                )
-            )
+            .assertIsEnabled()
+            .assertIsOff()
             .assertHasClickAction()
         findByTag("indeterminateToggleable")
-            .assertSemanticsIsEqualTo(
-                createFullSemantics(
-                    isEnabled = true,
-                    toggleableState = ToggleableState.Indeterminate
-                )
-            )
+            .assertIsEnabled()
+            .assert(hasIndeterminateState())
             .assertHasClickAction()
     }
 
@@ -97,55 +101,45 @@ class ToggleableTest {
     fun toggleableTest_booleanOverload_defaultSemantics() {
         composeTestRule.setContent {
             Column {
-                TestTag(tag = "checkedToggleable") {
-                    Toggleable(checked = true, onCheckedChange = {}) {
-                        Text("ToggleableText")
-                    }
+                Toggleable(
+                    modifier = Modifier.testTag("checkedToggleable"),
+                    value = true,
+                    onValueChange = {}
+                ) {
+                    Text("ToggleableText")
                 }
-                TestTag(tag = "unCheckedToggleable") {
-                    Toggleable(checked = false, onCheckedChange = {}) {
-                        Text("ToggleableText")
-                    }
+                Toggleable(
+                    modifier = Modifier.testTag("unCheckedToggleable"),
+                    value = false,
+                    onValueChange = {}
+                ) {
+                    Text("ToggleableText")
                 }
             }
         }
 
         findByTag("checkedToggleable")
-            .assertSemanticsIsEqualTo(
-                createFullSemantics(
-                    isEnabled = true,
-                    toggleableState = ToggleableState.Checked
-                )
-            )
+            .assertIsEnabled()
+            .assertIsOn()
             .assertHasClickAction()
         findByTag("unCheckedToggleable")
-            .assertSemanticsIsEqualTo(
-                createFullSemantics(
-                    isEnabled = true,
-                    toggleableState = ToggleableState.Unchecked
-                )
-            )
+            .assertIsEnabled()
+            .assertIsOff()
             .assertHasClickAction()
     }
 
     @Test
     fun toggleableTest_disabledSemantics() {
         composeTestRule.setContent {
-            Center {
-                TestTag(tag = "myToggleable") {
-                    TriStateToggleable(value = ToggleableState.Checked) {
-                        Text("ToggleableText")
-                    }
+            Stack {
+                TriStateToggleable(state = ToggleableState.On, enabled = false, onClick = {}) {
+                    Text("ToggleableText")
                 }
             }
         }
 
-        findByTag("myToggleable")
-            .assertSemanticsIsEqualTo(
-                createFullSemantics(
-                    isEnabled = false
-                )
-            )
+        find(isToggleable())
+            .assertIsNotEnabled()
             .assertHasNoClickAction()
     }
 
@@ -155,20 +149,18 @@ class ToggleableTest {
         val onCheckedChange: (Boolean) -> Unit = { checked = it }
 
         composeTestRule.setContent {
-            Center {
-                TestTag(tag = "myToggleable") {
-                    Toggleable(checked = checked, onCheckedChange = onCheckedChange) {
-                        Text("ToggleableText")
-                    }
+            Stack {
+                Toggleable(value = checked, onValueChange = onCheckedChange) {
+                    Text("ToggleableText")
                 }
             }
         }
 
-        findByTag("myToggleable")
+        find(isToggleable())
             .doClick()
 
-        Truth
-            .assertThat(checked)
-            .isEqualTo(false)
+        runOnIdleCompose {
+            assertThat(checked).isEqualTo(false)
+        }
     }
 }
