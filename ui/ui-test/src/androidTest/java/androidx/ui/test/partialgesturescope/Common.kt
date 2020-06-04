@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package androidx.ui.graphics
+package androidx.ui.test.partialgesturescope
 
-actual typealias NativePicture = android.graphics.Picture
+import androidx.ui.test.PartialGestureScope
+import androidx.ui.test.doPartialGesture
+import androidx.ui.test.findByTag
+import androidx.ui.test.util.ClickableTestBox.defaultTag
 
-actual fun NativePicture.getNativeWidth(): Int = this.width
-
-actual fun NativePicture.getNativeHeight(): Int = this.height
-
-actual fun NativePicture.beginNativeRecording(width: Int, height: Int): NativeCanvas {
-    return this.beginRecording(width, height)
+object Common {
+    fun partialGesture(block: PartialGestureScope.() -> Unit) {
+        findByTag(defaultTag).doPartialGesture(block)
+    }
 }

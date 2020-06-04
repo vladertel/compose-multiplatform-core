@@ -21,6 +21,8 @@ import javax.swing.SwingUtilities
 public class Handler() {
     constructor(looper: Looper, callback: Handler.Callback) : this()
 
+    constructor(looper: Looper, callback: Callback, async: Boolean) : this()
+
     interface Callback {
         fun handleMessage(msg: Message): Boolean
     }
