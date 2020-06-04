@@ -19,44 +19,31 @@ package androidx.ui.test.partialgesturescope
 import androidx.test.filters.MediumTest
 import androidx.ui.test.android.AndroidInputDispatcher
 import androidx.ui.test.createComposeRule
-import androidx.ui.test.doPartialGesture
-import androidx.ui.test.findByTag
+import androidx.ui.test.inputdispatcher.verifyNoGestureInProgress
+import androidx.ui.test.partialgesturescope.Common.partialGesture
 import androidx.ui.test.runOnIdleCompose
 import androidx.ui.test.sendCancel
 import androidx.ui.test.sendDown
+import androidx.ui.test.sendUp
 import androidx.ui.test.util.ClickableTestBox
-import androidx.ui.test.util.PointerInputRecorder
+import androidx.ui.test.util.MultiPointerInputRecorder
 import androidx.ui.test.util.assertTimestampsAreIncreasing
+import androidx.ui.test.util.expectError
 import androidx.ui.unit.PxPosition
 import com.google.common.truth.Truth.assertThat
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 
+/**
+ * Tests if [sendCancel] works
+ */
 @MediumTest
-@RunWith(Parameterized::class)
-class SendCancelTest(private val config: TestConfig) {
-    data class TestConfig(val cancelPosition: PxPosition?) {
-        val downPosition = PxPosition(1f, 1f)
-    }
-
+class SendCancelTest {
     companion object {
-        private const val tag = "widget"
-
-        @JvmStatic
-        @Parameterized.Parameters(name = "{0}")
-        fun createTestSet(): List<TestConfig> {
-            return mutableListOf<TestConfig>().apply {
-                for (x in listOf(2f, 99f)) {
-                    for (y in listOf(3f, 53f)) {
-                        add(TestConfig(PxPosition(x, y)))
-                    }
-                }
-                add(TestConfig(null))
-            }
-        }
+        private val downPosition1 = PxPosition(10f, 10f)
+        private val downPosition2 = PxPosition(20f, 20f)
     }
 
     @get:Rule
@@ -66,25 +53,75 @@ class SendCancelTest(private val config: TestConfig) {
     val inputDispatcherRule: TestRule =
         AndroidInputDispatcher.TestRule(disableDispatchInRealTime = true)
 
-    private val recorder = PointerInputRecorder()
+    private val recorder = MultiPointerInputRecorder()
 
-    @Test
-    fun testSendCancel() {
+    @Before
+    fun setUp() {
         // Given some content
         composeTestRule.setContent {
-            ClickableTestBox(recorder, tag = tag)
+            ClickableTestBox(recorder)
         }
+    }
 
+    @Test
+    fun onePointer() {
         // When we inject a down event followed by a cancel event
-        findByTag(tag).doPartialGesture { sendDown(config.downPosition) }
-        findByTag(tag).doPartialGesture { sendCancel(config.cancelPosition) }
+        partialGesture { sendDown(downPosition1) }
+        partialGesture { sendCancel() }
 
         runOnIdleCompose {
             recorder.run {
-                // Then we have only recorded 1 down event
+                // Then we have recorded just 1 down event
                 assertTimestampsAreIncreasing()
                 assertThat(events).hasSize(1)
             }
+        }
+
+        // And no gesture is in progress
+        partialGesture { inputDispatcher.verifyNoGestureInProgress() }
+    }
+
+    @Test
+    fun twoPointers() {
+        // When we inject two down events followed by a cancel event
+        partialGesture { sendDown(1, downPosition1) }
+        partialGesture { sendDown(2, downPosition2) }
+        partialGesture { sendCancel() }
+
+        runOnIdleCompose {
+            recorder.run {
+                // Then we have recorded just 2 down events
+                assertTimestampsAreIncreasing()
+                assertThat(events).hasSize(2)
+            }
+        }
+
+        // And no gesture is in progress
+        partialGesture { inputDispatcher.verifyNoGestureInProgress() }
+    }
+
+    @Test
+    fun cancelWithoutDown() {
+        expectError<IllegalStateException> {
+            partialGesture { sendCancel() }
+        }
+    }
+
+    @Test
+    fun cancelAfterUp() {
+        partialGesture { sendDown(downPosition1) }
+        partialGesture { sendUp() }
+        expectError<IllegalStateException> {
+            partialGesture { sendCancel() }
+        }
+    }
+
+    @Test
+    fun cancelAfterCancel() {
+        partialGesture { sendDown(downPosition1) }
+        partialGesture { sendCancel() }
+        expectError<IllegalStateException> {
+            partialGesture { sendCancel() }
         }
     }
 }

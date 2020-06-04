@@ -239,8 +239,8 @@ class NavControllerTest {
         } catch (e: IllegalArgumentException) {
             assertThat(e)
                 .hasMessageThat().contains(
-                    "navigation destination that matches request $deepLinkRequest is unknown to " +
-                            "this NavController"
+                    "Navigation destination that matches request $deepLinkRequest cannot be " +
+                            "found in the navigation graph ${navController.graph}"
                 )
         }
     }
@@ -945,6 +945,40 @@ class NavControllerTest {
 
         assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.second_test)
         assertThat(navigator.backStack.size).isEqualTo(2)
+
+        val returnedArgs = navigator.current.second
+        assertThat(returnedArgs?.getString(testKey)).isEqualTo(testValue)
+        assertThat(destinationListenerExecuted).isTrue()
+    }
+
+    @Test
+    fun testNavigateOptionSingleTopReplaceNullArgs() {
+        val navController = createNavController()
+        navController.setGraph(R.navigation.nav_simple)
+        assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.start_test)
+        val navigator = navController.navigatorProvider.getNavigator(TestNavigator::class.java)
+        assertThat(navigator.backStack.size).isEqualTo(1)
+        assertThat(navigator.current.second).isNull()
+
+        val args = Bundle()
+        val testKey = "testKey"
+        val testValue = "testValue"
+        args.putString(testKey, testValue)
+
+        var destinationListenerExecuted = false
+
+        navController.navigate(R.id.start_test, args, navOptions {
+            launchSingleTop = true
+        })
+
+        navController.addOnDestinationChangedListener { _, destination, arguments ->
+            destinationListenerExecuted = true
+            assertThat(destination.id).isEqualTo(R.id.start_test)
+            assertThat(arguments?.getString(testKey)).isEqualTo(testValue)
+        }
+
+        assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.start_test)
+        assertThat(navigator.backStack.size).isEqualTo(1)
 
         val returnedArgs = navigator.current.second
         assertThat(returnedArgs?.getString(testKey)).isEqualTo(testValue)
