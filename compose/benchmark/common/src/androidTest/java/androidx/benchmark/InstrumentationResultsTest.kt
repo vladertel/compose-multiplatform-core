@@ -24,18 +24,27 @@ import org.junit.runners.JUnit4
 
 @SmallTest
 @RunWith(JUnit4::class)
-class ProfilingModeTest {
+class InstrumentationResultsTest {
     @Test
-    fun getFromString() {
-        assertEquals(ProfilingMode.None, ProfilingMode.getFromString("none"))
-        assertEquals(ProfilingMode.None, ProfilingMode.getFromString("None"))
-        assertEquals(ProfilingMode.None, ProfilingMode.getFromString("nOne"))
+    fun ideSummary_alignment() {
+        val summary1 = InstrumentationResults.ideSummaryLine("foo", 1000, 100)
+        val summary2 = InstrumentationResults.ideSummaryLine("fooBarLongerKey", 10000, 0)
 
-        for (mode in ProfilingMode.values()) {
-            assertEquals(mode, ProfilingMode.getFromString(mode.toString()))
-        }
+        assertEquals(
+            summary1.indexOf("foo"),
+            summary2.indexOf("foo")
+        )
+    }
 
-        assertEquals(null, ProfilingMode.getFromString("methob"))
-        assertEquals(null, ProfilingMode.getFromString("secretmode"))
+    @Test
+    fun ideSummary_allocs() {
+        assertEquals(
+            "        1,000 ns    foo",
+            InstrumentationResults.ideSummaryLine("foo", 1000, null)
+        )
+        assertEquals(
+            "        1,000 ns          10 allocs    foo",
+            InstrumentationResults.ideSummaryLine("foo", 1000, 10)
+        )
     }
 }
