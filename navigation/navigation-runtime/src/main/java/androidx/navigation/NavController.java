@@ -1291,7 +1291,8 @@ public class NavController {
         }
         if (lastFromBackStack == null) {
             throw new IllegalArgumentException("No destination with ID " + destinationId
-                    + " is on the NavController's back stack");
+                    + " is on the NavController's back stack. The current destination is "
+                    + getCurrentDestination());
         }
         return lastFromBackStack;
     }
