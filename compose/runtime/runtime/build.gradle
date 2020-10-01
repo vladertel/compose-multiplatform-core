@@ -65,6 +65,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
+        darwin()
+        js()
     }
 
     kotlin {
@@ -91,6 +93,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             commonTest.dependencies {
                 implementation(kotlin("test-junit"))
+            }
+            jvmTest.dependencies {
                 implementation(libs.kotlinCoroutinesTest)
             }
 
