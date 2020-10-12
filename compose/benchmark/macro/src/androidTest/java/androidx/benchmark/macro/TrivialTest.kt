@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Android Open Source Project
+ * Copyright 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,33 +14,18 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.junit4
+package androidx.benchmark.macro
 
-import androidx.test.filters.LargeTest
-import org.junit.Assert.assertTrue
-import org.junit.Rule
+import androidx.test.filters.MediumTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import java.util.concurrent.TimeUnit
 
-@LargeTest
+@MediumTest
 @RunWith(JUnit4::class)
-class BenchmarkRuleTest {
-    @get:Rule
-    val benchmarkRule = BenchmarkRule(enableReport = false)
-
+class TrivialTest {
     @Test
-    fun runWithTimingDisabled() {
-        benchmarkRule.measureRepeated {
-            runWithTimingDisabled {
-                Thread.sleep(5)
-            }
-        }
-        val min = benchmarkRule.getState().getMinTimeNanos()
-        assertTrue(
-            "minimum $min should be less than 1ms",
-            min < TimeUnit.MILLISECONDS.toNanos(1)
-        )
+    fun foo() {
+        BenchmarkClass()
     }
 }
