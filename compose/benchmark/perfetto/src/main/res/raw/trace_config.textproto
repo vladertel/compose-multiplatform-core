@@ -68,12 +68,29 @@ data_sources {
 
       # New (userspace) LMK
       atrace_apps: "lmkd"
-      # Added for userspace annotation in the platform scenario test app
-      atrace_apps: "android.platform.test.scenario"
 
+      # Trace all apps for now
+      atrace_apps: "*"
+
+      # atrace categories currently come from default systrace tags
       atrace_categories: "am"
-      atrace_categories: "dalvik"
       atrace_categories: "binder_driver"
+      atrace_categories: "camera"
+      atrace_categories: "dalvik"
+      atrace_categories: "freq"
+      atrace_categories: "gfx"
+      atrace_categories: "hal"
+      atrace_categories: "idle"
+      atrace_categories: "input"
+      atrace_categories: "memory"
+      atrace_categories: "memreclaim"
+      atrace_categories: "res"
+      atrace_categories: "sched"
+      atrace_categories: "sync"
+      atrace_categories: "view"
+      atrace_categories: "webview"
+      atrace_categories: "wm"
+      atrace_categories: "workq"
     }
   }
 }
