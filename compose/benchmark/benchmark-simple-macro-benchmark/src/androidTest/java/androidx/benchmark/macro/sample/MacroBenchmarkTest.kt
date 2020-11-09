@@ -16,7 +16,6 @@
 
 package androidx.benchmark.macro.sample
 
-import android.content.Intent
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.CpuUsageMetric
 import androidx.benchmark.macro.MacrobenchmarkConfig
@@ -47,9 +46,6 @@ class MacroBenchmarkTest {
         )
     ) {
         pressHome()
-        launchPackageAndWait { launchIntent ->
-            // Clear out any previous instances
-            launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
+        launchPackageAndWait()
     }
 }
