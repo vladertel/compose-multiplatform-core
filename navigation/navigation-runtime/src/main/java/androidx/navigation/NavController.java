@@ -1101,7 +1101,7 @@ public class NavController {
             launchSingleTop = true;
             NavBackStackEntry singleTopBackStackEntry = mBackStack.peekLast();
             if (singleTopBackStackEntry != null) {
-                singleTopBackStackEntry.replaceArguments(args);
+                singleTopBackStackEntry.replaceArguments(finalArgs);
             }
         }
         updateOnBackPressedCallbackEnabled();
