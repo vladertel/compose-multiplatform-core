@@ -372,7 +372,11 @@ public class NavController {
                             NavDestination.DeepLinkMatch matchingDeepLink = mGraph.matchDeepLink(
                                     new NavDeepLinkRequest(mActivity.getIntent()));
                             if (matchingDeepLink != null) {
-                                args.putAll(matchingDeepLink.getMatchingArgs());
+                                Bundle destinationArgs =
+                                        matchingDeepLink.getDestination().addInDefaultArgs(
+                                                matchingDeepLink.getMatchingArgs()
+                                        );
+                                args.putAll(destinationArgs);
                             }
                         }
                     }
@@ -673,8 +677,11 @@ public class NavController {
             NavDestination.DeepLinkMatch matchingDeepLink =
                     mGraph.matchDeepLink(new NavDeepLinkRequest(intent));
             if (matchingDeepLink != null) {
-                deepLink = matchingDeepLink.getDestination().buildDeepLinkIds();
-                bundle.putAll(matchingDeepLink.getMatchingArgs());
+                NavDestination destination = matchingDeepLink.getDestination();
+                deepLink = destination.buildDeepLinkIds();
+                Bundle destinationArgs =
+                        destination.addInDefaultArgs(matchingDeepLink.getMatchingArgs());
+                bundle.putAll(destinationArgs);
             }
         }
         if (deepLink == null || deepLink.length == 0) {
@@ -1024,7 +1031,8 @@ public class NavController {
         NavDestination.DeepLinkMatch deepLinkMatch =
                 mGraph.matchDeepLink(request);
         if (deepLinkMatch != null) {
-            Bundle args = deepLinkMatch.getMatchingArgs();
+            NavDestination destination = deepLinkMatch.getDestination();
+            Bundle args = destination.addInDefaultArgs(deepLinkMatch.getMatchingArgs());
             NavDestination node = deepLinkMatch.getDestination();
             navigate(node, args, navOptions, navigatorExtras);
         } else {
