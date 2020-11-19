@@ -259,6 +259,23 @@ class NavControllerTest {
     }
 
     @Test
+    fun testNavigateViaDeepLinkDefaultArgs() {
+        val navController = createNavController()
+        navController.setGraph(R.navigation.nav_simple)
+        val navigator = navController.navigatorProvider.getNavigator(TestNavigator::class.java)
+        val deepLink = Uri.parse("android-app://androidx.navigation.test/test")
+
+        navController.navigate(deepLink)
+
+        val destination = navController.currentDestination
+        assertThat(destination?.id ?: 0).isEqualTo(R.id.second_test)
+        assertThat(navigator.backStack.size).isEqualTo(2)
+        assertThat(destination?.arguments?.get("defaultArg")?.defaultValue.toString())
+            .isEqualTo("defaultValue")
+    }
+
+    @UiThreadTest
+    @Test
     fun testNavigateViaDeepLinkAction() {
         val navController = createNavController()
         navController.setGraph(R.navigation.nav_simple)
@@ -894,6 +911,33 @@ class NavControllerTest {
     }
 
     @Test
+    fun testNavigateThenNavigateUpWithDefaultArgs() {
+        val navController = createNavController()
+        navController.setGraph(R.navigation.nav_simple)
+        val navigator = navController.navigatorProvider.getNavigator(TestNavigator::class.java)
+        assertEquals(R.id.start_test, navController.currentDestination?.id ?: 0)
+        assertEquals(1, navigator.backStack.size)
+
+        navController.navigate(R.id.second_test)
+        assertEquals(R.id.second_test, navController.currentDestination?.id ?: 0)
+        assertEquals(2, navigator.backStack.size)
+
+        navController.navigate(R.id.start_test_with_default_arg)
+        assertEquals(R.id.start_test_with_default_arg, navController.currentDestination?.id ?: 0)
+        assertEquals(3, navigator.backStack.size)
+
+        // This should function identically to popBackStack()
+        val success = navController.navigateUp()
+        assertThat(success).isTrue()
+        val destination = navController.currentDestination
+        assertEquals(R.id.second_test, destination?.id ?: 0)
+        assertEquals(2, navigator.backStack.size)
+        assertThat(destination?.arguments?.get("defaultArg")?.defaultValue.toString())
+            .isEqualTo("defaultValue")
+    }
+
+    @UiThreadTest
+    @Test
     fun testNavigateViaAction() {
         val navController = createNavController()
         navController.setGraph(R.navigation.nav_simple)
@@ -1184,6 +1228,30 @@ class NavControllerTest {
         intent!!.writeToParcel(p, 0)
     }
 
+    @Test
+    fun testDeepLinkIntentWithDefaultArgs() {
+        val navController = createNavController()
+        navController.setGraph(R.navigation.nav_simple)
+
+        val taskStackBuilder = navController.createDeepLink()
+            .setDestination(R.id.second_test)
+            .createTaskStackBuilder()
+
+        val intent = taskStackBuilder.editIntentAt(0)
+        assertNotNull(intent)
+        navController.handleDeepLink(intent)
+
+        // The original Intent should be untouched and safely writable to a Parcel
+        val p = Parcel.obtain()
+        intent!!.writeToParcel(p, 0)
+
+        val destination = navController.currentDestination
+        assertEquals(R.id.second_test, destination?.id ?: 0)
+        assertThat(destination?.arguments?.get("defaultArg")?.defaultValue.toString())
+            .isEqualTo("defaultValue")
+    }
+
+    @UiThreadTest
     @Test
     fun testHandleDeepLinkValid() {
         val navController = createNavController()
