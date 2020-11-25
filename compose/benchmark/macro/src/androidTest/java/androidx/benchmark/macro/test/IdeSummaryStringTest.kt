@@ -14,35 +14,44 @@
  * limitations under the License.
  */
 
-package androidx.benchmark
+package androidx.benchmark.macro.test
 
+import androidx.benchmark.Stats
+import androidx.benchmark.macro.ideSummaryString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@SmallTest
 @RunWith(AndroidJUnit4::class)
-class MetricNameUtilsTest {
+@SmallTest
+class IdeSummaryStringTest {
     @Test
-    fun toSnakeCase() {
-        assertEquals("noop", "noop".toSnakeCase())
-        assertEquals("camel_case", "camelCase".toSnakeCase())
-        assertEquals("time_ns", "timeNs".toSnakeCase())
-        assertEquals("a_ba_ba_b", "aBaBaB".toSnakeCase())
-        assertEquals("frame_time_90th_percentile_ms", "frameTime90thPercentileMs".toSnakeCase())
+    fun minimalSample() {
+        val stats = Stats(longArrayOf(0, 1, 2), "Metric")
+        assertEquals(
+            """
+                |foo
+                |  Metric   min 0,   median 1,   max 2
+                |
+            """.trimMargin(),
+            ideSummaryString("foo", listOf(stats))
+        )
     }
 
     @Test
-    fun toOutputMetricName() {
-        assertEquals("noop", "noop".toOutputMetricName())
-        assertEquals("camel_case", "camelCase".toOutputMetricName())
-        assertEquals("time_nanos", "timeNs".toOutputMetricName())
-        assertEquals("a_ba_ba_b", "aBaBaB".toOutputMetricName())
+    fun complexSample() {
+        val metric1 = Stats(longArrayOf(0, 1, 2), "Metric1")
+        val metric2 = Stats(longArrayOf(0, 111, 222), "Metric2")
         assertEquals(
-            "frame_time_90th_percentile_millis",
-            "frameTime90thPercentileMs".toOutputMetricName()
+            """
+                |foo
+                |  Metric1   min   0,   median   1,   max   2
+                |  Metric2   min   0,   median 111,   max 222
+                |
+            """.trimMargin(),
+            ideSummaryString("foo", listOf(metric1, metric2))
         )
     }
 }
