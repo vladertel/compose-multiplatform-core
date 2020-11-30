@@ -13,16 +13,20 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="androidx.benchmark.integration.macrobenchmark.target">
 
     <application
+        android:label="Jetpack Benchmark Macrobenchmark Target"
         android:allowBackup="false"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat">
+        android:theme="@style/Theme.AppCompat"
+        tools:ignore="MissingApplicationIcon">
 
         <!--
-        The activity needs to be exported so the Macro Benchmark Sample can discover activities
+        Activities need to be exported so the macrobenchmark can discover them
         under the new package visibility changes for Android 11.
          -->
         <activity
