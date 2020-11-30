@@ -26,7 +26,7 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
-class TrivialStartupBenchmark(private val startupMode: StartupMode) {
+class SmallListStartupBenchmark(private val startupMode: StartupMode) {
     @get:Rule
     val benchmarkRule = MacrobenchmarkRule()
 
@@ -35,14 +35,15 @@ class TrivialStartupBenchmark(private val startupMode: StartupMode) {
         profileCompiled = true,
         startupMode = startupMode
     ) {
-        action = "androidx.benchmark.integration.macrobenchmark.target.TRIVIAL_STARTUP_ACTIVITY"
+        action = "androidx.benchmark.integration.macrobenchmark.target.RECYCLER_VIEW"
+        putExtra("ITEM_COUNT", 5)
     }
 
     companion object {
         @Parameterized.Parameters(name = "mode={0}")
         @JvmStatic
         fun parameters(): List<Array<Any>> {
-            return listOf(StartupMode.COLD, StartupMode.WARM, StartupMode.HOT)
+            return listOf(StartupMode.COLD, StartupMode.WARM)
                 .map { arrayOf(it) }
         }
     }
