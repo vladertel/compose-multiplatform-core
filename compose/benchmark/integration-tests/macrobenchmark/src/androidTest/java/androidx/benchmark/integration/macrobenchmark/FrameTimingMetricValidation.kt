@@ -18,8 +18,7 @@ package androidx.benchmark.integration.macrobenchmark
 
 import android.content.Intent
 import androidx.benchmark.macro.CompilationMode
-import androidx.benchmark.macro.JankMetric
-import androidx.benchmark.macro.MacrobenchmarkConfig
+import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.MacrobenchmarkRule
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
@@ -36,7 +35,7 @@ import org.junit.runners.Parameterized
 @LargeTest
 @SdkSuppress(minSdkVersion = 29)
 @RunWith(Parameterized::class)
-class JankMetricValidation(
+class FrameTimingMetricValidation(
     private val compilationMode: CompilationMode
 ) {
     @get:Rule
@@ -52,15 +51,11 @@ class JankMetricValidation(
 
     @Test
     fun start() {
-        val config = MacrobenchmarkConfig(
-            packageName = PACKAGE_NAME,
-            metrics = listOf(JankMetric()),
-            compilationMode = compilationMode,
-            iterations = 10
-        )
-
         benchmarkRule.measureRepeated(
-            config,
+            packageName = PACKAGE_NAME,
+            metrics = listOf(FrameTimingMetric()),
+            compilationMode = compilationMode,
+            iterations = 10,
             setupBlock = {
                 val intent = Intent()
                 intent.action = ACTION
