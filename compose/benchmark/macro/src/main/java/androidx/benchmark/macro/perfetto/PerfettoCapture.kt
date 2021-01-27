@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.perfetto
+package androidx.benchmark.macro.perfetto
 
+import android.os.Environment
 import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
+import androidx.benchmark.macro.R
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 
@@ -78,5 +80,21 @@ class PerfettoCapture {
             // TODO: move internal failures to be exceptions
             throw IllegalStateException("Unable to store perfetto trace")
         }
+    }
+
+    /*
+     * Get path for an file to be written to additionalTestOutputDir
+     *
+     * NOTE: this method of getting additionalTestOutputDir duplicates behavior in
+     *androidx.benchmark.Arguments`, and should be unified at some point.
+     */
+    fun destinationPath(traceName: String): String {
+        val additionalTestOutputDir = InstrumentationRegistry.getArguments()
+            .getString("additionalTestOutputDir")
+
+        @Suppress("DEPRECATION") // Legacy code path for versions of agp older than 3.6
+        val testOutputDir = additionalTestOutputDir?.let { File(it) }
+            ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        return File(testOutputDir, traceName).absolutePath
     }
 }

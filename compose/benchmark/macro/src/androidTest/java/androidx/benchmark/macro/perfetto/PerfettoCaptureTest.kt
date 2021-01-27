@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.perfetto
+package androidx.benchmark.macro.perfetto
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.testutils.verifyWithPolling
 import androidx.tracing.Trace
 import androidx.tracing.trace
 import org.junit.After
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -67,27 +67,9 @@ class PerfettoCaptureTest {
     }
 }
 
-@Suppress("SameParameterValue")
-private fun verifyWithPoll(
-    message: String,
-    periodMs: Long,
-    timeoutMs: Long,
-    tryBlock: () -> Boolean
-) {
-    var totalDurationMs = 0L
-    while (!tryBlock()) {
-        Thread.sleep(periodMs)
-
-        totalDurationMs += periodMs
-        if (totalDurationMs > timeoutMs) {
-            fail(message)
-        }
-    }
-}
-
 fun verifyTraceEnable(enabled: Boolean) {
     // We poll here, since we may need to wait for enable flags to propagate to apps
-    verifyWithPoll(
+    verifyWithPolling(
         "Timeout waiting for Trace.isEnabled == $enabled",
         periodMs = 50,
         timeoutMs = 500

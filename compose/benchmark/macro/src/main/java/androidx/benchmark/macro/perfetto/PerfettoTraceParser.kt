@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.perfetto
+package androidx.benchmark.macro.perfetto
 
 import android.content.Context
 import android.os.Build
@@ -27,7 +27,7 @@ import java.io.File
  * Enables parsing perfetto traces on-device on Q+ devices.
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-@RequiresApi(21)
+@RequiresApi(29)
 class PerfettoTraceParser {
 
     /**
