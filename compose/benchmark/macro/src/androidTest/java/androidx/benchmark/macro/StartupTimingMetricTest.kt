@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.macro.test
+package androidx.benchmark.macro
 
 import android.content.Intent
 import android.os.Build
-import androidx.benchmark.macro.MacrobenchmarkConfig
-import androidx.benchmark.macro.MacrobenchmarkScope
-import androidx.benchmark.macro.PerfettoCaptureWrapper
-import androidx.benchmark.macro.StartupTimingMetric
+import androidx.benchmark.macro.perfetto.PerfettoCaptureWrapper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.perfetto
+package androidx.benchmark.macro.junit4
 
 import android.os.Build
-import android.os.Bundle
-import android.os.Environment
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.annotation.RestrictTo
-import androidx.test.platform.app.InstrumentationRegistry
+import androidx.benchmark.InstrumentationResults
+import androidx.benchmark.macro.perfetto.PerfettoCapture
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
-import java.io.File
 
 /**
  * Add this rule to record a Perfetto trace for each test on Q+ devices.
@@ -37,7 +34,7 @@ import java.io.File
  * When invoked locally with Gradle, file will be copied to host path like the following:
  *
  * ```
- * out/androidx/benchmark/benchmark-perfetto/build/outputs/connected_android_test_additional_output/debugAndroidTest/connected/<deviceName>/androidx.mypackage.TestClass_testMethod.trace
+ * out/androidx/benchmark/benchmark-macro/build/outputs/connected_android_test_additional_output/debugAndroidTest/connected/<deviceName>/androidx.mypackage.TestClass_testMethod.perfetto-trace
  * ```
  *
  * Note: if run from Studio, the file must be `adb pull`-ed manually, e.g.:
@@ -76,45 +73,11 @@ internal fun PerfettoCapture.recordAndReportFile(traceName: String, block: () ->
         Log.d(PerfettoRule.TAG, "Recording perfetto trace $traceName")
         start()
         block()
-        val dst = destinationPath(traceName)
-        stop(dst.absolutePath)
-        Log.d(PerfettoRule.TAG, "Finished recording to ${dst.absolutePath}")
-        reportAdditionalFileToCopy("perfetto_trace", dst.absolutePath)
+        val destinationPath = destinationPath(traceName)
+        stop(destinationPath)
+        Log.d(PerfettoRule.TAG, "Finished recording to $destinationPath")
+        InstrumentationResults.reportAdditionalFileToCopy("perfetto_trace", destinationPath)
     } finally {
         cancel()
     }
-}
-
-/*
-   NOTE: this method of getting additionalTestOutputDir duplicates behavior in
-   androidx.benchmark.Arguments`, and should be unified at some point.
-*/
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-fun destinationPath(traceName: String): File {
-    val additionalTestOutputDir = InstrumentationRegistry.getArguments()
-        .getString("additionalTestOutputDir")
-
-    @Suppress("DEPRECATION") // Legacy code path for versions of agp older than 3.6
-    val testOutputDir = additionalTestOutputDir?.let { File(it) }
-        ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-    return File(testOutputDir, traceName)
-}
-
-/**
- * Report additional file to be copied.
- *
- * Note that this is a temporary reimplementation of
- * `InstrumentationResults.reportAdditionalFileToCopy`, and should be unified at some point.
- */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-fun reportAdditionalFileToCopy(
-    @Suppress("SameParameterValue") key: String,
-    absoluteFilePath: String
-) {
-    val bundle = Bundle().also {
-        it.putString("additionalTestOutputFile_$key", absoluteFilePath)
-    }
-    InstrumentationRegistry
-        .getInstrumentation()
-        .sendStatus(2, bundle)
 }

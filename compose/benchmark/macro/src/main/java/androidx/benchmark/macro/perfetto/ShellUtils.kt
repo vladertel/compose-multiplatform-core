@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.perfetto
+package androidx.benchmark.macro.perfetto
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice

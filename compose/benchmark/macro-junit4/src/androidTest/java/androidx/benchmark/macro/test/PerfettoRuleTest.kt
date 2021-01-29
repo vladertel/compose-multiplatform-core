@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.perfetto
+package androidx.benchmark.macro.test
 
 import android.os.Build
+import androidx.benchmark.macro.junit4.PerfettoRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SmallTest
+import androidx.testutils.verifyWithPolling
+import androidx.tracing.Trace
 import androidx.tracing.trace
 import org.junit.Rule
 import org.junit.Test
@@ -50,5 +53,16 @@ class PerfettoRuleControlTest {
     @Test
     fun tracingNotEnabled() {
         verifyTraceEnable(false)
+    }
+}
+
+private fun verifyTraceEnable(enabled: Boolean) {
+    // We poll here, since we may need to wait for enable flags to propagate to apps
+    verifyWithPolling(
+        "Timeout waiting for Trace.isEnabled == $enabled",
+        periodMs = 50,
+        timeoutMs = 500
+    ) {
+        Trace.isEnabled() == enabled
     }
 }

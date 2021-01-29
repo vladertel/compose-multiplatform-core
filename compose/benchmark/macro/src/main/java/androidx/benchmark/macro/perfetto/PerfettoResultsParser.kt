@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.perfetto
+package androidx.benchmark.macro.perfetto
 
 import org.json.JSONArray
 import org.json.JSONObject

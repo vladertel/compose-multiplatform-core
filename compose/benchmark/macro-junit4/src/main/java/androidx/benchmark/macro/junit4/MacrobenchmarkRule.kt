@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
-package androidx.benchmark.macro
+package androidx.benchmark.macro.junit4
 
 import androidx.annotation.IntRange
+import androidx.benchmark.macro.CompilationMode
+import androidx.benchmark.macro.MacrobenchmarkConfig
+import androidx.benchmark.macro.MacrobenchmarkScope
+import androidx.benchmark.macro.Metric
+import androidx.benchmark.macro.StartupMode
+import androidx.benchmark.macro.macrobenchmarkWithStartupMode
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
@@ -33,7 +39,7 @@ class MacrobenchmarkRule : TestRule {
      * @param packageName Package name of the app being measured.
      * @param metrics List of metrics to measure.
      * @param compilationMode Mode of compilation used before capturing measurement, such as
-     * [SPEED_PROFILE], which performs
+     * [CompilationMode.SpeedProfile].
      * @param startupMode Optional mode to force app launches performed with
      * [MacrobenchmarkScope.launchIntentAndWait] (and similar variants) to be of the assigned
      * type. For example, `COLD` launches kill the process before the measureBlock, to ensure
