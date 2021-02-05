@@ -86,9 +86,7 @@ import androidx.compose.ui.input.key.plus
 import androidx.compose.ui.input.key.shortcuts
 import androidx.compose.ui.input.pointer.pointerMoveFilter
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.imageResource
-import androidx.compose.ui.res.svgResource
-import androidx.compose.ui.res.vectorXmlResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
@@ -136,7 +134,7 @@ private fun App() {
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Image(
-                                svgResource("androidx/compose/desktop/example/star.svg"),
+                                painterResource("androidx/compose/desktop/example/star.svg"),
                                 contentDescription = "Star"
                             )
                             Text(title)
@@ -470,13 +468,13 @@ private fun ScrollableContent(scrollState: ScrollState) {
 
         Row {
             Image(
-                imageResource("androidx/compose/desktop/example/circus.jpg"),
+                painterResource("androidx/compose/desktop/example/circus.jpg"),
                 "Localized description",
                 Modifier.size(200.dp)
             )
 
             Icon(
-                vectorXmlResource("androidx/compose/desktop/example/ic_baseline_deck_24.xml"),
+                painterResource("androidx/compose/desktop/example/ic_baseline_deck_24.xml"),
                 "Localized description",
                 Modifier.size(100.dp).align(Alignment.CenterVertically),
                 tint = Color.Blue.copy(alpha = 0.5f)
