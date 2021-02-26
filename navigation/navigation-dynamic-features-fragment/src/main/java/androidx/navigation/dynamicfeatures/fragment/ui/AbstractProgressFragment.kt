@@ -130,7 +130,7 @@ abstract class AbstractProgressFragment : Fragment {
                         @Suppress("DEPRECATION")
                         // TODO replace once PlayCore ships with code landed in b/145276704.
                         startIntentSenderForResult(
-                            sessionState.resolutionIntent().intentSender,
+                            sessionState.resolutionIntent()?.intentSender,
                             INSTALL_REQUEST_CODE, null, 0, 0, 0, null
                         )
                     } catch (e: IntentSender.SendIntentException) {
