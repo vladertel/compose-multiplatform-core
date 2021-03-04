@@ -16,58 +16,23 @@
 
 package androidx.compose.ui.platform
 
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeysSet
-import androidx.compose.ui.input.key.ShortcutsInstance
-import androidx.compose.ui.input.key.shortcuts
 
 /**
  * Window-scoped keyboard handling.
- *
- * @see [shortcuts] to setup event handlers based on the element that is in focus
  */
 class Keyboard {
-    private val shortcutsInstance = lazy {
-        ShortcutsInstance()
-    }
+    /**
+     * Callback is to be called on very top of [androidx.compose.ui.input.key.KeyInputModifier]s
+     * hierarchy.
+     * It's called only for unconsumed [KeyEvent]s by components down in the hierarchy.
+     */
+    var onKeyEvent: ((KeyEvent) -> Boolean)? = null
 
     /**
-     * Set a callback for [KeysSet]. If callback for the same [KeysSet] already exists, it
-     * overrides it.
-     *
-     * @param keysSet: [KeysSet] instance to react
-     * @param callback: Called when all keys from keysSet are pressed
+     * Callback is to be called on very top of [androidx.compose.ui.input.key.KeyInputModifier]s
+     * hierarchy.
+     * It's called for every [KeyEvent] in the window and gives a chance to intercept them.
      */
-    fun setShortcut(keysSet: KeysSet, callback: () -> Unit) {
-        shortcutsInstance.value.setHandler(keysSet, callback)
-    }
-
-    /**
-     * Set a callback for [Key]. If callback for the same [Key] already exists, it
-     * overrides it.
-     *
-     * @param key: [Key] instance to react
-     * @param callback: Called when all keys from keysSet are pressed
-     */
-    fun setShortcut(key: Key, callback: () -> Unit) {
-        shortcutsInstance.value.setHandler(KeysSet(key), callback)
-    }
-
-    /**
-     * Remove a callback for [KeysSet]. If no such callback it's noop
-     *
-     * @param keysSet: [KeysSet] instance
-     */
-    fun removeShortcut(keysSet: KeysSet) {
-        shortcutsInstance.value.removeHandler(keysSet)
-    }
-
-    internal fun processKeyInput(keyEvent: KeyEvent): Boolean {
-        return if (shortcutsInstance.isInitialized()) {
-            shortcutsInstance.value.process(keyEvent)
-        } else {
-            false
-        }
-    }
+    var onPreviewKeyEvent: ((KeyEvent) -> Boolean)? = null
 }
