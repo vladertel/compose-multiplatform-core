@@ -128,11 +128,21 @@ internal class DesktopOwner(
         onPreviewKeyEvent = null
     )
 
+    private val keyboardModifier = KeyInputModifier(
+        onKeyEvent = {
+            keyboard?.onKeyEvent?.let { clb -> clb(it) } ?: false
+        },
+        onPreviewKeyEvent = {
+            keyboard?.onPreviewKeyEvent?.let { clb -> clb(it) } ?: false
+        }
+    )
+
     override val root = LayoutNode().also {
         it.measurePolicy = RootMeasurePolicy
         it.modifier = semanticsModifier
             .then(_focusManager.modifier)
             .then(keyInputModifier)
+            .then(keyboardModifier)
             .then(
                 KeyInputModifier(
                     onKeyEvent = onKeyEvent,
@@ -196,8 +206,7 @@ internal class DesktopOwner(
                 container.platformInputService.charKeyPressed = false
         }
 
-        return keyInputModifier.processKeyInput(keyEvent) ||
-            keyboard?.processKeyInput(keyEvent) ?: false
+        return keyInputModifier.processKeyInput(keyEvent)
     }
 
     override var showLayoutBounds = false
