@@ -82,8 +82,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.plus
-import androidx.compose.ui.input.key.shortcuts
 import androidx.compose.ui.input.pointer.pointerMoveFilter
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.imageResource
@@ -105,6 +103,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 
 private const val title = "Desktop Compose Elements"
 
@@ -122,7 +124,21 @@ val italicFont = try {
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     Window(title, IntSize(1024, 850)) {
-        App()
+        var cleared by remember { mutableStateOf(false) }
+        LocalAppWindow.current.keyboard.onKeyEvent = {
+            if (it.isMetaPressed && it.isShiftPressed && it.key == Key.C) {
+                cleared = true
+                true
+            } else {
+                false
+            }
+        }
+
+        if (cleared) {
+            Text("The App was cleared!")
+        } else {
+            App()
+        }
     }
 }
 
@@ -402,9 +418,14 @@ private fun ScrollableContent(scrollState: ScrollState) {
                 Button(
                     modifier = Modifier.padding(4.dp),
                     onClick = {
-                        AppWindow(size = IntSize(400, 200)).also {
-                            it.keyboard.setShortcut(Key.Escape) {
-                                it.close()
+                        AppWindow(size = IntSize(400, 200)).also { window ->
+                            window.keyboard.onPreviewKeyEvent = {
+                                if (it.key == Key.Escape) {
+                                    window.close()
+                                    true
+                                } else {
+                                    false
+                                }
                             }
                         }.show {
                             Animations(isCircularEnabled = animation.value)
@@ -440,12 +461,17 @@ private fun ScrollableContent(scrollState: ScrollState) {
                 Text(text = "Important input")
             },
             maxLines = 1,
-            modifier = Modifier.shortcuts {
-                on(Key.MetaLeft + Key.ShiftLeft + Key.Enter) {
-                    text.value = "Cleared with shift!"
-                }
-                on(Key.MetaLeft + Key.Enter) {
-                    text.value = "Cleared!"
+            modifier = Modifier.onPreviewKeyEvent {
+                when {
+                    (it.isMetaPressed && it.key == Key.Enter) -> {
+                        if (it.isShiftPressed) {
+                            text.value = "Cleared with shift!"
+                        } else {
+                            text.value = "Cleared!"
+                        }
+                        true
+                    }
+                    else -> false
                 }
             }.focusOrder(focusItem1) {
                 next = focusItem2
