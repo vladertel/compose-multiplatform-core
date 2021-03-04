@@ -61,7 +61,7 @@ import androidx.recyclerview.widget.RecyclerView;
  *
  * <p>To build a hierarchy from code, use
  * {@link PreferenceManager#createPreferenceScreen(Context)} to create the root
- * {@link PreferenceScreen}. Once you have added other {@link Preference}s to this root scree
+ * {@link PreferenceScreen}. Once you have added other {@link Preference}s to this root screen
  * with {@link PreferenceScreen#addPreference(Preference)}, you then need to set the screen as
  * the root screen in your hierarchy with {@link #setPreferenceScreen(PreferenceScreen)}.
  *
@@ -118,6 +118,7 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
     private int mLayoutResId = R.layout.preference_list_fragment;
     private Runnable mSelectPreferenceRunnable;
 
+    @SuppressWarnings("deprecation")
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -140,13 +141,13 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         final TypedValue tv = new TypedValue();
-        getActivity().getTheme().resolveAttribute(R.attr.preferenceTheme, tv, true);
+        getContext().getTheme().resolveAttribute(R.attr.preferenceTheme, tv, true);
         int theme = tv.resourceId;
         if (theme == 0) {
             // Fallback to default theme.
             theme = R.style.PreferenceThemeOverlay;
         }
-        getActivity().getTheme().applyStyle(theme, false);
+        getContext().getTheme().applyStyle(theme, false);
 
         mPreferenceManager = new PreferenceManager(getContext());
         mPreferenceManager.setOnNavigateToScreenListener(this);
@@ -402,6 +403,12 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
                 handled = ((OnPreferenceStartFragmentCallback) getCallbackFragment())
                         .onPreferenceStartFragment(this, preference);
             }
+            if (!handled && getContext() instanceof OnPreferenceStartFragmentCallback) {
+                handled = ((OnPreferenceStartFragmentCallback) getContext())
+                        .onPreferenceStartFragment(this, preference);
+            }
+            // Check the Activity as well in case getContext was overridden to return something
+            // other than the Activity.
             if (!handled && getActivity() instanceof OnPreferenceStartFragmentCallback) {
                 handled = ((OnPreferenceStartFragmentCallback) getActivity())
                         .onPreferenceStartFragment(this, preference);
@@ -413,8 +420,7 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
                                 + "implement this method so that you can configure the new "
                                 + "fragment that will be displayed, and set a transition between "
                                 + "the fragments.");
-                final FragmentManager fragmentManager = requireActivity()
-                        .getSupportFragmentManager();
+                final FragmentManager fragmentManager = getParentFragmentManager();
                 final Bundle args = preference.getExtras();
                 final Fragment fragment = fragmentManager.getFragmentFactory().instantiate(
                         requireActivity().getClassLoader(), preference.getFragment());
@@ -449,6 +455,12 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
             handled = ((OnPreferenceStartScreenCallback) getCallbackFragment())
                     .onPreferenceStartScreen(this, preferenceScreen);
         }
+        if (!handled && getContext() instanceof OnPreferenceStartScreenCallback) {
+            handled = ((OnPreferenceStartScreenCallback) getContext())
+                    .onPreferenceStartScreen(this, preferenceScreen);
+        }
+        // Check the Activity as well in case getContext was overridden to return something other
+        // than the Activity.
         if (!handled && getActivity() instanceof OnPreferenceStartScreenCallback) {
             ((OnPreferenceStartScreenCallback) getActivity())
                     .onPreferenceStartScreen(this, preferenceScreen);
@@ -583,6 +595,12 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
             handled = ((OnPreferenceDisplayDialogCallback) getCallbackFragment())
                     .onPreferenceDisplayDialog(this, preference);
         }
+        if (!handled && getContext() instanceof OnPreferenceDisplayDialogCallback) {
+            handled = ((OnPreferenceDisplayDialogCallback) getContext())
+                    .onPreferenceDisplayDialog(this, preference);
+        }
+        // Check the Activity as well in case getContext was overridden to return something other
+        // than the Activity.
         if (!handled && getActivity() instanceof OnPreferenceDisplayDialogCallback) {
             handled = ((OnPreferenceDisplayDialogCallback) getActivity())
                     .onPreferenceDisplayDialog(this, preference);
@@ -593,7 +611,7 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
         }
 
         // check if dialog is already showing
-        if (getFragmentManager().findFragmentByTag(DIALOG_FRAGMENT_TAG) != null) {
+        if (getParentFragmentManager().findFragmentByTag(DIALOG_FRAGMENT_TAG) != null) {
             return;
         }
 
@@ -612,7 +630,7 @@ public abstract class PreferenceFragmentCompat extends Fragment implements
                             + "displaying a custom dialog for this Preference.");
         }
         f.setTargetFragment(this, 0);
-        f.show(getFragmentManager(), DIALOG_FRAGMENT_TAG);
+        f.show(getParentFragmentManager(), DIALOG_FRAGMENT_TAG);
     }
 
     /**

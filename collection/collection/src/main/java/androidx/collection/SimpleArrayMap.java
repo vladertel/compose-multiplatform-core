@@ -575,17 +575,13 @@ public class SimpleArrayMap<K, V> {
     public V removeAt(int index) {
         final Object old = mArray[(index << 1) + 1];
         final int osize = mSize;
-        final int nsize;
         if (osize <= 1) {
             // Now empty.
             if (DEBUG) System.out.println(TAG + " remove: shrink from " + mHashes.length + " to 0");
-            freeArrays(mHashes, mArray, osize);
-            mHashes = ContainerHelpers.EMPTY_INTS;
-            mArray = ContainerHelpers.EMPTY_OBJECTS;
-            nsize = 0;
+            clear();
         } else {
-            nsize = osize - 1;
-            if (mHashes.length > (BASE_SIZE*2) && mSize < mHashes.length/3) {
+            final int nsize = osize - 1;
+            if (mHashes.length > (BASE_SIZE*2) && osize < mHashes.length/3) {
                 // Shrunk enough to reduce size of arrays.  We don't allow it to
                 // shrink smaller than (BASE_SIZE*2) to avoid flapping between
                 // that and BASE_SIZE.
@@ -624,11 +620,11 @@ public class SimpleArrayMap<K, V> {
                 mArray[nsize << 1] = null;
                 mArray[(nsize << 1) + 1] = null;
             }
+            if (CONCURRENT_MODIFICATION_EXCEPTIONS && osize != mSize) {
+                throw new ConcurrentModificationException();
+            }
+            mSize = nsize;
         }
-        if (CONCURRENT_MODIFICATION_EXCEPTIONS && osize != mSize) {
-            throw new ConcurrentModificationException();
-        }
-        mSize = nsize;
         return (V)old;
     }
 
@@ -687,13 +683,33 @@ public class SimpleArrayMap<K, V> {
         if (this == object) {
             return true;
         }
-        if (object instanceof SimpleArrayMap) {
-            SimpleArrayMap<?, ?> map = (SimpleArrayMap<?, ?>) object;
-            if (size() != map.size()) {
-                return false;
-            }
+        try {
+            if (object instanceof SimpleArrayMap) {
+                SimpleArrayMap<?, ?> map = (SimpleArrayMap<?, ?>) object;
+                if (size() != map.size()) {
+                    return false;
+                }
 
-            try {
+                for (int i=0; i<mSize; i++) {
+                    K key = keyAt(i);
+                    V mine = valueAt(i);
+                    // TODO use index-based ops for this
+                    Object theirs = map.get(key);
+                    if (mine == null) {
+                        if (theirs != null || !map.containsKey(key)) {
+                            return false;
+                        }
+                    } else if (!mine.equals(theirs)) {
+                        return false;
+                    }
+                }
+                return true;
+            } else if (object instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) object;
+                if (size() != map.size()) {
+                    return false;
+                }
+
                 for (int i=0; i<mSize; i++) {
                     K key = keyAt(i);
                     V mine = valueAt(i);
@@ -706,37 +722,10 @@ public class SimpleArrayMap<K, V> {
                         return false;
                     }
                 }
-            } catch (NullPointerException ignored) {
-                return false;
-            } catch (ClassCastException ignored) {
-                return false;
+                return true;
             }
-            return true;
-        } else if (object instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) object;
-            if (size() != map.size()) {
-                return false;
-            }
-
-            try {
-                for (int i=0; i<mSize; i++) {
-                    K key = keyAt(i);
-                    V mine = valueAt(i);
-                    Object theirs = map.get(key);
-                    if (mine == null) {
-                        if (theirs != null || !map.containsKey(key)) {
-                            return false;
-                        }
-                    } else if (!mine.equals(theirs)) {
-                        return false;
-                    }
-                }
-            } catch (NullPointerException ignored) {
-                return false;
-            } catch (ClassCastException ignored) {
-                return false;
-            }
-            return true;
+        } catch (NullPointerException ignored) {
+        } catch (ClassCastException ignored) {
         }
         return false;
     }

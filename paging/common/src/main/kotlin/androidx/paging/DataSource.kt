@@ -17,16 +17,14 @@
 package androidx.paging
 
 import androidx.annotation.AnyThread
-import androidx.annotation.RestrictTo
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.WorkerThread
 import androidx.arch.core.util.Function
-import androidx.paging.PagedSource.LoadResult.Page
-import androidx.paging.PagedSource.LoadResult.Page.Companion.COUNT_UNDEFINED
+import androidx.paging.PagingSource.LoadResult.Page.Companion.COUNT_UNDEFINED
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
-
-typealias OnInvalidated = () -> Unit
 
 /**
  * Base class for loading pages of snapshot data into a [PagedList].
@@ -35,7 +33,7 @@ typealias OnInvalidated = () -> Unit
  * it loads more data, but the data loaded cannot be updated. If the underlying data set is
  * modified, a new PagedList / DataSource pair must be created to represent the new data.
  *
- * <h4>Loading Pages</h4>
+ * ### Loading Pages
  *
  * PagedList queries data from its DataSource in response to loading hints. PagedListAdapter
  * calls [PagedList.loadAround] to load content as the user scrolls in a RecyclerView.
@@ -43,7 +41,7 @@ typealias OnInvalidated = () -> Unit
  * To control how and when a PagedList queries data from its DataSource, see
  * [PagedList.Config]. The Config object defines things like load sizes and prefetch distance.
  *
- * <h4>Updating Paged Data</h4>
+ * ### Updating Paged Data
  *
  * A PagedList / DataSource pair are a snapshot of the data set. A new pair of
  * PagedList / DataSource must be created if an update occurs, such as a reorder, insert, delete, or
@@ -70,7 +68,7 @@ typealias OnInvalidated = () -> Unit
  * copy changes, invalidate the previous DataSource, and a new one wrapping the new state of the
  * snapshot can be created.
  *
- * <h4>Implementing a DataSource</h4>
+ * ### Implementing a DataSource
  *
  * To implement, extend one of the subclasses: [PageKeyedDataSource], [ItemKeyedDataSource], or
  * [PositionalDataSource].
@@ -98,7 +96,7 @@ typealias OnInvalidated = () -> Unit
  * position in data set. Note - this is distinct from e.g. Room's `<Value> Value type
  * loaded by the DataSource.
  */
-abstract class DataSource<Key : Any, Value : Any>
+public abstract class DataSource<Key : Any, Value : Any>
 // Since we currently rely on implementation details of two implementations, prevent external
 // subclassing, except through exposed subclasses.
 internal constructor(internal val type: KeyType) {
@@ -107,10 +105,11 @@ internal constructor(internal val type: KeyType) {
     internal val onInvalidatedCallbacks = CopyOnWriteArrayList<InvalidatedCallback>()
 
     private val _invalid = AtomicBoolean(false)
+
     /**
      * @return `true` if the data source is invalid, and can no longer be queried for data.
      */
-    open val isInvalid
+    public open val isInvalid: Boolean
         @WorkerThread
         get() = _invalid.get()
 
@@ -136,7 +135,7 @@ internal constructor(internal val type: KeyType) {
      * @param Key Key identifying items in DataSource.
      * @param Value Type of items in the list loaded by the DataSources.
      */
-    abstract class Factory<Key : Any, Value : Any> {
+    public abstract class Factory<Key : Any, Value : Any> {
         /**
          * Create a [DataSource].
          *
@@ -150,8 +149,7 @@ internal constructor(internal val type: KeyType) {
          *
          * @return the new DataSource.
          */
-        @Suppress("KDocUnresolvedReference")
-        abstract fun create(): DataSource<Key, Value>
+        public abstract fun create(): DataSource<Key, Value>
 
         /**
          * Applies the given function to each value emitted by DataSources produced by this Factory.
@@ -167,8 +165,11 @@ internal constructor(internal val type: KeyType) {
          * @see DataSource.map
          * @see DataSource.mapByPage
          */
-        open fun <ToValue : Any> map(function: Function<Value, ToValue>): Factory<Key, ToValue> =
-            mapByPage(Function { list -> list.map { function.apply(it) } })
+        public open fun <ToValue : Any> map(
+            function: Function<Value, ToValue>
+        ): Factory<Key, ToValue> {
+            return mapByPage(Function { list -> list.map { function.apply(it) } })
+        }
 
         /**
          * Applies the given function to each value emitted by DataSources produced by this Factory.
@@ -186,8 +187,10 @@ internal constructor(internal val type: KeyType) {
          * @see DataSource.map
          * @see DataSource.mapByPage
          */
-        open fun <ToValue : Any> map(function: (Value) -> ToValue): Factory<Key, ToValue> =
-            mapByPage(Function { list -> list.map(function) })
+        @JvmSynthetic // hidden to preserve Java source compat with arch.core.util.Function variant
+        public open fun <ToValue : Any> map(function: (Value) -> ToValue): Factory<Key, ToValue> {
+            return mapByPage(Function { list -> list.map(function) })
+        }
 
         /**
          * Applies the given function to each value emitted by DataSources produced by this Factory.
@@ -203,7 +206,7 @@ internal constructor(internal val type: KeyType) {
          * @see DataSource.map
          * @see DataSource.mapByPage
          */
-        open fun <ToValue : Any> mapByPage(
+        public open fun <ToValue : Any> mapByPage(
             function: Function<List<Value>, List<ToValue>>
         ): Factory<Key, ToValue> = object : Factory<Key, ToValue>() {
             override fun create(): DataSource<Key, ToValue> =
@@ -226,17 +229,20 @@ internal constructor(internal val type: KeyType) {
          * @see DataSource.map
          * @see DataSource.mapByPage
          */
-        open fun <ToValue : Any> mapByPage(
+        @JvmSynthetic // hidden to preserve Java source compat with arch.core.util.Function variant
+        public open fun <ToValue : Any> mapByPage(
             function: (List<Value>) -> List<ToValue>
         ): Factory<Key, ToValue> = mapByPage(Function { function(it) })
 
-        /**
-         * @hide
-         */
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-        fun asPagedSourceFactory(): PagedSourceFactory<Key, Value> = {
-            LegacyPagedSource(create())
-        }
+        @JvmOverloads
+        public fun asPagingSourceFactory(
+            fetchDispatcher: CoroutineDispatcher = Dispatchers.IO
+        ): () -> PagingSource<Key, Value> = SuspendingPagingSourceFactory(
+            delegate = {
+                LegacyPagingSource(fetchDispatcher, create())
+            },
+            dispatcher = fetchDispatcher
+        )
     }
 
     /**
@@ -253,7 +259,7 @@ internal constructor(internal val type: KeyType) {
      * @see DataSource.Factory.map
      * @see DataSource.Factory.mapByPage
      */
-    open fun <ToValue : Any> mapByPage(
+    public open fun <ToValue : Any> mapByPage(
         function: Function<List<Value>, List<ToValue>>
     ): DataSource<Key, ToValue> = WrapperDataSource(this, function)
 
@@ -273,7 +279,8 @@ internal constructor(internal val type: KeyType) {
      * @see DataSource.Factory.map
      * @see DataSource.Factory.mapByPage
      */
-    open fun <ToValue : Any> mapByPage(
+    @JvmSynthetic // hidden to preserve Java source compat with arch.core.util.Function variant
+    public open fun <ToValue : Any> mapByPage(
         function: (List<Value>) -> List<ToValue>
     ): DataSource<Key, ToValue> = mapByPage(Function { function(it) })
 
@@ -291,8 +298,11 @@ internal constructor(internal val type: KeyType) {
      * @see DataSource.Factory.map
      * @see DataSource.Factory.mapByPage
      */
-    open fun <ToValue : Any> map(function: Function<Value, ToValue>): DataSource<Key, ToValue> =
-        mapByPage { list -> list.map { function.apply(it) } }
+    public open fun <ToValue : Any> map(
+        function: Function<Value, ToValue>
+    ): DataSource<Key, ToValue> {
+        return mapByPage { list -> list.map { function.apply(it) } }
+    }
 
     /**
      * Applies the given function to each value emitted by the DataSource.
@@ -310,7 +320,8 @@ internal constructor(internal val type: KeyType) {
      * @see DataSource.Factory.map
      *
      */
-    open fun <ToValue : Any> map(
+    @JvmSynthetic // hidden to preserve Java source compat with arch.core.util.Function variant
+    public open fun <ToValue : Any> map(
         function: (Value) -> ToValue
     ): DataSource<Key, ToValue> = map(Function { function(it) })
 
@@ -328,7 +339,7 @@ internal constructor(internal val type: KeyType) {
      * Used to signal when a [DataSource] a data source has become invalid, and that a new data
      * source is needed to continue loading data.
      */
-    interface InvalidatedCallback {
+    public fun interface InvalidatedCallback {
         /**
          * Called when the data backing the list has become invalid. This callback is typically used
          * to signal that a new data source is needed.
@@ -338,15 +349,7 @@ internal constructor(internal val type: KeyType) {
          * invalidate it.
          */
         @AnyThread
-        fun onInvalidated()
-    }
-
-    /**
-     * Wrapper for [OnInvalidated] which holds a reference to allow removal by referential equality
-     * of Kotlin functions within [removeInvalidatedCallback].
-     */
-    private class OnInvalidatedWrapper(val callback: OnInvalidated) : InvalidatedCallback {
-        override fun onInvalidated() = callback()
+        public fun onInvalidated()
     }
 
     /**
@@ -361,50 +364,20 @@ internal constructor(internal val type: KeyType) {
      * [DataSource].
      */
     @AnyThread
-    open fun addInvalidatedCallback(onInvalidatedCallback: InvalidatedCallback) {
+    @Suppress("RegistrationName")
+    public open fun addInvalidatedCallback(onInvalidatedCallback: InvalidatedCallback) {
         onInvalidatedCallbacks.add(onInvalidatedCallback)
     }
 
     /**
-     * Add a callback to invoke when the DataSource is first invalidated.
-     *
-     * Once invalidated, a data source will not become valid again.
-     *
-     * A data source will only invoke its callbacks once - the first time [invalidate] is called, on
-     * that thread.
-     *
-     * This is a redundant override of [addInvalidatedCallback], which accepts Kotlin functions.
-     *
-     * @param onInvalidatedCallback The callback, will be invoked on thread that invalidates the
-     * [DataSource].
-     */
-    @AnyThread
-    fun addInvalidatedCallback(onInvalidatedCallback: OnInvalidated) {
-        onInvalidatedCallbacks.add(OnInvalidatedWrapper(onInvalidatedCallback))
-    }
-
-    /**
      * Remove a previously added invalidate callback.
      *
      * @param onInvalidatedCallback The previously added callback.
      */
     @AnyThread
-    open fun removeInvalidatedCallback(onInvalidatedCallback: InvalidatedCallback) {
+    @Suppress("RegistrationName")
+    public open fun removeInvalidatedCallback(onInvalidatedCallback: InvalidatedCallback) {
         onInvalidatedCallbacks.remove(onInvalidatedCallback)
-    }
-
-    /**
-     * Remove a previously added invalidate callback.
-     *
-     * This is a redundant override of [removeInvalidatedCallback], which accepts Kotlin functions.
-     *
-     * @param onInvalidatedCallback The previously added callback.
-     */
-    @AnyThread
-    fun removeInvalidatedCallback(onInvalidatedCallback: OnInvalidated) {
-        onInvalidatedCallbacks.removeAll {
-            it is OnInvalidatedWrapper && it.callback === onInvalidatedCallback
-        }
     }
 
     /**
@@ -413,7 +386,7 @@ internal constructor(internal val type: KeyType) {
      * If invalidate has already been called, this method does nothing.
      */
     @AnyThread
-    open fun invalidate() {
+    public open fun invalidate() {
         if (_invalid.compareAndSet(false, true)) {
             onInvalidatedCallbacks.forEach { it.onInvalidated() }
         }
@@ -474,8 +447,8 @@ internal constructor(internal val type: KeyType) {
             if (itemsBefore == COUNT_UNDEFINED || itemsAfter == COUNT_UNDEFINED) {
                 throw IllegalStateException(
                     "Placeholders requested, but totalCount not provided. Please call the" +
-                            " three-parameter onResult method, or disable placeholders in the" +
-                            " PagedList.Config"
+                        " three-parameter onResult method, or disable placeholders in the" +
+                        " PagedList.Config"
                 )
             }
 
@@ -483,33 +456,21 @@ internal constructor(internal val type: KeyType) {
                 val totalCount = itemsBefore + data.size + itemsAfter
                 throw IllegalArgumentException(
                     "PositionalDataSource requires initial load size to be a multiple of page" +
-                            " size to support internal tiling. loadSize ${data.size}, position" +
-                            " $itemsBefore, totalCount $totalCount, pageSize $pageSize"
+                        " size to support internal tiling. loadSize ${data.size}, position" +
+                        " $itemsBefore, totalCount $totalCount, pageSize $pageSize"
                 )
             }
             if (itemsBefore % pageSize != 0) {
                 throw IllegalArgumentException(
                     "Initial load must be pageSize aligned.Position = $itemsBefore, pageSize =" +
-                            " $pageSize"
+                        " $pageSize"
                 )
             }
         }
 
-        /**
-         * Assumes that nextKey and prevKey returned by this [BaseResult] matches the expected type
-         * in [PagedSource.LoadResult].
-         */
-        @Suppress("UNCHECKED_CAST") // Guaranteed to be the correct Key type.
-        internal fun <Key : Any> toLoadResult(): Page<Key, Value> = Page(
-            data,
-            prevKey as Key?,
-            nextKey as Key?,
-            itemsBefore,
-            itemsAfter
-        )
-
         override fun equals(other: Any?) = when (other) {
-            is BaseResult<*> -> data == other.data &&
+            is BaseResult<*> ->
+                data == other.data &&
                     prevKey == other.prevKey &&
                     nextKey == other.nextKey &&
                     itemsBefore == other.itemsBefore &&

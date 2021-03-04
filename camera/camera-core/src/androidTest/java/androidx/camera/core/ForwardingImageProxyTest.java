@@ -36,6 +36,9 @@ import org.junit.runner.RunWith;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Unit tests for {@link ForwardingImageProxy}.
+ */
 @SmallTest
 @RunWith(AndroidJUnit4.class)
 public final class ForwardingImageProxyTest {
@@ -111,20 +114,6 @@ public final class ForwardingImageProxyTest {
         when(mBaseImageProxy.getWidth()).thenReturn(640);
 
         assertThat(mImageProxy.getWidth()).isEqualTo(640);
-    }
-
-    @Test
-    public void getTimestamp_returnsTimestampForWrappedImage() {
-        when(mBaseImageProxy.getTimestamp()).thenReturn(138990020L);
-
-        assertThat(mImageProxy.getTimestamp()).isEqualTo(138990020L);
-    }
-
-    @Test
-    public void setTimestamp_setsTimestampForWrappedImage() {
-        mImageProxy.setTimestamp(138990020L);
-
-        verify(mBaseImageProxy).setTimestamp(138990020L);
     }
 
     @Test
