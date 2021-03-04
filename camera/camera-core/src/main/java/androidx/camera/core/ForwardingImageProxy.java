@@ -52,10 +52,11 @@ abstract class ForwardingImageProxy implements ImageProxy {
         mImage = image;
     }
 
-    @SuppressWarnings("GuardedBy") // TODO(b/141958189): Suppressed during upgrade to AGP 3.6.
     @Override
     public void close() {
-        mImage.close();
+        synchronized (this) {
+            mImage.close();
+        }
         notifyOnImageCloseListeners();
     }
 
@@ -86,22 +87,13 @@ abstract class ForwardingImageProxy implements ImageProxy {
     }
 
     @Override
-    public synchronized long getTimestamp() {
-        return mImage.getTimestamp();
-    }
-
-    @Override
-    public synchronized void setTimestamp(long timestamp) {
-        mImage.setTimestamp(timestamp);
-    }
-
-    @Override
     @NonNull
     public synchronized ImageProxy.PlaneProxy[] getPlanes() {
         return mImage.getPlanes();
     }
 
     @Override
+    @NonNull
     public synchronized ImageInfo getImageInfo() {
         return mImage.getImageInfo();
     }

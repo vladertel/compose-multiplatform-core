@@ -27,19 +27,14 @@ plugins {
 }
 
 dependencies {
-    api("androidx.core:core:1.1.0")
-    implementation("androidx.collection:collection:1.0.0")
-    implementation(project(":navigation:navigation-dynamic-features-activity"))
-    implementation(project(":navigation:navigation-dynamic-features-core"))
-    implementation(project(":navigation:navigation-runtime"))
-    implementation(project(":navigation:navigation-fragment"))
-    implementation("com.google.android.play:core:1.6.1")
+    api(project(":navigation:navigation-dynamic-features-runtime"))
+    api(project(":navigation:navigation-fragment-ktx"))
+    api(KOTLIN_STDLIB)
 
     testImplementation(ANDROIDX_TEST_CORE)
     testImplementation(ANDROIDX_TEST_EXT_JUNIT)
     testImplementation(ANDROIDX_TEST_RUNNER)
     testImplementation(JUNIT)
-    testImplementation(KOTLIN_STDLIB)
     testImplementation(MOCKITO_CORE)
     testImplementation(TRUTH)
 
@@ -49,31 +44,17 @@ dependencies {
     androidTestImplementation(ANDROIDX_TEST_RUNNER)
     androidTestImplementation(DEXMAKER_MOCKITO, libs.exclude_bytebuddy)
     androidTestImplementation(ESPRESSO_CORE)
-    androidTestImplementation(KOTLIN_STDLIB)
     androidTestImplementation(MOCKITO_CORE, libs.exclude_bytebuddy)
     androidTestImplementation(TRUTH)
-    androidTestImplementation project(':internal-testutils-runtime'), {
-        exclude group: 'androidx.fragment', module: 'fragment'
-    }
-}
-
-//used by testCompile safe-args-generator
-android.libraryVariants.all { variant ->
-    def name = variant.name
-    def suffix = name.capitalize()
-    project.tasks.create(name: "jar${suffix}", type: Jar){
-        dependsOn variant.javaCompileProvider.get()
-        from variant.javaCompileProvider.get().destinationDir
-        destinationDir new File(project.buildDir, "libJar")
-    }
+    androidTestImplementation(project(":internal-testutils-runtime"), {
+        exclude group: "androidx.fragment", module: "fragment"
+    })
 }
 
 androidx {
     name = "Android Dynamic Feature Navigation Fragment"
-    publish = Publish.SNAPSHOT_ONLY
-    mavenVersion = LibraryVersions.NAVIGATION
+    publish = Publish.SNAPSHOT_AND_RELEASE
     mavenGroup = LibraryGroups.NAVIGATION
     inceptionYear = "2019"
     description = "Android Dynamic Feature Navigation Fragment"
-    url = AndroidXExtension.ARCHITECTURE_URL
 }

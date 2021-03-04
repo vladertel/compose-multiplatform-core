@@ -17,10 +17,10 @@
 package androidx.navigation
 
 import android.content.Context
-import androidx.navigation.testing.TestNavigator
-import androidx.navigation.testing.test
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.filters.SmallTest
+import androidx.testutils.TestNavigator
+import androidx.testutils.test
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -28,17 +28,22 @@ import org.junit.Test
 class NavHostTest {
     private val navController =
         NavController(ApplicationProvider.getApplicationContext() as Context).apply {
-        navigatorProvider += TestNavigator()
+            navigatorProvider += TestNavigator()
+        }
+    private val navHost = object : NavHost {
+        override val navController: NavController
+            get() = this@NavHostTest.navController
     }
-    private val navHost = NavHost { this@NavHostTest.navController }
 
     @Test
     fun createGraph() {
         val graph = navHost.createGraph(startDestination = DESTINATION_ID) {
             test(DESTINATION_ID)
         }
-        assertTrue("Destination should be added to the graph",
-                DESTINATION_ID in graph)
+        assertTrue(
+            "Destination should be added to the graph",
+            DESTINATION_ID in graph
+        )
     }
 }
 

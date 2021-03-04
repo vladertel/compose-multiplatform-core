@@ -112,7 +112,7 @@ public class TransitionSet extends Transition {
 
     @SuppressLint("RestrictedApi") // remove once core lib would be released with the new
     // LIBRARY_GROUP_PREFIX restriction. tracking in b/127286008
-    public TransitionSet(Context context, AttributeSet attrs) {
+    public TransitionSet(@NonNull Context context, @NonNull AttributeSet attrs) {
         super(context, attrs);
         TypedArray a = context.obtainStyledAttributes(attrs, Styleable.TRANSITION_SET);
         int ordering = TypedArrayUtils.getNamedInt(a, (XmlResourceParser) attrs,
@@ -455,12 +455,8 @@ public class TransitionSet extends Transition {
 
     }
 
-    /**
-     * @hide
-     */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
     @Override
-    protected void createAnimators(ViewGroup sceneRoot, TransitionValuesMaps startValues,
+    void createAnimators(ViewGroup sceneRoot, TransitionValuesMaps startValues,
             TransitionValuesMaps endValues, ArrayList<TransitionValues> startValuesList,
             ArrayList<TransitionValues> endValuesList) {
         long startDelay = getStartDelay();

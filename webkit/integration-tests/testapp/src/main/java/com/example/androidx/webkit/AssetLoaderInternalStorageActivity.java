@@ -20,7 +20,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import android.app.Activity;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -43,7 +42,7 @@ import java.io.IOException;
  */
 public class AssetLoaderInternalStorageActivity extends AppCompatActivity {
     private static final String DEMO_HTML_CONTENT =
-            "<h3>Successfully loaded html from app files dir!</h3>";
+            "<h3 id=\"data_success_msg\">Successfully loaded html from app files dir!</h3>";
 
     @NonNull private File mPublicDir;
     @NonNull private File mDemoFile;
@@ -73,6 +72,7 @@ public class AssetLoaderInternalStorageActivity extends AppCompatActivity {
     }
 
     @Override
+    @SuppressWarnings("deprecation") /* AsyncTask */
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
@@ -117,7 +117,7 @@ public class AssetLoaderInternalStorageActivity extends AppCompatActivity {
     }
 
     // Writes to file asynchronously in the background thread.
-    private static class WriteFileTask extends AsyncTask<Void, Void, Void> {
+    private static class WriteFileTask extends android.os.AsyncTask<Void, Void, Void> {
         @NonNull private final File mFile;
         @NonNull private final String mContent;
 

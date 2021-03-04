@@ -209,6 +209,9 @@ public abstract class ListenableWorker {
      * this case, WorkManager provides a signal to the OS that the process should be kept alive
      * if possible while this work is executing.
      * <p>
+     * Calls to {@code setForegroundAsync} *must* complete before a {@link ListenableWorker}
+     * signals completion by returning a {@link Result}.
+     * <p>
      * Under the hood, WorkManager manages and runs a foreground service on your behalf to
      * execute this WorkRequest, showing the notification provided in
      * {@link ForegroundInfo}.
@@ -285,7 +288,7 @@ public abstract class ListenableWorker {
      * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public final boolean isRunInForeground() {
+    public boolean isRunInForeground() {
         return mRunInForeground;
     }
 
@@ -388,6 +391,13 @@ public abstract class ListenableWorker {
         }
 
         /**
+         * @return The output {@link Data} which will be merged into the input {@link Data} of
+         * any {@link OneTimeWorkRequest} that is dependent on this work request.
+         */
+        @NonNull
+        public abstract Data getOutputData();
+
+        /**
          * @hide
          */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -419,10 +429,7 @@ public abstract class ListenableWorker {
                 mOutputData = outputData;
             }
 
-            /**
-             * @hide
-             */
-            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+            @Override
             public @NonNull Data getOutputData() {
                 return mOutputData;
             }
@@ -474,10 +481,7 @@ public abstract class ListenableWorker {
                 mOutputData = outputData;
             }
 
-            /**
-             * @hide
-             */
-            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+            @Override
             public @NonNull Data getOutputData() {
                 return mOutputData;
             }
@@ -528,6 +532,12 @@ public abstract class ListenableWorker {
             public int hashCode() {
                 String name = Retry.class.getName();
                 return name.hashCode();
+            }
+
+            @NonNull
+            @Override
+            public Data getOutputData() {
+                return Data.EMPTY;
             }
 
             @Override

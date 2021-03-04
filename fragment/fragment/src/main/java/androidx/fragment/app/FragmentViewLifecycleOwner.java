@@ -16,13 +16,34 @@
 
 package androidx.fragment.app;
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.LifecycleRegistry;
+import android.os.Bundle;
 
-class FragmentViewLifecycleOwner implements LifecycleOwner {
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleRegistry;
+import androidx.lifecycle.ViewModelStore;
+import androidx.lifecycle.ViewModelStoreOwner;
+import androidx.savedstate.SavedStateRegistry;
+import androidx.savedstate.SavedStateRegistryController;
+import androidx.savedstate.SavedStateRegistryOwner;
+
+class FragmentViewLifecycleOwner implements SavedStateRegistryOwner, ViewModelStoreOwner {
+    private final ViewModelStore mViewModelStore;
+
     private LifecycleRegistry mLifecycleRegistry = null;
+    private SavedStateRegistryController mSavedStateRegistryController = null;
+
+    FragmentViewLifecycleOwner(@NonNull ViewModelStore viewModelStore) {
+        mViewModelStore = viewModelStore;
+    }
+
+    @NonNull
+    @Override
+    public ViewModelStore getViewModelStore() {
+        initialize();
+        return mViewModelStore;
+    }
 
     /**
      * Initializes the underlying Lifecycle if it hasn't already been created.
@@ -30,6 +51,7 @@ class FragmentViewLifecycleOwner implements LifecycleOwner {
     void initialize() {
         if (mLifecycleRegistry == null) {
             mLifecycleRegistry = new LifecycleRegistry(this);
+            mSavedStateRegistryController = SavedStateRegistryController.create(this);
         }
     }
 
@@ -47,7 +69,26 @@ class FragmentViewLifecycleOwner implements LifecycleOwner {
         return mLifecycleRegistry;
     }
 
+    void setCurrentState(@NonNull Lifecycle.State state) {
+        mLifecycleRegistry.setCurrentState(state);
+    }
+
     void handleLifecycleEvent(@NonNull Lifecycle.Event event) {
         mLifecycleRegistry.handleLifecycleEvent(event);
+    }
+
+    @NonNull
+    @Override
+    public SavedStateRegistry getSavedStateRegistry() {
+        initialize();
+        return mSavedStateRegistryController.getSavedStateRegistry();
+    }
+
+    void performRestore(@Nullable Bundle savedState) {
+        mSavedStateRegistryController.performRestore(savedState);
+    }
+
+    void performSave(@NonNull Bundle outBundle) {
+        mSavedStateRegistryController.performSave(outBundle);
     }
 }

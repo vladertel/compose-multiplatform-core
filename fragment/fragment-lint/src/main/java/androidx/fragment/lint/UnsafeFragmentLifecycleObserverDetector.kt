@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+@file:Suppress("UnstableApiUsage")
+
 package androidx.fragment.lint
 
 import androidx.fragment.lint.UnsafeFragmentLifecycleObserverDetector.Issues.BACK_PRESSED_ISSUE
@@ -48,13 +51,13 @@ class UnsafeFragmentLifecycleObserverDetector : Detector(), SourceCodeScanner {
         val LIVEDATA_ISSUE = Issue.create(
             id = "FragmentLiveDataObserve",
             briefDescription = "Use getViewLifecycleOwner() as the LifecycleOwner instead of " +
-                    "a Fragment instance when observing a LiveData object.",
-            explanation = """When observing a LiveData object from a fragment's onCreateView,
-                | onViewCreated, onActivityCreated, or onViewStateRestored method
-                | getViewLifecycleOwner() should be used as the LifecycleOwner rather than the
-                | Fragment instance. The Fragment lifecycle can result in the Fragment being
-                | active longer than its view. This can lead to unexpected behavior from
-                | LiveData objects being observed longer than the Fragment's view is active.""",
+                "a Fragment instance when observing a LiveData object.",
+            explanation = """When observing a LiveData object from a fragment's onCreateView, \
+                onViewCreated, onActivityCreated, or onViewStateRestored method \
+                getViewLifecycleOwner() should be used as the LifecycleOwner rather than the \
+                Fragment instance. The Fragment lifecycle can result in the Fragment being \
+                active longer than its view. This can lead to unexpected behavior from \
+                LiveData objects being observed longer than the Fragment's view is active.""",
             category = Category.CORRECTNESS,
             severity = Severity.ERROR,
             implementation = Implementation(
@@ -66,14 +69,14 @@ class UnsafeFragmentLifecycleObserverDetector : Detector(), SourceCodeScanner {
         val BACK_PRESSED_ISSUE = Issue.create(
             id = "FragmentBackPressedCallback",
             briefDescription = "Use getViewLifecycleOwner() as the LifecycleOwner instead of " +
-                    "a Fragment instance.",
-            explanation = """The Fragment lifecycle can result in a Fragment being active
-                | longer than its view. This can lead to unexpected behavior from lifecycle aware
-                | objects remaining active longer than the Fragment's view. To solve this issue,
-                | getViewLifecycleOwner() should be used as a LifecycleOwner rather than the
-                | Fragment instance once it is safe to access the view lifecycle in a
-                | Fragment's onCreateView, onViewCreated, onActivityCreated, or
-                | onViewStateRestored methods.""",
+                "a Fragment instance.",
+            explanation = """The Fragment lifecycle can result in a Fragment being active \
+                longer than its view. This can lead to unexpected behavior from lifecycle aware \
+                objects remaining active longer than the Fragment's view. To solve this issue, \
+                getViewLifecycleOwner() should be used as a LifecycleOwner rather than the \
+                Fragment instance once it is safe to access the view lifecycle in a \
+                Fragment's onCreateView, onViewCreated, onActivityCreated, or \
+                onViewStateRestored methods.""",
             category = Category.CORRECTNESS,
             severity = Severity.ERROR,
             implementation = Implementation(
@@ -83,8 +86,10 @@ class UnsafeFragmentLifecycleObserverDetector : Detector(), SourceCodeScanner {
         )
     }
 
-    private val lifecycleMethods = setOf("onCreateView", "onViewCreated", "onActivityCreated",
-        "onViewStateRestored")
+    private val lifecycleMethods = setOf(
+        "onCreateView", "onViewCreated", "onActivityCreated",
+        "onViewStateRestored"
+    )
 
     override fun applicableSuperClasses(): List<String>? = listOf(FRAGMENT_CLASS)
 
@@ -144,7 +149,9 @@ private class RecursiveMethodVisitor(
         val argMap = context.evaluator.computeArgumentMapping(call, psiMethod)
         argMap.forEach { (arg, param) ->
             if (arg.getExpressionType().extends(context, FRAGMENT_CLASS) &&
-                param.type.extends(context, "androidx.lifecycle.LifecycleOwner")) {
+                !arg.getExpressionType().extends(context, DIALOG_FRAGMENT_CLASS) &&
+                param.type.extends(context, "androidx.lifecycle.LifecycleOwner")
+            ) {
                 val argType = PsiTypesUtil.getPsiClass(arg.getExpressionType())
                 if (argType == call.getContainingUClass()?.javaPsi) {
                     val methodFix = if (isKotlin(context.psiFile)) {
@@ -152,16 +159,20 @@ private class RecursiveMethodVisitor(
                     } else {
                         "getViewLifecycleOwner()"
                     }
-                    context.report(issue, context.getLocation(arg),
+                    context.report(
+                        issue, context.getLocation(arg),
                         "Use $methodFix as the LifecycleOwner.",
                         LintFix.create()
                             .replace()
                             .with(methodFix)
-                            .build())
+                            .build()
+                    )
                 } else {
-                    context.report(issue, context.getLocation(call),
+                    context.report(
+                        issue, context.getLocation(call),
                         "Unsafe call to ${call.methodName} with Fragment instance as " +
-                                "LifecycleOwner from $originFragmentName.$lifecycleMethod.")
+                            "LifecycleOwner from $originFragmentName.$lifecycleMethod."
+                    )
                 }
                 return true
             }
@@ -196,7 +207,9 @@ internal data class Method(val cls: String?, val name: String)
 
 internal val UNSAFE_METHODS = mapOf(
     Method("androidx.lifecycle.LiveData", "observe") to LIVEDATA_ISSUE,
+    Method("androidx.lifecycle.LiveDataKt", "observe") to LIVEDATA_ISSUE,
     Method("androidx.activity.OnBackPressedDispatcher", "addCallback") to BACK_PRESSED_ISSUE
 )
 
 private const val FRAGMENT_CLASS = "androidx.fragment.app.Fragment"
+private const val DIALOG_FRAGMENT_CLASS = "androidx.fragment.app.DialogFragment"

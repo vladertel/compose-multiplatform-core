@@ -20,25 +20,29 @@ import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.dynamicfeatures.fragment.test.R
 import androidx.test.core.app.ActivityScenario
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
-import androidx.test.rule.ActivityTestRule
 import androidx.testutils.withActivity
-import org.junit.Assert.assertNotEquals
+import com.google.android.play.core.splitinstall.SplitInstallManager
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
-class DynamicNavHostFragmentTest {
+public class DynamicNavHostFragmentTest {
 
+    @Suppress("DEPRECATION")
     @get:Rule
-    val activityTestRule = ActivityTestRule(NavigationActivity::class.java)
+    public val activityTestRule: ActivityScenarioRule<NavigationActivity> = ActivityScenarioRule(
+        NavigationActivity::class.java
+    )
 
     @Test
-    fun createSplitInstallManager() {
-        val fragment = DynamicNavHostFragment()
+    public fun createSplitInstallManager() {
+        val fragment = TestDynamicNavHostFragment()
         with(ActivityScenario.launch(NavigationActivity::class.java)) {
             withActivity {
                 supportFragmentManager.beginTransaction()
@@ -47,13 +51,35 @@ class DynamicNavHostFragmentTest {
                     .commitNow()
             }
         }
-        assertNotEquals(fragment.createSplitInstallManager(), fragment.createSplitInstallManager())
+        assertEquals(fragment.createSplitInstallManager(), fragment.createSplitInstallManager())
+    }
+
+    @Test
+    public fun create_noArgs() {
+        val fragment = DynamicNavHostFragment.create(R.id.nav_host)
+        assertEquals(fragment.arguments!!.size(), 1)
+    }
+
+    @Test
+    public fun create_withArgs() {
+        val fragment = DynamicNavHostFragment.create(
+            R.id.nav_host,
+            Bundle().apply {
+                putInt("Test", 1)
+            }
+        )
+        assertEquals(fragment.arguments!!.size(), 2)
     }
 }
 
-class NavigationActivity : FragmentActivity() {
+public class NavigationActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         setContentView(R.layout.dynamic_activity_layout)
         super.onCreate(savedInstanceState)
     }
+}
+
+public class TestDynamicNavHostFragment : DynamicNavHostFragment() {
+    public override fun createSplitInstallManager(): SplitInstallManager =
+        super.createSplitInstallManager()
 }

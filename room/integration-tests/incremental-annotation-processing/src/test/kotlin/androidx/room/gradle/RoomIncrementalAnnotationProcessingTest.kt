@@ -16,6 +16,7 @@
 
 package androidx.room.gradle
 
+import androidx.testutils.gradle.ProjectSetupRule
 import com.google.common.truth.Expect
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
@@ -23,45 +24,47 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.io.File
 import java.nio.file.Files
-import java.util.Properties
 
 @RunWith(Parameterized::class)
-class RoomIncrementalAnnotationProcessingTest(private val withIncrementalRoom: Boolean) {
+class RoomIncrementalAnnotationProcessingTest(
+    private val withIncrementalRoom: Boolean,
+    private val useKsp: Boolean
+) {
 
     companion object {
 
-        @Parameterized.Parameters(name = "incrementalRoom={0}")
+        @Parameterized.Parameters(name = "incrementalRoom={0}_useKsp={1}")
         @JvmStatic
-        fun parameters() = listOf(true, false)
+        fun parameters() = listOf(
+            arrayOf(true, false),
+            arrayOf(true, true),
+            arrayOf(false, false),
+            // we don't let users turn off incremental compilation in KSP.
+        )
 
         private const val SRC_DIR = "src/main/java"
-        private const val GEN_SRC_DIR = "build/generated/ap_generated_sources/debug/out/"
-        private const val GEN_RES_DIR = "build/generated/resources"
-        private const val CLASS_DIR = "build/intermediates/javac/debug/classes"
+        private val GEN_RES_DIR = "schemas"
+        private val CLASS_DIR = "build/intermediates/javac/debug/classes"
 
         private const val CLEAN_TASK = ":clean"
-        private const val COMPILE_TASK = ":compileDebugJavaWithJavac"
+        private val COMPILE_TASK = ":compileDebugJavaWithJavac"
     }
 
     @get:Rule
-    val testProjectDir = TemporaryFolder()
+    val projectSetup = ProjectSetupRule()
 
     @get:Rule
     val expect: Expect = Expect.create()
 
-    // Properties to set up test project
-    private lateinit var prebuiltsRepo: String
-    private lateinit var agpDependency: String
-    private lateinit var localSupportRepo: String
-    private lateinit var compileSdkVersion: String
-    private lateinit var buildToolsVersion: String
-    private lateinit var minSdkVersion: String
-    private lateinit var debugKeystore: String
+    private val genSrcDir = if (useKsp) {
+        "build/generated/ksp/debug/java"
+    } else {
+        "build/generated/ap_generated_sources/debug/out/"
+    }
 
     // Original source files
     private lateinit var srcDatabase1: File
@@ -100,79 +103,81 @@ class RoomIncrementalAnnotationProcessingTest(private val withIncrementalRoom: B
 
     @Before
     fun setup() {
-        val projectRoot = testProjectDir.root
-
-        // copy local.properties
-        File("../../../local.properties")
-            .copyTo(File(projectRoot, "local.properties"), overwrite = true)
-
-        // copy sdk.prop (created by module's build.gradle)
-        RoomIncrementalAnnotationProcessingTest::class.java.classLoader
-            .getResourceAsStream("sdk.prop")
-            .use { input ->
-                val properties = Properties().apply { load(input) }
-                prebuiltsRepo = properties.getProperty("prebuiltsRepo")
-                localSupportRepo = properties.getProperty("localSupportRepo")
-                agpDependency = properties.getProperty("agpDependency")
-                compileSdkVersion = properties.getProperty("compileSdkVersion")
-                buildToolsVersion = properties.getProperty("buildToolsVersion")
-                minSdkVersion = properties.getProperty("minSdkVersion")
-                debugKeystore = properties.getProperty("debugKeystore")
+        val projectRoot = projectSetup.rootDir
+        val repositoriesBlock = buildString {
+            appendLine("repositories {")
+            projectSetup.allRepositoryPaths.forEach {
+                appendLine(
+                    """
+                    maven {
+                        url "$it"
+                    }
+                    """.trimIndent()
+                )
             }
+            appendLine("}")
+        }
+        val agpDependency = projectSetup.props.agpDependency
+        val kotlinPluginDependency =
+            "org.jetbrains.kotlin:kotlin-gradle-plugin:${projectSetup.props.kotlinVersion}"
+        val kspPluginDependency =
+            "com.google.devtools.ksp:symbol-processing-gradle-plugin:" +
+                projectSetup.props.kspVersion
 
         // copy test project
         File("src/test/data/simple-project").copyRecursively(projectRoot)
 
-        // setup gradle.properties
-        File(projectRoot, "gradle.properties").writeText(
-            "android.useAndroidX=true"
-        )
+        if (useKsp) {
+            // add a kotlin file to trigger kotlin compilation
+            projectRoot.resolve("src/main/java/placeholer.kt").writeText("")
+        }
 
+        val kspPluginBlock = if (useKsp) {
+            """
+                apply plugin: "kotlin-android"
+                apply plugin: "com.google.devtools.ksp"
+            """
+        } else {
+            ""
+        }
+        val processorConfiguration = if (useKsp) {
+            "ksp"
+        } else {
+            "annotationProcessor"
+        }
+        val kspArgumentsBlock = if (useKsp) {
+            """
+            ksp {
+                arg('room.incremental', '$withIncrementalRoom')
+                arg('room.schemaLocation', '${projectRoot.resolve(GEN_RES_DIR).canonicalPath}')
+            }
+            """.trimIndent()
+        } else {
+            ""
+        }
         // set up build file
         File(projectRoot, "build.gradle").writeText(
             """
             buildscript {
-                repositories {
-                    maven { url "$prebuiltsRepo/androidx/external" }
-                    maven { url "$prebuiltsRepo/androidx/internal" }
-                }
+                ${repositoriesBlock.prependIndent("    ")}
                 dependencies {
                     classpath "$agpDependency"
+                    classpath "$kotlinPluginDependency"
+                    classpath "$kspPluginDependency"
                 }
             }
 
             apply plugin: 'com.android.application'
+            $kspPluginBlock
 
-            repositories {
-                maven { url "$prebuiltsRepo/androidx/external" }
-                maven { url "$localSupportRepo" }
-                maven {
-                    url "$prebuiltsRepo/androidx/internal"
-                    content {
-                        excludeModule("androidx.room", "room-compiler")
-                    }
-                }
-            }
+            $repositoriesBlock
 
-            android {
-                compileSdkVersion $compileSdkVersion
-                buildToolsVersion "$buildToolsVersion"
-
-                defaultConfig {
-                    minSdkVersion $minSdkVersion
-                }
-
-                signingConfigs {
-                    debug {
-                        storeFile file("$debugKeystore")
-                    }
-                }
-            }
+            %s
 
             dependencies {
                 // Uses latest Room built from tip of tree
                 implementation "androidx.room:room-runtime:+"
-                annotationProcessor "androidx.room:room-compiler:+"
+                $processorConfiguration "androidx.room:room-compiler:+"
             }
 
             class SchemaLocationArgumentProvider implements CommandLineArgumentProvider {
@@ -200,7 +205,12 @@ class RoomIncrementalAnnotationProcessingTest(private val withIncrementalRoom: B
                     }
                 }
             }
-        """.trimIndent()
+            $kspArgumentsBlock
+        """
+                .trimIndent()
+                // doing format instead of "$projectSetup.androidProject" on purpose,
+                // because otherwise trimIndent will mess with formatting
+                .format(projectSetup.androidProject)
         )
 
         // Compute file paths
@@ -208,10 +218,10 @@ class RoomIncrementalAnnotationProcessingTest(private val withIncrementalRoom: B
         srcDao1 = File(projectRoot, "$SRC_DIR/room/testapp/Dao1.java")
         srcEntity1 = File(projectRoot, "$SRC_DIR/room/testapp/Entity1.java")
 
-        genDatabase1 = File(projectRoot, "$GEN_SRC_DIR/room/testapp/Database1_Impl.java")
-        genDao1 = File(projectRoot, "$GEN_SRC_DIR/room/testapp/Dao1_Impl.java")
-        genDatabase2 = File(projectRoot, "$GEN_SRC_DIR/room/testapp/Database2_Impl.java")
-        genDao2 = File(projectRoot, "$GEN_SRC_DIR/room/testapp/Dao2_Impl.java")
+        genDatabase1 = File(projectRoot, "$genSrcDir/room/testapp/Database1_Impl.java")
+        genDao1 = File(projectRoot, "$genSrcDir/room/testapp/Dao1_Impl.java")
+        genDatabase2 = File(projectRoot, "$genSrcDir/room/testapp/Database2_Impl.java")
+        genDao2 = File(projectRoot, "$genSrcDir/room/testapp/Dao2_Impl.java")
 
         genSchema1 = File(projectRoot, "$GEN_RES_DIR/room.testapp.Database1/1.json")
         genSchema2 = File(projectRoot, "$GEN_RES_DIR/room.testapp.Database2/1.json")
@@ -226,11 +236,19 @@ class RoomIncrementalAnnotationProcessingTest(private val withIncrementalRoom: B
         classGenDao1 = File(projectRoot, "$CLASS_DIR/room/testapp/Dao1_Impl.class")
         classGenDatabase2 = File(projectRoot, "$CLASS_DIR/room/testapp/Database2_Impl.class")
         classGenDao2 = File(projectRoot, "$CLASS_DIR/room/testapp/Dao2_Impl.class")
+
+        projectRoot.resolve("gradle.properties").writeText(
+            """
+            ksp.incremental=true
+            ksp.incremental.log=true
+            android.useAndroidX=true
+            """.trimIndent()
+        )
     }
 
     private fun runGradleTasks(vararg args: String): BuildResult {
         return GradleRunner.create()
-            .withProjectDir(testProjectDir.root)
+            .withProjectDir(projectSetup.rootDir)
             .withArguments(*args)
             .build()
     }
