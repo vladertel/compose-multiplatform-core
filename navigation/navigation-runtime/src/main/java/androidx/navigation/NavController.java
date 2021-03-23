@@ -1271,6 +1271,11 @@ public class NavController {
         mOnBackPressedCallback.remove();
         // Then add it to the new dispatcher
         dispatcher.addCallback(mLifecycleOwner, mOnBackPressedCallback);
+
+        // Make sure that listener for updating the NavBackStackEntry lifecycles comes after
+        // the dispatcher
+        mLifecycleOwner.getLifecycle().removeObserver(mLifecycleObserver);
+        mLifecycleOwner.getLifecycle().addObserver(mLifecycleObserver);
     }
 
     void enableOnBackPressed(boolean enabled) {
