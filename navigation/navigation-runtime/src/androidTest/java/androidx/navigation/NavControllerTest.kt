@@ -312,6 +312,10 @@ class NavControllerTest {
         navController.navigate(deepLink)
         assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.second_test)
         assertThat(navigator.backStack.size).isEqualTo(2)
+        val intent = navigator.current.second?.getParcelable<Intent>(
+            NavController.KEY_DEEP_LINK_INTENT
+        )
+        assertThat(intent?.data).isEqualTo(deepLink)
     }
 
     @Test
@@ -336,11 +340,16 @@ class NavControllerTest {
         val navController = createNavController()
         navController.setGraph(R.navigation.nav_simple)
         val navigator = navController.navigatorProvider.getNavigator(TestNavigator::class.java)
-        val deepLink = NavDeepLinkRequest(null, "test.action", null)
+        val action = "test.action"
+        val deepLink = NavDeepLinkRequest(null, action, null)
 
         navController.navigate(deepLink)
         assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.second_test)
         assertThat(navigator.backStack.size).isEqualTo(2)
+        val intent = navigator.current.second?.getParcelable<Intent>(
+            NavController.KEY_DEEP_LINK_INTENT
+        )
+        assertThat(intent?.action).isEqualTo(action)
     }
 
     @Test
@@ -372,11 +381,16 @@ class NavControllerTest {
         val navController = createNavController()
         navController.setGraph(R.navigation.nav_deeplink)
         val navigator = navController.navigatorProvider.getNavigator(TestNavigator::class.java)
-        val deepLink = NavDeepLinkRequest(null, null, "type/test")
+        val mimeType = "type/test"
+        val deepLink = NavDeepLinkRequest(null, null, mimeType)
 
         navController.navigate(deepLink)
         assertThat(navController.currentDestination?.id ?: 0).isEqualTo(R.id.forth_test)
         assertThat(navigator.backStack.size).isEqualTo(2)
+        val intent = navigator.current.second?.getParcelable<Intent>(
+            NavController.KEY_DEEP_LINK_INTENT
+        )
+        assertThat(intent?.type).isEqualTo(mimeType)
     }
 
     @Test
