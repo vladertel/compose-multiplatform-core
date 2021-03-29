@@ -25,6 +25,8 @@ import android.os.Parcel
 import android.os.Parcelable
 import android.view.View
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.addCallback
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.testing.TestLifecycleOwner
@@ -1425,6 +1427,35 @@ class NavControllerTest {
             .isFalse()
 
         verifyNoMoreInteractions(onDestinationChangedListener)
+    }
+
+    @UiThreadTest
+    @Test
+    fun testSetOnBackPressedDispatcherOnNavBackStackEntry() {
+        var backPressedIntercepted = false
+        val navController = createNavController()
+        val lifecycleOwner = TestLifecycleOwner()
+        val dispatcher = OnBackPressedDispatcher()
+
+        navController.setLifecycleOwner(lifecycleOwner)
+        navController.setOnBackPressedDispatcher(dispatcher)
+
+        navController.setGraph(R.navigation.nav_simple)
+        navController.navigate(R.id.second_test)
+        assertEquals(R.id.start_test, navController.previousBackStackEntry?.destination?.id ?: 0)
+
+        dispatcher.addCallback(navController.currentBackStackEntry!!) {
+            backPressedIntercepted = true
+        }
+
+        // Move to STOPPED
+        lifecycleOwner.currentState = Lifecycle.State.CREATED
+        // Move back up to RESUMED
+        lifecycleOwner.currentState = Lifecycle.State.RESUMED
+
+        dispatcher.onBackPressed()
+
+        assertThat(backPressedIntercepted).isTrue()
     }
 
     private fun createNavController(): NavController {
