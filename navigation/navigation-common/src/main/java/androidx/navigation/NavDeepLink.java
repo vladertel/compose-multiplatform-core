@@ -98,7 +98,7 @@ public final class NavDeepLink {
             // specifically escape any .* instances to ensure
             // they are still treated as wildcards in our final regex
             String finalRegex = uriRegex.toString().replace(".*", "\\E.*\\Q");
-            mPattern = Pattern.compile(finalRegex);
+            mPattern = Pattern.compile(finalRegex, Pattern.CASE_INSENSITIVE);
         }
 
         if (mimeType != null) {
