@@ -1035,7 +1035,14 @@ public class NavController {
         if (deepLinkMatch != null) {
             NavDestination destination = deepLinkMatch.getDestination();
             Bundle args = destination.addInDefaultArgs(deepLinkMatch.getMatchingArgs());
+            if (args == null) {
+                args = new Bundle();
+            }
             NavDestination node = deepLinkMatch.getDestination();
+            Intent intent = new Intent();
+            intent.setDataAndType(request.getUri(), request.getMimeType());
+            intent.setAction(request.getAction());
+            args.putParcelable(KEY_DEEP_LINK_INTENT, intent);
             navigate(node, args, navOptions, navigatorExtras);
         } else {
             throw new IllegalArgumentException("Navigation destination that matches request "
