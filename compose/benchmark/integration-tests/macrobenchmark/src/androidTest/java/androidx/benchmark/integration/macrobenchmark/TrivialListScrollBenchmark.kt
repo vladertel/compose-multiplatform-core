@@ -35,7 +35,7 @@ import org.junit.runners.Parameterized
 @LargeTest
 @SdkSuppress(minSdkVersion = 29)
 @RunWith(Parameterized::class)
-class FrameTimingMetricValidation(
+class TrivialListScrollBenchmark(
     private val compilationMode: CompilationMode
 ) {
     @get:Rule
@@ -79,13 +79,8 @@ class FrameTimingMetricValidation(
             "androidx.benchmark.integration.macrobenchmark.target.RECYCLER_VIEW"
         private const val RESOURCE_ID = "recycler"
 
-        @Parameterized.Parameters(name = "compilation_mode={0}")
+        @Parameterized.Parameters(name = "compilation={0}")
         @JvmStatic
-        fun jankParameters(): List<Array<Any>> {
-            return listOf(
-                CompilationMode.None,
-                CompilationMode.SpeedProfile(warmupIterations = 3)
-            ).map { arrayOf(it) }
-        }
+        fun parameters() = createCompilationParams()
     }
 }
