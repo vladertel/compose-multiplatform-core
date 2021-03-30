@@ -628,7 +628,7 @@ public class NavDestination {
             defaultArgs.putAll(args);
             if (mArguments != null) {
                 for (Map.Entry<String, NavArgument> argument : mArguments.entrySet()) {
-                    if (!argument.getValue().verify(argument.getKey(), args)) {
+                    if (!argument.getValue().verify(argument.getKey(), defaultArgs)) {
                         throw new IllegalArgumentException(
                                 "Wrong argument type for '" + argument.getKey()
                                         + "' in argument bundle. "
