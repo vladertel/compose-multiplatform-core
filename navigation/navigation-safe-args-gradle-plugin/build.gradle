@@ -30,7 +30,7 @@ plugins {
 
 dependencies {
     implementation("com.android.tools.build:gradle:4.0.1")
-    implementation(KOTLIN_GRADLE_PLUGIN)
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.31")
     api(project(":navigation:navigation-safe-args-generator"))
     api(gradleApi())
     implementation(GSON)
