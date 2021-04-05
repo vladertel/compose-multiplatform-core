@@ -17,6 +17,7 @@
 package androidx.benchmark.integration.macrobenchmark
 
 import android.content.Intent
+import android.graphics.Point
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
@@ -24,7 +25,6 @@ import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
-import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import org.junit.Before
 import org.junit.Rule
@@ -35,7 +35,7 @@ import org.junit.runners.Parameterized
 @LargeTest
 @SdkSuppress(minSdkVersion = 29)
 @RunWith(Parameterized::class)
-class FrameTimingMetricValidation(
+class TrivialListScrollBenchmark(
     private val compilationMode: CompilationMode
 ) {
     @get:Rule
@@ -66,7 +66,8 @@ class FrameTimingMetricValidation(
             // Setting a gesture margin is important otherwise gesture nav is triggered.
             recycler.setGestureMargin(device.displayWidth / 5)
             for (i in 1..10) {
-                recycler.scroll(Direction.DOWN, 2f)
+                // From center we scroll 2/3 of it which is 1/3 of the screen.
+                recycler.drag(Point(0, recycler.visibleCenter.y / 3))
                 device.waitForIdle()
             }
         }
@@ -78,13 +79,8 @@ class FrameTimingMetricValidation(
             "androidx.benchmark.integration.macrobenchmark.target.RECYCLER_VIEW"
         private const val RESOURCE_ID = "recycler"
 
-        @Parameterized.Parameters(name = "compilation_mode={0}")
+        @Parameterized.Parameters(name = "compilation={0}")
         @JvmStatic
-        fun jankParameters(): List<Array<Any>> {
-            return listOf(
-                CompilationMode.None,
-                CompilationMode.SpeedProfile(warmupIterations = 3)
-            ).map { arrayOf(it) }
-        }
+        fun parameters() = createCompilationParams()
     }
 }
