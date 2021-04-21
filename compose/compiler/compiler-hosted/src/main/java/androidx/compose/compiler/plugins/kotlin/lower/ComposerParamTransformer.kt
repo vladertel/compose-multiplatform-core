@@ -26,6 +26,7 @@ import androidx.compose.compiler.plugins.kotlin.lower.decoys.isDecoy
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.isDecoyImplementation
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.copyTo
+import org.jetbrains.kotlin.backend.common.ir.copyTypeParameters
 import org.jetbrains.kotlin.backend.common.ir.copyTypeParametersFrom
 import org.jetbrains.kotlin.backend.common.ir.moveBodyTo
 import org.jetbrains.kotlin.backend.common.ir.remapTypeParameters
@@ -83,6 +84,7 @@ import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.isFakeOverride
 import org.jetbrains.kotlin.ir.util.isVararg
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
+import org.jetbrains.kotlin.ir.util.remapTypes
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
@@ -456,6 +458,7 @@ class ComposerParamTransformer(
                     fn,
                     name = newName,
                     type = newType,
+                    defaultValue = param.defaultValue?.copyWithNewTypeParams(this, fn),
                     isAssignable = param.defaultValue != null
                 )
             }
