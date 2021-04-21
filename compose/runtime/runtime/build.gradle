@@ -26,10 +26,15 @@ plugins {
     id("com.android.library")
 }
 
-AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
+repositories {
+    mavenCentral()
+}
+
+AndroidXUiPlugin.applyAndConfigureKotlinPlugin(project)
 
 dependencies {
     kotlinPlugin(projectOrArtifact(":compose:compiler:compiler"))
+    kotlinNativeCompilerPluginClasspath(project(":compose:compiler:compiler-hosted"))
 
     if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         /*
@@ -77,6 +82,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
         }
+        macosX64()
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the

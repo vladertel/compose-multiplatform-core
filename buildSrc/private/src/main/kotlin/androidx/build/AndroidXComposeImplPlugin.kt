@@ -91,7 +91,6 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
     }
 
     companion object {
-
         /**
          * @param isMultiplatformEnabled whether this module has a corresponding
          * multiplatform configuration, or whether it is Android only
