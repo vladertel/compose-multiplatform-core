@@ -428,6 +428,7 @@ class ComposerParamTransformer(
                     fn,
                     name = newName,
                     type = newType,
+                    defaultValue = param.defaultValue?.copyWithNewTypeParams(this, fn),
                     isAssignable = param.defaultValue != null
                 )
             }
