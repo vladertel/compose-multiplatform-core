@@ -72,11 +72,7 @@ class ComposeWindow : JFrame() {
     }
 
     /**
-     * Composes the given composable into the ComposeWindow.
-     *
-     * The new composition can be logically "linked" to an existing one, by providing a
-     * [parentComposition]. This will ensure that invalidations and CompositionLocals will flow
-     * through the two compositions as if they were not separate.
+     * Sets Compose content of the ComposeWindow.
      *
      * @param parentComposition The parent composition reference to coordinate
      * scheduling of composition updates.
