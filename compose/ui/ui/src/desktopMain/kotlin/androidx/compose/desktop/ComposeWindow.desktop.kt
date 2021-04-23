@@ -18,6 +18,7 @@ package androidx.compose.desktop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.window.LocalWindow
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayer
@@ -69,7 +70,11 @@ class ComposeWindow : JFrame() {
     }
 
     /**
-     * Sets Compose content of the ComposeWindow.
+     * Composes the given composable into the ComposeWindow.
+     *
+     * The new composition can be logically "linked" to an existing one, by providing a
+     * [parentComposition]. This will ensure that invalidations and CompositionLocals will flow
+     * through the two compositions as if they were not separate.
      *
      * @param parentComposition The parent composition reference to coordinate
      *        scheduling of composition updates.
@@ -84,6 +89,7 @@ class ComposeWindow : JFrame() {
             parentComposition = parentComposition,
         ) {
             CompositionLocalProvider(
+                LocalWindow provides this,
                 LocalLayerContainer provides pane
             ) {
                 content()
@@ -105,6 +111,41 @@ class ComposeWindow : JFrame() {
             layer.component.requestFocus()
         }
     }
+
+    /**
+     * `true` if the window is in fullscreen mode, `false` otherwise
+     */
+    var isFullscreen: Boolean
+        get() = layer.component.fullscreen
+        set(value) {
+            layer.component.fullscreen = value
+        }
+
+    /**
+     * `true` if the window is maximized to fill all available screen space, `false` otherwise
+     */
+    var isMaximized: Boolean
+        get() = extendedState and MAXIMIZED_BOTH != 0
+        set(value) {
+            extendedState = if (value) {
+                extendedState or MAXIMIZED_BOTH
+            } else {
+                extendedState and MAXIMIZED_BOTH.inv()
+            }
+        }
+
+    /**
+     * `true` if the window is minimized to the taskbar, `false` otherwise
+     */
+    var isMinimized: Boolean
+        get() = extendedState and ICONIFIED != 0
+        set(value) {
+            extendedState = if (value) {
+                extendedState or ICONIFIED
+            } else {
+                extendedState and ICONIFIED.inv()
+            }
+        }
 
     /**
      * Registers a task to run when the rendering API changes.
