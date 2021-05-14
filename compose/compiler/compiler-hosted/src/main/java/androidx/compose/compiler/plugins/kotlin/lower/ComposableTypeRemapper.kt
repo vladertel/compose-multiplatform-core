@@ -37,9 +37,7 @@ import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrMetadataSourceOwner
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
-import org.jetbrains.kotlin.ir.declarations.IrTypeParameter
 import org.jetbrains.kotlin.ir.declarations.IrTypeParametersContainer
-import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.declarations.copyAttributes
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -72,8 +70,12 @@ import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.platform.js.isJs
+import org.jetbrains.kotlin.platform.jvm.isJvm
+import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.Variance
+import org.jetbrains.kotlin.ir.util.render
 
 class DeepCopyIrTreeWithSymbolsPreservingMetadata(
     private val context: IrPluginContext,
@@ -141,7 +143,11 @@ class DeepCopyIrTreeWithSymbolsPreservingMetadata(
         // as well, since if it they are @Composable it will have its unmodified signature. These
         // types won't be traversed by default by the DeepCopyIrTreeWithSymbols so we have to
         // do it ourself here.
+        //
+        // Native externals are guaranteed to be non-composable (they are wrappers for C world).
+        // So don't do anything for native.
         if (
+            (context.platform.isJs() || context.platform.isJvm()) &&
             ownerFn != null &&
             ownerFn.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
         ) {
@@ -234,7 +240,11 @@ class DeepCopyIrTreeWithSymbolsPreservingMetadata(
         // also transform the corresponding property so that we maintain the relationship
         // `getterFun.correspondingPropertySymbol.owner.getter == getterFun`. If we do not
         // maintain this relationship inline class getters will be incorrectly compiled.
+        //
+        // Native externals are guaranteed to be non-composable (they are wrappers for C world).
+        // So don't do anything for native.
         if (
+            (context.platform.isJs() || context.platform.isJvm()) &&
             ownerFn != null &&
             ownerFn.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
         ) {
@@ -299,18 +309,6 @@ class DeepCopyIrTreeWithSymbolsPreservingMetadata(
             expression.kind,
             expression.value
         ).copyAttributes(expression)
-
-    override fun visitValueParameter(declaration: IrValueParameter): IrValueParameter {
-        return super.visitValueParameter(declaration).also {
-            WrappedComposableDescriptorPatcher.visitValueParameter(it)
-        }
-    }
-
-    override fun visitTypeParameter(declaration: IrTypeParameter): IrTypeParameter {
-        return super.visitTypeParameter(declaration).also {
-            WrappedComposableDescriptorPatcher.visitTypeParameter(it)
-        }
-    }
 
     private fun IrSimpleFunctionSymbol.isBoundButNotRemapped(): Boolean {
         return this.isBound && symbolRemapper.getReferencedFunction(this) == this
