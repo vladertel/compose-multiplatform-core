@@ -121,6 +121,7 @@ import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.types.getClass
+
 import org.jetbrains.kotlin.ir.types.isBoolean
 import org.jetbrains.kotlin.ir.types.isByte
 import org.jetbrains.kotlin.ir.types.isChar
@@ -133,6 +134,7 @@ import org.jetbrains.kotlin.ir.types.isNothing
 import org.jetbrains.kotlin.ir.types.isNullableAny
 import org.jetbrains.kotlin.ir.types.isShort
 import org.jetbrains.kotlin.ir.types.isUnit
+
 import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.types.toKotlinType
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
@@ -161,6 +163,8 @@ import kotlin.math.absoluteValue
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.reflect.KProperty
+import org.jetbrains.kotlin.backend.common.ir.ir2stringWhole
+import org.jetbrains.kotlin.ir.util.render
 
 /**
  * An enum of the different "states" a parameter of a composable function can have relating to

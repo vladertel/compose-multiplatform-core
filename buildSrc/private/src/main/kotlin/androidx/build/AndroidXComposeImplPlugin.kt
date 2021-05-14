@@ -50,6 +50,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
 import org.jetbrains.kotlin.gradle.targets.js.KotlinJsCompilerAttribute
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 import java.io.File
 
 const val composeSourceOption =
@@ -113,8 +114,10 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
             }
 
             project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
-                // Needed to enable `expect` and `actual` keywords
-                compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+                if (compile !is KotlinNativeCompile) {
+                    // Needed to enable `expect` and `actual` keywords
+                    compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+                }
             }
 
             project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
