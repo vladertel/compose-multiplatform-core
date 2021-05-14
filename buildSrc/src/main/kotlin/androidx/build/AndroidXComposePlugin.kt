@@ -42,6 +42,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
 import org.jetbrains.kotlin.gradle.targets.js.KotlinJsCompilerAttribute
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 
 const val composeSourceOption =
     "plugin:androidx.compose.compiler.plugins.kotlin:sourceInformation=true"
@@ -112,8 +113,10 @@ class AndroidXComposePlugin : Plugin<Project> {
             }
 
             tasks.withType(KotlinCompile::class.java).configureEach { compile ->
-                // Needed to enable `expect` and `actual` keywords
-                compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+                if (compile !is KotlinNativeCompile) {
+                    // Needed to enable `expect` and `actual` keywords
+                    compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+                }
             }
 
             tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
