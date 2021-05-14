@@ -118,6 +118,7 @@ import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.types.getClass
+
 import org.jetbrains.kotlin.ir.types.isBoolean
 import org.jetbrains.kotlin.ir.types.isByte
 import org.jetbrains.kotlin.ir.types.isChar
@@ -130,6 +131,7 @@ import org.jetbrains.kotlin.ir.types.isNothing
 import org.jetbrains.kotlin.ir.types.isNullableAny
 import org.jetbrains.kotlin.ir.types.isShort
 import org.jetbrains.kotlin.ir.types.isUnit
+
 import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.types.toKotlinType
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
@@ -149,6 +151,8 @@ import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.name.FqNameUnsafe
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.platform.js.isJs
+import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.BindingTrace
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.types.typeUtil.isUnit
@@ -158,6 +162,8 @@ import kotlin.math.absoluteValue
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.reflect.KProperty
+import org.jetbrains.kotlin.backend.common.ir.ir2stringWhole
+import org.jetbrains.kotlin.ir.util.render
 
 /**
  * An enum of the different "states" a parameter of a composable function can have relating to
@@ -897,7 +903,8 @@ class ComposableFunctionBodyTransformer(
         // we know we will never be mutating this variable _after_ it gets captured, we can
         // safely mark this as `isVar = false`.
             changedParam.irCopyToTemporary(
-                isVar = false,
+                // LLVM validation doesn't allow us to have val here.
+                isVar = if (context.platform.isJvm() || context.platform.isJs()) false else true,
                 nameHint = "\$dirty",
                 exactName = true
             )
@@ -1011,7 +1018,8 @@ class ComposableFunctionBodyTransformer(
         // safely mark this as `isVar = false`.
         val dirty = if (scope.allTrackedParams.isNotEmpty())
             changedParam.irCopyToTemporary(
-                isVar = false,
+                // LLVM validation doesn't allow us to have val here.
+                isVar = if (context.platform.isJvm() || context.platform.isJs()) false else true,
                 nameHint = "\$dirty",
                 exactName = true
             )

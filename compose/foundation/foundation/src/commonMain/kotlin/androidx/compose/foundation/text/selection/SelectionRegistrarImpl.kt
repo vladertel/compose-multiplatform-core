@@ -136,7 +136,10 @@ internal class SelectionRegistrarImpl : SelectionRegistrar {
         if (!sorted) {
             // Sort selectables by y-coordinate first, and then x-coordinate, to match English
             // hand-writing habit.
-            _selectables.sortWith { a: Selectable, b: Selectable ->
+            //
+            // This used to be a lambda, but extracted as a separate function
+            // to workaround a K/N bug.
+            fun comparator(a: Selectable, b: Selectable): Int {
                 val layoutCoordinatesA = a.getLayoutCoordinates()
                 val layoutCoordinatesB = b.getLayoutCoordinates()
 
@@ -151,12 +154,14 @@ internal class SelectionRegistrarImpl : SelectionRegistrar {
                     Offset.Zero
                 }
 
-                if (positionA.y == positionB.y) {
+                return if (positionA.y == positionB.y) {
                     compareValues(positionA.x, positionB.x)
                 } else {
                     compareValues(positionA.y, positionB.y)
                 }
             }
+
+            _selectables.sortWith(::comparator)
             sorted = true
         }
         return selectables
