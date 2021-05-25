@@ -59,7 +59,10 @@ public class ProjectSubsetsTest {
         val projectDir = File("../..").normalize()
         var outDir = System.getenv("OUT_DIR")
         if (outDir == null || outDir == "") {
-            outDir = File(projectDir, "../../out").normalize().toString()
+            if (System.env.COMPOSE_DESKTOP_GITHUB_BUILD != null)
+                outDir = File(projectDir, "out").normalize().toString()
+            else
+                outDir = File(projectDir, "../../out").normalize().toString()
         }
         GradleRunner.create()
             .withProjectDir(projectDir)

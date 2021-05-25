@@ -21,13 +21,43 @@
 
 boolean currentBuildIsRootBuild = (gradle.parent == null)
 
+def runCommand(List<String> args, File path) {
+    def proc = new ProcessBuilder(args)
+            .directory(path)
+            .redirectOutput(ProcessBuilder.Redirect.PIPE)
+            .redirectError(ProcessBuilder.Redirect.PIPE)
+            .start()
+    proc.waitFor(5, java.util.concurrent.TimeUnit.MINUTES)
+    if (proc.exitValue() != 0) {
+        def out = proc.inputStream.bufferedReader().readText()
+        def err = proc.errorStream.bufferedReader().readText()
+        println(out)
+        println(err)
+        throw new GradleException("Cannot run ${args.joinToString(" ")}: $err")
+    }
+}
+
+def checkoutExternalDeps(File path) {
+    path.mkdirs()
+    if (new File(path, "doclava").exists())
+        runCommand(["git", "pull"], new File(path, "doclava"))
+    else
+        runCommand(["git", "clone", "--depth", "1", "https://github.com/JetBrains/doclava-mirror.git", "doclava"], path)
+}
+
+File getExternalProjectPath() {
+    def scriptDir = file(buildscript.sourceFile.parent)
+    if (System.getenv("COMPOSE_DESKTOP_GITHUB_BUILD") != null) {
+        def path = new File(scriptDir, "/out/buildSrc/build/external")
+        checkoutExternalDeps(path)
+        return path.getCanonicalFile()
+    } else {
+        return new File(scriptDir, "../../external").getCanonicalFile()
+    }
+}
+
 // Add included builds. This only works if this is currently the root build, so this script should
 // be applied to several builds and will only enable itself when part of the root build.
 if (currentBuildIsRootBuild) {
-  String buildScriptDir = buildscript.sourceFile.parent
-  File externalRoot = new File(buildScriptDir, "../../external")
-
-  includeBuild(new File(externalRoot, "doclava"))
+  includeBuild(new File(getExternalProjectPath(), "doclava"))
 }
-
-
