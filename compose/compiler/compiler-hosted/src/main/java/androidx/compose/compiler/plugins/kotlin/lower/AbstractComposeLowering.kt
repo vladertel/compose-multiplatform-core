@@ -54,7 +54,6 @@ import org.jetbrains.kotlin.fir.java.topLevelName
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
-import org.jetbrains.kotlin.ir.backend.js.utils.OperatorNames
 import org.jetbrains.kotlin.ir.builders.IrBlockBodyBuilder
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.declarations.buildField
@@ -150,6 +149,8 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.source.PsiSourceElement
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.utils.DFS
+import org.jetbrains.kotlin.util.OperatorNameConventions
+import org.jetbrains.kotlin.ir.util.render
 
 @Suppress("DEPRECATION")
 abstract class AbstractComposeLowering(
@@ -626,7 +627,7 @@ abstract class AbstractComposeLowering(
 
     protected fun irAnd(lhs: IrExpression, rhs: IrExpression): IrCallImpl {
         return irCall(
-            lhs.type.binaryOperator(OperatorNames.AND, rhs.type),
+            lhs.type.binaryOperator(OperatorNameConventions.AND, rhs.type),
             null,
             lhs,
             null,
@@ -637,7 +638,7 @@ abstract class AbstractComposeLowering(
     protected fun irInv(lhs: IrExpression): IrCallImpl {
         val int = context.irBuiltIns.intType
         return irCall(
-            int.unaryOperator(OperatorNames.INV),
+            int.unaryOperator(OperatorNameConventions.INV),
             null,
             lhs
         )
@@ -646,7 +647,7 @@ abstract class AbstractComposeLowering(
     protected fun irOr(lhs: IrExpression, rhs: IrExpression): IrCallImpl {
         val int = context.irBuiltIns.intType
         return irCall(
-            int.binaryOperator(OperatorNames.OR, int),
+            int.binaryOperator(OperatorNameConventions.OR, int),
             null,
             lhs,
             null,
@@ -657,7 +658,7 @@ abstract class AbstractComposeLowering(
     protected fun irBooleanOr(lhs: IrExpression, rhs: IrExpression): IrCallImpl {
         val boolean = context.irBuiltIns.booleanType
         return irCall(
-            boolean.binaryOperator(OperatorNames.OR, boolean),
+            boolean.binaryOperator(OperatorNameConventions.OR, boolean),
             null,
             lhs,
             null,
@@ -714,7 +715,7 @@ abstract class AbstractComposeLowering(
     protected fun irXor(lhs: IrExpression, rhs: IrExpression): IrCallImpl {
         val int = context.irBuiltIns.intType
         return irCall(
-            int.binaryOperator(OperatorNames.XOR, int),
+            int.binaryOperator(OperatorNameConventions.XOR, int),
             null,
             lhs,
             null,
