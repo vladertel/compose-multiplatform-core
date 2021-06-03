@@ -103,7 +103,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             commonTest.dependencies {
                 implementation(kotlin("test-junit"))
-                implementation(libs.kotlinCoroutinesTest)
             }
 
             androidAndroidTest.dependencies {
@@ -111,6 +110,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
                 implementation(libs.truth)
+                implementation(libs.kotlinCoroutinesTest)
             }
 
             jsMain {
@@ -120,6 +120,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
             jvmTest.dependencies {
                 implementation kotlin("test-junit")
+                implementation(libs.kotlinCoroutinesTest)
                 implementation(libs.kotlinCoroutinesTest)
             }
             desktopTest {
