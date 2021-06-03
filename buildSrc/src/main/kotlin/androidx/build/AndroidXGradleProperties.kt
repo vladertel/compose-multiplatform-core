@@ -54,6 +54,11 @@ const val VERSION_EXTRA_CHECK_ENABLED = "androidx.versionExtraCheckEnabled"
 const val COMPOSE_MPP_ENABLED = "androidx.compose.multiplatformEnabled"
 
 /**
+ * Setting this property enables JS compiler tests of Compose
+ */
+const val COMPOSE_JS_COMPILER_TESTS_ENABLED = "androidx.compose.jsCompilerTestsEnabled"
+
+/**
  * Returns whether the project should generate documentation.
  */
 const val ENABLE_DOCUMENTATION = "androidx.enableDocumentation"
@@ -123,6 +128,7 @@ val ALL_ANDROIDX_PROPERTIES = setOf(
     ALTERNATIVE_PROJECT_URL,
     VERSION_EXTRA_CHECK_ENABLED,
     COMPOSE_MPP_ENABLED,
+    COMPOSE_JS_COMPILER_TESTS_ENABLED,
     DISPLAY_TEST_OUTPUT,
     ENABLE_DOCUMENTATION,
     PROJECT_SUBSET,

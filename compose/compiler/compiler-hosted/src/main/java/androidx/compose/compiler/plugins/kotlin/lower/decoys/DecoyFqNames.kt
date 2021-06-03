@@ -22,4 +22,5 @@ object DecoyFqNames {
     val Decoy = ComposeFqNames.internalFqNameFor("Decoy")
     val DecoyImplementation = ComposeFqNames.internalFqNameFor("DecoyImplementation")
     val CurrentComposerIntrinsic = ComposeFqNames.fqNameFor("\$get-currentComposer\$\$composable")
+    val key = ComposeFqNames.fqNameFor("key\$composable")
 }
