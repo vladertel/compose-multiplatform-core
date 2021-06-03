@@ -17,6 +17,7 @@
 package androidx.build
 
 import androidx.build.COMPOSE_MPP_ENABLED
+import androidx.build.COMPOSE_JS_COMPILER_TESTS_ENABLED
 import androidx.build.dependencyTracker.AffectedModuleDetector
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -124,6 +125,7 @@ val ALL_ANDROIDX_PROPERTIES = setOf(
     ALTERNATIVE_PROJECT_URL,
     VERSION_EXTRA_CHECK_ENABLED,
     COMPOSE_MPP_ENABLED,
+    COMPOSE_JS_COMPILER_TESTS_ENABLED,
     ENABLE_COMPOSE_COMPILER_METRICS,
     DISPLAY_TEST_OUTPUT,
     ENABLE_DOCUMENTATION,

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import androidx.build.AndroidXComposePlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 import androidx.build.Publish
@@ -23,6 +24,8 @@ plugins {
     id("com.android.library")
     id("kotlin-android")
 }
+
+AndroidXComposePlugin.configureJsCompilerIntegrationTests(project)
 
 dependencies {
     implementation(libs.kotlinStdlib)
@@ -55,6 +58,10 @@ dependencies {
     testImplementation(projectOrArtifact(":compose:ui:ui"))
     testImplementation("androidx.core:core-ktx:1.1.0")
     testImplementation("androidx.activity:activity-ktx:1.2.0")
+
+    if (AndroidXComposePlugin.isJsCompilerTestsEnabled(project)) {
+        testJsRuntimeOnly(project(":compose:runtime:runtime"))
+    }
 }
 
 afterEvaluate {
