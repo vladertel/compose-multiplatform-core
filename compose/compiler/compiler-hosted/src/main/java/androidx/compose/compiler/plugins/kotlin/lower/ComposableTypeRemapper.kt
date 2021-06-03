@@ -41,9 +41,11 @@ import org.jetbrains.kotlin.ir.declarations.IrTypeParametersContainer
 import org.jetbrains.kotlin.ir.declarations.copyAttributes
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrMemberAccessExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.IrSimpleType
@@ -286,6 +288,16 @@ class DeepCopyIrTreeWithSymbolsPreservingMetadata(
 
         return super.visitCall(expression)
     }
+
+    override fun <T> visitConst(expression: IrConst<T>): IrConst<T> =
+        // unlike the original visitConst, this one remaps type as well
+        IrConstImpl(
+            expression.startOffset,
+            expression.endOffset,
+            expression.type.remapType(),
+            expression.kind,
+            expression.value
+        ).copyAttributes(expression)
 
     private fun IrSimpleFunctionSymbol.isBoundButNotRemapped(): Boolean {
         return this.isBound && symbolRemapper.getReferencedFunction(this) == this
