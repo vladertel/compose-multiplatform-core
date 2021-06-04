@@ -72,6 +72,8 @@ val KOTLIN_TEST get() = "org.jetbrains.kotlin:kotlin-test:$kotlinVersion"
 val KOTLIN_TEST_COMMON get() = "org.jetbrains.kotlin:kotlin-test-common:$kotlinVersion"
 val KOTLIN_REFLECT get() = "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
 
+val KOTLIN_NATIVE_VERSION get() = KOTLIN_VERSION
+
 internal lateinit var kotlinCoroutinesVersion: String
 
 val KOTLIN_COROUTINES_ANDROID
