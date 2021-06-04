@@ -91,7 +91,7 @@ class ModelViewTests {
         validate()
     }
 
-    @org.junit.Test
+    @Test
     fun testModelView_RecomposeScopeCleanup() = compositionTest {
         val washington = Person(
             PRESIDENT_NAME_1,
