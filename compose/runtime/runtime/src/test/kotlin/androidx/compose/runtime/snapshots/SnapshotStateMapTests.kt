@@ -19,8 +19,10 @@ package androidx.compose.runtime.snapshots
 import androidx.compose.runtime.mutableStateMapOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.test.IgnoreJsTarget
 
 class SnapshotStateMapTests {
     @Test
@@ -78,32 +80,40 @@ class SnapshotStateMapTests {
         }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun verifyMutableMapEntriesAdd() {
-        val map = defaultMap().toMutableMap()
-        val entriesToAdd = mutableMapOf(100 to 100f)
-        map.entries.add(entriesToAdd.entries.first())
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = defaultMap().toMutableMap()
+            val entriesToAdd = mutableMapOf(100 to 100f)
+            map.entries.add(entriesToAdd.entries.first())
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun validateEntriesAdd() {
-        val map = defaultMap()
-        val entriesToAdd = mutableMapOf(100 to 100f)
-        map.entries.add(entriesToAdd.entries.first())
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = defaultMap()
+            val entriesToAdd = mutableMapOf(100 to 100f)
+            map.entries.add(entriesToAdd.entries.first())
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun verifyMutableMapEntriesAddAll() {
-        val map = defaultMap().toMutableMap()
-        val entriesToAdd = mutableMapOf(100 to 100f, 200 to 200f)
-        map.entries.addAll(entriesToAdd.entries)
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = defaultMap().toMutableMap()
+            val entriesToAdd = mutableMapOf(100 to 100f, 200 to 200f)
+            map.entries.addAll(entriesToAdd.entries)
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun validateEntriesAddAll() {
-        val map = defaultMap()
-        val entriesToAdd = mutableMapOf(100 to 100f, 200 to 200f)
-        map.entries.addAll(entriesToAdd.entries)
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = defaultMap()
+            val entriesToAdd = mutableMapOf(100 to 100f, 200 to 200f)
+            map.entries.addAll(entriesToAdd.entries)
+        }
     }
 
     @Test
@@ -121,6 +131,7 @@ class SnapshotStateMapTests {
     }
 
     @Test
+    @IgnoreJsTarget
     fun validateEntriesIterator() {
         validateRead { map, normalMap ->
             for (entries in map.entries.zip(normalMap.entries)) {
@@ -235,28 +246,36 @@ class SnapshotStateMapTests {
         }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun verifyMutableMapKeysAdd() {
-        val map = mutableMapOf<Int, Float>()
-        map.keys.add(1)
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = mutableMapOf<Int, Float>()
+            map.keys.add(1)
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun validateKeysAdd() {
-        val map = mutableStateMapOf<Int, Float>()
-        map.keys.add(1)
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = mutableStateMapOf<Int, Float>()
+            map.keys.add(1)
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun verifyMutableMapKeysAddAll() {
-        val map = mutableMapOf<Int, Float>()
-        map.keys.addAll(listOf(1, 2))
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = mutableMapOf<Int, Float>()
+            map.keys.addAll(listOf(1, 2))
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun validateKeysAddAll() {
-        val map = mutableStateMapOf<Int, Float>()
-        map.keys.addAll(listOf(1, 2))
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = mutableStateMapOf<Int, Float>()
+            map.keys.addAll(listOf(1, 2))
+        }
     }
 
     @Test
@@ -339,28 +358,36 @@ class SnapshotStateMapTests {
         }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun verifyMutableMapValuesAdd() {
-        val map = mutableMapOf<Int, Float>()
-        map.values.add(1f)
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = mutableMapOf<Int, Float>()
+            map.values.add(1f)
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun validateValuesAdd() {
-        val map = mutableStateMapOf<Int, Float>()
-        map.values.add(1f)
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = mutableStateMapOf<Int, Float>()
+            map.values.add(1f)
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun verifyMutableMapValuesAddAll() {
-        val map = mutableMapOf<Int, Float>()
-        map.values.addAll(listOf(1f, 2f))
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = mutableMapOf<Int, Float>()
+            map.values.addAll(listOf(1f, 2f))
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test
     fun validateValuesAddAll() {
-        val map = mutableStateMapOf<Int, Float>()
-        map.values.addAll(listOf(1f, 2f))
+        assertFailsWith(UnsupportedOperationException::class) {
+            val map = mutableStateMapOf<Int, Float>()
+            map.values.addAll(listOf(1f, 2f))
+        }
     }
 
     @Test
