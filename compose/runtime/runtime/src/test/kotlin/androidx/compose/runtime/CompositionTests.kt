@@ -44,8 +44,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.test._runBlocking
 import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.test.IgnoreJsTarget
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -2012,7 +2013,7 @@ class CompositionTests {
     }
 
     @Test
-    fun testRememberedObserver_Controlled_Dispose() = runBlocking {
+    fun testRememberedObserver_Controlled_Dispose() = _runBlocking {
         val recomposer = Recomposer(coroutineContext)
         val root = View()
         val controlled = ControlledComposition(ViewApplier(root), recomposer)
@@ -2874,8 +2875,8 @@ class CompositionTests {
                 }
                 scope.invalidate()
                 advanceUntilIdle()
-                assert(parentReferences.size > 1) { "expected to be composed more than once" }
-                assert(parentReferences.toSet().size == 1) {
+                check(parentReferences.size > 1) { "expected to be composed more than once" }
+                check(parentReferences.toSet().size == 1) {
                     "expected all parentReferences to be the same; saw $parentReferences"
                 }
             } finally {
