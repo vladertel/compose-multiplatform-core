@@ -50,9 +50,6 @@ kotlin {
                 implementation project(":compose:runtime:runtime")
                 implementation project(":compose:ui:ui")
                 implementation project(":compose:ui:ui-graphics")
-
-                // implementation("org.jetbrains.skiko:skiko-native-runtime-macos-x64:$skiko_version")
-                // implementation("org.jetbrains.skiko:skiko-native-skia-interop-macos-x64:$skiko_version")
             }
         }
     }
