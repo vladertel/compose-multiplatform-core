@@ -45,6 +45,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.test.IgnoreJsTarget
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -1497,6 +1498,7 @@ class CompositionTests {
     }
 
     @Test
+    @IgnoreJsTarget
     fun testRememberObserver_Forget_Simple() = compositionTest {
         val rememberObject = object : RememberObserver {
             var count = 0
@@ -1561,6 +1563,7 @@ class CompositionTests {
     }
 
     @Test
+    @IgnoreJsTarget
     fun testRemember_Forget_NoForgetOnRemember() = compositionTest {
         var expectedRemember = true
         var expectedForget = true
@@ -1943,6 +1946,7 @@ class CompositionTests {
     }
 
     @Test
+    @IgnoreJsTarget
     fun testCompoundKeyHashStaysTheSameAfterRecompositions() = compositionTest {
         val outerKeys = mutableListOf<Int>()
         val innerKeys = mutableListOf<Int>()
@@ -2769,8 +2773,8 @@ class CompositionTests {
                 }
                 scope.invalidate()
                 advanceUntilIdle()
-                assert(parentReferences.size > 1) { "expected to be composed more than once" }
-                assert(parentReferences.toSet().size == 1) {
+                check(parentReferences.size > 1) { "expected to be composed more than once" }
+                check(parentReferences.toSet().size == 1) {
                     "expected all parentReferences to be the same; saw $parentReferences"
                 }
             } finally {

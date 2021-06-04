@@ -237,7 +237,9 @@ class AndroidXComposePlugin : Plugin<Project> {
                     java.includes.add("**/*.kt")
                 }
                 sourceSets.findByName("test")?.apply {
-                    java.srcDirs("src/test/kotlin")
+                    java.srcDirs(
+                        "src/test/kotlin", "src/commonTest/kotlin", "src/jvmTest/kotlin"
+                    )
                     res.srcDirs("src/test/res")
 
                     // Keep Kotlin files in java source sets so the source set is not empty when
