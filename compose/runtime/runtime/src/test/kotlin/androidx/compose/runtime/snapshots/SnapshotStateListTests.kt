@@ -19,6 +19,7 @@ package androidx.compose.runtime.snapshots
 import androidx.compose.runtime.mutableStateListOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -64,10 +65,12 @@ class SnapshotStateListTests {
         (0..3).forEach { assertEquals(it, list[it]) }
     }
 
-    @Test(expected = IndexOutOfBoundsException::class)
+    @Test
     fun validateGet_IndexOutOfBound() {
-        val list = mutableStateListOf(0, 1, 2, 3)
-        list[4]
+        assertFailsWith(IndexOutOfBoundsException::class) {
+            val list = mutableStateListOf(0, 1, 2, 3)
+            list[4]
+        }
     }
 
     @Test
@@ -88,16 +91,18 @@ class SnapshotStateListTests {
         assertEquals(5, expected)
     }
 
-    @Test(expected = IllegalStateException::class)
+    @Test
     fun validateIterator_remove() {
-        validate(mutableStateListOf(0, 1, 2, 3, 4)) { normalList ->
-            val iterator = normalList.iterator()
-            iterator.next()
-            iterator.next()
-            iterator.remove()
-            iterator.remove()
-            iterator.next()
-            iterator.remove()
+        assertFailsWith(IllegalStateException::class) {
+            validate(mutableStateListOf(0, 1, 2, 3, 4)) { normalList ->
+                val iterator = normalList.iterator()
+                iterator.next()
+                iterator.next()
+                iterator.remove()
+                iterator.remove()
+                iterator.next()
+                iterator.remove()
+            }
         }
     }
 
@@ -210,11 +215,13 @@ class SnapshotStateListTests {
         repeat(3) { assertEquals(it + 2, subList[it]) }
     }
 
-    @Test(java.lang.IndexOutOfBoundsException::class)
+    @Test
     fun validate_subList_get_outOfRange() {
-        val list = mutableStateListOf(0, 1, 2, 3, 4, 5, 6)
-        val subList = list.subList(2, 5)
-        subList[3]
+        assertFailsWith(IndexOutOfBoundsException::class) {
+            val list = mutableStateListOf(0, 1, 2, 3, 4, 5, 6)
+            val subList = list.subList(2, 5)
+            subList[3]
+        }
     }
 
     @Test
@@ -318,31 +325,37 @@ class SnapshotStateListTests {
         assertFalse(iterator.hasPrevious())
     }
 
-    @Test(expected = IllegalStateException::class)
+    @Test
     fun validate_subList_listIterator_add() {
-        val list = mutableStateListOf(0, 1, 2, 3, 4)
-        val subList = list.subList(1, 4)
-        val iterator = subList.listIterator()
-        iterator.next()
-        iterator.add(1)
+        assertFailsWith(IllegalStateException::class) {
+            val list = mutableStateListOf(0, 1, 2, 3, 4)
+            val subList = list.subList(1, 4)
+            val iterator = subList.listIterator()
+            iterator.next()
+            iterator.add(1)
+        }
     }
 
-    @Test(expected = IllegalStateException::class)
+    @Test
     fun validate_subList_listIterator_remove() {
-        val list = mutableStateListOf(0, 1, 2, 3, 4)
-        val subList = list.subList(1, 4)
-        val iterator = subList.listIterator()
-        iterator.next()
-        iterator.remove()
+        assertFailsWith(IllegalStateException::class) {
+            val list = mutableStateListOf(0, 1, 2, 3, 4)
+            val subList = list.subList(1, 4)
+            val iterator = subList.listIterator()
+            iterator.next()
+            iterator.remove()
+        }
     }
 
-    @Test(expected = IllegalStateException::class)
+    @Test
     fun validate_subList_listIterator_set() {
-        val list = mutableStateListOf(0, 1, 2, 3, 4)
-        val subList = list.subList(1, 4)
-        val iterator = subList.listIterator()
-        iterator.next()
-        iterator.set(1)
+        assertFailsWith(IllegalStateException::class) {
+            val list = mutableStateListOf(0, 1, 2, 3, 4)
+            val subList = list.subList(1, 4)
+            val iterator = subList.listIterator()
+            iterator.next()
+            iterator.set(1)
+        }
     }
 
     @Test
@@ -430,13 +443,15 @@ class SnapshotStateListTests {
         expected(normalList, list)
     }
 
-    @Test(expected = ConcurrentModificationException::class)
+    @Test
     fun validate_subList_concurrentChanges() {
-        val list = mutableStateListOf(0, 1, 2, 3, 4, 5, 6)
-        val subList1 = list.subList(1, 6)
-        val subList2 = list.subList(1, 6)
-        subList1.remove(3)
-        subList2.remove(4)
+        assertFailsWith(ConcurrentModificationException::class) {
+            val list = mutableStateListOf(0, 1, 2, 3, 4, 5, 6)
+            val subList1 = list.subList(1, 6)
+            val subList2 = list.subList(1, 6)
+            subList1.remove(3)
+            subList2.remove(4)
+        }
     }
 
     @Test
