@@ -18,6 +18,8 @@ package androidx.compose.runtime
 
 import androidx.compose.runtime.internal.ThreadMap
 import androidx.compose.runtime.internal.emptyThreadMap
+import kotlinx.coroutines.CoroutineScope
+import kotlin.coroutines.EmptyCoroutineContext
 
 internal actual typealias AtomicReference<V> = java.util.concurrent.atomic.AtomicReference<V>
 

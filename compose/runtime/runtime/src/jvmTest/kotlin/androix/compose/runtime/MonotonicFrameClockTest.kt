@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 
-package androidx.compose.runtime
+package androix.compose.runtime
 
+import androidx.compose.runtime.ExperimentalComposeApi
+import androidx.compose.runtime.MonotonicFrameClock
+import androidx.compose.runtime.monotonicFrameClock
+import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
