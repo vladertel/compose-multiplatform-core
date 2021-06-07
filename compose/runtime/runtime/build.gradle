@@ -26,11 +26,7 @@ plugins {
     id("com.android.library")
 }
 
-repositories {
-    mavenCentral()
-}
-
-AndroidXUiPlugin.applyAndConfigureKotlinPlugin(project)
+AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
 dependencies {
     kotlinPlugin(projectOrArtifact(":compose:compiler:compiler"))
