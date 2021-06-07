@@ -86,7 +86,6 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                 }
                 is KotlinBasePluginWrapper -> {
                     project.configureComposeImplPluginForAndroidx()
-
                     if (plugin is KotlinMultiplatformPluginWrapper) {
                         project.configureForMultiplatform()
                     }
@@ -338,6 +337,7 @@ fun Project.configureComposeImplPluginForAndroidx() {
     })
 
     project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
+        if (compile !is KotlinNativeCompile) {
         // TODO(b/157230235): remove when this is enabled by default
         compile.kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
         compile.inputs.files({ kotlinPlugin })
@@ -368,6 +368,7 @@ fun Project.configureComposeImplPluginForAndroidx() {
                         )
                 }
             }
+        }
         }
     }
 
