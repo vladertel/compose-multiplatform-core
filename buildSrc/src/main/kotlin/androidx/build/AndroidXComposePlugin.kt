@@ -79,11 +79,11 @@ class AndroidXComposePlugin : Plugin<Project> {
                         }
                     }
 
-                    project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
-                        if (compile !is KotlinNativeCompile) {
+                    project.afterEvaluate { project ->
+                        project.tasks.withType<KotlinCompile<*>>().configureEach { compile ->
                             // TODO(b/157230235): remove when this is enabled by default
                             compile.kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-                                compile.inputs.files({ kotlinPlugin.files })
+                            compile.inputs.files({ kotlinPlugin.files })
                                 .withPropertyName("composeCompilerExtension")
                                 .withNormalizer(ClasspathNormalizer::class.java)
                                 compile.doFirst {
@@ -93,9 +93,7 @@ class AndroidXComposePlugin : Plugin<Project> {
                                     }
                                 }
                         }
-                    }
 
-                    project.afterEvaluate {
                         val androidXExtension =
                             project.extensions.findByType(AndroidXExtension::class.java)
                         if (androidXExtension != null) {
@@ -156,17 +154,17 @@ class AndroidXComposePlugin : Plugin<Project> {
                 configureForKotlinMultiplatformSourceStructure()
             }
 
-            tasks.withType(KotlinCompile::class.java).configureEach { compile ->
-                if (compile !is KotlinNativeCompile) {
+            afterEvaluate { project ->
+                project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
                     // Needed to enable `expect` and `actual` keywords
                     compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
                 }
-            }
 
-            tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
-                compile.kotlinOptions.freeCompilerArgs += listOf(
-                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true"
-                )
+                project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
+                    compile.kotlinOptions.freeCompilerArgs += listOf(
+                        "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true"
+                    )
+                }
             }
         }
 
