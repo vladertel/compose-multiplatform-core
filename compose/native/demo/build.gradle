@@ -15,22 +15,22 @@
  */
 
 import static androidx.build.dependencies.DependenciesKt.*
-import androidx.build.AndroidXUiPlugin
+import androidx.build.AndroidXComposePlugin
 import androidx.build.LibraryGroups
 import androidx.build.Publish
-import androidx.build.AndroidXUiPlugin
+import androidx.build.AndroidXComposePlugin
 import androidx.build.LibraryGroups
 import androidx.build.LibraryType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("AndroidXPlugin")
-    id("AndroidXUiPlugin")
+    id("AndroidXComposePlugin")
     id("kotlin-multiplatform")
     id("application")
 }
 
-AndroidXUiPlugin.applyAndConfigureKotlinPlugin(project)
+AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 dependencies {
     kotlinPlugin project(":compose:compiler:compiler")
     kotlinNativeCompilerPluginClasspath(project(":compose:compiler:compiler-hosted"))
