@@ -23,21 +23,21 @@ import androidx.compose.ui.text.intl.PlatformLocale
 /**
  * An Native implementation of StringDelegate
  */
-/*
-internal class NativeStringDelegate : PlatformStringDelegate {
+
+internal class NativeStringDelegate() : PlatformStringDelegate {
     override fun toUpperCase(string: String, locale: PlatformLocale): String =
-        string.toUpperCase((locale as NativeLocale).locale)
+        string.toUpperCase()
 
     override fun toLowerCase(string: String, locale: PlatformLocale): String =
-        string.toLowerCase((locale as NativeLocale).locale)
+        string.toLowerCase()
 
     override fun capitalize(string: String, locale: PlatformLocale): String =
-        string.capitalize((locale as NativeLocale).locale)
+        string.capitalize()
 
     override fun decapitalize(string: String, locale: PlatformLocale): String =
-        string.decapitalize((locale as NativeLocale).locale)
+        string.decapitalize()
 }
-*/
+
 internal actual fun ActualStringDelegate(): PlatformStringDelegate =
-    TODO("implement native StringDelegate")
-    //NativeStringDelegate()
+    //TODO("implement native StringDelegate")
+    NativeStringDelegate()
