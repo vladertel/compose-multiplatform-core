@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import androidx.build.AndroidXUiPlugin
+import androidx.build.AndroidXComposePlugin
 import androidx.build.LibraryGroups
 import androidx.build.Publish
 
 plugins {
     id("AndroidXPlugin")
-    id("AndroidXUiPlugin")
+    id("AndroidXComposePlugin")
     id("kotlin-multiplatform")
 }
 
-AndroidXUiPlugin.applyAndConfigureKotlinPlugin(project)
+AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 dependencies {
     kotlinPlugin project(":compose:compiler:compiler")
     kotlinNativeCompilerPluginClasspath(project(":compose:compiler:compiler-hosted"))
