@@ -70,7 +70,6 @@ class AndroidXComposePlugin : Plugin<Project> {
                 }
                 is KotlinBasePluginWrapper -> {
                     project.configureComposePluginForAndroidx()
-
                     if (plugin is KotlinMultiplatformPluginWrapper) {
                         project.configureForMultiplatform()
                     }
@@ -362,16 +361,19 @@ fun Project.configureComposePluginForAndroidx() {
         }
     }.files
 
+
     project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
-        // TODO(b/157230235): remove when this is enabled by default
-        compile.kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-        compile.inputs.files({ kotlinPlugin })
-            .withPropertyName("composeCompilerExtension")
-            .withNormalizer(ClasspathNormalizer::class.java)
-        compile.doFirst {
-            if (!kotlinPlugin.isEmpty) {
-                compile.kotlinOptions.freeCompilerArgs +=
-                    "-Xplugin=${kotlinPlugin.first()}"
+        if (compile !is KotlinNativeCompile) {
+            // TODO(b/157230235): remove when this is enabled by default
+            compile.kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+            compile.inputs.files({ kotlinPlugin })
+                .withPropertyName("composeCompilerExtension")
+                .withNormalizer(ClasspathNormalizer::class.java)
+            compile.doFirst {
+                if (!kotlinPlugin.isEmpty) {
+                    compile.kotlinOptions.freeCompilerArgs +=
+                        "-Xplugin=${kotlinPlugin.first()}"
+                }
             }
         }
     }
