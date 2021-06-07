@@ -32,17 +32,11 @@ internal class NativeLocale(val locale: Locale) : PlatformLocale {
 }
 
 internal actual fun createPlatformLocaleDelegate(): PlatformLocaleDelegate =
-    TODO("implement native createPlatformLocaleDelegate")
-/*
     object : PlatformLocaleDelegate {
-    override val current: List<PlatformLocale>
-        get() = listOf(NativeLocale(Locale.getDefault()))
+      override val current: List<PlatformLocale>
+        get() = listOf(NativeLocale(Locale("utf-8")))
 
-    override fun parseLanguageTag(languageTag: String): PlatformLocale =
-        NativeLocale(
-            Locale.forLanguageTag(
-                languageTag
-            )
-        )
-}
-*/
+      override fun parseLanguageTag(languageTag: String): PlatformLocale =
+        TODO("parseLanguageTag unimplemented") 
+    }
+
