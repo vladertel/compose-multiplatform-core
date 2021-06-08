@@ -26,7 +26,8 @@ plugins {
 
 dependencies {
     compileOnly(libs.kotlinStdlib)
-    compileOnly(libs.kotlinCompiler)
+    // compileOnly(libs.kotlinCompiler)
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler:1.5.0-CUSTOM") // This to build the plugin with the changed kotlin compiler
 }
 
 tasks.withType(KotlinCompile).configureEach {

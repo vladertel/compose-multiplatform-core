@@ -21,9 +21,13 @@ import org.jetbrains.kotlin.descriptors.ClassConstructorDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.ParameterDescriptor
 import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBasedDeclarationDescriptor
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
+import org.jetbrains.kotlin.ir.symbols.impl.*
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.DescriptorsRemapper
+import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.types.KotlinType
 
 /**
@@ -44,6 +48,7 @@ import org.jetbrains.kotlin.types.KotlinType
  * This conversion is only required with decoys, but can be applied to the JVM as well for
  * consistency.
  */
+@OptIn(ObsoleteDescriptorBasedAPI::class)
 class ComposableSymbolRemapper : DeepCopySymbolRemapper(
     object : DescriptorsRemapper {
         override fun remapDeclaredConstructor(
@@ -88,4 +93,17 @@ class ComposableSymbolRemapper : DeepCopySymbolRemapper(
             hasComposableAnnotation() ||
                 arguments.any { it.type.hasComposableAnnotation() }
     }
-)
+) {
+    // TODO: the DeepCopySymbolRemapper in Kotlin compiler loses symbol signatures.
+    // Consider using DeepCopySymbolRemapperPreservingSignatures after moving to 1.5.20.
+    override fun visitClass(declaration: IrClass) {
+        remapSymbol(classes, declaration) {
+            if (declaration.symbol is IrClassPublicSymbolImpl) {
+                IrClassPublicSymbolImpl(declaration.symbol.signature!!)
+            } else {
+                IrClassSymbolImpl(descriptorsRemapper.remapDeclaredClass(it.descriptor))
+            }
+        }
+        declaration.acceptChildrenVoid(this)
+    }
+}
