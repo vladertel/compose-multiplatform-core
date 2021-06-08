@@ -158,7 +158,19 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
                 dependsOn(jvmMain)
             }
-            nativeMain.dependsOn(commonMain)
+            nativeMain {
+                dependencies {
+                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
+                    /*
+                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0-native-mt") {
+                        version {
+                            strictly("1.5.0-native-mt")
+                        }
+                    }
+                    */
+                }
+                dependsOn(commonMain)
+            }
             macosX64Main.dependsOn(nativeMain)
 
             test.dependencies {
