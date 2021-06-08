@@ -41,6 +41,9 @@ import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.DelegatingBindingTrace
 
+import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.declarations.IrFunction
+
 class ComposeIrGenerationExtension(
     @Suppress("unused") private val liveLiteralsEnabled: Boolean = false,
     @Suppress("unused") private val liveLiteralsV2Enabled: Boolean = false,
@@ -48,6 +51,16 @@ class ComposeIrGenerationExtension(
     private val intrinsicRememberEnabled: Boolean = true,
     private val decoysEnabled: Boolean = false,
 ) : IrGenerationExtension {
+
+    // create a symbol remapper to be used across all transforms
+    val symbolRemapper = ComposableSymbolRemapper()
+
+    private val transformedFunctions: MutableMap<IrSimpleFunction, IrSimpleFunction> =
+        mutableMapOf()
+
+    private val transformedFunctionSet = mutableSetOf<IrFunction>()
+
+
     @OptIn(ObsoleteDescriptorBasedAPI::class)
     override fun generate(
         moduleFragment: IrModuleFragment,
@@ -64,7 +77,7 @@ class ComposeIrGenerationExtension(
         )
 
         // create a symbol remapper to be used across all transforms
-        val symbolRemapper = ComposableSymbolRemapper()
+        // val symbolRemapper = ComposableSymbolRemapper()
 
         ClassStabilityTransformer(
             pluginContext,
@@ -114,7 +127,9 @@ class ComposeIrGenerationExtension(
             pluginContext,
             symbolRemapper,
             bindingTrace,
-            decoysEnabled
+            decoysEnabled,
+            transformedFunctions,
+            transformedFunctionSet
         ).lower(moduleFragment)
 
         // transform calls to the currentComposer to just use the local parameter from the

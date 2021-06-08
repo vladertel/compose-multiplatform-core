@@ -93,6 +93,8 @@ import org.jetbrains.kotlin.resolve.BindingTrace
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import kotlin.math.min
+import org.jetbrains.kotlin.backend.common.ir.ir2stringWhole
+import org.jetbrains.kotlin.ir.util.render
 
 @Suppress("DEPRECATION")
 class ComposerParamTransformer(
@@ -100,6 +102,9 @@ class ComposerParamTransformer(
     symbolRemapper: DeepCopySymbolRemapper,
     bindingTrace: BindingTrace,
     private val decoysEnabled: Boolean,
+
+    private val transformedFunctions: MutableMap<IrSimpleFunction, IrSimpleFunction>,
+    private val transformedFunctionSet: MutableSet<IrFunction>
 ) :
     AbstractComposeLowering(context, symbolRemapper, bindingTrace),
     ModuleLoweringPass {
@@ -143,10 +148,10 @@ class ComposerParamTransformer(
         module.patchDeclarationParents()
     }
 
-    private val transformedFunctions: MutableMap<IrSimpleFunction, IrSimpleFunction> =
-        mutableMapOf()
+    // private val transformedFunctions: MutableMap<IrSimpleFunction, IrSimpleFunction> =
+        // mutableMapOf()
 
-    private val transformedFunctionSet = mutableSetOf<IrFunction>()
+    // private val transformedFunctionSet = mutableSetOf<IrFunction>()
 
     private val composerType = composerIrClass.defaultType.replaceArgumentsWithStarProjections()
 
