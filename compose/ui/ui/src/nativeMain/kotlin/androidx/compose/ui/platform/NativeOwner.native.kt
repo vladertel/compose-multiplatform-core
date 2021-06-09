@@ -84,9 +84,13 @@ private typealias Command = () -> Unit
     InternalCoreApi::class
 )
 /* internal */ class NativeOwner(
-    // val container: NativeOwners,
+    val container: NativeOwners,
     density: Density = Density(1f, 1f)
 ) : Owner, RootForTest, /*DesktopRootForTest,*/ PositionCalculator {
+
+    init {
+        println("created NativeOwner")
+    }
 
     internal var size by mutableStateOf(IntSize(0, 0))
 
@@ -147,22 +151,17 @@ private typealias Command = () -> Unit
     }
 
 
-    override val textInputService // = TextInputService(container.platformInputService)
-        get() = TODO("implement NativeOwner.textInputService")
+    override val textInputService = TextInputService(container.platformInputService)
 
     override val fontLoader = FontLoader()
 
-    override val hapticFeedBack // = DesktopHapticFeedback()
-        get() = TODO("implement NativeHapticFeedback")
+    override val hapticFeedBack = NativeHapticFeedback()
 
-    override val clipboardManager // = DesktopClipboardManager()
-        get() = TODO("implement NativeClipboardManager")
+    override val clipboardManager = NativeClipboardManager()
 
-    override val accessibilityManager // = DesktopAccessibilityManager()
-        get() = TODO("implement NativeAccessebilityManager")
+    override val accessibilityManager = NativeAccessibilityManager()
 
-    override val textToolbar //= DesktopTextToolbar()
-        get() = TODO("implement NativeTextToolbar")
+    override val textToolbar = NativeTextToolbar()
 
     override val semanticsOwner: SemanticsOwner = SemanticsOwner(root)
 
@@ -170,8 +169,7 @@ private typealias Command = () -> Unit
 
     override val autofill: Autofill? get() = null
 
-    override val viewConfiguration: ViewConfiguration // = DesktopViewConfiguration(density)
-        get() = TODO("implement NativeViewConfiguration")
+    override val viewConfiguration: ViewConfiguration = NativeViewConfiguration(density)
 
 //    val keyboard: Keyboard?
 //        get() = container.keyboard
