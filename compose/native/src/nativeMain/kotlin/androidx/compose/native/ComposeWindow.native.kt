@@ -18,8 +18,14 @@ package androidx.compose.native
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
+import org.jetbrains.skiko.skia.native.*
 // import org.jetbrains.skiko.ClipComponent
 // import org.jetbrains.skiko.GraphicsApi
+
+import platform.AppKit.*
+import platform.Cocoa.*
+import platform.Foundation.*
+
 /*
 import java.awt.Component
 import javax.swing.JFrame
@@ -42,34 +48,40 @@ class ComposeWindow(val parent: AppFrame) /*: SkiaWindow()*/ {
     fun setTitle(title: String) {
         println("TODO: set title to SkiaWindow")
     }
-    /*
-    private val pane = object : JLayeredPane() {
-        override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
-            layer.wrapped.setSize(width, height)
-            super.setBounds(x, y, width, height)
-        }
-    }
-    */
-/*
-    private val clipMap = mutableMapOf<Component, ClipComponent>()
+
+    val windowStyle =
+        NSWindowStyleMaskTitled or
+        NSWindowStyleMaskMiniaturizable or
+        NSWindowStyleMaskClosable or
+        NSWindowStyleMaskResizable
+
+    private val nsWindow = NSWindow(
+        contentRect =  NSMakeRect(0.0, 0.0, 640.0, 480.0),
+        styleMask = windowStyle,
+        backing =  NSBackingStoreBuffered,
+        defer =  true)
+
+
+    // private val clipMap = mutableMapOf<Component, ClipComponent>()
 
     init {
-        pane.setLayout(null)
-        pane.add(layer.component, Integer.valueOf(1))
-        contentPane.add(pane)
+        nsWindow.contentView?.addSubview(layer.wrapped.nsView)
+        layer.wrapped.checkIsShowing() // TODO: The awt versions has hierarchy listener. What should we use here?
+    }
+/*
+    override fun add(nsView: NSView): Component {
+        println("ComposeWindow.add")
+        // val clipComponent = ClipComponent(component)
+        // clipMap.put(component, clipComponent)
+        // layer.wrapped.clipComponents.add(clipComponent)
+        // return pane.add(component, Integer.valueOf(0))
     }
 
-    override fun add(component: Component): Component {
-        val clipComponent = ClipComponent(component)
-        clipMap.put(component, clipComponent)
-        layer.wrapped.clipComponents.add(clipComponent)
-        return pane.add(component, Integer.valueOf(0))
-    }
-
-    override fun remove(component: Component) {
-        layer.wrapped.clipComponents.remove(clipMap.get(component)!!)
-        clipMap.remove(component)
-        pane.remove(component)
+    override fun remove(/*component: Component*/nsView: NSView) {
+        println("ComposeWindow.remove")
+        // layer.wrapped.clipComponents.remove(clipMap.get(component)!!)
+        // clipMap.remove(component)
+        // pane.remove(component)
     }
 */
     /**
@@ -84,6 +96,7 @@ class ComposeWindow(val parent: AppFrame) /*: SkiaWindow()*/ {
         parentComposition: CompositionContext? = null,
         content: @Composable () -> Unit
     ) {
+        println("ComposeWindow.setContent")
         layer.setContent(
             parentComposition = parentComposition,
             content = content

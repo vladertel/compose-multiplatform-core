@@ -13,19 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/*
+
 package androidx.compose.ui.platform
 
 import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.staticCompositionLocalOf
+/*
 import androidx.compose.ui.geometry.Offset
 // import androidx.compose.ui.input.mouse.MouseScrollEvent
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventData
 import androidx.compose.ui.input.pointer.PointerType
+*/
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
@@ -42,11 +44,14 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
 }
 
 // TODO: this is essentially a copy of DesktopOwners.
-internal class NativeOwners(
-    // private val coroutineScope: CoroutineScope,
-    // component: DesktopComponent = DummyDesktopComponent,
+/* internal */ class NativeOwners(
+    private val coroutineScope: CoroutineScope,
+    component: NativeComponent = DummyNativeComponent,
     private val invalidate: () -> Unit = {},
 ) {
+    init {
+        println("created NativeOwners")
+    }
     private var isInvalidationDisabled = false
 
     // @Volatile
@@ -69,21 +74,21 @@ internal class NativeOwners(
 
     val list = LinkedHashSet<NativeOwner>()
     private val listCopy = mutableListOf<NativeOwner>()
-/*
+
+    /*
     var keyboard: Keyboard? = null
 
     private var pointerId = 0L
     private var isMousePressed = false
 */
-    private val dispatcher: CoroutineDispatcher // = FlushCoroutineDispatcher(coroutineScope)
-        get() = TODO("implement FlushCoroutineDispatcher for native")
-    private val frameClock // = BroadcastFrameClock(onNewAwaiters = ::invalidateIfNeeded)
-        get() = TODO("implement frameCLock for native")
-    private val coroutineContext // = dispatcher + frameClock
-        get() = TODO("implement native coroutineContext")
+    private val dispatcher = FlushCoroutineDispatcher(coroutineScope)
+
+    private val frameClock = BroadcastFrameClock(onNewAwaiters = ::invalidateIfNeeded)
+
+    private val coroutineContext = dispatcher + frameClock
 
     internal val recomposer = Recomposer(coroutineContext)
-    internal val platformInputService: DesktopPlatformInput = DesktopPlatformInput(component)
+    internal val platformInputService: NativePlatformInput = NativePlatformInput(component)
 
     init {
         coroutineScope.launch(coroutineContext, start = CoroutineStart.UNDISPATCHED) {
@@ -224,4 +229,3 @@ internal class NativeOwners(
 
 */
 }
-*/

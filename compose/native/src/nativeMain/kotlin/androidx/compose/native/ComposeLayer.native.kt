@@ -23,55 +23,60 @@ import androidx.compose.runtime.CompositionContext
 import androidx.compose.ui.input.mouse.MouseScrollEvent
 import androidx.compose.ui.input.mouse.MouseScrollOrientation
 import androidx.compose.ui.input.mouse.MouseScrollUnit
-import androidx.compose.ui.platform.DesktopComponent
-*/
+ */
+import androidx.compose.ui.platform.NativeComponent
 import androidx.compose.ui.platform.NativeOwner
-// import androidx.compose.ui.platform.NativeOwners
-// import androidx.compose.ui.platform.setContent
+import androidx.compose.ui.platform.NativeOwners
+import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.Density
-/*
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.swing.Swing
-*/
+// import kotlinx.coroutines.swing.Swing
+
 import org.jetbrains.skiko.skia.native.Canvas
 import org.jetbrains.skiko.native.SkiaLayer
 import org.jetbrains.skiko.native.SkiaRenderer
 
 /* internal */ class ComposeLayer {
-
+    init {
+        println("created ComposeLayer")
+    }
     private var isDisposed = false
-/*
-    private val coroutineScope = CoroutineScope(Dispatchers.Swing)
+
+    private val coroutineScope = CoroutineScope(Dispatchers.Default /*Dispatchers.Swing*/)
     // TODO(demin): maybe pass CoroutineScope into AWTDebounceEventQueue and get rid of [cancel]
     //  method?
-    private val events = AWTDebounceEventQueue()
+    // private val events = AWTDebounceEventQueue()
 
     internal val wrapped = Wrapped()
-*/
-    /*
+
     internal val owners: NativeOwners = NativeOwners(
-        // coroutineScope,
-        // wrapped,
-        // wrapped::needRedraw
+        coroutineScope,
+        wrapped,
+        wrapped::needRedraw
     )
-*/
+
     private var owner: NativeOwner? = null
     private var composition: Composition? = null
 
     private var content: (@Composable () -> Unit)? = null
     private var parentComposition: CompositionContext? = null
 
-    private lateinit var density: Density
-/*
-    inner class Wrapped : SkiaLayer(), DesktopComponent {
-        var currentInputMethodRequests: InputMethodRequests? = null
+    private /*lateinit*/ var density: Density = Density(1f, 1f)
+
+    inner class Wrapped : SkiaLayer(), NativeComponent {
+        init {
+            println("created Wrapped")
+        }
+        // var currentInputMethodRequests: InputMethodRequests? = null
 
         var isInit = false
             private set
 
         override fun init() {
+            println("Wrapped.init()")
             super.init()
             isInit = true
             resetDensity()
@@ -88,21 +93,27 @@ import org.jetbrains.skiko.native.SkiaRenderer
             owner?.density = density
         }
 
-        override fun getInputMethodRequests() = currentInputMethodRequests
+        // override fun getInputMethodRequests() = currentInputMethodRequests
 
-        override fun enableInput(inputMethodRequests: InputMethodRequests) {
+
+        override fun enableInput(/*inputMethodRequests: InputMethodRequests*/) {
+            TODO("implement enableInput()")
+            /*
             currentInputMethodRequests = inputMethodRequests
             enableInputMethods(true)
             val focusGainedEvent = FocusEvent(this, FocusEvent.FOCUS_GAINED)
             inputContext.dispatchEvent(focusGainedEvent)
+
+             */
         }
 
         override fun disableInput() {
-            currentInputMethodRequests = null
+            TODO("implement disableInput()")
+            // currentInputMethodRequests = null
         }
 
-        override val locationOnScreen: Point
-            get() = super.getLocationOnScreen()
+        // override val locationOnScreen: Point
+        //     get() = super.getLocationOnScreen()
 
         override val density: Density
             get() = this@ComposeLayer.density
@@ -110,13 +121,14 @@ import org.jetbrains.skiko.native.SkiaRenderer
 
     val component: SkiaLayer
         get() = wrapped
-*/
-    val component = SkiaLayer()
+
     init {
         component.renderer = object : SkiaRenderer {
+            init {
+                println("Created SkiaRenderer object")
+            }
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-                TODO("implement ComposeLayer onRender")
-                /*
+                println("onRender()")
                 try {
                     owners.onFrame(canvas, width, height, nanoTime)
                 } catch (e: Throwable) {
@@ -125,8 +137,6 @@ import org.jetbrains.skiko.native.SkiaRenderer
                     //     throw e
                     // }
                 }
-
-                 */
             }
         }
         initCanvas()
@@ -232,7 +242,7 @@ import org.jetbrains.skiko.native.SkiaRenderer
             MouseScrollOrientation.Vertical
         }
     )
-
+*/
     // TODO(demin): detect OS fontScale
     //  font size can be changed on Windows 10 in Settings - Ease of Access,
     //  on Ubuntu in Settings - Universal Access
@@ -240,17 +250,17 @@ import org.jetbrains.skiko.native.SkiaRenderer
     private fun detectCurrentDensity(): Density {
         return Density(wrapped.contentScale, 1f)
     }
-*/
+
     fun dispose() {
         check(!isDisposed)
         composition?.dispose()
         owner?.dispose()
-    /*
-        events.cancel()
+
+        // events.cancel()
         coroutineScope.cancel()
         wrapped.dispose()
 
-     */
+
         isDisposed = true
     }
 
@@ -258,8 +268,6 @@ import org.jetbrains.skiko.native.SkiaRenderer
         parentComposition: CompositionContext? = null,
         content: @Composable () -> Unit
     ) {
-        TODO("implement native ComposeLayer setContent")
-        /*
         check(!isDisposed)
         check(this.content == null) { "Cannot set content twice" }
         this.content = content
@@ -267,16 +275,13 @@ import org.jetbrains.skiko.native.SkiaRenderer
         // We can't create NativeOwner now, because we don't know density yet.
         // We will know density only after SkiaLayer will be visible.
         initOwner()
-
-         */
     }
 
     private fun initOwner() {
         check(!isDisposed)
-        if (/*wrapped.isInit && */owner == null && content != null) {
-            owner = NativeOwner(/*owners, */density)
-            TODO("implement vvvv NativeOwner.setContent")
-            //composition = owner!!.setContent(parent = parentComposition, content = content!!)
+        if (wrapped.isInit && owner == null && content != null) {
+            owner = NativeOwner(owners, density)
+            composition = owner!!.setContent(parent = parentComposition, content = content!!)
         }
     }
 }
