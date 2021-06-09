@@ -30,23 +30,22 @@ import androidx.compose.ui.node.LayoutNode
  * @param content A `@Composable` function declaring the UI contents
  */
 
-internal fun NativeOwner.setContent(
+/* internal */fun NativeOwner.setContent(
     parent: CompositionContext? = null,
     content: @Composable () -> Unit
 ): Composition {
-    TODO("implement native NativeOwner.setContent")
 /*
     GlobalSnapshotManager.ensureStarted()
-
-    val composition = Composition(DesktopUiApplier(root), parent ?: container.recomposer)
+*/
+    val composition = Composition(NativeUiApplier(root), parent ?: container.recomposer)
     composition.setContent {
-        ProvideDesktopCompositionsLocals(this, content)
+        ProvideNativeCompositionsLocals(this, content)
     }
 
     return composition
-*/
+
 }
-/*
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun ProvideNativeCompositionsLocals(owner: NativeOwner, content: @Composable () -> Unit) {
@@ -60,7 +59,6 @@ private fun ProvideNativeCompositionsLocals(owner: NativeOwner, content: @Compos
         )
     }
 }
-*/
 
 internal actual fun createSubcomposition(
     container: LayoutNode,

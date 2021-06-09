@@ -235,7 +235,8 @@ internal class ComposeLayer {
     //  on Ubuntu in Settings - Universal Access
     //  on macOS there is no such setting
     private fun detectCurrentDensity(): Density {
-        return Density(wrapped.contentScale, 1f)
+        return Density(1f, 1f)
+        // return Density(wrapped.contentScale, 1f)
     }
 
     fun dispose() {
