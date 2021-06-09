@@ -25,6 +25,7 @@ fun main() {
 }
 
 fun createWindow(title: String) {
+    println("createWindow()")
     /*val window = */
     Window(title) {
         Box(modifier = Modifier
@@ -42,4 +43,5 @@ fun createWindow(title: String) {
 
         */
     }
+    println("end createWindow()")
 }

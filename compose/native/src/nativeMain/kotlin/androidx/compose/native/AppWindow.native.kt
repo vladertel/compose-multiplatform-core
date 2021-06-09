@@ -73,7 +73,7 @@ val LocalAppWindow = compositionLocalOf<AppWindow> {
  * @param onDismissRequest Executes when the user tries to close the Window.
  */
 fun Window(
-    title: String = "JetpackDesktopWindow",
+    title: String = "JetpackNativeWindow",
 /*
     size: IntSize = IntSize(800, 600),
     location: IntOffset = IntOffset.Zero,
