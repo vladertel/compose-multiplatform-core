@@ -19,32 +19,32 @@ package androidx.compose.ui.graphics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.*
 import androidx.compose.ui.util.fastForEach
+
 // import org.jetbrains.skiko.skia.native.RRect as SkiaRRect
-// import org.jetbrains.skiko.skia.native.SkRect as SkiaRect
+import org.jetbrains.skiko.skia.native.SkRect as SkiaNativeRect
+import org.jetbrains.skiko.skia.native.*
+import org.jetbrains.skiko.skia.native.`SkCanvas::SrcRectConstraint`.* // TODO: Do something with cpp nesting.
 
-// TODO remove me.
-// NativeCanvas is taken by the common expect.
-// Unitl we rename the common, the actual is SkiaNativeCanvas
-class SkiaNativeCanvas
 
-actual typealias NativeCanvas = SkiaNativeCanvas // org.jetbrains.skiko.skia.native.Canvas
-
-internal actual fun ActualCanvas(image: ImageBitmap): Canvas = error("implement SkiaCanvas") /*{
+internal actual fun ActualCanvas(image: ImageBitmap): Canvas {
     val skiaBitmap = image.asSkiaBitmap()
-    require(!skiaBitmap.isImmutable) {
+    require(!skiaBitmap.isImmutable()) {
         "Cannot draw on immutable ImageBitmap"
     }
-    return SkiaCanvas(org.jetbrains.skiko.skia.native.Canvas(skiaBitmap))
+    return NativeCanvas(org.jetbrains.skiko.skia.native.Canvas(skiaBitmap))
 }
-*/
 
-actual val Canvas.nativeCanvas: NativeCanvas get() = error("Implement nativeCanvas") // (this as SkiaCanvas).skia
-/*
-class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canvas {
-    private val Paint.skia get() = (this as SkiaPaint).skia
+
+actual val Canvas.nativeCanvas: PlatformCanvas get() = (this as NativeCanvas).skia
+
+actual typealias PlatformCanvas = org.jetbrains.skiko.skia.native.Canvas
+
+class NativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canvas {
+    private val Paint.skia
+        get() = (this as NativePaint).skia
 
     override fun save() {
         skia.save()
@@ -56,10 +56,7 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
 
     override fun saveLayer(bounds: Rect, paint: Paint) {
         skia.saveLayer(
-            bounds.left,
-            bounds.top,
-            bounds.right,
-            bounds.bottom,
+            bounds.toSkiaNativeRect(),
             paint.skia
         )
     }
@@ -83,23 +80,23 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
     override fun concat(matrix: Matrix) {
         if (!matrix.isIdentity()) {
             TODO("implement native concat(matrix: Matrix)")
-            // skia.concat(matrix.toSkija())
+            // skia.concat(matrix.toSkiaNative())
         }
     }
 
     override fun clipRect(left: Float, top: Float, right: Float, bottom: Float, clipOp: ClipOp) {
         val antiAlias = true
-        skia.clipRect(SkijaRect.makeLTRB(left, top, right, bottom), clipOp.toSkija(), antiAlias)
+        skia.clipRect(makeLTRB(left, top, right, bottom), clipOp.toSkiaNative(), antiAlias)
     }
 
     fun clipRoundRect(rect: RoundRect, clipOp: ClipOp = ClipOp.Intersect) {
         val antiAlias = true
-        skia.clipRRect(rect.toSkijaRRect(), clipOp.toSkija(), antiAlias)
+        skia.clipRRect(rect.toSkiaNativeRRect(), clipOp.toSkiaNative(), antiAlias)
     }
 
     override fun clipPath(path: Path, clipOp: ClipOp) {
         val antiAlias = true
-        skia.clipPath(path.asSkiaPath(), clipOp.toSkija(), antiAlias)
+        skia.clipPath(path.asSkiaPath(), clipOp.toSkiaNative(), antiAlias)
     }
 
     override fun drawLine(p1: Offset, p2: Offset, paint: Paint) {
@@ -107,7 +104,7 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
     }
 
     override fun drawRect(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
-        skia.drawRect(SkijaRect.makeLTRB(left, top, right, bottom), paint.skia)
+        skia.drawRect(makeLTRB(left, top, right, bottom), paint.skia)
     }
 
     override fun drawRoundRect(
@@ -119,8 +116,10 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
         radiusY: Float,
         paint: Paint
     ) {
+        TODO("implement native NativeCanvas.drawRoundRect")
+        /*
         skia.drawRRect(
-            SkijaRRect.makeLTRB(
+            SkiaNativeRRect.makeLTRB(
                 left,
                 top,
                 right,
@@ -130,10 +129,11 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
             ),
             paint.skia
         )
+         */
     }
 
     override fun drawOval(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
-        skia.drawOval(SkijaRect.makeLTRB(left, top, right, bottom), paint.skia)
+        skia.drawOval(makeLTRB(left, top, right, bottom), paint.skia)
     }
 
     override fun drawCircle(center: Offset, radius: Float, paint: Paint) {
@@ -151,10 +151,7 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
         paint: Paint
     ) {
         skia.drawArc(
-            left,
-            top,
-            right,
-            bottom,
+            makeLTRB(left, top, right, bottom),
             startAngle,
             sweepAngle,
             useCenter,
@@ -167,22 +164,8 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
     }
 
     override fun drawImage(image: ImageBitmap, topLeftOffset: Offset, paint: Paint) {
-        skia.drawBitmapRect(
-            image.asSkiaBitmap(),
-            SkijaRect.makeXYWH(
-                0f,
-                0f,
-                image.width.toFloat(),
-                image.height.toFloat()
-            ),
-            SkijaRect.makeXYWH(
-                topLeftOffset.x,
-                topLeftOffset.y,
-                image.width.toFloat(),
-                image.height.toFloat()
-            ),
-            paint.skia
-        )
+        val size = Size(image.width.toFloat(), image.height.toFloat())
+        drawImageRect(image, Offset.Zero, size, topLeftOffset, size, paint)
     }
 
     override fun drawImageRect(
@@ -193,23 +176,50 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
         dstSize: IntSize,
         paint: Paint
     ) {
-        skia.drawBitmapRect(
-            image.asSkiaBitmap(),
-            SkijaRect.makeXYWH(
-                srcOffset.x.toFloat(),
-                srcOffset.y.toFloat(),
-                srcSize.width.toFloat(),
-                srcSize.height.toFloat()
-            ),
-            SkijaRect.makeXYWH(
-                dstOffset.x.toFloat(),
-                dstOffset.y.toFloat(),
-                dstSize.width.toFloat(),
-                dstSize.height.toFloat()
-            ),
-            paint.skia
+        drawImageRect(
+            image,
+            Offset(srcOffset.x.toFloat(), srcOffset.y.toFloat()),
+            Size(srcSize.width.toFloat(), srcSize.height.toFloat()),
+            Offset(dstOffset.x.toFloat(), dstOffset.y.toFloat()),
+            Size(dstSize.width.toFloat(), dstSize.height.toFloat()),
+            paint
         )
     }
+
+
+    // TODO(demin): probably this method should be in the common Canvas
+    private fun drawImageRect(
+        image: ImageBitmap,
+        srcOffset: Offset,
+        srcSize: Size,
+        dstOffset: Offset,
+        dstSize: Size,
+        paint: Paint
+    ) {
+        val bitmap = image.asSkiaBitmap()
+        // TODO: with skija this is .use, not .let .
+        Image.MakeFromBitmap(bitmap).let { skiaImage ->
+            skia.drawImageRect(
+                skiaImage,
+                makeXYWH(
+                    srcOffset.x,
+                    srcOffset.y,
+                    srcSize.width,
+                    srcSize.height
+                ),
+                makeXYWH(
+                    dstOffset.x,
+                    dstOffset.y,
+                    dstSize.width,
+                    dstSize.height
+                ),
+                paint.filterQuality.toSkia(),
+                paint.skia,
+                kFast_SrcRectConstraint
+            )
+        }
+    }
+
 
     override fun drawPoints(pointMode: PointMode, points: List<Offset>, paint: Paint) {
         when (pointMode) {
@@ -325,30 +335,35 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
     }
 
     override fun drawVertices(vertices: Vertices, blendMode: BlendMode, paint: Paint) {
+        TODO("implement NativeCanvas.drawVertices")
+        /*
         org.jetbrains.skiko.skia.native.Canvas._nDrawVertices(
             skia._ptr,
-            vertices.vertexMode.toSkijaMode(),
+            vertices.vertexMode.toSkiaNativeMode(),
             vertices.positions,
             vertices.colors,
             vertices.textureCoordinates,
             vertices.indices,
-            blendMode.toSkija().ordinal,
+            blendMode.toSkiaNative().ordinal,
             Native.getPtr(paint.asFrameworkPaint())
         )
+        */
     }
 
-    private fun VertexMode.toSkijaMode() = when (this) {
+    private fun VertexMode.toSkiaNativeMode() = when (this) {
         VertexMode.Triangles -> 0
         VertexMode.TriangleStrip -> 1
         VertexMode.TriangleFan -> 2
+        else -> 0
     }
 
-    private fun ClipOp.toSkija() = when (this) {
-        ClipOp.Difference -> SkijaClipMode.DIFFERENCE
-        ClipOp.Intersect -> SkijaClipMode.INTERSECT
+    private fun ClipOp.toSkiaNative() = when (this) {
+        ClipOp.Difference -> kDifference_
+        ClipOp.Intersect -> kIntersect
+        else -> kIntersect
     }
 
-    private fun Matrix.toSkija() = Matrix44(
+    private fun Matrix.toSkiaNative() = M44(
         this[0, 0],
         this[1, 0],
         this[2, 0],
@@ -369,5 +384,13 @@ class SkiaNativeCanvas(val skia: org.jetbrains.skiko.skia.native.Canvas) : Canva
         this[2, 3],
         this[3, 3]
     )
+
+    private fun FilterQuality.toSkia() = null
+    /* : SamplingMode = when (this) {
+        FilterQuality.Low -> FilterMipmap(FilterMode.LINEAR, MipmapMode.NONE)
+        FilterQuality.Medium -> FilterMipmap(FilterMode.LINEAR, MipmapMode.NEAREST)
+        FilterQuality.High -> CubicResampler(1 / 3.0f, 1 / 3.0f)
+        else -> FilterMipmap(FilterMode.NEAREST, MipmapMode.NONE)
+    }
+    */
 }
-*/

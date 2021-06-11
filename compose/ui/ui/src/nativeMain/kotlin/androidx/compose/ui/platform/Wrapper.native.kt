@@ -34,9 +34,10 @@ import androidx.compose.ui.node.LayoutNode
     parent: CompositionContext? = null,
     content: @Composable () -> Unit
 ): Composition {
-/*
+    println("Wrapper.native.kt: NativeOwner.setContent")
+
     GlobalSnapshotManager.ensureStarted()
-*/
+
     val composition = Composition(NativeUiApplier(root), parent ?: container.recomposer)
     composition.setContent {
         ProvideNativeCompositionsLocals(this, content)

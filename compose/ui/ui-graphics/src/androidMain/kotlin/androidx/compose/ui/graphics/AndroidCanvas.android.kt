@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastForEach
 
-actual typealias NativeCanvas = android.graphics.Canvas
+actual typealias PlatformCanvas = android.graphics.Canvas
 
 /**
  * Create a new Canvas instance that targets its drawing commands
@@ -54,7 +54,7 @@ class CanvasHolder {
 /**
  * Return an instance of the native primitive that implements the Canvas interface
  */
-actual val Canvas.nativeCanvas: NativeCanvas
+actual val Canvas.nativeCanvas: PlatformCanvas
     get() = (this as AndroidCanvas).internalCanvas
 
 // Stub canvas instance used to keep the internal canvas parameter non-null during its
@@ -65,7 +65,7 @@ private val EmptyCanvas = android.graphics.Canvas()
 
     // Keep the internal canvas as a var prevent having to allocate an AndroidCanvas
     // instance on each draw call
-    @PublishedApi internal var internalCanvas: NativeCanvas = EmptyCanvas
+    @PublishedApi internal var internalCanvas: PlatformCanvas = EmptyCanvas
 
     private val srcRect: android.graphics.Rect by lazy(LazyThreadSafetyMode.NONE) {
         android.graphics.Rect()
