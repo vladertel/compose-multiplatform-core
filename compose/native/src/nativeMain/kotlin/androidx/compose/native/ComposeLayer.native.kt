@@ -128,7 +128,7 @@ import org.jetbrains.skiko.native.SkiaRenderer
                 println("Created SkiaRenderer object")
             }
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-                println("onRender()")
+                println("ComposeLayer: renderer.onRender()")
                 try {
                     owners.onFrame(canvas, width, height, nanoTime)
                 } catch (e: Throwable) {
