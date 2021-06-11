@@ -67,6 +67,7 @@ class ComposeWindow(val parent: AppFrame) /*: SkiaWindow()*/ {
     init {
         nsWindow.contentView?.addSubview(layer.wrapped.nsView)
         layer.wrapped.checkIsShowing() // TODO: The awt versions has hierarchy listener. What should we use here?
+        nsWindow.orderFrontRegardless()
     }
 /*
     override fun add(nsView: NSView): Component {
