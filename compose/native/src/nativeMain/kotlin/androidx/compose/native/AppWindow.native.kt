@@ -435,6 +435,7 @@ class AppWindow : AppFrame {
         parentComposition: CompositionContext? = null,
         content: @Composable () -> Unit
     ) {
+    println("AppWindow.onCreate()")
         window.setContent(parentComposition) {
             CompositionLocalProvider(
                 LocalAppWindow provides this,
