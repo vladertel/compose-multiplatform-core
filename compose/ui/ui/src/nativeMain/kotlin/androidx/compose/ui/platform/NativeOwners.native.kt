@@ -111,6 +111,7 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
         dispatcher.hasTasks()
 
     fun register(NativeOwner: NativeOwner) {
+        println("NativeOwners.register() LIST: add")
         list.add(NativeOwner)
         NativeOwner.onNeedsRender = ::invalidateIfNeeded
         NativeOwner.onDispatchCommand = ::dispatchCommand
@@ -118,6 +119,7 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
     }
 
     fun unregister(NativeOwner: NativeOwner) {
+        println("NativeOwners.unregister() LIST: remove")
         list.remove(NativeOwner)
         NativeOwner.onDispatchCommand = null
         NativeOwner.onNeedsRender = null
@@ -125,6 +127,7 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
     }
 
     fun onFrame(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+        println("NativeOwners.onFrame() ${list}")
         disableInvalidation {
             // We must see the actual state before we will render the frame
             Snapshot.sendApplyNotifications()
@@ -134,6 +137,7 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
             listCopy.clear()
             listCopy.addAll(list)
             for (owner in listCopy) {
+                println("LIST member render")
                 owner.render(canvas, width, height)
             }
         }

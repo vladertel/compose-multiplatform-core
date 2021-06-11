@@ -23,7 +23,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SkiaNativeCanvas
+import androidx.compose.ui.graphics.NativeCanvas
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
@@ -31,10 +31,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asNativePath
+import androidx.compose.ui.graphics.asSkiaPath
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-// import androidx.compose.ui.graphics.toSkijaRect
+import androidx.compose.ui.graphics.toSkiaNativeRect
 import androidx.compose.ui.node.OwnedLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
@@ -42,12 +42,11 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
-/*
+
 import org.jetbrains.skiko.skia.native.Picture
 import org.jetbrains.skiko.skia.native.PictureRecorder
-import org.jetbrains.skiko.skia.native.Point3
+import org.jetbrains.skiko.skia.native.SkPoint3
 import org.jetbrains.skiko.skia.native.ShadowUtils
- */
 
 /* internal */ class SkiaNativeLayer(
     private var density: Density,
@@ -60,10 +59,8 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
     private var outlineCache =
         OutlineCache(density, size, RectangleShape, LayoutDirection.Ltr)
     private val matrix = Matrix()
-    private val pictureRecorder: Any // = PictureRecorder()
-        get() = TODO("implement native picture recorder")
-    private var picture: Any? = null // Picture? = null
-        get() = TODO("implement native picture")
+    private val pictureRecorder = PictureRecorder()
+    private var picture: Picture? = null
     private var isDestroyed = false
 
     private var transformOrigin: TransformOrigin = TransformOrigin.Center
@@ -210,13 +207,11 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
     }
 
     override fun drawLayer(canvas: Canvas) {
-        TODO("implement SkiaNativeLayer.drawLayer")
-        /*
-        outlineCache.density = getDensity()
         if (picture == null) {
             val bounds = size.toSize().toRect()
-            val pictureCanvas = pictureRecorder.beginRecording(bounds.toSkijaRect())
-            performDrawLayer(SkiaNativeCanvas(pictureCanvas), bounds)
+            val pictureCanvas = pictureRecorder.beginRecording(bounds.toSkiaNativeRect(), null)
+                ?: error("Could not begin picture recording")
+            performDrawLayer(NativeCanvas(pictureCanvas), bounds)
             picture = pictureRecorder.finishRecordingAsPicture()
         }
 
@@ -225,12 +220,10 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
         canvas.translate(position.x.toFloat(), position.y.toFloat())
         canvas.nativeCanvas.drawPicture(picture!!, null, null)
         canvas.restore()
-         */
     }
 
-    private fun performDrawLayer(canvas: SkiaNativeCanvas, bounds: Rect) {
-        TODO("implement performDrawLayer")
-        /*
+    private fun performDrawLayer(canvas: NativeCanvas, bounds: Rect) {
+
         if (alpha > 0) {
             if (shadowElevation > 0) {
                 drawShadow(canvas)
@@ -256,16 +249,12 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
             drawBlock(canvas)
             canvas.restore()
         }
-
-         */
     }
 
     override fun updateDisplayList() = Unit
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    fun drawShadow(canvas: SkiaNativeCanvas): Any = TODO("implement draw shadow")
-    /*
-    = with(getDensity()) {
+    fun drawShadow(canvas: NativeCanvas) = with(density) {
         val path = when (val outline = outlineCache.outline) {
             is Outline.Rectangle -> Path().apply { addRect(outline.rect) }
             is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
@@ -274,10 +263,10 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
         }
 
         // TODO: perspective?
-        val zParams = Point3(0f, 0f, shadowElevation)
+        val zParams = SkPoint3.Make(0f, 0f, shadowElevation)
 
         // TODO: configurable?
-        val lightPos = Point3(0f, -300.dp.toPx(), 600.dp.toPx())
+        val lightPos = SkPoint3.Make(0f, -300.dp.toPx(), 600.dp.toPx())
         val lightRad = 800.dp.toPx()
 
         val ambientAlpha = 0.039f * alpha
@@ -285,16 +274,17 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
         val ambientColor = Color.Black.copy(alpha = ambientAlpha)
         val spotColor = Color.Black.copy(alpha = spotAlpha)
 
-        ShadowUtils.drawShadow(
-            canvas.nativeCanvas, path.asNativePath(), zParams, lightPos,
-            lightRad,
-            ambientColor.toArgb(),
-            spotColor.toArgb(), alpha < 1f, false
+        ShadowUtils.DrawShadow(
+            canvas.nativeCanvas, path.asSkiaPath(),
+            zParams, lightPos, lightRad,
+            ambientColor.toArgb().toUInt(),
+            spotColor.toArgb().toUInt(),
+            0
         )
+
     }
 
-     */
-
+    @ThreadLocal
     companion object {
         private var lastId = 0L
     }

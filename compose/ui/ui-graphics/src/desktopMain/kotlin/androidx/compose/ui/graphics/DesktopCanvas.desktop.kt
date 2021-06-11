@@ -35,7 +35,7 @@ import org.jetbrains.skia.ClipMode as SkiaClipMode
 import org.jetbrains.skia.RRect as SkiaRRect
 import org.jetbrains.skia.Rect as SkiaRect
 
-actual typealias NativeCanvas = org.jetbrains.skia.Canvas
+actual typealias PlatformCanvas = org.jetbrains.skia.Canvas
 
 internal actual fun ActualCanvas(image: ImageBitmap): Canvas {
     val skiaBitmap = image.asDesktopBitmap()
@@ -45,7 +45,7 @@ internal actual fun ActualCanvas(image: ImageBitmap): Canvas {
     return DesktopCanvas(org.jetbrains.skia.Canvas(skiaBitmap))
 }
 
-actual val Canvas.nativeCanvas: NativeCanvas get() = (this as DesktopCanvas).skia
+actual val Canvas.nativeCanvas: PlatformCanvas get() = (this as DesktopCanvas).skia
 
 class DesktopCanvas(val skia: org.jetbrains.skia.Canvas) : Canvas {
     private val Paint.skia get() = (this as DesktopPaint).skia

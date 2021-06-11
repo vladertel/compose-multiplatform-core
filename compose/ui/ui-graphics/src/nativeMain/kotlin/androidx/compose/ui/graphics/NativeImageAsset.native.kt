@@ -18,18 +18,10 @@ package androidx.compose.ui.graphics
 
 import androidx.compose.ui.graphics.colorspace.ColorSpace
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
-/*
-import org.jetbrains.skija.Bitmap
-import org.jetbrains.skija.ColorAlphaType
-import org.jetbrains.skija.ColorInfo
-import org.jetbrains.skija.ColorType
-import org.jetbrains.skija.Image
-import org.jetbrains.skija.ImageInfo
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-
- */
+import org.jetbrains.skiko.skia.native.*
+import kotlinx.cinterop.*
 import kotlin.math.abs
+import kotlin.math.min
 
 /**
  * Create an [ImageBitmap] from the given [Bitmap]. Note this does
@@ -41,18 +33,20 @@ import kotlin.math.abs
 /**
  * Create an [ImageBitmap] from the given [Image].
  */
-//fun Image.asImageBitmap(): ImageBitmap = DesktopImageBitmap(toBitmap())
+fun Image.asImageBitmap(): ImageBitmap = NativeImageBitmap(toBitmap())
 
-/*
+
 private fun Image.toBitmap(): Bitmap {
     val bitmap = Bitmap()
-    bitmap.allocPixels(ImageInfo.makeN32(width, height, ColorAlphaType.PREMUL))
-    val canvas = org.jetbrains.skija.Canvas(bitmap)
+    // TODO: The last arg should be null, but Skia plugin doesn't let me pass null here.
+    // bitmap.allocPixels(SkImageInfo.MakeN32(width(), height(), kPremul_SkAlphaType, null))
+    bitmap.allocPixels(SkImageInfo.MakeN32(width(), height(), kPremul_SkAlphaType, SkColorSpace.MakeSRGB()))
+    val canvas = org.jetbrains.skiko.skia.native.Canvas(bitmap)
     canvas.drawImage(this, 0f, 0f)
     bitmap.setImmutable()
     return bitmap
 }
-*/
+
 
 internal actual fun ActualImageBitmap(
     width: Int,
@@ -60,18 +54,18 @@ internal actual fun ActualImageBitmap(
     config: ImageBitmapConfig,
     hasAlpha: Boolean,
     colorSpace: ColorSpace
-): ImageBitmap = TODO("Implement ActualImageBitmap")
-/*{
-    val colorType = config.toSkijaColorType()
-    val alphaType = if (hasAlpha) ColorAlphaType.PREMUL else ColorAlphaType.OPAQUE
-    val skijaColorSpace = colorSpace.toSkijaColorSpace()
-    val colorInfo = ColorInfo(colorType, alphaType, skijaColorSpace)
-    val imageInfo = ImageInfo(colorInfo, width, height)
+): ImageBitmap {
+    val colorType = config.toSkiaColorType()
+    val alphaType = if (hasAlpha) kPremul_SkAlphaType else kOpaque_SkAlphaType
+    val skiaColorSpace = colorSpace.toSkiaColorSpace()
+    val colorInfo = ColorInfo(colorType, alphaType, skiaColorSpace)
+    // TODO: have non-Sk counterparts here.
+    val imageInfo = SkImageInfo.Make(width, height, colorType, alphaType, SkColorSpace.MakeSRGB())
     val bitmap = Bitmap()
     bitmap.allocPixels(imageInfo)
-    return DesktopImageBitmap(bitmap)
+    return NativeImageBitmap(bitmap)
 }
-*/
+
 /*
 /**
  * Create an [ImageBitmap] from an image file stored in resources for the application
@@ -88,23 +82,20 @@ private fun loadResource(path: String): ByteArray {
     requireNotNull(resource) { "Resource $path not found" }
     return resource.readBytes()
 }
+*/
 
-/**
- * @Throws UnsupportedOperationException if this [ImageBitmap] is not backed by an
- * org.jetbrains.skija.Image
- */
-fun ImageBitmap.asDesktopBitmap(): Bitmap =
+fun ImageBitmap.asSkiaBitmap(): Bitmap =
     when (this) {
-        is DesktopImageBitmap -> bitmap
-        else -> throw UnsupportedOperationException("Unable to obtain org.jetbrains.skija.Image")
+        is NativeImageBitmap -> bitmap
+        else -> error("Unable to obtain org.jetbrains.skiko.skia.native.Image")
     }
 
-private class DesktopImageBitmap(val bitmap: Bitmap) : ImageBitmap {
-    override val colorSpace = bitmap.colorSpace.toComposeColorSpace()
-    override val config = bitmap.colorType.toComposeConfig()
-    override val hasAlpha = !bitmap.isOpaque
-    override val height get() = bitmap.height
-    override val width get() = bitmap.width
+private class NativeImageBitmap(val bitmap: Bitmap) : ImageBitmap {
+    override val colorSpace = bitmap.colorSpace().toComposeColorSpace()
+    override val config = bitmap.colorType().toComposeConfig()
+    override val hasAlpha = !bitmap.isOpaque()
+    override val height get() = bitmap.height()
+    override val width get() = bitmap.width()
     override fun prepareToDraw() = Unit
 
     override fun readPixels(
@@ -125,20 +116,22 @@ private class DesktopImageBitmap(val bitmap: Bitmap) : ImageBitmap {
         require(bufferOffset >= 0 && bufferOffset + width <= buffer.size)
         require(lastScanline >= 0 && lastScanline + width <= buffer.size)
 
-        // similar to https://cs.android.com/android/platform/superproject/+/9054ca2b342b2ea902839f629e820546d8a2458b:frameworks/base/libs/hwui/jni/Bitmap.cpp;l=898;bpv=1
-        val colorInfo = ColorInfo(
-            ColorType.BGRA_8888,
-            ColorAlphaType.UNPREMUL,
-            org.jetbrains.skija.ColorSpace.getSRGB()
-        )
-        val imageInfo = ImageInfo(colorInfo, width, height)
+        val imageInfo = SkImageInfo.Make(width, height, kBGRA_8888_SkColorType, kUnpremul_SkAlphaType, SkColorSpace.MakeSRGB())
         val bytesPerPixel = 4
-        val bytes = bitmap.readPixels(imageInfo, stride * bytesPerPixel.toLong(), startX, startY)!!
+        val rowBytes = stride * bytesPerPixel
+        val bytes = ByteArray(min(height, bitmap.height()-startY) * rowBytes) {0}
+        bytes.usePinned { pinned ->
+            bitmap.readPixels(imageInfo, pinned.addressOf(0), rowBytes.toULong(), startX, startY)!!
+        }
 
+        TODO("implement this byte buffer transformation")
+/*
         ByteBuffer.wrap(bytes)
             .order(ByteOrder.LITTLE_ENDIAN) // to return ARGB
             .asIntBuffer()
             .get(buffer, bufferOffset, bytes.size / bytesPerPixel)
+
+ */
     }
 }
 
@@ -147,40 +140,44 @@ private class DesktopImageBitmap(val bitmap: Bitmap) : ImageBitmap {
 //  in toSkijaColorType/toComposeConfig/toComposeColorSpace/toSkijaColorSpace
 //  see [https://android-review.googlesource.com/c/platform/frameworks/support/+/1429835/comment/c219501b_63c3d1fe/]
 
-private fun ImageBitmapConfig.toSkijaColorType() = when (this) {
-    ImageBitmapConfig.Argb8888 -> ColorType.N32
-    ImageBitmapConfig.Alpha8 -> ColorType.ALPHA_8
-    ImageBitmapConfig.Rgb565 -> ColorType.RGB_565
-    ImageBitmapConfig.F16 -> ColorType.RGBA_F16
-    else -> ColorType.N32
+private fun ImageBitmapConfig.toSkiaColorType() = when (this) {
+    ImageBitmapConfig.Argb8888 -> kN32_SkColorType
+    ImageBitmapConfig.Alpha8 -> error("figure out ColorType.ALPHA_8")// ColorType.ALPHA_8
+    ImageBitmapConfig.Rgb565 -> kRGB_565_SkColorType
+    ImageBitmapConfig.F16 -> kRGBA_F16_SkColorType
+    else -> kN32_SkColorType
 }
 
-private fun ColorType.toComposeConfig() = when (this) {
-    ColorType.N32 -> ImageBitmapConfig.Argb8888
-    ColorType.ALPHA_8 -> ImageBitmapConfig.Alpha8
-    ColorType.RGB_565 -> ImageBitmapConfig.Rgb565
-    ColorType.RGBA_F16 -> ImageBitmapConfig.F16
+private fun SkColorType.toComposeConfig() = when (this) {
+    kN32_SkColorType -> ImageBitmapConfig.Argb8888
+    // ColorType.ALPHA_8 -> ImageBitmapConfig.Alpha8
+    kRGB_565_SkColorType -> ImageBitmapConfig.Rgb565
+    kRGBA_F16_SkColorType -> ImageBitmapConfig.F16
     else -> ImageBitmapConfig.Argb8888
 }
 
-private fun org.jetbrains.skija.ColorSpace?.toComposeColorSpace(): ColorSpace {
+private fun org.jetbrains.skiko.skia.native.ColorSpace?.toComposeColorSpace(): ColorSpace {
+    return when {
+        this?.isSRGB() == true -> ColorSpaces.Srgb
+        else -> TODO("implement native toComposeColorSpace()")
+    }
+    /*
     return when (this) {
-        org.jetbrains.skija.ColorSpace.getSRGB() -> ColorSpaces.Srgb
-        org.jetbrains.skija.ColorSpace.getSRGBLinear() -> ColorSpaces.LinearSrgb
-        org.jetbrains.skija.ColorSpace.getDisplayP3() -> ColorSpaces.DisplayP3
+        org.jetbrains.skiko.skia.native.ColorSpace.getSRGB() -> ColorSpaces.Srgb
+        org.jetbrains.skiko.skia.native.ColorSpace.getSRGBLinear() -> ColorSpaces.LinearSrgb
+        org.jetbrains.skiko.skia.native.ColorSpace.getDisplayP3() -> ColorSpaces.DisplayP3
         else -> ColorSpaces.Srgb
     }
+     */
 }
 
 // TODO(demin): support all color spaces.
 //  to do this we need to implement SkColorSpace::MakeRGB in skija
-private fun ColorSpace.toSkijaColorSpace(): org.jetbrains.skija.ColorSpace {
+private fun ColorSpace.toSkiaColorSpace(): org.jetbrains.skiko.skia.native.ColorSpace {
     return when (this) {
-        ColorSpaces.Srgb -> org.jetbrains.skija.ColorSpace.getSRGB()
-        ColorSpaces.LinearSrgb -> org.jetbrains.skija.ColorSpace.getSRGBLinear()
-        ColorSpaces.DisplayP3 -> org.jetbrains.skija.ColorSpace.getDisplayP3()
-        else -> org.jetbrains.skija.ColorSpace.getSRGB()
+        ColorSpaces.Srgb -> org.jetbrains.skiko.skia.native.ColorSpace.MakeSRGB()
+        ColorSpaces.LinearSrgb -> TODO("figure out LinearSrgb") // org.jetbrains.skiko.skia.native.ColorSpace.getSRGBLinear()
+        ColorSpaces.DisplayP3 -> TODO("figure out DisplayP3") // org.jetbrains.skiko.skia.native.ColorSpace.getDisplayP3()
+        else -> org.jetbrains.skiko.skia.native.ColorSpace.MakeSRGB()
     }
 }
-
- */

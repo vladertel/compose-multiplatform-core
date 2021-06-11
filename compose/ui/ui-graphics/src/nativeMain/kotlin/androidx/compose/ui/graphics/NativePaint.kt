@@ -15,129 +15,134 @@
  */
 
 package androidx.compose.ui.graphics
-/*
-import org.jetbrains.skiko.skia.native.FilterQuality as SkijaFilterQuality
-import org.jetbrains.skiko.skia.native.PaintMode as SkijaPaintMode
-import org.jetbrains.skiko.skia.native.PaintStrokeCap as SkijaPaintStrokeCap
-import org.jetbrains.skiko.skia.native.PaintStrokeJoin as SkijaPaintStrokeJoin
-*/
-// TODO: remove me.
-class NativePaintSub
 
-actual typealias NativePaint = NativePaintSub// org.jetbrains.skiko.skia.native.Paint
+import org.jetbrains.skiko.skia.native.*
 
-actual fun Paint(): Paint = error("Implement native Paint")// SkiaPaint()
-/*
-class SkiaPaint : Paint {
+actual typealias PlatformPaint = org.jetbrains.skiko.skia.native.Paint
+
+actual fun Paint(): Paint = NativePaint()
+
+class NativePaint : Paint {
     internal val skia = org.jetbrains.skiko.skia.native.Paint()
 
     constructor() {
         filterQuality = FilterQuality.Medium
     }
 
-    override fun asFrameworkPaint(): NativePaint = skia
+    override fun asFrameworkPaint(): PlatformPaint = skia
 
     override var alpha: Float
-        get() = Color(skia.color).alpha
+        get() = Color(skia.getColor().toInt()).alpha
         set(value) {
-            skia.color = Color(skia.color).copy(alpha = value).toArgb()
+            skia.setColor(Color(skia.getColor().toInt()).copy(alpha = value).toArgb().toUInt())
         }
 
     override var isAntiAlias: Boolean
-        get() = skia.isAntiAlias
+        get() = skia.isAntiAlias()
         set(value) {
-            skia.isAntiAlias = value
+            skia.setAntiAlias(value)
         }
 
     override var color: Color
-        get() = Color(skia.color)
+        get() = Color(skia.getColor().toInt())
         set(color) {
-            skia.color = color.toArgb()
+            skia.setColor(color.toArgb().toUInt())
         }
 
     override var blendMode: BlendMode = BlendMode.SrcOver
         set(value) {
-            skia.blendMode = value.toSkija()
+            skia.setBlendMode(value.toSkia())
             field = value
         }
 
     override var style: PaintingStyle = PaintingStyle.Fill
         set(value) {
-            skia.mode = value.toSkija()
+            TODO("figure out painting style")
+            // skia.mode = value.toSkia()
             field = value
         }
 
     override var strokeWidth: Float
-        get() = skia.strokeWidth
+        get() = skia.getStrokeWidth()
         set(value) {
-            skia.strokeWidth = value
+            skia.setStrokeWidth(value)
         }
 
-    override var strokeCap: StrokeCap = StrokeCap.Butt
+    override var strokeCap = StrokeCap.Butt
         set(value) {
-            skia.strokeCap = value.toSkija()
+            skia.setStrokeCap(value.toSkia())
             field = value
         }
 
     override var strokeJoin: StrokeJoin = StrokeJoin.Round
         set(value) {
-            skia.strokeJoin = value.toSkija()
+            skia.setStrokeJoin(value.toSkia())
             field = value
         }
 
     override var strokeMiterLimit: Float = 0f
         set(value) {
-            skia.strokeMiter = value
+            skia.setStrokeMiter(value)
             field = value
         }
 
     override var filterQuality: FilterQuality = FilterQuality.None
         set(value) {
-            skia.filterQuality = value.toSkija()
+            skia.setFilterQuality(value.toSkia())
             field = value
         }
 
     override var shader: Shader? = null
         set(value) {
-            skia.shader = value
+            TODO("figure out NativePaint shader")
+            // skia.setShader(value)
             field = value
         }
 
     override var colorFilter: ColorFilter? = null
         set(value) {
-            skia.colorFilter = value?.asDesktopColorFilter()
+            TODO("figure out color filter")
+            // skia.colorFilter = value?.asNativeColorFilter()
             field = value
         }
 
     override var pathEffect: PathEffect? = null
         set(value) {
-            skia.pathEffect = (value as DesktopPathEffect?)?.asDesktopPathEffect()
+            TODO("figur out NativePaint path effect")
+            // skia.setPathEffect((value as NativePathEffect?)?.asNativePathEffect())
             field = value
         }
-
-    private fun PaintingStyle.toSkija() = when (this) {
+/*
+    private fun PaintingStyle.toSkia() = when (this) {
         PaintingStyle.Fill -> SkijaPaintMode.FILL
         PaintingStyle.Stroke -> SkijaPaintMode.STROKE
     }
-
-    private fun StrokeCap.toSkija() = when (this) {
-        StrokeCap.Butt -> SkijaPaintStrokeCap.BUTT
-        StrokeCap.Round -> SkijaPaintStrokeCap.ROUND
-        StrokeCap.Square -> SkijaPaintStrokeCap.SQUARE
+*/
+    private fun StrokeCap.toSkia() = when (this) {
+        StrokeCap.Butt -> kButt_Cap
+        StrokeCap.Round -> kRound_Cap
+        StrokeCap.Square -> kSquare_Cap
+        else -> error("Unexpected StrokeCap")
     }
 
-    private fun StrokeJoin.toSkija() = when (this) {
-        StrokeJoin.Miter -> SkijaPaintStrokeJoin.MITER
-        StrokeJoin.Round -> SkijaPaintStrokeJoin.ROUND
-        StrokeJoin.Bevel -> SkijaPaintStrokeJoin.BEVEL
+    private fun StrokeJoin.toSkia() = when (this) {
+        StrokeJoin.Miter -> kMiter_Join
+        StrokeJoin.Round -> kRound_Join
+        StrokeJoin.Bevel -> kBevel_Join
+        else -> error("Unexpected StrokeJoin")
     }
 
-    private fun FilterQuality.toSkija() = when (this) {
+    private fun FilterQuality.toSkia(): SkFilterQuality =
+        TODO("figure out native FilterQuality.toSkia()")
+        /*
+        when (this) {
         FilterQuality.None -> SkijaFilterQuality.NONE
         FilterQuality.Low -> SkijaFilterQuality.LOW
         FilterQuality.Medium -> SkijaFilterQuality.MEDIUM
         FilterQuality.High -> SkijaFilterQuality.HIGH
-    }
+        else -> error("Unexpected FilterQuality")
+        }
+         */
 }
-*/
+
 actual fun BlendMode.isSupported(): Boolean = true

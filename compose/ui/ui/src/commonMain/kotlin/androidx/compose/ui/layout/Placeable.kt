@@ -315,6 +315,7 @@ abstract class Placeable : Measured {
             placeAt(position + apparentToRealOffset, zIndex, layerBlock)
         }
 
+        @ThreadLocal
         internal companion object : PlacementScope() {
             override var parentLayoutDirection = LayoutDirection.Ltr
                 private set

@@ -19,39 +19,31 @@ package androidx.compose.ui.graphics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
-/*
-import org.jetbrains.skija.Matrix33
-import org.jetbrains.skija.PathDirection
-import org.jetbrains.skija.PathFillMode
-import org.jetbrains.skija.PathOp
-*/
+import org.jetbrains.skiko.skia.native.*
+import org.jetbrains.skiko.skia.native.SkPathFillType.*
+import org.jetbrains.skiko.skia.native.SkPathDirection.*
+import org.jetbrains.skiko.skia.native.`SkPath::AddPathMode`.*
+import kotlinx.cinterop.*
 
-actual fun Path(): Path = TODO("Implement SkiaPath")//DesktopPath()
+actual fun Path(): Path = NativePath()
 
-/**
- * @Throws UnsupportedOperationException if this Path is not backed by an org.jetbrains.skija.Path
- */
 @Suppress("NOTHING_TO_INLINE")
-inline fun Path.asNativePath(): /*org.jetbrains.skiko.skia.native.Path*/ Any = TODO("implement native  Path" +
-    ".asNativePath()")
-    /*
-    if (this is DesktopPath) {
+inline fun Path.asSkiaPath(): org.jetbrains.skiko.skia.native.Path =
+    if (this is NativePath) {
         internalPath
     } else {
-        throw UnsupportedOperationException("Unable to obtain org.jetbrains.skija.Path")
+        error("Unable to obtain org.jetbrains.skija.Path")
     }
 
-     */
-/*
-class DesktopPath(
-    internalPath: org.jetbrains.skija.Path = org.jetbrains.skija.Path()
+class NativePath(
+    internalPath: org.jetbrains.skiko.skia.native.Path = org.jetbrains.skiko.skia.native.Path()
 ) : Path {
     var internalPath = internalPath
         private set
 
     override var fillType: PathFillType
         get() {
-            if (internalPath.fillMode == PathFillMode.EVEN_ODD) {
+            if (internalPath.getFillType() == kEvenOdd) {
                 return PathFillType.EvenOdd
             } else {
                 return PathFillType.NonZero
@@ -59,12 +51,13 @@ class DesktopPath(
         }
 
         set(value) {
-            internalPath.fillMode =
+            internalPath.setFillType(
                 if (value == PathFillType.EvenOdd) {
-                    PathFillMode.EVEN_ODD
+                    kEvenOdd
                 } else {
-                    PathFillMode.WINDING
+                    kWinding
                 }
+            )
         }
 
     override fun moveTo(x: Float, y: Float) {
@@ -121,7 +114,7 @@ class DesktopPath(
         forceMoveTo: Boolean
     ) {
         internalPath.arcTo(
-            rect.toSkijaRect(),
+            rect.toSkiaNativeRect(),
             startAngleDegrees,
             sweepAngleDegrees,
             forceMoveTo
@@ -129,11 +122,11 @@ class DesktopPath(
     }
 
     override fun addRect(rect: Rect) {
-        internalPath.addRect(rect.toSkijaRect(), PathDirection.COUNTER_CLOCKWISE)
+        internalPath.addRect(rect.toSkiaNativeRect(), kCCW)
     }
 
     override fun addOval(oval: Rect) {
-        internalPath.addOval(oval.toSkijaRect(), PathDirection.COUNTER_CLOCKWISE)
+        internalPath.addOval(oval.toSkiaNativeRect(), kCCW)
     }
 
     override fun addArcRad(oval: Rect, startAngleRadians: Float, sweepAngleRadians: Float) {
@@ -141,19 +134,19 @@ class DesktopPath(
     }
 
     override fun addArc(oval: Rect, startAngleDegrees: Float, sweepAngleDegrees: Float) {
-        internalPath.addArc(oval.toSkijaRect(), startAngleDegrees, sweepAngleDegrees)
+        internalPath.addArc(oval.toSkiaNativeRect(), startAngleDegrees, sweepAngleDegrees)
     }
 
     override fun addRoundRect(roundRect: RoundRect) {
-        internalPath.addRRect(roundRect.toSkijaRRect(), PathDirection.COUNTER_CLOCKWISE)
+        internalPath.addRRect(roundRect.toSkiaNativeRRect(), kCCW)
     }
 
     override fun addPath(path: Path, offset: Offset) {
-        internalPath.addPath(path.asDesktopPath(), offset.x, offset.y)
+        internalPath.addPath(path.asSkiaPath(), offset.x, offset.y, kAppend_AddPathMode)
     }
 
     override fun close() {
-        internalPath.closePath()
+        internalPath.close()
     }
 
     override fun reset() {
@@ -165,16 +158,17 @@ class DesktopPath(
     }
 
     override fun translate(offset: Offset) {
-        internalPath.transform(Matrix33.makeTranslate(offset.x, offset.y))
+        TODO("figure out Pat.translate()")
+        // internalPath.transform(Matrix33.makeTranslate(offset.x, offset.y))
     }
 
     override fun getBounds(): Rect {
-        val bounds = internalPath.bounds
+        val bounds = internalPath.getBounds()!!.pointed
         return Rect(
-            bounds.left,
-            bounds.top,
-            bounds.right,
-            bounds.bottom
+            bounds.fLeft,
+            bounds.fTop,
+            bounds.fRight,
+            bounds.fBottom
         )
     }
 
@@ -183,27 +177,29 @@ class DesktopPath(
         path2: Path,
         operation: PathOperation
     ): Boolean {
+        TODO("implement Path.op")
+        /*
         val path = org.jetbrains.skija.Path.makeCombining(
             path1.asDesktopPath(),
             path2.asDesktopPath(),
-            operation.toSkijaOperation()
+            operation.toSkiaOperation()
         )
 
         internalPath = path ?: internalPath
         return path != null
-    }
 
-    private fun PathOperation.toSkijaOperation() = when (this) {
+         */
+    }
+/*
+    private fun PathOperation.toSkiaOperation() = when (this) {
         PathOperation.difference -> PathOp.DIFFERENCE
         PathOperation.intersect -> PathOp.INTERSECT
         PathOperation.union -> PathOp.UNION
         PathOperation.xor -> PathOp.XOR
         PathOperation.reverseDifference -> PathOp.REVERSE_DIFFERENCE
     }
+*/
+    override val isConvex: Boolean get() = internalPath.isConvex()
 
-    override val isConvex: Boolean get() = internalPath.isConvex
-
-    override val isEmpty: Boolean get() = internalPath.isEmpty
+    override val isEmpty: Boolean get() = internalPath.isEmpty()
 }
-
- */

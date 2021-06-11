@@ -20,14 +20,14 @@ import org.jetbrains.skia.PaintMode as SkiaPaintMode
 import org.jetbrains.skia.PaintStrokeCap as SkiaPaintStrokeCap
 import org.jetbrains.skia.PaintStrokeJoin as SkiaPaintStrokeJoin
 
-actual typealias NativePaint = org.jetbrains.skia.Paint
+actual typealias PlatformPaint = org.jetbrains.skia.Paint
 
 actual fun Paint(): Paint = DesktopPaint()
 
 class DesktopPaint : Paint {
     internal val skia = org.jetbrains.skia.Paint()
 
-    override fun asFrameworkPaint(): NativePaint = skia
+    override fun asFrameworkPaint(): PlatformPaint = skia
 
     override var alpha: Float
         get() = Color(skia.color).alpha
