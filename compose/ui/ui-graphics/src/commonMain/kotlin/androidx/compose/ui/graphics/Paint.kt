@@ -21,12 +21,12 @@ package androidx.compose.ui.graphics
  */
 const val DefaultAlpha: Float = 1.0f
 
-expect class NativePaint
+expect class PlatformPaint
 
 expect fun Paint(): Paint
 
 interface Paint {
-    fun asFrameworkPaint(): NativePaint
+    fun asFrameworkPaint(): PlatformPaint
 
     /**
      * Configures the alpha value between 0f to 1f representing fully transparent to fully
