@@ -23,8 +23,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.swing.Swing
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Platform-specific mechanism for starting a monitor of global snapshot state writes
@@ -38,12 +36,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * may establish different policies for these notifications.
  */
 internal object GlobalSnapshotManager {
-    private val started = AtomicBoolean(false)
+    private val started = AtomicInt(0)
 
     fun ensureStarted() {
-        if (started.compareAndSet(false, true)) {
+        if (started.compareAndSet(0, 1)) {
             val channel = Channel<Unit>(Channel.CONFLATED)
-            CoroutineScope(Dispatchers.Swing).launch {
+            CoroutineScope(Dispatchers.Default).launch {
                 channel.consumeEach {
                     Snapshot.sendApplyNotifications()
                 }

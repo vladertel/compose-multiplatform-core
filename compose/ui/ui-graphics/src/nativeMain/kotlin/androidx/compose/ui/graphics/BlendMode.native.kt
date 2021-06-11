@@ -15,12 +15,17 @@
  */
 
 package androidx.compose.ui.graphics
-/*
-internal fun BlendMode.toSkija() = when (this) {
+
+import org.jetbrains.skiko.skia.native.*
+
+internal fun BlendMode.toSkia() = when (this) {
+    /*
     BlendMode.Clear -> org.jetbrains.skija.BlendMode.CLEAR
     BlendMode.Src -> org.jetbrains.skija.BlendMode.SRC
     BlendMode.Dst -> org.jetbrains.skija.BlendMode.DST
-    BlendMode.SrcOver -> org.jetbrains.skija.BlendMode.SRC_OVER
+     */
+    BlendMode.SrcOver -> kSrcOver
+/*
     BlendMode.DstOver -> org.jetbrains.skija.BlendMode.DST_OVER
     BlendMode.SrcIn -> org.jetbrains.skija.BlendMode.SRC_IN
     BlendMode.DstIn -> org.jetbrains.skija.BlendMode.DST_IN
@@ -46,6 +51,7 @@ internal fun BlendMode.toSkija() = when (this) {
     BlendMode.Saturation -> org.jetbrains.skija.BlendMode.SATURATION
     BlendMode.Color -> org.jetbrains.skija.BlendMode.COLOR
     BlendMode.Luminosity -> org.jetbrains.skija.BlendMode.LUMINOSITY
-}
 
  */
+    else -> TODO("implement native $this")
+}

@@ -38,7 +38,7 @@ import androidx.compose.ui.focus.FocusManagerImpl
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
-// import androidx.compose.ui.graphics.DesktopCanvas
+import androidx.compose.ui.graphics.NativeCanvas
 import androidx.compose.ui.input.key.Key.Companion.Back
 import androidx.compose.ui.input.key.Key.Companion.DirectionCenter
 import androidx.compose.ui.input.key.Key.Companion.DirectionDown
@@ -138,7 +138,7 @@ private typealias Command = () -> Unit
     private val measureAndLayoutDelegate = MeasureAndLayoutDelegate(root)
 
     init {
-        // container.register(this)
+        container.register(this)
         snapshotObserver.startObserving()
         root.attach(this)
         _focusManager.takeFocus()
@@ -146,7 +146,7 @@ private typealias Command = () -> Unit
 
     fun dispose() {
         snapshotObserver.stopObserving()
-        // container.unregister(this)
+        container.unregister(this)
         // we don't need to call root.detach() because root will be garbage collected
     }
 
@@ -211,11 +211,22 @@ private typealias Command = () -> Unit
     var onDispatchCommand: ((Command) -> Unit)? = null
 
     fun render(canvas: org.jetbrains.skiko.skia.native.Canvas, width: Int, height: Int) {
+        println("NativeOwner.render()")
         needsLayout = false
         setSize(width, height)
-        measureAndLayout()
+        try {
+            measureAndLayout()
+        } catch (e: Throwable) {
+            println("EXCEPTION in NativeOwner.render:")
+            println(e.message)
+        }
         needsDraw = false
-        draw(canvas)
+        try {
+            draw(canvas)
+        } catch (e: Throwable) {
+            println("EXCEPTION in NativeOwner.draw:")
+            println(e.message)
+        }
         clearInvalidObservations()
     }
 
@@ -240,6 +251,7 @@ private typealias Command = () -> Unit
     }
 
     override fun measureAndLayout() {
+        println("NativeOwner.measureAndLayout()")
         if (measureAndLayoutDelegate.measureAndLayout()) {
             requestDraw()
         }
@@ -302,14 +314,14 @@ private typealias Command = () -> Unit
     override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
 
     fun setSize(width: Int, height: Int) {
+        println("NativeOwner.setSize()")
         val constraints = Constraints(0, width, 0, height)
         this.size = IntSize(width, height)
         measureAndLayoutDelegate.updateRootConstraints(constraints)
     }
 
     fun draw(canvas: org.jetbrains.skiko.skia.native.Canvas) {
-        TODO("implement NativeOwner.draw(canvas: org.jetbrains.skiko.skia.native.Canvas)")
-        // root.draw(SkiaCanvas(canvas))
+        root.draw(NativeCanvas(canvas))
     }
 
     internal fun processPointerInput(event: PointerInputEvent) {
