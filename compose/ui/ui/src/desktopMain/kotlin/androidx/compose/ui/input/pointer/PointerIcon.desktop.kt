@@ -28,7 +28,6 @@ import androidx.compose.ui.platform.LocalPointerIconService
 /**
  * Represents a pointer icon to use in [Modifier.pointerIcon]
  */
-@ExperimentalComposeUiApi
 interface PointerIcon {
     companion object {
         val Default: PointerIcon = AwtCursor(Cursor(Cursor.DEFAULT_CURSOR))
@@ -60,13 +59,13 @@ internal class AwtCursor(val cursor: Cursor) : PointerIcon {
 }
 
 internal interface PointerIconService {
+    fun getCurrent(): PointerIcon
     fun set(icon: PointerIcon)
 }
 
 /**
  * Creates [PointerIcon] from [Cursor]
  */
-@ExperimentalComposeUiApi
 fun PointerIcon(cursor: Cursor): PointerIcon = AwtCursor(cursor)
 
 /**
@@ -75,13 +74,33 @@ fun PointerIcon(cursor: Cursor): PointerIcon = AwtCursor(cursor)
  *
  * @param icon The icon to set
  */
-@ExperimentalComposeUiApi
 fun Modifier.pointerIcon(icon: PointerIcon) = composed {
     val pointerIconService = LocalPointerIconService.current
-    this.pointerMoveFilter(
-        onMove = {
-            pointerIconService.set(icon)
-            false
+    if (pointerIconService == null) {
+        Modifier
+    } else {
+        this.pointerInput(icon) {
+            awaitPointerEventScope {
+                var previouseIcon: PointerIcon? = null
+                while (true) {
+                    val event = awaitPointerEvent()
+                    when (event.type) {
+                        PointerEventType.Move -> {
+                            if (previouseIcon != null && pointerIconService.getCurrent() != icon) {
+                                pointerIconService.set(icon)
+                            }
+                        }
+                        PointerEventType.Enter -> {
+                            previouseIcon = pointerIconService.getCurrent()
+                            pointerIconService.set(icon)
+                        }
+                        PointerEventType.Exit -> {
+                            pointerIconService.set(previouseIcon ?: PointerIcon.Default)
+                            previouseIcon = null
+                        }
+                    }
+                }
+            }
         }
-    )
+    }
 }

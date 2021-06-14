@@ -368,20 +368,15 @@ internal class DesktopOwner(
         }
     }
 
-    internal var desiredPointerIcon = PointerIcon.Default
-
-    internal fun withPointerIconSet(body: () -> Unit) {
-        desiredPointerIcon = PointerIcon.Default
-        body()
-        when (val newPointerIcon = desiredPointerIcon) {
-            is AwtCursor -> container.component.componentCursor = newPointerIcon.cursor
-        }
-    }
-
     internal val pointerIconService: PointerIconService =
         object : PointerIconService {
-            override fun set(cursor: PointerIcon) {
-                desiredPointerIcon = cursor
+            override fun getCurrent(): PointerIcon =
+                AwtCursor(container.component.componentCursor)
+
+            override fun set(icon: PointerIcon) {
+                when (icon) {
+                    is AwtCursor -> container.component.componentCursor = icon.cursor
+                }
             }
         }
 }

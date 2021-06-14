@@ -37,16 +37,20 @@ import org.junit.runners.JUnit4
 class PointerIconTest {
     private val window = TestComposeWindow(width = 100, height = 100, density = Density(1f))
 
+    private val iconService = object : PointerIconService {
+        var currentIcon: PointerIcon? = null
+        override fun set(cursor: PointerIcon) {
+            currentIcon = cursor
+        }
+
+        override fun getCurrent(): PointerIcon = currentIcon ?: PointerIcon.Default
+    }
+
     @Test
     fun basicTest() {
-        var lastIcon: PointerIcon? = null
         window.setContent {
             CompositionLocalProvider(
-                LocalPointerIconService provides object : PointerIconService {
-                    override fun set(cursor: PointerIcon) {
-                        lastIcon = cursor
-                    }
-                }
+                LocalPointerIconService provides iconService
             ) {
                 Box(
                     modifier = Modifier
@@ -65,19 +69,14 @@ class PointerIconTest {
             x = 5,
             y = 5
         )
-        assertThat(lastIcon).isEqualTo(PointerIcon.Text)
+        assertThat(iconService.getCurrent()).isEqualTo(PointerIcon.Text)
     }
 
     @Test
     fun parentWins() {
-        var lastIcon: PointerIcon? = null
         window.setContent {
             CompositionLocalProvider(
-                LocalPointerIconService provides object : PointerIconService {
-                    override fun set(cursor: PointerIcon) {
-                        lastIcon = cursor
-                    }
-                }
+                LocalPointerIconService provides iconService
             ) {
                 Box(
                     modifier = Modifier
@@ -97,12 +96,12 @@ class PointerIconTest {
             x = 5,
             y = 5
         )
-        assertThat(lastIcon).isEqualTo(PointerIcon.Hand)
+        assertThat(iconService.getCurrent()).isEqualTo(PointerIcon.Hand)
 
         window.onMouseMoved(
             x = 15,
             y = 15
         )
-        assertThat(lastIcon).isEqualTo(PointerIcon.Hand)
+        assertThat(iconService.getCurrent()).isEqualTo(PointerIcon.Hand)
     }
 }
