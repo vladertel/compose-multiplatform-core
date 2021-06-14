@@ -15,7 +15,6 @@
  */
 
 @file:OptIn(ExperimentalComposeUiApi::class)
-
 package androidx.compose.ui.input.pointer
 
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -29,9 +28,13 @@ import androidx.compose.ui.platform.LocalPointerIconService
 @ExperimentalComposeUiApi
 interface PointerIcon {
     companion object {
+        @ExperimentalComposeUiApi
         val Default = pointerIconDefault
+        @ExperimentalComposeUiApi
         val Crosshair = pointerIconCrosshair
+        @ExperimentalComposeUiApi
         val Text = pointerIconText
+        @ExperimentalComposeUiApi
         val Hand = pointerIconHand
     }
 }
@@ -48,6 +51,8 @@ internal interface PointerIconService {
 /**
  * Creates modifier which specifies desired pointer icon when the cursor is over the modified
  * element.
+ *
+ * @sample androidx.compose.foundation.samples.PointerIconSample
  *
  * @param icon The icon to set
  * @param enforce if true parent's PointerIcon overrides children's. To set
@@ -75,3 +80,4 @@ fun Modifier.pointerHoverIcon(icon: PointerIcon, enforce: Boolean = true) =
             }
         }
     }
+

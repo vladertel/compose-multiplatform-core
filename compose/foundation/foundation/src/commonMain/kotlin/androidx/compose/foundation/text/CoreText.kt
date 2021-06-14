@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.selection.mouseSelectionDetector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -411,7 +412,7 @@ internal class TextController(val state: TextState) : RememberObserver {
                 Modifier.pointerInput(mouseSelectionObserver) {
                     mouseSelectionDetector(mouseSelectionObserver)
                 }
-            }
+            }.selectablePointerIcon()
         } else {
             Modifier
         }
@@ -716,6 +717,10 @@ internal fun updateTextDelegate(
 
 private val EmptyInlineContent: Pair<List<PlaceholderRange>, List<InlineContentRange>> =
     Pair(emptyList(), emptyList())
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun Modifier.selectablePointerIcon() =
+    this.pointerHoverIcon(PointerIcon.Text)
 
 internal fun resolveInlineContent(
     text: AnnotatedString,

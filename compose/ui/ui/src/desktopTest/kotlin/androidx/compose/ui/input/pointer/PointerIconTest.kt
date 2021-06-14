@@ -19,7 +19,10 @@ package androidx.compose.ui.input.pointer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
+<<<<<<< HEAD
 import androidx.compose.ui.ExperimentalComposeUiApi
+=======
+>>>>>>> ae71269d013 (Support for changing pointer icon that's hovering components via)
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalPointerIconService
 import androidx.compose.ui.platform.TestComposeWindow

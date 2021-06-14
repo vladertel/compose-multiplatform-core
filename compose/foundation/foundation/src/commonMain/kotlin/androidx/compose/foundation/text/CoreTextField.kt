@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusManager
@@ -319,7 +320,7 @@ internal fun CoreTextField(
             observer = manager.mouseSelectionObserver,
             enabled = enabled
         )
-    }.pointerHoverIcon(PointerIcon.Text)
+    }.textFieldPointerIcon()
 
     val drawModifier = Modifier.drawBehind {
         state.layoutResult?.let { layoutResult ->
@@ -869,3 +870,7 @@ internal expect fun CursorHandle(
     modifier: Modifier,
     content: @Composable (() -> Unit)?
 )
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun Modifier.textFieldPointerIcon() =
+    this.pointerHoverIcon(PointerIcon.Text)
