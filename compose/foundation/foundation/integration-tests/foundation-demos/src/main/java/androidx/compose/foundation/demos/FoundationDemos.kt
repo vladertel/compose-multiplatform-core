@@ -18,6 +18,7 @@ package androidx.compose.foundation.demos
 
 import androidx.compose.foundation.samples.ControlledScrollableRowSample
 import androidx.compose.foundation.samples.InteractionSourceFlowSample
+import androidx.compose.foundation.samples.PointerIconSample
 import androidx.compose.foundation.samples.SimpleInteractionSourceSample
 import androidx.compose.foundation.samples.VerticalScrollExample
 import androidx.compose.integration.demos.common.ComposableDemo
@@ -35,5 +36,6 @@ val FoundationDemos = DemoCategory(
         ComposableDemo("Flow InteractionSource") { InteractionSourceFlowSample() },
         DemoCategory("Suspending Gesture Detectors", CoroutineGestureDemos),
         ComposableDemo("NestedScroll") { NestedScrollDemo() },
+        ComposableDemo("PointerIcon") { PointerIconSample() },
     )
 )

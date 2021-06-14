@@ -47,6 +47,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.mouse.MouseScrollEvent
 import androidx.compose.ui.input.mouse.MouseScrollEventFilter
+import androidx.compose.ui.input.pointer.AwtCursor
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
@@ -232,6 +235,7 @@ internal class DesktopOwner(
     val needsRender get() = needsLayout || needsDraw
     var onNeedsRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
+    var containerCursor: DesktopComponentWithCursor? = null
 
     fun render(canvas: org.jetbrains.skia.Canvas) {
         needsLayout = false
@@ -319,8 +323,11 @@ internal class DesktopOwner(
         root.draw(canvas.asComposeCanvas())
     }
 
+    var desiredPointerIcon: PointerIcon? = null
+
     internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
         measureAndLayout()
+        desiredPointerIcon = null
         return pointerInputEventProcessor.process(
             event,
             this,
@@ -328,7 +335,12 @@ internal class DesktopOwner(
                 it.position.x in 0f..root.width.toFloat() &&
                     it.position.y in 0f..root.height.toFloat()
             }
-        )
+        ).also {
+            val icon = desiredPointerIcon
+            when (icon) {
+                is AwtCursor -> containerCursor?.componentCursor = icon.cursor
+            }
+        }
     }
 
     override fun processPointerInput(nanoTime: Long, pointers: List<TestPointerInputEventData>) {
@@ -359,4 +371,16 @@ internal class DesktopOwner(
             if (isConsumed) break
         }
     }
+
+    override val pointerIconService: PointerIconService =
+        object : PointerIconService {
+            override fun getCurrent(): PointerIcon =
+                desiredPointerIcon
+                    ?: containerCursor?.let { AwtCursor(it.componentCursor) }
+                    ?: PointerIcon.Default
+
+            override fun set(icon: PointerIcon) {
+                desiredPointerIcon = icon
+            }
+        }
 }

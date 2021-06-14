@@ -71,7 +71,7 @@ internal val LocalDesktopOwners = staticCompositionLocalOf<DesktopOwners> {
  */
 internal class DesktopOwners internal constructor(
     coroutineContext: CoroutineContext,
-    component: DesktopComponent,
+    private val component: DesktopComponent,
     density: Density,
     private val invalidate: () -> Unit
 ) {
@@ -203,6 +203,7 @@ internal class DesktopOwners internal constructor(
         desktopOwner.onNeedsRender = ::invalidateIfNeeded
         desktopOwner.onDispatchCommand = ::dispatchCommand
         desktopOwner.constraints = constraints
+        desktopOwner.containerCursor = component
         invalidateIfNeeded()
         if (desktopOwner.isFocusable) {
             focusedOwner = desktopOwner

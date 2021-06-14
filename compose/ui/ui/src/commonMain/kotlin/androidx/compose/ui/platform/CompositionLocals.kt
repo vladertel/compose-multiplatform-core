@@ -25,6 +25,7 @@ import androidx.compose.ui.autofill.AutofillTree
 import androidx.compose.ui.draw.DrawModifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.node.Owner
 import androidx.compose.ui.text.font.Font
@@ -144,6 +145,10 @@ val LocalWindowInfo = staticCompositionLocalOf<WindowInfo> {
     noLocalProvidedFor("LocalWindowInfo")
 }
 
+internal val LocalPointerIconService = staticCompositionLocalOf<PointerIconService?> {
+    null
+}
+
 @ExperimentalComposeUiApi
 @Composable
 internal fun ProvideCommonCompositionLocals(
@@ -166,6 +171,7 @@ internal fun ProvideCommonCompositionLocals(
         LocalUriHandler provides uriHandler,
         LocalViewConfiguration provides owner.viewConfiguration,
         LocalWindowInfo provides owner.windowInfo,
+        LocalPointerIconService provides owner.pointerIconService,
         content = content
     )
 }
