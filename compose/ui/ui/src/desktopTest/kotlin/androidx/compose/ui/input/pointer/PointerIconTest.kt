@@ -36,12 +36,7 @@ class PointerIconTest {
     private val window = TestComposeWindow(width = 100, height = 100, density = Density(1f))
 
     private val iconService = object : PointerIconService {
-        var currentIcon: PointerIcon? = null
-        override fun set(cursor: PointerIcon) {
-            currentIcon = cursor
-        }
-
-        override fun getCurrent(): PointerIcon = currentIcon ?: PointerIcon.Default
+        override var current: PointerIcon = PointerIcon.Default
     }
 
     @Test
@@ -67,7 +62,7 @@ class PointerIconTest {
             x = 5,
             y = 5
         )
-        assertThat(iconService.getCurrent()).isEqualTo(PointerIcon.Text)
+        assertThat(iconService.current).isEqualTo(PointerIcon.Text)
     }
 
     @Test
@@ -94,13 +89,13 @@ class PointerIconTest {
             x = 5,
             y = 5
         )
-        assertThat(iconService.getCurrent()).isEqualTo(PointerIcon.Hand)
+        assertThat(iconService.current).isEqualTo(PointerIcon.Hand)
 
         window.onMouseMoved(
             x = 15,
             y = 15
         )
-        assertThat(iconService.getCurrent()).isEqualTo(PointerIcon.Hand)
+        assertThat(iconService.current).isEqualTo(PointerIcon.Hand)
     }
 
     @Test
@@ -127,12 +122,12 @@ class PointerIconTest {
             x = 5,
             y = 5
         )
-        assertThat(iconService.getCurrent()).isEqualTo(PointerIcon.Text)
+        assertThat(iconService.current).isEqualTo(PointerIcon.Text)
 
         window.onMouseMoved(
             x = 15,
             y = 15
         )
-        assertThat(iconService.getCurrent()).isEqualTo(PointerIcon.Hand)
+        assertThat(iconService.current).isEqualTo(PointerIcon.Hand)
     }
 }

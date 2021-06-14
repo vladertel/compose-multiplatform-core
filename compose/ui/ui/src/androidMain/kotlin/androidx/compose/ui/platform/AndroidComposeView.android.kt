@@ -1178,27 +1178,25 @@ internal class AndroidComposeView(context: Context) :
 
     override val pointerIconService: PointerIconService =
         object : PointerIconService {
-            override fun getCurrent(): PointerIcon {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
-                    return PointerIcon.Default
-                return desiredPointerIcon
-                    ?: view.pointerIcon?.let { AndroidPointerIcon(it) }
-                    ?: PointerIcon.Default
-            }
-
-            override fun set(icon: PointerIcon) {
-                desiredPointerIcon = icon
-            }
+            override var current: PointerIcon
+                get() = desiredPointerIcon ?: PointerIcon.Default
+                set(value) { desiredPointerIcon = value }
         }
 
     private fun setPointerIcon() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
         val icon = desiredPointerIcon
+        val default = android.view.PointerIcon.getSystemIcon(context,
+            android.view.PointerIcon.TYPE_TEXT
+        )
         when (icon) {
             is AndroidPointerIcon ->
                 view.pointerIcon = icon.pointerIcon
             is AndroidPointerIconType ->
                 view.pointerIcon = android.view.PointerIcon.getSystemIcon(context, icon.type)
+            else -> if (view.pointerIcon != default) {
+                view.pointerIcon = default
+            }
         }
     }
 

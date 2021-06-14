@@ -42,8 +42,7 @@ internal expect val pointerIconText: PointerIcon
 internal expect val pointerIconHand: PointerIcon
 
 internal interface PointerIconService {
-    fun getCurrent(): PointerIcon
-    fun set(icon: PointerIcon)
+    var current: PointerIcon
 }
 
 /**
@@ -61,27 +60,14 @@ fun Modifier.pointerHoverIcon(icon: PointerIcon, enforce: Boolean = true) =
         if (pointerIconService == null) {
             Modifier
         } else {
-            this.pointerInput(icon) {
+            this.pointerInput(icon, enforce) {
                 awaitPointerEventScope {
-                    var previouseIcon: PointerIcon? = null
                     while (true) {
                         val pass = if (enforce) PointerEventPass.Main else PointerEventPass.Initial
                         val event = awaitPointerEvent(pass)
                         when (event.type) {
-                            PointerEventType.Move -> {
-                                if (
-                                    previouseIcon != null && pointerIconService.getCurrent() != icon
-                                ) {
-                                    pointerIconService.set(icon)
-                                }
-                            }
-                            PointerEventType.Enter -> {
-                                previouseIcon = pointerIconService.getCurrent()
-                                pointerIconService.set(icon)
-                            }
-                            PointerEventType.Exit -> {
-                                pointerIconService.set(previouseIcon ?: PointerIcon.Default)
-                                previouseIcon = null
+                            PointerEventType.Enter, PointerEventType.Move -> {
+                                pointerIconService.current = icon
                             }
                         }
                     }
