@@ -7,6 +7,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.unit.dp
 
 /*
 import androidx.compose.material.Text
@@ -29,9 +30,16 @@ fun createWindow(title: String) {
     /*val window = */
     Window(title) {
         Box(modifier = Modifier
+            .padding(16.dp)
             .background(color = Color.Red)
-            .fillMaxSize()
-        )
+            .width(100.dp).height(100.dp)
+        ) {
+            Box(modifier = Modifier
+                .padding(16.dp)
+                .background(color = Color.Blue)
+                .width(10.dp).height(10.dp)
+            )
+        }
         /*
         var text by remember { mutableStateOf("Hello, World!") }
 

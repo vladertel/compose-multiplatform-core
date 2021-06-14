@@ -57,8 +57,7 @@ class NativePaint : Paint {
 
     override var style: PaintingStyle = PaintingStyle.Fill
         set(value) {
-            TODO("figure out painting style")
-            // skia.mode = value.toSkia()
+            skia.setStyle(value.toSkia())
             field = value
         }
 
@@ -112,12 +111,13 @@ class NativePaint : Paint {
             // skia.setPathEffect((value as NativePathEffect?)?.asNativePathEffect())
             field = value
         }
-/*
+
     private fun PaintingStyle.toSkia() = when (this) {
-        PaintingStyle.Fill -> SkijaPaintMode.FILL
-        PaintingStyle.Stroke -> SkijaPaintMode.STROKE
+        PaintingStyle.Fill -> `SkPaint::Style`.kFill_Style
+        PaintingStyle.Stroke -> `SkPaint::Style`.kStroke_Style
+        else -> error("Unexpected PaintingStyle")
     }
-*/
+
     private fun StrokeCap.toSkia() = when (this) {
         StrokeCap.Butt -> kButt_Cap
         StrokeCap.Round -> kRound_Cap
@@ -133,16 +133,13 @@ class NativePaint : Paint {
     }
 
     private fun FilterQuality.toSkia(): SkFilterQuality =
-        TODO("figure out native FilterQuality.toSkia()")
-        /*
         when (this) {
-        FilterQuality.None -> SkijaFilterQuality.NONE
-        FilterQuality.Low -> SkijaFilterQuality.LOW
-        FilterQuality.Medium -> SkijaFilterQuality.MEDIUM
-        FilterQuality.High -> SkijaFilterQuality.HIGH
-        else -> error("Unexpected FilterQuality")
+            FilterQuality.None -> kNone_SkFilterQuality
+            FilterQuality.Low -> kLow_SkFilterQuality
+            FilterQuality.Medium -> kMedium_SkFilterQuality
+            FilterQuality.High -> kHigh_SkFilterQuality
+            else -> error("Unexpected FilterQuality")
         }
-         */
 }
 
 actual fun BlendMode.isSupported(): Boolean = true
