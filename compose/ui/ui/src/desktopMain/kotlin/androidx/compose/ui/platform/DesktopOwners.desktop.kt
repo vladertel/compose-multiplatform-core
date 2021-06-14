@@ -41,7 +41,7 @@ internal val LocalDesktopOwners = staticCompositionLocalOf<DesktopOwners> {
 
 internal class DesktopOwners(
     private val coroutineScope: CoroutineScope,
-    component: DesktopComponent = DummyDesktopComponent,
+    internal val component: DesktopComponent = DummyDesktopComponent,
     private val invalidate: () -> Unit = {},
 ) {
     private var isInvalidationDisabled = false
