@@ -18,6 +18,7 @@ package kotlinx.coroutines.test
 
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.test._synchronized
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 
@@ -34,14 +35,7 @@ public interface UncaughtExceptionCaptor {
      */
     public val uncaughtExceptions: List<Throwable>
 
-    /**
-     * Call after the test completes to ensure that there were no uncaught exceptions.
-     *
-     * The first exception in uncaughtExceptions is rethrown. All other exceptions are
-     * printed using [Throwable.printStackTrace].
-     *
-     * @throws Throwable the first uncaught exception, if there are any uncaught exceptions.
-     */
+
     public fun cleanupTestCoroutines()
 }
 
@@ -56,19 +50,19 @@ public class TestCoroutineExceptionHandler :
 
     /** @suppress **/
     override fun handleException(context: CoroutineContext, exception: Throwable) {
-        synchronized(_exceptions) {
+        _synchronized(_exceptions) {
             _exceptions += exception
         }
     }
 
     /** @suppress **/
     override val uncaughtExceptions: List<Throwable>
-        get() = synchronized(_exceptions) { _exceptions.toList() }
+        get() = _synchronized(_exceptions) { _exceptions.toList() }
 
     /** @suppress **/
     override fun cleanupTestCoroutines() {
-        synchronized(_exceptions) {
-            val exception = _exceptions.firstOrNull() ?: return
+        _synchronized(_exceptions) {
+            val exception = _exceptions.firstOrNull() ?: return@_synchronized
             // log the rest
             _exceptions.drop(1).forEach { it.printStackTrace() }
             throw exception
