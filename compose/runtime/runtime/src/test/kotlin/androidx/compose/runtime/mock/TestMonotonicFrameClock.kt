@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.test.DelayController
+import kotlinx.test._synchronized
 import kotlin.coroutines.ContinuationInterceptor
 
 private const val DefaultFrameDelay = 16_000_000L
@@ -89,7 +90,7 @@ class TestMonotonicFrameClock(
 
     override suspend fun <R> withFrameNanos(onFrame: (frameTimeNanos: Long) -> R): R =
         suspendCancellableCoroutine { co ->
-            synchronized(lock) {
+            _synchronized(lock) {
                 awaiters.add(Awaiter(onFrame, co))
                 maybeLaunchTickRunner()
             }
@@ -100,7 +101,7 @@ class TestMonotonicFrameClock(
             posted = true
             coroutineScope.launch {
                 delay(frameDelayMillis)
-                synchronized(lock) {
+                _synchronized(lock) {
                     posted = false
                     val toRun = awaiters.toList()
                     awaiters.clear()
