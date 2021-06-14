@@ -78,7 +78,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
         }
-        macosX64()
+        macosX64() {
+            compilations.test.kotlinOptions {
+                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
+                freeCompilerArgs += "-Xplugin=" + project.rootDir.absolutePath + "/../../out/androidx/compose/compiler/compiler-hosted/build//libs/compiler-hosted-1.0.0-beta09.jar"
+            }
+        }
+
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -144,6 +150,10 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation kotlin("test-js")
                 }
             }
+            nativeTest {
+                kotlin.srcDir("src/nativeTest/kotlin")
+            }
+            macosX64Test.dependsOn(nativeTest)
         }
     }
 }
