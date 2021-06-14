@@ -188,7 +188,7 @@ internal fun CoreText(
                                 controller.mouseSelectionObserver,
                                 finalPass = true
                             )
-                        }
+                        }.pointerTextIcon()
                     }
                 } else {
                     Modifier
