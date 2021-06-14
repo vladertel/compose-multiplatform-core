@@ -46,6 +46,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.mouse.MouseScrollEvent
 import androidx.compose.ui.input.mouse.MouseScrollEventFilter
+import androidx.compose.ui.input.pointer.AwtCursor
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
 import androidx.compose.ui.input.pointer.PointerInputFilter
@@ -354,13 +357,13 @@ internal class DesktopOwner(
     private var oldMoveFilters = listOf<PointerMoveEventFilter>()
     private val newMoveFilters = HitTestResult<PointerInputFilter>()
 
-    internal fun onPointerMove(position: Offset) {
+    internal fun onPointerMove(position: Offset) = withPointerIconSet {
         // TODO: do we actually need that?
         measureAndLayout()
 
         root.hitTest(position, newMoveFilters)
         // Optimize fastpath, where no pointer move event listeners are there.
-        if (newMoveFilters.isEmpty() && oldMoveFilters.isEmpty()) return
+        if (newMoveFilters.isEmpty() && oldMoveFilters.isEmpty()) return@withPointerIconSet
 
         // For elements in `newMoveFilters` we call on `onMoveHandler`.
         // For elements in `oldMoveFilters` but not in `newMoveFilters` we call `onExitHandler`.
@@ -414,7 +417,7 @@ internal class DesktopOwner(
         newMoveFilters.clear()
     }
 
-    internal fun onPointerExit() {
+    internal fun onPointerExit() = withPointerIconSet {
         var onExitConsumed = false
         for (filter in oldMoveFilters.asReversed()) {
             if (!onExitConsumed) {
@@ -424,4 +427,21 @@ internal class DesktopOwner(
         oldMoveFilters = listOf()
         newMoveFilters.clear()
     }
+
+    internal var desiredPointerIcon = PointerIcon.Default
+
+    internal fun withPointerIconSet(body: () -> Unit) {
+        desiredPointerIcon = PointerIcon.Default
+        body()
+        when (val newPointerIcon = desiredPointerIcon) {
+            is AwtCursor -> container.component.componentCursor = newPointerIcon.cursor
+        }
+    }
+
+    internal val pointerIconService: PointerIconService =
+        object : PointerIconService {
+            override fun set(cursor: PointerIcon) {
+                desiredPointerIcon = cursor
+            }
+        }
 }

@@ -317,7 +317,7 @@ internal fun CoreTextField(
             observer = manager.mouseSelectionObserver,
             enabled = enabled
         )
-    }
+    }.pointerTextIcon()
 
     val drawModifier = Modifier.drawBehind {
         state.layoutResult?.let { layoutResult ->
