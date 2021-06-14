@@ -79,7 +79,7 @@ internal val LocalComposeScene = staticCompositionLocalOf<ComposeScene> {
  */
 class ComposeScene internal constructor(
     coroutineContext: CoroutineContext,
-    component: DesktopComponent,
+    private val component: DesktopComponent,
     density: Density,
     private val invalidate: () -> Unit
 ) {
@@ -211,6 +211,7 @@ class ComposeScene internal constructor(
         desktopOwner.onNeedsRender = ::invalidateIfNeeded
         desktopOwner.onDispatchCommand = ::dispatchCommand
         desktopOwner.constraints = constraints
+        desktopOwner.containerCursor = component
         invalidateIfNeeded()
         if (desktopOwner.isFocusable) {
             focusedOwner = desktopOwner

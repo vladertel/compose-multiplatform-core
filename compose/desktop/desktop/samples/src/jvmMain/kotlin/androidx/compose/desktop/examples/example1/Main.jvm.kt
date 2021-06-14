@@ -90,6 +90,8 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -366,7 +368,7 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Button(
-                modifier = Modifier.padding(4.dp),
+                modifier = Modifier.padding(4.dp).pointerHoverIcon(PointerIcon.Hand),
                 onClick = {
                     amount.value++
                 }
