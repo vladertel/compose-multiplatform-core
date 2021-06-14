@@ -100,7 +100,12 @@ import androidx.compose.ui.input.key.KeyInputModifier
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.AndroidPointerIcon
+import androidx.compose.ui.input.pointer.AndroidPointerIconType
 import androidx.compose.ui.input.pointer.MotionEventAdapter
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerIconDefaults
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
 import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.ProcessResult
@@ -464,7 +469,7 @@ internal class AndroidComposeView(context: Context) :
         setWillNotDraw(false)
         isFocusable = true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            AndroidComposeViewVerificationHelperMethods.focusable(
+            AndroidComposeViewVerificationHelperMethodsO.focusable(
                 this,
                 focusable = View.FOCUSABLE,
                 defaultFocusHighlightEnabled = false
@@ -1020,6 +1025,7 @@ internal class AndroidComposeView(context: Context) :
             recalculateWindowPosition(motionEvent)
             forceUseMatrixCache = true
             measureAndLayout(sendPointerUpdate = false)
+            desiredPointerIcon = null
             val result = trace("AndroidOwner:onTouch") {
                 val action = motionEvent.actionMasked
                 val lastEvent = previousMotionEvent
@@ -1079,6 +1085,12 @@ internal class AndroidComposeView(context: Context) :
                         anyMovementConsumed = false
                     )
                 }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                AndroidComposeViewVerificationHelperMethodsN.setPointerIcon(
+                    this,
+                    desiredPointerIcon
+                )
             }
             return result
         } finally {
@@ -1354,6 +1366,17 @@ internal class AndroidComposeView(context: Context) :
         return null
     }
 
+    private var desiredPointerIcon: PointerIcon? = null
+
+    override val pointerIconService: PointerIconService =
+        object : PointerIconService {
+            override var current: PointerIcon
+                get() = desiredPointerIcon ?: PointerIconDefaults.Default
+                set(value) {
+                    desiredPointerIcon = value
+                }
+        }
+
     /**
      * This overrides an @hide method in ViewGroup. Because of the @hide, the override keyword
      * cannot be used, but the override works anyway because the ViewGroup method is not final.
@@ -1488,18 +1511,41 @@ var textInputServiceFactory: (PlatformTextInputService) -> TextInputService =
     { TextInputService(it) }
 
 /**
- * This class is here to ensure that the classes that use this API will get verified and can be
+ * These classes are here to ensure that the classes that use this API will get verified and can be
  * AOT compiled. It is expected that this class will soft-fail verification, but the classes
  * which use this method will pass.
  */
 @RequiresApi(Build.VERSION_CODES.O)
-internal object AndroidComposeViewVerificationHelperMethods {
+internal object AndroidComposeViewVerificationHelperMethodsO {
     @RequiresApi(Build.VERSION_CODES.O)
     @DoNotInline
     fun focusable(view: View, focusable: Int, defaultFocusHighlightEnabled: Boolean) {
         view.focusable = focusable
         // not to add the default focus highlight to the whole compose view
         view.defaultFocusHighlightEnabled = defaultFocusHighlightEnabled
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.N)
+internal object AndroidComposeViewVerificationHelperMethodsN {
+    @DoNotInline
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun setPointerIcon(view: View, icon: PointerIcon?) {
+        val iconToSet = when (icon) {
+            is AndroidPointerIcon ->
+                icon.pointerIcon
+            is AndroidPointerIconType ->
+                android.view.PointerIcon.getSystemIcon(view.context, icon.type)
+            else ->
+                android.view.PointerIcon.getSystemIcon(
+                    view.context,
+                    android.view.PointerIcon.TYPE_TEXT
+                )
+        }
+
+        if (view.pointerIcon != iconToSet) {
+            view.pointerIcon = iconToSet
+        }
     }
 }
 

@@ -71,7 +71,7 @@ internal val LocalComposeScene = staticCompositionLocalOf<ComposeScene> {
  */
 class ComposeScene internal constructor(
     coroutineContext: CoroutineContext,
-    component: PlatformComponent,
+    private val component: PlatformComponent,
     density: Density,
     private val invalidate: () -> Unit
 ) {
@@ -203,6 +203,7 @@ class ComposeScene internal constructor(
         skiaBasedOwner.onNeedsRender = ::invalidateIfNeeded
         skiaBasedOwner.onDispatchCommand = ::dispatchCommand
         skiaBasedOwner.constraints = constraints
+        skiaBasedOwner.containerCursor = component
         invalidateIfNeeded()
         if (skiaBasedOwner.isFocusable) {
             focusedOwner = skiaBasedOwner
