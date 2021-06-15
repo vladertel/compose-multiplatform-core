@@ -92,10 +92,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             nativeMain {
                 dependsOn commonMain
                 dependencies {
-                    implementation(SKIKO_NATIVE_MACOS_X64)
-                    // TODO: we do we need this explicit dependency?
-                    // Can we publish the skiko so that this klib is also brought along?
-                    implementation(SKIKO_NATIVE_INTEROP_SKIA_MACOS_X64)
+                    implementation(libs.skikoNativeMacOSX64)
+                    implementation(libs.skikoNativeInteropSkiaMacOSX64)
                 }
             }
 
