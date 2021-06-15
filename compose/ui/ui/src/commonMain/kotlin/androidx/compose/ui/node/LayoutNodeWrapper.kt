@@ -851,6 +851,7 @@ internal abstract class LayoutNodeWrapper(
         return focusableChildren
     }
 
+    @ThreadLocal
     internal companion object {
         const val ExpectAttachedLayoutCoordinates = "LayoutCoordinate operations are only valid " +
             "when isAttached is true"
