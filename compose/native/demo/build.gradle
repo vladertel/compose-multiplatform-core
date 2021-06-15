@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import static androidx.build.dependencies.DependenciesKt.*
 import androidx.build.AndroidXComposePlugin
 import androidx.build.LibraryGroups
 import androidx.build.Publish
@@ -75,8 +74,8 @@ kotlin {
                 implementation project(":compose:ui:ui-graphics")
                 // implementation project(":compose:ui:ui-text")
 
-                implementation(SKIKO_NATIVE_MACOS_X64)
-                implementation(SKIKO_NATIVE_INTEROP_SKIA_MACOS_X64)
+                implementation(libs.skikoNativeMacOSX64)
+                implementation(libs.skikoNativeInteropSkiaMacOSX64)
             }
         }
     }
