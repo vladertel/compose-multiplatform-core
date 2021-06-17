@@ -40,6 +40,7 @@ import androidx.compose.ui.util.fastAll
 internal interface MouseSelectionObserver {
     // on start of shift click. if returns true event will be consumed
     fun onExtend(downPosition: Offset): Boolean
+
     // on drag after shift click. if returns true event will be consumed
     fun onExtendDrag(dragPosition: Offset): Boolean
 
@@ -134,7 +135,13 @@ private suspend fun AwaitPointerEventScope.awaitMouseEventDown(finalPass: Boolea
             }
         )
     } while (
-        !event.changes.fastAll { it.type == PointerType.Mouse && it.changedToDown() }
+        !(
+            event.isPrimaryPressed && event.changes.fastAll {
+                it.type == PointerType.Mouse && it.changedToDown()
+            }
+            )
     )
     return event
 }
+
+internal expect val PointerEvent.isPrimaryPressed: Boolean
