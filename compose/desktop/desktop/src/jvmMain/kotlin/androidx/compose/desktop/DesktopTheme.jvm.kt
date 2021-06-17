@@ -16,6 +16,7 @@
 
 package androidx.compose.desktop
 
+import androidx.compose.foundation.LocalContextMenuRepresentation
 import androidx.compose.foundation.LocalScrollbarStyle
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.material.Colors
@@ -53,5 +54,6 @@ fun DesktopTheme(
     content: @Composable () -> Unit
 ) = CompositionLocalProvider(
     LocalScrollbarStyle provides scrollbar,
+    LocalContextMenuRepresentation provides contextMenuRepresentation,
     content = content
 )
