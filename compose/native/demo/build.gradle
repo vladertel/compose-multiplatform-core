@@ -47,7 +47,7 @@ kotlin {
                 // TODO: the current compose binary surprises LLVM, so disable checks for now.
                 freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
                 // TODO: need the proper plugin flag for the binary for the final link.
-                freeCompilerArgs += "-Xplugin=" + project.rootDir.absolutePath + "/../../out/androidx/compose/compiler/compiler-hosted/build//libs/compiler-hosted-1.0.0-beta09.jar"
+                freeCompilerArgs += "-Xplugin=" + project.rootProject.ext["outDir"] + "/androidx/compose/compiler/compiler-hosted/build//libs/compiler-hosted-1.0.0-beta10.jar"
             }
         }
     }
