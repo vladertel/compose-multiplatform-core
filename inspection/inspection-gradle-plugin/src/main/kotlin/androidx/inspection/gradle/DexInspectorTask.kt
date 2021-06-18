@@ -36,6 +36,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.bundling.Zip
+import org.jetbrains.kotlin.cli.common.isWindows
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.charset.Charset
@@ -103,7 +104,8 @@ abstract class DexInspectorTask : DefaultTask() {
     }
 
     fun setD8(sdkDir: File, toolsVersion: String) {
-        d8Executable.set(File(sdkDir, "build-tools/$toolsVersion/d8"))
+        val ext = if (isWindows) ".exe" else ""
+        d8Executable.set(File(sdkDir, "build-tools/$toolsVersion/d8$ext"))
     }
 
     fun setAndroidJar(sdkDir: File, compileSdk: String) {

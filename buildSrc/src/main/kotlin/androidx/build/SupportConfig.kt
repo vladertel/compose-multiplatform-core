@@ -56,15 +56,11 @@ object SupportConfig {
 }
 
 fun Project.getExternalProjectPath(): File {
-    val path = if (System.getenv("COMPOSE_DESKTOP_GITHUB_BUILD") != null)
-        File(System.getenv("OUT_DIR")).also {
-            if (!File(it, "doclava").isDirectory()) {
-                throw GradleException("Please checkout doclava to $it")
-            }
-        }
-    else
-        File(rootProject.projectDir, "../../external")
-    return path.getCanonicalFile()
+    return File(project.getCheckoutRoot(), "external")
+}
+
+fun Project.getGoldenPath(): File {
+    return File(project.getCheckoutRoot(), "golden")
 }
 
 fun Project.getKeystore(): File {

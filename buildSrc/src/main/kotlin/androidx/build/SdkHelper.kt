@@ -55,7 +55,7 @@ fun Project.writeSdkPathToLocalPropertiesFile() {
  */
 fun Project.getSdkPath(): File {
     if (rootProject.plugins.hasPlugin(AndroidXPlaygroundRootPlugin::class.java) ||
-        System.getenv("COMPOSE_DESKTOP_GITHUB_BUILD") != null
+        System.getenv("ANDROIDX_CUSTOM_ANDROID_SDK") != null
     ) {
         // This is not full checkout, use local settings instead.
         // https://developer.android.com/studio/command-line/variables
