@@ -219,6 +219,7 @@ private typealias Command = () -> Unit
         } catch (e: Throwable) {
             println("EXCEPTION in NativeOwner.render:")
             println(e.message)
+            println(e.printStackTrace())
         }
         needsDraw = false
         try {
@@ -226,6 +227,7 @@ private typealias Command = () -> Unit
         } catch (e: Throwable) {
             println("EXCEPTION in NativeOwner.draw:")
             println(e.message)
+            println(e.printStackTrace())
         }
         clearInvalidObservations()
     }
