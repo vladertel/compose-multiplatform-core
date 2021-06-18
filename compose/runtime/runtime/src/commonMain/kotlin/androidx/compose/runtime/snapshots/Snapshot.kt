@@ -188,6 +188,7 @@ sealed class Snapshot(
         require(!disposed) { "Cannot use a disposed snapshot" }
     }
 
+    @ThreadLocal
     companion object {
         /**
          * Return the thread's active snapshot. If no thread snapshot is active then the current
@@ -1365,6 +1366,7 @@ private val threadSnapshot = SnapshotThreadLocal<Snapshot>()
 // A global synchronization object. This synchronization object should be taken before modifying any
 // of the fields below.
 @PublishedApi
+@SharedImmutable
 internal val lock = Any()
 
 @PublishedApi
