@@ -87,6 +87,9 @@ def addMavenRepositories(RepositoryHandler handler) {
         handler.maven {
                url("https://maven.pkg.jetbrains.space/public/p/compose/dev")
         }
+        handler.maven {
+               url("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev/")
+        }
         handler.mavenLocal()
     }
     def androidPluginRepoOverride = System.getenv("GRADLE_PLUGIN_REPO")

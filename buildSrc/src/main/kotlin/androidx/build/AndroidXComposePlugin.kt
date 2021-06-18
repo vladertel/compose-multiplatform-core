@@ -308,9 +308,7 @@ class AndroidXComposePlugin : Plugin<Project> {
          */
         private fun Project.configureForMultiplatform() {
 
-            // Disabled for plugin linking experiments.
-            // Use -Porg.jetbrains.kotlin.native.home=YOUR KOTLIN NATIVE/dist
-            // (this.rootProject.property("ext") as ExtraPropertiesExtension).set("kotlin.native.version", KOTLIN_NATIVE_VERSION)
+            (this.rootProject.property("ext") as ExtraPropertiesExtension).set("kotlin.native.version", KOTLIN_NATIVE_VERSION)
 
             val multiplatformExtension = checkNotNull(multiplatformExtension) {
                 "Unable to configureForMultiplatform() when " +
