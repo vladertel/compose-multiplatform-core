@@ -132,6 +132,11 @@ import org.jetbrains.skiko.native.SkiaRenderer
                 try {
                     owners.onFrame(canvas, width, height, nanoTime)
                 } catch (e: Throwable) {
+                    println("Exception in Wrapped.onRender()")
+                    println(e.message)
+                    e.printStackTrace()
+
+                    throw e
                     // TODO: K/N doesn't have Properties.
                     // if (System.getProperty("compose.desktop.render.ignore.errors") == null) {
                     //     throw e
