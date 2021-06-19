@@ -131,8 +131,7 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
         disableInvalidation {
             // We must see the actual state before we will render the frame
 
-            // TODO: restore me!
-            // Snapshot.sendApplyNotifications()
+            Snapshot.sendApplyNotifications()
             dispatcher.flush()
             frameClock.sendFrame(nanoTime)
 
