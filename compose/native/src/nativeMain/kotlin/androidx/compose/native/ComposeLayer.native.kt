@@ -45,7 +45,7 @@ import org.jetbrains.skiko.native.SkiaRenderer
     }
     private var isDisposed = false
 
-    private val coroutineScope = CoroutineScope(Dispatchers.Default /*Dispatchers.Swing*/)
+    private val coroutineScope = CoroutineScope(Dispatchers.Main /*Dispatchers.Swing*/)
     // TODO(demin): maybe pass CoroutineScope into AWTDebounceEventQueue and get rid of [cancel]
     //  method?
     // private val events = AWTDebounceEventQueue()
