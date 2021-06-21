@@ -66,7 +66,7 @@ import java.awt.Window
 @Suppress("unused")
 @ExperimentalComposeUiApi
 @Composable
-fun <T : Window> OwnerWindowScope.AwtWindow(
+fun <T : Window> AwtWindow(
     visible: Boolean = true,
     create: () -> T,
     dispose: (T) -> Unit,

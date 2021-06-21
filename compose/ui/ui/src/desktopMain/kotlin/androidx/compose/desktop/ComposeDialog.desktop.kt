@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.window.LocalWindow
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayer
@@ -107,6 +108,7 @@ class ComposeDialog(
             onKeyEvent = onKeyEvent
         ) {
             CompositionLocalProvider(
+                LocalWindow provides this,
                 LocalLayerContainer provides pane
             ) {
                 content()
