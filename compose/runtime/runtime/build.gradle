@@ -69,6 +69,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
     kotlin {
         targets.js {
+            nodejs {}
             browser() {
                 testTask {
                     testLogging.showStandardStreams = true
