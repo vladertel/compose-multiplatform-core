@@ -68,6 +68,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         jvm("desktop")
         js(IR) {
+            nodejs {}
             browser() {
                 testTask {
                     testLogging.showStandardStreams = true
