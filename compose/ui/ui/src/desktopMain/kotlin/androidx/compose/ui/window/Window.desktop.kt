@@ -109,7 +109,7 @@ import javax.swing.JMenuBar
 @Suppress("unused")
 @ExperimentalComposeUiApi
 @Composable
-fun ApplicationScope.Window(
+fun Window(
     onCloseRequest: () -> Unit,
     state: WindowState = rememberWindowState(),
     visible: Boolean = true,
@@ -230,7 +230,7 @@ fun ApplicationScope.Window(
 @Suppress("unused")
 @ExperimentalComposeUiApi
 @Composable
-fun ApplicationScope.Window(
+fun Window(
     visible: Boolean = true,
     onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
     onKeyEvent: (KeyEvent) -> Boolean = { false },
@@ -260,13 +260,11 @@ fun ApplicationScope.Window(
 /**
  * Receiver scope which is used by [androidx.compose.ui.window.Window].
  */
-interface WindowScope : OwnerWindowScope {
+interface WindowScope {
     /**
      * [ComposeWindow] that was created inside [androidx.compose.ui.window.Window].
      */
     val window: ComposeWindow
-
-    override val ownerWindow: Window get() = window
 }
 
 /**

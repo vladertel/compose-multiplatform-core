@@ -162,8 +162,6 @@ suspend fun awaitApplication(
         var isOpen by mutableStateOf(true)
 
         val applicationScope = object : ApplicationScope {
-            override val ownerWindow: Window? get() = null
-
             override fun exitApplication() {
                 isOpen = false
             }
@@ -191,7 +189,7 @@ suspend fun awaitApplication(
     }
 }
 
-interface ApplicationScope : OwnerWindowScope {
+interface ApplicationScope {
     fun exitApplication()
 }
 
