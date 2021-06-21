@@ -93,7 +93,7 @@ import javax.swing.JDialog
  */
 @ExperimentalComposeUiApi
 @Composable
-fun OwnerWindowScope.Dialog(
+fun Dialog(
     onCloseRequest: () -> Unit,
     state: DialogState = rememberDialogState(),
     visible: Boolean = true,
@@ -108,7 +108,7 @@ fun OwnerWindowScope.Dialog(
     onKeyEvent: ((KeyEvent) -> Boolean) = { false },
     content: @Composable DialogScope.() -> Unit
 ) {
-    val owner = this.ownerWindow
+    val owner = LocalWindow.current
 
     val currentState by rememberUpdatedState(state)
     val currentTitle by rememberUpdatedState(title)
@@ -209,7 +209,7 @@ fun OwnerWindowScope.Dialog(
 @Suppress("unused")
 @ExperimentalComposeUiApi
 @Composable
-fun OwnerWindowScope.Dialog(
+fun Dialog(
     visible: Boolean = true,
     onPreviewKeyEvent: ((KeyEvent) -> Boolean) = { false },
     onKeyEvent: ((KeyEvent) -> Boolean) = { false },
@@ -239,11 +239,9 @@ fun OwnerWindowScope.Dialog(
 /**
  * Receiver scope which is used by [androidx.compose.ui.window.Dialog].
  */
-interface DialogScope : OwnerWindowScope {
+interface DialogScope {
     /**
      * [ComposeDialog] that was created inside [androidx.compose.ui.window.Dialog].
      */
     val dialog: ComposeDialog
-
-    override val ownerWindow: Window get() = dialog
 }
