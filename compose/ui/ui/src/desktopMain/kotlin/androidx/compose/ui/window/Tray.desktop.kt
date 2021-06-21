@@ -66,7 +66,7 @@ val isTraySupported get() = SystemTray.isSupported()
 @Suppress("unused")
 @ExperimentalComposeUiApi
 @Composable
-fun ApplicationScope.Tray(
+fun Tray(
     icon: Image,
     state: TrayState = TrayState(),
     hint: String? = null,

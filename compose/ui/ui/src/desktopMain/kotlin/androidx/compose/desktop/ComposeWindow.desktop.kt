@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.window.LocalWindow
 import androidx.compose.ui.window.WindowPlacement
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
@@ -102,6 +103,7 @@ class ComposeWindow : JFrame() {
             onKeyEvent = onKeyEvent,
         ) {
             CompositionLocalProvider(
+                LocalWindow provides this,
                 LocalLayerContainer provides pane
             ) {
                 content()
