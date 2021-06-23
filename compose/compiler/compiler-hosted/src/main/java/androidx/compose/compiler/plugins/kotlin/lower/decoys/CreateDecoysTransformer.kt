@@ -129,7 +129,7 @@ class CreateDecoysTransformer(
         return original.apply {
             setDecoyAnnotation(newName.asString())
 
-            valueParameters.forEach { it.defaultValue = null }
+            //valueParameters.forEach { it.defaultValue = null }
             if (body != null) {
                 stubBody()
             }

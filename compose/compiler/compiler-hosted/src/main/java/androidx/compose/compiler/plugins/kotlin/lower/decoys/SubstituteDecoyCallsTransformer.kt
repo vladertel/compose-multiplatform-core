@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.backend.common.ir.remapTypeParameters
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
+import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -37,6 +38,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.copyTypeAndValueArgumentsFrom
+import org.jetbrains.kotlin.ir.util.hasDefaultValue
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.resolve.BindingTrace
 
@@ -91,6 +93,8 @@ class SubstituteDecoyCallsTransformer(
 
         val actualConstructor = callee.getComposableForDecoy().owner as IrConstructor
 
+        recordDefaultValuesExpressionForDecoy(callee, actualConstructor)
+
         val updatedCall = IrConstructorCallImpl(
             symbol = actualConstructor.symbol,
             origin = expression.origin,
@@ -118,6 +122,8 @@ class SubstituteDecoyCallsTransformer(
 
         val actualConstructor = callee.getComposableForDecoy().owner as IrConstructor
 
+        recordDefaultValuesExpressionForDecoy(callee, actualConstructor)
+
         val updatedCall = IrDelegatingConstructorCallImpl(
             symbol = actualConstructor.symbol,
             startOffset = expression.startOffset,
@@ -140,6 +146,8 @@ class SubstituteDecoyCallsTransformer(
         }
 
         val actualFunction = callee.getComposableForDecoy().owner as IrSimpleFunction
+
+        recordDefaultValuesExpressionForDecoy(callee, actualFunction)
 
         val updatedCall = IrCallImpl(
             symbol = actualFunction.symbol,
@@ -165,6 +173,8 @@ class SubstituteDecoyCallsTransformer(
 
         val actualFunction = callee.getComposableForDecoy().owner as IrSimpleFunction
 
+        recordDefaultValuesExpressionForDecoy(callee, actualFunction)
+
         val updatedReference = IrFunctionReferenceImpl(
             symbol = actualFunction.symbol,
             origin = expression.origin,
@@ -179,5 +189,25 @@ class SubstituteDecoyCallsTransformer(
             return@let it.copyWithNewTypeParams(callee, actualFunction)
         }
         return super.visitFunctionReference(updatedReference)
+    }
+
+    companion object {
+        private val decoyImplementationToDecoyMap = mutableMapOf<IrFunction, IrFunction>()
+
+        fun doesDecoyHaveDefaultForValueParameter(
+            function: IrFunction, index: Int
+        ): Boolean {
+            return decoyImplementationToDecoyMap[function]
+                ?.valueParameters?.get(index)?.hasDefaultValue() ?: false
+        }
+
+        private fun recordDefaultValuesExpressionForDecoy(
+            decoyFunction: IrFunction,
+            decoyImplementation: IrFunction
+        ) {
+            if (!decoyFunction.isDecoy()) return
+            if (!decoyImplementation.isDecoyImplementation()) return
+            decoyImplementationToDecoyMap[decoyImplementation] = decoyFunction
+        }
     }
 }

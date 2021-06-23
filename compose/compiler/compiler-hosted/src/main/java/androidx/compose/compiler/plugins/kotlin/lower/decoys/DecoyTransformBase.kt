@@ -176,6 +176,10 @@ internal interface DecoyTransformBase {
 fun IrDeclaration.isDecoy(): Boolean =
     hasAnnotationSafe(DecoyFqNames.Decoy)
 
+@OptIn(ObsoleteDescriptorBasedAPI::class)
+fun IrDeclaration.isDecoyImplementation(): Boolean =
+    hasAnnotationSafe(DecoyFqNames.DecoyImplementation)
+
 inline fun <reified T : IrElement> T.copyWithNewTypeParams(
     source: IrFunction,
     target: IrFunction
