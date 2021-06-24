@@ -19,8 +19,8 @@ package androidx.compose.compiler.plugins.kotlin.lower
 import androidx.compose.compiler.plugins.kotlin.KtxNameConventions
 import androidx.compose.compiler.plugins.kotlin.analysis.ComposeWritableSlices
 import androidx.compose.compiler.plugins.kotlin.irTrace
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.SubstituteDecoyCallsTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.copyWithNewTypeParams
+import androidx.compose.compiler.plugins.kotlin.lower.decoys.didDecoyHaveDefaultForValueParameter
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.isDecoy
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.isDecoyImplementation
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
@@ -505,10 +505,7 @@ class ComposerParamTransformer(
         if (valueParameters[index].defaultValue != null) return true
 
         if (context.platform.isJs() && this.isDecoyImplementation()) {
-            val hasDefault = SubstituteDecoyCallsTransformer.doesDecoyHaveDefaultForValueParameter(
-                this, index
-            )
-            if (hasDefault) return true
+            if (didDecoyHaveDefaultForValueParameter(index)) return true
         }
 
         return overriddenSymbols.any {

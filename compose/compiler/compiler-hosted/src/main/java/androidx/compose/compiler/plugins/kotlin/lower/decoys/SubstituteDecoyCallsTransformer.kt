@@ -93,8 +93,6 @@ class SubstituteDecoyCallsTransformer(
 
         val actualConstructor = callee.getComposableForDecoy().owner as IrConstructor
 
-        recordDefaultValuesExpressionForDecoy(callee, actualConstructor)
-
         val updatedCall = IrConstructorCallImpl(
             symbol = actualConstructor.symbol,
             origin = expression.origin,
@@ -122,8 +120,6 @@ class SubstituteDecoyCallsTransformer(
 
         val actualConstructor = callee.getComposableForDecoy().owner as IrConstructor
 
-        recordDefaultValuesExpressionForDecoy(callee, actualConstructor)
-
         val updatedCall = IrDelegatingConstructorCallImpl(
             symbol = actualConstructor.symbol,
             startOffset = expression.startOffset,
@@ -146,8 +142,6 @@ class SubstituteDecoyCallsTransformer(
         }
 
         val actualFunction = callee.getComposableForDecoy().owner as IrSimpleFunction
-
-        recordDefaultValuesExpressionForDecoy(callee, actualFunction)
 
         val updatedCall = IrCallImpl(
             symbol = actualFunction.symbol,
@@ -173,8 +167,6 @@ class SubstituteDecoyCallsTransformer(
 
         val actualFunction = callee.getComposableForDecoy().owner as IrSimpleFunction
 
-        recordDefaultValuesExpressionForDecoy(callee, actualFunction)
-
         val updatedReference = IrFunctionReferenceImpl(
             symbol = actualFunction.symbol,
             origin = expression.origin,
@@ -189,25 +181,5 @@ class SubstituteDecoyCallsTransformer(
             return@let it.copyWithNewTypeParams(callee, actualFunction)
         }
         return super.visitFunctionReference(updatedReference)
-    }
-
-    companion object {
-        private val decoyImplementationToDecoyMap = mutableMapOf<IrFunction, IrFunction>()
-
-        fun doesDecoyHaveDefaultForValueParameter(
-            function: IrFunction, index: Int
-        ): Boolean {
-            return decoyImplementationToDecoyMap[function]
-                ?.valueParameters?.get(index)?.hasDefaultValue() ?: false
-        }
-
-        private fun recordDefaultValuesExpressionForDecoy(
-            decoyFunction: IrFunction,
-            decoyImplementation: IrFunction
-        ) {
-            if (!decoyFunction.isDecoy()) return
-            if (!decoyImplementation.isDecoyImplementation()) return
-            decoyImplementationToDecoyMap[decoyImplementation] = decoyFunction
-        }
     }
 }
