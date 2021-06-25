@@ -1,5 +1,3 @@
-// ktlint-disable filename
-
 /*
  * Copyright 2021 The Android Open Source Project
  *
@@ -15,31 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("UNUSED_PARAMETER")
-package androidx.compose.animation.core
 
-class NativeAtomicReference<V>(value: V) {
-    private var v: V = value
+package androidx.compose.material
 
-    fun get(): V = v
+import androidx.compose.runtime.Composable
 
-    fun set(value: V) {
-        v = value
-    }
-
-    fun getAndSet(value: V): V {
-        val returnV = v
-        v = value
-        return returnV!!
-    }
-
-    fun compareAndSet(expect: V, newValue: V): Boolean {
-        if (v == expect) {
-            v = newValue
-            return true
-        }
-        return false
+@Composable
+internal actual fun getString(string: Strings): String {
+    return when (string) {
+        Strings.NavigationMenu -> "Navigation menu"
+        Strings.CloseDrawer -> "Close navigation menu"
+        Strings.CloseSheet -> "Close sheet"
+        Strings.DefaultErrorMessage -> "Invalid input"
+        else -> ""
     }
 }
-
-internal actual typealias AtomicReference<V> = NativeAtomicReference<V>

@@ -1,5 +1,3 @@
-// ktlint-disable filename
-
 /*
  * Copyright 2021 The Android Open Source Project
  *
@@ -15,31 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("UNUSED_PARAMETER")
-package androidx.compose.animation.core
 
-class NativeAtomicReference<V>(value: V) {
-    private var v: V = value
+// ktlint-disable filename
+package androidx.compose.material.ripple
 
-    fun get(): V = v
-
-    fun set(value: V) {
-        v = value
-    }
-
-    fun getAndSet(value: V): V {
-        val returnV = v
-        v = value
-        return returnV!!
-    }
-
-    fun compareAndSet(expect: V, newValue: V): Boolean {
-        if (v == expect) {
-            v = newValue
-            return true
-        }
-        return false
-    }
-}
-
-internal actual typealias AtomicReference<V> = NativeAtomicReference<V>
+/**
+ * Native ripple implementation using the Compose-rendered [CommonRipple] implementation.
+ */
+internal actual typealias PlatformRipple = CommonRipple
