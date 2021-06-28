@@ -74,7 +74,7 @@ val KOTLIN_REFLECT get() = "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
 
 // val KOTLIN_NATIVE_VERSION get() = KOTLIN_VERSION
 // A special K/N build capable of Skia interop and Compose plugin at the same time
-val KOTLIN_NATIVE_VERSION get() = "1.5.10-dev-89"
+val KOTLIN_NATIVE_VERSION get() = "1.5.10-dev-91"
 
 internal lateinit var kotlinCoroutinesVersion: String
 
