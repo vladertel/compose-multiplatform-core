@@ -682,5 +682,5 @@ class ComposerParamTransformer(
      * different module fragment with the same [ModuleDescriptor]
      */
     private fun IrFunction.externallyTransformed(): Boolean =
-        decoysEnabled && currentModule?.files?.contains(fileOrNull) != true
+        currentModule?.files?.contains(fileOrNull) != true
 }
