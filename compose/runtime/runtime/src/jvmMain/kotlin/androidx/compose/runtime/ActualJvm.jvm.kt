@@ -38,6 +38,10 @@ internal actual open class ThreadLocal<T> actual constructor(
     override fun initialValue(): T? {
         return initialValue.invoke()
     }
+
+    actual override fun remove() {
+        super.remove()
+    }
 }
 
 internal actual class SnapshotThreadLocal<T> {
@@ -79,4 +83,12 @@ actual internal fun <T> invokeComposableForResult(
     @Suppress("UNCHECKED_CAST")
     val realFn = composable as Function2<Composer, Int, T>
     return realFn(composer, 1)
+
+actual annotation class CompositionContextLocal
+
+actual class AtomicInt(value: Int) {
+    val delegate = java.util.concurrent.atomic.AtomicInteger(value)
+    fun get(): Int = delegate.intValue()
+    fun set(value: Int) = delegate.set(value)
+    fun add(amount: Int): Int = delegate.addAndGet()
 }
