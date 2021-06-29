@@ -26,10 +26,11 @@ import androidx.compose.ui.tooling.preview.CommonPreviewUtils
 internal class NonInteractivePreviewFacade {
     companion object {
         @JvmStatic
-        fun render(fqName: String, width: Int, height: Int): ByteArray {
+        fun render(fqName: String, width: Int, height: Int, scale: Double?): ByteArray {
             val className = fqName.substringBeforeLast(".")
             val methodName = fqName.substringAfterLast(".")
-            val window = TestComposeWindow(width, height)
+            val density = scale?.let { Density(it.toFloat()) } ?: Density(1f)
+            val window = TestComposeWindow(width = width, height = height, density = density)
             window.setContent @Composable {
                 // We need to delay the reflection instantiation of the class until we are in the
                 // composable to ensure all the right initialization has happened and the Composable
