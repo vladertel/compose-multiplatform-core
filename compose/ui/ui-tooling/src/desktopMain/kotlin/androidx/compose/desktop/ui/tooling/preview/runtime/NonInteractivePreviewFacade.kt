@@ -19,7 +19,7 @@ package androidx.compose.desktop.ui.tooling.preview.runtime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.currentComposer
 import androidx.compose.ui.platform.TestComposeWindow
-import androidx.compose.ui.tooling.preview.CommonPreviewUtils
+import androidx.compose.ui.tooling.CommonPreviewUtils
 import androidx.compose.ui.unit.Density
 
 // used in Compose For MPP Intellij plugin through reflection
