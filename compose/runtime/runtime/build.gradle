@@ -81,7 +81,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         macosX64() {
             compilations.test.kotlinOptions {
                 freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
-                freeCompilerArgs += "-Xplugin=" + project.rootProject.ext["outDir"] + "/androidx/compose/compiler/compiler-hosted/build//libs/compiler-hosted-1.0.0-beta10.jar"
+                freeCompilerArgs += "-Xplugin=" + project.rootProject.ext["outDir"] + "/androidx/compose/compiler/compiler-hosted/build//libs/compiler-hosted-1.1.0-alpha01.jar"
             }
         }
 
