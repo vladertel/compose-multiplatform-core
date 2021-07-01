@@ -29,4 +29,4 @@ class NativeAtomicReference<V>(value: V) {
         TODO("implement native atomic reference compareAndSet for $expect, $newValue")
 }
 
-internal actual typealias AtomicReference<V> = NativeAtomicReference<V>
+internal actual typealias AtomicReference<V> = androidx.compose.runtime.AtomicReference<V>

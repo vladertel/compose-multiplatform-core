@@ -42,4 +42,5 @@ class NativeAtomicReference<V>(value: V) {
     }
 }
 
-internal actual typealias AtomicReference<V> = NativeAtomicReference<V>
+internal actual typealias AtomicReference<V> = androidx.compose.runtime.AtomicReference<V>
+
