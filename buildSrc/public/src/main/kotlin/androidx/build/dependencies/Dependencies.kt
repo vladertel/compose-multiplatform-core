@@ -29,6 +29,8 @@ internal lateinit var kotlinVersion: String
 val KOTLIN_VERSION get() = kotlinVersion
 val KOTLIN_STDLIB get() = "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
 
+val KOTLIN_NATIVE_VERSION get() = "1.5.10-eap-85"
+
 internal lateinit var agpVersion: String
 val AGP_LATEST get() = "com.android.tools.build:gradle:$agpVersion"
 
