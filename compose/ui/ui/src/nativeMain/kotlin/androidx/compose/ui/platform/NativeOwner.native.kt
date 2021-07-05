@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.input.pointer.*
 
 private typealias Command = () -> Unit
 
@@ -329,6 +330,49 @@ private typealias Command = () -> Unit
     internal fun processPointerInput(event: PointerInputEvent) {
         measureAndLayout()
         pointerInputEventProcessor.process(event, this)
+    }
+
+    private var newMoveFilters = mutableListOf<PointerInputFilter>()
+    private var oldMoveFilters = listOf<PointerMoveEventFilter>()
+
+    // TODO: this code is copy-pasted from desktop (consider reusing)
+    internal fun onPointerMove(position: Offset) {
+        //measureAndLayout()
+        root.hitTest(position, newMoveFilters)
+
+        if (newMoveFilters.isEmpty() && oldMoveFilters.isEmpty()) return
+
+        // For elements in `newMoveFilters` we call on `onMoveHandler`.
+        // For elements in `oldMoveFilters` but not in `newMoveFilters` we call `onExitHandler`.
+        // For elements not in `oldMoveFilters` but in `newMoveFilters` we call `onEnterHandler`.
+
+        var onMoveConsumed = false
+        var onEnterConsumed = false
+        var onExitConsumed = false
+
+        for (
+        filter in newMoveFilters
+            .asReversed()
+            .asSequence()
+            .filterIsInstance<PointerMoveEventFilter>()
+        ) {
+            if (!onMoveConsumed) {
+                val relative = position - filter.layoutCoordinates!!.boundsInWindow().topLeft
+                onMoveConsumed = filter.onMoveHandler(relative)
+            }
+            if (!onEnterConsumed && !oldMoveFilters.contains(filter))
+                onEnterConsumed = filter.onEnterHandler()
+        }
+
+        // TODO: is this quadratic algorithm (by number of matching filters) a problem?
+        //  Unlikely we'll have significant number of filters.
+        for (filter in oldMoveFilters.asReversed()) {
+            if (!onExitConsumed && !newMoveFilters.contains(filter))
+                onExitConsumed = filter.onExitHandler()
+        }
+
+        oldMoveFilters = newMoveFilters.filterIsInstance<PointerMoveEventFilter>()
+        newMoveFilters = mutableListOf()
     }
 /*
     override fun processPointerInput(nanoTime: Long, pointers: List<TestPointerInputEventData>) {
