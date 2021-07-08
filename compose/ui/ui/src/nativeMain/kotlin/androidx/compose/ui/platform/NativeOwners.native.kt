@@ -20,6 +20,12 @@ import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerInputEvent
+import androidx.compose.ui.input.pointer.PointerInputEventData
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.unit.IntOffset
 /*
 import androidx.compose.ui.geometry.Offset
 // import androidx.compose.ui.input.mouse.MouseScrollEvent
@@ -32,6 +38,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import org.jetbrains.skiko.skia.native.Canvas
+import kotlinx.cinterop.*
+import platform.AppKit.*
+import platform.Cocoa.*
+import platform.Foundation.*
 /*
 import java.awt.event.InputMethodEvent
 import java.awt.event.KeyEvent
@@ -148,6 +158,29 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
 
     private val lastOwner: NativeOwner?
         get() = list.lastOrNull()
+
+    private var isMousePressed = false
+
+    fun onMousePressed(event: NSEvent) {
+        isMousePressed = true
+        lastOwner!!.processPointerInput(pointerInputEvent(event, true))
+    }
+
+    fun onMouseReleased(event: NSEvent) {
+        isMousePressed = false
+        lastOwner!!.processPointerInput(pointerInputEvent(event, false))
+    }
+
+    fun onMouseMoved(event: NSEvent) {
+        lastOwner!!.onPointerMove(event.offset())
+//        pointLocation = IntOffset(x, y)
+//        val event = pointerInputEvent(nativeEvent, x, y, isMousePressed)
+//        val result = hoveredOwner?.processPointerInput(event)
+//        if (result?.anyMovementConsumed != true) {
+//            val position = Offset(x.toFloat(), y.toFloat())
+//            hoveredOwner?.onPointerMove(position)
+//        }
+    }
 /*
     fun onMousePressed(x: Int, y: Int, nativeEvent: MouseEvent? = null) {
         isMousePressed = true
@@ -233,4 +266,35 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
     }
 
 */
+    private fun NSEvent.offset(): Offset {
+        val windowHeight = this.window!!.contentLayoutRect.useContents {
+            this.size.height
+        }
+        return this.locationInWindow.useContents {
+            Offset(x.toFloat(), (windowHeight - y).toFloat())
+        }
+    }
+
+    private fun pointerInputEvent(
+        nativeEvent: NSEvent,
+        down: Boolean
+    ): PointerInputEvent {
+        val time = nativeEvent.timestamp.toLong()
+        val position = nativeEvent.offset()
+
+        return PointerInputEvent(
+            time,
+            listOf(
+                PointerInputEventData(
+                    PointerId(nativeEvent.uniqueID.toLong()),
+                    time,
+                    position,
+                    position,
+                    down,
+                    PointerType.Mouse
+                )
+            ),
+            null
+        )
+    }
 }
