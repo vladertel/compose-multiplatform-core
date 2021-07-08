@@ -55,17 +55,39 @@ class ComposeWindow(val parent: AppFrame) /*: SkiaWindow()*/ {
         NSWindowStyleMaskClosable or
         NSWindowStyleMaskResizable
 
-    private val nsWindow = NSWindow(
+    private val nsWindow = object : NSWindow(
         contentRect =  NSMakeRect(0.0, 0.0, 640.0, 480.0),
         styleMask = windowStyle,
         backing =  NSBackingStoreBuffered,
-        defer =  true)
+        defer =  true
+    ) {
+        override fun mouseDown(event: NSEvent) {
+            layer.owners.onMousePressed(event)
+            super.mouseDown(event)
+        }
+
+        override fun mouseUp(event: NSEvent) {
+            layer.owners.onMouseReleased(event)
+            super.mouseUp(event)
+        }
+
+        override fun mouseMoved(event: NSEvent) {
+            layer.owners.onMouseMoved(event)
+            super.mouseMoved(event)
+        }
+    }
 
 
     // private val clipMap = mutableMapOf<Component, ClipComponent>()
 
     init {
         nsWindow.contentView?.addSubview(layer.wrapped.nsView)
+        layer.wrapped.nsView.also {
+            val trackingOptions = NSTrackingActiveAlways or
+                NSTrackingMouseMoved or
+                NSTrackingMouseEnteredAndExited
+            it.addTrackingArea(NSTrackingArea(it.frame, trackingOptions, it, null))
+        }
         layer.wrapped.checkIsShowing() // TODO: The awt versions has hierarchy listener. What should we use here?
         nsWindow.orderFrontRegardless()
     }
