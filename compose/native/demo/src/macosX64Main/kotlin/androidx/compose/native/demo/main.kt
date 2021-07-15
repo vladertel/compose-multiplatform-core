@@ -13,6 +13,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Checkbox
 import androidx.compose.material.RadioButton
 import androidx.compose.material.Switch
+import androidx.compose.material.Text
 import androidx.compose.native.Window
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +41,8 @@ fun createWindow(title: String) {
         var selected by remember { mutableStateOf(false) }
         var clutz by remember { mutableStateOf(false) }
         Column {
+            Text(text = "HELLO WORLD!!!")
+
             Box(
                 modifier = Modifier
                     .padding(16.dp)
