@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.round
 
 /**
@@ -99,8 +100,6 @@ fun Popup(
  * @param popupPositionProvider Provides the screen position of the popup.
  * @param onDismissRequest Executes when the user clicks outside of the popup.
  * @param focusable Indicates if the popup can grab the focus.
- * @property contextMenu Places the popup window below the lower-right rectangle of the mouse
- * cursor image (basic context menu behaviour).
  * @param onPreviewKeyEvent This callback is invoked when the user interacts with the hardware
  * keyboard. It gives ancestors of a focused component the chance to intercept a [KeyEvent].
  * Return true to stop propagation of this event. If you return false, the key event will be
@@ -118,13 +117,11 @@ fun Popup(
     onPreviewKeyEvent: ((KeyEvent) -> Boolean) = { false },
     onKeyEvent: ((KeyEvent) -> Boolean) = { false },
     focusable: Boolean = false,
-    contextMenu: Boolean = false,
     content: @Composable () -> Unit
 ) {
     PopupLayout(
         popupPositionProvider,
         focusable,
-        contextMenu,
         onDismissRequest,
         onPreviewKeyEvent,
         onKeyEvent,
@@ -136,7 +133,6 @@ fun Popup(
 private fun PopupLayout(
     popupPositionProvider: PopupPositionProvider,
     focusable: Boolean,
-    contextMenu: Boolean,
     onDismissRequest: (() -> Unit)?,
     onPreviewKeyEvent: ((KeyEvent) -> Boolean) = { false },
     onKeyEvent: ((KeyEvent) -> Boolean) = { false },
@@ -144,11 +140,9 @@ private fun PopupLayout(
 ) {
     val owners = LocalDesktopOwners.current
     val density = LocalDensity.current
-    val component = if (contextMenu) LocalLayerContainer.current else null
 
     var parentBounds by remember { mutableStateOf(IntRect.Zero) }
     var popupBounds by remember { mutableStateOf(IntRect.Zero) }
-    val pointClick = remember { component?.getMousePosition() }
 
     // getting parent bounds
     Layout(
@@ -191,20 +185,13 @@ private fun PopupLayout(
                     layout(constraints.maxWidth, constraints.maxHeight) {
                         measurables.forEach {
                             val placeable = it.measure(constraints)
-                            var position: IntOffset
-                            if (contextMenu) {
-                                position = IntOffset(
-                                    (pointClick!!.x * density.density).toInt(),
-                                    (pointClick.y * density.density).toInt()
-                                )
-                            } else {
-                                position = popupPositionProvider.calculatePosition(
-                                    anchorBounds = parentBounds,
-                                    windowSize = windowSize,
-                                    layoutDirection = layoutDirection,
-                                    popupContentSize = IntSize(placeable.width, placeable.height)
-                                )
-                            }
+                            val position = popupPositionProvider.calculatePosition(
+                                anchorBounds = parentBounds,
+                                windowSize = windowSize,
+                                layoutDirection = layoutDirection,
+                                popupContentSize = IntSize(placeable.width, placeable.height)
+                            )
+
                             popupBounds = IntRect(
                                 position,
                                 IntSize(placeable.width, placeable.height)
@@ -229,4 +216,27 @@ private fun PopupLayout(
 
 private fun isOutsideRectTap(rect: IntRect, point: Offset): Boolean {
     return !rect.contains(IntOffset(point.x.toInt(), point.y.toInt()))
+}
+
+/**
+ * Creates [PopupPositionProvider] where popup position is calculated based on the current cursor
+ * position.
+ */
+@Composable
+fun rememberCursorPositionProvider(): PopupPositionProvider {
+    val density = LocalDensity.current
+    val component = LocalLayerContainer.current
+    val pointClick = remember { component.mousePosition }
+    return object : PopupPositionProvider {
+        override fun calculatePosition(
+            anchorBounds: IntRect,
+            windowSize: IntSize,
+            layoutDirection: LayoutDirection,
+            popupContentSize: IntSize
+        ) =
+            IntOffset(
+                (pointClick!!.x * density.density).toInt(),
+                (pointClick.y * density.density).toInt()
+            )
+    }
 }
