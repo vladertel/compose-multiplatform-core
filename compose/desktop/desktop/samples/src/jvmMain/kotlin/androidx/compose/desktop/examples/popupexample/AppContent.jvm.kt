@@ -38,7 +38,7 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Checkbox
-import androidx.compose.material.ContextMenu
+import androidx.compose.material.CursorDropdownMenu
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.RadioButton
@@ -442,7 +442,7 @@ fun ContextMenu() {
                     .padding(start = 4.dp, end = 4.dp)
                     .clickable(onClick = { showMenu.value = true })
             )
-            ContextMenu(
+            CursorDropdownMenu(
                 expanded = showMenu.value,
                 onDismissRequest = { showMenu.value = false }
             ) {
