@@ -304,9 +304,9 @@ private typealias Command = () -> Unit
         }
     }
 
-    override fun requestRectangleOnScreen(rect: Rect) {
+    //override fun requestRectangleOnScreen(rect: Rect) {
         // TODO: Scroll the owner to bring the specified rectangle into view.
-    }
+    //}
 
     override fun calculatePositionInWindow(localPosition: Offset): Offset = localPosition
 
