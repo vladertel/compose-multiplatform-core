@@ -38,6 +38,15 @@ import java.awt.Point
  *
  * @param modifier The modifier to be applied to the layout.
  */
+@Deprecated(
+    "Use another variant of WindowDraggableArea for the new Composable Window API (https://github" +
+        ".com/JetBrains/compose-jb/tree/master/tutorials/Window_API_new)",
+    replaceWith = ReplaceWith(
+        "WindowDraggableArea(modifier, content)",
+        "androidx.compose.foundation.window.WindowDraggableArea"
+    )
+)
+@Suppress("DEPRECATION")
 @Composable
 fun WindowDraggableArea(
     modifier: Modifier = Modifier,
@@ -60,6 +69,7 @@ fun WindowDraggableArea(
     }
 }
 
+@Suppress("DEPRECATION")
 private class DragHandler(private val window: AppWindow) {
     private var location = window.window.location.toComposeOffset()
     private var pointStart = MouseInfo.getPointerInfo().location.toComposeOffset()
