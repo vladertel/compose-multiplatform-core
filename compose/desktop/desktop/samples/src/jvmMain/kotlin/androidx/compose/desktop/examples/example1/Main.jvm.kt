@@ -103,6 +103,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.singleWindowApplication
@@ -129,7 +130,7 @@ fun main() = singleWindowApplication(
 }
 
 @Composable
-private fun WindowScope.App() {
+private fun FrameWindowScope.App() {
     val uriHandler = LocalUriHandler.current
     DesktopMaterialTheme {
         Scaffold(
@@ -175,7 +176,7 @@ private fun WindowScope.App() {
 }
 
 @Composable
-private fun WindowScope.LeftColumn(modifier: Modifier) = Box(modifier.fillMaxSize()) {
+private fun FrameWindowScope.LeftColumn(modifier: Modifier) = Box(modifier.fillMaxSize()) {
     val state = rememberScrollState()
     ScrollableContent(state)
 
@@ -190,7 +191,7 @@ private fun WindowScope.LeftColumn(modifier: Modifier) = Box(modifier.fillMaxSiz
     ExperimentalDesktopApi::class
 )
 @Composable
-private fun WindowScope.ScrollableContent(scrollState: ScrollState) {
+private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
     val amount = remember { mutableStateOf(0f) }
     val animation = remember { mutableStateOf(true) }
     Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
