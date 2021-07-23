@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.LocalLayerContainer
 import androidx.compose.ui.geometry.Offset
@@ -222,6 +223,7 @@ private fun isOutsideRectTap(rect: IntRect, point: Offset): Boolean {
  * Creates [PopupPositionProvider] where popup position is calculated based on the current cursor
  * position.
  */
+@ExperimentalComposeUiApi
 @Composable
 fun rememberCursorPositionProvider(): PopupPositionProvider {
     val density = LocalDensity.current

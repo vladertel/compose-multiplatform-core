@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.KeyEvent
@@ -102,6 +103,7 @@ import javax.swing.JMenuBar
  * If you return false, the key event will be sent to this [onKeyEvent]'s parent.
  * @param content Content of the window
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun Window(
     onCloseRequest: () -> Unit,
@@ -224,6 +226,7 @@ fun Window(
  * If you return false, the key event will be sent to this [onKeyEvent]'s parent.
  * @param content Content of the window
  */
+@ExperimentalComposeUiApi
 fun singleWindowApplication(
     state: WindowState = WindowState(),
     visible: Boolean = true,
@@ -291,6 +294,7 @@ fun singleWindowApplication(
  * @param update The callback to be invoked after the layout is inflated.
  * @param content Composable content of the creating window.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Suppress("unused")
 @Composable
 fun Window(
@@ -323,6 +327,7 @@ fun Window(
 /**
  * Receiver scope which is used by [androidx.compose.ui.window.Window].
  */
+@ExperimentalComposeUiApi
 interface FrameWindowScope : WindowScope {
     /**
      * [ComposeWindow] that was created inside [androidx.compose.ui.window.Window].
@@ -336,6 +341,7 @@ interface FrameWindowScope : WindowScope {
  * @param content content of the menu bar (list of menus)
  */
 @Composable
+@ExperimentalComposeUiApi
 fun FrameWindowScope.MenuBar(content: @Composable MenuBarScope.() -> Unit) {
     val parentComposition = rememberCompositionContext()
 

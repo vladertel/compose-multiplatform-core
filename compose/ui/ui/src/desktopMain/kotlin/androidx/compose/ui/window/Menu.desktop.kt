@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class)
 package androidx.compose.ui.window
 
 import androidx.compose.runtime.AbstractApplier
@@ -26,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.asAwtImage
@@ -201,6 +203,7 @@ class MenuBarScope internal constructor() {
     @Composable
     fun Menu(
         text: String,
+        @ExperimentalComposeUiApi
         mnemonic: Char? = null,
         enabled: Boolean = true,
         content: @Composable MenuScope.() -> Unit
@@ -539,6 +542,7 @@ class MenuScope internal constructor(private val impl: MenuScopeImpl) {
     fun Menu(
         text: String,
         enabled: Boolean = true,
+        @ExperimentalComposeUiApi
         mnemonic: Char? = null,
         content: @Composable MenuScope.() -> Unit
     ): Unit = impl.Menu(
@@ -573,7 +577,9 @@ class MenuScope internal constructor(private val impl: MenuScopeImpl) {
         text: String,
         icon: Painter? = null,
         enabled: Boolean = true,
+        @ExperimentalComposeUiApi
         mnemonic: Char? = null,
+        @ExperimentalComposeUiApi
         shortcut: KeyShortcut? = null,
         onClick: () -> Unit
     ): Unit = impl.Item(text, icon, enabled, mnemonic, shortcut, onClick)
@@ -594,6 +600,7 @@ class MenuScope internal constructor(private val impl: MenuScopeImpl) {
      * @param onCheckedChange callback to be invoked when checkbox is being clicked,
      * therefore the change of checked state in requested
      */
+    @ExperimentalComposeUiApi
     @Composable
     fun CheckboxItem(
         text: String,
@@ -623,6 +630,7 @@ class MenuScope internal constructor(private val impl: MenuScopeImpl) {
      * @param onClick callback to be invoked when the radio button is being clicked
      */
     @Composable
+    @ExperimentalComposeUiApi
     fun RadioButtonItem(
         text: String,
         selected: Boolean,

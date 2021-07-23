@@ -16,11 +16,13 @@
 
 package androidx.compose.foundation.window
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
@@ -38,6 +40,7 @@ import java.awt.event.MouseMotionAdapter
  * @param modifier The modifier to be applied to the layout.
  */
 @Composable
+@ExperimentalFoundationApi
 fun WindowScope.WindowDraggableArea(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit = {}

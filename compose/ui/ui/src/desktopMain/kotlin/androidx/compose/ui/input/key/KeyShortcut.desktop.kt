@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+@file:OptIn(ExperimentalComposeUiApi::class)
 package androidx.compose.ui.input.key
 
+import androidx.compose.ui.ExperimentalComposeUiApi
 import java.awt.event.InputEvent
 import javax.swing.KeyStroke
 
@@ -23,6 +24,7 @@ import javax.swing.KeyStroke
 /**
  * Represents a key combination which should be pressed on a keyboard to trigger some action.
  */
+@ExperimentalComposeUiApi
 class KeyShortcut(
     /**
      * Key that should be pressed to trigger an action

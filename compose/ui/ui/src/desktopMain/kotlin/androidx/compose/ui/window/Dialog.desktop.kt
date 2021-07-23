@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.awt.ComposeDialog
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.KeyEvent
@@ -89,6 +90,7 @@ import javax.swing.JDialog
  * If you return false, the key event will be sent to this [onKeyEvent]'s parent.
  * @param content content of the dialog
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun Dialog(
     onCloseRequest: () -> Unit,
@@ -200,6 +202,7 @@ fun Dialog(
  * @param update The callback to be invoked after the layout is inflated.
  * @param content Composable content of the creating dialog.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Suppress("unused")
 @Composable
 fun Dialog(
@@ -232,6 +235,7 @@ fun Dialog(
 /**
  * Receiver scope which is used by [androidx.compose.ui.window.Dialog].
  */
+@ExperimentalComposeUiApi
 interface DialogWindowScope : WindowScope {
     /**
      * [ComposeDialog] that was created inside [androidx.compose.ui.window.Dialog].

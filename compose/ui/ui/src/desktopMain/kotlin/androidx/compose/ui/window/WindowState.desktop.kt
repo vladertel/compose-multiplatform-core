@@ -23,6 +23,7 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -65,6 +66,7 @@ fun rememberWindowState(
  * @param height the initial value for height of  [WindowState.size]
  */
 @Composable
+@ExperimentalComposeUiApi
 fun rememberWindowState(
     placement: WindowPlacement = WindowPlacement.Floating,
     isMinimized: Boolean = false,
@@ -110,6 +112,7 @@ fun WindowState(
  * @param width the initial value for width of [WindowState.size]
  * @param height the initial value for height of  [WindowState.size]
  */
+@ExperimentalComposeUiApi
 fun WindowState(
     placement: WindowPlacement = WindowPlacement.Floating,
     isMinimized: Boolean = false,
