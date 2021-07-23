@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package androidx.compose.ui.platform
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.ExperimentalComposeUiApi
 
+@ExperimentalComposeUiApi
 interface PlatformLocalization {
     val copy: String
     val cut: String
@@ -32,6 +36,7 @@ internal val defaultPlatformLocalization = object : PlatformLocalization {
     override val selectAll = "Select All"
 }
 
+@ExperimentalComposeUiApi
 val LocalLocalization = staticCompositionLocalOf {
     defaultPlatformLocalization
 }

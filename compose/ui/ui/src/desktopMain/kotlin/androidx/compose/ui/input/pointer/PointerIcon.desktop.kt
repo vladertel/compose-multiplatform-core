@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package androidx.compose.ui.input.pointer
 
+import androidx.compose.ui.ExperimentalComposeUiApi
 import java.awt.Cursor
 
 import androidx.compose.ui.Modifier
@@ -25,6 +28,7 @@ import androidx.compose.ui.platform.LocalPointerIconService
 /**
  * Represents a pointer icon to use in [Modifier.pointerIcon]
  */
+@ExperimentalComposeUiApi
 interface PointerIcon {
     companion object {
         val Default: PointerIcon = AwtCursor(Cursor(Cursor.DEFAULT_CURSOR))
@@ -34,6 +38,7 @@ interface PointerIcon {
     }
 }
 
+@ExperimentalComposeUiApi
 internal class AwtCursor(val cursor: Cursor) : PointerIcon {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -62,6 +67,7 @@ internal interface PointerIconService {
 /**
  * Creates [PointerIcon] from [Cursor]
  */
+@ExperimentalComposeUiApi
 fun awtCursor(cursor: Cursor): PointerIcon = AwtCursor(cursor)
 
 /**
@@ -70,6 +76,7 @@ fun awtCursor(cursor: Cursor): PointerIcon = AwtCursor(cursor)
  *
  * @param icon The icon to set
  */
+@ExperimentalComposeUiApi
 fun Modifier.pointerIcon(icon: PointerIcon) = composed {
     val pointerIconService = LocalPointerIconService.current
     this.pointerMoveFilter(

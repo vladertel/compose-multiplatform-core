@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalDensity
@@ -149,8 +150,10 @@ fun DropdownMenuItem(
  * @param onDismissRequest Called when the user requests to dismiss the menu, such as by
  * tapping outside the menu's bounds
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Suppress("ModifierParameter")
 @Composable
+@ExperimentalMaterialApi
 fun CursorDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,

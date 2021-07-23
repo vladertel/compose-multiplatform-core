@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
+
 package androidx.compose.foundation.text
 
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.DesktopPlatform
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.selection.SelectionManager
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.ContextMenuItem
 import androidx.compose.ui.platform.ContextMenuState
