@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterialApi::class)
+
 package androidx.compose.desktop
 
 import androidx.compose.material.CursorDropdownMenu
 import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Text
 import androidx.compose.ui.platform.ContextMenuRepresentation
 import androidx.compose.ui.platform.ContextMenuState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.node.Ref
 import androidx.compose.ui.platform.ContextMenuData
 import androidx.compose.ui.platform.ContextMenuItem

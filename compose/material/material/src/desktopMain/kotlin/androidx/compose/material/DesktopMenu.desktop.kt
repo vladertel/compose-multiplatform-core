@@ -153,6 +153,7 @@ fun DropdownMenuItem(
 @OptIn(ExperimentalComposeUiApi::class)
 @Suppress("ModifierParameter")
 @Composable
+@ExperimentalMaterialApi
 fun CursorDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,

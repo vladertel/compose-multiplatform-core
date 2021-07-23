@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package androidx.compose.foundation
 
 import androidx.compose.foundation.gestures.forEachGesture
@@ -22,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.consumeDownChange
@@ -31,6 +34,7 @@ import androidx.compose.ui.platform.ContextMenuItem
 import androidx.compose.ui.platform.ContextMenuState
 import androidx.compose.ui.platform.LocalContextMenuRepresentation
 
+@ExperimentalFoundationApi
 @Composable
 fun ContextMenuArea(
     items: () -> List<ContextMenuItem>,
@@ -48,6 +52,7 @@ fun ContextMenuArea(
     }
 }
 
+@ExperimentalFoundationApi
 @Composable
 fun ContextMenuDataProvider(
     items: () -> List<ContextMenuItem>,

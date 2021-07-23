@@ -21,8 +21,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Rect
 
+@ExperimentalComposeUiApi
 class ContextMenuItem(
     val label: String,
     val onClick: () -> Unit
@@ -50,6 +52,7 @@ class ContextMenuItem(
     }
 }
 
+@ExperimentalComposeUiApi
 class ContextMenuData(
     val items: () -> List<ContextMenuItem>,
     val next: ContextMenuData?
@@ -81,6 +84,7 @@ class ContextMenuData(
     }
 }
 
+@ExperimentalComposeUiApi
 class ContextMenuState {
     sealed class Status {
         class Open(
@@ -112,11 +116,13 @@ class ContextMenuState {
     var status: Status by mutableStateOf(Status.Closed)
 }
 
+@ExperimentalComposeUiApi
 interface ContextMenuRepresentation {
     @Composable
     fun Representation(state: ContextMenuState, data: ContextMenuData)
 }
 
+@ExperimentalComposeUiApi
 val LocalContextMenuRepresentation =
     staticCompositionLocalOf<ContextMenuRepresentation?> {
         null
