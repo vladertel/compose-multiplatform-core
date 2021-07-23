@@ -61,7 +61,7 @@ val isTraySupported: Boolean get() = SystemTray.isSupported()
  */
 @Suppress("unused")
 @Composable
-fun ApplicationScope.Tray(
+fun Tray(
     icon: Painter,
     state: TrayState = rememberTrayState(),
     hint: String? = null,
