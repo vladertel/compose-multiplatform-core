@@ -33,6 +33,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -588,19 +589,21 @@ class SnapshotTests {
         }
     }
 
-    @Test(expected = SnapshotApplyConflictException::class)
+    @Test
     fun stateUsingNeverEqualPolicyCannotBeMerged() {
-        val state = mutableStateOf(0, neverEqualPolicy())
-        val snapshot1 = Snapshot.takeMutableSnapshot()
-        val snapshot2 = Snapshot.takeMutableSnapshot()
-        try {
-            snapshot1.enter { state.value = 1 }
-            snapshot2.enter { state.value = 1 }
-            snapshot1.apply().check()
-            snapshot2.apply().check()
-        } finally {
-            snapshot1.dispose()
-            snapshot2.dispose()
+        assertFailsWith(SnapshotApplyConflictException::class) {
+            val state = mutableStateOf(0, neverEqualPolicy())
+            val snapshot1 = Snapshot.takeMutableSnapshot()
+            val snapshot2 = Snapshot.takeMutableSnapshot()
+            try {
+                snapshot1.enter { state.value = 1 }
+                snapshot2.enter { state.value = 1 }
+                snapshot1.apply().check()
+                snapshot2.apply().check()
+            } finally {
+                snapshot1.dispose()
+                snapshot2.dispose()
+            }
         }
     }
 
