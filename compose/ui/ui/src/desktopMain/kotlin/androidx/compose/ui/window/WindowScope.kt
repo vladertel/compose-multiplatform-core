@@ -19,12 +19,13 @@ package androidx.compose.ui.window
 import java.awt.Window
 
 /**
- * Scope that is created by [application], [Window] or [Dialog] and provides an owner window of
- * this scope
+ * Receiver scope which is used by [androidx.compose.ui.window.Window] and
+ * [androidx.compose.ui.window.Dialog].
  */
-interface OwnerWindowScope {
+interface WindowScope {
     /**
-     *  Owner window of this scope
+     * [Window] that was created inside [androidx.compose.ui.window.Window]
+     * or [androidx.compose.ui.window.Dialog]
      */
-    val ownerWindow: Window?
+    val window: Window
 }

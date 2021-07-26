@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.compose.desktop
+package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.DesktopOwner
 import androidx.compose.ui.platform.DesktopOwners
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.window.density
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -47,14 +48,14 @@ import java.awt.event.MouseMotionAdapter
 import java.awt.event.MouseWheelEvent
 import java.awt.im.InputMethodRequests
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
-import androidx.compose.ui.window.density
 
 internal class ComposeLayer {
     private var isDisposed = false
 
     private val coroutineScope = CoroutineScope(Dispatchers.Swing)
-    // TODO(demin): maybe pass CoroutineScope into AWTDebounceEventQueue and get rid of [cancel]
-    //  method?
+    // TODO(demin): probably we need to get rid of asynchronous events. it was added because of
+    //  slow lazy scroll. But events become unpredictable, and we can't consume them.
+    //  Alternative solution to a slow scroll - merge multiple scroll events into a single one.
     private val events = AWTDebounceEventQueue()
 
     internal val wrapped = Wrapped().apply {
@@ -221,16 +222,22 @@ internal class ComposeLayer {
         }
         wrapped.focusTraversalKeysEnabled = false
         wrapped.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(event: KeyEvent) = events.post {
-                owners.onKeyPressed(event)
+            override fun keyPressed(event: KeyEvent) {
+                if (owners.onKeyPressed(event)) {
+                    event.consume()
+                }
             }
 
-            override fun keyReleased(event: KeyEvent) = events.post {
-                owners.onKeyReleased(event)
+            override fun keyReleased(event: KeyEvent) {
+                if (owners.onKeyReleased(event)) {
+                    event.consume()
+                }
             }
 
-            override fun keyTyped(event: KeyEvent) = events.post {
-                owners.onKeyTyped(event)
+            override fun keyTyped(event: KeyEvent) {
+                if (owners.onKeyTyped(event)) {
+                    event.consume()
+                }
             }
         })
     }
