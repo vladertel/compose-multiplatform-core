@@ -89,13 +89,6 @@ class ComposeDialog(
         super.dispose()
     }
 
-    override fun setVisible(value: Boolean) {
-        if (value != isVisible) {
-            super.setVisible(value)
-            delegate.setVisible(value)
-        }
-    }
-
     /**
      * Registers a task to run when the rendering API changes.
      */

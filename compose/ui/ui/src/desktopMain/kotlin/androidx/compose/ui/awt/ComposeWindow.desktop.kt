@@ -86,13 +86,6 @@ class ComposeWindow : JFrame() {
         super.dispose()
     }
 
-    override fun setVisible(value: Boolean) {
-        if (value != isVisible) {
-            super.setVisible(value)
-            delegate.setVisible(value)
-        }
-    }
-
     var placement: WindowPlacement
         get() = when {
             isFullscreen -> WindowPlacement.Fullscreen
