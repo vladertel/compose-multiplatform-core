@@ -50,6 +50,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -409,6 +410,7 @@ fun TextBox(text: String = "", modifier: Modifier = Modifier.height(30.dp)) {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ContextMenu() {
     val items = listOf("Item A", "Item B", "Item C", "Item D", "Item E", "Item F")
@@ -416,9 +418,9 @@ fun ContextMenu() {
     val selectedIndex = remember { mutableStateOf(0) }
     BoxWithTooltip(
         delay = 100,
-        tooltipPlacement = TooltipPlacement(
-            anchor = TooltipPlacement.Anchor.Component,
-            alignment = Alignment.TopCenter
+        tooltipPlacement = TooltipPlacement.ComponentRect(
+            anchor = Alignment.TopStart,
+            alignment = Alignment.TopEnd
         ),
         tooltip = {
             Surface(
