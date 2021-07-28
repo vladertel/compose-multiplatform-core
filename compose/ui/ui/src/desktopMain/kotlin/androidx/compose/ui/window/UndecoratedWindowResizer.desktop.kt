@@ -16,7 +16,7 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.desktop.ComposeWindow
+import androidx.compose.ui.awt.ComposeLayer
 import java.awt.Dimension
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
@@ -24,11 +24,13 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import java.awt.MouseInfo
 import java.awt.Point
+import java.awt.Window
 
-internal val DefaultBorderThickness = 8
+internal const val DefaultBorderThickness = 8
 
 internal class UndecoratedWindowResizer(
-    private val window: ComposeWindow,
+    private val window: Window,
+    layer: ComposeLayer,
     var enabled: Boolean = false,
     var borderThickness: Int = DefaultBorderThickness
 ) {
@@ -52,14 +54,15 @@ internal class UndecoratedWindowResizer(
             initialWindowPos = Point(window.x, window.y)
             initialWindowSize = Dimension(window.width, window.height)
         }
+
         override fun mouseReleased(event: MouseEvent) {
             isResizing = false
         }
     }
 
     init {
-        window.layer.component.addMouseListener(mouseListener)
-        window.layer.component.addMouseMotionListener(motionListener)
+        layer.component.addMouseListener(mouseListener)
+        layer.component.addMouseMotionListener(motionListener)
     }
 
     private fun changeCursor(event: MouseEvent) {
