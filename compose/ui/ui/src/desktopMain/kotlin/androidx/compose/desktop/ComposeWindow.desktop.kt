@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.window.UndecoratedWindowResizer
 import androidx.compose.ui.window.WindowPlacement
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
@@ -118,18 +117,6 @@ class ComposeWindow : JFrame() {
             isDisposed = true
         }
         super.dispose()
-    }
-
-    private val undecoratedWindowResizer = UndecoratedWindowResizer(this)
-
-    override fun setUndecorated(value: Boolean) {
-        super.setUndecorated(value)
-        undecoratedWindowResizer.enabled = isUndecorated && isResizable
-    }
-
-    override fun setResizable(value: Boolean) {
-        super.setResizable(value)
-        undecoratedWindowResizer.enabled = isUndecorated && isResizable
     }
 
     override fun setVisible(value: Boolean) {
