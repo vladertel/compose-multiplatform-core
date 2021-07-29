@@ -24,7 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot.Companion.openSnapshotCount
-import org.junit.Ignore
+import kotlin.test.Ignore
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -130,7 +130,7 @@ class DerivedSnapshotStateTests {
     }
 
     @Test
-    @Ignore("b/169406779: Flaky test")
+    @Ignore // "b/169406779: Flaky test"
     fun multipleSnapshotsAreIsolatedAndCanBeApplied() {
         val count = 2
         val state = MutableList(count) { mutableStateOf(0) }
