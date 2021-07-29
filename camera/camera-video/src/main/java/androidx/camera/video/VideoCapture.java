@@ -43,13 +43,11 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.OptIn;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.annotation.UiThread;
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.CameraSelector;
-import androidx.camera.core.ExperimentalUseCaseGroup;
 import androidx.camera.core.Logger;
 import androidx.camera.core.SurfaceRequest;
 import androidx.camera.core.UseCase;
@@ -93,29 +91,12 @@ import java.util.concurrent.Executor;
  * <p>VideoCapture is used to create a camera stream suitable for video application. The camera
  * stream is used by the extended classes of {@link VideoOutput}.
  * {@link #withOutput(VideoOutput)} can be used to create a VideoCapture instance associated with
- * the given VideoOutput.
- *
- * <p>When {@linkplain androidx.camera.lifecycle.ProcessCameraProvider#bindToLifecycle binding}
- * VideoCapture to lifecycle, VideoCapture will create a camera stream with the resolution
- * selected by the {@link QualitySelector} in VideoOutput. Example:
- * <pre>
- *     <code>
- *         Recorder recorder = new Recorder.Builder()
- *                 .setQualitySelector(QualitySelector.of(QualitySelector.QUALITY_FHD))
- *                 .build();
- *         VideoCapture<Recorder> videoCapture = VideoCapture.withOutput(recorder);
- *     </code>
- * </pre>
- *
- * <p>Then VideoCapture will {@link VideoOutput#onSurfaceRequested(SurfaceRequest) ask}
- * VideoOutput to {@link SurfaceRequest#provideSurface provide} a {@link Surface} for setting up
- * the camera stream. After VideoCapture is bound, update QualitySelector in VideoOutput will not
- * have any effect. If it needs to change the resolution of the camera stream after VideoCapture
- * is bound, it has to update QualitySelector of VideoOutput and rebind
- * ({@linkplain androidx.camera.lifecycle.ProcessCameraProvider#unbind unbind} and
- * {@linkplain androidx.camera.lifecycle.ProcessCameraProvider#bindToLifecycle bind}) the
- * VideoCapture. If the extended class of VideoOutput does not have API to modify the
- * QualitySelector, it has to create new VideoOutput and VideoCapture for rebinding.
+ * the given VideoOutput. Take {@link Recorder} as an example,
+ * <pre>{@code
+ *         VideoCapture<Recorder> videoCapture
+ *                 = VideoCapture.withOutput(new Recorder.Builder().build());
+ * }</pre>
+ * Then {@link #getOutput()} can retrieve the Recorder instance.
  *
  * @param <T> the type of VideoOutput
  */
@@ -195,7 +176,6 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
      * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
-    @OptIn(markerClass = ExperimentalUseCaseGroup.class)
     public void setTargetRotation(@RotationValue int rotation) {
         if (setTargetRotationInternal(rotation)) {
             sendTransformationInfoIfReady(getAttachedSurfaceResolution());
@@ -242,7 +222,6 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
      * @hide
      */
     @Override
-    @OptIn(markerClass = ExperimentalUseCaseGroup.class)
     @RestrictTo(Scope.LIBRARY_GROUP)
     public void setViewPortCropRect(@NonNull Rect viewPortCropRect) {
         super.setViewPortCropRect(viewPortCropRect);
@@ -315,7 +294,6 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         return Builder.fromConfig(config);
     }
 
-    @OptIn(markerClass = ExperimentalUseCaseGroup.class)
     private void sendTransformationInfoIfReady(@Nullable Size resolution) {
         CameraInternal cameraInternal = getCamera();
         SurfaceRequest surfaceRequest = mSurfaceRequest;

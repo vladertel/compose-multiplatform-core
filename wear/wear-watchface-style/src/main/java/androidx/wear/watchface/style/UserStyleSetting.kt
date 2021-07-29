@@ -93,22 +93,20 @@ public sealed class UserStyleSetting(
             }
         }
 
-        override fun toString(): String = value
-
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
             other as Id
 
-            if (value != other.value) return false
-
-            return true
+            return value == other.value
         }
 
         override fun hashCode(): Int {
             return value.hashCode()
         }
+
+        override fun toString(): String = value
     }
 
     public companion object {
@@ -144,7 +142,7 @@ public sealed class UserStyleSetting(
         if (id == null) {
             options[defaultOptionIndex]
         } else {
-            getOptionForId(id)
+            getOptionForId(Option.Id(id))
         }
 
     private constructor(wireFormat: UserStyleSettingWireFormat) : this(
@@ -169,6 +167,19 @@ public sealed class UserStyleSetting(
     /** Returns the default for when the user hasn't selected an option. */
     public val defaultOption: Option
         get() = options[defaultOptionIndex]
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as UserStyleSetting
+
+        return id == other.id
+    }
+
+    override fun hashCode(): Int {
+        return id.hashCode()
+    }
 
     override fun toString(): String = "{${id.value} : " +
         options.joinToString(transform = { it.toString() }) + "}"
@@ -203,6 +214,17 @@ public sealed class UserStyleSetting(
                     "Option.Id.value.size (${value.size}) must be less than MAX_LENGTH " +
                         "($MAX_LENGTH)"
                 }
+            }
+
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (javaClass != other?.javaClass) return false
+                other as Id
+                return value.contentEquals(other.value)
+            }
+
+            override fun hashCode(): Int {
+                return value.contentHashCode()
             }
 
             override fun toString(): String =
@@ -250,6 +272,19 @@ public sealed class UserStyleSetting(
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
         public abstract fun toWireFormat(): OptionWireFormat
 
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Option
+
+            return id == other.id
+        }
+
+        override fun hashCode(): Int {
+            return id.hashCode()
+        }
+
         override fun toString(): String =
             try {
                 id.value.decodeToString()
@@ -262,14 +297,14 @@ public sealed class UserStyleSetting(
      * Translates an option name into an option. This will need to be overridden for userStyle
      * categories that can't sensibly be fully enumerated (e.g. a full 24-bit color picker).
      *
-     * @param optionId The ID of the option
+     * @param optionId The [Option.Id] of the option
      * @return An [Option] corresponding to the name. This could either be one of the options from
      * [UserStyleSetting]s or a newly constructed Option depending on the nature of the
      * UserStyleSetting. If optionName is unrecognized then the default value for the setting should
      * be returned.
      */
-    public open fun getOptionForId(optionId: ByteArray): Option =
-        options.find { it.id.value.contentEquals(optionId) } ?: options[defaultOptionIndex]
+    public open fun getOptionForId(optionId: Option.Id): Option =
+        options.find { it.id.value.contentEquals(optionId.value) } ?: options[defaultOptionIndex]
 
     /** A BooleanUserStyleSetting represents a setting with a true and a false setting. */
     public class BooleanUserStyleSetting : UserStyleSetting {
@@ -701,8 +736,10 @@ public sealed class UserStyleSetting(
             get() = (options[defaultOptionIndex] as DoubleRangeOption).value
 
         /** We support all values in the range [min ... max] not just min & max. */
-        override fun getOptionForId(optionId: ByteArray): Option =
-            options.find { it.id.value.contentEquals(optionId) } ?: checkedOptionForId(optionId)
+        override fun getOptionForId(optionId: Option.Id): Option =
+            options.find { it.id.value.contentEquals(optionId.value) } ?: checkedOptionForId(
+                optionId.value
+            )
 
         private fun checkedOptionForId(optionId: ByteArray): DoubleRangeOption {
             return try {
@@ -940,8 +977,10 @@ public sealed class UserStyleSetting(
         /**
          * We support all values in the range [min ... max] not just min & max.
          */
-        override fun getOptionForId(optionId: ByteArray): Option =
-            options.find { it.id.value.contentEquals(optionId) } ?: checkedOptionForId(optionId)
+        override fun getOptionForId(optionId: Option.Id): Option =
+            options.find { it.id.value.contentEquals(optionId.value) } ?: checkedOptionForId(
+                optionId.value
+            )
 
         private fun checkedOptionForId(optionId: ByteArray): LongRangeOption {
             return try {
@@ -1028,7 +1067,9 @@ public sealed class UserStyleSetting(
                 CustomValueOptionWireFormat(id.value)
         }
 
-        override fun getOptionForId(optionId: ByteArray): Option =
-            options.find { it.id.value.contentEquals(optionId) } ?: CustomValueOption(optionId)
+        override fun getOptionForId(optionId: Option.Id): Option =
+            options.find { it.id.value.contentEquals(optionId.value) } ?: CustomValueOption(
+                optionId.value
+            )
     }
 }

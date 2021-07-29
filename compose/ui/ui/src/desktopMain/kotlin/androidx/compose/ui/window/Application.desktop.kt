@@ -16,12 +16,10 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.desktop.AppManager
-import androidx.compose.desktop.AppWindow
-import androidx.compose.desktop.ComposePanel
 import androidx.compose.runtime.Applier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MonotonicFrameClock
 import androidx.compose.runtime.Recomposer
@@ -29,9 +27,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.configureSwingGlobalsForCompose
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.GlobalSnapshotManager
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -41,9 +40,6 @@ import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.awt.Window
-
-// TODO(demin): remove ExperimentalComposeUiApi once we implement Dialog/Menu/Tray/Notifier, deprecate
-//  AppWindow/AppWindowManager
 
 /**
  * An entry point for the Compose application. See [awaitApplication] for more information.
@@ -68,11 +64,8 @@ import java.awt.Window
  * }
  * ```
  *
- * This API is experimental and will eventually will replace [AppWindow] / [AppManager].
- *
  * @see [awaitApplication]
  */
-@ExperimentalComposeUiApi
 fun application(
     content: @Composable ApplicationScope.() -> Unit
 ) {
@@ -103,11 +96,8 @@ fun application(
  * (because global coroutines are daemon threads, daemon threads don't keep process alive:
  * https://kotlinlang.org/docs/coroutines-basics.html#global-coroutines-are-like-daemon-threads)
  *
- * This API is experimental and will eventually replace [AppWindow] / [AppManager].
- *
  * @see [awaitApplication]
  */
-@ExperimentalComposeUiApi
 fun CoroutineScope.launchApplication(
     content: @Composable ApplicationScope.() -> Unit
 ): Job {
@@ -155,8 +145,6 @@ fun CoroutineScope.launchApplication(
  *
  * All animation's should be created inside Composable content of the
  * [Window] / [Dialog] / [ComposePanel].
- *
- * This API is experimental and will eventually replace [AppWindow] / [AppManager].
  */
 suspend fun awaitApplication(
     content: @Composable ApplicationScope.() -> Unit
@@ -172,8 +160,6 @@ suspend fun awaitApplication(
             var isOpen by mutableStateOf(true)
 
             val applicationScope = object : ApplicationScope {
-                override val ownerWindow: Window? get() = null
-
                 override fun exitApplication() {
                     isOpen = false
                 }
@@ -189,7 +175,13 @@ suspend fun awaitApplication(
                 try {
                     composition.setContent {
                         if (isOpen) {
-                            applicationScope.content()
+                            CompositionLocalProvider(
+                                // Resources which are defined at the application level can use
+                                // density to calculate intrinsicSize
+                                LocalDensity provides GlobalDensity
+                            ) {
+                                applicationScope.content()
+                            }
                         }
                     }
                     recomposer.close()
@@ -202,7 +194,7 @@ suspend fun awaitApplication(
     }
 }
 
-interface ApplicationScope : OwnerWindowScope {
+interface ApplicationScope {
     fun exitApplication()
 }
 

@@ -65,11 +65,13 @@ import androidx.wear.watchface.style.UserStyleData
 import androidx.wear.watchface.style.UserStyleSchema
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
@@ -82,16 +84,16 @@ private typealias WireComplicationProviderInfo =
  * face and call [close] when done. This reports the updated [EditorState] to the [EditorListener]s
  * registered via [EditorServiceClient.addListener].
  *
- * For EditorSessions backed by a headless instance (see [createHeadlessEditingSession] and
+ * For EditorSessions backed by a headless instance (see [createHeadlessEditorSession] and
  * [EditorRequest.headlessDeviceConfig]), style changes are not applied to the interactive
  * instance and it's up to the system to apply them. For EditorSessions backed by an
  * interactive instance style changes are applied immediately. Its possible the system might fail to
  * persist the style changes (e.g. to data base write failure or a crash) and if this happens its
  * the responsibiltiy of the system to revert the style change.
  */
-public abstract class EditorSession : AutoCloseable {
+public interface EditorSession : AutoCloseable {
     /** The [ComponentName] of the watch face being edited. */
-    public abstract val watchFaceComponentName: ComponentName
+    public val watchFaceComponentName: ComponentName
 
     /**
      * Unique ID for the instance of the watch face being edited, only defined for Android R and
@@ -99,23 +101,23 @@ public abstract class EditorSession : AutoCloseable {
      * multiple instances.
      */
     @get:RequiresApi(Build.VERSION_CODES.R)
-    public abstract val watchFaceId: WatchFaceId
+    public val watchFaceId: WatchFaceId
 
     /** The current [UserStyle]. Assigning to this will cause the style to update. However, styling
      * changes to the watch face will be reverted upon exit. */
-    public abstract var userStyle: UserStyle
+    public var userStyle: UserStyle
 
     /** The UTC reference preview time for this watch face in milliseconds since the epoch. */
-    public abstract val previewReferenceTimeMillis: Long
+    public val previewReferenceTimeMillis: Long
 
     /** The watch face's [UserStyleSchema]. */
-    public abstract val userStyleSchema: UserStyleSchema
+    public val userStyleSchema: UserStyleSchema
 
     /**
      * Map of complication slot ids to [ComplicationSlotState] for each complication slot. Note
      * [ComplicationSlotState] can change, typically in response to styling.
      */
-    public abstract val complicationSlotsState: Map<Int, ComplicationSlotState>
+    public val complicationSlotsState: Map<Int, ComplicationSlotState>
 
     /**
      * Whether any changes should be committed when the session is closed (defaults to `true`).
@@ -130,9 +132,10 @@ public abstract class EditorSession : AutoCloseable {
      * setting) and that config currently can't be reverted.
      */
     @get:UiThread
+    @Suppress("INAPPLICABLE_JVM_NAME")
     @get:JvmName("isCommitChangesOnClose")
     @set:UiThread
-    public var commitChangesOnClose: Boolean = true
+    public var commitChangesOnClose: Boolean
 
     /**
      * Returns a map of [androidx.wear.watchface.ComplicationSlot] ids to preview [ComplicationData]
@@ -142,7 +145,7 @@ public abstract class EditorSession : AutoCloseable {
      * may update (on the UiThread) as a result of [openComplicationDataSourceChooser].
      */
     @UiThread
-    public abstract suspend fun getComplicationsPreviewData(): Map<Int, ComplicationData>
+    public suspend fun getComplicationsPreviewData(): Map<Int, ComplicationData>
 
     /**
      * Returns a map of [androidx.wear.watchface.ComplicationSlot] ids to
@@ -154,12 +157,12 @@ public abstract class EditorSession : AutoCloseable {
      * data source.
      */
     @UiThread
-    public abstract suspend fun getComplicationsDataSourceInfo():
+    public suspend fun getComplicationsDataSourceInfo():
         Map<Int, ComplicationDataSourceInfo?>
 
     /** The ID of the background complication or `null` if there isn't one. */
     @get:SuppressWarnings("AutoBoxing")
-    public abstract val backgroundComplicationSlotId: Int?
+    public val backgroundComplicationSlotId: Int?
 
     /**
      * Returns the ID of the complication at the given coordinates or `null` if there isn't one.
@@ -168,7 +171,7 @@ public abstract class EditorSession : AutoCloseable {
      */
     @SuppressWarnings("AutoBoxing")
     @UiThread
-    public abstract fun getComplicationSlotIdAt(@Px x: Int, @Px y: Int): Int?
+    public fun getComplicationSlotIdAt(@Px x: Int, @Px y: Int): Int?
 
     /**
      * Renders the watch face to a [Bitmap] using the current [userStyle].
@@ -179,7 +182,7 @@ public abstract class EditorSession : AutoCloseable {
      * [androidx.wear.watchface.ComplicationSlot] to render with
      */
     @UiThread
-    public abstract fun renderWatchFaceToBitmap(
+    public fun renderWatchFaceToBitmap(
         renderParameters: RenderParameters,
         calendarTimeMillis: Long,
         slotIdToComplicationData: Map<Int, ComplicationData>?
@@ -202,7 +205,7 @@ public abstract class EditorSession : AutoCloseable {
      * is still running when openComplicationDataSourceChooser is called.
      */
     @UiThread
-    public abstract suspend fun openComplicationDataSourceChooser(complicationSlotId: Int):
+    public suspend fun openComplicationDataSourceChooser(complicationSlotId: Int):
         ChosenComplicationDataSource?
 
     public companion object {
@@ -222,10 +225,10 @@ public abstract class EditorSession : AutoCloseable {
         @JvmStatic
         @UiThread
         @Throws(TimeoutCancellationException::class)
-        public suspend fun createOnWatchEditingSession(
+        public suspend fun createOnWatchEditorSession(
             activity: ComponentActivity,
             editIntent: Intent
-        ): EditorSession = createOnWatchEditingSessionImpl(
+        ): EditorSession = createOnWatchEditorSessionImpl(
             activity,
             editIntent,
             object : ComplicationDataSourceInfoRetrieverProvider {
@@ -236,12 +239,12 @@ public abstract class EditorSession : AutoCloseable {
 
         // Used by tests.
         @Throws(TimeoutCancellationException::class)
-        internal suspend fun createOnWatchEditingSessionImpl(
+        internal suspend fun createOnWatchEditorSessionImpl(
             activity: ComponentActivity,
             editIntent: Intent,
             complicationDataSourceInfoRetrieverProvider: ComplicationDataSourceInfoRetrieverProvider
         ): EditorSession = TraceEvent(
-            "EditorSession.createOnWatchEditingSessionAsyncImpl"
+            "EditorSession.createOnWatchEditorSessionAsyncImpl"
         ).use {
             val coroutineScope =
                 CoroutineScope(Handler(Looper.getMainLooper()).asCoroutineDispatcher().immediate)
@@ -305,11 +308,11 @@ public abstract class EditorSession : AutoCloseable {
         @JvmStatic
         @RequiresApi(27)
         @UiThread
-        public fun createHeadlessEditingSession(
+        public fun createHeadlessEditorSession(
             activity: ComponentActivity,
             editIntent: Intent,
             headlessWatchFaceClient: HeadlessWatchFaceClient
-        ): EditorSession = TraceEvent("EditorSession.createHeadlessEditingSession").use {
+        ): EditorSession = TraceEvent("EditorSession.createHeadlessEditorSession").use {
             EditorRequest.createFromIntent(editIntent).let {
                 HeadlessEditorSession(
                     activity,
@@ -368,7 +371,7 @@ public abstract class BaseEditorSession internal constructor(
         ComplicationDataSourceInfoRetrieverProvider,
     public val coroutineScope: CoroutineScope,
     private val previewScreenshotParams: PreviewScreenshotParams?
-) : EditorSession() {
+) : EditorSession {
     protected var closed: Boolean = false
     protected var forceClosed: Boolean = false
 
@@ -391,6 +394,8 @@ public abstract class BaseEditorSession internal constructor(
     init {
         EditorService.globalEditorService.addCloseCallback(closeCallback)
     }
+
+    override var commitChangesOnClose: Boolean = true
 
     /**
      * This is completed when [fetchComplicationsData] has called [getPreviewData] for each
@@ -562,10 +567,10 @@ public abstract class BaseEditorSession internal constructor(
         MonochromaticImage.Builder(dataSourceInfo.icon).build()
     ).build()
 
-    protected fun fetchComplicationsData(fetchCoroutineScope: CoroutineScope) {
+    protected fun fetchComplicationsData(fetchCoroutineScope: CoroutineScope): Job {
         val complicationDataSourceInfoRetriever =
             complicationDataSourceInfoRetrieverProvider.getComplicationDataSourceInfoRetriever()
-        fetchCoroutineScope.launchWithTracing("BaseEditorSession.fetchComplicationsData") {
+        return fetchCoroutineScope.launchWithTracing("BaseEditorSession.fetchComplicationsData") {
             try {
                 // Unlikely but WCS could conceivably crash during this call. We could retry but
                 // it's not obvious if that'd succeed or if WCS session state is recoverable,
@@ -734,6 +739,7 @@ internal class OnWatchFaceEditorSessionImpl(
 
     private lateinit var previousWatchFaceUserStyle: UserStyle
     private lateinit var backgroundCoroutineScope: CoroutineScope
+    private lateinit var fetchComplicationsDataJob: Job
 
     override fun renderWatchFaceToBitmap(
         renderParameters: RenderParameters,
@@ -760,13 +766,24 @@ internal class OnWatchFaceEditorSessionImpl(
             userStyle = previousWatchFaceUserStyle
         }
 
-        // Note this has to be done after resetting userStyle to ensure tests are not racy.
-        if (this::editorDelegate.isInitialized) {
-            editorDelegate.onDestroy()
+        if (this::fetchComplicationsDataJob.isInitialized) {
+            // Wait until the fetchComplicationsDataJob has finished and released the
+            // complicationDataSourceInfoRetriever. This is important because if the service
+            // finishes before this is finished we'll get errors complaining that the service
+            // wasn't unbound.
+            runBlocking {
+                // Canceling the scope & the job means the join will be fast and we won't block for
+                // long. In practice we often won't block at all because fetchComplicationsDataJob
+                // is run only once during editor initialization and it will usually be finished
+                // by the time the user closes the editor.
+                backgroundCoroutineScope.cancel()
+                fetchComplicationsDataJob.join()
+            }
         }
 
-        if (this::backgroundCoroutineScope.isInitialized) {
-            backgroundCoroutineScope.cancel()
+        // Note this has to be done last to ensure tests are not racy.
+        if (this::editorDelegate.isInitialized) {
+            editorDelegate.onDestroy()
         }
     }
 
@@ -786,7 +803,7 @@ internal class OnWatchFaceEditorSessionImpl(
             editorDelegate.backgroundThreadHandler.asCoroutineDispatcher().immediate
         )
 
-        fetchComplicationsData(backgroundCoroutineScope)
+        fetchComplicationsDataJob = fetchComplicationsData(backgroundCoroutineScope)
     }
 }
 

@@ -89,7 +89,7 @@ class WatchFaceConfigActivity : FragmentActivity() {
         coroutineScope = CoroutineScope(handler.asCoroutineDispatcher().immediate)
         coroutineScope.launch {
             init(
-                EditorSession.createOnWatchEditingSession(
+                EditorSession.createOnWatchEditorSession(
                     this@WatchFaceConfigActivity,
                     intent!!
                 ),
@@ -126,10 +126,6 @@ class WatchFaceConfigActivity : FragmentActivity() {
                 }
             )
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
     }
 
     private fun focusCurrentFragment() {
@@ -217,11 +213,11 @@ class WatchFaceConfigActivity : FragmentActivity() {
         }
     }
 
-    override fun onStop() {
-        super.onStop()
+    override fun onDestroy() {
         editorSession.close()
         // Make sure the activity closes.
         finish()
+        super.onDestroy()
     }
 
     private fun updateUi(

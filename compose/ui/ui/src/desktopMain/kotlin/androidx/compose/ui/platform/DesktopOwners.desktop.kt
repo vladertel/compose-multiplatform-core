@@ -67,8 +67,6 @@ internal class DesktopOwners(
     val list = LinkedHashSet<DesktopOwner>()
     private val listCopy = mutableListOf<DesktopOwner>()
 
-    var keyboard: Keyboard? = null
-
     private var pointerId = 0L
     private var isMousePressed = false
 
@@ -208,18 +206,18 @@ internal class DesktopOwners(
         hoveredOwner?.onPointerExit()
     }
 
-    private fun consumeKeyEvent(event: KeyEvent) {
-        focusedOwner?.sendKeyEvent(ComposeKeyEvent(event))
+    private fun consumeKeyEvent(event: KeyEvent): Boolean {
+        return focusedOwner?.sendKeyEvent(ComposeKeyEvent(event)) == true
     }
 
-    fun onKeyPressed(event: KeyEvent) = consumeKeyEvent(event)
+    fun onKeyPressed(event: KeyEvent): Boolean = consumeKeyEvent(event)
 
-    fun onKeyReleased(event: KeyEvent) = consumeKeyEvent(event)
+    fun onKeyReleased(event: KeyEvent): Boolean = consumeKeyEvent(event)
 
-    fun onKeyTyped(event: KeyEvent) = consumeKeyEvent(event)
+    fun onKeyTyped(event: KeyEvent): Boolean = consumeKeyEvent(event)
 
     fun onInputMethodEvent(event: InputMethodEvent) {
-        if (!event.isConsumed()) {
+        if (!event.isConsumed) {
             when (event.id) {
                 InputMethodEvent.INPUT_METHOD_TEXT_CHANGED -> {
                     platformInputService.replaceInputMethodText(event)

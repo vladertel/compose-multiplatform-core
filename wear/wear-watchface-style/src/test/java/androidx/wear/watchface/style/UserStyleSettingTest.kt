@@ -30,8 +30,8 @@ import java.nio.ByteBuffer
 @RunWith(StyleTestRunner::class)
 public class UserStyleSettingTest {
 
-    private fun doubleToByteArray(value: Double) =
-        ByteArray(8).apply { ByteBuffer.wrap(this).putDouble(value) }
+    private fun doubleToOptionId(value: Double) =
+        Option.Id(ByteArray(8).apply { ByteBuffer.wrap(this).putDouble(value) })
 
     private fun byteArrayToDouble(value: ByteArray) = ByteBuffer.wrap(value).double
 
@@ -52,19 +52,26 @@ public class UserStyleSettingTest {
 
         assertThat(
             (
-                rangedUserStyleSetting.getOptionForId("not a number".encodeToByteArray()) as
-                    DoubleRangeOption
+                rangedUserStyleSetting.getOptionForId(
+                    Option.Id("not a number".encodeToByteArray())
+                ) as DoubleRangeOption
                 ).value
         ).isEqualTo(defaultValue)
 
         assertThat(
-            (rangedUserStyleSetting.getOptionForId("-1".encodeToByteArray()) as DoubleRangeOption)
-                .value
+            (
+                rangedUserStyleSetting.getOptionForId(
+                    Option.Id("-1".encodeToByteArray())
+                ) as DoubleRangeOption
+                ).value
         ).isEqualTo(defaultValue)
 
         assertThat(
-            (rangedUserStyleSetting.getOptionForId("10".encodeToByteArray()) as DoubleRangeOption)
-                .value
+            (
+                rangedUserStyleSetting.getOptionForId(
+                    Option.Id("10".encodeToByteArray())
+                ) as DoubleRangeOption
+                ).value
         ).isEqualTo(defaultValue)
     }
 
@@ -93,19 +100,19 @@ public class UserStyleSettingTest {
 
         assertThat(
             byteArrayToDouble(
-                rangedUserStyleSetting.getOptionForId(doubleToByteArray(0.0)).id.value
+                rangedUserStyleSetting.getOptionForId(doubleToOptionId(0.0)).id.value
             )
         ).isEqualTo(0.0)
 
         assertThat(
             byteArrayToDouble(
-                rangedUserStyleSetting.getOptionForId(doubleToByteArray(0.5)).id.value
+                rangedUserStyleSetting.getOptionForId(doubleToOptionId(0.5)).id.value
             )
         ).isEqualTo(0.5)
 
         assertThat(
             byteArrayToDouble(
-                rangedUserStyleSetting.getOptionForId(doubleToByteArray(1.0)).id.value
+                rangedUserStyleSetting.getOptionForId(doubleToOptionId(1.0)).id.value
             )
         ).isEqualTo(1.0)
     }
@@ -136,5 +143,101 @@ public class UserStyleSettingTest {
         } catch (e: Exception) {
             // Expected
         }
+    }
+
+    @Test
+    public fun equalsBasedOnId() {
+        val setting = DoubleRangeUserStyleSetting(
+            UserStyleSetting.Id("example_setting"),
+            "Example Ranged Setting",
+            "An example setting",
+            null,
+            0.0,
+            1.0,
+            listOf(WatchFaceLayer.BASE),
+            0.1
+        )
+        val settingCopy = DoubleRangeUserStyleSetting(
+            UserStyleSetting.Id("example_setting"),
+            "Example Ranged Setting",
+            "An example setting",
+            null,
+            0.0,
+            1.0,
+            listOf(WatchFaceLayer.BASE),
+            0.1
+        )
+        val settings1ModifiedInfo = DoubleRangeUserStyleSetting(
+            UserStyleSetting.Id("example_setting"),
+            "Example Ranged Setting (modified)",
+            "An example setting (modified)",
+            null,
+            0.0,
+            100.0,
+            listOf(WatchFaceLayer.BASE),
+            3.0
+        )
+        val settings1ModifiedId = DoubleRangeUserStyleSetting(
+            UserStyleSetting.Id("example_setting_modified"),
+            "Example Ranged Setting",
+            "An example setting",
+            null,
+            0.0,
+            1.0,
+            listOf(WatchFaceLayer.BASE),
+            0.1
+        )
+        assertThat(setting).isEqualTo(setting)
+        assertThat(setting).isEqualTo(settingCopy)
+        assertThat(setting).isEqualTo(settings1ModifiedInfo)
+        assertThat(setting).isNotEqualTo(settings1ModifiedId)
+    }
+
+    @Test
+    public fun hashcodeBasedOnId() {
+        val setting = DoubleRangeUserStyleSetting(
+            UserStyleSetting.Id("example_setting"),
+            "Example Ranged Setting",
+            "An example setting",
+            null,
+            0.0,
+            1.0,
+            listOf(WatchFaceLayer.BASE),
+            0.1
+        )
+        val settingCopy = DoubleRangeUserStyleSetting(
+            UserStyleSetting.Id("example_setting"),
+            "Example Ranged Setting",
+            "An example setting",
+            null,
+            0.0,
+            1.0,
+            listOf(WatchFaceLayer.BASE),
+            0.1
+        )
+        val settings1ModifiedInfo = DoubleRangeUserStyleSetting(
+            UserStyleSetting.Id("example_setting"),
+            "Example Ranged Setting (modified)",
+            "An example setting (modified)",
+            null,
+            0.0,
+            100.0,
+            listOf(WatchFaceLayer.BASE),
+            3.0
+        )
+        val settings1ModifiedId = DoubleRangeUserStyleSetting(
+            UserStyleSetting.Id("example_setting_modified"),
+            "Example Ranged Setting",
+            "An example setting",
+            null,
+            0.0,
+            1.0,
+            listOf(WatchFaceLayer.BASE),
+            0.1
+        )
+        assertThat(setting.hashCode()).isEqualTo(setting.hashCode())
+        assertThat(setting.hashCode()).isEqualTo(settingCopy.hashCode())
+        assertThat(setting.hashCode()).isEqualTo(settings1ModifiedInfo.hashCode())
+        assertThat(setting.hashCode()).isNotEqualTo(settings1ModifiedId.hashCode())
     }
 }

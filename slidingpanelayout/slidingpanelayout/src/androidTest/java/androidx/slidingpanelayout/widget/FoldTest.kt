@@ -25,13 +25,13 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.testutils.withActivity
-import androidx.window.FoldingFeature.Orientation.Companion.VERTICAL
-import androidx.window.FoldingFeature.State.Companion.FLAT
-import androidx.window.FoldingFeature.State.Companion.HALF_OPENED
-import androidx.window.WindowLayoutInfo
-import androidx.window.WindowMetricsCalculator
-import androidx.window.testing.FoldingFeature
-import androidx.window.testing.WindowLayoutInfoPublisherRule
+import androidx.window.layout.FoldingFeature.Orientation.Companion.VERTICAL
+import androidx.window.layout.FoldingFeature.State.Companion.FLAT
+import androidx.window.layout.FoldingFeature.State.Companion.HALF_OPENED
+import androidx.window.layout.WindowLayoutInfo
+import androidx.window.layout.WindowMetricsCalculator
+import androidx.window.testing.layout.FoldingFeature
+import androidx.window.testing.layout.WindowLayoutInfoPublisherRule
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Rule
@@ -101,11 +101,11 @@ public class FoldTest {
         TestActivity.onActivityCreated = { activity ->
             activity.setContentView(R.layout.activity_test_fold_layout)
             val detailView = activity.findViewById<View>(R.id.detail_pane)
-            detailView.minimumWidth = WindowMetricsCalculator.create()
+            detailView.minimumWidth = WindowMetricsCalculator.getOrCreate()
                 .computeCurrentWindowMetrics(activity)
                 .bounds
                 .width() / 2 + detailViewExtraWidth
-            val window = WindowMetricsCalculator.create()
+            val window = WindowMetricsCalculator.getOrCreate()
                 .computeCurrentWindowMetrics(activity).bounds
             detailView.minimumWidth = window.width() / 2 + detailViewExtraWidth
         }
@@ -115,7 +115,7 @@ public class FoldTest {
                 val feature = FoldingFeature(activity = this, orientation = VERTICAL)
                 val info = WindowLayoutInfo.Builder().setDisplayFeatures(listOf(feature)).build()
                 rule.overrideWindowLayoutInfo(info)
-                WindowMetricsCalculator.create().computeCurrentWindowMetrics(this).bounds
+                WindowMetricsCalculator.getOrCreate().computeCurrentWindowMetrics(this).bounds
             }
             assertThat(findViewById(R.id.detail_pane).width).isEqualTo(window.width())
         }

@@ -52,8 +52,8 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.customview.view.AbsSavedState;
 import androidx.customview.widget.Openable;
 import androidx.customview.widget.ViewDragHelper;
-import androidx.window.FoldingFeature;
-import androidx.window.WindowInfoRepo;
+import androidx.window.layout.FoldingFeature;
+import androidx.window.layout.WindowInfoRepository;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -328,7 +328,7 @@ public class SlidingPaneLayout extends ViewGroup implements Openable {
 
         try {
             Activity activity = requireActivity(context);
-            WindowInfoRepo repo = WindowInfoRepo.create(activity);
+            WindowInfoRepository repo = WindowInfoRepository.getOrCreate(activity);
             Executor mainExecutor = ContextCompat.getMainExecutor(activity);
             FoldingFeatureObserver foldingFeatureObserver = new FoldingFeatureObserver(repo,
                     mainExecutor);
