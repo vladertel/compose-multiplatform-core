@@ -17,7 +17,6 @@
 
 package androidx.compose.desktop.examples.windowapi
 
-import androidx.compose.desktop.ComposeWindow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -34,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.asPainter
 import androidx.compose.ui.input.key.Key
@@ -48,7 +48,6 @@ import androidx.compose.ui.window.AwtWindow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Notification
-import androidx.compose.ui.window.OwnerWindowScope
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.TrayState
 import androidx.compose.ui.window.Window
@@ -311,7 +310,7 @@ fun customDialog() = GlobalScope.launchApplication {
 }
 
 @Composable
-private fun OwnerWindowScope.FileDialog(
+private fun FileDialog(
     onDismissRequest: (result: String?) -> Unit
 ) = AwtWindow(
     create = {

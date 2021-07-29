@@ -16,16 +16,13 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.desktop.AppManager
-import androidx.compose.desktop.AppWindow
-import androidx.compose.desktop.ComposeWindow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.unit.dp
@@ -104,13 +101,9 @@ import javax.swing.JMenuBar
  * keyboard. While implementing this callback, return true to stop propagation of this event.
  * If you return false, the key event will be sent to this [onKeyEvent]'s parent.
  * @param content Content of the window
- *
- * This API is experimental and will eventually replace [AppWindow] / [AppManager]
  */
-@Suppress("unused")
-@ExperimentalComposeUiApi
 @Composable
-fun ApplicationScope.Window(
+fun Window(
     onCloseRequest: () -> Unit,
     state: WindowState = rememberWindowState(),
     visible: Boolean = true,
@@ -123,7 +116,7 @@ fun ApplicationScope.Window(
     alwaysOnTop: Boolean = false,
     onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
     onKeyEvent: (KeyEvent) -> Boolean = { false },
-    content: @Composable WindowScope.() -> Unit
+    content: @Composable FrameWindowScope.() -> Unit
 ) {
     val currentState by rememberUpdatedState(state)
     val currentTitle by rememberUpdatedState(title)
@@ -230,10 +223,7 @@ fun ApplicationScope.Window(
  * keyboard. While implementing this callback, return true to stop propagation of this event.
  * If you return false, the key event will be sent to this [onKeyEvent]'s parent.
  * @param content Content of the window
- *
- * This API is experimental and will eventually replace [AppWindow] / [AppManager]
  */
-@ExperimentalComposeUiApi
 fun singleWindowApplication(
     state: WindowState = WindowState(),
     visible: Boolean = true,
@@ -246,7 +236,7 @@ fun singleWindowApplication(
     alwaysOnTop: Boolean = false,
     onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
     onKeyEvent: (KeyEvent) -> Boolean = { false },
-    content: @Composable WindowScope.() -> Unit
+    content: @Composable FrameWindowScope.() -> Unit
 ) = application {
     Window(
         ::exitApplication,
@@ -281,8 +271,6 @@ fun singleWindowApplication(
  * Window is needed for creating window's that still can't be created with
  * the default Compose function [androidx.compose.ui.window.Window]
  *
- * This API is experimental and will eventually replace [AppWindow] / [AppManager].
- *
  * @param visible Is [ComposeWindow] visible to user.
  * If `false`:
  * - internal state of [ComposeWindow] is preserved and will be restored next time the window
@@ -304,28 +292,22 @@ fun singleWindowApplication(
  * @param content Composable content of the creating window.
  */
 @Suppress("unused")
-@ExperimentalComposeUiApi
 @Composable
-fun ApplicationScope.Window(
+fun Window(
     visible: Boolean = true,
     onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
     onKeyEvent: (KeyEvent) -> Boolean = { false },
     create: () -> ComposeWindow,
     dispose: (ComposeWindow) -> Unit,
     update: (ComposeWindow) -> Unit = {},
-    content: @Composable WindowScope.() -> Unit
+    content: @Composable FrameWindowScope.() -> Unit
 ) {
     val composition = rememberCompositionContext()
     AwtWindow(
         visible = visible,
         create = {
             create().apply {
-                val scope = object : WindowScope {
-                    override val window: ComposeWindow get() = this@apply
-                }
-                setContent(composition, onPreviewKeyEvent, onKeyEvent) {
-                    scope.content()
-                }
+                setContent(composition, onPreviewKeyEvent, onKeyEvent, content)
             }
         },
         dispose = dispose,
@@ -336,13 +318,11 @@ fun ApplicationScope.Window(
 /**
  * Receiver scope which is used by [androidx.compose.ui.window.Window].
  */
-interface WindowScope : OwnerWindowScope {
+interface FrameWindowScope : WindowScope {
     /**
      * [ComposeWindow] that was created inside [androidx.compose.ui.window.Window].
      */
-    val window: ComposeWindow
-
-    override val ownerWindow: Window get() = window
+    override val window: ComposeWindow
 }
 
 /**
@@ -351,7 +331,7 @@ interface WindowScope : OwnerWindowScope {
  * @param content content of the menu bar (list of menus)
  */
 @Composable
-fun WindowScope.MenuBar(content: @Composable MenuBarScope.() -> Unit) {
+fun FrameWindowScope.MenuBar(content: @Composable MenuBarScope.() -> Unit) {
     val parentComposition = rememberCompositionContext()
 
     DisposableEffect(Unit) {

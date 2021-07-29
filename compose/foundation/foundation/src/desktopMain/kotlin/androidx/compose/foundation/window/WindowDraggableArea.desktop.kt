@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.window
+package androidx.compose.foundation.window
 
-import androidx.compose.desktop.AppWindow
-import androidx.compose.desktop.LocalAppWindow
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -27,32 +24,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.WindowScope
+import java.awt.MouseInfo
+import java.awt.Point
+import java.awt.Window
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
-import java.awt.MouseInfo
-import java.awt.Point
 
 /**
  * WindowDraggableArea is a component that allows you to drag the window using the mouse.
  *
  * @param modifier The modifier to be applied to the layout.
  */
-@Deprecated(
-    "Use another variant of WindowDraggableArea for the new Composable Window API (https://github" +
-        ".com/JetBrains/compose-jb/tree/master/tutorials/Window_API_new)",
-    replaceWith = ReplaceWith(
-        "WindowDraggableArea(modifier, content)",
-        "androidx.compose.foundation.window.WindowDraggableArea"
-    )
-)
-@Suppress("DEPRECATION")
 @Composable
-fun WindowDraggableArea(
+fun WindowScope.WindowDraggableArea(
     modifier: Modifier = Modifier,
-    content: @Composable() () -> Unit = {}
+    content: @Composable () -> Unit = {}
 ) {
-    val window = LocalAppWindow.current
     val handler = remember { DragHandler(window) }
 
     Box(
@@ -69,9 +58,8 @@ fun WindowDraggableArea(
     }
 }
 
-@Suppress("DEPRECATION")
-private class DragHandler(private val window: AppWindow) {
-    private var location = window.window.location.toComposeOffset()
+private class DragHandler(private val window: Window) {
+    private var location = window.location.toComposeOffset()
     private var pointStart = MouseInfo.getPointerInfo().location.toComposeOffset()
 
     private val dragListener = object : MouseMotionAdapter() {
@@ -85,7 +73,7 @@ private class DragHandler(private val window: AppWindow) {
     }
 
     fun register() {
-        location = window.window.location.toComposeOffset()
+        location = window.location.toComposeOffset()
         pointStart = MouseInfo.getPointerInfo().location.toComposeOffset()
         window.addMouseListener(removeListener)
         window.addMouseMotionListener(dragListener)
