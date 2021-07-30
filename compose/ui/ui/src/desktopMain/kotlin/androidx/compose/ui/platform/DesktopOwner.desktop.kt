@@ -159,9 +159,6 @@ internal class DesktopOwner(
         container.register(this)
         snapshotObserver.startObserving()
         root.attach(this)
-        if (isFocusable) {
-            container.focusedOwner = this
-        }
         _focusManager.takeFocus()
     }
 
