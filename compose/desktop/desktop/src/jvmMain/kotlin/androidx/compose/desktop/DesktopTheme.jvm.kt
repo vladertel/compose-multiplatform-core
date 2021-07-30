@@ -24,6 +24,7 @@ import androidx.compose.material.Shapes
 import androidx.compose.material.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalContextMenuRepresentation
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -53,5 +54,6 @@ fun DesktopTheme(
     content: @Composable () -> Unit
 ) = CompositionLocalProvider(
     LocalScrollbarStyle provides scrollbar,
+    LocalContextMenuRepresentation provides contextMenuRepresentation,
     content = content
 )
