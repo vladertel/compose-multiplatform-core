@@ -38,6 +38,8 @@ import kotlinx.cinterop.*
 import org.jetbrains.skiko.skia.native.FontCollection
 import org.jetbrains.skiko.skia.native.Typeface as SkiaTypeface
 import org.jetbrains.skiko.skia.native.TypefaceFontProvider
+import org.jetbrains.skiko.skia.native.skia__textlayout__TypefaceFontProvider
+import org.jetbrains.skiko.skia.native.__TypefaceFontProvider
 import org.jetbrains.skiko.skia.native.FontMgr
 import org.jetbrains.skiko.skia.native.SkFontMgr
 
@@ -66,17 +68,18 @@ internal fun FontListFontFamily.makeAlias(): String {
     return ""
 }
 
-private val TypefaceFontProvider.asFontMgr
-    get() = FontMgr(this.cpp.ptr.reinterpret<SkFontMgr>().pointed, managed = false)
+private fun asFontMgr(typefaceFontManager: CPointer<skia__textlayout__TypefaceFontProvider>) =
+    FontMgr(typefaceFontManager.reinterpret<SkFontMgr>().pointed, managed = false)
 
 class FontLoader : Font.ResourceLoader {
 
     val fonts = FontCollection()
-    private val fontProvider = TypefaceFontProvider()
+    // TODO: This is worked around in the .def file.
+    private val fontProvider = __TypefaceFontProvider() ?: error("TypefaceFontProvider() returned null")
 
     init {
         fonts.setDefaultFontManager(FontMgr.RefDefault())
-        fonts.setAssetFontManager(fontProvider.asFontMgr)
+        fonts.setAssetFontManager(asFontMgr(fontProvider))
     }
 
     private val registered = HashSet<String>()
@@ -94,7 +97,7 @@ class FontLoader : Font.ResourceLoader {
                 val alias = fontFamily.makeAlias()
                 if (!registered.contains(alias)) {
                     fontFamily.fonts.forEach {
-                        fontProvider.registerTypeface(load(it), alias)
+                        // fontProvider.registerTypeface(load(it), alias)
                     }
                     registered.add(alias)
                 }
@@ -102,9 +105,9 @@ class FontLoader : Font.ResourceLoader {
             }
             is LoadedFontFamily -> {
                 val typeface = fontFamily.typeface as NativeTypeface
-                val alias = typeface.alias ?: typeface.nativeTypeface.familyName
+                val alias = typeface.alias!! // ?: typeface.nativeTypeface.familyName
                 if (!registered.contains(alias)) {
-                    fontProvider.registerTypeface(typeface.nativeTypeface, alias)
+                    // fontProvider.registerTypeface(typeface.nativeTypeface, alias)
                     registered.add(alias)
                 }
                 listOf(alias)

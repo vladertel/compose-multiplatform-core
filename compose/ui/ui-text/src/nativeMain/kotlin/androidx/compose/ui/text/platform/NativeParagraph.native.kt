@@ -81,6 +81,7 @@ import kotlinx.cinterop.*
 
 import org.jetbrains.skiko.skia.native.Paragraph as SkiaParagraph
 import org.jetbrains.skiko.skia.native.ParagraphBuilder as SkiaParagraphBuilder
+import org.jetbrains.skiko.skia.native.__ParagraphBuilder__make
 import org.jetbrains.skiko.skia.native.TextStyle as SkiaTextStyle
 import org.jetbrains.skiko.skia.native.Typeface as SkiaTypeface
 import org.jetbrains.skiko.skia.native.SkFontStyle
@@ -88,6 +89,8 @@ import org.jetbrains.skiko.skia.native.skia__textlayout__ParagraphStyle as Parag
 import org.jetbrains.skiko.skia.native.Font as SkiaFont
 import org.jetbrains.skiko.skia.native.SkFontMetrics
 import org.jetbrains.skiko.skia.native.__ParagraphBuilder__Build
+import org.jetbrains.skiko.skia.native.__TextStyle__setFontStyle
+import org.jetbrains.skiko.skia.native.SkFontStyle__Slant.*
 import org.jetbrains.skiko.skia.native.*
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.cValuesOf
@@ -327,7 +330,9 @@ private data class ComputedStyle(
 //            res.setFontFamilies(fontFamilies.toTypedArray())
         }
         fontStyle?.let {
-            res.setFontStyle(it.toSkFontStyle())
+            // res.setFontStyle(it.toSkFontStyle())
+            // TODO: this is a workaround in def file.
+            __TextStyle__setFontStyle(res.cpp.ptr, it.toSkFontStyle())
         }
         textDecoration?.let {
             //res.decorationStyle = it.toSkDecorationStyle(this.color)
@@ -385,10 +390,14 @@ private data class ComputedStyle(
     }
 }
 
-fun androidx.compose.ui.text.font.FontStyle.toSkFontStyle(): CValue<SkFontStyle> {
+
+fun androidx.compose.ui.text.font.FontStyle.toSkFontStyle(): CPointer<SkFontStyle> {
     return when (this) {
-        androidx.compose.ui.text.font.FontStyle.Italic -> SkFontStyle.Italic()
-        else -> SkFontStyle.Normal()
+        // androidx.compose.ui.text.font.FontStyle.Italic -> SkFontStyle.Italic().ptr
+        // TODO: Normal(), Italic() etc are static constexpr.
+        // Interop chokes on them.
+        // So let's just create an instance instead of a constant for now.
+        else -> FontStyle(400, 5, kUpright_Slant).cpp.ptr
     }
 }
 
@@ -447,14 +456,19 @@ internal class ParagraphBuilder(
         val ps: ParagraphStyle = textStyleToParagraphStyle(textStyle)
 
         if (maxLines != Int.MAX_VALUE) {
-            ps.setMaxLines(maxLines.toULong())
+            //ps.setMaxLines(maxLines.toULong())
             //ps.setEllipsis(ellipsis)
         }
 
         val cvaluesRefParagraphStyle:  CValuesRef<ParagraphStyle> = ps.readValue()
-        val cPointerFonts: CPointer<skia__textlayout__FontCollection> = fontLoader.fonts.ptr
+        val cPointerFonts = fontLoader.fonts
 
-        val pb = SkiaParagraphBuilder(cvaluesRefParagraphStyle, cPointerFonts)
+        // TODO: this is to workaround interop inability to process uniq_ptr.
+        // See skiko def file for the wrapper details.
+        val pb = SkiaParagraphBuilder(
+            __ParagraphBuilder__make(cvaluesRefParagraphStyle, cPointerFonts.cpp.ptr)!!.pointed,
+            managed=true
+        )
 
         var addText = true
 
