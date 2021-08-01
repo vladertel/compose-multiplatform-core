@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.DesktopPath
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.isSpecified
-import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.platformCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.text.AnnotatedString.Range
@@ -383,7 +383,7 @@ internal class DesktopParagraph(
             textDecoration = textDecoration
         )
 
-        para.paint(canvas.nativeCanvas, 0.0f, 0.0f)
+        para.paint(canvas.platformCanvas, 0.0f, 0.0f)
     }
 }
 

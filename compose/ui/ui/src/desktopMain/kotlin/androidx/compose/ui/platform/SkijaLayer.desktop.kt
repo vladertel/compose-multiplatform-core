@@ -32,7 +32,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asDesktopPath
-import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.platformCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toSkijaRect
 import androidx.compose.ui.node.OwnedLayer
@@ -216,7 +216,7 @@ internal class SkijaLayer(
         canvas.save()
         canvas.concat(matrix)
         canvas.translate(position.x.toFloat(), position.y.toFloat())
-        canvas.nativeCanvas.drawPicture(picture!!, null, null)
+        canvas.platformCanvas.drawPicture(picture!!, null, null)
         canvas.restore()
     }
 
@@ -272,7 +272,7 @@ internal class SkijaLayer(
         val spotColor = Color.Black.copy(alpha = spotAlpha)
 
         ShadowUtils.drawShadow(
-            canvas.nativeCanvas, path.asDesktopPath(), zParams, lightPos,
+            canvas.platformCanvas, path.asDesktopPath(), zParams, lightPos,
             lightRad,
             ambientColor.toArgb(),
             spotColor.toArgb(), alpha < 1f, false

@@ -23,7 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.platformCanvas
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -43,7 +43,7 @@ import androidx.compose.ui.platform.LocalContext
  * @sample androidx.compose.ui.samples.PainterResourceSample
  *
  * Alternative Drawable implementations can be used with compose by calling
- * [drawIntoCanvas] and drawing with the Android framework canvas provided through [nativeCanvas]
+ * [drawIntoCanvas] and drawing with the Android framework canvas provided through [platformCanvas]
  *
  * Example:
  * @sample androidx.compose.ui.samples.AndroidDrawableInDrawScopeSample

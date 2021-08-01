@@ -29,7 +29,7 @@ fun Canvas(image: ImageBitmap): Canvas = ActualCanvas(image)
 
 internal expect fun ActualCanvas(image: ImageBitmap): Canvas
 
-expect class NativeCanvas
+expect class PlatformCanvas
 
 /**
  * Saves a copy of the current transform and clip on the save stack and executes the
@@ -165,7 +165,7 @@ fun Canvas.scale(sx: Float, sy: Float = sx, pivotX: Float, pivotY: Float) {
 /**
  * Return an instance of the native primitive that implements the Canvas interface
  */
-expect val Canvas.nativeCanvas: NativeCanvas
+expect val Canvas.platformCanvas: PlatformCanvas
 
 interface Canvas {
 

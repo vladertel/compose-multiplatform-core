@@ -20,110 +20,110 @@ import android.graphics.PorterDuffXfermode
 import android.os.Build
 import androidx.annotation.RequiresApi
 
-actual typealias NativePaint = android.graphics.Paint
+actual typealias PlatformPaint = android.graphics.Paint
 
 actual fun Paint(): Paint = AndroidPaint()
 
 class AndroidPaint : Paint {
 
-    private var internalPaint = makeNativePaint()
+    private var internalPaint = makePlatformPaint()
     private var _blendMode = BlendMode.SrcOver
     private var internalShader: Shader? = null
     private var internalColorFilter: ColorFilter? = null
 
-    override fun asFrameworkPaint(): NativePaint = internalPaint
+    override fun asFrameworkPaint(): PlatformPaint = internalPaint
 
     override var alpha: Float
-        get() = internalPaint.getNativeAlpha()
+        get() = internalPaint.getPlatformAlpha()
         set(value) {
-            internalPaint.setNativeAlpha(value)
+            internalPaint.setPlatformAlpha(value)
         }
 
     override var isAntiAlias: Boolean
-        get() = internalPaint.getNativeAntiAlias()
+        get() = internalPaint.getPlatformAntiAlias()
         set(value) {
-            internalPaint.setNativeAntiAlias(value)
+            internalPaint.setPlatformAntiAlias(value)
         }
 
     override var color: Color
-        get() = internalPaint.getNativeColor()
+        get() = internalPaint.getPlatformColor()
         set(color) {
-            internalPaint.setNativeColor(color)
+            internalPaint.setPlatformColor(color)
         }
 
     override var blendMode: BlendMode
         get() = _blendMode
         set(value) {
             _blendMode = value
-            internalPaint.setNativeBlendMode(value)
+            internalPaint.setPlatformBlendMode(value)
         }
 
     override var style: PaintingStyle
-        get() = internalPaint.getNativeStyle()
+        get() = internalPaint.getPlatformStyle()
         set(value) {
-            internalPaint.setNativeStyle(value)
+            internalPaint.setPlatformStyle(value)
         }
 
     override var strokeWidth: Float
-        get() = internalPaint.getNativeStrokeWidth()
+        get() = internalPaint.getPlatformStrokeWidth()
         set(value) {
-            internalPaint.setNativeStrokeWidth(value)
+            internalPaint.setPlatformStrokeWidth(value)
         }
 
     override var strokeCap: StrokeCap
-        get() = internalPaint.getNativeStrokeCap()
+        get() = internalPaint.getPlatformStrokeCap()
         set(value) {
-            internalPaint.setNativeStrokeCap(value)
+            internalPaint.setPlatformStrokeCap(value)
         }
 
     override var strokeJoin: StrokeJoin
-        get() = internalPaint.getNativeStrokeJoin()
+        get() = internalPaint.getPlatformStrokeJoin()
         set(value) {
-            internalPaint.setNativeStrokeJoin(value)
+            internalPaint.setPlatformStrokeJoin(value)
         }
 
     override var strokeMiterLimit: Float
-        get() = internalPaint.getNativeStrokeMiterLimit()
+        get() = internalPaint.getPlatformStrokeMiterLimit()
         set(value) {
-            internalPaint.setNativeStrokeMiterLimit(value)
+            internalPaint.setPlatformStrokeMiterLimit(value)
         }
 
     // TODO(ianh): verify that the image drawing methods actually respect this
     override var filterQuality: FilterQuality
-        get() = internalPaint.getNativeFilterQuality()
+        get() = internalPaint.getPlatformFilterQuality()
         set(value) {
-            internalPaint.setNativeFilterQuality(value)
+            internalPaint.setPlatformFilterQuality(value)
         }
 
     override var shader: Shader?
         get() = internalShader
         set(value) {
             internalShader = value
-            internalPaint.setNativeShader(internalShader)
+            internalPaint.setPlatformShader(internalShader)
         }
 
     override var colorFilter: ColorFilter?
         get() = internalColorFilter
         set(value) {
             internalColorFilter = value
-            internalPaint.setNativeColorFilter(value)
+            internalPaint.setPlatformColorFilter(value)
         }
 
     override var pathEffect: PathEffect? = null
         set(value) {
-            internalPaint.setNativePathEffect(value)
+            internalPaint.setPlatformPathEffect(value)
             field = value
         }
 }
 
-internal fun makeNativePaint() =
+internal fun makePlatformPaint() =
     android.graphics.Paint(
         android.graphics.Paint.ANTI_ALIAS_FLAG or
             android.graphics.Paint.DITHER_FLAG or
             android.graphics.Paint.FILTER_BITMAP_FLAG
     )
 
-internal fun NativePaint.setNativeBlendMode(mode: BlendMode) {
+internal fun PlatformPaint.setPlatformBlendMode(mode: BlendMode) {
     if (Build.VERSION.SDK_INT >= 29) {
         // All blend modes supported in Q
         WrapperVerificationHelperMethods.setBlendMode(this, mode)
@@ -133,29 +133,29 @@ internal fun NativePaint.setNativeBlendMode(mode: BlendMode) {
     }
 }
 
-internal fun NativePaint.setNativeColorFilter(value: ColorFilter?) {
+internal fun PlatformPaint.setPlatformColorFilter(value: ColorFilter?) {
     colorFilter = value?.asAndroidColorFilter()
 }
 
-internal fun NativePaint.getNativeAlpha() = this.alpha / 255f
+internal fun PlatformPaint.getPlatformAlpha() = this.alpha / 255f
 
-internal fun NativePaint.setNativeAlpha(value: Float) {
+internal fun PlatformPaint.setPlatformAlpha(value: Float) {
     this.alpha = kotlin.math.round(value * 255.0f).toInt()
 }
 
-internal fun NativePaint.getNativeAntiAlias(): Boolean = this.isAntiAlias
+internal fun PlatformPaint.getPlatformAntiAlias(): Boolean = this.isAntiAlias
 
-internal fun NativePaint.setNativeAntiAlias(value: Boolean) {
+internal fun PlatformPaint.setPlatformAntiAlias(value: Boolean) {
     this.isAntiAlias = value
 }
 
-internal fun NativePaint.getNativeColor(): Color = Color(this.color)
+internal fun PlatformPaint.getPlatformColor(): Color = Color(this.color)
 
-internal fun NativePaint.setNativeColor(value: Color) {
+internal fun PlatformPaint.setPlatformColor(value: Color) {
     this.color = value.toArgb()
 }
 
-internal fun NativePaint.setNativeStyle(value: PaintingStyle) {
+internal fun PlatformPaint.setPlatformStyle(value: PaintingStyle) {
     // TODO(njawad): Platform also supports Paint.Style.FILL_AND_STROKE)
     this.style = when (value) {
         PaintingStyle.Stroke -> android.graphics.Paint.Style.STROKE
@@ -163,26 +163,26 @@ internal fun NativePaint.setNativeStyle(value: PaintingStyle) {
     }
 }
 
-internal fun NativePaint.getNativeStyle() = when (this.style) {
+internal fun PlatformPaint.getPlatformStyle() = when (this.style) {
     android.graphics.Paint.Style.STROKE -> PaintingStyle.Stroke
     else -> PaintingStyle.Fill
 }
 
-internal fun NativePaint.getNativeStrokeWidth(): Float =
+internal fun PlatformPaint.getPlatformStrokeWidth(): Float =
     this.strokeWidth
 
-internal fun NativePaint.setNativeStrokeWidth(value: Float) {
+internal fun PlatformPaint.setPlatformStrokeWidth(value: Float) {
     this.strokeWidth = value
 }
 
-internal fun NativePaint.getNativeStrokeCap(): StrokeCap = when (this.strokeCap) {
+internal fun PlatformPaint.getPlatformStrokeCap(): StrokeCap = when (this.strokeCap) {
     android.graphics.Paint.Cap.BUTT -> StrokeCap.Butt
     android.graphics.Paint.Cap.ROUND -> StrokeCap.Round
     android.graphics.Paint.Cap.SQUARE -> StrokeCap.Square
     else -> StrokeCap.Butt
 }
 
-internal fun NativePaint.setNativeStrokeCap(value: StrokeCap) {
+internal fun PlatformPaint.setPlatformStrokeCap(value: StrokeCap) {
     this.strokeCap = when (value) {
         StrokeCap.Square -> android.graphics.Paint.Cap.SQUARE
         StrokeCap.Round -> android.graphics.Paint.Cap.ROUND
@@ -191,7 +191,7 @@ internal fun NativePaint.setNativeStrokeCap(value: StrokeCap) {
     }
 }
 
-internal fun NativePaint.getNativeStrokeJoin(): StrokeJoin =
+internal fun PlatformPaint.getPlatformStrokeJoin(): StrokeJoin =
     when (this.strokeJoin) {
         android.graphics.Paint.Join.MITER -> StrokeJoin.Miter
         android.graphics.Paint.Join.BEVEL -> StrokeJoin.Bevel
@@ -199,7 +199,7 @@ internal fun NativePaint.getNativeStrokeJoin(): StrokeJoin =
         else -> StrokeJoin.Miter
     }
 
-internal fun NativePaint.setNativeStrokeJoin(value: StrokeJoin) {
+internal fun PlatformPaint.setPlatformStrokeJoin(value: StrokeJoin) {
     this.strokeJoin = when (value) {
         StrokeJoin.Miter -> android.graphics.Paint.Join.MITER
         StrokeJoin.Bevel -> android.graphics.Paint.Join.BEVEL
@@ -208,14 +208,14 @@ internal fun NativePaint.setNativeStrokeJoin(value: StrokeJoin) {
     }
 }
 
-internal fun NativePaint.getNativeStrokeMiterLimit(): Float =
+internal fun PlatformPaint.getPlatformStrokeMiterLimit(): Float =
     this.strokeMiter
 
-internal fun NativePaint.setNativeStrokeMiterLimit(value: Float) {
+internal fun PlatformPaint.setPlatformStrokeMiterLimit(value: Float) {
     this.strokeMiter = value
 }
 
-internal fun NativePaint.getNativeFilterQuality(): FilterQuality =
+internal fun PlatformPaint.getPlatformFilterQuality(): FilterQuality =
     if (!this.isFilterBitmap) {
         FilterQuality.None
     } else {
@@ -227,15 +227,15 @@ internal fun NativePaint.getNativeFilterQuality(): FilterQuality =
         FilterQuality.Low
     }
 
-internal fun NativePaint.setNativeFilterQuality(value: FilterQuality) {
+internal fun PlatformPaint.setPlatformFilterQuality(value: FilterQuality) {
     this.isFilterBitmap = value != FilterQuality.None
 }
 
-internal fun NativePaint.setNativeShader(value: Shader?) {
+internal fun PlatformPaint.setPlatformShader(value: Shader?) {
     this.shader = value
 }
 
-internal fun NativePaint.setNativePathEffect(value: PathEffect?) {
+internal fun PlatformPaint.setPlatformPathEffect(value: PathEffect?) {
     this.pathEffect = (value as AndroidPathEffect?)?.nativePathEffect
 }
 
@@ -247,7 +247,7 @@ internal fun NativePaint.setNativePathEffect(value: PathEffect?) {
 @RequiresApi(Build.VERSION_CODES.Q)
 internal object WrapperVerificationHelperMethods {
     @androidx.annotation.DoNotInline
-    fun setBlendMode(paint: NativePaint, mode: BlendMode) {
+    fun setBlendMode(paint: PlatformPaint, mode: BlendMode) {
         paint.blendMode = mode.toAndroidBlendMode()
     }
 }
