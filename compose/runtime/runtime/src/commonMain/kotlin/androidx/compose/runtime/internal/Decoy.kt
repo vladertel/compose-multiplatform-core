@@ -51,9 +51,21 @@ annotation class Decoy(val targetName: String, vararg val signature: String)
  *
  * @param name Name of this implementation function.
  * @param id Id from original function signature to distinguish overloads.
- * @param defaultsBitMask keeps the flags for default values in original function parameters.
  */
 @Suppress("unused")
 @ExperimentalComposeApi
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CONSTRUCTOR)
-annotation class DecoyImplementation(val name: String, val id: Long, val defaultsBitMask: Int)
+annotation class DecoyImplementation(val name: String, val id: Long)
+
+/**
+ * Complements [DecoyImplementation] with extra information about default values for parameters.
+ * Default values are erased and not present in klib.
+ * This annotation uses [bitMask] to store the information about default values in original (decoy)
+ * functions.
+ *
+ * @param bitMask keeps the flags of default values presence.
+ */
+@Suppress("unused")
+@ExperimentalComposeApi
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.CONSTRUCTOR)
+internal annotation class DecoyImplementationDefaultsBitMask(val bitMask: Int)

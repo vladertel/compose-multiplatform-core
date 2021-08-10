@@ -101,6 +101,9 @@ class CreateDecoysTransformer(
         getTopLevelClass(DecoyFqNames.DecoyImplementation).owner
     }
 
+    private val decoyImplementationDefaultsBitmaskAnnotation =
+        getTopLevelClass(DecoyFqNames.DecoyImplementationDefaultsBitMask).owner
+
     private val decoyStub by lazy {
         getInternalFunction("illegalDecoyCallException").owner
     }
@@ -243,12 +246,20 @@ class CreateDecoysTransformer(
                 type = decoyImplementationAnnotation.defaultType,
                 constructorSymbol = decoyImplementationAnnotation.constructors.first().symbol
             ).also {
+                it.putValueArgument(0, irConst(name))
+                it.putValueArgument(1, irConst(signatureId))
+            }
+
+        annotations = annotations +
+            IrConstructorCallImpl.fromSymbolOwner(
+                type = decoyImplementationDefaultsBitmaskAnnotation.defaultType,
+                constructorSymbol =
+                    decoyImplementationDefaultsBitmaskAnnotation.constructors.first().symbol
+            ).also {
                 val paramsWithDefaultsBitMask = bitMask(
                     *valueParameters.map { it.hasDefaultValue() }.toBooleanArray()
                 )
-                it.putValueArgument(0, irConst(name))
-                it.putValueArgument(1, irConst(signatureId))
-                it.putValueArgument(2, irConst(paramsWithDefaultsBitMask))
+                it.putValueArgument(0, irConst(paramsWithDefaultsBitMask))
             }
     }
 

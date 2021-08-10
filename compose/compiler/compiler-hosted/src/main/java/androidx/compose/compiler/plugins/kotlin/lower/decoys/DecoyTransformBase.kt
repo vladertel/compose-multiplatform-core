@@ -181,10 +181,10 @@ fun IrDeclaration.isDecoyImplementation(): Boolean =
     hasAnnotationSafe(DecoyFqNames.DecoyImplementation)
 
 private fun IrFunction.getDecoyImplementationDefaultValuesBitMask(): Int? {
-    val annotation = getAnnotation(DecoyFqNames.DecoyImplementation) ?: return null
+    val annotation = getAnnotation(DecoyFqNames.DecoyImplementationDefaultsBitMask) ?: return null
 
     @Suppress("UNCHECKED_CAST")
-    val paramsDefaultsBitMask = annotation.getValueArgument(2) as IrConst<Int>
+    val paramsDefaultsBitMask = annotation.getValueArgument(0) as IrConst<Int>
 
     return paramsDefaultsBitMask.value
 }
