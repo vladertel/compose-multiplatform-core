@@ -703,6 +703,8 @@ class ComposerLambdaMemoization(
             putValueArgument(index, expression)
         }
 
+        return composableLambdaExpression
+
         return if (!isJs) {
             composableLambdaExpression
         } else {

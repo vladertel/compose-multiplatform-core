@@ -29,14 +29,45 @@ import androidx.compose.compiler.plugins.kotlin.lower.LiveLiteralTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.CreateDecoysTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.RecordDecoySignaturesTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.SubstituteDecoyCallsTransformer
+import androidx.compose.compiler.plugins.kotlin.lower.decoys.isDecoyImplementation
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.serialization.DeclarationTable
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
+import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
+import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsGlobalDeclarationTable
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerIr
+import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
+import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.expressions.IrConstKind
+import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrGetValue
+import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
+import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
+import org.jetbrains.kotlin.ir.expressions.impl.IrBranchImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrElseBranchImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrIfThenElseImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
+import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
+import org.jetbrains.kotlin.ir.types.IrSimpleType
+import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.classifierOrNull
+import org.jetbrains.kotlin.ir.types.defaultType
+import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
+import org.jetbrains.kotlin.ir.types.impl.IrStarProjectionImpl
+import org.jetbrains.kotlin.ir.util.defaultType
+import org.jetbrains.kotlin.ir.util.dump
+import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.DelegatingBindingTrace
@@ -129,6 +160,198 @@ class ComposeIrGenerationExtension(
             intrinsicRememberEnabled
         ).lower(moduleFragment)
 
+        fun IrType.replaceArgumentsWithStarProjections(): IrType =
+            when (this) {
+                is IrSimpleType -> IrSimpleTypeImpl(
+                    classifier,
+                    hasQuestionMark,
+                    List(arguments.size) { IrStarProjectionImpl },
+                    annotations,
+                    abbreviation
+                )
+                else -> this
+            }
+
+        val _composerIrClass = pluginContext.referenceClass(ComposeFqNames.Composer)?.owner!!
+        val composerIrClass = symbolRemapper.getReferencedClass(_composerIrClass.symbol).owner
+        val composerType = composerIrClass.defaultType.replaceArgumentsWithStarProjections()
+
+
+        moduleFragment.transformChildrenVoid(object : IrElementTransformerVoid() {
+            private fun IrType.isFunction(): Boolean {
+                val classifier = classifierOrNull ?: return false
+                val name = classifier.descriptor.name.asString()
+                if (!name.startsWith("Function")) return false
+                return true
+            }
+
+            private fun IrType.hasComposer(): Boolean {
+                if (this == composerType) return true
+
+                return when (this) {
+                    is IrSimpleType -> arguments.any { (it as? IrType)?.hasComposer() == true }
+                    else -> false
+                }
+            }
+//            override fun visitFunction(declaration: IrFunction): IrStatement {
+////                declaration.valueParameters.firstOrNull {
+////                    it.type.isFunction() && it.type.hasComposer()
+////                } ?: return declaration
+//
+//                if(!declaration.isDecoyImplementation()) return declaration
+//                val f = super.visitFunction(declaration)
+//                return f
+////                return declaration//declaration.copyWithName(declaration.name)
+//                //return super.visitSimpleFunction(declaration)
+//            }
+//
+//            override fun visitElement(element: IrElement): IrElement {
+//                val e = element
+//                return super.visitElement(element)
+//            }
+//
+//            override fun visitDeclaration(declaration: IrDeclarationBase): IrStatement {
+//                val d = declaration
+//                return super.visitDeclaration(declaration)
+//            }
+
+            override fun visitCall(expression: IrCall): IrExpression {
+                val original = super.visitCall(expression) as IrCall
+
+                if (original.origin != IrStatementOrigin.INVOKE) {
+                    return original
+                }
+
+                val dispatchReceiver = original.dispatchReceiver!!
+
+                val valueParameter = (dispatchReceiver as? IrGetValue)
+                    ?.symbol?.owner as? IrValueParameter //?: return original
+
+
+                if (valueParameter != null
+                    && (valueParameter.parent as? IrSimpleFunction)?.isInline == true
+                    && !valueParameter.isNoinline
+                ) {
+                    return original
+                }
+
+
+                if (!dispatchReceiver.type.isFunction() || !dispatchReceiver.type.hasComposer()) {
+                    return original
+                }
+
+                val sym = symbolRemapper.getReferencedClass(pluginContext.referenceClass(
+                    FqName("androidx.compose.runtime.internal.ComposableLambdaImpl")
+                )!!).owner
+
+                val targetInvoke = sym.declarations.firstOrNull {
+                    it is IrFunction
+                        && it.name.asString() == "invoke"
+                        && it.valueParameters.size == original.valueArgumentsCount
+                } as? IrSimpleFunction ?: error("ComposableLambdaImpl.call() not found " +
+                    original.dump()
+                )
+
+                return IrIfThenElseImpl(
+                    UNDEFINED_OFFSET, UNDEFINED_OFFSET,
+                    pluginContext.irBuiltIns.unitType
+                ).apply {
+                    branches.add(IrBranchImpl(
+                        condition = IrTypeOperatorCallImpl(
+                            startOffset = UNDEFINED_OFFSET,
+                            endOffset = UNDEFINED_OFFSET,
+                            type = pluginContext.irBuiltIns.booleanType,
+                            operator = IrTypeOperator.INSTANCEOF,
+                            typeOperand = sym.defaultType,
+                            argument = dispatchReceiver
+                        ),
+                        result = IrCallImpl(
+                            startOffset = original.startOffset,
+                            endOffset = original.endOffset,
+                            type = original.type,
+                            symbol = targetInvoke.symbol,
+                            typeArgumentsCount = 0,
+                            valueArgumentsCount = original.valueArgumentsCount,
+                            origin = null//original.origin
+                        ).also {
+                            it.dispatchReceiver = dispatchReceiver
+                            repeat(original.valueArgumentsCount) { ix ->
+                                it.putValueArgument(ix, original.getValueArgument(ix))
+                            }
+                        }
+                    ))
+                    branches.add(
+                        IrElseBranchImpl(
+                            condition = IrConstImpl(
+                                UNDEFINED_OFFSET,
+                                UNDEFINED_OFFSET,
+                                pluginContext.irBuiltIns.booleanType,
+                                IrConstKind.Boolean,
+                                true
+                            ),
+                            result = expression
+                        )
+                    )
+                }
+            }
+
+            override fun visitValueParameter(declaration: IrValueParameter): IrStatement {
+                val original = super.visitValueParameter(declaration) as IrValueParameter
+                return original
+
+                if ((declaration.parent as? IrSimpleFunction)?.isDecoyImplementation() == false) {
+                    return original
+                }
+                if ((declaration.parent as? IrSimpleFunction)?.isInline == true && !declaration.isNoinline) {
+                    return original
+                }
+                if (!declaration.type.isFunction()) {
+                    return original
+                }
+                if (!original.type.hasComposer()) {
+                    return original
+                }
+                val sym = symbolRemapper.getReferencedClass(pluginContext.referenceClass(
+                    FqName("androidx.compose.runtime.internal.JsComposableLambdaImpl")
+                )!!)
+                return IrValueParameterImpl(
+                    startOffset = declaration.startOffset,
+                    endOffset = declaration.endOffset,
+                    origin = declaration.origin,
+                    symbol = IrValueParameterSymbolImpl(),
+                    name = declaration.name,
+                    index = declaration.index,
+                    type = sym.defaultType,
+                    varargElementType = null,
+                    isCrossinline = declaration.isCrossinline,
+                    isNoinline = true,//declaration.isNoinline,
+                    isHidden = declaration.isHidden,
+                    isAssignable = declaration.isAssignable
+                ).also {
+                    it.parent = declaration.parent
+                }
+            }
+        })
+//
+//        moduleFragment.transformChildrenVoid(object : IrElementTransformerVoid() {
+//            override fun visitGetValue(expression: IrGetValue): IrExpression {
+//                val original = super.visitGetValue(expression) as IrGetValue
+//
+//                val targetValueParam = listOfValueParams.firstOrNull {
+//                    it.first.symbol == original.symbol
+//                }?.second ?: return original
+//
+//                return IrGetValueImpl(
+//                    startOffset = original.startOffset,
+//                    endOffset = original.endOffset,
+//                    symbol = targetValueParam.symbol
+//                )
+//                //return super.visitGetValue(expression)
+//            }
+//        })
+
+//        moduleFragment.patchDeclarationParents()
+
         if (decoysEnabled) {
             require(idSignatureBuilder != null) {
                 "decoys are not supported for ${pluginContext.platform}"
@@ -149,5 +372,6 @@ class ComposeIrGenerationExtension(
                 bindingTrace
             ).lower(moduleFragment)
         }
+
     }
 }
