@@ -177,180 +177,120 @@ class ComposeIrGenerationExtension(
         val composerType = composerIrClass.defaultType.replaceArgumentsWithStarProjections()
 
 
-        moduleFragment.transformChildrenVoid(object : IrElementTransformerVoid() {
-            private fun IrType.isFunction(): Boolean {
-                val classifier = classifierOrNull ?: return false
-                val name = classifier.descriptor.name.asString()
-                if (!name.startsWith("Function")) return false
-                return true
-            }
-
-            private fun IrType.hasComposer(): Boolean {
-                if (this == composerType) return true
-
-                return when (this) {
-                    is IrSimpleType -> arguments.any { (it as? IrType)?.hasComposer() == true }
-                    else -> false
-                }
-            }
-//            override fun visitFunction(declaration: IrFunction): IrStatement {
-////                declaration.valueParameters.firstOrNull {
-////                    it.type.isFunction() && it.type.hasComposer()
-////                } ?: return declaration
-//
-//                if(!declaration.isDecoyImplementation()) return declaration
-//                val f = super.visitFunction(declaration)
-//                return f
-////                return declaration//declaration.copyWithName(declaration.name)
-//                //return super.visitSimpleFunction(declaration)
-//            }
-//
-//            override fun visitElement(element: IrElement): IrElement {
-//                val e = element
-//                return super.visitElement(element)
-//            }
-//
-//            override fun visitDeclaration(declaration: IrDeclarationBase): IrStatement {
-//                val d = declaration
-//                return super.visitDeclaration(declaration)
-//            }
-
-            override fun visitCall(expression: IrCall): IrExpression {
-                val original = super.visitCall(expression) as IrCall
-
-                if (original.origin != IrStatementOrigin.INVOKE) {
-                    return original
+        if (decoysEnabled) {
+            moduleFragment.transformChildrenVoid(object : IrElementTransformerVoid() {
+                private fun IrType.isFunction(): Boolean {
+                    val classifier = classifierOrNull ?: return false
+                    val name = classifier.descriptor.name.asString()
+                    if (!name.startsWith("Function")) return false
+                    return true
                 }
 
-                val dispatchReceiver = original.dispatchReceiver!!
+                private fun IrType.hasComposer(): Boolean {
+                    if (this == composerType) return true
 
-                val valueParameter = (dispatchReceiver as? IrGetValue)
-                    ?.symbol?.owner as? IrValueParameter //?: return original
-
-
-                if (valueParameter != null
-                    && (valueParameter.parent as? IrSimpleFunction)?.isInline == true
-                    && !valueParameter.isNoinline
-                ) {
-                    return original
+                    return when (this) {
+                        is IrSimpleType -> arguments.any { (it as? IrType)?.hasComposer() == true }
+                        else -> false
+                    }
                 }
 
-
-                if (!dispatchReceiver.type.isFunction() || !dispatchReceiver.type.hasComposer()) {
-                    return original
+                override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
+                    if (declaration.name.asString().contains
+                            ("invokeComposableForResult\$composable")) {
+                        return declaration
+                    }
+                    return super.visitSimpleFunction(declaration)
                 }
 
-                val sym = symbolRemapper.getReferencedClass(pluginContext.referenceClass(
-                    FqName("androidx.compose.runtime.internal.ComposableLambdaImpl")
-                )!!).owner
+                override fun visitCall(expression: IrCall): IrExpression {
+                    val original = super.visitCall(expression) as IrCall
 
-                val targetInvoke = sym.declarations.firstOrNull {
-                    it is IrFunction
-                        && it.name.asString() == "invoke"
-                        && it.valueParameters.size == original.valueArgumentsCount
-                } as? IrSimpleFunction ?: error("ComposableLambdaImpl.call() not found " +
-                    original.dump()
-                )
+//                    if (original.origin != IrStatementOrigin.INVOKE) {
+//                        return original
+//                    }
 
-                return IrIfThenElseImpl(
-                    UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-                    pluginContext.irBuiltIns.unitType
-                ).apply {
-                    branches.add(IrBranchImpl(
-                        condition = IrTypeOperatorCallImpl(
-                            startOffset = UNDEFINED_OFFSET,
-                            endOffset = UNDEFINED_OFFSET,
-                            type = pluginContext.irBuiltIns.booleanType,
-                            operator = IrTypeOperator.INSTANCEOF,
-                            typeOperand = sym.defaultType,
-                            argument = dispatchReceiver
-                        ),
-                        result = IrCallImpl(
-                            startOffset = original.startOffset,
-                            endOffset = original.endOffset,
-                            type = original.type,
-                            symbol = targetInvoke.symbol,
-                            typeArgumentsCount = 0,
-                            valueArgumentsCount = original.valueArgumentsCount,
-                            origin = null//original.origin
-                        ).also {
-                            it.dispatchReceiver = dispatchReceiver
-                            repeat(original.valueArgumentsCount) { ix ->
-                                it.putValueArgument(ix, original.getValueArgument(ix))
-                            }
-                        }
-                    ))
-                    branches.add(
-                        IrElseBranchImpl(
-                            condition = IrConstImpl(
-                                UNDEFINED_OFFSET,
-                                UNDEFINED_OFFSET,
-                                pluginContext.irBuiltIns.booleanType,
-                                IrConstKind.Boolean,
-                                true
-                            ),
-                            result = expression
-                        )
+                    if (!original.symbol.owner.isOperator) return original
+                    if (original.symbol.owner.name.asString().contains("<get-entries>")) return original
+                    if (original.symbol.owner.name.asString() != "invoke") return original
+                    val dispatchReceiver = original.dispatchReceiver ?: return original
+
+                    val valueParameter = (dispatchReceiver as? IrGetValue)
+                        ?.symbol?.owner as? IrValueParameter //?: return original
+
+
+                    if (valueParameter != null
+                        && (valueParameter.parent as? IrSimpleFunction)?.isInline == true
+                        && !valueParameter.isNoinline
+                    ) {
+                        return original
+                    }
+
+
+                    if (!dispatchReceiver.type.isFunction() || !dispatchReceiver.type.hasComposer()) {
+                        return original
+                    }
+
+                    val sym = symbolRemapper.getReferencedClass(
+                        pluginContext.referenceClass(
+                            FqName("androidx.compose.runtime.internal.ComposableLambdaImpl")
+                        )!!
+                    ).owner
+
+                    val targetInvoke = sym.declarations.firstOrNull {
+                        it is IrFunction
+                            && it.name.asString() == "invoke"
+                            && it.valueParameters.size == original.valueArgumentsCount
+                    } as? IrSimpleFunction ?: error(
+                        "ComposableLambdaImpl.call() not found " +
+                            original.dump()
                     )
-                }
-            }
 
-            override fun visitValueParameter(declaration: IrValueParameter): IrStatement {
-                val original = super.visitValueParameter(declaration) as IrValueParameter
-                return original
+                    return IrIfThenElseImpl(
+                        UNDEFINED_OFFSET, UNDEFINED_OFFSET,
+                        pluginContext.irBuiltIns.unitType
+                    ).apply {
+                        branches.add(IrBranchImpl(
+                            condition = IrTypeOperatorCallImpl(
+                                startOffset = UNDEFINED_OFFSET,
+                                endOffset = UNDEFINED_OFFSET,
+                                type = pluginContext.irBuiltIns.booleanType,
+                                operator = IrTypeOperator.INSTANCEOF,
+                                typeOperand = sym.defaultType,
+                                argument = dispatchReceiver
+                            ),
+                            result = IrCallImpl(
+                                startOffset = original.startOffset,
+                                endOffset = original.endOffset,
+                                type = original.type,
+                                symbol = targetInvoke.symbol,
+                                typeArgumentsCount = 0,
+                                valueArgumentsCount = original.valueArgumentsCount,
+                                origin = null//original.origin
+                            ).also {
+                                it.dispatchReceiver = dispatchReceiver
+                                repeat(original.valueArgumentsCount) { ix ->
+                                    it.putValueArgument(ix, original.getValueArgument(ix))
+                                }
+                            }
+                        ))
+                        branches.add(
+                            IrElseBranchImpl(
+                                condition = IrConstImpl(
+                                    UNDEFINED_OFFSET,
+                                    UNDEFINED_OFFSET,
+                                    pluginContext.irBuiltIns.booleanType,
+                                    IrConstKind.Boolean,
+                                    true
+                                ),
+                                result = expression
+                            )
+                        )
+                    }
+                }
+            })
+        }
 
-                if ((declaration.parent as? IrSimpleFunction)?.isDecoyImplementation() == false) {
-                    return original
-                }
-                if ((declaration.parent as? IrSimpleFunction)?.isInline == true && !declaration.isNoinline) {
-                    return original
-                }
-                if (!declaration.type.isFunction()) {
-                    return original
-                }
-                if (!original.type.hasComposer()) {
-                    return original
-                }
-                val sym = symbolRemapper.getReferencedClass(pluginContext.referenceClass(
-                    FqName("androidx.compose.runtime.internal.JsComposableLambdaImpl")
-                )!!)
-                return IrValueParameterImpl(
-                    startOffset = declaration.startOffset,
-                    endOffset = declaration.endOffset,
-                    origin = declaration.origin,
-                    symbol = IrValueParameterSymbolImpl(),
-                    name = declaration.name,
-                    index = declaration.index,
-                    type = sym.defaultType,
-                    varargElementType = null,
-                    isCrossinline = declaration.isCrossinline,
-                    isNoinline = true,//declaration.isNoinline,
-                    isHidden = declaration.isHidden,
-                    isAssignable = declaration.isAssignable
-                ).also {
-                    it.parent = declaration.parent
-                }
-            }
-        })
-//
-//        moduleFragment.transformChildrenVoid(object : IrElementTransformerVoid() {
-//            override fun visitGetValue(expression: IrGetValue): IrExpression {
-//                val original = super.visitGetValue(expression) as IrGetValue
-//
-//                val targetValueParam = listOfValueParams.firstOrNull {
-//                    it.first.symbol == original.symbol
-//                }?.second ?: return original
-//
-//                return IrGetValueImpl(
-//                    startOffset = original.startOffset,
-//                    endOffset = original.endOffset,
-//                    symbol = targetValueParam.symbol
-//                )
-//                //return super.visitGetValue(expression)
-//            }
-//        })
-
-//        moduleFragment.patchDeclarationParents()
 
         if (decoysEnabled) {
             require(idSignatureBuilder != null) {

@@ -29,10 +29,9 @@ actual internal fun <T> invokeComposableForResult(
     composable: @Composable () -> T
 ): T {
     @Suppress("UNCHECKED_CAST")
-    return if (composable is ComposableLambda) {
-        val cl = composable as ComposableLambda
-        cl.invoke(composer, 1) as T
-    } else {
-        (composable as Function2<Composer, Int, T>).invoke(composer, 1) as T
+    if (composable is ComposableLambda) {
+        val realFn = composable.unsafeCast<ComposableLambda>()
+        return realFn.invoke(composer, 1) as T
     }
+    return (composable as Function2<Composer, Int, T>).invoke(composer, 1) as T
 }
