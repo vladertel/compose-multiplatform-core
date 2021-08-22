@@ -19,19 +19,14 @@ package androidx.compose.runtime
 import androidx.compose.runtime.internal.ComposableLambda
 
 actual internal fun invokeComposable(composer: Composer, composable: @Composable () -> Unit) {
-    @Suppress("UNCHECKED_CAST")
-    val realFn = composable.unsafeCast<ComposableLambda>()
-    realFn.invoke(composer, 1)
+    composable.unsafeCast<ComposableLambda>().invoke(composer, 1)
 }
 
 actual internal fun <T> invokeComposableForResult(
     composer: Composer,
     composable: @Composable () -> T
 ): T {
-    @Suppress("UNCHECKED_CAST")
-    if (composable is ComposableLambda) {
-        val realFn = composable.unsafeCast<ComposableLambda>()
-        return realFn.invoke(composer, 1) as T
-    }
-    return (composable as Function2<Composer, Int, T>).invoke(composer, 1) as T
+    return composable.unsafeCast<Function2<Any, Int, T>>()
+        .invoke(composer, 1)
+        .unsafeCast<T>()
 }
