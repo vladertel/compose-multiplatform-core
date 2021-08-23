@@ -65,3 +65,18 @@ internal actual inline fun <R> synchronized(lock: Any, block: () -> R): R {
 }
 
 internal actual typealias TestOnly = org.jetbrains.annotations.TestOnly
+
+actual internal fun invokeComposable(composer: Composer, composable: @Composable () -> Unit) {
+    @Suppress("UNCHECKED_CAST")
+    val realFn = composable as Function2<Composer, Int, Unit>
+    realFn(composer, 1)
+}
+
+actual internal fun <T> invokeComposableForResult(
+    composer: Composer,
+    composable: @Composable () -> T
+): T {
+    @Suppress("UNCHECKED_CAST")
+    val realFn = composable as Function2<Composer, Int, T>
+    return realFn(composer, 1)
+}
