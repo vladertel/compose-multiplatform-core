@@ -1498,7 +1498,7 @@ class CompositionTests {
     }
 
     @Test
-    @IgnoreJsTarget
+    //@IgnoreJsTarget
     fun testRememberObserver_Forget_Simple() = compositionTest {
         val rememberObject = object : RememberObserver {
             var count = 0
@@ -1563,7 +1563,7 @@ class CompositionTests {
     }
 
     @Test
-    @IgnoreJsTarget
+    //@IgnoreJsTarget
     fun testRemember_Forget_NoForgetOnRemember() = compositionTest {
         var expectedRemember = true
         var expectedForget = true
@@ -1946,7 +1946,7 @@ class CompositionTests {
     }
 
     @Test
-    @IgnoreJsTarget
+    //@IgnoreJsTarget
     fun testCompoundKeyHashStaysTheSameAfterRecompositions() = compositionTest {
         val outerKeys = mutableListOf<Int>()
         val innerKeys = mutableListOf<Int>()
