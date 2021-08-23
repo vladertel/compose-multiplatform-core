@@ -29,6 +29,7 @@ import androidx.compose.compiler.plugins.kotlin.lower.KlibAssignableParamTransfo
 import androidx.compose.compiler.plugins.kotlin.lower.DurableFunctionKeyTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.LiveLiteralTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.CreateDecoysTransformer
+import androidx.compose.compiler.plugins.kotlin.lower.decoys.FixComposableLambdaCalls
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.RecordDecoySignaturesTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.SubstituteDecoyCallsTransformer
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -189,6 +190,15 @@ class ComposeIrGenerationExtension(
                 metrics,
                 mangler!!
             ).lower(moduleFragment)
+
+            if (pluginContext.platform.isJs()) {
+                FixComposableLambdaCalls(
+                    pluginContext,
+                    symbolRemapper,
+                    bindingTrace,
+                    metrics,
+                ).lower(moduleFragment)
+            }
         }
 
         if (isKlibTarget) {
