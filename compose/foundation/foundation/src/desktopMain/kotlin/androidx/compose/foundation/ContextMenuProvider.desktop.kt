@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package androidx.compose.foundation
 
 import androidx.compose.foundation.gestures.forEachGesture
@@ -31,6 +33,7 @@ import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 
+@ExperimentalFoundationApi
 @Composable
 fun ContextMenuArea(
     items: () -> List<ContextMenuItem>,
@@ -48,6 +51,7 @@ fun ContextMenuArea(
     }
 }
 
+@ExperimentalFoundationApi
 @Composable
 fun ContextMenuDataProvider(
     items: () -> List<ContextMenuItem>,
@@ -100,6 +104,7 @@ private fun Modifier.contextMenuDetector(
     }
 }
 
+@ExperimentalFoundationApi
 class ContextMenuItem(
     val label: String,
     val onClick: () -> Unit
@@ -127,6 +132,7 @@ class ContextMenuItem(
     }
 }
 
+@ExperimentalFoundationApi
 class ContextMenuData(
     val items: () -> List<ContextMenuItem>,
     val next: ContextMenuData?
@@ -158,6 +164,7 @@ class ContextMenuData(
     }
 }
 
+@ExperimentalFoundationApi
 class ContextMenuState {
     sealed class Status {
         class Open(
@@ -189,9 +196,11 @@ class ContextMenuState {
     var status: Status by mutableStateOf(Status.Closed)
 }
 
+@ExperimentalFoundationApi
 interface ContextMenuRepresentation {
     @Composable
     fun Representation(state: ContextMenuState, data: ContextMenuData)
 }
 
+@ExperimentalFoundationApi
 val LocalContextMenuRepresentation = staticCompositionLocalOf { BasicContextMenuRepresentation }

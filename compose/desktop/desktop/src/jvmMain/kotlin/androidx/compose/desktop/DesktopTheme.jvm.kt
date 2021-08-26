@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+
 package androidx.compose.desktop
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalContextMenuRepresentation
 import androidx.compose.foundation.LocalScrollbarStyle
 import androidx.compose.foundation.ScrollbarStyle
@@ -25,6 +28,7 @@ import androidx.compose.material.Shapes
 import androidx.compose.material.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.unit.dp
 
 @Composable

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+
 package androidx.compose.foundation
 
 import androidx.compose.foundation.layout.Column
