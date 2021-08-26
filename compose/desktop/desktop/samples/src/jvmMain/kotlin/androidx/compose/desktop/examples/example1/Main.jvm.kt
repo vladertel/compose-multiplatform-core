@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+
 package androidx.compose.desktop.examples.example1
 
 import androidx.compose.animation.animateColorAsState
