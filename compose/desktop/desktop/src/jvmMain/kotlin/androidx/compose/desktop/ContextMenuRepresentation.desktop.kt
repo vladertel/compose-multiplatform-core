@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+
 package androidx.compose.desktop
 
 import androidx.compose.foundation.ContextMenuData
 import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ContextMenuRepresentation
 import androidx.compose.foundation.ContextMenuState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.CursorDropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.node.Ref
 
 internal val contextMenuRepresentation = object : ContextMenuRepresentation {
