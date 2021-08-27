@@ -1,11 +1,9 @@
 import groovy.transform.Field
 
-pluginManagement {
-    repositories {
-        maven {
-            url = new File(buildscript.sourceFile.parent + "/../../prebuilts/androidx/external").getCanonicalFile()
-        }
-    }
+buildscript {
+    ext.supportRootFolder = file(".")
+    apply from: "buildSrc/repos.gradle"
+    repos.addMavenRepositories(repositories)
 }
 
 rootProject.name = "androidx"

@@ -317,7 +317,7 @@ internal fun CoreTextField(
             observer = manager.mouseSelectionObserver,
             enabled = enabled
         )
-    }
+    }.pointerTextIcon()
 
     val drawModifier = Modifier.drawBehind {
         state.layoutResult?.let { layoutResult ->
@@ -484,7 +484,7 @@ internal fun CoreTextField(
             state.layoutResult?.decorationBoxCoordinates = it
         }
 
-    Box(modifier = decorationBoxModifier, propagateMinConstraints = true) {
+    CoreTextFieldRootBox(decorationBoxModifier, manager) {
         decorationBox {
             // Modifiers applied directly to the internal input field implementation. In general,
             // these will most likely include draw, layout and IME related modifiers.
@@ -555,6 +555,19 @@ internal fun CoreTextField(
                     TextFieldCursorHandle(manager = manager)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private inline fun CoreTextFieldRootBox(
+    modifier: Modifier,
+    manager: TextFieldSelectionManager,
+    crossinline content: @Composable () -> Unit
+) {
+    Box(modifier, propagateMinConstraints = true) {
+        ContextMenuArea(manager) {
+            content()
         }
     }
 }
