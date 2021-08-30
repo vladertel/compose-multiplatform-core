@@ -34,7 +34,6 @@ import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DuplicatesStrategy
-import org.gradle.api.attributes.Usage
 import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.artifacts.ExternalModuleDependency
@@ -116,7 +115,7 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                 project.configureForKotlinMultiplatformSourceStructure()
             }
 
-            afterEvaluate { project ->
+            project.afterEvaluate { project ->
                 project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
                     // Needed to enable `expect` and `actual` keywords
                     compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
@@ -333,7 +332,6 @@ fun Project.configureComposeImplPluginForAndroidx() {
     }.files
 
 
-<<<<<<< HEAD:buildSrc/private/src/main/kotlin/androidx/build/AndroidXComposeImplPlugin.kt
     project.afterEvaluate { project ->
         project.tasks.withType<KotlinCompile<*>>().configureEach { compile ->
         // TODO(b/157230235): remove when this is enabled by default
@@ -369,7 +367,6 @@ fun Project.configureComposeImplPluginForAndroidx() {
                         )
                 }
             }
-        }
         }
     }
 
