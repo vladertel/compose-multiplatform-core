@@ -115,13 +115,13 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                 project.configureForKotlinMultiplatformSourceStructure()
             }
 
-            project.afterEvaluate { project ->
-                project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
+            project.afterEvaluate { projectAfterEvaluated ->
+                projectAfterEvaluated.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
                     // Needed to enable `expect` and `actual` keywords
                     compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
                 }
 
-                project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
+                projectAfterEvaluated.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
                     compile.kotlinOptions.freeCompilerArgs += listOf(
                         "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true"
                     )
