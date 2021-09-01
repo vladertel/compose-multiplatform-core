@@ -1403,7 +1403,9 @@ private val nextSnapshotId = AtomicInt(INVALID_SNAPSHOT + 1)
 /**
  * Current thread snapshot
  */
-@ThreadLocal
+// TODO: This is a hack for native.
+// The current snapshot architecture doesn't play well with k/n mt model.
+// @ThreadLocal
 private val threadSnapshot = SnapshotThreadLocal<Snapshot>()
 
 // A global synchronization object. This synchronization object should be taken before modifying any
@@ -1416,14 +1418,14 @@ internal val lock = Any()
 internal inline fun <T> sync(block: () -> T): T = synchronized(lock, block)
 
 // A list of apply observers
-@CompositionContextLocal
+// @CompositionContextLocal
 private val applyObservers = mutableListOf<(Set<Any>, Snapshot) -> Unit>()
 
 // A list of observers of writes to the global state.
-@CompositionContextLocal
+// @CompositionContextLocal
 private var globalWriteObservers: MutableList<((Any) -> Unit)>? = null
 
-@CompositionContextLocal
+// @CompositionContextLocal
 private var currentGlobalSnapshot =
     GlobalSnapshot(
         id = nextSnapshotId.postIncrement(),
