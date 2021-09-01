@@ -62,12 +62,6 @@ import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.TestPointerInputEventData
 import androidx.compose.ui.layout.RootMeasurePolicy
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.node.InternalCoreApi
-import androidx.compose.ui.node.LayoutNode
-import androidx.compose.ui.node.MeasureAndLayoutDelegate
-import androidx.compose.ui.node.Owner
-import androidx.compose.ui.node.OwnerSnapshotObserver
-import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.semantics.SemanticsModifierCore
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.TextInputService
@@ -77,6 +71,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.input.pointer.*
+import androidx.compose.ui.node.*
 
 private typealias Command = () -> Unit
 
@@ -99,6 +94,8 @@ private typealias Command = () -> Unit
 
     // TODO(demin): support RTL
     override val layoutDirection: LayoutDirection = LayoutDirection.Ltr
+
+    override val sharedDrawScope = LayoutNodeDrawScope()
 
     private val semanticsModifier = SemanticsModifierCore(
         id = SemanticsModifierCore.generateSemanticsId(),
@@ -332,7 +329,7 @@ private typealias Command = () -> Unit
         pointerInputEventProcessor.process(event, this)
     }
 
-    private var newMoveFilters = mutableListOf<PointerInputFilter>()
+    private var newMoveFilters = HitTestResult<PointerInputFilter>()
     private var oldMoveFilters = listOf<PointerMoveEventFilter>()
 
     // TODO: this code is copy-pasted from desktop (consider reusing)
@@ -372,7 +369,7 @@ private typealias Command = () -> Unit
         }
 
         oldMoveFilters = newMoveFilters.filterIsInstance<PointerMoveEventFilter>()
-        newMoveFilters = mutableListOf()
+        newMoveFilters.clear()
     }
 /*
     override fun processPointerInput(nanoTime: Long, pointers: List<TestPointerInputEventData>) {

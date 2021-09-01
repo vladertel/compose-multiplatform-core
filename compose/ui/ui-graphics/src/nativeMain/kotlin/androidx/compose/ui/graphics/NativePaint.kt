@@ -85,11 +85,7 @@ class NativePaint : Paint {
             field = value
         }
 
-    override var filterQuality: FilterQuality = FilterQuality.None
-        set(value) {
-            skia.setFilterQuality(value.toSkia())
-            field = value
-        }
+    override var filterQuality: FilterQuality = FilterQuality.Medium
 
     override var shader: Shader? = null
         set(value) {

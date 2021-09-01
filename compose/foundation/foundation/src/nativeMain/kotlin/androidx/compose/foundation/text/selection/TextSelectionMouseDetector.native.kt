@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation.text
+package androidx.compose.foundation.text.selection
 
-import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.isPrimaryPressed
 
-internal actual fun KeyEvent.cancelsTextSelection(): Boolean = false
-
-internal actual fun showCharacterPalette():Unit = TODO("implement native showCharacterPalette")
+internal actual val PointerEvent.isPrimaryPressed: Boolean
+    get() = this.buttons.isPrimaryPressed

@@ -27,7 +27,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
  * [ContentDrawScope] implementation that extracts density and layout direction information
  * from the given LayoutNodeWrapper
  */
-internal class LayoutNodeDrawScope(
+/*internal*/ class LayoutNodeDrawScope(
     private val canvasDrawScope: CanvasDrawScope = CanvasDrawScope()
 ) : DrawScope by canvasDrawScope, ContentDrawScope {
 

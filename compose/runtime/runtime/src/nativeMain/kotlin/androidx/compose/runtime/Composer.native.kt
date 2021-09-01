@@ -14,10 +14,21 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation.text
+package androidx.compose.runtime
 
-import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.runtime.internal.ComposableLambda
 
-internal actual fun KeyEvent.cancelsTextSelection(): Boolean = false
+actual internal fun invokeComposable(composer: Composer, composable: @Composable () -> Unit) {
+    @Suppress("UNCHECKED_CAST")
+    val realFn = composable as Function2<Composer, Int, Unit>
+    realFn(composer, 1)
+}
 
-internal actual fun showCharacterPalette():Unit = TODO("implement native showCharacterPalette")
+actual internal fun <T> invokeComposableForResult(
+    composer: Composer,
+    composable: @Composable () -> T
+): T {
+    @Suppress("UNCHECKED_CAST")
+    val realFn = composable as Function2<Composer, Int, T>
+    return realFn(composer, 1)
+}
