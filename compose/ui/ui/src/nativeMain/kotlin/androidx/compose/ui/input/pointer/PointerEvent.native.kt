@@ -16,6 +16,9 @@
 
 package androidx.compose.ui.input.pointer
 
+internal actual typealias NativePointerButtons = Int
+internal actual typealias NativePointerKeyboardModifiers = Int
+
 /**
  * Describes a pointer input change event that has occurred at a particular point in time.
  */
@@ -39,4 +42,68 @@ actual data class PointerEvent internal constructor(
      * @param changes The changes.
      */
     actual constructor(changes: List<PointerInputChange>) : this(changes, mouseEvent = null)
+
+    actual val buttons: PointerButtons
+        get() = TODO("implement native pointer event")
+
+    actual val keyboardModifiers: PointerKeyboardModifiers
+        get() = TODO("implement native pointer event")
+
 }
+
+
+actual val PointerButtons.isPrimaryPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerButtons.isSecondaryPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerButtons.isTertiaryPressed: Boolean
+    get() = TODO("implement native events")
+
+
+actual val PointerButtons.isBackPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerButtons.isForwardPressed: Boolean
+    get() = TODO("implement native events")
+
+actual fun PointerButtons.isPressed(buttonIndex: Int): Boolean =
+    TODO("implement native events")
+
+actual val PointerButtons.areAnyPressed: Boolean
+    get() = TODO("implement native events")
+
+actual fun PointerButtons.indexOfFirstPressed(): Int = TODO("implement native events")
+
+actual fun PointerButtons.indexOfLastPressed(): Int = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isCtrlPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isMetaPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isAltPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isAltGraphPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isSymPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isShiftPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isFunctionPressed: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isCapsLockOn: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isScrollLockOn: Boolean
+    get() = TODO("implement native events")
+
+actual val PointerKeyboardModifiers.isNumLockOn: Boolean
+    get() = TODO("implement native events")

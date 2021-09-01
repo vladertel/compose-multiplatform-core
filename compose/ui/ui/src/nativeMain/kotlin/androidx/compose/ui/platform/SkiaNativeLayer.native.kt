@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.RenderEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asSkiaPath
@@ -73,6 +74,7 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
     private var scaleY: Float = 1f
     private var alpha: Float = 1f
     private var clip: Boolean = false
+    private var renderEffect: RenderEffect? = null
     private var shadowElevation: Float = 0f
 
     override val layerId = lastId++
@@ -152,6 +154,7 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
         transformOrigin: TransformOrigin,
         shape: Shape,
         clip: Boolean,
+        renderEffect: RenderEffect?,
         layoutDirection: LayoutDirection,
         density: Density
     ) {
@@ -167,6 +170,7 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
         this.clip = clip
         this.shadowElevation = shadowElevation
         this.density = density
+        this.renderEffect = renderEffect
         outlineCache.shape = shape
         outlineCache.layoutDirection = layoutDirection
         outlineCache.density = density

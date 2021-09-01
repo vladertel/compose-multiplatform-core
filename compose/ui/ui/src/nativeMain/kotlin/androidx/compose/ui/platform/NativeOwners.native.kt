@@ -82,7 +82,7 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
         }
     }
 
-    val list = LinkedHashSet<NativeOwner>()
+    internal val list = LinkedHashSet<NativeOwner>()
     private val listCopy = mutableListOf<NativeOwner>()
 
     /*
@@ -120,7 +120,7 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
         recomposer.hasPendingWork ||
         dispatcher.hasTasks()
 
-    fun register(NativeOwner: NativeOwner) {
+    internal fun register(NativeOwner: NativeOwner) {
         println("NativeOwners.register() LIST: add")
         list.add(NativeOwner)
         NativeOwner.onNeedsRender = ::invalidateIfNeeded
@@ -128,7 +128,7 @@ internal val LocalNativeOwners = staticCompositionLocalOf<NativeOwners> {
         invalidateIfNeeded()
     }
 
-    fun unregister(NativeOwner: NativeOwner) {
+    internal fun unregister(NativeOwner: NativeOwner) {
         println("NativeOwners.unregister() LIST: remove")
         list.remove(NativeOwner)
         NativeOwner.onDispatchCommand = null

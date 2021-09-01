@@ -14,10 +14,16 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package androidx.compose.foundation.text
 
-import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+// import androidx.compose.ui.input.pointer.PointerIcon
+// import androidx.compose.ui.input.pointer.pointerIcon
 
-internal actual fun KeyEvent.cancelsTextSelection(): Boolean = false
-
-internal actual fun showCharacterPalette():Unit = TODO("implement native showCharacterPalette")
+internal actual fun Modifier.pointerTextIcon(): Modifier =
+    TODO("implement native pointerTextIcon")
+    //this.pointerIcon(PointerIcon.Text)

@@ -39,11 +39,7 @@ import androidx.compose.ui.unit.LayoutDirection
  * to Android [views][android.view.View] and all layout, draw, input, and accessibility is hooked
  * through them.
  */
-interface Owner {
-// TODO this is because native doesn't see the internal here.
-// figure out what to do here.
-// internal interface Owner {
-
+internal interface Owner {
     /**
      * The root layout node in the component tree.
      */
