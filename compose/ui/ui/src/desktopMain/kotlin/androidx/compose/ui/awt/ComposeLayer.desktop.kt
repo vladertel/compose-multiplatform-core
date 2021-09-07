@@ -35,6 +35,7 @@ import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkiaRenderer
 import java.awt.Cursor
+import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Point
@@ -49,6 +50,7 @@ import java.awt.event.MouseMotionAdapter
 import java.awt.event.MouseWheelEvent
 import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
+import javax.accessibility.AccessibleContext
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
@@ -74,7 +76,17 @@ internal class ComposeLayer {
 
     private val density get() = _component.density.density
 
-    private inner class ComponentImpl : SkiaLayer(), Accessible, DesktopComponent {
+    fun makeAccessible(component: Component) = object : Accessible {
+        override fun getAccessibleContext(): AccessibleContext? {
+            if (System.getenv("COMPOSE_DISABLE_ACCESSIBILITY") != null) return null
+            val accessible = scene.mainOwner?.accessibilityController?.rootAccessible
+            accessible?.getAccessibleContext()?.accessibleParent = component.parent as Accessible
+            return accessible?.getAccessibleContext()
+        }
+    }
+
+    private inner class ComponentImpl :
+        SkiaLayer(externalAccessibleFactory = ::makeAccessible), Accessible, DesktopComponent {
         var currentInputMethodRequests: InputMethodRequests? = null
 
         override fun addNotify() {
