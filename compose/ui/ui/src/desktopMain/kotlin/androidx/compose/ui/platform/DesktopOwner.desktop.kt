@@ -25,6 +25,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
+import androidx.compose.ui.awt.AccessibilityController
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusDirection.Companion.In
 import androidx.compose.ui.focus.FocusDirection.Companion.Next
@@ -90,12 +91,14 @@ internal class DesktopOwner(
     val isFocusable: Boolean = true,
     val onDismissRequest: (() -> Unit)? = null,
     private val onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
-    private val onKeyEvent: (KeyEvent) -> Boolean = { false },
+    private val onKeyEvent: (KeyEvent) -> Boolean = { false }
 ) : Owner, RootForTest, DesktopRootForTest, PositionCalculator {
 
     internal fun isHovered(point: IntOffset): Boolean {
         return bounds.contains(point)
     }
+
+    internal var accessibilityController: AccessibilityController? = null
 
     internal var bounds by mutableStateOf(IntRect.Zero)
 
@@ -285,9 +288,13 @@ internal class DesktopOwner(
         onDestroy = { needClearObservations = true }
     )
 
-    override fun onSemanticsChange() = Unit
+    override fun onSemanticsChange() {
+        accessibilityController?.onSemanticsChange()
+    }
 
-    override fun onLayoutChange(layoutNode: LayoutNode) = Unit
+    override fun onLayoutChange(layoutNode: LayoutNode) {
+        accessibilityController?.onLayoutChange(layoutNode)
+    }
 
     override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
         return when (keyEvent.key) {
