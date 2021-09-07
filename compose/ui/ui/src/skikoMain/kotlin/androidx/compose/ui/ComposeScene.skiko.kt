@@ -35,6 +35,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.node.LayoutNode
+import androidx.compose.ui.platform.AccessibilityController
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.SkiaBasedOwner
 import androidx.compose.ui.platform.PlatformInput
@@ -150,7 +151,7 @@ class ComposeScene internal constructor(
 
     internal val platformInputService: PlatformInput = PlatformInput(component)
 
-    private var mainOwner: SkiaBasedOwner? = null
+    internal var mainOwner: SkiaBasedOwner? = null
     private var composition: Composition? = null
 
     /**
@@ -215,6 +216,10 @@ class ComposeScene internal constructor(
         skiaBasedOwner.onDispatchCommand = ::dispatchCommand
         skiaBasedOwner.constraints = constraints
         skiaBasedOwner.containerCursor = component
+        skiaBasedOwner.accessibilityController = makeAccessibilityController(
+            skiaBasedOwner,
+            component
+        )
         invalidateIfNeeded()
         if (skiaBasedOwner.isFocusable) {
             focusedOwner = skiaBasedOwner
@@ -459,3 +464,8 @@ internal expect fun pointerInputEvent(
     isMousePressed: Boolean,
     pointerId: Long
 ): PointerInputEvent
+
+internal expect fun makeAccessibilityController(
+    skiaBasedOwner: SkiaBasedOwner,
+    component: PlatformComponent
+): AccessibilityController
