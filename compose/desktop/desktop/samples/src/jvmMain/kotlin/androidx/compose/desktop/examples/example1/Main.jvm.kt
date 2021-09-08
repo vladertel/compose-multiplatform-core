@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+
 package androidx.compose.desktop.examples.example1
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.desktop.DesktopMaterialTheme
+import androidx.compose.foundation.ContextMenuDataProvider
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ExperimentalDesktopApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -91,6 +95,8 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerIcon
 import androidx.compose.ui.input.pointer.pointerMoveFilter
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -365,7 +371,7 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Button(
-                modifier = Modifier.padding(4.dp),
+                modifier = Modifier.padding(4.dp).pointerIcon(PointerIcon.Hand),
                 onClick = {
                     amount.value++
                 }
@@ -455,30 +461,36 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
         val text = remember {
             mutableStateOf("Hello \uD83E\uDDD1\uD83C\uDFFF\u200D\uD83E\uDDB0")
         }
-        TextField(
-            value = text.value,
-            onValueChange = { text.value = it },
-            label = { Text(text = "Input2") },
-            placeholder = {
-                Text(text = "Important input")
-            },
-            maxLines = 1,
-            modifier = Modifier.onPreviewKeyEvent {
-                when {
-                    (it.isMetaPressed && it.key == Key.Enter) -> {
-                        if (it.isShiftPressed) {
-                            text.value = "Cleared with shift!"
-                        } else {
-                            text.value = "Cleared!"
-                        }
-                        true
-                    }
-                    else -> false
-                }
-            }.focusOrder(focusItem1) {
-                next = focusItem2
+        ContextMenuDataProvider(
+            items = {
+                listOf(ContextMenuItem("Clear") { text.value = ""; focusItem1.requestFocus() })
             }
-        )
+        ) {
+            TextField(
+                value = text.value,
+                onValueChange = { text.value = it },
+                label = { Text(text = "Input2") },
+                placeholder = {
+                    Text(text = "Important input")
+                },
+                maxLines = 1,
+                modifier = Modifier.onPreviewKeyEvent {
+                    when {
+                        (it.isMetaPressed && it.key == Key.Enter) -> {
+                            if (it.isShiftPressed) {
+                                text.value = "Cleared with shift!"
+                            } else {
+                                text.value = "Cleared!"
+                            }
+                            true
+                        }
+                        else -> false
+                    }
+                }.focusOrder(focusItem1) {
+                    next = focusItem2
+                }
+            )
+        }
 
         var text2 by remember {
             val initText = buildString {

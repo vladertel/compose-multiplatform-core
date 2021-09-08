@@ -187,7 +187,7 @@ internal fun CoreText(
                             mouseSelectionDetector(
                                 controller.mouseSelectionObserver
                             )
-                        }
+                        }.pointerTextIcon()
                     }
                 } else {
                     Modifier

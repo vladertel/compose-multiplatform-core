@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation.demos
 
+import androidx.compose.foundation.samples.ContextMenuSample
 import androidx.compose.foundation.samples.ControlledScrollableRowSample
 import androidx.compose.foundation.samples.InteractionSourceFlowSample
 import androidx.compose.foundation.samples.SimpleInteractionSourceSample
@@ -35,5 +36,6 @@ val FoundationDemos = DemoCategory(
         ComposableDemo("Flow InteractionSource") { InteractionSourceFlowSample() },
         DemoCategory("Suspending Gesture Detectors", CoroutineGestureDemos),
         ComposableDemo("NestedScroll") { NestedScrollDemo() },
+        ComposableDemo("Context Menu") { ContextMenuSample() },
     )
 )
