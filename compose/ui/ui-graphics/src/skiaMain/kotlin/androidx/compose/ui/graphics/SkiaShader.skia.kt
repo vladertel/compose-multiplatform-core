@@ -17,15 +17,9 @@
 package androidx.compose.ui.graphics
 
 import androidx.compose.ui.geometry.Offset
-/*
-import org.jetbrains.skija.FilterTileMode
-import org.jetbrains.skija.GradientStyle
-*/
+import org.jetbrains.skia.GradientStyle
 
-// TODO: remove me
-class NativeSharedStub
-
-actual typealias Shader = NativeSharedStub // org.jetbrains.skija.Shader
+actual typealias Shader = org.jetbrains.skia.Shader
 
 internal actual fun ActualLinearGradientShader(
     from: Offset,
@@ -33,17 +27,13 @@ internal actual fun ActualLinearGradientShader(
     colors: List<Color>,
     colorStops: List<Float>?,
     tileMode: TileMode
-): Shader = TODO("implement native ActualLinearGradientShader")
-/*
-{
+): Shader {
     validateColorStops(colors, colorStops)
     return Shader.makeLinearGradient(
         from.x, from.y, to.x, to.y, colors.toIntArray(), colorStops?.toFloatArray(),
-        GradientStyle(tileMode.toSkijaRect(), true, identityMatrix33())
+        GradientStyle(tileMode.toSkiaTileMode(), true, identityMatrix33())
     )
 }
-
- */
 
 internal actual fun ActualRadialGradientShader(
     center: Offset,
@@ -51,10 +41,7 @@ internal actual fun ActualRadialGradientShader(
     colors: List<Color>,
     colorStops: List<Float>?,
     tileMode: TileMode
-): Shader =
-    TODO("implement native ActualRadialGradientShader")
-/*
-{
+): Shader {
     validateColorStops(colors, colorStops)
     return Shader.makeRadialGradient(
         center.x,
@@ -62,19 +49,15 @@ internal actual fun ActualRadialGradientShader(
         radius,
         colors.toIntArray(),
         colorStops?.toFloatArray(),
-        GradientStyle(tileMode.toSkijaRect(), true, identityMatrix33())
+        GradientStyle(tileMode.toSkiaTileMode(), true, identityMatrix33())
     )
 }
-*/
 
 internal actual fun ActualSweepGradientShader(
     center: Offset,
     colors: List<Color>,
     colorStops: List<Float>?
-): Shader =
-    TODO("implement native ActualSweepGradientShader")
-/*
-{
+): Shader {
     validateColorStops(colors, colorStops)
     return Shader.makeSweepGradient(
         center.x,
@@ -83,28 +66,16 @@ internal actual fun ActualSweepGradientShader(
         colorStops?.toFloatArray()
     )
 }
- */
 
 internal actual fun ActualImageShader(
     image: ImageBitmap,
     tileModeX: TileMode,
     tileModeY: TileMode
-): Shader =
-    TODO("implement native ActualImageShader")
-/*
-{
-    return image.asDesktopBitmap().makeShader(
-        tileModeX.toSkijaTileMode(),
-        tileModeY.toSkijaTileMode()
+): Shader {
+    return image.asSkiaBitmap().makeShader(
+        tileModeX.toSkiaTileMode(),
+        tileModeY.toSkiaTileMode()
     )
-}
-*/
-
-/*
-private fun TileMode.toSkijaTileMode() = when (this) {
-    TileMode.Clamp -> FilterTileMode.CLAMP
-    TileMode.Repeated -> FilterTileMode.REPEAT
-    TileMode.Mirror -> FilterTileMode.MIRROR
 }
 
 private fun List<Color>.toIntArray(): IntArray =
@@ -125,11 +96,3 @@ private fun validateColorStops(colors: List<Color>, colorStops: List<Float>?) {
         )
     }
 }
-
-private fun TileMode.toSkijaRect() = when (this) {
-    TileMode.Clamp -> FilterTileMode.CLAMP
-    TileMode.Repeated -> FilterTileMode.REPEAT
-    TileMode.Mirror -> FilterTileMode.MIRROR
-}
-
- */

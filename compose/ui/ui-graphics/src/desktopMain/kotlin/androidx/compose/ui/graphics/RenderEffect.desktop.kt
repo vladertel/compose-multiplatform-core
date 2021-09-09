@@ -68,13 +68,13 @@ actual class BlurEffect actual constructor(
             ImageFilter.makeBlur(
                 convertRadiusToSigma(radiusX),
                 convertRadiusToSigma(radiusY),
-                edgeTreatment.toDesktopTileMode()
+                edgeTreatment.toSkiaTileMode()
             )
         } else {
             ImageFilter.makeBlur(
                 convertRadiusToSigma(radiusX),
                 convertRadiusToSigma(radiusY),
-                edgeTreatment.toDesktopTileMode(),
+                edgeTreatment.toSkiaTileMode(),
                 renderEffect.asDesktopImageFilter(),
                 null
             )

@@ -23,7 +23,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.DesktopCanvas
+import androidx.compose.ui.graphics.SkiaCanvas
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
@@ -32,7 +32,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.RenderEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asDesktopPath
+import androidx.compose.ui.graphics.asSkiaPath
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toSkiaRect
@@ -213,7 +213,7 @@ internal class SkiaLayer(
         if (picture == null) {
             val bounds = size.toSize().toRect()
             val pictureCanvas = pictureRecorder.beginRecording(bounds.toSkiaRect())
-            performDrawLayer(DesktopCanvas(pictureCanvas), bounds)
+            performDrawLayer(SkiaCanvas(pictureCanvas), bounds)
             picture = pictureRecorder.finishRecordingAsPicture()
         }
 
@@ -224,7 +224,7 @@ internal class SkiaLayer(
         canvas.restore()
     }
 
-    private fun performDrawLayer(canvas: DesktopCanvas, bounds: Rect) {
+    private fun performDrawLayer(canvas: SkiaCanvas, bounds: Rect) {
         if (alpha > 0) {
             if (shadowElevation > 0) {
                 drawShadow(canvas)
@@ -263,7 +263,7 @@ internal class SkiaLayer(
     override fun updateDisplayList() = Unit
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    fun drawShadow(canvas: DesktopCanvas) = with(density) {
+    fun drawShadow(canvas: SkiaCanvas) = with(density) {
         val path = when (val outline = outlineCache.outline) {
             is Outline.Rectangle -> Path().apply { addRect(outline.rect) }
             is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
@@ -284,7 +284,7 @@ internal class SkiaLayer(
         val spotColor = Color.Black.copy(alpha = spotAlpha)
 
         ShadowUtils.drawShadow(
-            canvas.nativeCanvas, path.asDesktopPath(), zParams, lightPos,
+            canvas.nativeCanvas, path.asSkiaPath(), zParams, lightPos,
             lightRad,
             ambientColor.toArgb(),
             spotColor.toArgb(), alpha < 1f, false

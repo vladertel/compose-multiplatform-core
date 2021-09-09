@@ -16,26 +16,26 @@
 
 package androidx.compose.ui.graphics
 
-import org.jetbrains.skia.ColorFilter as SkiaColorFilter
+import org.jetbrains.skia.ColorFilter as SkColorFilter
 
-actual typealias NativeColorFilter = SkiaColorFilter
+actual typealias NativeColorFilter = SkColorFilter
 
 /**
- * Obtain a reference to the desktop ColorFilter type
+ * Obtain a reference to the Skia ColorFilter type
  */
-fun ColorFilter.asDesktopColorFilter(): SkiaColorFilter = nativeColorFilter
+fun ColorFilter.asSkiaColorFilter(): SkColorFilter = nativeColorFilter
 
 fun org.jetbrains.skia.ColorFilter.toComposeColorFilter(): ColorFilter = ColorFilter(this)
 
 internal actual fun actualTintColorFilter(color: Color, blendMode: BlendMode): ColorFilter =
-    ColorFilter(SkiaColorFilter.makeBlend(color.toArgb(), blendMode.toSkia()))
+    ColorFilter(SkColorFilter.makeBlend(color.toArgb(), blendMode.toSkia()))
 
 internal actual fun actualColorMatrixColorFilter(colorMatrix: ColorMatrix): ColorFilter =
     ColorFilter(
-        SkiaColorFilter.makeMatrix(
+        SkColorFilter.makeMatrix(
             org.jetbrains.skia.ColorMatrix(*colorMatrix.values)
         )
     )
 
 internal actual fun actualLightingColorFilter(multiply: Color, add: Color): ColorFilter =
-    ColorFilter(SkiaColorFilter.makeLighting(multiply.toArgb(), add.toArgb()))
+    ColorFilter(SkColorFilter.makeLighting(multiply.toArgb(), add.toArgb()))

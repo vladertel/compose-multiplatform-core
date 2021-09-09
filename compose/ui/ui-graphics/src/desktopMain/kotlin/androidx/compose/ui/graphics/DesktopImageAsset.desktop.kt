@@ -28,79 +28,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
 
-/**
- * Create an [ImageBitmap] from the given [Bitmap]. Note this does
- * not create a copy of the original [Bitmap] and changes to it
- * will modify the returned [ImageBitmap]
- */
-fun Bitmap.asImageBitmap(): ImageBitmap = DesktopImageBitmap(this)
-
-/**
- * Create an [ImageBitmap] from the given [Image].
- */
-fun Image.asImageBitmap(): ImageBitmap = DesktopImageBitmap(toBitmap())
-
-private fun Image.toBitmap(): Bitmap {
-    val bitmap = Bitmap()
-    bitmap.allocPixels(ImageInfo.makeN32(width, height, ColorAlphaType.PREMUL))
-    val canvas = org.jetbrains.skia.Canvas(bitmap)
-    canvas.drawImage(this, 0f, 0f)
-    bitmap.setImmutable()
-    return bitmap
-}
-
-internal actual fun ActualImageBitmap(
-    width: Int,
-    height: Int,
-    config: ImageBitmapConfig,
-    hasAlpha: Boolean,
-    colorSpace: ColorSpace
-): ImageBitmap {
-    val colorType = config.toSkiaColorType()
-    val alphaType = if (hasAlpha) ColorAlphaType.PREMUL else ColorAlphaType.OPAQUE
-    val skiaColorSpace = colorSpace.toSkiaColorSpace()
-    val colorInfo = ColorInfo(colorType, alphaType, skiaColorSpace)
-    val imageInfo = ImageInfo(colorInfo, width, height)
-    val bitmap = Bitmap()
-    bitmap.allocPixels(imageInfo)
-    return DesktopImageBitmap(bitmap)
-}
-
-/**
- * Create an [ImageBitmap] from an image file stored in resources for the application
- *
- * @param path path to the image file
- *
- * @return Loaded image file represented as an [ImageBitmap]
- */
-@Deprecated(
-    "Use useResource(path, ::loadImageBitmap)",
-    replaceWith = ReplaceWith(
-        "useResource(path) { loadImageBitmap(it) }",
-        "androidx.compose.ui.res.useResource",
-        "androidx.compose.ui.res.loadImageBitmap"
-    )
-)
-fun imageFromResource(path: String): ImageBitmap =
-    Image.makeFromEncoded(loadResource(path)).asImageBitmap()
-
-private fun loadResource(path: String): ByteArray {
-    val resource = Thread.currentThread().contextClassLoader.getResource(path)
-    requireNotNull(resource) { "Resource $path not found" }
-    return resource.readBytes()
-}
-
-/**
- * @Throws UnsupportedOperationException if this [ImageBitmap] is not backed by an
- * org.jetbrains.skia.Image
- */
-fun ImageBitmap.asDesktopBitmap(): Bitmap =
-    when (this) {
-        is DesktopImageBitmap -> bitmap
-        else -> throw UnsupportedOperationException("Unable to obtain org.jetbrains.skia.Image")
-    }
-
-private class DesktopImageBitmap(val bitmap: Bitmap) : ImageBitmap {
+actual internal class SkiaImageBitmap actual constructor(val bitmap: Bitmap) : ImageBitmap {
     override val colorSpace = bitmap.colorSpace.toComposeColorSpace()
     override val config = bitmap.colorType.toComposeConfig()
     override val hasAlpha = !bitmap.isOpaque
@@ -108,7 +36,7 @@ private class DesktopImageBitmap(val bitmap: Bitmap) : ImageBitmap {
     override val width get() = bitmap.width
     override fun prepareToDraw() = Unit
 
-    override fun readPixels(
+    actual override fun readPixels(
         buffer: IntArray,
         startX: Int,
         startY: Int,
@@ -143,43 +71,3 @@ private class DesktopImageBitmap(val bitmap: Bitmap) : ImageBitmap {
     }
 }
 
-// TODO(demin): [API] maybe we should use:
-//  `else -> throw UnsupportedOperationException()`
-//  in toSkiaColorType/toComposeConfig/toComposeColorSpace/toSkiaColorSpace
-//  see [https://android-review.googlesource.com/c/platform/frameworks/support/+/1429835/comment/c219501b_63c3d1fe/]
-
-private fun ImageBitmapConfig.toSkiaColorType() = when (this) {
-    ImageBitmapConfig.Argb8888 -> ColorType.N32
-    ImageBitmapConfig.Alpha8 -> ColorType.ALPHA_8
-    ImageBitmapConfig.Rgb565 -> ColorType.RGB_565
-    ImageBitmapConfig.F16 -> ColorType.RGBA_F16
-    else -> ColorType.N32
-}
-
-private fun ColorType.toComposeConfig() = when (this) {
-    ColorType.N32 -> ImageBitmapConfig.Argb8888
-    ColorType.ALPHA_8 -> ImageBitmapConfig.Alpha8
-    ColorType.RGB_565 -> ImageBitmapConfig.Rgb565
-    ColorType.RGBA_F16 -> ImageBitmapConfig.F16
-    else -> ImageBitmapConfig.Argb8888
-}
-
-private fun org.jetbrains.skia.ColorSpace?.toComposeColorSpace(): ColorSpace {
-    return when (this) {
-        org.jetbrains.skia.ColorSpace.sRGB -> ColorSpaces.Srgb
-        org.jetbrains.skia.ColorSpace.sRGBLinear -> ColorSpaces.LinearSrgb
-        org.jetbrains.skia.ColorSpace.displayP3 -> ColorSpaces.DisplayP3
-        else -> ColorSpaces.Srgb
-    }
-}
-
-// TODO(demin): support all color spaces.
-//  to do this we need to implement SkColorSpace::MakeRGB in skia
-private fun ColorSpace.toSkiaColorSpace(): org.jetbrains.skia.ColorSpace {
-    return when (this) {
-        ColorSpaces.Srgb -> org.jetbrains.skia.ColorSpace.sRGB
-        ColorSpaces.LinearSrgb -> org.jetbrains.skia.ColorSpace.sRGBLinear
-        ColorSpaces.DisplayP3 -> org.jetbrains.skia.ColorSpace.displayP3
-        else -> org.jetbrains.skia.ColorSpace.sRGB
-    }
-}

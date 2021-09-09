@@ -16,28 +16,9 @@
 
 package androidx.compose.ui.graphics
 
-internal class DesktopPathMeasure : PathMeasure {
-    private val skia = org.jetbrains.skia.PathMeasure()
-
-    override fun setPath(path: Path?, forceClosed: Boolean) {
-        skia.setPath(path?.asDesktopPath(), forceClosed)
-    }
-
-    override fun getSegment(
-        startDistance: Float,
-        stopDistance: Float,
-        destination: Path,
-        startWithMoveTo: Boolean
-    ) = skia.getSegment(
-        startDistance,
-        stopDistance,
-        destination.asDesktopPath(),
-        startWithMoveTo
-    )
-
-    override val length: Float
-        get() = skia.length
+fun VertexMode.toSkiaVertexMode(): Int = when (this) {
+    VertexMode.Triangles -> 0
+    VertexMode.TriangleStrip -> 1
+    VertexMode.TriangleFan -> 2
+    else -> 0
 }
-
-actual fun PathMeasure(): PathMeasure =
-    DesktopPathMeasure()

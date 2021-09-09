@@ -19,31 +19,33 @@ package androidx.compose.ui.graphics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
-import org.jetbrains.skiko.skia.native.*
-import org.jetbrains.skiko.skia.native.SkPathFillType.*
-import org.jetbrains.skiko.skia.native.SkPathDirection.*
-import org.jetbrains.skiko.skia.native.SkPath__AddPathMode.*
-import kotlinx.cinterop.*
+import org.jetbrains.skia.Matrix33
+import org.jetbrains.skia.PathDirection
+import org.jetbrains.skia.PathFillMode
+import org.jetbrains.skia.PathOp
 
-actual fun Path(): Path = NativePath()
+actual fun Path(): Path = SkiaPath()
 
+/**
+ * @Throws UnsupportedOperationException if this Path is not backed by an org.jetbrains.skia.Path
+ */
 @Suppress("NOTHING_TO_INLINE")
-inline fun Path.asSkiaPath(): org.jetbrains.skiko.skia.native.Path =
-    if (this is NativePath) {
+inline fun Path.asSkiaPath(): org.jetbrains.skia.Path =
+    if (this is SkiaPath) {
         internalPath
     } else {
-        error("Unable to obtain org.jetbrains.skija.Path")
+        throw UnsupportedOperationException("Unable to obtain org.jetbrains.skia.Path")
     }
 
-class NativePath(
-    internalPath: org.jetbrains.skiko.skia.native.Path = org.jetbrains.skiko.skia.native.Path()
+class SkiaPath(
+    internalPath: org.jetbrains.skia.Path = org.jetbrains.skia.Path()
 ) : Path {
     var internalPath = internalPath
         private set
 
     override var fillType: PathFillType
         get() {
-            if (internalPath.getFillType() == kEvenOdd) {
+            if (internalPath.fillMode == PathFillMode.EVEN_ODD) {
                 return PathFillType.EvenOdd
             } else {
                 return PathFillType.NonZero
@@ -51,13 +53,12 @@ class NativePath(
         }
 
         set(value) {
-            internalPath.setFillType(
+            internalPath.fillMode =
                 if (value == PathFillType.EvenOdd) {
-                    kEvenOdd
+                    PathFillMode.EVEN_ODD
                 } else {
-                    kWinding
+                    PathFillMode.WINDING
                 }
-            )
         }
 
     override fun moveTo(x: Float, y: Float) {
@@ -114,7 +115,7 @@ class NativePath(
         forceMoveTo: Boolean
     ) {
         internalPath.arcTo(
-            rect.toSkiaNativeRect(),
+            rect.toSkiaRect(),
             startAngleDegrees,
             sweepAngleDegrees,
             forceMoveTo
@@ -122,11 +123,11 @@ class NativePath(
     }
 
     override fun addRect(rect: Rect) {
-        internalPath.addRect(rect.toSkiaNativeRect(), kCCW)
+        internalPath.addRect(rect.toSkiaRect(), PathDirection.COUNTER_CLOCKWISE)
     }
 
     override fun addOval(oval: Rect) {
-        internalPath.addOval(oval.toSkiaNativeRect(), kCCW)
+        internalPath.addOval(oval.toSkiaRect(), PathDirection.COUNTER_CLOCKWISE)
     }
 
     override fun addArcRad(oval: Rect, startAngleRadians: Float, sweepAngleRadians: Float) {
@@ -134,19 +135,19 @@ class NativePath(
     }
 
     override fun addArc(oval: Rect, startAngleDegrees: Float, sweepAngleDegrees: Float) {
-        internalPath.addArc(oval.toSkiaNativeRect(), startAngleDegrees, sweepAngleDegrees)
+        internalPath.addArc(oval.toSkiaRect(), startAngleDegrees, sweepAngleDegrees)
     }
 
     override fun addRoundRect(roundRect: RoundRect) {
-        internalPath.addRRect(roundRect.toSkiaNativeRRect(), kCCW)
+        internalPath.addRRect(roundRect.toSkiaRRect(), PathDirection.COUNTER_CLOCKWISE)
     }
 
     override fun addPath(path: Path, offset: Offset) {
-        internalPath.addPath(path.asSkiaPath(), offset.x, offset.y, kAppend_AddPathMode)
+        internalPath.addPath(path.asSkiaPath(), offset.x, offset.y)
     }
 
     override fun close() {
-        internalPath.close()
+        internalPath.closePath()
     }
 
     override fun reset() {
@@ -158,17 +159,16 @@ class NativePath(
     }
 
     override fun translate(offset: Offset) {
-        TODO("figure out Pat.translate()")
-        // internalPath.transform(Matrix33.makeTranslate(offset.x, offset.y))
+        internalPath.transform(Matrix33.makeTranslate(offset.x, offset.y))
     }
 
     override fun getBounds(): Rect {
-        val bounds = internalPath.getBounds()!!.pointed
+        val bounds = internalPath.bounds
         return Rect(
-            bounds.fLeft,
-            bounds.fTop,
-            bounds.fRight,
-            bounds.fBottom
+            bounds.left,
+            bounds.top,
+            bounds.right,
+            bounds.bottom
         )
     }
 
@@ -177,29 +177,26 @@ class NativePath(
         path2: Path,
         operation: PathOperation
     ): Boolean {
-        TODO("implement Path.op")
-        /*
-        val path = org.jetbrains.skija.Path.makeCombining(
-            path1.asDesktopPath(),
-            path2.asDesktopPath(),
+        val path = org.jetbrains.skia.Path.makeCombining(
+            path1.asSkiaPath(),
+            path2.asSkiaPath(),
             operation.toSkiaOperation()
         )
 
         internalPath = path ?: internalPath
         return path != null
-
-         */
     }
-/*
+
     private fun PathOperation.toSkiaOperation() = when (this) {
-        PathOperation.difference -> PathOp.DIFFERENCE
-        PathOperation.intersect -> PathOp.INTERSECT
-        PathOperation.union -> PathOp.UNION
-        PathOperation.xor -> PathOp.XOR
-        PathOperation.reverseDifference -> PathOp.REVERSE_DIFFERENCE
+        PathOperation.Difference -> PathOp.DIFFERENCE
+        PathOperation.Intersect -> PathOp.INTERSECT
+        PathOperation.Union -> PathOp.UNION
+        PathOperation.Xor -> PathOp.XOR
+        PathOperation.ReverseDifference -> PathOp.REVERSE_DIFFERENCE
+        else -> PathOp.XOR
     }
-*/
-    override val isConvex: Boolean get() = internalPath.isConvex()
 
-    override val isEmpty: Boolean get() = internalPath.isEmpty()
+    override val isConvex: Boolean get() = internalPath.isConvex
+
+    override val isEmpty: Boolean get() = internalPath.isEmpty
 }

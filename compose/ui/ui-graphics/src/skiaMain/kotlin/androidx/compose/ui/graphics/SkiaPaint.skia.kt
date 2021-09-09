@@ -22,9 +22,9 @@ import org.jetbrains.skia.PaintStrokeJoin as SkiaPaintStrokeJoin
 
 actual typealias PlatformPaint = org.jetbrains.skia.Paint
 
-actual fun Paint(): Paint = DesktopPaint()
+actual fun Paint(): Paint = SkiaPaint()
 
-class DesktopPaint : Paint {
+class SkiaPaint : Paint {
     internal val skia = org.jetbrains.skia.Paint()
 
     override fun asFrameworkPaint(): PlatformPaint = skia
@@ -93,13 +93,13 @@ class DesktopPaint : Paint {
 
     override var colorFilter: ColorFilter? = null
         set(value) {
-            skia.colorFilter = value?.asDesktopColorFilter()
+            skia.colorFilter = value?.asSkiaColorFilter()
             field = value
         }
 
     override var pathEffect: PathEffect? = null
         set(value) {
-            skia.pathEffect = (value as DesktopPathEffect?)?.asDesktopPathEffect()
+            skia.pathEffect = (value as SkiaPathEffect?)?.asSkiaPathEffect()
             field = value
         }
 

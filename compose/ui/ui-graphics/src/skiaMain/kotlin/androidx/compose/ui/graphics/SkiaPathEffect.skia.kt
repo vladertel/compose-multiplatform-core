@@ -16,26 +16,26 @@
 
 package androidx.compose.ui.graphics
 
-import org.jetbrains.skia.PathEffect as SkiaPathEffect
+import org.jetbrains.skia.PathEffect as SkPathEffect
 
-internal class DesktopPathEffect(val nativePathEffect: SkiaPathEffect) : PathEffect
+internal class SkiaPathEffect(val nativePathEffect: SkPathEffect) : PathEffect
 
 /**
- * Obtain a reference to the desktop PathEffect type
+ * Obtain a reference to the Skia PathEffect type
  */
-fun PathEffect.asDesktopPathEffect(): SkiaPathEffect =
-    (this as DesktopPathEffect).nativePathEffect
+fun PathEffect.asSkiaPathEffect(): SkPathEffect =
+    (this as SkiaPathEffect).nativePathEffect
 
 internal actual fun actualCornerPathEffect(radius: Float): PathEffect =
-    DesktopPathEffect(SkiaPathEffect.makeCorner(radius))
+    SkiaPathEffect(SkPathEffect.makeCorner(radius))
 
 internal actual fun actualDashPathEffect(
     intervals: FloatArray,
     phase: Float
-): PathEffect = DesktopPathEffect(SkiaPathEffect.makeDash(intervals, phase))
+): PathEffect = SkiaPathEffect(SkPathEffect.makeDash(intervals, phase))
 
 internal actual fun actualChainPathEffect(outer: PathEffect, inner: PathEffect): PathEffect =
-    DesktopPathEffect(outer.asDesktopPathEffect().makeCompose(inner.asDesktopPathEffect()))
+    SkiaPathEffect(outer.asSkiaPathEffect().makeCompose(inner.asSkiaPathEffect()))
 
 internal actual fun actualStampedPathEffect(
     shape: Path,
@@ -43,19 +43,19 @@ internal actual fun actualStampedPathEffect(
     phase: Float,
     style: StampedPathEffectStyle
 ): PathEffect =
-    DesktopPathEffect(
-        SkiaPathEffect.makePath1D(
-            shape.asDesktopPath(),
+    SkiaPathEffect(
+        SkPathEffect.makePath1D(
+            shape.asSkiaPath(),
             advance,
             phase,
             style.toSkiaStampedPathEffectStyle()
         )
     )
 
-internal fun StampedPathEffectStyle.toSkiaStampedPathEffectStyle(): SkiaPathEffect.Style =
+internal fun StampedPathEffectStyle.toSkiaStampedPathEffectStyle(): SkPathEffect.Style =
     when (this) {
-        StampedPathEffectStyle.Morph -> SkiaPathEffect.Style.MORPH
-        StampedPathEffectStyle.Rotate -> SkiaPathEffect.Style.ROTATE
-        StampedPathEffectStyle.Translate -> SkiaPathEffect.Style.TRANSLATE
-        else -> SkiaPathEffect.Style.TRANSLATE
+        StampedPathEffectStyle.Morph -> SkPathEffect.Style.MORPH
+        StampedPathEffectStyle.Rotate -> SkPathEffect.Style.ROTATE
+        StampedPathEffectStyle.Translate -> SkPathEffect.Style.TRANSLATE
+        else -> SkPathEffect.Style.TRANSLATE
     }

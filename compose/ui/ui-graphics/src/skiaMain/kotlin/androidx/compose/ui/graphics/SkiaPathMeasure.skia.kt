@@ -16,9 +16,28 @@
 
 package androidx.compose.ui.graphics
 
-fun VertexMode.toDesktopVertexMode(): Int = when (this) {
-    VertexMode.Triangles -> 0
-    VertexMode.TriangleStrip -> 1
-    VertexMode.TriangleFan -> 2
-    else -> 0
+internal class SkiaPathMeasure : PathMeasure {
+    private val skia = org.jetbrains.skia.PathMeasure()
+
+    override fun setPath(path: Path?, forceClosed: Boolean) {
+        skia.setPath(path?.asSkiaPath(), forceClosed)
+    }
+
+    override fun getSegment(
+        startDistance: Float,
+        stopDistance: Float,
+        destination: Path,
+        startWithMoveTo: Boolean
+    ) = skia.getSegment(
+        startDistance,
+        stopDistance,
+        destination.asSkiaPath(),
+        startWithMoveTo
+    )
+
+    override val length: Float
+        get() = skia.length
 }
+
+actual fun PathMeasure(): PathMeasure =
+    SkiaPathMeasure()
