@@ -83,14 +83,20 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 api("androidx.annotation:annotation:1.2.0")
             }
 
-            desktopMain.dependencies {
-                implementation(libs.kotlinStdlib)
-                implementation(libs.kotlinStdlibJdk8)
-                api(libs.skiko)
+            skiaMain {
+            }
+
+            desktopMain {
+                dependsOn skiaMain
+                dependencies {
+                    implementation(libs.kotlinStdlib)
+                    implementation(libs.kotlinStdlibJdk8)
+                    api(libs.skiko)
+                }
             }
 
             nativeMain {
-                dependsOn commonMain
+                dependsOn skiaMain
                 dependencies {
                     implementation(libs.skikoNativeMacOSX64)
                     implementation(libs.skikoNativeInteropSkiaMacOSX64)
