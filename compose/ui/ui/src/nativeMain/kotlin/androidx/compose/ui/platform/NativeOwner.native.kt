@@ -38,7 +38,7 @@ import androidx.compose.ui.focus.FocusManagerImpl
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
-import androidx.compose.ui.graphics.NativeCanvas
+import androidx.compose.ui.graphics.SkiaCanvas
 import androidx.compose.ui.input.key.Key.Companion.Back
 import androidx.compose.ui.input.key.Key.Companion.DirectionCenter
 import androidx.compose.ui.input.key.Key.Companion.DirectionDown
@@ -208,7 +208,7 @@ private typealias Command = () -> Unit
     var onNeedsRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
 
-    fun render(canvas: org.jetbrains.skiko.skia.native.Canvas, width: Int, height: Int) {
+    fun render(canvas: org.jetbrains.skia.Canvas, width: Int, height: Int) {
         println("NativeOwner.render()")
         needsLayout = false
         setSize(width, height)
@@ -320,8 +320,8 @@ private typealias Command = () -> Unit
         measureAndLayoutDelegate.updateRootConstraints(constraints)
     }
 
-    fun draw(canvas: org.jetbrains.skiko.skia.native.Canvas) {
-        root.draw(NativeCanvas(canvas))
+    fun draw(canvas: org.jetbrains.skia.Canvas) {
+        root.draw(SkiaCanvas(canvas))
     }
 
     internal fun processPointerInput(event: PointerInputEvent) {

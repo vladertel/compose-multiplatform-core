@@ -23,7 +23,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.NativeCanvas
+import androidx.compose.ui.graphics.SkiaCanvas
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
@@ -35,7 +35,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asSkiaPath
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.toSkiaNativeRect
+import androidx.compose.ui.graphics.toSkiaRect
 import androidx.compose.ui.node.OwnedLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
@@ -43,11 +43,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
-
-import org.jetbrains.skiko.skia.native.Picture
-import org.jetbrains.skiko.skia.native.PictureRecorder
-import org.jetbrains.skiko.skia.native.SkPoint3
-import org.jetbrains.skiko.skia.native.ShadowUtils
+import org.jetbrains.skia.Picture
+import org.jetbrains.skia.PictureRecorder
+import org.jetbrains.skia.Point3
+import org.jetbrains.skia.ShadowUtils
 
 /* internal */ class SkiaNativeLayer(
     private var density: Density,
@@ -213,9 +212,9 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
     override fun drawLayer(canvas: Canvas) {
         if (picture == null) {
             val bounds = size.toSize().toRect()
-            val pictureCanvas = pictureRecorder.beginRecording(bounds.toSkiaNativeRect(), null)
+            val pictureCanvas = pictureRecorder.beginRecording(bounds.toSkiaRect())
                 ?: error("Could not begin picture recording")
-            performDrawLayer(NativeCanvas(pictureCanvas), bounds)
+            performDrawLayer(SkiaCanvas(pictureCanvas), bounds)
             picture = pictureRecorder.finishRecordingAsPicture()
         }
 
@@ -226,7 +225,7 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
         canvas.restore()
     }
 
-    private fun performDrawLayer(canvas: NativeCanvas, bounds: Rect) {
+    private fun performDrawLayer(canvas: SkiaCanvas, bounds: Rect) {
 
         if (alpha > 0) {
             if (shadowElevation > 0) {
@@ -258,7 +257,7 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
     override fun updateDisplayList() = Unit
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    fun drawShadow(canvas: NativeCanvas) = with(density) {
+    fun drawShadow(canvas: SkiaCanvas) = with(density) {
         val path = when (val outline = outlineCache.outline) {
             is Outline.Rectangle -> Path().apply { addRect(outline.rect) }
             is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
@@ -267,10 +266,10 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
         }
 
         // TODO: perspective?
-        val zParams = SkPoint3.Make(0f, 0f, shadowElevation)
+        val zParams = Point3(0f, 0f, shadowElevation)
 
         // TODO: configurable?
-        val lightPos = SkPoint3.Make(0f, -300.dp.toPx(), 600.dp.toPx())
+        val lightPos = Point3(0f, -300.dp.toPx(), 600.dp.toPx())
         val lightRad = 800.dp.toPx()
 
         val ambientAlpha = 0.039f * alpha
@@ -278,14 +277,12 @@ import org.jetbrains.skiko.skia.native.ShadowUtils
         val ambientColor = Color.Black.copy(alpha = ambientAlpha)
         val spotColor = Color.Black.copy(alpha = spotAlpha)
 
-        ShadowUtils.DrawShadow(
-            canvas.nativeCanvas, path.asSkiaPath(),
-            zParams, lightPos, lightRad,
-            ambientColor.toArgb().toUInt(),
-            spotColor.toArgb().toUInt(),
-            0
+        ShadowUtils.drawShadow(
+            canvas.nativeCanvas, path.asSkiaPath(), zParams, lightPos,
+            lightRad,
+            ambientColor.toArgb(),
+            spotColor.toArgb(), alpha < 1f, false
         )
-
     }
 
     @ThreadLocal

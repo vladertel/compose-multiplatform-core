@@ -29,13 +29,10 @@ import androidx.compose.ui.platform.NativeOwner
 import androidx.compose.ui.platform.NativeOwners
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.Density
-
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
-// import kotlinx.coroutines.swing.Swing
-
-import org.jetbrains.skiko.skia.native.Canvas
+import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.native.SkiaLayer
 import org.jetbrains.skiko.native.SkiaRenderer
 

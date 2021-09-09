@@ -71,7 +71,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 dependsOn commonMain
                 dependencies {
                     implementation(libs.skikoNativeMacOSX64)
-                    implementation(libs.skikoNativeInteropSkiaMacOSX64)
                 }
             }
 

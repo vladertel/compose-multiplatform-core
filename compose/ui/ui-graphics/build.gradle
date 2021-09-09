@@ -99,7 +99,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 dependsOn skiaMain
                 dependencies {
                     implementation(libs.skikoNativeMacOSX64)
-                    implementation(libs.skikoNativeInteropSkiaMacOSX64)
                 }
             }
 

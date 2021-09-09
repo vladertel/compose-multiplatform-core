@@ -37,7 +37,7 @@ import androidx.compose.ui.input.pointer.PointerType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
-import org.jetbrains.skiko.skia.native.Canvas
+import org.jetbrains.skia.Canvas
 import kotlinx.cinterop.*
 import platform.AppKit.*
 import platform.Cocoa.*

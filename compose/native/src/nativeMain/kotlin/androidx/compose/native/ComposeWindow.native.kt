@@ -18,7 +18,7 @@ package androidx.compose.native
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
-import org.jetbrains.skiko.skia.native.*
+import org.jetbrains.skia.*
 // import org.jetbrains.skiko.ClipComponent
 // import org.jetbrains.skiko.GraphicsApi
 
@@ -26,11 +26,6 @@ import platform.AppKit.*
 import platform.Cocoa.*
 import platform.Foundation.*
 
-/*
-import java.awt.Component
-import javax.swing.JFrame
-import javax.swing.JLayeredPane
-*/
 /**
  * ComposeWindow is a window for building UI using Compose for Desktop.
  * ComposeWindow inherits javax.swing.JFrame.
