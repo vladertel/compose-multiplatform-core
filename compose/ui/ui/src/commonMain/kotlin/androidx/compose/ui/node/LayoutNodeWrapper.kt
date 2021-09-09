@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.minus
 import androidx.compose.ui.unit.plus
 import androidx.compose.ui.util.fastForEach
+import kotlin.native.concurrent.ThreadLocal
 
 /**
  * Measurable and Placeable type that has a position.

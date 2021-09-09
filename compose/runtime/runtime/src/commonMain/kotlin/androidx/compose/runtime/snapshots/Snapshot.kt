@@ -28,6 +28,8 @@ import androidx.compose.runtime.SnapshotThreadLocal
 import androidx.compose.runtime.CompositionContextLocal
 import androidx.compose.runtime.snapshots.Snapshot.Companion.notifyObjectsInitialized
 import androidx.compose.runtime.synchronized
+import kotlin.native.concurrent.SharedImmutable
+import kotlin.native.concurrent.ThreadLocal
 
 /**
  * A snapshot of the values return by mutable states and other state objects. All state object

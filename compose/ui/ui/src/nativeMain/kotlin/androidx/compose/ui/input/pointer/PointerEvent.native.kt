@@ -43,6 +43,10 @@ actual data class PointerEvent internal constructor(
      */
     actual constructor(changes: List<PointerInputChange>) : this(changes, mouseEvent = null)
 
+    actual var type: PointerEventType
+        get() = TODO("implent native pointer event")
+        set(value) = TODO("implent native pointer event")
+
     actual val buttons: PointerButtons
         get() = TODO("implement native pointer event")
 

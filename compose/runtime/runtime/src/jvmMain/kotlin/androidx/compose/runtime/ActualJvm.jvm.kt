@@ -83,12 +83,15 @@ actual internal fun <T> invokeComposableForResult(
     @Suppress("UNCHECKED_CAST")
     val realFn = composable as Function2<Composer, Int, T>
     return realFn(composer, 1)
-
-actual annotation class CompositionContextLocal
-
-actual class AtomicInt(value: Int) {
-    val delegate = java.util.concurrent.atomic.AtomicInteger(value)
-    fun get(): Int = delegate.intValue()
-    fun set(value: Int) = delegate.set(value)
-    fun add(amount: Int): Int = delegate.addAndGet()
 }
+
+actual annotation class CompositionContextLocal {}
+
+actual class AtomicInt actual constructor(value: Int) {
+    val delegate = java.util.concurrent.atomic.AtomicInteger(value)
+    actual fun get(): Int = delegate.get()
+    actual fun set(value: Int) = delegate.set(value)
+    actual fun add(amount: Int): Int = delegate.addAndGet(amount)
+}
+
+actual fun ensureMutable(it: Any) { /* NOTHING */ }
