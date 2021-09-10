@@ -20,6 +20,7 @@ import androidx.annotation.Sampled
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.ContextMenuDataProvider
 import androidx.compose.foundation.ContextMenuItem
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
+@OptIn(ExperimentalFoundationApi::class)
 @Sampled
 @Composable
 fun ContextMenuSample() {
@@ -42,6 +44,7 @@ fun ContextMenuSample() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NumberWithContextMenu() {
     var number by remember { mutableStateOf(1) }
