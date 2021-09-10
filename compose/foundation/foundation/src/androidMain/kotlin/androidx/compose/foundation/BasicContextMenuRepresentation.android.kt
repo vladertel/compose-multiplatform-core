@@ -28,16 +28,18 @@ import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.flow.collect
 
-internal actual val BasicContextMenuRepresentation = object : ContextMenuRepresentation {
+private val BasicContextMenuRepresentation = object : ContextMenuRepresentation {
     @Composable
     override fun Representation(state: ContextMenuState, data: ContextMenuData) {
         val view = LocalView.current
@@ -78,6 +80,9 @@ internal actual val BasicContextMenuRepresentation = object : ContextMenuReprese
         }
     }
 }
+
+internal actual val LocalContextMenuRepresentation: ProvidableCompositionLocal<ContextMenuRepresentation> =
+    staticCompositionLocalOf { BasicContextMenuRepresentation }
 
 private class ContextMenuCallback(val state: ContextMenuState) {
     lateinit var data: ContextMenuData
