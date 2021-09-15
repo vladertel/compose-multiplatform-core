@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-import androidx.build.LibraryGroups
-import androidx.build.LibraryType
-import androidx.build.LibraryVersions
-import androidx.build.RunApiTasks
-import androidx.build.BuildOnServerKt
-import androidx.build.SupportConfigKt
+
+import androidx.build.*
 
 plugins {
     id("AndroidXPlugin")
@@ -129,3 +125,7 @@ afterEvaluate {
 }
 
 BuildOnServerKt.addToBuildOnServer(project, "${project.path}:jvmJar")
+
+if (MultiplatformUtils.isOpenExpectLiteAndroidx(project)) {
+    MultiplatformUtils.disableCompilationsOfTarget(kotlin.jvm())
+}

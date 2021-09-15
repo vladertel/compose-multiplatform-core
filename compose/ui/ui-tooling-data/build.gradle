@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import androidx.build.MultiplatformUtils
 import androidx.build.LibraryGroups
 import androidx.build.LibraryType
 
@@ -56,4 +57,9 @@ androidx {
     description = "Compose tooling library data. This library provides data about compose" +
             " for different tooling purposes."
     legacyDisableKotlinStrictApiMode = true
+}
+
+if (MultiplatformUtils.isOpenExpectLiteOrgJetbrains(project)) {
+    MultiplatformUtils.disableCompilationsOfTarget(kotlin.target)
+    // TODO: check that the AAR doesn't include any duplicate content
 }

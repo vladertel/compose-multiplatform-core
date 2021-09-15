@@ -16,6 +16,7 @@
 
 import androidx.build.LibraryGroups
 import androidx.build.LibraryType
+import androidx.build.MultiplatformUtils
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -102,4 +103,9 @@ tasks.withType(KotlinCompile).configureEach {
 
 inspection {
     name = "compose-ui-inspection.jar"
+}
+
+if (MultiplatformUtils.isOpenExpectLiteOrgJetbrains(project)) {
+    MultiplatformUtils.disableCompilationsOfTarget(kotlin.target)
+    // TODO: check that the AAR doesn't include any duplicate content
 }

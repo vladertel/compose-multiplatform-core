@@ -1,1 +1,9 @@
 apply from: "../shared.gradle"
+
+// Allow the IDE to analyze the impl parts against the `public` sources, which are imported as a
+// part of the `plugins` module
+if (providers.systemProperty("idea.active").getOrNull() == "true") {
+    dependencies {
+        compileOnly(project(":plugins"))
+    }
+}

@@ -18,11 +18,23 @@ package androidx.build
 
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.extra
+import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJvmAndroidCompilation
 
 /**
  * Setting this property enables multiplatform builds of Compose
  */
 const val COMPOSE_MPP_ENABLED = "androidx.compose.multiplatformEnabled"
+
+/**
+ * Publishing layout setup for the open-expect-lite mode.
+ *
+ */
+const val COMPOSE_MPP_OPEN_EXPECT_LITE_MODE = "androidx.compose.openExpectLiteMode"
+
+enum class OpenExpectLiteMode {
+    ANDROIDX, ORG_JETBRAINS
+}
 
 /**
  * Setting this property enables JS compiler tests of Compose
@@ -41,6 +53,50 @@ class Multiplatform {
 
         fun setEnabledForProject(project: Project, enabled: Boolean) {
             project.extra.set(COMPOSE_MPP_ENABLED, enabled)
+        }
+
+        fun Project.openExpectLiteMode(): OpenExpectLiteMode? =
+            findProperty(COMPOSE_MPP_OPEN_EXPECT_LITE_MODE)?.let { property ->
+                OpenExpectLiteMode.values().find { it.name.equals("$property", true) }
+            }
+    }
+}
+
+object MultiplatformUtils {
+    @JvmStatic
+    fun isOpenExpectLiteAndroidx(project: Project): Boolean =
+        with(Multiplatform) { project.openExpectLiteMode() == OpenExpectLiteMode.ANDROIDX }
+
+    @JvmStatic
+    fun isOpenExpectLiteOrgJetbrains(project: Project): Boolean =
+        with(Multiplatform) { project.openExpectLiteMode() == OpenExpectLiteMode.ORG_JETBRAINS }
+
+    @JvmStatic
+    fun disableCompilationsOfTarget(target: KotlinTarget) {
+        target.compilations.all { compilation ->
+            val tasksToDisable = listOfNotNull(
+                compilation.compileKotlinTask,
+                (compilation as? KotlinJvmAndroidCompilation)?.androidVariant
+                    ?.javaCompileProvider?.get()
+            )
+            tasksToDisable.forEach { taskToDisable ->
+                taskToDisable.enabled = false
+                val cleanTask =
+                    target.project.tasks.named("clean" + taskToDisable.name.replaceFirstChar { it.uppercase() })
+                taskToDisable.dependsOn(cleanTask)
+            }
+            compilation.output.classesDirs.setFrom(emptyList<Any>())
+
+            if (compilation is KotlinJvmAndroidCompilation) {
+                @Suppress("deprecation")
+                (compilation.androidVariant as? com.android.build.gradle.api.LibraryVariant)
+                    ?.packageLibraryProvider
+                    ?.configure { aarTask ->
+                        aarTask.exclude("**/*.jar")
+                        aarTask.exclude("**/*.txt")
+                        aarTask.exclude("**/*.xml")
+                    }
+            }
         }
     }
 }

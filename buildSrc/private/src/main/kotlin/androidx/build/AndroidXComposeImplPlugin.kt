@@ -16,6 +16,8 @@
 
 package androidx.build
 
+import androidx.build.Multiplatform.Companion.openExpectLiteMode
+import androidx.build.MultiplatformUtils.disableCompilationsOfTarget
 import com.android.build.api.variant.AndroidComponentsExtension
 import com.android.build.gradle.AppExtension
 import com.android.build.gradle.AppPlugin
@@ -35,7 +37,9 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.attributes.Usage
-import org.gradle.api.tasks.testing.Test
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.named
@@ -43,14 +47,11 @@ import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.commonizer.util.transitiveClosure
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
-import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
-import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
-import org.jetbrains.kotlin.gradle.targets.js.KotlinJsCompilerAttribute
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
+import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import java.io.File
+import kotlin.reflect.full.memberProperties
 
 const val composeSourceOption =
     "plugin:androidx.compose.compiler.plugins.kotlin:sourceInformation=true"
@@ -307,6 +308,128 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                 if (multiplatformExtension.targets.findByName("desktop") != null) {
                     tasks.named("desktopTestClasses").also(::addToBuildOnServer)
                 }
+            }
+
+            when (project.openExpectLiteMode()) {
+                null -> Unit
+                OpenExpectLiteMode.ANDROIDX -> configureOpenExpectLiteAndroidX()
+                OpenExpectLiteMode.ORG_JETBRAINS -> configureOpenExpectLiteOrgJetbrains()
+            }
+        }
+
+        private fun isTargetBuiltByAndroidX(target: KotlinTarget): Boolean =
+            target.platformType !in arrayOf(KotlinPlatformType.jvm, KotlinPlatformType.js)
+
+        private fun isTargetBuiltByOrgJetbrains(target: KotlinTarget): Boolean =
+            target !is KotlinAndroidTarget
+
+        // FIXME: reflection access! Some API in Kotlin is needed
+        @Suppress("unchecked_cast")
+        private val KotlinTarget.kotlinComponents: Iterable<KotlinTargetComponent>
+            get() = javaClass.kotlin.memberProperties
+                .single { it.name == "kotlinComponents" }
+                .get(this) as Iterable<KotlinTargetComponent>
+
+        private fun Project.configureOpenExpectLiteAndroidX() {
+            val ext = project.multiplatformExtension ?: error("expected a multiplatform project")
+            ext.targets.all { target ->
+                if (!isTargetBuiltByAndroidX(target)) {
+                    disableCompilationsOfTarget(target)
+                    publishWithoutPlatformModule(target)
+                }
+            }
+        }
+
+        private fun Project.configureOpenExpectLiteOrgJetbrains() {
+            val ext = project.multiplatformExtension ?: error("expected a multiplatform project")
+            ext.targets.all { target ->
+                if (!isTargetBuiltByOrgJetbrains(target)) {
+                    disableCompilationsOfTarget(target)
+                    publishWithoutPlatformModule(target)
+                }
+            }
+        }
+
+        private fun publishWithoutPlatformModule(target: KotlinTarget) {
+            val project = target.project
+
+            //FIXME: this code is called twice because of shared-dependencies.gradle.
+            //  So we have to add a check, because otherwise Gradle fails on non-unique entities
+            val singleCallPropertyName = "compose.publishWithoutPlatformModule.done.${target.name}"
+            with(project.extensions.extraProperties) {
+                if (!has(singleCallPropertyName)) {
+                    set(singleCallPropertyName, "true")
+                } else return
+            }
+
+            // Disable a separate platform module publication for Android targets,
+            // and exclude the variants of this target from the root module:
+            if (target is KotlinAndroidTarget)
+                target.publishLibraryVariants = emptyList()
+
+            target.project.afterEvaluate {
+                target.kotlinComponents.forEach { platformComponent ->
+                    project.publishInRootModuleWithoutArtifacts(platformComponent)
+                }
+            }
+        }
+
+        private fun Project.publishInRootModuleWithoutArtifacts(component: KotlinTargetComponent) {
+            val multiplatformExtension =
+                project.extensions.findByType(KotlinMultiplatformExtension::class.java)
+                    ?: error("Expected a multiplatform project")
+
+            val componentName = component.name
+
+            // Exclude the original variants of this target from the root module, as below we
+            // add them to the root module in a different way that doesn't lead to 'available-at'
+            // entries in the Gradle *.module metadata:
+            if (component is KotlinVariant)
+                component.publishable = false
+
+            val usages = when (component) {
+                is KotlinVariant -> component.usages
+                is JointAndroidKotlinTargetComponent -> component.usages
+                else -> emptyList()
+            }
+
+            extensions.getByType(PublishingExtension::class.java)
+                .publications.withType(DefaultMavenPublication::class.java)
+                // isAlias is needed for Gradle to ignore the fact that there's a
+                // publication that is not referenced as an available-at variant of the root module
+                // and has the Maven coordinates that are different from those of the root module
+                // FIXME: internal Gradle API! We would rather not create the publications,
+                //        but some API for that is needed in the Kotlin Gradle plugin
+                .all { if (it.name == componentName) it.isAlias = true }
+
+            tasks.withType(PublishToMavenRepository::class.java)
+                .matching { it.publication?.name == componentName }
+                .configureEach { it.enabled = false }
+
+            usages.forEach { kotlinUsageContext ->
+                // FIXME: an assumption is made here about the configuration name related to
+                //        the usage component
+                // This configuration models the published platform variant; we are going to add
+                // it to the root module, so that it is present there with its original name,
+                // original attributes, and original dependencies, but we don't want its artifact:
+                val configurationName = kotlinUsageContext.name + "-published"
+                // The configuration might not have been created at this point
+                configurations.matching { it.name == configurationName }.all { configuration ->
+                    configuration.artifacts.clear()
+                }
+
+                val rootComponent = components.withType(KotlinSoftwareComponent::class.java)
+                    .getByName("kotlin")
+
+                // Register the artifact-less variant in the root module:
+                // FIXME: stable API is needed for adding a variant to the root component
+                (rootComponent.usages as MutableSet).add(
+                    DefaultKotlinUsageContext(
+                        multiplatformExtension.metadata().compilations.getByName("main"),
+                        objects.named(Usage::class.java, "kotlin-api"),
+                        configurationName
+                    )
+                )
             }
         }
     }
