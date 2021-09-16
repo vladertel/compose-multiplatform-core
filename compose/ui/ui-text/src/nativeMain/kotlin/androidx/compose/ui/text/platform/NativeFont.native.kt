@@ -15,7 +15,7 @@
  */
 package androidx.compose.ui.text.platform
 
-// import androidx.compose.ui.text.ExpireAfterAccessCache
+import androidx.compose.ui.text.ExpireAfterAccessCache
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontListFontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -23,20 +23,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.GenericFontFamily
 import androidx.compose.ui.text.font.LoadedFontFamily
 import androidx.compose.ui.util.fastForEach
-/*
-import org.jetbrains.skija.Data
-import org.jetbrains.skija.FontMgr
-import org.jetbrains.skija.Typeface as SkTypeface
-import org.jetbrains.skija.paragraph.FontCollection
-import org.jetbrains.skija.paragraph.TypefaceFontProvider
-*/
+import org.jetbrains.skia.Data
+import org.jetbrains.skia.FontMgr
+import org.jetbrains.skia.Typeface as SkTypeface
+import org.jetbrains.skia.paragraph.FontCollection
+import org.jetbrains.skia.paragraph.TypefaceFontProvider
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.Typeface
 
-class FontLoader : Font.ResourceLoader {
-    override fun load(font: Font): Any = error("implement native FontLoader")
-}
-/*
 internal val GenericFontFamiliesMapping by lazy {
     when (Platform.Current) {
         Platform.Windows ->
@@ -74,7 +68,7 @@ internal val GenericFontFamiliesMapping by lazy {
     }
 }
 
-sealed class DesktopFont : Font {
+sealed class NativeFont : Font {
     abstract val identity: String
 
     internal val cacheKey: String
@@ -98,10 +92,11 @@ class LoadedFont internal constructor(
     val data: ByteArray,
     override val weight: FontWeight,
     override val style: FontStyle
-) : DesktopFont() {
+) : NativeFont() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null) return false
+        if (this::class != other::class) return false
 
         other as LoadedFont
 
@@ -146,67 +141,6 @@ fun Font(
 ): Font = LoadedFont(identity, data, weight, style)
 
 /**
- * Defines a Font using file path.
- *
- * @param file File path to font.
- * @param weight The weight of the font. The system uses this to match a font to a font request
- * that is given in a [androidx.compose.ui.text.SpanStyle].
- * @param style The style of the font, normal or italic. The system uses this to match a font to a
- * font request that is given in a [androidx.compose.ui.text.SpanStyle].
- *
- * @see FontFamily
- */
-class FileFont internal constructor(
-    val file: File,
-    override val weight: FontWeight = FontWeight.Normal,
-    override val style: FontStyle = FontStyle.Normal
-) : DesktopFont() {
-    override val identity
-        get() = file.toString()
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as FileFont
-
-        if (file != other.file) return false
-        if (weight != other.weight) return false
-        if (style != other.style) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = file.hashCode()
-        result = 31 * result + weight.hashCode()
-        result = 31 * result + style.hashCode()
-        return result
-    }
-
-    override fun toString(): String {
-        return "FileFont(file=$file, weight=$weight, style=$style)"
-    }
-}
-
-/**
- * Creates a Font using file path.
- *
- * @param file File path to font.
- * @param weight The weight of the font. The system uses this to match a font to a font request
- * that is given in a [androidx.compose.ui.text.SpanStyle].
- * @param style The style of the font, normal or italic. The system uses this to match a font to a
- * font request that is given in a [androidx.compose.ui.text.SpanStyle].
- *
- * @see FontFamily
- */
-fun Font(
-    file: File,
-    weight: FontWeight = FontWeight.Normal,
-    style: FontStyle = FontStyle.Normal
-): Font = FileFont(file, weight, style)
-
-/**
  * Defines a Font using resource name.
  *
  * @param name The resource name in classpath.
@@ -222,13 +156,14 @@ class ResourceFont internal constructor(
     val name: String,
     override val weight: FontWeight = FontWeight.Normal,
     override val style: FontStyle = FontStyle.Normal
-) : DesktopFont() {
+) : NativeFont() {
     override val identity
         get() = name
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null) return false
+        if (this::class != other::class) return false
 
         other as ResourceFont
 
@@ -268,7 +203,7 @@ fun Font(
     style: FontStyle = FontStyle.Normal
 ): Font = ResourceFont(resource, weight, style)
 
-internal class DesktopTypeface(
+internal class NativeTypeface(
     val alias: String?,
     val nativeTypeface: SkTypeface
 ) : Typeface {
@@ -276,34 +211,24 @@ internal class DesktopTypeface(
 }
 
 /**
- * Returns a Compose [Typeface] from Skija [SkTypeface].
+ * Returns a Compose [Typeface] from Skia [SkTypeface].
  *
  * @param typeface Android Typeface instance
  */
 fun Typeface(typeface: SkTypeface, alias: String? = null): Typeface {
-    return DesktopTypeface(alias, typeface)
+    return NativeTypeface(alias, typeface)
 }
 
 internal fun FontListFontFamily.makeAlias(): String {
-    val digest = MessageDigest.getInstance("SHA-256")
-    fonts.fastForEach { font ->
-        when (font) {
-            is DesktopFont -> {
-                digest.update(font.identity.toByteArray())
-            }
-        }
-    }
-    return "-compose-${digest.digest().toHexString()}"
+    TODO("implement native FontListFontFamily.makeAlias()")
 }
-
-private fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
 
 class FontLoader : Font.ResourceLoader {
     val fonts = FontCollection()
     private val fontProvider = TypefaceFontProvider()
 
     init {
-        fonts.setDefaultFontManager(FontMgr.getDefault())
+        fonts.setDefaultFontManager(FontMgr.default)
         fonts.setAssetFontManager(fontProvider)
     }
 
@@ -327,7 +252,7 @@ class FontLoader : Font.ResourceLoader {
                 listOf(alias)
             }
             is LoadedFontFamily -> {
-                val typeface = fontFamily.typeface as DesktopTypeface
+                val typeface = fontFamily.typeface as NativeTypeface
                 val alias = typeface.alias ?: typeface.nativeTypeface.familyName
                 if (!registered.contains(alias)) {
                     fontProvider.registerTypeface(typeface.nativeTypeface, alias)
@@ -336,7 +261,7 @@ class FontLoader : Font.ResourceLoader {
                 listOf(alias)
             }
             is GenericFontFamily -> mapGenericFontFamily(fontFamily)
-            FontFamily.Default -> listOf()
+            FontFamily.Default -> mapGenericFontFamily(FontFamily.SansSerif)
             else -> throw IllegalArgumentException("Unknown font family type: $fontFamily")
         }
 
@@ -346,16 +271,10 @@ class FontLoader : Font.ResourceLoader {
     //  2. variable fonts. for them we also need to extend definition interfaces to support
     //  custom variation settings
     override fun load(font: Font): SkTypeface {
-        if (font !is DesktopFont) {
+        if (font !is NativeFont) {
             throw IllegalArgumentException("Unsupported font type: $font")
         }
-        return typefacesCache.get(font.cacheKey) {
-            when (font) {
-                is ResourceFont -> typefaceResource(font.name)
-                is FileFont -> SkTypeface.makeFromFile(font.file.toString())
-                is LoadedFont -> SkTypeface.makeFromData(Data.makeFromBytes(font.data))
-            }
-        }
+        TODO("implement native FontLoader.load()")
     }
 
     internal fun findTypeface(
@@ -363,29 +282,13 @@ class FontLoader : Font.ResourceLoader {
         fontWeight: FontWeight = FontWeight.Normal,
         fontStyle: FontStyle = FontStyle.Normal
     ): SkTypeface? {
-        return when (fontFamily) {
-            FontFamily.Default -> fonts.defaultFallback()
-            else -> {
-                val aliases = ensureRegistered(fontFamily)
-                val style = fontStyle.toSkFontStyle().withWeight(fontWeight.weight)
-                fonts.findTypefaces(aliases.toTypedArray(), style).first()
-            }
-        }
+        val aliases = ensureRegistered(fontFamily)
+        val style = fontStyle.toSkFontStyle().withWeight(fontWeight.weight)
+        return fonts.findTypefaces(aliases.toTypedArray(), style).first()
     }
 }
 
-private val typefacesCache = ExpireAfterAccessCache<String, SkTypeface>(
-    60_000_000_000 // 1 minute
-)
-
-private fun typefaceResource(resourceName: String): SkTypeface {
-    val resource = Thread
-        .currentThread()
-        .contextClassLoader
-        .getResourceAsStream(resourceName) ?: error("Can't load font from $resourceName")
-    val bytes = resource.readAllBytes()
-    return SkTypeface.makeFromData(Data.makeFromBytes(bytes))
-}
+private val typefacesCache = ExpireAfterAccessCache<String, SkTypeface>()
 
 private enum class Platform {
     Linux,
@@ -395,6 +298,9 @@ private enum class Platform {
 
     companion object {
         val Current by lazy {
+            println("TODO: selecting MacOS unconditionally")
+            MacOS
+            /*
             val name = System.getProperty("os.name")
             when {
                 name.startsWith("Linux") -> Linux
@@ -402,7 +308,7 @@ private enum class Platform {
                 name == "Mac OS X" -> MacOS
                 else -> Unknown
             }
+             */
         }
     }
 }
-*/

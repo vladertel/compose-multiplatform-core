@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.graphics
+package androidx.compose.ui.text
 
-import org.jetbrains.skia.VertexMode as SkVertexMode
+// Extremely simple Cache interface which is enough for ui.text needs
+internal interface Cache<K, V> {
+    // get a value for [key] or load it by [loader] if doesn't exist
+    fun get(key: K, loader: (K) -> V): V
+}
 
-fun VertexMode.toSkiaVertexMode(): SkVertexMode = when (this) {
-    VertexMode.Triangles -> SkVertexMode.TRIANGLES
-    VertexMode.TriangleStrip -> SkVertexMode.TRIANGLE_STRIP
-    VertexMode.TriangleFan -> SkVertexMode.TRIANGLE_FAN
-    else -> SkVertexMode.TRIANGLES
+// expire cache entries after `expireAfter` after last access
+internal class ExpireAfterAccessCache<K, V>() : Cache<K, V> {
+    internal val map = HashMap<K, V>()
+
+    override fun get(key: K, loader: (K) -> V): V = map.getOrPut(key) {
+        loader(key)
+    }
 }

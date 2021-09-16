@@ -338,15 +338,14 @@ class SkiaCanvas(val skia: org.jetbrains.skia.Canvas) : Canvas {
     }
 
     override fun drawVertices(vertices: Vertices, blendMode: BlendMode, paint: Paint) {
-        org.jetbrains.skia.Canvas._nDrawVertices(
-            skia._ptr,
+        skia.drawVertices(
             vertices.vertexMode.toSkiaVertexMode(),
             vertices.positions,
             vertices.colors,
             vertices.textureCoordinates,
             vertices.indices,
-            blendMode.toSkia().ordinal,
-            getPtr(paint.asFrameworkPaint())
+            blendMode.toSkia(),
+            paint.asFrameworkPaint()
         )
     }
 

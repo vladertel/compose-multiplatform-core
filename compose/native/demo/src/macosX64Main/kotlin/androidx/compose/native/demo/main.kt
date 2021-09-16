@@ -13,6 +13,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Checkbox
 import androidx.compose.material.RadioButton
 import androidx.compose.material.Switch
+import androidx.compose.material.Text
 import androidx.compose.native.Window
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,7 +35,6 @@ fun main() {
 }
 
 fun createWindow(title: String) {
-    println("createWindow()")
     Window(title) {
         var tick by remember { mutableStateOf(false) }
         var selected by remember { mutableStateOf(false) }
@@ -99,6 +99,7 @@ fun createWindow(title: String) {
                     tick = !tick
                 }
             ) {
+                Text("Press me!")
             }
             Row {
                 RadioButton(
@@ -133,5 +134,4 @@ fun createWindow(title: String) {
             }
         }
     }
-    println("end createWindow()")
 }

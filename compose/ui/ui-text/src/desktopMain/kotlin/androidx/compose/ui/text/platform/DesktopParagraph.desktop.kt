@@ -550,7 +550,7 @@ internal class ParagraphBuilder(
         val ps = textStyleToParagraphStyle(textStyle)
 
         if (maxLines != Int.MAX_VALUE) {
-            ps.maxLinesCount = maxLines.toLong()
+            ps.maxLinesCount = maxLines
             ps.ellipsis = ellipsis
         }
 
