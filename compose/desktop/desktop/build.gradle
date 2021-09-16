@@ -113,19 +113,21 @@ PublicationContainer.metaClass.jvmOs = { name, skikoDeps ->
 }
 
 afterEvaluate {
-    publishing {
-        publications {
-            it.jvmOs("linux-x64", [libs.skikoLinuxX64])
-            it.jvmOs("linux-arm64", [libs.skikoLinuxArm64])
-            it.jvmOs("macos-x64", [libs.skikoMacOsX64])
-            it.jvmOs("macos-arm64", [libs.skikoMacOsArm64])
-            it.jvmOs("windows-x64", [libs.skikoWindowsX64])
+    if (!MultiplatformUtils.isOpenExpectLiteAndroidx(project)) {
+        publishing {
+            publications {
+                it.jvmOs("linux-x64", [libs.skikoLinuxX64])
+                it.jvmOs("linux-arm64", [libs.skikoLinuxArm64])
+                it.jvmOs("macos-x64", [libs.skikoMacOsX64])
+                it.jvmOs("macos-arm64", [libs.skikoMacOsArm64])
+                it.jvmOs("windows-x64", [libs.skikoWindowsX64])
+            }
         }
+    } else {
+        MultiplatformUtils.disableCompilationsOfTarget(kotlin.jvm())
+        tasks.withType(PublishToMavenRepository).configureEach { enabled = false }
     }
 }
 
 BuildOnServerKt.addToBuildOnServer(project, "${project.path}:jvmJar")
 
-if (MultiplatformUtils.isOpenExpectLiteAndroidx(project)) {
-    MultiplatformUtils.disableCompilationsOfTarget(kotlin.jvm())
-}
