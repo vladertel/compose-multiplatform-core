@@ -348,6 +348,7 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                     publishWithoutPlatformModule(target)
                 }
             }
+            disableCompilationsOfTarget(ext.metadata())
         }
 
         private fun publishWithoutPlatformModule(target: KotlinTarget) {
