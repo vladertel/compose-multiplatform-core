@@ -124,18 +124,6 @@ internal suspend fun PointerInputScope.detectTapWithContext(
     }
 }
 
-@ExperimentalFoundationApi
-suspend fun AwaitPointerEventScope.awaitEventFirstDown(): PointerEvent {
-    var event: PointerEvent
-    do {
-        event = awaitPointerEvent()
-    } while (
-        !event.changes.fastAll { it.changedToDown() }
-    )
-    return event
-}
-
-
 private suspend fun AwaitPointerEventScope.waitForFirstInboundUp(): PointerEvent? {
     while (true) {
         val event = awaitPointerEvent()
