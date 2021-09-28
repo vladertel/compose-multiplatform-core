@@ -26,6 +26,7 @@ import java.awt.Component
 import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelListener
+import javax.accessibility.AccessibleContext
 import javax.swing.JFrame
 
 /**
@@ -38,6 +39,13 @@ class ComposeWindow : JFrame() {
 
     init {
         contentPane.add(delegate.pane)
+    }
+
+    override fun getAccessibleContext(): AccessibleContext? {
+        val accessible = layer.owner?.accessibilityController?.rootAccessible
+        accessible?.getAccessibleContext()?.accessibleParent = this
+//        accessible?.print()
+        return accessible?.getAccessibleContext()
     }
 
     override fun add(component: Component) = delegate.add(component)

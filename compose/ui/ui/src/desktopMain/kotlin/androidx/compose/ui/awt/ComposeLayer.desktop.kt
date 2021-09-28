@@ -35,6 +35,7 @@ import kotlinx.coroutines.swing.Swing
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkiaRenderer
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.FocusEvent
@@ -47,6 +48,7 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import java.awt.event.MouseWheelEvent
 import java.awt.im.InputMethodRequests
+import javax.accessibility.Accessible
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
@@ -70,14 +72,14 @@ internal class ComposeLayer {
         wrapped::needRedraw
     )
 
-    private var owner: DesktopOwner? = null
+    internal var owner: DesktopOwner? = null
     private var composition: Composition? = null
 
     private var initOwner: (() -> Unit)? = null
 
     private lateinit var density: Density
 
-    inner class Wrapped : SkiaLayer(), DesktopComponent {
+    inner class Wrapped : SkiaLayer(), Accessible, DesktopComponent {
         var currentInputMethodRequests: InputMethodRequests? = null
 
         var isInit = false
@@ -96,6 +98,9 @@ internal class ComposeLayer {
         }
 
         override fun getInputMethodRequests() = currentInputMethodRequests
+        override var componentCursor: Cursor
+            get() = super.getCursor()
+            set(value) { super.setCursor(value) }
 
         override fun enableInput(inputMethodRequests: InputMethodRequests) {
             currentInputMethodRequests = inputMethodRequests
@@ -290,8 +295,14 @@ internal class ComposeLayer {
                     density,
                     onPreviewKeyEvent = onPreviewKeyEvent,
                     onKeyEvent = onKeyEvent
-                )
-                composition = owner!!.setContent(parent = parentComposition, content = content)
+                ).also {
+                    it.accessibilityController =
+                        AccessibilityController(
+                            it,
+                            wrapped
+                        )
+                    composition = it.setContent(parent = parentComposition, content = content)
+                }
                 initOwner = null
             }
         }

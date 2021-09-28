@@ -19,7 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.node.LayoutNode
 
 /**
@@ -38,15 +41,23 @@ internal fun DesktopOwner.setContent(
     val composition = Composition(DesktopUiApplier(root), parent ?: container.recomposer)
     composition.setContent {
         ProvideDesktopCompositionsLocals(this, content)
+        val owner = this
+        LaunchedEffect(this) { owner.accessibilityController?.syncLoop() }
     }
 
     return composition
 }
+
+internal val LocalPointerIconService = staticCompositionLocalOf<PointerIconService?> {
+    null
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun ProvideDesktopCompositionsLocals(owner: DesktopOwner, content: @Composable () -> Unit) {
     CompositionLocalProvider(
-        LocalDesktopOwners provides owner.container
+        LocalDesktopOwners provides owner.container,
+        LocalPointerIconService provides owner.pointerIconService
     ) {
         ProvideCommonCompositionLocals(
             owner = owner,

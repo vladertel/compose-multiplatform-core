@@ -28,14 +28,12 @@ import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
-import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.util.fastAll
 import kotlinx.coroutines.coroutineScope
 
 // TODO: b/168524931 - should this depend on the input device?
@@ -124,17 +122,6 @@ internal suspend fun PointerInputScope.detectTapWithContext(
             }
         }
     }
-}
-
-@ExperimentalFoundationApi
-suspend fun AwaitPointerEventScope.awaitEventFirstDown(): PointerEvent {
-    var event: PointerEvent
-    do {
-        event = awaitPointerEvent()
-    } while (
-        !event.changes.fastAll { it.changedToDown() }
-    )
-    return event
 }
 
 private suspend fun AwaitPointerEventScope.waitForFirstInboundUp(): PointerEvent? {
