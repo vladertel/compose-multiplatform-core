@@ -50,6 +50,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     kotlin {
         android()
         jvm("desktop")
+        js(IR) {
+            browser()
+        }
         macosX64()
         iosX64("uikitX64")
 
