@@ -46,6 +46,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     kotlin {
         android()
         jvm("desktop")
+        js(IR) {
+            browser()
+        }
         macosX64()
         iosX64("uikitX64")
 
@@ -67,6 +70,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             desktopMain.dependsOn(jvmMain)
+            jsMain {
+                dependsOn commonMain
+                dependencies {
+                    implementation(kotlin("stdlib-js"))
+                }
+            }
+
 
             nativeMain.dependsOn(commonMain)
             darwinMain.dependsOn(nativeMain)
@@ -97,6 +107,7 @@ androidx {
 
 tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
+        incremental = false
         freeCompilerArgs += ["-XXLanguage:+InlineClasses"]
     }
 }
