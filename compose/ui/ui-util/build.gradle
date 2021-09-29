@@ -47,6 +47,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         desktop()
         darwin()
+        js()
     }
 
     kotlin {
@@ -89,6 +90,7 @@ androidx {
 
 tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
+        incremental = false
         freeCompilerArgs += ["-XXLanguage:+InlineClasses"]
     }
 }
