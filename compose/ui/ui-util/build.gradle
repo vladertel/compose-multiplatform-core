@@ -47,6 +47,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         jvm("desktop")
         macosX64()
+        js(IR) {
+            browser()
+        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -66,6 +69,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             desktopMain.dependsOn(jvmMain)
+
+            jsMain {
+                dependsOn commonMain
+                dependencies {
+                    implementation(kotlin("stdlib-js"))
+                }
+            }
 
             nativeMain {
                 dependsOn commonMain
@@ -100,6 +110,7 @@ androidx {
 
 tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
+        incremental = false
         freeCompilerArgs += ["-XXLanguage:+InlineClasses"]
     }
 }
