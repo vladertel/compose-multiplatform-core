@@ -43,6 +43,7 @@ if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
         testImplementation(libs.testRules)
         testImplementation(libs.testRunner)
+        testImplementation(libs.kotlinTestJunit)
         testImplementation(libs.junit)
         testImplementation(libs.truth)
 
@@ -70,6 +71,10 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
     kotlin {
 
+        js(IR) {
+            browser()
+        }
+
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
          * corresponding block above
@@ -92,6 +97,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 dependsOn(commonMain)
                 dependencies {
                     api(libs.skikoCommon)
+                }
+            }
+
+            jsMain {
+                dependsOn skiaMain
+                dependencies {
+                    implementation(libs.skikoJs)
                 }
             }
 
@@ -129,6 +141,15 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.junit)
                     implementation(libs.truth)
                     implementation(libs.skikoCurrentOs)
+                }
+            }
+
+            commonTest {
+                kotlin.srcDir("src/test/kotlin")
+                dependencies {
+                    implementation(kotlin("test"))
+//                    implementation(libs.kotlinCoroutinesCore)
+//                    implementation("org.jetbrains.kotlinx:atomicfu:0.14.4")
                 }
             }
         }
