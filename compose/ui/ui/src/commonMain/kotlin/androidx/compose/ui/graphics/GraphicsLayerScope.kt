@@ -18,6 +18,7 @@ package androidx.compose.ui.graphics
 
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.internal.JvmDefaultWithCompatibility
+import kotlin.js.JsName
 import androidx.compose.ui.unit.Density
 
 /**
@@ -220,6 +221,7 @@ interface GraphicsLayerScope : Density {
 /**
  * Creates simple [GraphicsLayerScope].
  */
+@JsName("funGraphicsLayerScope")
 fun GraphicsLayerScope(): GraphicsLayerScope = ReusableGraphicsLayerScope()
 
 internal class ReusableGraphicsLayerScope : GraphicsLayerScope {
