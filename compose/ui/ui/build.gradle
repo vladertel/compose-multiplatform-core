@@ -117,6 +117,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         desktop()
         darwin()
+        js()
     }
 
     kotlin {
@@ -172,6 +173,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.kotlinStdlibJdk8)
                     api(libs.kotlinCoroutinesSwing)
                 }
+            }
+            jsMain {
+                dependsOn(commonMain)
             }
 
             nativeMain {
