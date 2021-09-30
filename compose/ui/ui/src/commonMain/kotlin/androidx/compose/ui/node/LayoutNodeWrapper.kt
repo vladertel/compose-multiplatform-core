@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.plus
  */
 internal abstract class LayoutNodeWrapper(
     internal val layoutNode: LayoutNode
-) : Placeable(), Measurable, LayoutCoordinates, OwnerScope, (Canvas) -> Unit {
+) : Placeable(), Measurable, LayoutCoordinates, OwnerScope, (Canvas) -> Unit, InvokeOnCanvas {
     internal open val wrapped: LayoutNodeWrapper? get() = null
     internal var wrappedBy: LayoutNodeWrapper? = null
 
