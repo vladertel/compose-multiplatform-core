@@ -16,18 +16,12 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.text.input.CommitTextCommand
-import androidx.compose.ui.text.input.DeleteSurroundingTextInCodePointsCommand
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.PlatformTextInputService
-import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.substring
 import androidx.compose.ui.unit.Density
-import kotlin.math.max
-import kotlin.math.min
 
 /* internal */ interface NativeInputComponent {
     fun enableInput(/*inputMethodRequests: InputMethodRequests*/)
@@ -37,7 +31,7 @@ import kotlin.math.min
     val density: Density
 }
 
-/* internal */ class NativePlatformInput(val component: NativeComponent) :
+/* internal */ class NativePlatformInput(val component: JsComponent) :
     PlatformTextInputService {
 /*
     data class CurrentInput(

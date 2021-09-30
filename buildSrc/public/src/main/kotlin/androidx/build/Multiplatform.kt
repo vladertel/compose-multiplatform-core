@@ -32,7 +32,7 @@ const val COMPOSE_JS_COMPILER_TESTS_ENABLED = "androidx.compose.jsCompilerTestsE
 class Multiplatform {
     companion object {
         fun Project.isMultiplatformEnabled(): Boolean {
-            return properties.get(COMPOSE_MPP_ENABLED)?.toString()?.toBoolean() ?: false
+            return true//properties.get(COMPOSE_MPP_ENABLED)?.toString()?.toBoolean() ?: false
         }
 
         fun Project.isJsCompilerTestsEnabled(): Boolean {

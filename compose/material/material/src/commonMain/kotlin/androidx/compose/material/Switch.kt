@@ -275,32 +275,32 @@ object SwitchDefaults {
     @Composable
     fun colors(
         checkedThumbColor: Color = MaterialTheme.colors.secondaryVariant,
-        checkedTrackColor: Color = checkedThumbColor,
+        checkedTrackColor: Color? = null,
         checkedTrackAlpha: Float = 0.54f,
         uncheckedThumbColor: Color = MaterialTheme.colors.surface,
         uncheckedTrackColor: Color = MaterialTheme.colors.onSurface,
         uncheckedTrackAlpha: Float = 0.38f,
-        disabledCheckedThumbColor: Color = checkedThumbColor
-            .copy(alpha = ContentAlpha.disabled)
-            .compositeOver(MaterialTheme.colors.surface),
-        disabledCheckedTrackColor: Color = checkedTrackColor
-            .copy(alpha = ContentAlpha.disabled)
-            .compositeOver(MaterialTheme.colors.surface),
-        disabledUncheckedThumbColor: Color = uncheckedThumbColor
-            .copy(alpha = ContentAlpha.disabled)
-            .compositeOver(MaterialTheme.colors.surface),
-        disabledUncheckedTrackColor: Color = uncheckedTrackColor
-            .copy(alpha = ContentAlpha.disabled)
-            .compositeOver(MaterialTheme.colors.surface)
+        disabledCheckedThumbColor: Color? = null,
+        disabledCheckedTrackColor: Color? = null,
+        disabledUncheckedThumbColor: Color? = null,
+        disabledUncheckedTrackColor: Color? = null
     ): SwitchColors = DefaultSwitchColors(
         checkedThumbColor = checkedThumbColor,
-        checkedTrackColor = checkedTrackColor.copy(alpha = checkedTrackAlpha),
+        checkedTrackColor = checkedTrackColor?.copy(alpha = checkedTrackAlpha) ?: checkedThumbColor.copy(alpha = checkedTrackAlpha),
         uncheckedThumbColor = uncheckedThumbColor,
         uncheckedTrackColor = uncheckedTrackColor.copy(alpha = uncheckedTrackAlpha),
-        disabledCheckedThumbColor = disabledCheckedThumbColor,
-        disabledCheckedTrackColor = disabledCheckedTrackColor.copy(alpha = checkedTrackAlpha),
-        disabledUncheckedThumbColor = disabledUncheckedThumbColor,
-        disabledUncheckedTrackColor = disabledUncheckedTrackColor.copy(alpha = uncheckedTrackAlpha)
+        disabledCheckedThumbColor = disabledCheckedThumbColor ?: checkedThumbColor
+            .copy(alpha = ContentAlpha.disabled)
+            .compositeOver(MaterialTheme.colors.surface),
+        disabledCheckedTrackColor = (disabledCheckedTrackColor ?: (checkedTrackColor?.copy(alpha = checkedTrackAlpha) ?: checkedThumbColor.copy(alpha = checkedTrackAlpha))
+            .copy(alpha = ContentAlpha.disabled)
+            .compositeOver(MaterialTheme.colors.surface)).copy(alpha = checkedTrackAlpha),
+        disabledUncheckedThumbColor = disabledUncheckedThumbColor ?: uncheckedThumbColor
+            .copy(alpha = ContentAlpha.disabled)
+            .compositeOver(MaterialTheme.colors.surface),
+        disabledUncheckedTrackColor = (disabledUncheckedTrackColor ?: uncheckedTrackColor
+            .copy(alpha = ContentAlpha.disabled)
+            .compositeOver(MaterialTheme.colors.surface)).copy(alpha = uncheckedTrackAlpha)
     )
 }
 

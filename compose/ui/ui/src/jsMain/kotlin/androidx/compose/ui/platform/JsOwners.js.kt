@@ -20,12 +20,6 @@ import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.PointerId
-import androidx.compose.ui.input.pointer.PointerInputEvent
-import androidx.compose.ui.input.pointer.PointerInputEventData
-import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.unit.IntOffset
 /*
 import androidx.compose.ui.geometry.Offset
 // import androidx.compose.ui.input.mouse.MouseScrollEvent
@@ -47,7 +41,6 @@ import java.awt.event.InputMethodEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 */
-import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal val LocalJsOwners = staticCompositionLocalOf<JsOwners> {
     error("CompositionLocal JsOwnersAmbient not provided")
@@ -56,7 +49,7 @@ internal val LocalJsOwners = staticCompositionLocalOf<JsOwners> {
 // TODO: this is essentially a copy of DesktopOwners.
 /* internal */ class JsOwners(
     private val coroutineScope: CoroutineScope,
-    component: NativeComponent = DummyNativeComponent,
+    component: JsComponent = DummyJsComponent,
     private val invalidate: () -> Unit = {},
 ) {
     init {

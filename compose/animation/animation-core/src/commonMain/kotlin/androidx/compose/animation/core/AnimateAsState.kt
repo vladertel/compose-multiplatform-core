@@ -351,9 +351,9 @@ fun <T, V : AnimationVector> animateValueAsState(
     targetValue: T,
     typeConverter: TwoWayConverter<T, V>,
     animationSpec: AnimationSpec<T> = remember {
-        spring(visibilityThreshold = visibilityThreshold)
+        spring(visibilityThreshold = null)
     },
-    visibilityThreshold: T? = null,
+    //visibilityThreshold: T = null,
     finishedListener: ((T) -> Unit)? = null
 ): State<T> {
 
@@ -381,4 +381,22 @@ fun <T, V : AnimationVector> animateValueAsState(
         }
     }
     return animatable.asState()
+}
+
+// TODO: this function is incorrect. We need it now to move further (to ignore the compiler error -
+//  ManglerChecks IR vs Descriptor - kotlin/JS)
+// Ideally only original animateValueAsState should remain
+@Composable
+fun <T, V : AnimationVector> animateValueAsState(
+    targetValue: T,
+    typeConverter: TwoWayConverter<T, V>,
+    animationSpec: AnimationSpec<T> = remember {
+        spring(visibilityThreshold = visibilityThreshold)
+    },
+    visibilityThreshold: T,
+    finishedListener: ((T) -> Unit)? = null
+): State<T> {
+    return animateValueAsState(
+        targetValue, typeConverter, animationSpec, finishedListener
+    )
 }

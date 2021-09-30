@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,10 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.platform
+// ktlint-disable filename
+package androidx.compose.material.ripple
 
-import androidx.compose.ui.unit.Density
-// import java.awt.Point
-// import java.awt.im.InputMethodRequests
-
-/* internal */ interface JsComponent : NativeInputComponent
-
-/* internal */ object DummyJsComponent : JsComponent {
-    override fun enableInput(/*inputMethodRequests: InputMethodRequests*/) {}
-    override fun disableInput() {}
-    // override val locationOnScreen = Point(0, 0)
-    override val density: Density
-        get() = Density(1f, 1f)
-}
+/**
+ * Native ripple implementation using the Compose-rendered [CommonRipple] implementation.
+ */
+internal actual typealias PlatformRipple = CommonRipple

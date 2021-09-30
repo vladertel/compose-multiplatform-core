@@ -13,19 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
+@file:Suppress("DEPRECATION_ERROR")
 
-package androidx.compose.ui.platform
+package androidx.compose.desktop
 
-import androidx.compose.ui.unit.Density
-// import java.awt.Point
-// import java.awt.im.InputMethodRequests
+/**
+ * Can be called multiple times.
+ *
+ * Initialization will occur only on the first call. The next calls will do nothing.
+ *
+ * Should be called in a class that uses Jetpack Compose Api:
+ *
+ * class SomeClass {
+ *     companion object {
+ *         init {
+ *             initCompose()
+ *         }
+ *     }
+ * }
+ */
+@Suppress("DeprecatedCallableAddReplaceWith")
+@Deprecated("We don't need to init Compose explicitly now")
+fun initCompose() = Unit
 
-/* internal */ interface JsComponent : NativeInputComponent
-
-/* internal */ object DummyJsComponent : JsComponent {
-    override fun enableInput(/*inputMethodRequests: InputMethodRequests*/) {}
-    override fun disableInput() {}
-    // override val locationOnScreen = Point(0, 0)
-    override val density: Density
-        get() = Density(1f, 1f)
-}
+ */

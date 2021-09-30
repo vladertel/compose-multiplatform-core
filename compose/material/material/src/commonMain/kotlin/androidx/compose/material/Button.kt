@@ -367,14 +367,14 @@ object ButtonDefaults {
     @Composable
     fun buttonColors(
         backgroundColor: Color = MaterialTheme.colors.primary,
-        contentColor: Color = contentColorFor(backgroundColor),
+        contentColor: Color? = null,
         disabledBackgroundColor: Color = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
             .compositeOver(MaterialTheme.colors.surface),
         disabledContentColor: Color = MaterialTheme.colors.onSurface
             .copy(alpha = ContentAlpha.disabled)
     ): ButtonColors = DefaultButtonColors(
         backgroundColor = backgroundColor,
-        contentColor = contentColor,
+        contentColor = contentColor ?: contentColorFor(backgroundColor),
         disabledBackgroundColor = disabledBackgroundColor,
         disabledContentColor = disabledContentColor
     )

@@ -221,14 +221,15 @@ object CheckboxDefaults {
         uncheckedColor: Color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
         checkmarkColor: Color = MaterialTheme.colors.surface,
         disabledColor: Color = MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.disabled),
-        disabledIndeterminateColor: Color = checkedColor.copy(alpha = ContentAlpha.disabled)
+        disabledIndeterminateColor: Color? = null,
     ): CheckboxColors {
+        val dindcolor = disabledIndeterminateColor ?: checkedColor.copy(alpha = ContentAlpha.disabled)
         return remember(
             checkedColor,
             uncheckedColor,
             checkmarkColor,
             disabledColor,
-            disabledIndeterminateColor,
+            dindcolor,
         ) {
             DefaultCheckboxColors(
                 checkedBorderColor = checkedColor,
@@ -238,10 +239,10 @@ object CheckboxDefaults {
                 uncheckedBoxColor = checkedColor.copy(alpha = 0f),
                 disabledCheckedBoxColor = disabledColor,
                 disabledUncheckedBoxColor = disabledColor.copy(alpha = 0f),
-                disabledIndeterminateBoxColor = disabledIndeterminateColor,
+                disabledIndeterminateBoxColor = dindcolor,
                 uncheckedBorderColor = uncheckedColor,
                 disabledBorderColor = disabledColor,
-                disabledIndeterminateBorderColor = disabledIndeterminateColor,
+                disabledIndeterminateBorderColor = dindcolor,
             )
         }
     }
