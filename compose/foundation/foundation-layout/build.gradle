@@ -71,6 +71,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     kotlin {
         android()
         jvm("desktop")
+        js(IR) {
+            browser()
+        }
         macosX64()
         iosX64("uikitX64")
 
@@ -114,6 +117,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
             nativeMain.dependsOn(commonMain)
             macosX64Main.dependsOn(commonMain)
+            jsMain.dependsOn(commonMain)
         }
     }
     dependencies {

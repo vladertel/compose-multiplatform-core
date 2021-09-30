@@ -116,6 +116,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         jvm("desktop")
         iosX64('uikitX64')
         macosX64()
+        js(IR) {
+            browser()
+        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -170,6 +173,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     api(libs.kotlinCoroutinesSwing)
                 }
                 dependsOn(jvmMain)
+            }
+            jsMain {
+                dependsOn(commonMain)
             }
 
             nativeMain.dependsOn(skikoMain)
