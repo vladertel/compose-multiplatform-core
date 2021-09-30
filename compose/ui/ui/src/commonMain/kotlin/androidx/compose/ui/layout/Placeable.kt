@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import kotlin.native.concurrent.ThreadLocal
+//import kotlin.native.concurrent.ThreadLocal
 
 /**
  * A [Placeable] corresponds to a child layout that can be positioned by its
@@ -316,7 +316,7 @@ abstract class Placeable : Measured {
             placeAt(position + apparentToRealOffset, zIndex, layerBlock)
         }
 
-        @ThreadLocal
+        //@ThreadLocal
         internal companion object : PlacementScope() {
             override var parentLayoutDirection = LayoutDirection.Ltr
                 private set

@@ -271,7 +271,7 @@ private typealias Command = () -> Unit
     }
 
     override fun createLayer(
-        drawBlock: (Canvas) -> Unit,
+        drawBlock: InvokeOnCanvas,
         invalidateParentLayer: () -> Unit
     ) = SkiaNativeLayer(
         density,

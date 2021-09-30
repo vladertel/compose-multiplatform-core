@@ -51,14 +51,16 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.minus
 import androidx.compose.ui.unit.plus
 import androidx.compose.ui.util.fastForEach
-import kotlin.native.concurrent.ThreadLocal
+//import kotlin.native.concurrent.ThreadLocal
 
 /**
  * Measurable and Placeable type that has a position.
  */
 internal abstract class LayoutNodeWrapper(
     internal val layoutNode: LayoutNode
-) : Placeable(), Measurable, LayoutCoordinates, OwnerScope, (Canvas) -> Unit {
+) : Placeable(), Measurable, LayoutCoordinates, OwnerScope, InvokeOnCanvas {
+
+
     internal open val wrapped: LayoutNodeWrapper? get() = null
     internal var wrappedBy: LayoutNodeWrapper? = null
 
@@ -892,7 +894,7 @@ internal abstract class LayoutNodeWrapper(
         return Offset(horizontal, vertical)
     }
 
-    @ThreadLocal
+    //@ThreadLocal
     internal companion object {
         const val ExpectAttachedLayoutCoordinates = "LayoutCoordinate operations are only valid " +
             "when isAttached is true"
