@@ -45,6 +45,7 @@ kotlin {
         jsMain {
             dependsOn(commonMain)
             dependencies {
+                implementation(libs.skikoJs)
                 implementation project(":compose:foundation:foundation")
                 implementation project(":compose:foundation:foundation-layout")
                 implementation project(":compose:runtime:runtime")

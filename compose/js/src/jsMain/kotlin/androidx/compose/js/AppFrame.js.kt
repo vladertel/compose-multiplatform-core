@@ -46,7 +46,7 @@ abstract class AppFrame {
      * Gets the title of the window. The title is displayed in the windows's native border.
      */
     val title: String
-        get() = window.title
+        get() = ""//window.title
 
 /*
     /**

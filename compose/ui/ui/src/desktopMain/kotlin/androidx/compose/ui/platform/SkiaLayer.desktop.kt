@@ -47,11 +47,12 @@ import org.jetbrains.skia.Picture
 import org.jetbrains.skia.PictureRecorder
 import org.jetbrains.skia.Point3
 import org.jetbrains.skia.ShadowUtils
+import androidx.compose.ui.node.InvokeOnCanvas
 
 internal class SkiaLayer(
     private var density: Density,
     private val invalidateParentLayer: () -> Unit,
-    private val drawBlock: (Canvas) -> Unit,
+    private val drawBlock: InvokeOnCanvas,
     private val onDestroy: () -> Unit = {}
 ) : OwnedLayer {
     private var size = IntSize.Zero
@@ -252,7 +253,7 @@ internal class SkiaLayer(
                 canvas.save()
             }
 
-            drawBlock(canvas)
+            drawBlock.invoke(canvas)
             canvas.restore()
             if (clip) {
                 canvas.restore()

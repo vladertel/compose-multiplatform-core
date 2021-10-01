@@ -29,10 +29,12 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -63,8 +65,8 @@ val DarkDefaultContextMenuRepresentation = DefaultContextMenuRepresentation(
     itemHoverColor = Color.White.copy(alpha = 0.04f)
 )
 
-internal actual val BasicContextMenuRepresentation: ContextMenuRepresentation =
-    LightDefaultContextMenuRepresentation
+internal actual val LocalContextMenuRepresentation: ProvidableCompositionLocal<ContextMenuRepresentation> =
+    staticCompositionLocalOf { LightDefaultContextMenuRepresentation }
 
 @ExperimentalFoundationApi
 @OptIn(ExperimentalComposeUiApi::class)

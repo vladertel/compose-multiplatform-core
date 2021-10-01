@@ -122,7 +122,7 @@ class AppWindow : AppFrame {
         //    "AppWindow should be created inside AWT Event Thread (use SwingUtilities.invokeLater " +
         //        "or just dsl for creating window: Window { })"
         // }
-        window = ComposeWindow(parent = this)
+        window = ComposeWindow()//(parent = this)
         /*
         window.apply {
             defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
@@ -285,7 +285,7 @@ class AppWindow : AppFrame {
      * @param title Window title text.
      */
     override fun setTitle(title: String) {
-        window.setTitle(title)
+        //window.setTitle(title)
     }
 /*
     /**

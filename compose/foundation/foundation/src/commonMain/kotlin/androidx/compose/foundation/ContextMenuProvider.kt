@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -205,10 +206,8 @@ interface ContextMenuRepresentation {
     fun Representation(state: ContextMenuState, data: ContextMenuData)
 }
 
-internal expect val BasicContextMenuRepresentation: ContextMenuRepresentation
-
 @ExperimentalFoundationApi
-val LocalContextMenuRepresentation = staticCompositionLocalOf { BasicContextMenuRepresentation }
+internal expect val LocalContextMenuRepresentation: ProvidableCompositionLocal<ContextMenuRepresentation>
 
 internal suspend fun AwaitPointerEventScope.awaitEventFirstDown(): PointerEvent {
     var event: PointerEvent

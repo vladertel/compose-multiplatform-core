@@ -42,6 +42,8 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.staticCompositionLocalOf
 
 // TODO: commonize with Desktop.
 // import androidx.compose.ui.window.Popup
@@ -65,8 +67,8 @@ val DarkDefaultContextMenuRepresentation = DefaultContextMenuRepresentation(
     itemHoverColor = Color.White.copy(alpha = 0.04f)
 )
 
-internal actual val BasicContextMenuRepresentation: ContextMenuRepresentation =
-    LightDefaultContextMenuRepresentation
+internal actual val LocalContextMenuRepresentation: ProvidableCompositionLocal<ContextMenuRepresentation> =
+    staticCompositionLocalOf { LightDefaultContextMenuRepresentation }
 
 @ExperimentalFoundationApi
 @OptIn(ExperimentalComposeUiApi::class)

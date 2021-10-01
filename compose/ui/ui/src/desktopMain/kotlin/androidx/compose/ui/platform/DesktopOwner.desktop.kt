@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.node.InvokeOnCanvas
 
 private typealias Command = () -> Unit
 
@@ -273,7 +274,7 @@ internal class DesktopOwner(
     }
 
     override fun createLayer(
-        drawBlock: (Canvas) -> Unit,
+        drawBlock: InvokeOnCanvas,
         invalidateParentLayer: () -> Unit
     ) = SkiaLayer(
         density,
