@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package androidx.compose.ui.input.pointer
 
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalPointerIconService
@@ -23,6 +26,7 @@ import androidx.compose.ui.platform.LocalPointerIconService
 /**
  * Represents a pointer icon to use in [Modifier.pointerHoverIcon]
  */
+@ExperimentalComposeUiApi
 interface PointerIcon {
     companion object {
         val Default = pointerIconDefault
@@ -50,6 +54,7 @@ internal interface PointerIconService {
  * @param enforce if true parent's PointerIcon overrides children's. To set
  * "default" PointerIcon that could be overridden by children set enforce to false.
  */
+@ExperimentalComposeUiApi
 fun Modifier.pointerHoverIcon(icon: PointerIcon, enforce: Boolean = true) =
     composed {
         val pointerIconService = LocalPointerIconService.current
