@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalFoundationApi::class)
-
 package androidx.compose.foundation
 
 import androidx.compose.foundation.layout.Column
@@ -51,14 +49,12 @@ import androidx.compose.ui.window.rememberCursorPositionProvider
 // https://material.io/design/interaction/states.html#hover
 // https://material.io/components/menus#specs
 
-@ExperimentalFoundationApi
 val LightDefaultContextMenuRepresentation = DefaultContextMenuRepresentation(
     backgroundColor = Color.White,
     textColor = Color.Black,
     itemHoverColor = Color.Black.copy(alpha = 0.04f)
 )
 
-@ExperimentalFoundationApi
 val DarkDefaultContextMenuRepresentation = DefaultContextMenuRepresentation(
     backgroundColor = Color(0xFF121212), // like surface in darkColors
     textColor = Color.White,
@@ -70,7 +66,6 @@ internal actual val LocalContextMenuRepresentation:
         LightDefaultContextMenuRepresentation
     }
 
-@ExperimentalFoundationApi
 @OptIn(ExperimentalComposeUiApi::class)
 class DefaultContextMenuRepresentation(
     private val backgroundColor: Color,

@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalComposeUiApi::class)
-
 package androidx.compose.ui.input.pointer
 
-import androidx.compose.ui.ExperimentalComposeUiApi
 import java.awt.Cursor
 
 internal class AwtCursor(val cursor: Cursor) : PointerIcon {
@@ -45,7 +42,6 @@ internal class AwtCursor(val cursor: Cursor) : PointerIcon {
 /**
  * Creates [PointerIcon] from [Cursor]
  */
-@ExperimentalComposeUiApi
 fun PointerIcon(cursor: Cursor): PointerIcon = AwtCursor(cursor)
 
 internal actual val pointerIconDefault: PointerIcon = AwtCursor(Cursor(Cursor.DEFAULT_CURSOR))
