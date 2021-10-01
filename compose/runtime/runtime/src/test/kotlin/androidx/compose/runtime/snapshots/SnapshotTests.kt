@@ -732,22 +732,24 @@ class SnapshotTests {
     // Regression test for b/199921314
     // This test lifted directly from the bug reported by chrnie@foxmail.com, modified and formatted
     // to avoid lint warnings.
-    @Test(expected = IllegalStateException::class)
+    //@Test(expected = IllegalStateException::class) was moved to assertFailsWith<IllegalStateException>, to make js tests work
     fun testTakeSnapshotNested() {
-        Snapshot.withMutableSnapshot {
-            val expectReadonlySnapshot = Snapshot.takeSnapshot()
-            try {
-                expectReadonlySnapshot.enter {
-                    var state by mutableStateOf(0)
+        assertFailsWith<IllegalStateException> {
+            Snapshot.withMutableSnapshot {
+                val expectReadonlySnapshot = Snapshot.takeSnapshot()
+                try {
+                    expectReadonlySnapshot.enter {
+                        var state by mutableStateOf(0)
 
-                    // expect throw IllegalStateException:Cannot modify a state object in a
-                    // read-only snapshot
-                    state = 1
+                        // expect throw IllegalStateException:Cannot modify a state object in a
+                        // read-only snapshot
+                        state = 1
 
-                    assertEquals(1, state)
+                        assertEquals(1, state)
+                    }
+                } finally {
+                    expectReadonlySnapshot.dispose()
                 }
-            } finally {
-                expectReadonlySnapshot.dispose()
             }
         }
     }
