@@ -17,7 +17,9 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.ExperimentalComposeUiApi
 
+@ExperimentalComposeUiApi
 interface PlatformLocalization {
     val copy: String
     val cut: String
@@ -25,6 +27,7 @@ interface PlatformLocalization {
     val selectAll: String
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 internal val defaultPlatformLocalization = object : PlatformLocalization {
     override val copy = "Copy"
     override val cut = "Cut"
@@ -32,6 +35,7 @@ internal val defaultPlatformLocalization = object : PlatformLocalization {
     override val selectAll = "Select All"
 }
 
+@ExperimentalComposeUiApi
 val LocalLocalization = staticCompositionLocalOf {
     defaultPlatformLocalization
 }
