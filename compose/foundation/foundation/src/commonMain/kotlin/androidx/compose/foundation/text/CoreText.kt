@@ -102,7 +102,7 @@ private typealias InlineContentRange = AnnotatedString.Range<@Composable (String
  * functionality to the text. For example, to draw selection around the text.
  */
 @Composable
-@OptIn(InternalFoundationTextApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
+@OptIn(InternalFoundationTextApi::class)
 internal fun CoreText(
     text: AnnotatedString,
     modifier: Modifier = Modifier,

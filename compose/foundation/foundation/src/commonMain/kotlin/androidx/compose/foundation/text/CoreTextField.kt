@@ -160,7 +160,7 @@ import kotlin.math.roundToInt
  * innerTextField exactly once.
  */
 @Composable
-@OptIn(InternalFoundationTextApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
+@OptIn(InternalFoundationTextApi::class)
 internal fun CoreTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
