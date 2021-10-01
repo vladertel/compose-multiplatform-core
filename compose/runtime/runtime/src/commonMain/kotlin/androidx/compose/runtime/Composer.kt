@@ -866,6 +866,14 @@ interface Composer {
     /**
      * A Compose internal function. DO NOT call directly.
      *
+     * Return all current [ProvidableCompositionLocal]'s provided by [CompositionLocalProvider]'s.
+     */
+    @InternalComposeApi
+    val currentCompositionLocals: Set<ProvidableCompositionLocal<Any?>> get() = emptySet()
+
+    /**
+     * A Compose internal function. DO NOT call directly.
+     *
      * Provide the given values for the associated [CompositionLocal] keys. This is the primitive
      * function used to implement [CompositionLocalProvider].
      *
@@ -1748,6 +1756,11 @@ internal class ComposerImpl(
     @InternalComposeApi
     override fun <T> consume(key: CompositionLocal<T>): T =
         resolveCompositionLocal(key, currentCompositionLocalScope())
+
+    @Suppress("UNCHECKED_CAST")
+    @InternalComposeApi
+    override val currentCompositionLocals: Set<ProvidableCompositionLocal<Any?>> get() =
+        currentCompositionLocalScope().keys as Set<ProvidableCompositionLocal<Any?>>
 
     /**
      * Create or use a memoized [CompositionContext] instance at this position in the slot table.

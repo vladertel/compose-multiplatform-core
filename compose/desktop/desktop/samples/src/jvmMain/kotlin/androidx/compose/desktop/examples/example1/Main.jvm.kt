@@ -18,6 +18,8 @@ package androidx.compose.desktop.examples.example1
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.TweenSpec
+import androidx.compose.foundation.ContextMenuDataProvider
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
@@ -90,6 +92,8 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -196,7 +200,7 @@ private fun FrameWindowScope.LeftColumn(modifier: Modifier) = Box(modifier.fillM
     )
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
     val amount = remember { mutableStateOf(0f) }
@@ -366,7 +370,7 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Button(
-                modifier = Modifier.padding(4.dp),
+                modifier = Modifier.padding(4.dp).pointerHoverIcon(PointerIcon.Hand),
                 onClick = {
                     amount.value++
                 }
@@ -456,30 +460,36 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
         val text = remember {
             mutableStateOf("Hello \uD83E\uDDD1\uD83C\uDFFF\u200D\uD83E\uDDB0")
         }
-        TextField(
-            value = text.value,
-            onValueChange = { text.value = it },
-            label = { Text(text = "Input2") },
-            placeholder = {
-                Text(text = "Important input")
-            },
-            maxLines = 1,
-            modifier = Modifier.onPreviewKeyEvent {
-                when {
-                    (it.isMetaPressed && it.key == Key.Enter) -> {
-                        if (it.isShiftPressed) {
-                            text.value = "Cleared with shift!"
-                        } else {
-                            text.value = "Cleared!"
-                        }
-                        true
-                    }
-                    else -> false
-                }
-            }.focusOrder(focusItem1) {
-                next = focusItem2
+        ContextMenuDataProvider(
+            items = {
+                listOf(ContextMenuItem("Clear") { text.value = ""; focusItem1.requestFocus() })
             }
-        )
+        ) {
+            TextField(
+                value = text.value,
+                onValueChange = { text.value = it },
+                label = { Text(text = "Input2") },
+                placeholder = {
+                    Text(text = "Important input")
+                },
+                maxLines = 1,
+                modifier = Modifier.onPreviewKeyEvent {
+                    when {
+                        (it.isMetaPressed && it.key == Key.Enter) -> {
+                            if (it.isShiftPressed) {
+                                text.value = "Cleared with shift!"
+                            } else {
+                                text.value = "Cleared!"
+                            }
+                            true
+                        }
+                        else -> false
+                    }
+                }.focusOrder(focusItem1) {
+                    next = focusItem2
+                }
+            )
+        }
 
         var text2 by remember {
             val initText = buildString {

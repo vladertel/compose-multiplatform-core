@@ -63,6 +63,7 @@ package androidx.compose.runtime {
     method @androidx.compose.runtime.Composable public static inline void ReusableContent(Object? key, kotlin.jvm.functions.Function0<kotlin.Unit> content);
     method @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable public static androidx.compose.runtime.Composer getCurrentComposer();
     method @androidx.compose.runtime.Composable @androidx.compose.runtime.ExplicitGroupsComposable public static int getCurrentCompositeKeyHash();
+    method @androidx.compose.runtime.Composable public static java.util.Set<androidx.compose.runtime.ProvidableCompositionLocal<java.lang.Object>> getCurrentCompositionLocals();
     method @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable public static androidx.compose.runtime.RecomposeScope getCurrentRecomposeScope();
     method @kotlin.PublishedApi internal static void invalidApplier();
     method @androidx.compose.runtime.Composable public static inline <T> T! key(Object![]? keys, kotlin.jvm.functions.Function0<? extends T> block);
@@ -102,6 +103,7 @@ package androidx.compose.runtime {
     method @org.jetbrains.annotations.TestOnly public androidx.compose.runtime.ControlledComposition getComposition();
     method public androidx.compose.runtime.tooling.CompositionData getCompositionData();
     method public int getCompoundKeyHash();
+    method public default java.util.Set<androidx.compose.runtime.ProvidableCompositionLocal<java.lang.Object>> getCurrentCompositionLocals();
     method public boolean getDefaultsInvalid();
     method public boolean getInserting();
     method public androidx.compose.runtime.RecomposeScope? getRecomposeScope();
@@ -127,6 +129,7 @@ package androidx.compose.runtime {
     property @org.jetbrains.annotations.TestOnly public abstract androidx.compose.runtime.ControlledComposition composition;
     property public abstract androidx.compose.runtime.tooling.CompositionData compositionData;
     property public abstract int compoundKeyHash;
+    property public default java.util.Set<androidx.compose.runtime.ProvidableCompositionLocal<java.lang.Object>> currentCompositionLocals;
     property public abstract boolean defaultsInvalid;
     property public abstract boolean inserting;
     property public abstract androidx.compose.runtime.RecomposeScope? recomposeScope;

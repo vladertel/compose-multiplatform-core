@@ -84,7 +84,11 @@ import androidx.compose.ui.input.key.KeyInputModifier
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.AndroidPointerIcon
+import androidx.compose.ui.input.pointer.AndroidPointerIconType
 import androidx.compose.ui.input.pointer.MotionEventAdapter
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
 import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.ProcessResult
@@ -879,6 +883,7 @@ internal class AndroidComposeView(context: Context) :
             recalculateWindowPosition(motionEvent)
             forceUseMatrixCache = true
             measureAndLayout()
+            desiredPointerIcon = null
             val result = trace("AndroidOwner:onTouch") {
                 val pointerInputEvent =
                     motionEventAdapter.convertToPointerInputEvent(motionEvent, this)
@@ -897,6 +902,7 @@ internal class AndroidComposeView(context: Context) :
                 }
             }
             previousPosition = Offset(motionEvent.rawX, motionEvent.rawY)
+            setPointerIcon()
             return result
         } finally {
             forceUseMatrixCache = false
@@ -1071,6 +1077,34 @@ internal class AndroidComposeView(context: Context) :
             }
         }
         return null
+    }
+
+    var desiredPointerIcon: PointerIcon? = null
+
+    override val pointerIconService: PointerIconService =
+        object : PointerIconService {
+            override fun getCurrent(): PointerIcon {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
+                    return PointerIcon.Default
+                return desiredPointerIcon
+                    ?: view.pointerIcon?.let { AndroidPointerIcon(it) }
+                    ?: PointerIcon.Default
+            }
+
+            override fun set(icon: PointerIcon) {
+                desiredPointerIcon = icon
+            }
+        }
+
+    private fun setPointerIcon() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
+        val icon = desiredPointerIcon
+        when (icon) {
+            is AndroidPointerIcon ->
+                view.pointerIcon = icon.pointerIcon
+            is AndroidPointerIconType ->
+                view.pointerIcon = android.view.PointerIcon.getSystemIcon(context, icon.type)
+        }
     }
 
     /**

@@ -41,6 +41,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.IntrinsicMeasurable
@@ -100,7 +102,7 @@ private typealias InlineContentRange = AnnotatedString.Range<@Composable (String
  * functionality to the text. For example, to draw selection around the text.
  */
 @Composable
-@OptIn(InternalFoundationTextApi::class)
+@OptIn(InternalFoundationTextApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 internal fun CoreText(
     text: AnnotatedString,
     modifier: Modifier = Modifier,
@@ -204,7 +206,7 @@ internal fun CoreText(
                                 controller.mouseSelectionObserver
                             )
                         }
-                    }
+                    }.pointerHoverIcon(PointerIcon.Text)
                 } else {
                     Modifier
                 }

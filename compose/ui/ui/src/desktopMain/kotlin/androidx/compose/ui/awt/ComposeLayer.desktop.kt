@@ -17,7 +17,6 @@
 package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionContext
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.mouse.MouseScrollOrientation
@@ -34,6 +33,7 @@ import kotlinx.coroutines.swing.Swing
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkiaRenderer
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Point
@@ -47,6 +47,7 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import java.awt.event.MouseWheelEvent
 import java.awt.im.InputMethodRequests
+import javax.accessibility.Accessible
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
@@ -67,9 +68,12 @@ internal class ComposeLayer {
         _component::needRedraw
     )
 
+    internal val mainOwner
+        get() = owners.mainOwner
+
     private val density get() = _component.density.density
 
-    private inner class ComponentImpl : SkiaLayer(), DesktopComponent {
+    private inner class ComponentImpl : SkiaLayer(), Accessible, DesktopComponent {
         var currentInputMethodRequests: InputMethodRequests? = null
 
         override fun addNotify() {
@@ -84,6 +88,9 @@ internal class ComposeLayer {
         }
 
         override fun getInputMethodRequests() = currentInputMethodRequests
+        override var componentCursor: Cursor
+            get() = super.getCursor()
+            set(value) { super.setCursor(value) }
 
         override fun enableInput(inputMethodRequests: InputMethodRequests) {
             currentInputMethodRequests = inputMethodRequests
@@ -208,7 +215,6 @@ internal class ComposeLayer {
     }
 
     fun setContent(
-        parentComposition: CompositionContext? = null,
         onPreviewKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
         onKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
         content: @Composable () -> Unit
@@ -218,7 +224,6 @@ internal class ComposeLayer {
         // (we don't know the real density if we have unattached component)
         _initContent = {
             owners.setContent(
-                parentComposition,
                 onPreviewKeyEvent = onPreviewKeyEvent,
                 onKeyEvent = onKeyEvent,
                 content = content

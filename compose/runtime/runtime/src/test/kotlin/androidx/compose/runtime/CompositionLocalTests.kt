@@ -560,6 +560,132 @@ class CompositionLocalTests {
             assertEquals(it, n[it])
         }
     }
+
+    @OptIn(ExperimentalComposeApi::class)
+    @Test
+    fun testGetProvidedCompositionLocals() = compositionTest {
+        val local1 = compositionLocalOf { 0 }
+        val local2 = compositionLocalOf { 0 }
+        val static1 = staticCompositionLocalOf { 0 }
+        val static2 = staticCompositionLocalOf { 0 }
+
+        var provided: Array<ProvidedValue<Int>> by mutableStateOf(emptyArray())
+
+        var actualLocals: Set<ProvidableCompositionLocal<*>> = emptySet()
+
+        @Composable
+        fun LocalsConsumer() {
+            actualLocals = currentCompositionLocals
+        }
+
+        compose {
+            CompositionLocalProvider(*provided) {
+                LocalsConsumer()
+            }
+        }
+
+        advance()
+        assertEquals(emptySet(), actualLocals)
+
+        provided = arrayOf(local1 provides 0)
+        advance()
+        assertEquals(setOf(local1), actualLocals)
+
+        provided = arrayOf(local1 provides 0, static1 provides 0)
+        advance()
+        assertEquals(setOf(local1, static1), actualLocals)
+
+        provided = arrayOf(local1 provides 0, static2 provides 0, static1 provides 0)
+        advance()
+        assertEquals(setOf(local1, static2, static1), actualLocals)
+
+        provided = arrayOf(static2 provides 0, local1 provides 0, static1 provides 0)
+        advance()
+        assertEquals(setOf(static2, local1, static1), actualLocals)
+
+        provided = arrayOf(static2 provides 0, local1 provides 3, static1 provides 0)
+        advance()
+        assertEquals(setOf(static2, local1, static1), actualLocals)
+
+        provided = arrayOf(local1 provides 0, local2 provides 0)
+        advance()
+        assertEquals(setOf(local1, local2), actualLocals)
+
+        provided = emptyArray()
+        advance()
+        assertEquals(emptySet(), actualLocals)
+    }
+
+    @OptIn(ExperimentalComposeApi::class)
+    @Test
+    fun testGetNestedProvidedCompositionLocals() = compositionTest {
+        val local1 = compositionLocalOf { 0 }
+        val local2 = compositionLocalOf { 0 }
+        val static = staticCompositionLocalOf { 0 }
+
+        var provided1: Array<ProvidedValue<Int>> by mutableStateOf(emptyArray())
+        var provided2: Array<ProvidedValue<Int>> by mutableStateOf(emptyArray())
+
+        var actualLocals: Set<ProvidableCompositionLocal<*>> = emptySet()
+
+        @Composable
+        fun LocalsConsumer() {
+            actualLocals = currentCompositionLocals
+        }
+
+        compose {
+            CompositionLocalProvider(*provided1) {
+                CompositionLocalProvider(*provided2) {
+                    LocalsConsumer()
+                }
+            }
+        }
+
+        advance()
+        assertEquals(emptySet(), actualLocals)
+
+        provided1 = arrayOf(local1 provides 0)
+        advance()
+        assertEquals(setOf(local1), actualLocals)
+
+        provided2 = arrayOf(local2 provides 0)
+        advance()
+        assertEquals(setOf(local1, local2), actualLocals)
+
+        provided1 = arrayOf(local2 provides 0, local1 provides 0)
+        advance()
+        assertEquals(setOf(local2, local1), actualLocals)
+
+        provided1 = arrayOf(local2 provides 0, local1 provides 0, static provides 0)
+        advance()
+        assertEquals(setOf(local2, local1, static), actualLocals)
+
+        provided1 = emptyArray()
+        advance()
+        assertEquals(setOf(local2), actualLocals)
+
+        provided2 = emptyArray()
+        advance()
+        assertEquals(emptySet(), actualLocals)
+    }
+
+    @OptIn(ExperimentalComposeApi::class)
+    @Test
+    fun testGetNonProvidedCompositionLocals() = compositionTest {
+        var actualLocals: Set<ProvidableCompositionLocal<*>> = emptySet()
+
+        @Composable
+        fun LocalsConsumer() {
+            actualLocals = currentCompositionLocals
+        }
+
+        compose {
+            LocalsConsumer()
+        }
+
+        advance()
+        assertEquals(emptySet(), actualLocals)
+    }
 }
 
 data class SomeData(val value: String = "default")
