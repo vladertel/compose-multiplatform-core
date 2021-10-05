@@ -150,7 +150,7 @@ jobs:
 
       - name: "Test ui:ui-graphics"
         id: find-affected-modules
-        if: ${{ needs.lint.outputs.affectedFileArgs != '' }}
+        if: always() #${{ needs.lint.outputs.affectedFileArgs != '' }}
         uses: gradle/gradle-command-action@v1
         env:
           JAVA_HOME: ${{ steps.setup-java.outputs.path }}
