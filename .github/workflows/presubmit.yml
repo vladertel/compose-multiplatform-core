@@ -1,11 +1,7 @@
 name: AndroidX Presubmits
 on:
   push:
-    branches:
-      - test_cls3
   pull_request:
-    branches:
-      - test_cls3
 
 jobs:
   setup:
