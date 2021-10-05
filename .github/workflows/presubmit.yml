@@ -156,7 +156,7 @@ jobs:
           JAVA_HOME: ${{ steps.setup-java.outputs.path }}
           JAVA_TOOLS_JAR: ${{ steps.setup-tools-jar.outputs.toolsJar }}
         with:
-          arguments: -q :compose:ui:ui-graphics:test
+          arguments: :compose:ui:ui-graphics:test
           configuration-cache-enabled: false
           dependencies-cache-enabled: false
           distributions-cache-enabled: false
