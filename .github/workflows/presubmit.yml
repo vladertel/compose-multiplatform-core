@@ -151,14 +151,15 @@ jobs:
       - name: "Test ui:ui-graphics"
         id: find-affected-modules
         if: always() #${{ needs.lint.outputs.affectedFileArgs != '' }}
-        uses: gradle/gradle-command-action@v1
+        uses: gradle/gradle-build-action@v2
         env:
           JAVA_HOME: ${{ steps.setup-java.outputs.path }}
           JAVA_TOOLS_JAR: ${{ steps.setup-tools-jar.outputs.toolsJar }}
         with:
+          gradle-version: 7.2
           arguments: :compose:ui:ui-graphics:test
           configuration-cache-enabled: false
           dependencies-cache-enabled: false
           distributions-cache-enabled: false
-          gradle-executable: gradlew
-          wrapper-directory: gradle/wrapper
+#          gradle-executable: gradlew
+#          wrapper-directory: gradle/wrapper
