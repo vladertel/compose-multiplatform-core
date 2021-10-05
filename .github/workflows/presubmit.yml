@@ -1,7 +1,11 @@
 name: AndroidX Presubmits
 on:
   push:
+    branches:
+      - test_cl3
   pull_request:
+    branches:
+      - test_cl3
 
 jobs:
   setup:
@@ -46,12 +50,6 @@ jobs:
       status: ${{ steps.output-status.outputs.status }}
       affectedFileArgs: ${{ steps.affected-file-args.outputs.files }}
     steps:
-      - name: Pull request format
-        uses: 'androidx/check-pr-format-action@main'
-        with:
-          # Enforces a `Test: <stanza>` in the pull request
-          checks: '["(.*)?Test:(.*)?"]'
-
       - name: "Setup JDK 11"
         id: setup-java
         uses: actions/setup-java@v1
