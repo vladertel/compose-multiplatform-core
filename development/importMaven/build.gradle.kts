@@ -108,6 +108,13 @@ repositories {
         }
     }
 
+        maven {
+            url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
+            metadataSources {
+                artifact()
+            }
+        }
+
     val allowJetbrainsDev: String? = findProperty("allowJetbrainsDev") as String?
     if (allowJetbrainsDev != null) {
         maven {
