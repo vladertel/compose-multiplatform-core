@@ -43,3 +43,4 @@ androidx {
     inceptionYear = "2020"
     description = "Contains the sample code for the Androidx Paging library compose interop"
 }
+
