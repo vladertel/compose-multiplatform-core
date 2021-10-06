@@ -81,6 +81,16 @@ android {
     sourceSets {
         androidTest.assets.srcDirs += project.rootDir.absolutePath + "/../../golden/glance/glance-wear"
     }
+
+    packagingOptions {
+        pickFirst("kotlin/coroutines/coroutines.kotlin_builtins")
+        pickFirst("kotlin/kotlin.kotlin_builtins")
+        pickFirst("kotlin/internal/internal.kotlin_builtins")
+        pickFirst("kotlin/ranges/ranges.kotlin_builtins")
+        pickFirst("kotlin/reflect/reflect.kotlin_builtins")
+        pickFirst("kotlin/collections/collections.kotlin_builtins")
+        pickFirst("kotlin/annotation/annotation.kotlin_builtins")
+    }
 }
 
 androidx {
