@@ -185,6 +185,9 @@ fun Stability.normalize(): Stability {
                 }
             }
             is Stability.Runtime -> parts.add(stability)
+            is Stability.Unknown -> {
+                /* do nothing */
+            }
         }
     }
     return Stability.Combined(parts)
