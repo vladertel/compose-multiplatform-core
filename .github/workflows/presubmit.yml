@@ -1,7 +1,11 @@
 name: AndroidX Presubmits
 on:
   push:
+    branches:
+      - test_cls*
   pull_request:
+    branches:
+      - test_cls*
 
 jobs:
   setup:
@@ -47,6 +51,7 @@ jobs:
       affectedFileArgs: ${{ steps.affected-file-args.outputs.files }}
     steps:
       - name: Pull request format
+        if: ${{ false }}
         uses: 'androidx/check-pr-format-action@main'
         with:
           # Enforces a `Test: <stanza>` in the pull request
@@ -126,6 +131,7 @@ jobs:
           wrapper-directory: activity/gradle/wrapper
           distributions-cache-enabled: false
   build-modules:
+    if: ${{ false }}
     strategy:
       fail-fast: false
       matrix:
