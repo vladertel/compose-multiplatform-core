@@ -242,6 +242,9 @@ internal class SkiaLayer(
                     is Outline.Rectangle -> canvas.clipRect(outline.rect)
                     is Outline.Rounded -> canvas.clipRoundRect(outline.roundRect)
                     is Outline.Generic -> canvas.clipPath(outline.path)
+                    null -> {
+                        // Nothing
+                    }
                 }
             }
 
