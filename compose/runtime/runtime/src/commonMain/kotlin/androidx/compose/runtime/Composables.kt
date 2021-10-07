@@ -36,6 +36,14 @@ inline fun <T> remember(
     return currentComposer.cache(currentComposer.changed(key1), calculation)
 }
 
+@Composable
+fun <T> remember2(
+    key1: Any?,
+    calculation: @DisallowComposableCalls () -> T
+): T {
+    return currentComposer.cache(currentComposer.changed(key1), calculation)
+}
+
 /**
  * Remember the value returned by [calculation] if [key1] and [key2] are equal to the previous
  * composition, otherwise produce and remember a new value by calling [calculation].
