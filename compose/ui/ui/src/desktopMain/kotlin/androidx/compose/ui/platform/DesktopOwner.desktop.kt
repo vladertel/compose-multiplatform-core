@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
+import java.awt.Cursor
 
 private typealias Command = () -> Unit
 
@@ -330,7 +331,8 @@ internal class DesktopOwner(
         root.draw(canvas.asComposeCanvas())
     }
 
-    var desiredPointerIcon: PointerIcon? = null
+    private var desiredPointerIcon: PointerIcon? = null
+    private val defaultCursor = Cursor(Cursor.DEFAULT_CURSOR)
 
     internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
         measureAndLayout()
@@ -346,6 +348,9 @@ internal class DesktopOwner(
             val icon = desiredPointerIcon
             when (icon) {
                 is AwtCursor -> containerCursor?.componentCursor = icon.cursor
+                else -> if (containerCursor?.componentCursor != defaultCursor) {
+                    containerCursor?.componentCursor = defaultCursor
+                }
             }
         }
     }
@@ -381,13 +386,8 @@ internal class DesktopOwner(
 
     override val pointerIconService: PointerIconService =
         object : PointerIconService {
-            override fun getCurrent(): PointerIcon =
-                desiredPointerIcon
-                    ?: containerCursor?.let { AwtCursor(it.componentCursor) }
-                    ?: PointerIcon.Default
-
-            override fun set(icon: PointerIcon) {
-                desiredPointerIcon = icon
-            }
+            override var current: PointerIcon
+                get() = desiredPointerIcon ?: PointerIcon.Default
+                set(value) { desiredPointerIcon = value }
         }
 }
