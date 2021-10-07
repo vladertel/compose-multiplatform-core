@@ -37,7 +37,7 @@ inline fun <T> remember(
 }
 
 @Composable
-fun <T> remember2(
+private fun <T> remember2(
     key1: Any?,
     calculation: @DisallowComposableCalls () -> T
 ): T {
