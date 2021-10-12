@@ -45,7 +45,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runTest
+import kotlinx.test._runBlocking
+import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.test.IgnoreJsTarget
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -2011,8 +2013,8 @@ class CompositionTests {
         assertArrayEquals(listOf(observed), abandonedObjects)
     }
 
-    @Test @OptIn(ExperimentalCoroutinesApi::class)
-    fun testRememberedObserver_Controlled_Dispose() = runTest {
+    @Test
+    fun testRememberedObserver_Controlled_Dispose() = _runBlocking {
         val recomposer = Recomposer(coroutineContext)
         val root = View()
         val controlled = ControlledComposition(ViewApplier(root), recomposer)
