@@ -18,6 +18,7 @@ package androidx.compose.runtime.collection
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -247,9 +248,11 @@ class MutableVectorTest {
         assertEquals(1, list.first())
     }
 
-    @Test(expected = NoSuchElementException::class)
+    @Test
     fun firstException() {
-        mutableVectorOf<String>().first()
+        assertFailsWith(NoSuchElementException::class) {
+            mutableVectorOf<String>().first()
+        }
     }
 
     @Test
@@ -264,9 +267,11 @@ class MutableVectorTest {
         assertEquals(1, mutableVectorOf(1, 5).first { it != 0 })
     }
 
-    @Test(expected = NoSuchElementException::class)
+    @Test
     fun firstWithPredicateException() {
-        mutableVectorOf<String>().first { it == "Hello" }
+        assertFailsWith(NoSuchElementException::class) {
+            mutableVectorOf<String>().first { it == "Hello" }
+        }
     }
 
     @Test
@@ -280,9 +285,11 @@ class MutableVectorTest {
         assertEquals(5, list.last())
     }
 
-    @Test(expected = NoSuchElementException::class)
+    @Test
     fun lastException() {
-        mutableVectorOf<String>().last()
+        assertFailsWith(NoSuchElementException::class) {
+            mutableVectorOf<String>().last()
+        }
     }
 
     @Test
@@ -297,9 +304,11 @@ class MutableVectorTest {
         assertEquals(5, mutableVectorOf(1, 5).last { it != 0 })
     }
 
-    @Test(expected = NoSuchElementException::class)
+    @Test
     fun lastWithPredicateException() {
-        mutableVectorOf<String>().last { it == "Hello" }
+        assertFailsWith(NoSuchElementException::class) {
+            mutableVectorOf<String>().last { it == "Hello" }
+        }
     }
 
     @Test
