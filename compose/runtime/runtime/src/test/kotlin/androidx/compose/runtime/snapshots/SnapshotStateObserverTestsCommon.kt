@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,16 @@
 package androidx.compose.runtime.snapshots
 
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import kotlin.concurrent.thread
+import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.runtime.snapshots.SnapshotStateObserver
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class SnapshotStateObserverTests {
+class SnapshotStateObserverTestsCommon {
 
     @Test
     fun stateChangeTriggersCallback() {
@@ -285,185 +285,6 @@ class SnapshotStateObserverTests {
         }
         assertEquals(0, changes1)
         assertEquals(1, changes2)
-    }
-
-    @Test // regression test for 192677711
-    fun tryToReproduceRaceCondition() {
-        var running = true
-        var threadException: Exception? = null
-        try {
-            thread {
-                try {
-                    while (running) {
-                        Snapshot.sendApplyNotifications()
-                    }
-                } catch (e: Exception) {
-                    threadException = e
-                }
-            }
-
-            for (i in 1..10000) {
-                val state1 by mutableStateOf(0)
-                var state2 by mutableStateOf(true)
-                val observer = SnapshotStateObserver({}).apply {
-                    start()
-                }
-                repeat(1000) {
-                    observer.observeReads(Unit, {}) {
-                        @Suppress("UNUSED_EXPRESSION")
-                        state1
-                        if (state2) {
-                            state2 = false
-                        }
-                    }
-                }
-                assertNull(threadException)
-            }
-        } finally {
-            running = false
-        }
-        assertNull(threadException)
-    }
-
-    @Test // regression test for 192677711, second case
-    fun tryToReproduceSecondRaceCondtion() {
-        var running = true
-        var threadException: Exception? = null
-        try {
-            thread {
-                try {
-                    while (running) {
-                        Snapshot.sendApplyNotifications()
-                    }
-                } catch (e: Exception) {
-                    threadException = e
-                }
-            }
-
-            for (i in 1..10000) {
-                val state1 by mutableStateOf(0)
-                var state2 by mutableStateOf(true)
-                val observer = SnapshotStateObserver({}).apply {
-                    start()
-                }
-                observer.observeReads(Unit, {}) {
-                    repeat(1000) {
-                        @Suppress("UNUSED_EXPRESSION")
-                        state1
-                        if (state2) {
-                            state2 = false
-                        }
-                    }
-                }
-                assertNull(threadException)
-            }
-        } finally {
-            running = false
-        }
-        assertNull(threadException)
-    }
-
-    @Test
-    fun stateChangeTriggersUpdateWhenDerivedStateIsUsedRightAfter() {
-        val data = "data"
-        var changes = 0
-        val derivedState = derivedStateOf { 0 }
-
-        runSimpleTest { stateObserver, state ->
-            stateObserver.observeReads(data, { _ -> changes++ }) {
-                if (state.value == 0) {
-                    state.value++
-                }
-                // derived state read internally calls notifyObjectsInitialized() which triggers
-                // the first onValueChanged invocation.
-                derivedState.value
-            }
-        }
-
-        assertEquals(2, changes)
-    }
-
-    @Test
-    fun nestedObservationIsClearingThePreviousScopesBeforeReexecuting() {
-        val data1 = "data1"
-        val data2 = "data2"
-        var changes = 0
-
-        val stateObserver = SnapshotStateObserver { it() }
-        val state1 = mutableStateOf(true)
-        val state2 = mutableStateOf(0)
-        val onChanged1: (String) -> Unit = { }
-        val onChanged2: (String) -> Unit = { _ -> changes++ }
-
-        fun runObservedBlocks() {
-            // we have nested observations
-            stateObserver.observeReads(data1, onChanged1) {
-                stateObserver.observeReads(data2, onChanged2) {
-                    if (state1.value) {
-                        state2.value++
-                    }
-                }
-            }
-        }
-
-        try {
-            stateObserver.start()
-            Snapshot.notifyObjectsInitialized()
-
-            runObservedBlocks()
-            assertEquals(0, changes)
-
-            state1.value = false
-            Snapshot.sendApplyNotifications()
-            runObservedBlocks()
-            assertEquals(1, changes)
-
-            state2.value++
-            Snapshot.sendApplyNotifications()
-            assertEquals(1, changes)
-        } finally {
-            stateObserver.stop()
-        }
-    }
-
-    @Test
-    fun readingNestedDerivedStateFromAnImmediatelyRerunningObserver() {
-        var changes = 0
-
-        val state = mutableStateOf(0)
-        val derivedState = derivedStateOf { state.value }
-        val nestedDerivedState = derivedStateOf { derivedState.value }
-
-        val stateObserver = SnapshotStateObserver { it() }
-        try {
-            stateObserver.start()
-
-            val observer = object : (Any) -> Unit {
-                override fun invoke(affected: Any) {
-                    assertEquals(this, affected)
-                    assertEquals(0, changes)
-                    changes++
-                    readWithObservation()
-                }
-
-                fun readWithObservation() {
-                    stateObserver.observeReads(this, this) {
-                        // read the value
-                        nestedDerivedState.value
-                    }
-                }
-            }
-
-            state.value++
-            observer.readWithObservation()
-
-            Snapshot.notifyObjectsInitialized()
-            Snapshot.sendApplyNotifications()
-
-            assertEquals(1, changes)
-        } finally {
-            stateObserver.stop()
-        }
     }
 
     private fun runSimpleTest(
