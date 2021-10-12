@@ -58,7 +58,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
 import org.jetbrains.kotlin.gradle.targets.js.KotlinJsCompilerAttribute
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import java.io.File
 import kotlin.reflect.full.memberProperties
 import org.jetbrains.kotlin.gradle.plugin.*
@@ -263,7 +263,9 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                     java.includes.add("**/*.kt")
                 }
                 sourceSets.findByName("test")?.apply {
-                    java.srcDirs("src/test/kotlin")
+                    java.srcDirs(
+                        "src/test/kotlin", "src/commonTest/kotlin", "src/jvmTest/kotlin"
+                    )
                     res.srcDirs("src/test/res")
 
                     // Keep Kotlin files in java source sets so the source set is not empty when
