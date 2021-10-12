@@ -16,14 +16,25 @@
 
 package androidx.compose.runtime
 
+import androidx.compose.runtime.Composition
+import androidx.compose.runtime.ExperimentalComposeApi
+import androidx.compose.runtime.MonotonicFrameClock
+import androidx.compose.runtime.RecomposeScope
+import androidx.compose.runtime.Recomposer
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.UnitApplier
+import androidx.compose.runtime.currentRecomposeScope
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mock.TestMonotonicFrameClock
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher

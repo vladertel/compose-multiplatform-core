@@ -22,14 +22,11 @@ import androidx.compose.runtime.mock.Text
 import androidx.compose.runtime.mock.compositionTest
 import androidx.compose.runtime.mock.expectNoChanges
 import androidx.compose.runtime.snapshots.Snapshot
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.test.IgnoreJsTarget
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -117,6 +114,7 @@ class RecomposerTests {
     }
 
     @Test
+    @IgnoreJsTarget
     fun testRecomposition() = compositionTest {
         val counter = Counter()
         val triggers = mapOf(
