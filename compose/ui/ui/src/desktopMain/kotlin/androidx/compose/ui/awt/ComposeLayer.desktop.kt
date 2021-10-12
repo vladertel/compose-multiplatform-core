@@ -47,6 +47,7 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import java.awt.event.MouseWheelEvent
 import java.awt.im.InputMethodRequests
+import javax.accessibility.Accessible
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
@@ -67,9 +68,12 @@ internal class ComposeLayer {
         _component::needRedraw
     )
 
+    internal val mainOwner
+        get() = owners.mainOwner
+
     private val density get() = _component.density.density
 
-    private inner class ComponentImpl : SkiaLayer(), DesktopComponent {
+    private inner class ComponentImpl : SkiaLayer(), Accessible, DesktopComponent {
         var currentInputMethodRequests: InputMethodRequests? = null
 
         override fun addNotify() {

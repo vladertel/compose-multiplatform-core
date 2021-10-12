@@ -26,6 +26,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.awt.AccessibilityController
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.mouse.MouseScrollEvent
@@ -152,7 +154,7 @@ class ComposeScene internal constructor(
     private val recomposer = Recomposer(coroutineScope.coroutineContext)
     internal val platformInputService: DesktopPlatformInput = DesktopPlatformInput(component)
 
-    private var mainOwner: DesktopOwner? = null
+    internal var mainOwner: DesktopOwner? = null
     private var composition: Composition? = null
 
     /**
@@ -211,6 +213,11 @@ class ComposeScene internal constructor(
         desktopOwner.onNeedsRender = ::invalidateIfNeeded
         desktopOwner.onDispatchCommand = ::dispatchCommand
         desktopOwner.constraints = constraints
+        desktopOwner.accessibilityController =
+            AccessibilityController(
+                desktopOwner,
+                component
+            )
         desktopOwner.containerCursor = component
         invalidateIfNeeded()
         if (desktopOwner.isFocusable) {
