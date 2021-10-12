@@ -17,7 +17,6 @@
 package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionContext
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.mouse.MouseScrollOrientation
@@ -212,7 +211,6 @@ internal class ComposeLayer {
     }
 
     fun setContent(
-        parentComposition: CompositionContext? = null,
         onPreviewKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
         onKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
         content: @Composable () -> Unit
