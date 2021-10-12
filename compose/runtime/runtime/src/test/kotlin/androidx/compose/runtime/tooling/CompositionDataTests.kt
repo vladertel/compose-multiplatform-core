@@ -23,6 +23,7 @@ import androidx.compose.runtime.insert
 import androidx.compose.runtime.nodeGroup
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @OptIn(InternalComposeApi::class)
@@ -167,7 +168,7 @@ class CompositionDataTests {
         assertEquals(List(40) { "$it" }, collected)
     }
 
-    @Test(expected = ConcurrentModificationException::class)
+    @Test
     fun writeDuringIterationCausesException() {
         val slots = SlotTable().also {
             it.write { writer ->
@@ -196,11 +197,13 @@ class CompositionDataTests {
         val groups = slots.compositionGroups.iterator()
         insertAGroup()
 
-        // Expect this to cause an exception
-        groups.next()
+        assertFailsWith(ConcurrentModificationException::class) {
+            // Expect this to cause an exception
+            groups.next()
+        }
     }
 
-    @Test(expected = ConcurrentModificationException::class)
+    @Test
     fun iterationDuringWriteCausesException() {
         val slots = SlotTable().also {
             it.write { writer ->
@@ -222,8 +225,10 @@ class CompositionDataTests {
                 }
                 writer.skipToGroupEnd()
 
-                // Expect this to throw an exception
-                slots.compositionGroups.first()
+                assertFailsWith(ConcurrentModificationException::class) {
+                    // Expect this to throw an exception
+                    slots.compositionGroups.first()
+                }
             }
         }
     }
