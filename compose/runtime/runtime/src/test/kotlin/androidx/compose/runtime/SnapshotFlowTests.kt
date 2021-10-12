@@ -21,15 +21,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.plus
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
+import kotlinx.test._runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @Suppress("RemoveExplicitTypeArguments")
 class SnapshotFlowTests {
     @Test
-    fun observeBasicChanges() = runBlocking<Unit> {
+    fun observeBasicChanges() = _runBlocking {
         var state by mutableStateOf(1)
         var result = 0
 
@@ -51,7 +51,7 @@ class SnapshotFlowTests {
     }
 
     @Test
-    fun coalesceChanges() = runBlocking<Unit> {
+    fun coalesceChanges() = _runBlocking {
         var state by mutableStateOf(1)
         var runCount = 0
 
@@ -80,7 +80,7 @@ class SnapshotFlowTests {
     }
 
     @Test
-    fun ignoreUnrelatedChanges() = runBlocking<Unit> {
+    fun ignoreUnrelatedChanges() = _runBlocking {
         val state by mutableStateOf(1)
         var unrelatedState by mutableStateOf(1)
         var runCount = 0
