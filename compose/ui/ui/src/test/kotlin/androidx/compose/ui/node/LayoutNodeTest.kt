@@ -2310,7 +2310,7 @@ private class MockOwner(
 
     override fun requestFocus(): Boolean = false
 
-    override fun measureAndLayout() {
+    override fun measureAndLayout(sendPointerUpdate: Boolean) {
     }
 
     override fun createLayer(
