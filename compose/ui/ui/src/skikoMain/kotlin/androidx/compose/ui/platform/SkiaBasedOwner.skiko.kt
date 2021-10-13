@@ -272,7 +272,7 @@ internal class SkiaBasedOwner(
     var contentSize = IntSize.Zero
         private set
 
-    override fun measureAndLayout() {
+    override fun measureAndLayout(sendPointerUpdate: Boolean) {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
         if (measureAndLayoutDelegate.measureAndLayout()) {
             requestDraw()
