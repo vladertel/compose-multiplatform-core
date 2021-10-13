@@ -38,6 +38,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.*
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -161,6 +163,31 @@ class RecomposerTestsJvm {
 
             recomposer.close()
         }
+    }
+
+    @Test
+    fun recomposerCancelReportsShuttingDownImmediately() = runBlocking(AutoTestFrameClock()) {
+        val recomposer = Recomposer(coroutineContext)
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            recomposer.runRecomposeAndApplyChanges()
+        }
+
+        // Create a composition with a LaunchedEffect that will need to be resumed for cancellation
+        // before the recomposer can fully join.
+        Composition(UnitApplier(), recomposer).setContent {
+            LaunchedEffect(Unit) {
+                awaitCancellation()
+            }
+        }
+
+        recomposer.cancel()
+        // runBlocking will not dispatch resumed continuations for cancellation yet;
+        // read the current state immediately.
+        val state = recomposer.currentState.value
+        assertTrue(
+            state <= Recomposer.State.ShuttingDown,
+            "recomposer state $state but expected <= ShuttingDown"
+        )
     }
 }
 
