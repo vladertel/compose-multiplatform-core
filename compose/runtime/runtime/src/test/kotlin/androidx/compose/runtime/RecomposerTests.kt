@@ -22,16 +22,9 @@ import androidx.compose.runtime.mock.Text
 import androidx.compose.runtime.mock.compositionTest
 import androidx.compose.runtime.mock.expectNoChanges
 import androidx.compose.runtime.snapshots.Snapshot
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runBlockingTest
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.test.IgnoreJsTarget
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.Test
@@ -275,31 +268,6 @@ class RecomposerTests {
             "testParent",
             child.recomposeCoroutineContext[CoroutineName]?.name,
             "child did not inherit parent recomposeCoroutineContext"
-        )
-    }
-
-    @Test
-    fun recomposerCancelReportsShuttingDownImmediately() = runBlocking(AutoTestFrameClock()) {
-        val recomposer = Recomposer(coroutineContext)
-        launch(start = CoroutineStart.UNDISPATCHED) {
-            recomposer.runRecomposeAndApplyChanges()
-        }
-
-        // Create a composition with a LaunchedEffect that will need to be resumed for cancellation
-        // before the recomposer can fully join.
-        Composition(UnitApplier(), recomposer).setContent {
-            LaunchedEffect(Unit) {
-                awaitCancellation()
-            }
-        }
-
-        recomposer.cancel()
-        // runBlocking will not dispatch resumed continuations for cancellation yet;
-        // read the current state immediately.
-        val state = recomposer.currentState.value
-        assertTrue(
-            state <= Recomposer.State.ShuttingDown,
-            "recomposer state $state but expected <= ShuttingDown"
         )
     }
 }
