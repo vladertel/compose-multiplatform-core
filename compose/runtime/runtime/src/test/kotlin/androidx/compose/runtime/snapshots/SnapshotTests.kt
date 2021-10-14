@@ -33,6 +33,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -588,19 +589,21 @@ class SnapshotTests {
         }
     }
 
-    @Test(expected = SnapshotApplyConflictException::class)
+    @Test
     fun stateUsingNeverEqualPolicyCannotBeMerged() {
-        val state = mutableStateOf(0, neverEqualPolicy())
-        val snapshot1 = Snapshot.takeMutableSnapshot()
-        val snapshot2 = Snapshot.takeMutableSnapshot()
-        try {
-            snapshot1.enter { state.value = 1 }
-            snapshot2.enter { state.value = 1 }
-            snapshot1.apply().check()
-            snapshot2.apply().check()
-        } finally {
-            snapshot1.dispose()
-            snapshot2.dispose()
+        assertFailsWith(SnapshotApplyConflictException::class) {
+            val state = mutableStateOf(0, neverEqualPolicy())
+            val snapshot1 = Snapshot.takeMutableSnapshot()
+            val snapshot2 = Snapshot.takeMutableSnapshot()
+            try {
+                snapshot1.enter { state.value = 1 }
+                snapshot2.enter { state.value = 1 }
+                snapshot1.apply().check()
+                snapshot2.apply().check()
+            } finally {
+                snapshot1.dispose()
+                snapshot2.dispose()
+            }
         }
     }
 
@@ -727,22 +730,24 @@ class SnapshotTests {
     // Regression test for b/199921314
     // This test lifted directly from the bug reported by chrnie@foxmail.com, modified and formatted
     // to avoid lint warnings.
-    @Test(expected = IllegalStateException::class)
+    //@Test(expected = IllegalStateException::class) was moved to assertFailsWith<IllegalStateException>, to make js tests work
     fun testTakeSnapshotNested() {
-        Snapshot.withMutableSnapshot {
-            val expectReadonlySnapshot = Snapshot.takeSnapshot()
-            try {
-                expectReadonlySnapshot.enter {
-                    var state by mutableStateOf(0)
+        assertFailsWith<IllegalStateException> {
+            Snapshot.withMutableSnapshot {
+                val expectReadonlySnapshot = Snapshot.takeSnapshot()
+                try {
+                    expectReadonlySnapshot.enter {
+                        var state by mutableStateOf(0)
 
-                    // expect throw IllegalStateException:Cannot modify a state object in a
-                    // read-only snapshot
-                    state = 1
+                        // expect throw IllegalStateException:Cannot modify a state object in a
+                        // read-only snapshot
+                        state = 1
 
-                    assertEquals(1, state)
+                        assertEquals(1, state)
+                    }
+                } finally {
+                    expectReadonlySnapshot.dispose()
                 }
-            } finally {
-                expectReadonlySnapshot.dispose()
             }
         }
     }
