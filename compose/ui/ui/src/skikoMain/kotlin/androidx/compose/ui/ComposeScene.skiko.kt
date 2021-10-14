@@ -110,18 +110,19 @@ class ComposeScene internal constructor(
 
     @Volatile
     private var hasPendingDraws = true
-    private inline fun postponeInvalidation(block: () -> Unit) {
+    private inline fun <T> postponeInvalidation(block: () -> T): T {
         isInvalidationDisabled = true
-        try {
+        val result = try {
             block()
         } finally {
             isInvalidationDisabled = false
         }
         invalidateIfNeeded()
+        return result
     }
 
     private fun invalidateIfNeeded() {
-        hasPendingDraws = frameClock.hasAwaiters || list.any(SkiaBasedOwner::needsRender)
+        hasPendingDraws = frameClock.hasAwaiters || list.any(SkiaBasedOwner::needRender)
         if (hasPendingDraws && !isInvalidationDisabled) {
             invalidate()
         }
@@ -219,7 +220,7 @@ class ComposeScene internal constructor(
     internal fun attach(skiaBasedOwner: SkiaBasedOwner) {
         check(!isClosed) { "ComposeScene is closed" }
         list.add(skiaBasedOwner)
-        skiaBasedOwner.onNeedsRender = ::invalidateIfNeeded
+        skiaBasedOwner.onNeedRender = ::invalidateIfNeeded
         skiaBasedOwner.onDispatchCommand = ::dispatchCommand
         skiaBasedOwner.constraints = constraints
         skiaBasedOwner.containerCursor = component
@@ -237,7 +238,7 @@ class ComposeScene internal constructor(
         check(!isClosed) { "ComposeScene is closed" }
         list.remove(skiaBasedOwner)
         skiaBasedOwner.onDispatchCommand = null
-        skiaBasedOwner.onNeedsRender = null
+        skiaBasedOwner.onNeedRender = null
         invalidateIfNeeded()
         if (skiaBasedOwner == focusedOwner) {
             focusedOwner = list.lastOrNull { it.isFocusable }
@@ -389,7 +390,7 @@ class ComposeScene internal constructor(
         buttons: PointerButtons? = null,
         keyboardModifiers: PointerKeyboardModifiers? = null,
         nativeEvent: Any? = null,
-    ) {
+    ): Unit = postponeInvalidation {
         check(!isClosed) { "ComposeScene is closed" }
         defaultPointerStateTracker.onPointerEvent(eventType)
 
@@ -460,7 +461,7 @@ class ComposeScene internal constructor(
         buttons: PointerButtons? = null,
         keyboardModifiers: PointerKeyboardModifiers? = null,
         nativeEvent: Any? = null,
-    ) {
+    ): Unit = postponeInvalidation {
         check(!isClosed) { "ComposeScene is closed" }
         hoveredOwner?.onMouseScroll(position, MouseScrollEvent(delta, orientation))
     }
@@ -492,7 +493,7 @@ class ComposeScene internal constructor(
      * Send [KeyEvent] to the content.
      * @return true if the event was consumed by the content
      */
-    fun sendKeyEvent(event: ComposeKeyEvent): Boolean {
+    fun sendKeyEvent(event: ComposeKeyEvent): Boolean = postponeInvalidation {
         return focusedOwner?.sendKeyEvent(event) == true
     }
 
