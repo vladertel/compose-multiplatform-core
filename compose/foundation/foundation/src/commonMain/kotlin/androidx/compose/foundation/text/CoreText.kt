@@ -18,7 +18,6 @@
 package androidx.compose.foundation.text
 
 import androidx.compose.foundation.fastMapIndexedNotNull
-import androidx.compose.foundation.text.selection.*
 import androidx.compose.foundation.text.selection.MouseSelectionObserver
 import androidx.compose.foundation.text.selection.MultiWidgetSelectionDelegate
 import androidx.compose.foundation.text.selection.Selectable
@@ -26,9 +25,9 @@ import androidx.compose.foundation.text.selection.SelectionAdjustment
 import androidx.compose.foundation.text.selection.SelectionRegistrar
 import androidx.compose.foundation.text.selection.hasSelection
 import androidx.compose.foundation.text.selection.mouseSelectionDetector
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.RememberObserver
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -50,8 +49,6 @@ import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFontLoader
 import androidx.compose.ui.semantics.getTextLayoutResult
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
@@ -235,9 +232,189 @@ internal fun InlineChildren(
 /*@VisibleForTesting*/
 internal class TextController(val state: TextState) : RememberObserver {
     private var selectionRegistrar: SelectionRegistrar? = null
+    lateinit var longPressDragObserver: TextDragObserver
 
     fun update(selectionRegistrar: SelectionRegistrar?) {
         this.selectionRegistrar = selectionRegistrar
+        selectionModifiers = if (selectionRegistrar != null) {
+            if (isInTouchMode) {
+                longPressDragObserver = object : TextDragObserver {
+                    /**
+                     * The beginning position of the drag gesture. Every time a new drag gesture starts, it wil be
+                     * recalculated.
+                     */
+                    var lastPosition = Offset.Zero
+
+                    /**
+                     * The total distance being dragged of the drag gesture. Every time a new drag gesture starts,
+                     * it will be zeroed out.
+                     */
+                    var dragTotalDistance = Offset.Zero
+
+                    override fun onStart(startPoint: Offset) {
+                        state.layoutCoordinates?.let {
+                            if (!it.isAttached) return
+
+                            if (outOfBoundary(startPoint, startPoint)) {
+                                selectionRegistrar.notifySelectionUpdateSelectAll(
+                                    selectableId = state.selectableId
+                                )
+                            } else {
+                                selectionRegistrar.notifySelectionUpdateStart(
+                                    layoutCoordinates = it,
+                                    startPosition = startPoint,
+                                    adjustment = SelectionAdjustment.Word
+                                )
+                            }
+
+                            lastPosition = startPoint
+                        }
+                        // selection never started
+                        if (!selectionRegistrar.hasSelection(state.selectableId)) return
+                        // Zero out the total distance that being dragged.
+                        dragTotalDistance = Offset.Zero
+                    }
+
+                    override fun onDrag(delta: Offset) {
+                        state.layoutCoordinates?.let {
+                            if (!it.isAttached) return
+                            // selection never started, did not consume any drag
+                            if (!selectionRegistrar.hasSelection(state.selectableId)) return
+
+                            dragTotalDistance += delta
+                            val newPosition = lastPosition + dragTotalDistance
+
+                            if (!outOfBoundary(lastPosition, newPosition)) {
+                                // Notice that only the end position needs to be updated here.
+                                // Start position is left unchanged. This is typically important when
+                                // long-press is using SelectionAdjustment.WORD or
+                                // SelectionAdjustment.PARAGRAPH that updates the start handle position from
+                                // the dragBeginPosition.
+                                val consumed = selectionRegistrar.notifySelectionUpdate(
+                                    layoutCoordinates = it,
+                                    previousPosition = lastPosition,
+                                    newPosition = newPosition,
+                                    isStartHandle = false,
+                                    adjustment = SelectionAdjustment.CharacterWithWordAccelerate
+                                )
+                                if (consumed == true) {
+                                    lastPosition = newPosition
+                                    dragTotalDistance = Offset.Zero
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onStop() {
+                        if (selectionRegistrar.hasSelection(state.selectableId)) {
+                            selectionRegistrar.notifySelectionUpdateEnd()
+                        }
+                    }
+
+                    override fun onCancel() {
+                        if (selectionRegistrar.hasSelection(state.selectableId)) {
+                            selectionRegistrar.notifySelectionUpdateEnd()
+                        }
+                    }
+                }
+                Modifier.pointerInput(longPressDragObserver) {
+                    detectDragGesturesAfterLongPressWithObserver(
+                        longPressDragObserver
+                    )
+                }
+            } else {
+                val mouseSelectionObserver = object : MouseSelectionObserver {
+                    var lastPosition = Offset.Zero
+
+                    override fun onExtend(downPosition: Offset): Boolean {
+                        state.layoutCoordinates?.let { layoutCoordinates ->
+                            if (!layoutCoordinates.isAttached) return false
+                            selectionRegistrar.let {
+                                val consumed = it.notifySelectionUpdate(
+                                    layoutCoordinates = layoutCoordinates,
+                                    newPosition = downPosition,
+                                    previousPosition = lastPosition,
+                                    isStartHandle = false,
+                                    adjustment = SelectionAdjustment.None
+                                )
+                                if (consumed) {
+                                    lastPosition = downPosition
+                                }
+                            }
+                            return selectionRegistrar.hasSelection(state.selectableId)
+                        }
+                        return false
+                    }
+
+                    override fun onExtendDrag(dragPosition: Offset): Boolean {
+                        state.layoutCoordinates?.let { layoutCoordinates ->
+                            if (!layoutCoordinates.isAttached) return false
+                            if (!selectionRegistrar.hasSelection(state.selectableId)) return false
+
+                            val consumed = selectionRegistrar.notifySelectionUpdate(
+                                layoutCoordinates = layoutCoordinates,
+                                newPosition = dragPosition,
+                                previousPosition = lastPosition,
+                                isStartHandle = false,
+                                adjustment = SelectionAdjustment.None
+                            )
+
+                            if (consumed) {
+                                lastPosition = dragPosition
+                            }
+                        }
+                        return true
+                    }
+
+                    override fun onStart(
+                        downPosition: Offset,
+                        adjustment: SelectionAdjustment
+                    ): Boolean {
+                        state.layoutCoordinates?.let {
+                            if (!it.isAttached) return false
+
+                            selectionRegistrar.notifySelectionUpdateStart(
+                                layoutCoordinates = it,
+                                startPosition = downPosition,
+                                adjustment = adjustment
+                            )
+
+                            lastPosition = downPosition
+                            return selectionRegistrar.hasSelection(state.selectableId)
+                        }
+
+                        return false
+                    }
+
+                    override fun onDrag(
+                        dragPosition: Offset,
+                        adjustment: SelectionAdjustment
+                    ): Boolean {
+                        state.layoutCoordinates?.let {
+                            if (!it.isAttached) return false
+                            if (!selectionRegistrar.hasSelection(state.selectableId)) return false
+
+                            val consumed = selectionRegistrar.notifySelectionUpdate(
+                                layoutCoordinates = it,
+                                previousPosition = lastPosition,
+                                newPosition = dragPosition,
+                                isStartHandle = false,
+                                adjustment = adjustment
+                            )
+                            if (consumed == true) {
+                                lastPosition = dragPosition
+                            }
+                        }
+                        return true
+                    }
+                }
+                Modifier.pointerInput(mouseSelectionObserver) {
+                    mouseSelectionDetector(mouseSelectionObserver)
+                }
+            }
+        } else {
+            Modifier
+        }
     }
 
     val measurePolicy = object : MeasurePolicy {
@@ -340,187 +517,6 @@ internal class TextController(val state: TextState) : RememberObserver {
             return state.textDelegate
                 .layout(Constraints(0, width, 0, Constraints.Infinity), layoutDirection)
                 .size.height
-        }
-    }
-
-    val commit: DisposableEffectScope.() -> DisposableEffectResult = {
-        // if no SelectionContainer is added as parent selectionRegistrar will be null
-        selectionRegistrar?.let { selectionRegistrar ->
-            state.selectable = selectionRegistrar.subscribe(
-                MultiWidgetSelectionDelegate(
-                    selectableId = state.selectableId,
-                    coordinatesCallback = { state.layoutCoordinates },
-                    layoutResultCallback = { state.layoutResult }
-                )
-            )
-        }
-        onDispose {
-            state.selectable?.let { selectionRegistrar?.unsubscribe(it) }
-        }
-    }
-
-    val longPressDragObserver: TextDragObserver = object : TextDragObserver {
-        /**
-         * The beginning position of the drag gesture. Every time a new drag gesture starts, it wil be
-         * recalculated.
-         */
-        var lastPosition = Offset.Zero
-
-        /**
-         * The total distance being dragged of the drag gesture. Every time a new drag gesture starts,
-         * it will be zeroed out.
-         */
-        var dragTotalDistance = Offset.Zero
-
-        override fun onStart(startPoint: Offset) {
-            state.layoutCoordinates?.let {
-                if (!it.isAttached) return
-
-                if (outOfBoundary(startPoint, startPoint)) {
-                    selectionRegistrar?.notifySelectionUpdateSelectAll(
-                        selectableId = state.selectableId
-                    )
-                } else {
-                    selectionRegistrar?.notifySelectionUpdateStart(
-                        layoutCoordinates = it,
-                        startPosition = startPoint,
-                        adjustment = SelectionAdjustment.Word
-                    )
-                }
-
-                lastPosition = startPoint
-            }
-            // selection never started
-            if (!selectionRegistrar.hasSelection(state.selectableId)) return
-            // Zero out the total distance that being dragged.
-            dragTotalDistance = Offset.Zero
-        }
-
-        override fun onDrag(delta: Offset) {
-            state.layoutCoordinates?.let {
-                if (!it.isAttached) return
-                // selection never started, did not consume any drag
-                if (!selectionRegistrar.hasSelection(state.selectableId)) return
-
-                dragTotalDistance += delta
-                val newPosition = lastPosition + dragTotalDistance
-
-                if (!outOfBoundary(lastPosition, newPosition)) {
-                    // Notice that only the end position needs to be updated here.
-                    // Start position is left unchanged. This is typically important when
-                    // long-press is using SelectionAdjustment.WORD or
-                    // SelectionAdjustment.PARAGRAPH that updates the start handle position from
-                    // the dragBeginPosition.
-                    val consumed = selectionRegistrar?.notifySelectionUpdate(
-                        layoutCoordinates = it,
-                        previousPosition = lastPosition,
-                        newPosition = newPosition,
-                        isStartHandle = false,
-                        adjustment = SelectionAdjustment.CharacterWithWordAccelerate
-                    )
-                    if (consumed == true) {
-                        lastPosition = newPosition
-                        dragTotalDistance = Offset.Zero
-                    }
-                }
-            }
-        }
-
-        override fun onStop() {
-            if (selectionRegistrar.hasSelection(state.selectableId)) {
-                selectionRegistrar?.notifySelectionUpdateEnd()
-            }
-        }
-
-        override fun onCancel() {
-            if (selectionRegistrar.hasSelection(state.selectableId)) {
-                selectionRegistrar?.notifySelectionUpdateEnd()
-            }
-        }
-    }
-
-    val mouseSelectionObserver = object : MouseSelectionObserver {
-        var lastPosition = Offset.Zero
-
-        override fun onExtend(downPosition: Offset): Boolean {
-            state.layoutCoordinates?.let { layoutCoordinates ->
-                if (!layoutCoordinates.isAttached) return false
-                selectionRegistrar?.let {
-                    val consumed = it.notifySelectionUpdate(
-                        layoutCoordinates = layoutCoordinates,
-                        newPosition = downPosition,
-                        previousPosition = lastPosition,
-                        isStartHandle = false,
-                        adjustment = SelectionAdjustment.None
-                    )
-                    if (consumed) {
-                        lastPosition = downPosition
-                    }
-                }
-                return selectionRegistrar.hasSelection(state.selectableId)
-            }
-            return false
-        }
-
-        override fun onExtendDrag(dragPosition: Offset): Boolean {
-            state.layoutCoordinates?.let { layoutCoordinates ->
-                if (!layoutCoordinates.isAttached) return false
-                if (!selectionRegistrar.hasSelection(state.selectableId)) return false
-
-                selectionRegistrar?. let {
-                    val consumed = it.notifySelectionUpdate(
-                        layoutCoordinates = layoutCoordinates,
-                        newPosition = dragPosition,
-                        previousPosition = lastPosition,
-                        isStartHandle = false,
-                        adjustment = SelectionAdjustment.None
-                    )
-
-                    if (consumed) {
-                        lastPosition = dragPosition
-                    }
-                }
-            }
-            return true
-        }
-
-        override fun onStart(
-            downPosition: Offset,
-            adjustment: SelectionAdjustment
-        ): Boolean {
-            state.layoutCoordinates?.let {
-                if (!it.isAttached) return false
-
-                selectionRegistrar?.notifySelectionUpdateStart(
-                    layoutCoordinates = it,
-                    startPosition = downPosition,
-                    adjustment = adjustment
-                )
-
-                lastPosition = downPosition
-                return selectionRegistrar.hasSelection(state.selectableId)
-            }
-
-            return false
-        }
-
-        override fun onDrag(dragPosition: Offset, adjustment: SelectionAdjustment): Boolean {
-            state.layoutCoordinates?.let {
-                if (!it.isAttached) return false
-                if (!selectionRegistrar.hasSelection(state.selectableId)) return false
-
-                val consumed = selectionRegistrar?.notifySelectionUpdate(
-                    layoutCoordinates = it,
-                    previousPosition = lastPosition,
-                    newPosition = dragPosition,
-                    isStartHandle = false,
-                    adjustment = adjustment
-                )
-                if (consumed == true) {
-                    lastPosition = dragPosition
-                }
-            }
-            return true
         }
     }
 
@@ -752,11 +748,3 @@ internal fun resolveInlineContent(
     }
     return Pair(placeholders, inlineComposables)
 }
-
-/**
- * A custom saver that won't save if no selection is active.
- */
-private fun selectionIdSaver(selectionRegistrar: SelectionRegistrar?) = Saver<Long, Long>(
-    save = { if (selectionRegistrar.hasSelection(it)) it else null },
-    restore = { it }
-)
