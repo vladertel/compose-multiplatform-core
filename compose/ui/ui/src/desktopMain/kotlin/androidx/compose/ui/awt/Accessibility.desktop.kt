@@ -324,7 +324,7 @@ internal class ComposeAccessible(
         }
 
         private fun Point.toComposeOffset(): Offset {
-            return Offset(x.toFloat(), y.toFloat())
+            return Offset(x.toFloat() * density.density, y.toFloat() * density.density)
         }
 
         private fun Rect.toAwtRectangle() =
@@ -435,7 +435,8 @@ internal class ComposeAccessible(
         }
 
         override fun getAccessibleIndexInParent(): Int {
-            return semanticsNode.parent?.replacedChildren?.indexOf(semanticsNode) ?: -1
+            val parentChildren = semanticsNode.parent?.replacedChildren
+            return parentChildren?.indexOfFirst { it.id == semanticsNode.id } ?: -1
         }
 
         override fun getAccessibleChildrenCount(): Int {
@@ -482,12 +483,21 @@ internal class ComposeAccessible(
         override fun isShowing(): Boolean = true
 
         override fun contains(p: Point): Boolean {
-            return semanticsNode.boundsInRoot.contains(p.toComposeOffset())
+            return bounds.contains(p)
         }
 
-        override fun getAccessibleAt(p: Point?): Accessible {
-            println("Not implemented: getAccessibleAt")
-            TODO("Not yet implemented")
+        override fun getAccessibleAt(p: Point): Accessible? {
+            for (i in 0 until accessibleChildrenCount) {
+                val child = (getAccessibleChild(i)?.accessibleContext as? AccessibleComponent)
+                child?.getAccessibleAt(p)?.let {
+                    return it
+                }
+            }
+            if (contains(p)) {
+                return this@ComposeAccessible
+            }
+
+            return null
         }
 
         override fun isFocusTraversable(): Boolean {
