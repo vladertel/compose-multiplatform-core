@@ -19,23 +19,32 @@ package androidx.benchmark
 import android.os.Bundle
 import androidx.annotation.RestrictTo
 import kotlin.math.pow
-import kotlin.math.roundToLong
 import kotlin.math.sqrt
 
 /**
- * Provides statistics such as mean, median, min, max, and percentiles, given a list of input
- * values.
+ * Results for a given metric from a benchmark, including each measurement made and general stats
+ * for those measurements (min/median/max).
+ *
  * @suppress
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public class Stats(data: LongArray, public val name: String) {
-    public val median: Long
-    public val medianIndex: Int
-    public val min: Long
-    public val minIndex: Int
-    public val max: Long
-    public val maxIndex: Int
-    public val standardDeviation: Double
+public class MetricResult(
+    val name: String,
+    val data: List<Double>,
+    val iterationData: List<List<Double>>? = null
+) {
+    val median: Double
+    val medianIndex: Int
+    val min: Double
+    val minIndex: Int
+    val max: Double
+    val maxIndex: Int
+    val standardDeviation: Double
+
+    val p50: Double
+    val p90: Double
+    val p95: Double
+    val p99: Double
 
     init {
         val values = data.sorted()
@@ -47,8 +56,13 @@ public class Stats(data: LongArray, public val name: String) {
         max = values.last()
         median = getPercentile(values, 50)
 
-        minIndex = data.indexOf(min)
-        maxIndex = data.indexOf(max)
+        p50 = getPercentile(values, 50)
+        p90 = getPercentile(values, 90)
+        p95 = getPercentile(values, 95)
+        p99 = getPercentile(values, 99)
+
+        minIndex = data.indexOfFirst { it == min }
+        maxIndex = data.indexOfFirst { it == max }
         medianIndex = data.size / 2
 
         standardDeviation = if (data.size == 1) {
@@ -60,7 +74,7 @@ public class Stats(data: LongArray, public val name: String) {
     }
 
     internal fun getSummary(): String {
-        return "Stats for $name: median $median, min $min, max $max, " +
+        return "Metric ($name) results: median $median, min $min, max $max, " +
             "standardDeviation: $standardDeviation"
     }
 
@@ -68,9 +82,19 @@ public class Stats(data: LongArray, public val name: String) {
         // format string to be in instrumentation results format
         val bundleName = name.toOutputMetricName()
 
-        status.putLong("${prefix}${bundleName}_min", min)
-        status.putLong("${prefix}${bundleName}_median", median)
-        status.putLong("${prefix}${bundleName}_stddev", standardDeviation.toLong())
+        status.putDouble("${prefix}${bundleName}_min", min)
+        status.putDouble("${prefix}${bundleName}_median", median)
+        status.putDouble("${prefix}${bundleName}_stddev", standardDeviation)
+    }
+
+    public fun putPercentilesInBundle(status: Bundle, prefix: String) {
+        // format string to be in instrumentation results format
+        val bundleName = name.toOutputMetricName()
+
+        status.putDouble("${prefix}${bundleName}_p50", p50)
+        status.putDouble("${prefix}${bundleName}_p90", p90)
+        status.putDouble("${prefix}${bundleName}_p95", p95)
+        status.putDouble("${prefix}${bundleName}_p99", p99)
     }
 
     // NOTE: Studio-generated, re-generate if members change
@@ -78,7 +102,7 @@ public class Stats(data: LongArray, public val name: String) {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as Stats
+        other as MetricResult
 
         if (name != other.name) return false
         if (median != other.median) return false
@@ -104,18 +128,18 @@ public class Stats(data: LongArray, public val name: String) {
         return result
     }
 
-    internal companion object {
-        internal fun lerp(a: Long, b: Long, ratio: Double): Long {
-            return (a * (1 - ratio) + b * (ratio)).roundToLong()
+    companion object {
+        internal fun lerp(a: Double, b: Double, ratio: Double): Double {
+            return (a * (1 - ratio) + b * (ratio))
         }
 
-        internal fun getPercentile(data: List<Long>, percentile: Int): Long {
-            val idealIndex = percentile.coerceIn(0, 100) / 100.0 * (data.size - 1)
+        fun getPercentile(sortedData: List<Double>, percentile: Int): Double {
+            val idealIndex = percentile.coerceIn(0, 100) / 100.0 * (sortedData.size - 1)
             val firstIndex = idealIndex.toInt()
             val secondIndex = firstIndex + 1
 
-            val firstValue = data[firstIndex]
-            val secondValue = data.getOrElse(secondIndex) { firstValue }
+            val firstValue = sortedData[firstIndex]
+            val secondValue = sortedData.getOrElse(secondIndex) { firstValue }
             return lerp(firstValue, secondValue, idealIndex - firstIndex)
         }
     }
