@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusManager
@@ -44,6 +45,8 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.IntrinsicMeasurable
@@ -158,7 +161,7 @@ import kotlin.math.roundToInt
  * innerTextField exactly once.
  */
 @Composable
-@OptIn(InternalFoundationTextApi::class)
+@OptIn(InternalFoundationTextApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 internal fun CoreTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
@@ -317,7 +320,7 @@ internal fun CoreTextField(
             observer = manager.mouseSelectionObserver,
             enabled = enabled
         )
-    }
+    }.textFieldPointerIcon()
 
     val drawModifier = Modifier.drawBehind {
         state.layoutResult?.let { layoutResult ->
@@ -498,7 +501,7 @@ internal fun CoreTextField(
             state.layoutResult?.decorationBoxCoordinates = it
         }
 
-    Box(modifier = decorationBoxModifier, propagateMinConstraints = true) {
+    CoreTextFieldRootBox(decorationBoxModifier, manager) {
         decorationBox {
             // Modifiers applied directly to the internal input field implementation. In general,
             // these will most likely include draw, layout and IME related modifiers.
@@ -569,6 +572,19 @@ internal fun CoreTextField(
                     TextFieldCursorHandle(manager = manager)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private inline fun CoreTextFieldRootBox(
+    modifier: Modifier,
+    manager: TextFieldSelectionManager,
+    crossinline content: @Composable () -> Unit
+) {
+    Box(modifier, propagateMinConstraints = true) {
+        ContextMenuArea(manager) {
+            content()
         }
     }
 }
@@ -854,3 +870,7 @@ internal expect fun CursorHandle(
     modifier: Modifier,
     content: @Composable (() -> Unit)?
 )
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun Modifier.textFieldPointerIcon() =
+    this.pointerHoverIcon(PointerIcon.Text)

@@ -13,24 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package androidx.compose.ui.window
-
+import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assume.assumeFalse
 import java.awt.GraphicsEnvironment
-
 @OptIn(ExperimentalCoroutinesApi::class)
 internal fun runApplicationTest(
     /**
@@ -46,7 +47,6 @@ internal fun runApplicationTest(
     body: suspend WindowTestScope.() -> Unit
 ) {
     assumeFalse(GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance)
-
     runBlocking(Dispatchers.Swing) {
         withTimeout(30000) {
             val testScope = WindowTestScope(this, useDelay)
@@ -56,9 +56,7 @@ internal fun runApplicationTest(
         }
     }
 }
-
 /* Snippet that demonstrated the issue with window state listening on Linux
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -68,7 +66,6 @@ import java.awt.Point
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.JFrame
-
 fun main()  {
     runBlocking(Dispatchers.Swing) {
         repeat(10) {
@@ -97,17 +94,15 @@ fun main()  {
     }
 }
 */
-
 internal class WindowTestScope(
     private val scope: CoroutineScope,
     private val useDelay: Boolean
 ) : CoroutineScope by CoroutineScope(scope.coroutineContext + Job()) {
     var isOpen by mutableStateOf(true)
-
+    private val initialRecomposers = Recomposer.runningRecomposers.value
     fun exitApplication() {
         isOpen = false
     }
-
     suspend fun awaitIdle() {
         if (useDelay) {
             delay(500)
@@ -121,6 +116,10 @@ internal class WindowTestScope(
         // after fourth yield()
         repeat(100) {
             yield()
+        }
+        Snapshot.sendApplyNotifications()
+        for (recomposerInfo in Recomposer.runningRecomposers.value - initialRecomposers) {
+            recomposerInfo.state.takeWhile { it > Recomposer.State.Idle }.collect()
         }
     }
 }

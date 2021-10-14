@@ -25,6 +25,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
+import androidx.compose.ui.awt.AccessibilityController
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusDirection.Companion.In
 import androidx.compose.ui.focus.FocusDirection.Companion.Next
@@ -50,6 +51,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.mouse.MouseScrollEvent
 import androidx.compose.ui.input.mouse.MouseScrollEventFilter
+import androidx.compose.ui.input.pointer.AwtCursor
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
@@ -76,6 +80,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
+import java.awt.Cursor
 
 private typealias Command = () -> Unit
 
@@ -91,13 +96,15 @@ internal class DesktopOwner(
     val isFocusable: Boolean = true,
     val onDismissRequest: (() -> Unit)? = null,
     private val onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
-    private val onKeyEvent: (KeyEvent) -> Boolean = { false },
+    private val onKeyEvent: (KeyEvent) -> Boolean = { false }
 ) : Owner, RootForTest, DesktopRootForTest, PositionCalculator {
 
     internal fun isHovered(point: Offset): Boolean {
         val intOffset = IntOffset(point.x.toInt(), point.y.toInt())
         return bounds.contains(intOffset)
     }
+
+    internal var accessibilityController: AccessibilityController? = null
 
     internal var bounds by mutableStateOf(IntRect.Zero)
 
@@ -247,6 +254,7 @@ internal class DesktopOwner(
     val needsRender get() = needsLayout || needsDraw
     var onNeedsRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
+    var containerCursor: DesktopComponentWithCursor? = null
 
     fun render(canvas: org.jetbrains.skia.Canvas) {
         needsLayout = false
@@ -309,9 +317,13 @@ internal class DesktopOwner(
         onDestroy = { needClearObservations = true }
     )
 
-    override fun onSemanticsChange() = Unit
+    override fun onSemanticsChange() {
+        accessibilityController?.onSemanticsChange()
+    }
 
-    override fun onLayoutChange(layoutNode: LayoutNode) = Unit
+    override fun onLayoutChange(layoutNode: LayoutNode) {
+        accessibilityController?.onLayoutChange(layoutNode)
+    }
 
     override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
         return when (keyEvent.key) {
@@ -334,8 +346,12 @@ internal class DesktopOwner(
         root.draw(canvas.asComposeCanvas())
     }
 
+    private var desiredPointerIcon: PointerIcon? = null
+    private val defaultCursor = Cursor(Cursor.DEFAULT_CURSOR)
+
     internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
         measureAndLayout()
+        desiredPointerIcon = null
         return pointerInputEventProcessor.process(
             event,
             this,
@@ -343,7 +359,15 @@ internal class DesktopOwner(
                 it.position.x in 0f..root.width.toFloat() &&
                     it.position.y in 0f..root.height.toFloat()
             }
-        )
+        ).also {
+            val icon = desiredPointerIcon
+            when (icon) {
+                is AwtCursor -> containerCursor?.componentCursor = icon.cursor
+                else -> if (containerCursor?.componentCursor != defaultCursor) {
+                    containerCursor?.componentCursor = defaultCursor
+                }
+            }
+        }
     }
 
     override fun processPointerInput(timeMillis: Long, pointers: List<TestPointerInputEventData>) {
@@ -374,4 +398,11 @@ internal class DesktopOwner(
             if (isConsumed) break
         }
     }
+
+    override val pointerIconService: PointerIconService =
+        object : PointerIconService {
+            override var current: PointerIcon
+                get() = desiredPointerIcon ?: PointerIcon.Default
+                set(value) { desiredPointerIcon = value }
+        }
 }

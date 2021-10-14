@@ -30,7 +30,7 @@ import javax.xml.transform.stream.StreamResult
 
 buildscript {
     repositories {
-        jcenter()
+//        jcenter()
         mavenCentral()
         google()
     }
@@ -75,7 +75,6 @@ repositories {
     if (metalavaBuildId != null) {
         maven(url="https://androidx.dev/metalava/builds/${metalavaBuildId}/artifacts/repo/m2repository")
     }
-    jcenter()
     mavenCentral()
     google()
     gradlePluginPortal()

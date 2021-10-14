@@ -17,9 +17,11 @@
 package androidx.compose.ui.window
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ExperimentalComposeApi
+import androidx.compose.runtime.currentCompositionLocals
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.awt.ComposeDialog
@@ -202,7 +204,7 @@ fun Dialog(
  * @param update The callback to be invoked after the layout is inflated.
  * @param content Composable content of the creating dialog.
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalComposeApi::class)
 @Suppress("unused")
 @Composable
 fun Dialog(
@@ -214,12 +216,17 @@ fun Dialog(
     update: (ComposeDialog) -> Unit = {},
     content: @Composable DialogWindowScope.() -> Unit
 ) {
-    val composition = rememberCompositionContext()
+    val locals = currentCompositionLocals.map { it provides it.current }.toTypedArray()
+    val currentLocals by rememberUpdatedState(locals)
     AwtWindow(
         visible = visible,
         create = {
             create().apply {
-                setContent(composition, onPreviewKeyEvent, onKeyEvent, content)
+                setContent(onPreviewKeyEvent, onKeyEvent) {
+                    CompositionLocalProvider(*currentLocals) {
+                        content()
+                    }
+                }
             }
         },
         dispose = dispose,

@@ -168,6 +168,14 @@ val currentRecomposeScope: RecomposeScope
     }
 
 /**
+ * Return all current [ProvidableCompositionLocal]'s provided by [CompositionLocalProvider]'s.
+ */
+@OptIn(InternalComposeApi::class)
+@ExperimentalComposeApi
+val currentCompositionLocals: Set<ProvidableCompositionLocal<Any?>>
+    @Composable get() = currentComposer.currentCompositionLocals
+
+/**
  * This a hash value used to coordinate map externally stored state to the composition. For
  * example, this is used by saved instance state to preserve state across activity lifetime
  * boundaries.
