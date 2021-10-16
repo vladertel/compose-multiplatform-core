@@ -30,6 +30,7 @@ AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
 dependencies {
     kotlinPlugin(projectOrArtifact(":compose:compiler:compiler"))
+    kotlinNativeCompilerPluginClasspath(project(":compose:compiler:compiler-hosted"))
 
     if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         /*
@@ -79,6 +80,12 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
         }
+        macosX64() {
+            compilations.test.kotlinOptions {
+                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
+                freeCompilerArgs += "-Xplugin=" + project.rootProject.ext["outDir"] + "/androidx/compose/compiler/compiler-hosted/build//libs/compiler-hosted-1.1.0-alpha06.jar"
+            }
+        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -111,6 +118,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation("org.jetbrains.kotlinx:atomicfu:0.14.4")
                 }
             }
+            nativeMain.dependsOn(commonMain)
+            macosX64Main.dependsOn(nativeMain)
+
             androidAndroidTest.dependencies {
                 implementation(libs.testExtJunit)
                 implementation(libs.testRules)
@@ -141,6 +151,11 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation kotlin("test-js")
                 }
             }
+            nativeTest {
+                dependsOn(commonTest)
+                kotlin.srcDir("src/nativeTest/kotlin")
+            }
+            macosX64Test.dependsOn(nativeTest)
         }
     }
     dependencies {
