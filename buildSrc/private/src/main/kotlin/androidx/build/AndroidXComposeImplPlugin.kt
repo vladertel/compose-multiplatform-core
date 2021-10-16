@@ -124,9 +124,11 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                 project.configureForKotlinMultiplatformSourceStructure()
             }
 
-            project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
-                // Needed to enable `expect` and `actual` keywords
-                compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+            project.afterEvaluate { projectAfterEvaluate ->
+                projectAfterEvaluate.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
+                    // Needed to enable `expect` and `actual` keywords
+                    compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+                }
             }
 
             project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
