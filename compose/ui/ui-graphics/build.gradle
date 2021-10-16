@@ -65,6 +65,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     kotlin {
         android()
         jvm("desktop")
+        macosX64()
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -98,6 +99,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.kotlinStdlibJdk8)
                 }
             }
+
+            nativeMain.dependsOn(skikoMain)
+            macosX64Main.dependsOn(nativeMain)
 
             androidTest.dependencies {
                 implementation(libs.testRules)
