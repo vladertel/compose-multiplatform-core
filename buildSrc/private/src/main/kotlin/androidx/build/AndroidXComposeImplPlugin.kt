@@ -124,9 +124,11 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                 project.configureForKotlinMultiplatformSourceStructure()
             }
 
-            project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
-                // Needed to enable `expect` and `actual` keywords
-                compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+            project.afterEvaluate { projectAfterEvaluate ->
+                projectAfterEvaluate.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
+                    // Needed to enable `expect` and `actual` keywords
+                    compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+                }
             }
 
             project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
@@ -390,21 +392,19 @@ fun Project.configureComposeImplPluginForAndroidx() {
         }
     }
 
-    project.afterEvaluate {
-        val androidXExtension =
-            project.extensions.findByType(AndroidXExtension::class.java)
-        if (androidXExtension != null) {
-            if (androidXExtension.publish.shouldPublish()) {
-                project.tasks.withType(KotlinCompile::class.java)
-                    .configureEach { compile ->
-                        compile.doFirst {
-                            if (!kotlinPlugin.isEmpty) {
-                                compile.kotlinOptions.freeCompilerArgs +=
-                                    listOf("-P", composeSourceOption)
-                            }
+    val androidXExtension =
+        project.extensions.findByType(AndroidXExtension::class.java)
+    if (androidXExtension != null) {
+        if (androidXExtension.publish.shouldPublish()) {
+            project.tasks.withType(KotlinCompile::class.java)
+                .configureEach { compile ->
+                    compile.doFirst {
+                        if (!kotlinPlugin.isEmpty) {
+                            compile.kotlinOptions.freeCompilerArgs +=
+                                listOf("-P", composeSourceOption)
                         }
                     }
-            }
+                }
         }
     }
 }
