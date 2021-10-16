@@ -16,6 +16,7 @@
 
 package androidx.build
 
+import androidx.build.dependencies.KOTLIN_NATIVE_VERSION
 import com.android.build.api.variant.AndroidComponentsExtension
 import com.android.build.gradle.AppExtension
 import com.android.build.gradle.AppPlugin
@@ -32,6 +33,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.attributes.Usage
@@ -116,9 +118,11 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                 project.configureForKotlinMultiplatformSourceStructure()
             }
 
-            project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
-                // Needed to enable `expect` and `actual` keywords
-                compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+            project.afterEvaluate { projectAfterEvaluate ->
+                projectAfterEvaluate.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
+                    // Needed to enable `expect` and `actual` keywords
+                    compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+                }
             }
 
             project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
@@ -270,6 +274,13 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
          * resolved.
          */
         private fun Project.configureForMultiplatform() {
+
+            // TODO: this is needed to use custom Kotlin/Native compiler build
+            // with several workarounds.
+            // Shall not be needed after 1.6-M1, presumably.
+            (this.rootProject.property("ext") as ExtraPropertiesExtension)
+                .set("kotlin.native.version", KOTLIN_NATIVE_VERSION)
+
             val multiplatformExtension = checkNotNull(multiplatformExtension) {
                 "Unable to configureForMultiplatform() when " +
                     "multiplatformExtension is null (multiplatform plugin not enabled?)"
@@ -359,7 +370,6 @@ fun Project.configureComposeImplPluginForAndroidx() {
                             "$composeMetricsOption=${metricsDest.absolutePath}"
                         )
                 }
-
                 // since metrics reports in compose compiler are a new feature, we only want to
                 // pass in this parameter for modules that are using the tip of tree compose
                 // compiler, or else we will run into an exception since the parameter will not
@@ -377,21 +387,19 @@ fun Project.configureComposeImplPluginForAndroidx() {
         }
     }
 
-    project.afterEvaluate {
-        val androidXExtension =
-            project.extensions.findByType(AndroidXExtension::class.java)
-        if (androidXExtension != null) {
-            if (androidXExtension.publish.shouldPublish()) {
-                project.tasks.withType(KotlinCompile::class.java)
-                    .configureEach { compile ->
-                        compile.doFirst {
-                            if (!kotlinPlugin.isEmpty) {
-                                compile.kotlinOptions.freeCompilerArgs +=
-                                    listOf("-P", composeSourceOption)
-                            }
+    val androidXExtension =
+        project.extensions.findByType(AndroidXExtension::class.java)
+    if (androidXExtension != null) {
+        if (androidXExtension.publish.shouldPublish()) {
+            project.tasks.withType(KotlinCompile::class.java)
+                .configureEach { compile ->
+                    compile.doFirst {
+                        if (!kotlinPlugin.isEmpty) {
+                            compile.kotlinOptions.freeCompilerArgs +=
+                                listOf("-P", composeSourceOption)
                         }
                     }
-            }
+                }
         }
     }
 }
