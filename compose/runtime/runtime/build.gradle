@@ -30,6 +30,7 @@ AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
 dependencies {
     kotlinPlugin(projectOrArtifact(":compose:compiler:compiler"))
+    kotlinNativeCompilerPluginClasspath(project(":compose:compiler:compiler-hosted"))
 
     if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         /*
@@ -79,6 +80,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
         }
+        macosX64()
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -111,6 +113,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation("org.jetbrains.kotlinx:atomicfu:0.14.4")
                 }
             }
+            nativeMain.dependsOn(commonMain)
+            macosX64Main.dependsOn(nativeMain)
+
             androidAndroidTest.dependencies {
                 implementation(libs.testExtJunit)
                 implementation(libs.testRules)
@@ -141,6 +146,11 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation kotlin("test-js")
                 }
             }
+            nativeTest {
+                dependsOn(commonTest)
+                kotlin.srcDir("src/nativeTest/kotlin")
+            }
+            macosX64Test.dependsOn(nativeTest)
         }
     }
     dependencies {
