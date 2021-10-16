@@ -80,6 +80,8 @@ internal fun AtomicInt.postIncrement(): Int = add(1) - 1
 
 internal expect fun ensureMutable(it: Any)
 
+expect annotation class CompositionContextLocal
+
 @MustBeDocumented
 @Retention(AnnotationRetention.SOURCE)
 @Target(
