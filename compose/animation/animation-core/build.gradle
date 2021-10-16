@@ -29,6 +29,7 @@ AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
 dependencies {
     kotlinPlugin(project(":compose:compiler:compiler"))
+    kotlinNativeCompilerPluginClasspath(project(":compose:compiler:compiler-hosted"))
 
     if (!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         /*
@@ -69,6 +70,7 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
+        darwin()
     }
 
     kotlin {
@@ -127,6 +129,9 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(project(":compose:ui:ui-test-junit4"))
                 implementation(project(":compose:test-utils"))
             }
+
+            nativeMain.dependsOn(commonMain)
+            macosX64Main.dependsOn(nativeMain)
         }
     }
     dependencies {
