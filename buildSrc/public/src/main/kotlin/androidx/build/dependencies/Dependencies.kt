@@ -27,6 +27,8 @@ val KSP_VERSION get() = kspVersion
 
 internal lateinit var kotlinVersion: String
 val KOTLIN_VERSION get() = kotlinVersion
+internal lateinit var kotlinNativeVersion: String
+val KOTLIN_NATIVE_VERSION get() = kotlinNativeVersion
 val KOTLIN_STDLIB get() = "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
 
 internal lateinit var agpVersion: String
