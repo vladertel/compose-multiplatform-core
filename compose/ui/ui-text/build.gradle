@@ -83,6 +83,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
+        darwin()
     }
 
     kotlin {
@@ -117,6 +118,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 dependsOn(skikoMain)
                 dependsOn(jvmMain)
             }
+
+            nativeMain.dependsOn(skikoMain)
 
             androidMain.dependencies {
                 api("androidx.annotation:annotation:1.1.0")
