@@ -16,8 +16,6 @@
 
 package androidx.compose.ui.text.style
 
-import androidx.compose.runtime.Stable
-
 /** How overflowing text should be handled. */
 @Suppress("INLINE_CLASS_DEPRECATED")
 inline class TextOverflow internal constructor(internal val value: Int) {
@@ -36,14 +34,12 @@ inline class TextOverflow internal constructor(internal val value: Int) {
          * Clip the overflowing text to fix its container.
          * @sample androidx.compose.ui.text.samples.TextOverflowClipSample
          */
-        @Stable
         val Clip = TextOverflow(1)
 
         /**
          * Use an ellipsis to indicate that the text has overflowed.
          * @sample androidx.compose.ui.text.samples.TextOverflowEllipsisSample
          */
-        @Stable
         val Ellipsis = TextOverflow(2)
 
         /**
@@ -65,7 +61,6 @@ inline class TextOverflow internal constructor(internal val value: Int) {
          * Note: text that expands past its bounds using `Visible` may be clipped by other modifiers
          * such as `Modifier.clipToBounds`.
          */
-        @Stable
         val Visible = TextOverflow(3)
     }
 }
