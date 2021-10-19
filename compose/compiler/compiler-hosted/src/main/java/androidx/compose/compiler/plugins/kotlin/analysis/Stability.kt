@@ -19,7 +19,6 @@ package androidx.compose.compiler.plugins.kotlin.analysis
 import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
 import androidx.compose.compiler.plugins.kotlin.lower.annotationClass
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
-import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
 import org.jetbrains.kotlin.ir.declarations.IrAnnotationContainer
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
@@ -50,18 +49,19 @@ import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.classifierOrFail
 import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.types.isAny
+import org.jetbrains.kotlin.ir.types.isMarkedNullable
 import org.jetbrains.kotlin.ir.types.isNullable
 import org.jetbrains.kotlin.ir.types.isPrimitiveType
 import org.jetbrains.kotlin.ir.types.isString
 import org.jetbrains.kotlin.ir.types.isUnit
 import org.jetbrains.kotlin.ir.types.makeNotNull
-import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.ir.util.fqNameForIrSerialization
 import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.util.getInlineClassUnderlyingType
 import org.jetbrains.kotlin.ir.util.isEnumClass
 import org.jetbrains.kotlin.ir.util.isEnumEntry
 import org.jetbrains.kotlin.ir.util.isFunctionOrKFunction
+import org.jetbrains.kotlin.ir.util.isInlined
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.util.isTypeParameter
 
@@ -259,7 +259,6 @@ class StabilityInferencer(val context: IrPluginContext) {
         if (currentlyAnalyzing.contains(symbol)) return Stability.Unstable
         if (declaration.hasStableMarkedDescendant()) return Stability.Stable
         if (declaration.isEnumClass || declaration.isEnumEntry) return Stability.Stable
-        if (declaration.defaultType.isPrimitiveType()) return Stability.Stable
 
         val analyzing = currentlyAnalyzing + symbol
 
@@ -374,7 +373,7 @@ class StabilityInferencer(val context: IrPluginContext) {
                 substitutions,
                 currentlyAnalyzing
             )
-            type.isInlineClassType() -> stabilityOf(
+            type.isInlined() -> stabilityOf(
                 type.getInlinedClass()!!,
                 substitutions,
                 currentlyAnalyzing
@@ -434,7 +433,7 @@ class StabilityInferencer(val context: IrPluginContext) {
         return when (expr) {
             is IrConst<*> -> Stability.Stable
             is IrGetObjectValue ->
-                if (stabilityOf(expr.symbol.owner).knownStable())
+                if (expr.symbol.owner.superTypes.any { stabilityOf(it).knownStable() })
                     Stability.Stable
                 else
                     Stability.Unstable
@@ -460,13 +459,32 @@ class StabilityInferencer(val context: IrPluginContext) {
     }
 }
 
+/**
+ * Returns inline class for given class or null of type is not inlined
+ * TODO: Make this configurable for different backends (currently implements logic of JS BE)
+ */
+// From Kotin's InlineClasses.kt
 private fun IrType.getInlinedClass(): IrClass? {
-    val erased = erase(this) ?: return null
-    if (this is IrSimpleType && erased.isInline) {
-        val fieldType = getInlineClassUnderlyingType(erased)
-        return fieldType.getInlinedClass()
+    if (this is IrSimpleType) {
+        val erased = erase(this) ?: return null
+        if (erased.isInline) {
+            if (this.isMarkedNullable()) {
+                var fieldType: IrType
+                var fieldInlinedClass = erased
+                while (true) {
+                    fieldType = getInlineClassUnderlyingType(fieldInlinedClass)
+                    if (fieldType.isMarkedNullable()) {
+                        return null
+                    }
+
+                    fieldInlinedClass = fieldType.getInlinedClass() ?: break
+                }
+            }
+
+            return erased
+        }
     }
-    return erased
+    return null
 }
 
 // From Kotin's InlineClasses.kt
