@@ -356,7 +356,7 @@ class ComposeScene internal constructor(
     fun sendPointerEvent(
         eventType: PointerEventType,
         position: Offset,
-        timeMillis: Long = System.nanoTime() / 1_000_000L,
+        timeMillis: Long = getTimeMilliseconds(),
         type: PointerType = PointerType.Mouse,
         nativeEvent: Any? = null,
         // TODO(demin): support PointerButtons, PointerKeyboardModifiers
@@ -408,7 +408,7 @@ class ComposeScene internal constructor(
         position: Offset,
         delta: MouseScrollUnit,
         orientation: MouseScrollOrientation = MouseScrollOrientation.Vertical,
-        timeMillis: Long = System.nanoTime() / 1_000_000L,
+        timeMillis: Long = getTimeMilliseconds(),
         type: PointerType = PointerType.Mouse,
         nativeEvent: Any? = null,
 //        buttons: PointerButtons? = null,
@@ -473,3 +473,5 @@ internal expect fun pointerInputEvent(
     isMousePressed: Boolean,
     pointerId: Long
 ): PointerInputEvent
+
+internal expect fun getTimeMilliseconds(): Long
