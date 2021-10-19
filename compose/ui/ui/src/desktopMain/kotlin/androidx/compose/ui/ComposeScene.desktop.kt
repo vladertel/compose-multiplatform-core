@@ -67,3 +67,5 @@ internal actual fun pointerInputEvent(
         nativeEvent as MouseEvent?
     )
 }
+
+internal actual fun getTimeMilliseconds(): Long = System.nanoTime() / 1_000_000L
