@@ -70,6 +70,8 @@ import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.platform.js.isJs
+import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.Variance
 
@@ -139,7 +141,11 @@ class DeepCopyIrTreeWithSymbolsPreservingMetadata(
         // as well, since if it they are @Composable it will have its unmodified signature. These
         // types won't be traversed by default by the DeepCopyIrTreeWithSymbols so we have to
         // do it ourself here.
+        //
+        // Native externals are guaranteed to be non-composable (they are wrappers for C world).
+        // So don't do anything for native.
         if (
+            (context.platform.isJs() || context.platform.isJvm()) &&
             ownerFn != null &&
             ownerFn.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
         ) {
@@ -232,7 +238,11 @@ class DeepCopyIrTreeWithSymbolsPreservingMetadata(
         // also transform the corresponding property so that we maintain the relationship
         // `getterFun.correspondingPropertySymbol.owner.getter == getterFun`. If we do not
         // maintain this relationship inline class getters will be incorrectly compiled.
+        //
+        // Native externals are guaranteed to be non-composable (they are wrappers for C world).
+        // So don't do anything for native.
         if (
+            (context.platform.isJs() || context.platform.isJvm()) &&
             ownerFn != null &&
             ownerFn.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
         ) {
