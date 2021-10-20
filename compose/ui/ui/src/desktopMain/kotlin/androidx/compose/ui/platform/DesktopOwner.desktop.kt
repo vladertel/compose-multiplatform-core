@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.platform
 
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.KeyInputModifier
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -41,6 +42,7 @@ internal actual fun sendKeyEvent(
 
 private val defaultCursor = Cursor(Cursor.DEFAULT_CURSOR)
 
+@OptIn(ExperimentalComposeUiApi::class)
 internal actual fun setPointerIcon(
     containerCursor: PlatformComponentWithCursor?,
     icon: PointerIcon?

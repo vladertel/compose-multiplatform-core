@@ -395,6 +395,7 @@ internal expect fun sendKeyEvent(
     keyEvent: KeyEvent
 ): Boolean
 
+@OptIn(ExperimentalComposeUiApi::class)
 internal expect fun setPointerIcon(
     containerCursor: PlatformComponentWithCursor?,
     icon: PointerIcon?

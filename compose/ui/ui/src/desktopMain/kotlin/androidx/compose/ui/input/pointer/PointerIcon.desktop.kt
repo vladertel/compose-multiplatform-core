@@ -16,8 +16,10 @@
 
 package androidx.compose.ui.input.pointer
 
+import androidx.compose.ui.ExperimentalComposeUiApi
 import java.awt.Cursor
 
+@OptIn(ExperimentalComposeUiApi::class)
 internal class AwtCursor(val cursor: Cursor) : PointerIcon {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -42,9 +44,14 @@ internal class AwtCursor(val cursor: Cursor) : PointerIcon {
 /**
  * Creates [PointerIcon] from [Cursor]
  */
+@ExperimentalComposeUiApi
 fun PointerIcon(cursor: Cursor): PointerIcon = AwtCursor(cursor)
 
+@OptIn(ExperimentalComposeUiApi::class)
 internal actual val pointerIconDefault: PointerIcon = AwtCursor(Cursor(Cursor.DEFAULT_CURSOR))
+@OptIn(ExperimentalComposeUiApi::class)
 internal actual val pointerIconCrosshair: PointerIcon = AwtCursor(Cursor(Cursor.CROSSHAIR_CURSOR))
+@OptIn(ExperimentalComposeUiApi::class)
 internal actual val pointerIconText: PointerIcon = AwtCursor(Cursor(Cursor.TEXT_CURSOR))
+@OptIn(ExperimentalComposeUiApi::class)
 internal actual val pointerIconHand: PointerIcon = AwtCursor(Cursor(Cursor.HAND_CURSOR))
