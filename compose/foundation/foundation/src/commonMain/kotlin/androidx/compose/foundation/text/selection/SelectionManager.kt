@@ -389,7 +389,7 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
                 val selection = if (selectable.selectableId == selectableId)
                     selectable.getSelectAllSelection() else null
                 selection?.let { subselections[selectable.selectableId] = it }
-                merge(mergedSelection, selection)
+                mergedSelection?.merge(selection) ?: selection
             }
         if (newSelection != previousSelection) {
             hapticFeedBack?.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -784,7 +784,7 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
 
                 moveConsumed = moveConsumed || consumed
                 selection?.let { newSubselections[selectable.selectableId] = it }
-                merge(mergedSelection, selection)
+                mergedSelection?.merge(selection) ?: selection
             }
         if (newSelection != selection) {
             hapticFeedBack?.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -806,10 +806,6 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
             )
         }
     }
-}
-
-internal fun merge(lhs: Selection?, rhs: Selection?): Selection? {
-    return lhs?.merge(rhs) ?: rhs
 }
 
 internal expect fun isCopyKeyEvent(keyEvent: KeyEvent): Boolean
