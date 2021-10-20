@@ -69,7 +69,7 @@ fun renderComposeScene(
  * @param block a function to process this [ImageComposeScene].
  * @return the result of [block] function invoked on this [ImageComposeScene].
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@ExperimentalComposeUiApi
 inline fun <R> ImageComposeScene.use(
     block: (ImageComposeScene) -> R
 ): R {
