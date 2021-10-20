@@ -56,6 +56,7 @@ internal actual fun pointerInputEvent(
     nativeEvent: Any?,
     type: PointerType,
     pointerId: Long,
+    scrollDelta: Offset,
     buttons: PointerButtons,
     keyboardModifiers: PointerKeyboardModifiers,
 ): PointerInputEvent {
@@ -69,7 +70,8 @@ internal actual fun pointerInputEvent(
                 position,
                 position,
                 buttons.areAnyPressed,
-                type
+                type,
+                scrollDelta = scrollDelta
             )
         ),
         buttons,
