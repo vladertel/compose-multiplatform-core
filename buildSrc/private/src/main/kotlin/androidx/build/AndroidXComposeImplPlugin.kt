@@ -72,9 +72,6 @@ const val enableReportsArg = "androidx.enableComposeCompilerReports"
  */
 class AndroidXComposeImplPlugin : Plugin<Project> {
     override fun apply(project: Project) {
-        if (project.experimentalOELPublication() and (project.oelAndroidxVersion() == null)) {
-            error("androidx version should be specified for OEL publications")
-        }
         val f: KFunction<Unit> = AndroidXComposeImplPlugin.Companion::applyAndConfigureKotlinPlugin
         project.extensions.add("applyAndConfigureKotlinPlugin", f)
         project.plugins.all { plugin ->
@@ -96,6 +93,11 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
                     if (plugin is KotlinMultiplatformPluginWrapper) {
                         project.configureForMultiplatform()
+                        if (project.experimentalOELPublication() and (project.oelAndroidxVersion() == null)) {
+                            error("androidx version should be specified for OEL publications")
+                        }
+                        if (project.experimentalOELPublication())
+                            OELPublishingPrototype(project)
                     }
                 }
             }
@@ -320,9 +322,6 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                     tasks.named("desktopTestClasses").also(::addToBuildOnServer)
                 }
             }
-
-            if (experimentalOELPublication())
-                OELPublishingPrototype(project)
         }
     }
 }
@@ -350,16 +349,6 @@ fun OELPublishingPrototype(project: Project) {
 
 @Suppress("unchecked_cast")
 private fun Project.publishAndroidxReference(target: KotlinTarget) {
-
-    val singleCallPropertyName = "compose.publishAndroidxReference.done.${target.name}"
-    with(extensions.extraProperties) {
-        if (!has(singleCallPropertyName)) {
-            set(singleCallPropertyName, "true")
-        } else {
-            return
-        }
-    }
-
     afterEvaluate {
         target.kotlinComponents.forEach { component ->
             val componentName = component.name
