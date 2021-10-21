@@ -93,7 +93,7 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
                     if (plugin is KotlinMultiplatformPluginWrapper) {
                         project.configureForMultiplatform()
-                        if (project.experimentalOELPublication() and (project.oelAndroidxVersion() == null)) {
+                        if (project.experimentalOELPublication() && (project.oelAndroidxVersion() == null)) {
                             error("androidx version should be specified for OEL publications")
                         }
                         if (project.experimentalOELPublication())
