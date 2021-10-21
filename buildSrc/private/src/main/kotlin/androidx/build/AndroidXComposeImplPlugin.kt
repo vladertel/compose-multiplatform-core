@@ -266,8 +266,8 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
             // TODO: this is needed to use custom Kotlin/Native compiler build
             // with several workarounds.
             // Shall not be needed after 1.6-M1, presumably.
-            (this.rootProject.property("ext") as ExtraPropertiesExtension)
-                .set("kotlin.native.version", KOTLIN_NATIVE_VERSION)
+            //(this.rootProject.property("ext") as ExtraPropertiesExtension)
+            //    .set("kotlin.native.version", KOTLIN_NATIVE_VERSION)
 
             val multiplatformExtension = checkNotNull(multiplatformExtension) {
                 "Unable to configureForMultiplatform() when " +
