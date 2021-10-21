@@ -223,7 +223,7 @@ class AndroidXImplPlugin : Plugin<Project> {
         plugin: KotlinBasePluginWrapper
     ) {
         project.tasks.withType(KotlinCompile::class.java).configureEach { task ->
-            task.kotlinOptions.jvmTarget = "1.8"
+            task.kotlinOptions.jvmTarget = "11"
             project.configureJavaCompilationWarnings(task)
         }
         project.afterEvaluate {
