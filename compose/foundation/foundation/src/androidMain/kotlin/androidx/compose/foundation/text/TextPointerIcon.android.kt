@@ -16,7 +16,9 @@
 
 package androidx.compose.foundation.text
 
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.PointerIcon
 
+@OptIn(ExperimentalComposeUiApi::class)
 internal actual val textPointerIcon: PointerIcon =
     PointerIcon(android.view.PointerIcon.TYPE_TEXT)
