@@ -307,6 +307,7 @@ internal class SkiaLayer(
         )
     }
 
+    @ThreadLocal
     companion object {
         private var lastId = 0L
     }
