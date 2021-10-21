@@ -13,10 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package androidx.compose.ui.platform
 
-internal expect interface PlatformComponent : PlatformInputComponent, PlatformComponentWithCursor
+import androidx.compose.ui.node.LayoutNode
 
-internal expect interface PlatformComponentWithCursor
-
-internal expect object DummyPlatformComponent : PlatformComponent
+internal interface AccessibilityController {
+    fun onSemanticsChange()
+    fun onLayoutChange(layoutNode: LayoutNode)
+    suspend fun syncLoop()
+}

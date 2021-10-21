@@ -13,10 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package androidx.compose.ui.platform
 
-internal expect interface PlatformComponent : PlatformInputComponent, PlatformComponentWithCursor
+package androidx.compose.foundation.text
 
-internal expect interface PlatformComponentWithCursor
+import androidx.compose.foundation.text.selection.SelectionManager
+import androidx.compose.foundation.text.selection.TextFieldSelectionManager
+import androidx.compose.runtime.Composable
 
-internal expect object DummyPlatformComponent : PlatformComponent
+@Composable
+internal expect fun ContextMenuArea(
+    manager: TextFieldSelectionManager,
+    content: @Composable () -> Unit
+)
+
+@Composable
+internal expect fun ContextMenuArea(
+    manager: SelectionManager,
+    content: @Composable () -> Unit
+)

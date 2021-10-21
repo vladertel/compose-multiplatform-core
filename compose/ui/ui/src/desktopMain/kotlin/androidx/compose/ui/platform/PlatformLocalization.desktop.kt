@@ -13,10 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package androidx.compose.ui.platform
 
-internal expect interface PlatformComponent : PlatformInputComponent, PlatformComponentWithCursor
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.ExperimentalComposeUiApi
 
-internal expect interface PlatformComponentWithCursor
+@ExperimentalComposeUiApi
+interface PlatformLocalization {
+    val copy: String
+    val cut: String
+    val paste: String
+    val selectAll: String
+}
 
-internal expect object DummyPlatformComponent : PlatformComponent
+@OptIn(ExperimentalComposeUiApi::class)
+internal val defaultPlatformLocalization = object : PlatformLocalization {
+    override val copy = "Copy"
+    override val cut = "Cut"
+    override val paste = "Paste"
+    override val selectAll = "Select All"
+}
+
+@ExperimentalComposeUiApi
+val LocalLocalization = staticCompositionLocalOf {
+    defaultPlatformLocalization
+}

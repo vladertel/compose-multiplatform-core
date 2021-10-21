@@ -50,6 +50,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.mouse.MouseScrollEvent
 import androidx.compose.ui.input.mouse.MouseScrollEventFilter
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerIconDefaults
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
 import androidx.compose.ui.input.pointer.PointerInputFilter
@@ -97,6 +100,8 @@ internal class SkiaBasedOwner(
         val intOffset = IntOffset(point.x.toInt(), point.y.toInt())
         return bounds.contains(intOffset)
     }
+
+    internal var accessibilityController: AccessibilityController? = null
 
     internal var bounds by mutableStateOf(IntRect.Zero)
 
@@ -238,6 +243,7 @@ internal class SkiaBasedOwner(
     val needsRender get() = needsLayout || needsDraw
     var onNeedsRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
+    var containerCursor: PlatformComponentWithCursor? = null
 
     fun render(canvas: org.jetbrains.skia.Canvas) {
         needsLayout = false
@@ -300,9 +306,13 @@ internal class SkiaBasedOwner(
         onDestroy = { needClearObservations = true }
     )
 
-    override fun onSemanticsChange() = Unit
+    override fun onSemanticsChange() {
+        accessibilityController?.onSemanticsChange()
+    }
 
-    override fun onLayoutChange(layoutNode: LayoutNode) = Unit
+    override fun onLayoutChange(layoutNode: LayoutNode) {
+        accessibilityController?.onLayoutChange(layoutNode)
+    }
 
     override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
         return when (keyEvent.key) {
@@ -325,8 +335,11 @@ internal class SkiaBasedOwner(
         root.draw(canvas.asComposeCanvas())
     }
 
+    private var desiredPointerIcon: PointerIcon? = null
+
     internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
         measureAndLayout()
+        desiredPointerIcon = null
         return pointerInputEventProcessor.process(
             event,
             this,
@@ -334,7 +347,9 @@ internal class SkiaBasedOwner(
                 it.position.x in 0f..root.width.toFloat() &&
                     it.position.y in 0f..root.height.toFloat()
             }
-        )
+        ).also {
+            setPointerIcon(containerCursor, desiredPointerIcon)
+        }
     }
 
     override fun processPointerInput(timeMillis: Long, pointers: List<TestPointerInputEventData>) {
@@ -365,6 +380,13 @@ internal class SkiaBasedOwner(
             if (isConsumed) break
         }
     }
+
+    override val pointerIconService: PointerIconService =
+        object : PointerIconService {
+            override var current: PointerIcon
+                get() = desiredPointerIcon ?: PointerIconDefaults.Default
+                set(value) { desiredPointerIcon = value }
+        }
 }
 
 internal expect fun sendKeyEvent(
@@ -372,3 +394,9 @@ internal expect fun sendKeyEvent(
     keyInputModifier: KeyInputModifier,
     keyEvent: KeyEvent
 ): Boolean
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal expect fun setPointerIcon(
+    containerCursor: PlatformComponentWithCursor?,
+    icon: PointerIcon?
+)
