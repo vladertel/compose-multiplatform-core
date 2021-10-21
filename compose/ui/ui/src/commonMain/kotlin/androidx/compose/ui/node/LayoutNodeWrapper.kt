@@ -904,6 +904,7 @@ internal abstract class LayoutNodeWrapper(
         return Offset(horizontal, vertical)
     }
 
+    @ThreadLocal
     internal companion object {
         const val ExpectAttachedLayoutCoordinates = "LayoutCoordinate operations are only valid " +
             "when isAttached is true"
