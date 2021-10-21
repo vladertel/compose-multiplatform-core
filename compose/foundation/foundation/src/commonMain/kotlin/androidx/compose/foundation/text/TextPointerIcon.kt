@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package androidx.compose.ui.platform
 
-internal expect interface PlatformComponent : PlatformInputComponent, PlatformComponentWithCursor
+@file:OptIn(ExperimentalComposeUiApi::class)
 
-internal expect interface PlatformComponentWithCursor
+package androidx.compose.foundation.text
 
-internal expect object DummyPlatformComponent : PlatformComponent
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerIcon
+
+internal expect val textPointerIcon: PointerIcon
