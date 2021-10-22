@@ -19,10 +19,10 @@ package androidx.compose.ui.platform
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.platform.GlobalSnapshotManager.ensureStarted
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
+import org.jetbrains.skiko.SkikoDispatchers
 
 /**
  * Platform-specific mechanism for starting a monitor of global snapshot state writes
@@ -41,7 +41,7 @@ internal actual object GlobalSnapshotManager {
     actual fun ensureStarted() {
         if (started.compareAndSet(0, 1)) {
             val channel = Channel<Unit>(Channel.CONFLATED)
-            CoroutineScope(Dispatchers.Main).launch {
+            CoroutineScope(SkikoDispatchers.Main).launch {
                 channel.consumeEach {
                     Snapshot.sendApplyNotifications()
                 }
