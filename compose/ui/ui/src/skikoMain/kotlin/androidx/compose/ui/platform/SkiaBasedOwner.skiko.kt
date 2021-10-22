@@ -273,12 +273,21 @@ internal class SkiaBasedOwner(
         onNeedsRender?.invoke()
     }
 
+    var contentSize = IntSize.Zero
+        private set
+
     override fun measureAndLayout() {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
         if (measureAndLayoutDelegate.measureAndLayout()) {
             requestDraw()
         }
         measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
+
+        // Don't use mainOwner.root.width here, as it strictly coerced by [constraints]
+        contentSize = IntSize(
+            root.children.maxOfOrNull { it.outerLayoutNodeWrapper.measuredWidth } ?: 0,
+            root.children.maxOfOrNull { it.outerLayoutNodeWrapper.measuredHeight } ?: 0,
+        )
     }
 
     override fun onRequestMeasure(layoutNode: LayoutNode) {
