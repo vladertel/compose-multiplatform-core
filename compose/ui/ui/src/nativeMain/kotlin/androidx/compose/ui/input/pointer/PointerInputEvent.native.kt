@@ -17,11 +17,12 @@
 package androidx.compose.ui.input.pointer
 
 import androidx.compose.ui.geometry.Offset
+import org.jetbrains.skiko.SkikoPointerEvent
 
 internal actual class PointerInputEvent(
     val eventType: PointerEventType,
     actual val uptime: Long,
     actual val pointers: List<PointerInputEventData>,
-    val mouseEvent: NativeMouseEvent? = null
+    val mouseEvent: SkikoPointerEvent? = null
 )
 
