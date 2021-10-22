@@ -17,8 +17,12 @@
 package androidx.compose.ui.native
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.ComposeScene
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
+import androidx.compose.ui.input.pointer.toCompose
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.unit.Density
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoDispatchers
@@ -27,7 +31,8 @@ import org.jetbrains.skiko.SkikoView
 import org.jetbrains.skiko.SkikoInputEvent
 import org.jetbrains.skiko.SkikoKeyboardEvent
 import org.jetbrains.skiko.SkikoPointerEvent
-import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
+import org.jetbrains.skiko.SkikoPointerEventKind
+import kotlin.system.getTimeMillis
 
 internal class ComposeLayer {
     private var isDisposed = false
@@ -52,7 +57,14 @@ internal class ComposeLayer {
         }
 
         override fun onPointerEvent(event: SkikoPointerEvent) {
-            TODO("need scene.sendPointerEvent")
+            scene.sendPointerEvent(
+                eventType = event.kind.toCompose(),
+                // TODO: account for the proper density.
+                position = Offset(event.x.toFloat(), event.y.toFloat()), // * density,
+                timeMillis = getTimeMillis(),
+                type = PointerType.Mouse,
+                nativeEvent = event
+            )
         }
     }
 
