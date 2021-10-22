@@ -20,8 +20,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.unit.Density
-import kotlinx.coroutines.Dispatchers
 import org.jetbrains.skia.Canvas
+import org.jetbrains.skiko.SkikoDispatchers
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkikoView
 import org.jetbrains.skiko.SkikoInputEvent
@@ -63,7 +63,7 @@ internal class ComposeLayer {
     }
 
     private val scene = ComposeScene(
-        Dispatchers.Main,
+        SkikoDispatchers.Main,
         view,
         Density(1f),
         layer::needRedraw
