@@ -58,7 +58,7 @@ internal class ComposeWindowDelegate(private val window: Window) {
             layer.component.requestFocus()
         }
 
-        override fun getPreferredSize() = layer.component.preferredSize
+        override fun getPreferredSize() = if (isPreferredSizeSet) super.getPreferredSize() else layer.component.preferredSize
     }
 
     private val clipMap = mutableMapOf<Component, ClipComponent>()
