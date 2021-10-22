@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.input.pointer
 
+import org.jetbrains.skiko.SkikoPointerEvent
+
 internal actual typealias NativePointerButtons = Int
 internal actual typealias NativePointerKeyboardModifiers = Int
 
@@ -31,7 +33,7 @@ actual data class PointerEvent internal constructor(
     /**
      * Original raw native event from AWT
      */
-    val mouseEvent: NativeMouseEvent?
+    val mouseEvent: SkikoPointerEvent?
 ) {
     internal actual constructor(
         changes: List<PointerInputChange>,
@@ -43,9 +45,8 @@ actual data class PointerEvent internal constructor(
      */
     actual constructor(changes: List<PointerInputChange>) : this(changes, mouseEvent = null)
 
-    actual var type: PointerEventType
-        get() = TODO("implent native pointer event")
-        set(value) = TODO("implent native pointer event")
+    actual var type: PointerEventType = PointerEventType.Unknown
+        internal set
 
     actual val buttons: PointerButtons
         get() = TODO("implement native pointer event")
