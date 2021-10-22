@@ -21,6 +21,7 @@ import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventData
 import androidx.compose.ui.input.pointer.PointerType
+import org.jetbrains.skiko.SkikoPointerEvent
 
 internal actual fun ComposeScene.onPlatformInputMethodEvent(event: Any) {
     TODO("implement native onPlatformInputMethodEvent")
@@ -35,8 +36,6 @@ internal actual fun pointerInputEvent(
     isMousePressed: Boolean,
     pointerId: Long
 ): PointerInputEvent {
-    TODO("implement native pointerInputEvent")
-/*
     return PointerInputEvent(
         eventType,
         timeMillis,
@@ -50,9 +49,8 @@ internal actual fun pointerInputEvent(
                 type
             )
         ),
-        nativeEvent as MouseEvent?
+        nativeEvent as SkikoPointerEvent?
     )
-*/
 }
 
 internal actual fun getTimeMilliseconds(): Long = kotlin.system.getTimeNanos() / 1_000_000L
