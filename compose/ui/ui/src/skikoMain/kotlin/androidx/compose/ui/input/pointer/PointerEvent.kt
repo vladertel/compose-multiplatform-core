@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
+
 package androidx.compose.ui.input.pointer
 
-import androidx.compose.ui.geometry.Offset
-import org.jetbrains.skiko.SkikoPointerEvent
+import org.jetbrains.skiko.SkikoPointerEventKind
 
-internal actual class PointerInputEvent(
-    val eventType: PointerEventType,
-    actual val uptime: Long,
-    actual val pointers: List<PointerInputEventData>,
-    val mouseEvent: SkikoPointerEvent? = null
-)
+fun SkikoPointerEventKind.toCompose() = when(this) {
+    SkikoPointerEventKind.UP -> PointerEventType.Release
+    SkikoPointerEventKind.DOWN -> PointerEventType.Press
+    SkikoPointerEventKind.MOVE -> PointerEventType.Move
+    else -> PointerEventType.Unknown
+}
 
