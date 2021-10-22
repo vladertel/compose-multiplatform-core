@@ -16,15 +16,11 @@
 
 package androidx.compose.ui.input.pointer
 
-//import java.awt.event.MouseEvent
-
-// TODO: remove me
-class NativeMouseEvent
-
+import org.jetbrains.skiko.SkikoPointerEvent
 
 internal actual class InternalPointerEvent constructor(
     actual val changes: Map<PointerId, PointerInputChange>,
-    val mouseEvent: NativeMouseEvent?
+    val mouseEvent: SkikoPointerEvent?
 ) {
     actual constructor(
         changes: Map<PointerId, PointerInputChange>,
