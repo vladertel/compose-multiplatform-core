@@ -37,6 +37,7 @@ import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkikoView
 import java.awt.Cursor
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Point
@@ -91,6 +92,7 @@ internal class ComposeLayer {
             super.addNotify()
             resetDensity()
             initContent()
+            updateSceneSize()
         }
 
         override fun paint(g: Graphics) {
@@ -120,17 +122,20 @@ internal class ComposeLayer {
             currentInputMethodRequests = null
         }
 
-        override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
+        override fun doLayout() {
+            super.doLayout()
+            updateSceneSize()
+        }
+
+        private fun updateSceneSize() {
             this@ComposeLayer.scene.constraints = Constraints(
                 maxWidth = (width * density.density).toInt().coerceAtLeast(0),
                 maxHeight = (height * density.density).toInt().coerceAtLeast(0)
             )
-            super.setBounds(x, y, width, height)
         }
 
-        override fun doLayout() {
-            super.doLayout()
-            preferredSize = Dimension(
+        override fun getPreferredSize(): Dimension {
+            return if (isPreferredSizeSet) super.getPreferredSize() else Dimension(
                 (this@ComposeLayer.scene.contentSize.width / density.density).toInt(),
                 (this@ComposeLayer.scene.contentSize.height / density.density).toInt()
             )
@@ -144,7 +149,10 @@ internal class ComposeLayer {
 
         private fun resetDensity() {
             density = (this as SkiaLayer).density
-            this@ComposeLayer.scene.density = density
+            if (this@ComposeLayer.scene.density != density) {
+                this@ComposeLayer.scene.density = density
+                updateSceneSize()
+            }
         }
 
         override fun scheduleSyntheticMoveEvent() {
