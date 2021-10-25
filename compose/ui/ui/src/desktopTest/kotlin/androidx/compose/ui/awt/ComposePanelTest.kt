@@ -8,13 +8,17 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.swing.Swing
+import org.junit.Assume
 import org.junit.Test
 import java.awt.Dimension
+import java.awt.GraphicsEnvironment
 import javax.swing.JFrame
 
 class ComposePanelTest {
     @Test
     fun `don't override user preferred size`() {
+        Assume.assumeFalse(GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance)
+
         runBlocking(Dispatchers.Swing) {
             val composePanel = ComposePanel()
             composePanel.preferredSize = Dimension(234, 345)
@@ -39,6 +43,8 @@ class ComposePanelTest {
 
     @Test
     fun `pack to Compose content`() {
+        Assume.assumeFalse(GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance)
+
         runBlocking(Dispatchers.Swing) {
             val composePanel = ComposePanel()
             composePanel.setContent {
