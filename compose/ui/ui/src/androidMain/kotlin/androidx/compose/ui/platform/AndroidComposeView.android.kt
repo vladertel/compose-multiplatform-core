@@ -1349,7 +1349,7 @@ internal object AndroidComposeViewVerificationHelperMethodsN {
             else ->
                 android.view.PointerIcon.getSystemIcon(
                     view.context,
-                    android.view.PointerIcon.TYPE_TEXT
+                    android.view.PointerIcon.TYPE_DEFAULT
                 )
         }
 
