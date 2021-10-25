@@ -8,12 +8,16 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.swing.Swing
+import org.junit.Assume
 import org.junit.Test
+import java.awt.GraphicsEnvironment
 import java.awt.Dimension
 
 class ComposeWindowTest {
     @Test
     fun `don't override user preferred size`() {
+        Assume.assumeFalse(GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance)
+
         runBlocking(Dispatchers.Swing) {
             val window = ComposeWindow()
             try {
@@ -31,6 +35,8 @@ class ComposeWindowTest {
 
     @Test
     fun `pack to Compose content`() {
+        Assume.assumeFalse(GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance)
+
         runBlocking(Dispatchers.Swing) {
             val window = ComposeWindow()
             try {
