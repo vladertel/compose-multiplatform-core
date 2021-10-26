@@ -51,6 +51,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         jvm("desktop")
         macosX64()
+        iosX64()
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -71,7 +72,11 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             nativeMain.dependsOn(commonMain)
-            macosX64Main.dependsOn(nativeMain)
+            darwinMain.dependsOn(nativeMain)
+            macosX64Main.dependsOn(darwinMain)
+            macosArm64Main.dependsOn(darwinMain)
+            iosX64Main.dependsOn(darwinMain)
+            iosArm64Main.dependsOn(darwinMain)
 
             commonTest.dependencies {
                 implementation(kotlin("test-junit"))
