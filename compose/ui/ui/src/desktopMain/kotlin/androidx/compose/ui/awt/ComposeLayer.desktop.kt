@@ -17,15 +17,15 @@
 package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.mouse.MouseScrollOrientation
 import androidx.compose.ui.input.mouse.MouseScrollUnit
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.platform.PlatformComponent
-import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.platform.AccessibilityControllerImpl
+import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.window.density
@@ -34,8 +34,8 @@ import kotlinx.coroutines.swing.Swing
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkikoView
-import java.awt.Cursor
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Point
@@ -103,7 +103,9 @@ internal class ComposeLayer {
         override fun getInputMethodRequests() = currentInputMethodRequests
         override var componentCursor: Cursor
             get() = super.getCursor()
-            set(value) { super.setCursor(value) }
+            set(value) {
+                super.setCursor(value)
+            }
 
         override fun enableInput(inputMethodRequests: InputMethodRequests) {
             currentInputMethodRequests = inputMethodRequests
@@ -126,7 +128,10 @@ internal class ComposeLayer {
                 maxWidth = (width * density.density).toInt().coerceAtLeast(0),
                 maxHeight = (height * density.density).toInt().coerceAtLeast(0)
             )
-            preferredSize = Dimension(
+        }
+
+        override fun getPreferredSize(): Dimension {
+            return if (isPreferredSizeSet) super.getPreferredSize() else Dimension(
                 (this@ComposeLayer.scene.contentSize.width / density.density).toInt(),
                 (this@ComposeLayer.scene.contentSize.height / density.density).toInt()
             )
