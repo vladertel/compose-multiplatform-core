@@ -45,11 +45,22 @@ kotlin {
                 entryPoint = "androidx.compose.native.demo.main"
                 // TODO: the current compose binary surprises LLVM, so disable checks for now.
                 freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
-                freeCompilerArgs += ["-linker-options", "-framework", "-linker-option", "Metal"]
+                freeCompilerArgs += ["-linker-option", "-framework", "-linker-option", "Metal"]
             }
         }
     }
-
+    iosX64() {
+        binaries {
+            executable() {
+                entryPoint = "androidx.compose.native.demo.main"
+                // TODO: the current compose binary surprises LLVM, so disable checks for now.
+                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
+                freeCompilerArgs += ["-linker-option", "-framework", "-linker-option", "Metal",
+                                     "-linker-option", "-framework", "-linker-option", "CoreText",
+                                     "-linker-option", "-framework", "-linker-option", "CoreGraphics"]
+            }
+        }
+    }
     sourceSets {
         commonMain {
         }
@@ -64,15 +75,10 @@ kotlin {
         nativeMain {
             dependsOn(skikoMain)
             dependencies {
-                implementation project(":compose:native")
-            }
-        }
-        macosX64Main {
-            dependsOn(nativeMain)
-            dependencies {
                 implementation project(":compose:foundation:foundation")
                 implementation project(":compose:foundation:foundation-layout")
                 implementation project(":compose:material:material")
+                implementation project(":compose:native")
                 implementation project(":compose:runtime:runtime")
                 implementation project(":compose:ui:ui")
                 implementation project(":compose:ui:ui-graphics")
@@ -80,5 +86,12 @@ kotlin {
                 implementation(libs.kotlinCoroutinesCore)
             }
         }
+        darwinMain.dependsOn(nativeMain)
+        macosMain.dependsOn(darwinMain)
+        macosX64Main.dependsOn(macosMain)
+        macosArm64Main.dependsOn(macosMain)
+        iosMain.dependsOn(darwinMain)
+        iosX64Main.dependsOn(iosMain)
+        iosArm64Main.dependsOn(iosMain)
     }
 }
