@@ -31,11 +31,16 @@ dependencies {
 
 kotlin {
     macosX64()
+    iosX64()
 
     sourceSets {
         commonMain 
         skikoMain.dependsOn(commonMain)
         nativeMain.dependsOn(skikoMain)
-        macosX64Main.dependsOn(nativeMain)
+        darwinMain.dependsOn(nativeMain)
+        macosX64Main.dependsOn(darwinMain)
+        macosArm64Main.dependsOn(darwinMain)
+        iosX64Main.dependsOn(darwinMain)
+        iosArm64Main.dependsOn(darwinMain)
     }
 }
