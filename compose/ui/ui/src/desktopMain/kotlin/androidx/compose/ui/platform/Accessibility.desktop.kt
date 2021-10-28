@@ -37,6 +37,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.delay
+import org.jetbrains.skia.BreakIterator
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
@@ -60,6 +61,9 @@ import javax.accessibility.AccessibleRole
 import javax.accessibility.AccessibleState
 import javax.accessibility.AccessibleStateSet
 import javax.accessibility.AccessibleText
+import javax.accessibility.AccessibleText.CHARACTER
+import javax.accessibility.AccessibleText.SENTENCE
+import javax.accessibility.AccessibleText.WORD
 import javax.accessibility.AccessibleTextSequence
 import javax.accessibility.AccessibleValue
 import javax.swing.text.AttributeSet
@@ -239,7 +243,7 @@ private fun <T> SemanticsConfiguration.getFirst(key: SemanticsPropertyKey<List<T
 
 internal class ComposeAccessible(
     var semanticsNode: SemanticsNode,
-    val controller: AccessibilityControllerImpl
+    val controller: AccessibilityControllerImpl? = null
 ) : Accessible {
     val accessibleContext: ComposeAccessibleComponent by lazy { ComposeAccessibleComponent() }
     override fun getAccessibleContext(): AccessibleContext = accessibleContext
@@ -275,7 +279,7 @@ internal class ComposeAccessible(
             get() = semanticsNode.config.getOrNull(SemanticsProperties.Selected)
 
         private val density: Density
-            get() = controller.owner.density
+            get() = controller?.owner?.density ?: Density(1f)
 
         val horizontalScroll
             get() = semanticsNode.config.getOrNull(SemanticsProperties.HorizontalScrollAxisRange)
@@ -354,8 +358,8 @@ internal class ComposeAccessible(
         }
 
         override fun getAccessibleParent(): Accessible? {
-            return semanticsNode.parent?.id?.let {
-                controller.currentNodes[it]!!
+            return semanticsNode.parent?.id?.let { id ->
+                controller?.let { it.currentNodes[id]!! }
             } ?: accessibleParent
         }
 
@@ -442,15 +446,15 @@ internal class ComposeAccessible(
         }
 
         override fun getAccessibleChild(i: Int): Accessible? {
-            return semanticsNode.replacedChildren.getOrNull(i)?.let {
-                controller.currentNodes[it.id]
+            return semanticsNode.replacedChildren.getOrNull(i)?.id?.let { id ->
+                controller?.let { it.currentNodes[id] }
             } ?: auxiliaryChildren[i - semanticsNode.replacedChildren.size]
         }
 
         override fun getLocale(): Locale = Locale.getDefault()
 
         override fun getLocationOnScreen(): Point {
-            val rootLocation = controller.desktopComponent.locationOnScreen
+            val rootLocation = controller?.desktopComponent?.locationOnScreen ?: Point(0, 0)
             val position = semanticsNode.positionInRoot
             return Point(
                 (rootLocation.x + position.x / density.density).toInt(),
@@ -522,7 +526,7 @@ internal class ComposeAccessible(
         // -----------------------------------
 
         override fun getAccessibleRole(): AccessibleRole {
-            controller.itsActiveNow()
+            controller?.itsActiveNow()
             when (semanticsNode.config.getOrNull(SemanticsProperties.Role)) {
                 Role.Button -> return AccessibleRole.PUSH_BUTTON
                 Role.Checkbox -> return AccessibleRole.CHECK_BOX
@@ -618,22 +622,46 @@ internal class ComposeAccessible(
             }
 
             override fun getCaretPosition(): Int {
-                return textSelectionRange!!.start
+                return textSelectionRange?.start ?: -1
+            }
+
+            private fun partToBreakIterator(part: Int): BreakIterator {
+                val iter = when (part) {
+                    SENTENCE -> BreakIterator.makeSentenceInstance()
+                    WORD -> BreakIterator.makeWordInstance()
+                    CHARACTER -> BreakIterator.makeCharacterInstance()
+                    else -> throw IllegalArgumentException()
+                }
+                iter.setText(text!!.toString())
+                return iter
             }
 
             override fun getAtIndex(part: Int, index: Int): String {
-                println("Not implemented: getAtIndex")
-                TODO("Not yet implemented")
+                return when (val end = partToBreakIterator(part).following(index)) {
+                    BreakIterator.DONE -> ""
+                    else -> text!!.subSequence(index, end).toString()
+                }
             }
 
             override fun getAfterIndex(part: Int, index: Int): String {
-                println("Not implemented: getAfterIndex")
-                TODO("Not yet implemented")
+                val iterator = partToBreakIterator(part)
+                var start = index
+                do {
+                    start = iterator.following(start)
+                    if (start == BreakIterator.DONE) return ""
+                } while (text!![start] == ' ' || text!![start] == '\n')
+                val end = when (val end = iterator.next()) {
+                    BreakIterator.DONE -> iterator.last()
+                    else -> end
+                }
+                return text!!.subSequence(start, end).toString()
             }
 
             override fun getBeforeIndex(part: Int, index: Int): String {
-                println("Not implemented: getBeforeIndex")
-                TODO("Not yet implemented")
+                return when (val start = partToBreakIterator(part).preceding(index)) {
+                    BreakIterator.DONE -> ""
+                    else -> text!!.subSequence(start, index).toString()
+                }
             }
 
             override fun getCharacterAttribute(i: Int): AttributeSet {
