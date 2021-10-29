@@ -117,6 +117,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             desktopMain.dependencies {
                 implementation(libs.kotlinStdlib)
             }
+
             androidTest.dependencies {
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
