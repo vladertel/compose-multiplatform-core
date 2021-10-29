@@ -66,10 +66,14 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     kotlin {
         android()
         jvm("desktop")
+        iosX64("uikitX64") {
+            compilations.test.kotlinOptions {
+                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
+            }
+        }
         macosX64() {
             compilations.test.kotlinOptions {
                 freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
-                freeCompilerArgs += "-Xplugin=" + project.rootProject.ext["outDir"] + "/androidx/compose/compiler/compiler-hosted/build//libs/compiler-hosted-1.1.0-alpha06.jar"
             }
         }
 
@@ -98,6 +102,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             nativeMain.dependsOn(commonMain)
+            uikitX64Main.dependsOn(nativeMain)
             macosX64Main.dependsOn(nativeMain)
 
             commonTest.dependencies {
