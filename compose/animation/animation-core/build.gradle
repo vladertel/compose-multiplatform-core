@@ -72,6 +72,7 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         jvm("desktop")
         macosX64()
+        iosX64("uikitX64")
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -126,9 +127,12 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(project(":compose:ui:ui-test-junit4"))
                 implementation(project(":compose:test-utils"))
             }
-
             nativeMain.dependsOn(commonMain)
-            macosX64Main.dependsOn(nativeMain)
+            darwinMain.dependsOn(nativeMain)
+            macosX64Main.dependsOn(darwinMain)
+            macosArm64Main.dependsOn(darwinMain)
+            uikitX64Main.dependsOn(darwinMain)
+            uikitArm64Main.dependsOn(darwinMain)
         }
     }
     dependencies {
