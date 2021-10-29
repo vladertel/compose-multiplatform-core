@@ -180,9 +180,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             nativeMain {
                 dependsOn(skikoMain)
-                dependencies {
-                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
-                }
             }
 
             // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you
