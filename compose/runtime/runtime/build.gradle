@@ -80,6 +80,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
         }
+        iosX64("uikitX64")
         macosX64()
 
         /*
@@ -114,6 +115,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
             nativeMain.dependsOn(commonMain)
+            uikitX64Main.dependsOn(nativeMain)
             macosX64Main.dependsOn(nativeMain)
 
             androidAndroidTest.dependencies {
