@@ -19,53 +19,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.macos.ComposeWindow
 
 fun Window(
     title: String = "JetpackNativeWindow",
     content: @Composable () -> Unit = { }
 
 ) {
-    AppWindow(
-        title = title,
-    ).show {
-        content()
+    ComposeWindow().apply {
+        setTitle(title)
+        setContent(content)
     }
 }
 
-class AppWindow(title: String = "JetpackNativeWindow") {
-    internal val window = ComposeWindow()
-
-    init {
-        setTitle(title)
-    }
-
-    fun setTitle(title: String) {
-        window.setTitle(title)
-    }
-
-    private fun onCreate(
-        parentComposition: CompositionContext? = null,
+internal expect class ComposeWindow() {
+    fun setTitle(title: String)
+    fun setContent(
         content: @Composable () -> Unit
-    ) {
-        window.setContent(content)
-    }
-
-    /**
-     * Shows a window with the given Compose content.
-     *
-     * @param parentComposition The parent composition reference to coordinate
-     *        scheduling of composition updates.
-     *        If null then default root composition will be used.
-     * @param content Composable content of the window.
-     */
-    fun show(
-        parentComposition: CompositionContext? = null,
-        content: @Composable () -> Unit
-    ) {
-        onCreate(parentComposition) {
-            // window.layer.owners.keyboard = keyboard
-            content()
-        }
-    }
+    )
+    fun dispose()
 }
