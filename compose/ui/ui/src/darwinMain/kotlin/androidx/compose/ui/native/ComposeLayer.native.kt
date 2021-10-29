@@ -83,12 +83,8 @@ internal class ComposeLayer {
 
     fun dispose() {
         check(!isDisposed)
+        this.layer.detach()
         scene.dispose()
-        // events.cancel()
-
-        // TODO: SkiaLayer.macos has disposeLayer, SkiaLayer.jvm  has dispose.
-        // Should't we have a common dispose()?
-        // layer.dispose()
         _initContent = null
         isDisposed = true
     }
