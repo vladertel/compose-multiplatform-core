@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.macos
+package androidx.compose.ui.window
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
@@ -24,13 +24,13 @@ import platform.AppKit.*
 import platform.Cocoa.*
 import platform.Foundation.*
 
-internal class ComposeWindow  {
+internal actual class ComposeWindow actual constructor(){
     val layer = ComposeLayer()
 
     val title: String
         get() = "TODO: get a title from SkiaWindow"
 
-    fun setTitle(title: String) {
+    actual fun setTitle(title: String) {
         println("TODO: set title to SkiaWindow")
     }
 
@@ -57,12 +57,17 @@ internal class ComposeWindow  {
      *
      * @param content Composable content of the ComposeWindow.
      */
-    fun setContent(
+    actual fun setContent(
         content: @Composable () -> Unit
     ) {
         println("ComposeWindow.setContent")
         layer.setContent(
             content = content
         )
+    }
+
+    // TODO: need to call .dispose() on window close.
+    actual fun dispose() {
+        layer.dispose()
     }
 }
