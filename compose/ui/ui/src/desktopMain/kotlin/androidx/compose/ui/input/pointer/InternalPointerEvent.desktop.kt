@@ -35,4 +35,6 @@ internal actual class InternalPointerEvent constructor(
         pointerInputEvent.keyboardModifiers,
         pointerInputEvent.mouseEvent
     )
+
+    actual var suppressMovementConsumption: Boolean = false
 }
