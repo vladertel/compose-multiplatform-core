@@ -46,8 +46,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlin.concurrent.thread
 import kotlinx.test._runBlocking
 import kotlinx.coroutines.test.runBlockingTest
 import kotlinx.test.IgnoreJsTarget
@@ -3156,42 +3154,6 @@ class CompositionTests {
                 currentComposer.createNode { null }
             }
         }
-    }
-
-    // Regression test for b/202967533
-    // Test taken from the bug report; reformatted to conform to lint rules.
-    @OptIn(ExperimentalCoroutinesApi::class)
-    @Test
-    fun avoidsDeadlockInRecomposerComposerDispose() {
-        val thread = thread {
-            while (!Thread.interrupted()) {
-                // -> synchronized(stateLock) -> recordComposerModificationsLocked
-                // -> composition.recordModificationsOf -> synchronized(lock)
-                Snapshot.sendApplyNotifications()
-            }
-        }
-
-        for (i in 1..5000) {
-            runBlocking(TestCoroutineDispatcher()) {
-                localRecomposerTest {
-                    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-                    var value by mutableStateOf(0)
-                    val snapshotObserver = SnapshotStateObserver {}
-                    snapshotObserver.start()
-                    @Suppress("UNUSED_VALUE")
-                    value = 4
-                    val composition = Composition(EmptyApplier(), it)
-                    composition.setContent {}
-
-                    // -> synchronized(lock) -> parent.unregisterComposition(this)
-                    // -> synchronized(stateLock)
-                    composition.dispose()
-                    snapshotObserver.stop()
-                }
-            }
-        }
-
-        thread.interrupt()
     }
 }
 
