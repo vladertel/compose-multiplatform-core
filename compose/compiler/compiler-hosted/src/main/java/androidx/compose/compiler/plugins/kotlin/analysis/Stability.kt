@@ -64,6 +64,7 @@ import org.jetbrains.kotlin.ir.util.isEnumEntry
 import org.jetbrains.kotlin.ir.util.isFunctionOrKFunction
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.util.isTypeParameter
+import org.jetbrains.kotlin.platform.jvm.isJvm
 
 sealed class Stability {
     // class Foo(val bar: Int)
@@ -377,7 +378,7 @@ class StabilityInferencer(val context: IrPluginContext) {
                 substitutions,
                 currentlyAnalyzing
             )
-            type.isInlineClassType() -> stabilityOf(
+            context.platform.isJvm() && type.isInlineClassType() -> stabilityOf(
                 type.getInlinedClass()!!,
                 substitutions,
                 currentlyAnalyzing
