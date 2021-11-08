@@ -20,6 +20,7 @@ import androidx.compose.ui.input.key.KeyInputModifier
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerIcon
 
 internal actual fun sendKeyEvent(
     platformInputService: PlatformInput,
@@ -37,4 +38,11 @@ internal actual fun sendKeyEvent(
 
     return keyInputModifier.processKeyInput(keyEvent)
 */
+}
+
+internal actual fun setPointerIcon(
+    containerCursor: PlatformComponentWithCursor?,
+    icon: PointerIcon?
+) {
+    println("TODO: implement setPointerIcon for Native")
 }
