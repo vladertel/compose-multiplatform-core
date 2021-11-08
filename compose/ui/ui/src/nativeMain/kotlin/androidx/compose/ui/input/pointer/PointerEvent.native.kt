@@ -48,8 +48,7 @@ actual data class PointerEvent internal constructor(
     actual var type: PointerEventType = PointerEventType.Unknown
         internal set
 
-    actual val buttons: PointerButtons
-        get() = TODO("implement native pointer event")
+    actual val buttons: PointerButtons = PointerButtons(mouseEvent?.buttonMask ?: 0)
 
     actual val keyboardModifiers: PointerKeyboardModifiers
         get() = TODO("implement native pointer event")
@@ -76,8 +75,9 @@ actual val PointerButtons.isForwardPressed: Boolean
 actual fun PointerButtons.isPressed(buttonIndex: Int): Boolean =
     TODO("implement native events")
 
+// TODO: all this file should go away when we move to Skiko events for skikoCommon.
 actual val PointerButtons.areAnyPressed: Boolean
-    get() = TODO("implement native events")
+    get() = packedValue != 0
 
 actual fun PointerButtons.indexOfFirstPressed(): Int = TODO("implement native events")
 
