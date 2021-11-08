@@ -53,6 +53,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
 import org.jetbrains.kotlin.gradle.targets.js.KotlinJsCompilerAttribute
 import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import org.jetbrains.kotlin.tooling.core.withClosure
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 
 const val composeSourceOption =
     "plugin:androidx.compose.compiler.plugins.kotlin:sourceInformation=true"
@@ -355,8 +356,10 @@ fun Project.configureComposeImplPluginForAndroidx() {
             .withNormalizer(ClasspathNormalizer::class.java)
         compile.onlyIf {
             if (!kotlinPlugin.isEmpty) {
-                compile.kotlinOptions.freeCompilerArgs +=
-                    "-Xplugin=${kotlinPlugin.first()}"
+                if (compile !is KotlinNativeCompile) {
+                    compile.kotlinOptions.freeCompilerArgs +=
+                        "-Xplugin=${kotlinPlugin.first()}"
+                }
 
                 val enableMetrics = (enableMetricsProvider.orNull == "true")
 
