@@ -17,12 +17,6 @@
 package androidx.compose.foundation.text
 
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
 
 internal actual val platformDefaultKeyMapping: KeyMapping = defaultKeyMapping
 

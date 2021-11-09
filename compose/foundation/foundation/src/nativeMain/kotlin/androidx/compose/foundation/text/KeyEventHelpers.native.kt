@@ -20,4 +20,4 @@ import androidx.compose.ui.input.key.KeyEvent
 
 internal actual fun KeyEvent.cancelsTextSelection(): Boolean = false
 
-internal actual fun showCharacterPalette():Unit = TODO("implement native showCharacterPalette")
+internal actual fun showCharacterPalette(): Unit = TODO("implement native showCharacterPalette")

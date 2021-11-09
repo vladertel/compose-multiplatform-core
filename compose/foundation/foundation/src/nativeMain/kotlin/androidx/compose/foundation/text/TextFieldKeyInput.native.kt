@@ -17,17 +17,6 @@
 package androidx.compose.foundation.text
 
 import androidx.compose.ui.input.key.KeyEvent
-/*
-private fun Char.isPrintable(): Boolean {
-    val block = Character.UnicodeBlock.of(this)
-    return (!Character.isISOControl(this)) &&
-        this != java.awt.event.KeyEvent.CHAR_UNDEFINED &&
-        block != null &&
-        block != Character.UnicodeBlock.SPECIALS
-}
-*/
 
 actual val KeyEvent.isTypedEvent: Boolean
     get() = TODO("implement native KeyEvent.isTypedEvent")
-    //get() = nativeKeyEvent.id == java.awt.event.KeyEvent.KEY_TYPED &&
-    //    nativeKeyEvent.keyChar.isPrintable()

@@ -16,10 +16,6 @@
 
 package androidx.compose.foundation.lazy
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
-import androidx.compose.ui.layout.SubcomposeLayoutState
-
 internal actual fun getDefaultLazyKeyFor(index: Int): Any = DefaultLazyKey(index)
 
 private data class DefaultLazyKey(private val index: Int)
