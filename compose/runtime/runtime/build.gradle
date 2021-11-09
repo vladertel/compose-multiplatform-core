@@ -148,6 +148,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 kotlin.srcDir("src/nativeTest/kotlin")
             }
             macosX64Test.dependsOn(nativeTest)
+            uikitX64Test.dependsOn(nativeTest)
         }
     }
     dependencies {
