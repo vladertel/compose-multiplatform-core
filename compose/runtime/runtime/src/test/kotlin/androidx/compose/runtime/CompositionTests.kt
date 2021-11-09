@@ -3225,7 +3225,7 @@ fun testDeferredSubcomposition(block: @Composable () -> Unit): () -> Unit {
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-private suspend fun <R> localRecomposerTest(
+internal suspend fun <R> localRecomposerTest(
     block: CoroutineScope.(Recomposer) -> R
 ) = coroutineScope {
     val contextWithClock = coroutineContext + TestMonotonicFrameClock(this)
