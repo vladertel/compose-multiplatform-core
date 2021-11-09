@@ -33,7 +33,6 @@ class ComposePanelTest {
                 frame.contentPane.add(composePanel)
                 frame.isUndecorated = true
 
-                frame.isVisible = true
                 assertThat(composePanel.preferredSize).isEqualTo(Dimension(234, 345))
 
                 frame.pack()
