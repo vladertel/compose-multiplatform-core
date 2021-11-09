@@ -22,10 +22,9 @@ actual class AtomicLong actual constructor(value: Long) {
 
     actual fun get(): Long = atomic.value
 
-    actual fun set(value: Long): Unit {
+    actual fun set(value: Long) {
         atomic.value = value
     }
 
     actual fun getAndIncrement(): Long = TODO("Implement native atomic getAndIncrement")
 }
-

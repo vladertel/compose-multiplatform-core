@@ -17,4 +17,3 @@
 package androidx.compose.foundation.text
 
 internal actual fun timeNowMillis(): Long = TODO("implement native timeNowMillis")
-
