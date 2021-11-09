@@ -307,7 +307,7 @@ internal class SkiaLayer(
         )
     }
 
-    @ThreadLocal
+    @kotlin.native.concurrent.ThreadLocal
     companion object {
         private var lastId = 0L
     }
