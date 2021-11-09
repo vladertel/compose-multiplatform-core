@@ -31,4 +31,3 @@ internal actual val TapIndicationDelay: Long = 0L
  */
 internal actual val KeyEvent.isClick: Boolean
     get() = TODO("implement native isClick")
-
