@@ -29,4 +29,3 @@ internal actual fun CursorHandle(
 ) {
     /* Not implemented. */
 }
-
