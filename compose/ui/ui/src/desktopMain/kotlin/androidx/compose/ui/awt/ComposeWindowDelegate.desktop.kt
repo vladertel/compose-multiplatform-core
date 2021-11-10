@@ -77,11 +77,7 @@ internal class ComposeWindowDelegate(private val window: Window) {
         pane.remove(component)
     }
 
-    var compositionLocalContext: CompositionLocalContext?
-        get() = layer.compositionLocalContext
-        set(value) {
-            layer.compositionLocalContext = value
-        }
+    var compositionLocalContext: CompositionLocalContext? by layer::compositionLocalContext
 
     fun setContent(
         onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },

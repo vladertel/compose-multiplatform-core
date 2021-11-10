@@ -71,11 +71,7 @@ class ComposeDialog(
      *
      * `null` if no composition locals should be provided.
      */
-    var compositionLocalContext: CompositionLocalContext?
-        get() = delegate.compositionLocalContext
-        set(value) {
-            delegate.compositionLocalContext = value
-        }
+    var compositionLocalContext: CompositionLocalContext? by delegate::compositionLocalContext
 
     /**
      * Composes the given composable into the ComposeDialog.

@@ -236,11 +236,7 @@ internal class ComposeLayer {
         isDisposed = true
     }
 
-    var compositionLocalContext: CompositionLocalContext?
-        get() = scene.compositionLocalContext
-        set(value) {
-            scene.compositionLocalContext = value
-        }
+    var compositionLocalContext: CompositionLocalContext? by scene::compositionLocalContext
 
     fun setContent(
         onPreviewKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
