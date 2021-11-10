@@ -732,7 +732,7 @@ class SnapshotTests {
     // Regression test for b/199921314
     // This test lifted directly from the bug reported by chrnie@foxmail.com, modified and formatted
     // to avoid lint warnings.
-    //@Test(expected = IllegalStateException::class) was moved to assertFailsWith<IllegalStateException>, to make js tests work
+    @Test // was moved to assertFailsWith<IllegalStateException>, to make js tests work
     fun testTakeSnapshotNested() {
         assertFailsWith<IllegalStateException> {
             Snapshot.withMutableSnapshot {
