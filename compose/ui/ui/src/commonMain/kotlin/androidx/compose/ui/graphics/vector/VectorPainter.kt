@@ -76,21 +76,26 @@ fun rememberVectorPainter(
     val vpWidth = if (viewportWidth.isNaN()) widthPx else viewportWidth
     val vpHeight = if (viewportHeight.isNaN()) heightPx else viewportHeight
 
+    val intrinsicColorFilter = remember(tintColor, tintBlendMode) {
+        if (tintColor != Color.Unspecified) {
+            ColorFilter.tint(tintColor, tintBlendMode)
+        } else {
+            null
+        }
+    }
+
     val painter = remember { VectorPainter() }.apply {
         // This assignment is thread safe as the internal Size parameter is
         // backed by a mutableState object
         size = Size(widthPx, heightPx)
+        this.intrinsicColorFilter = intrinsicColorFilter
         RenderVector(name, vpWidth, vpHeight, content)
     }
     SideEffect {
         // Initialize the intrinsic color filter if a tint color is provided on the
         // vector itself. Note this tint can be overridden by an explicit ColorFilter
         // provided on the Modifier.paint call
-        painter.intrinsicColorFilter = if (tintColor != Color.Unspecified) {
-            ColorFilter.tint(tintColor, tintBlendMode)
-        } else {
-            null
-        }
+        painter.intrinsicColorFilter = intrinsicColorFilter
     }
     return painter
 }
