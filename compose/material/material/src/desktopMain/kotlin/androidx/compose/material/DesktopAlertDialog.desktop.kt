@@ -16,8 +16,10 @@
 
 package androidx.compose.material
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -27,9 +29,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.rememberDialogState
 import androidx.compose.ui.window.Dialog as CoreDialog
 
@@ -178,12 +186,28 @@ object PopupAlertDialogProvider : AlertDialogProvider {
         content: @Composable () -> Unit
     ) {
         Popup(
-            alignment = Alignment.Center,
+            popupPositionProvider = object : PopupPositionProvider {
+                override fun calculatePosition(
+                    anchorBounds: IntRect,
+                    windowSize: IntSize,
+                    layoutDirection: LayoutDirection,
+                    popupContentSize: IntSize
+                ): IntOffset = IntOffset.Zero
+            },
             focusable = true,
             onDismissRequest = onDismissRequest,
         ) {
-            Surface(elevation = 24.dp) {
-                content()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(onDismissRequest) {
+                        detectTapGestures(onPress = { onDismissRequest() })
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(elevation = 24.dp) {
+                    content()
+                }
             }
         }
     }
