@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.platform.AccessibilityControllerImpl
 import androidx.compose.ui.platform.DesktopPlatform
 import androidx.compose.ui.platform.PlatformComponent
+import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.window.density
@@ -55,9 +56,12 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import java.awt.event.MouseWheelEvent
+import java.awt.event.WindowEvent
+import java.awt.event.WindowFocusListener
 import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
 import javax.accessibility.AccessibleContext
+import javax.swing.SwingUtilities
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
@@ -90,11 +94,27 @@ internal class ComposeLayer {
         SkiaLayer(externalAccessibleFactory = ::makeAccessible), Accessible, PlatformComponent {
         var currentInputMethodRequests: InputMethodRequests? = null
 
+        private var window: Window? = null
+        private var windowListener = object : WindowFocusListener {
+            override fun windowGainedFocus(e: WindowEvent) = refreshWindowFocus()
+            override fun windowLostFocus(e: WindowEvent) = refreshWindowFocus()
+        }
+
         override fun addNotify() {
             super.addNotify()
             resetDensity()
             initContent()
             updateSceneSize()
+            window = SwingUtilities.getWindowAncestor(this)
+            window?.addWindowFocusListener(windowListener)
+            refreshWindowFocus()
+        }
+
+        override fun removeNotify() {
+            window?.removeWindowFocusListener(windowListener)
+            window = null
+            refreshWindowFocus()
+            super.removeNotify()
         }
 
         override fun paint(g: Graphics) {
@@ -149,6 +169,12 @@ internal class ComposeLayer {
                 this@ComposeLayer.scene.density = density
                 updateSceneSize()
             }
+        }
+
+        override val windowInfo = WindowInfoImpl()
+
+        private fun refreshWindowFocus() {
+            windowInfo.isWindowFocused = window?.isFocused ?: false
         }
 
         override fun scheduleSyntheticMoveEvent() {
