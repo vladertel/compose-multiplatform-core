@@ -78,7 +78,7 @@ internal val LocalComposeScene = staticCompositionLocalOf<ComposeScene> {
  */
 class ComposeScene internal constructor(
     coroutineContext: CoroutineContext = Dispatchers.Unconfined,
-    private val component: PlatformComponent,
+    internal val component: PlatformComponent,
     density: Density,
     private val invalidate: () -> Unit
 ) {
@@ -289,6 +289,7 @@ class ComposeScene internal constructor(
         mainOwner?.dispose()
         val mainOwner = SkiaBasedOwner(
             platformInputService,
+            component.windowInfo,
             density,
             onPreviewKeyEvent = onPreviewKeyEvent,
             onKeyEvent = onKeyEvent
