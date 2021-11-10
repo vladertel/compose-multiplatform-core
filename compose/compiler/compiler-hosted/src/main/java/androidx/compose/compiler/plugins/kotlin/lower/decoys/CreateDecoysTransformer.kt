@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.backend.common.ir.moveBodyTo
 import org.jetbrains.kotlin.backend.common.ir.remapTypeParameters
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.builders.declarations.IrFunctionBuilder
@@ -36,6 +37,7 @@ import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irReturn
+import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationContainer
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
@@ -149,6 +151,13 @@ class CreateDecoysTransformer(
                 stubBody()
             }
         }
+    }
+
+    override fun visitClass(declaration: IrClass): IrStatement {
+        if (declaration.visibility == DescriptorVisibilities.PRIVATE) {
+            return declaration
+        }
+        return super.visitClass(declaration)
     }
 
     override fun visitConstructor(declaration: IrConstructor): IrStatement {
@@ -310,6 +319,7 @@ class CreateDecoysTransformer(
     }
 
     private fun IrFunction.shouldBeRemapped(): Boolean =
+        this.visibility != DescriptorVisibilities.PRIVATE &&
         !isLocalFunction() &&
             !isEnumConstructor() &&
             (hasComposableAnnotation() || hasComposableParameter())

@@ -160,13 +160,22 @@ class ClassStabilityTransformer(
             it.putValueArgument(0, irConst(parameterMask))
         }
 
-        cls.declarations += makeStabilityField().also { f ->
-            f.parent = cls
+        val stabilityProp = makeStabilityProp()
+        val stabilityField = makeStabilityField().also { f ->
+//            f.parent = cls
             f.initializer = IrExpressionBodyImpl(
                 UNDEFINED_OFFSET,
                 UNDEFINED_OFFSET,
                 stableExpr
             )
+            f.correspondingPropertySymbol = stabilityProp.symbol
+        }
+
+//        cls.declarations += stabilityField
+
+        cls.declarations += stabilityProp.also {
+            it.parent = cls
+            it.backingField = stabilityField
         }
 
         return result
