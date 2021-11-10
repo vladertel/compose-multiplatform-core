@@ -171,6 +171,7 @@ private fun PopupLayout(
         val owner = SkiaBasedOwner(
             platformInputService = scene.platformInputService,
             component = scene.component,
+            windowInfo = scene.component.windowInfo,
             density = density,
             isFocusable = focusable,
             onDismissRequest = onDismissRequest,
