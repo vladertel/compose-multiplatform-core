@@ -217,11 +217,10 @@ fun Modifier.pointerInput(
 ) {
     val density = LocalDensity.current
     val viewConfiguration = LocalViewConfiguration.current
-    remember(density) { SuspendingPointerInputFilter(viewConfiguration, density) }.apply {
-        val filter = this
-        LaunchedEffect(this, key1) {
+    remember(density) { SuspendingPointerInputFilter(viewConfiguration, density) }.also { filter ->
+        LaunchedEffect(filter, key1) {
             filter.coroutineScope = this
-            block()
+            filter.block()
         }
     }
 }
@@ -251,7 +250,7 @@ fun Modifier.pointerInput(
     val density = LocalDensity.current
     val viewConfiguration = LocalViewConfiguration.current
     remember(density) { SuspendingPointerInputFilter(viewConfiguration, density) }.also { filter ->
-        LaunchedEffect(this, key1, key2) {
+        LaunchedEffect(filter, key1, key2) {
             filter.coroutineScope = this
             filter.block()
         }
@@ -279,11 +278,10 @@ fun Modifier.pointerInput(
 ) {
     val density = LocalDensity.current
     val viewConfiguration = LocalViewConfiguration.current
-    remember(density) { SuspendingPointerInputFilter(viewConfiguration, density) }.apply {
-        val filter = this
-        LaunchedEffect(this, *keys) {
+    remember(density) { SuspendingPointerInputFilter(viewConfiguration, density) }.also { filter ->
+        LaunchedEffect(filter, *keys) {
             filter.coroutineScope = this
-            block()
+            filter.block()
         }
     }
 }
