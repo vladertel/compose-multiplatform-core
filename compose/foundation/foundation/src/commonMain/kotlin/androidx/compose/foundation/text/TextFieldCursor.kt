@@ -32,7 +32,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.isUnspecified
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
 
 @Suppress("ModifierInspectorInfo")
 internal fun Modifier.cursor(
@@ -56,7 +56,7 @@ internal fun Modifier.cursor(
                     .originalToTransformed(value.selection.start)
                 val cursorRect = state.layoutResult?.value?.getCursorRect(transformedOffset)
                     ?: Rect(0f, 0f, 0f, 0f)
-                val cursorWidth = DefaultCursorThickness.toPx()
+                val cursorWidth = getDefaultCursorThicknessPx()
                 val cursorX = (cursorRect.left + cursorWidth / 2)
                     .coerceAtMost(size.width - cursorWidth / 2)
 
@@ -85,4 +85,4 @@ private val cursorAnimationSpec: AnimationSpec<Float>
         }
     )
 
-internal val DefaultCursorThickness = 2.dp
+internal expect fun Density.getDefaultCursorThicknessPx(): Float

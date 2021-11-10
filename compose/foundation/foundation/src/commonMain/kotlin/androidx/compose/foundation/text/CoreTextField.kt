@@ -851,7 +851,7 @@ internal fun TextFieldCursorHandle(manager: TextFieldSelectionManager) {
             offset.coerceIn(0, it.layoutInput.text.length)
         )
         val x = with(LocalDensity.current) {
-            cursorRect.left + DefaultCursorThickness.toPx() / 2
+            cursorRect.left + getDefaultCursorThicknessPx() / 2
         }
         CursorHandle(
             handlePosition = Offset(x, cursorRect.bottom),
