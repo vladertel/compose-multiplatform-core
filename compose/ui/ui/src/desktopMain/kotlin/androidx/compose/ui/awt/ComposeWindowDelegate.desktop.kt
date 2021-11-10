@@ -17,6 +17,7 @@
 package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.window.LocalWindow
@@ -75,6 +76,8 @@ internal class ComposeWindowDelegate(private val window: Window) {
     fun remove(component: Component) {
         pane.remove(component)
     }
+
+    var compositionLocalContext: CompositionLocalContext? by layer::compositionLocalContext
 
     fun setContent(
         onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },

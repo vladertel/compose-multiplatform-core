@@ -16,6 +16,7 @@
 package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.window.DialogWindowScope
@@ -63,6 +64,14 @@ class ComposeDialog(
         onKeyEvent = { false },
         content = content
     )
+
+    // TODO(CL) non-experimental new API. we can't remove it when we merge it into AOSP, we can just deprecate it.
+    /**
+     * Top-level composition locals, which will be provided for the Composable content, which is set by [setContent].
+     *
+     * `null` if no composition locals should be provided.
+     */
+    var compositionLocalContext: CompositionLocalContext? by delegate::compositionLocalContext
 
     /**
      * Composes the given composable into the ComposeDialog.

@@ -19,10 +19,14 @@ import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
 import androidx.compose.runtime.CompositionContext
+import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Recomposer
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
@@ -237,6 +241,14 @@ class ComposeScene internal constructor(
         }
     }
 
+    // TODO(CL) non-experimental new API. we can't remove it when we merge it into AOSP, we can just deprecate it.
+    /**
+     * Top-level composition locals, which will be provided for the Composable content, which is set by [setContent].
+     *
+     * `null` if no composition locals should be provided.
+     */
+    var compositionLocalContext: CompositionLocalContext? by mutableStateOf(null)
+
     /**
      * Update the composition with the content described by the [content] composable. After this
      * has been called the changes to produce the initial composition has been calculated and
@@ -282,7 +294,7 @@ class ComposeScene internal constructor(
             onKeyEvent = onKeyEvent
         )
         attach(mainOwner)
-        composition = mainOwner.setContent(parentComposition ?: recomposer) {
+        composition = mainOwner.setContent(parentComposition ?: recomposer, { compositionLocalContext }) {
             CompositionLocalProvider(
                 LocalComposeScene provides this,
                 content = content
