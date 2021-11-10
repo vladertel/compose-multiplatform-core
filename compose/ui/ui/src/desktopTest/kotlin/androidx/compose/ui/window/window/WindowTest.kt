@@ -485,6 +485,7 @@ class WindowTest {
         }
 
         awaitIdle()
+        assertThat(actualDensity).isNotNull()
         assertThat(actualDensity).isNotEqualTo(customDensity)
 
         exitApplication()
