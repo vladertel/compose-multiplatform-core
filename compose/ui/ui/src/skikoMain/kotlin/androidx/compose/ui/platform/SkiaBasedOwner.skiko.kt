@@ -90,6 +90,7 @@ private typealias Command = () -> Unit
 internal class SkiaBasedOwner(
     private val platformInputService: PlatformInput,
     private val component: PlatformComponent,
+    override val windowInfo: WindowInfo,
     private val pointerPositionUpdater: PointerPositionUpdater,
     density: Density = Density(1f, 1f),
     bounds: IntRect = IntRect.Zero,
@@ -140,11 +141,6 @@ internal class SkiaBasedOwner(
     )
     override val inputModeManager: InputModeManager
         get() = _inputModeManager
-
-    // TODO: set/clear _windowInfo.isWindowFocused when the window gains/loses focus.
-    private val _windowInfo: WindowInfoImpl = WindowInfoImpl()
-    override val windowInfo: WindowInfo
-        get() = _windowInfo
 
     // TODO(b/177931787) : Consider creating a KeyInputManager like we have for FocusManager so
     //  that this common logic can be used by all owners.
