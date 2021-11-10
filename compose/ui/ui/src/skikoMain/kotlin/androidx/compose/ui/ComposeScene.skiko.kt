@@ -325,6 +325,7 @@ class ComposeScene internal constructor(
         val mainOwner = SkiaBasedOwner(
             platformInputService,
             component,
+            component.windowInfo,
             pointerPositionUpdater,
             density,
             IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect(),
