@@ -359,20 +359,20 @@ fun Window(
     update: (ComposeWindow) -> Unit = {},
     content: @Composable FrameWindowScope.() -> Unit
 ) {
-    val currentLocals by rememberUpdatedState(currentCompositionLocalContext)
+    val compositionLocalContext by rememberUpdatedState(currentCompositionLocalContext)
     AwtWindow(
         visible = visible,
         create = {
             create().apply {
-                setContent(onPreviewKeyEvent, onKeyEvent) {
-                    CompositionLocalProvider(currentLocals) {
-                        content()
-                    }
-                }
+                this.compositionLocalContext = compositionLocalContext
+                setContent(onPreviewKeyEvent, onKeyEvent, content)
             }
         },
         dispose = dispose,
-        update = update
+        update = {
+            it.compositionLocalContext = compositionLocalContext
+            update(it)
+        }
     )
 }
 

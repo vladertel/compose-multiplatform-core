@@ -17,6 +17,8 @@
 package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalContext
+import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -336,6 +338,8 @@ internal class ComposeLayer {
         _initContent = null
         isDisposed = true
     }
+
+    var compositionLocalContext: CompositionLocalContext? by scene::compositionLocalContext
 
     fun setContent(
         onPreviewKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
