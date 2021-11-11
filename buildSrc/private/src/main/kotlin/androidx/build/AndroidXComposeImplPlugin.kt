@@ -128,7 +128,7 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
             project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
                 compile.kotlinOptions.freeCompilerArgs += listOf(
-                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true"
+                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=false"
                 )
             }
         }
@@ -354,7 +354,7 @@ fun Project.configureComposeImplPluginForAndroidx() {
             .withNormalizer(ClasspathNormalizer::class.java)
         compile.onlyIf {
             if (!kotlinPlugin.isEmpty) {
-                if (compile !is KotlinNativeCompile) {
+                if (compile !is KotlinNativeCompile && compile !is KotlinJsCompile) {
                     compile.kotlinOptions.freeCompilerArgs +=
                         "-Xplugin=${kotlinPlugin.first()}"
                 }

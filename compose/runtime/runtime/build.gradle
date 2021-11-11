@@ -69,8 +69,15 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         jvm("desktop")
         js(IR) {
-            nodejs {}
+            nodejs {
+                compilations.test.kotlinOptions {
+                    freeCompilerArgs += "-Xplugin=$projectDir/../out/androidx/compose/compiler/compiler/build/repackaged/embedded.jar"
+                }
+            }
             browser() {
+                compilations.test.kotlinOptions {
+                    freeCompilerArgs += "-Xplugin=$projectDir/../out/androidx/compose/compiler/compiler/build/repackaged/embedded.jar"
+                }
                 testTask {
                     testLogging.showStandardStreams = true
                     useKarma {
