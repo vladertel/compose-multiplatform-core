@@ -352,6 +352,7 @@ class ComposeScene internal constructor(
     }
 
     private var focusedOwner: SkiaBasedOwner? = null
+    private var mousePressOwner: SkiaBasedOwner? = null
     private val hoveredOwner: SkiaBasedOwner?
         get() = list.lastOrNull { it.isHovered(pointLocation) } ?: list.lastOrNull()
 
@@ -396,7 +397,11 @@ class ComposeScene internal constructor(
             PointerEventType.Release -> onMouseReleased(event)
             PointerEventType.Move -> {
                 pointLocation = position
-                hoveredOwner?.processPointerInput(event)
+                if (isMousePressed) {
+                    mousePressOwner?.processPointerInput(event)
+                } else {
+                    hoveredOwner?.processPointerInput(event)
+                }
             }
             PointerEventType.Enter -> hoveredOwner?.processPointerInput(event)
             PointerEventType.Exit -> hoveredOwner?.processPointerInput(event)
@@ -445,15 +450,18 @@ class ComposeScene internal constructor(
                 focusedOwner?.onDismissRequest?.invoke()
             } else {
                 currentOwner.processPointerInput(event)
+                mousePressOwner = currentOwner
             }
         } else {
             focusedOwner?.processPointerInput(event)
+            mousePressOwner = focusedOwner
         }
     }
 
     private fun onMouseReleased(event: PointerInputEvent) {
-        val owner = hoveredOwner ?: focusedOwner
+        val owner = (mousePressOwner ?: hoveredOwner) ?: focusedOwner
         owner?.processPointerInput(event)
+        mousePressOwner = null
         pointerId += 1
     }
 
