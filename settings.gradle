@@ -23,6 +23,16 @@ buildscript {
         maven {
             url = new File(buildscript.sourceFile.parent + "/../../prebuilts/androidx/external").getCanonicalFile()
         }
+        if (System.getenv("ALLOW_PUBLIC_REPOS") != null || System.getProperty("ALLOW_PUBLIC_REPOS") != null) {
+            mavenCentral()
+            google()
+            maven {
+                url = "https://maven.pkg.jetbrains.space/public/p/compose/dev"
+            }
+            maven {
+                url = "https://plugins.gradle.org/m2/"
+            }
+        }
     }
 
     dependencies {
