@@ -383,7 +383,7 @@ includeProject(":compose:ui:ui-graphics-lint", "compose/ui/ui-graphics-lint", [B
 includeProject(":compose:ui:ui-graphics:ui-graphics-benchmark", "compose/ui/ui-graphics/benchmark", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-graphics:ui-graphics-benchmark:test", "compose/ui/ui-graphics/benchmark/test", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-graphics:ui-graphics-samples", "compose/ui/ui-graphics/samples", [BuildType.COMPOSE])
-includeProject(":compose:ui:ui-inspection", "compose/ui/ui-inspection", [BuildType.COMPOSE])
+//includeProject(":compose:ui:ui-inspection", "compose/ui/ui-inspection", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-lint", "compose/ui/ui-lint", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-test", "compose/ui/ui-test", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-test-font", "compose/ui/ui-test-font", [BuildType.COMPOSE])

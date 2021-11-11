@@ -19,29 +19,36 @@ package androidx.compose.ui.input.mouse
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.TestComposeWindow
+import androidx.compose.ui.awtWheelEvent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.use
 import com.google.common.truth.Truth.assertThat
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @OptIn(ExperimentalComposeUiApi::class)
 @RunWith(JUnit4::class)
-@Ignore // TODO(demin) remove after migration to ImageComposeScene (it will be upstreamed from Compose MPP 1.0.0)
 class MouseScrollFilterTest {
-    private val window = TestComposeWindow(width = 100, height = 100, density = Density(2f))
-
     @Test
-    fun `inside box`() {
+    fun `inside box`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var actualEvent: MouseScrollEvent? = null
         var actualBounds: IntSize? = null
 
-        window.setContent {
+        scene.setContent {
             Box(
                 Modifier
                     .mouseScrollFilter { event, bounds ->
@@ -53,10 +60,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        window.onMouseScroll(
-            x = 0,
-            y = 0,
-            event = MouseScrollEvent(MouseScrollUnit.Line(3f), MouseScrollOrientation.Vertical)
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
+            position = Offset.Zero,
+            scrollDelta = Offset(0f, 3f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent?.delta).isEqualTo(MouseScrollUnit.Line(3f))
@@ -65,11 +73,15 @@ class MouseScrollFilterTest {
     }
 
     @Test
-    fun `outside box`() {
+    fun `outside box`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var actualEvent: MouseScrollEvent? = null
         var actualBounds: IntSize? = null
 
-        window.setContent {
+        scene.setContent {
             Box(
                 Modifier
                     .mouseScrollFilter { event, bounds ->
@@ -81,10 +93,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        window.onMouseScroll(
-            x = 20,
-            y = 0,
-            event = MouseScrollEvent(MouseScrollUnit.Line(3f), MouseScrollOrientation.Vertical)
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
+            position = Offset(20f, 0f),
+            scrollDelta = Offset(0f, 3f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent).isEqualTo(null)
@@ -92,13 +105,17 @@ class MouseScrollFilterTest {
     }
 
     @Test
-    fun `inside two overlapping boxes`() {
+    fun `inside two overlapping boxes`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var actualEvent1: MouseScrollEvent? = null
         var actualBounds1: IntSize? = null
         var actualEvent2: MouseScrollEvent? = null
         var actualBounds2: IntSize? = null
 
-        window.setContent {
+        scene.setContent {
             Box(
                 Modifier
                     .mouseScrollFilter { event, bounds ->
@@ -119,10 +136,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        window.onMouseScroll(
-            x = 0,
-            y = 0,
-            event = MouseScrollEvent(MouseScrollUnit.Line(3f), MouseScrollOrientation.Horizontal)
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
+            position = Offset.Zero,
+            scrollDelta = Offset(3f, 0f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent1).isEqualTo(null)
@@ -133,11 +151,15 @@ class MouseScrollFilterTest {
     }
 
     @Test
-    fun `inside two overlapping boxes, top box doesn't handle scroll`() {
+    fun `inside two overlapping boxes, top box doesn't handle scroll`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var actualEvent: MouseScrollEvent? = null
         var actualBounds: IntSize? = null
 
-        window.setContent {
+        scene.setContent {
             Box(
                 Modifier
                     .mouseScrollFilter { event, bounds ->
@@ -156,10 +178,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        window.onMouseScroll(
-            x = 0,
-            y = 0,
-            event = MouseScrollEvent(MouseScrollUnit.Line(3f), MouseScrollOrientation.Horizontal)
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
+            position = Offset.Zero,
+            scrollDelta = Offset(3f, 0f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent).isEqualTo(null)
@@ -167,11 +190,15 @@ class MouseScrollFilterTest {
     }
 
     @Test
-    fun `inside two overlapping boxes, top box doesn't have mouseScrollFilter`() {
+    fun `inside two overlapping boxes, top box doesn't have filter`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var actualEvent: MouseScrollEvent? = null
         var actualBounds: IntSize? = null
 
-        window.setContent {
+        scene.setContent {
             Box(
                 Modifier
                     .mouseScrollFilter { event, bounds ->
@@ -187,10 +214,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        window.onMouseScroll(
-            x = 0,
-            y = 0,
-            event = MouseScrollEvent(MouseScrollUnit.Line(3f), MouseScrollOrientation.Horizontal)
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
+            position = Offset.Zero,
+            scrollDelta = Offset(3f, 0f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent?.delta).isEqualTo(MouseScrollUnit.Line(3f))
@@ -199,13 +227,17 @@ class MouseScrollFilterTest {
     }
 
     @Test
-    fun `inside two nested boxes`() {
+    fun `inside two nested boxes`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var actualEvent1: MouseScrollEvent? = null
         var actualBounds1: IntSize? = null
         var actualEvent2: MouseScrollEvent? = null
         var actualBounds2: IntSize? = null
 
-        window.setContent {
+        scene.setContent {
             Box(
                 Modifier
                     .mouseScrollFilter { event, bounds ->
@@ -227,10 +259,11 @@ class MouseScrollFilterTest {
             }
         }
 
-        window.onMouseScroll(
-            x = 0,
-            y = 0,
-            event = MouseScrollEvent(MouseScrollUnit.Line(-1f), MouseScrollOrientation.Horizontal)
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
+            position = Offset.Zero,
+            scrollDelta = Offset(-1f, 0f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent1).isEqualTo(null)
@@ -241,11 +274,15 @@ class MouseScrollFilterTest {
     }
 
     @Test
-    fun `inside two nested boxes, nested box doesn't handle scroll`() {
+    fun `inside two nested boxes, nested box doesn't handle scroll`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var actualEvent: MouseScrollEvent? = null
         var actualBounds: IntSize? = null
 
-        window.setContent {
+        scene.setContent {
             Box(
                 Modifier
                     .mouseScrollFilter { event, bounds ->
@@ -265,10 +302,11 @@ class MouseScrollFilterTest {
             }
         }
 
-        window.onMouseScroll(
-            x = 0,
-            y = 0,
-            event = MouseScrollEvent(MouseScrollUnit.Page(1f), MouseScrollOrientation.Horizontal)
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
+            position = Offset.Zero,
+            scrollDelta = Offset(1f, 0f),
+            nativeEvent = awtWheelEvent(isScrollByPages = true),
         )
 
         assertThat(actualEvent?.delta).isEqualTo(MouseScrollUnit.Page(1f))
@@ -277,11 +315,15 @@ class MouseScrollFilterTest {
     }
 
     @Test
-    fun `inside two nested boxes, nested box doesn't have mouseScrollFilter`() {
+    fun `inside two nested boxes, nested box doesn't have mouseScrollFilter`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var actualEvent: MouseScrollEvent? = null
         var actualBounds: IntSize? = null
 
-        window.setContent {
+        scene.setContent {
             Box(
                 Modifier
                     .mouseScrollFilter { event, bounds ->
@@ -298,10 +340,11 @@ class MouseScrollFilterTest {
             }
         }
 
-        window.onMouseScroll(
-            x = 0,
-            y = 0,
-            event = MouseScrollEvent(MouseScrollUnit.Page(1f), MouseScrollOrientation.Horizontal)
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
+            position = Offset.Zero,
+            scrollDelta = Offset(1f, 0f),
+            nativeEvent = awtWheelEvent(isScrollByPages = true),
         )
 
         assertThat(actualEvent?.delta).isEqualTo(MouseScrollUnit.Page(1f))

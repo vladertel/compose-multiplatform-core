@@ -57,6 +57,13 @@ internal val EmptyDispatcher = object : CoroutineDispatcher() {
  * dispatcher as coroutineContext (for example, Dispatchers.Swing)
  */
 @OptIn(ExperimentalComposeUiApi::class)
+@Deprecated(
+    "use ImageComposeScene",
+    replaceWith = ReplaceWith(
+        "ImageComposeScene",
+        "androidx.compose.ui.ImageComposeScene"
+    )
+)
 class TestComposeWindow(
     val width: Int,
     val height: Int,

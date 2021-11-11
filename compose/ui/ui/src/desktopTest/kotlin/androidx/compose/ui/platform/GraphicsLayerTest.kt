@@ -21,11 +21,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.test.InternalTestApi
+import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.test.junit4.DesktopScreenshotTestRule
 import androidx.compose.ui.unit.dp
 import org.junit.Rule
@@ -41,8 +43,7 @@ class GraphicsLayerTest {
 
     @Test
     fun scale() {
-        val window = TestComposeWindow(width = 40, height = 40)
-        window.setContent {
+        val snapshot = renderComposeScene(width = 40, height = 40) {
             Box(
                 Modifier
                     .graphicsLayer(
@@ -63,13 +64,12 @@ class GraphicsLayerTest {
                     .requiredSize(10f.dp, 10f.dp).background(Color.Blue)
             )
         }
-        screenshotRule.snap(window.surface)
+        screenshotRule.write(snapshot)
     }
 
     @Test
     fun rotationZ() {
-        val window = TestComposeWindow(width = 40, height = 40)
-        window.setContent {
+        val snapshot = renderComposeScene(width = 40, height = 40) {
             Box(
                 Modifier
                     .graphicsLayer(
@@ -91,14 +91,12 @@ class GraphicsLayerTest {
                     .requiredSize(10f.dp, 10f.dp).background(Color.Blue)
             )
         }
-        screenshotRule.snap(window.surface)
+        screenshotRule.write(snapshot)
     }
 
     @Test
     fun rotationX() {
-        val window = TestComposeWindow(width = 40, height = 40)
-
-        window.setContent {
+        val snapshot = renderComposeScene(width = 40, height = 40) {
             Box(
                 Modifier
                     .graphicsLayer(rotationX = 45f)
@@ -114,13 +112,12 @@ class GraphicsLayerTest {
                     .requiredSize(10f.dp, 10f.dp).background(Color.Blue)
             )
         }
-        screenshotRule.snap(window.surface)
+        screenshotRule.write(snapshot)
     }
 
     @Test
     fun rotationY() {
-        val window = TestComposeWindow(width = 40, height = 40)
-        window.setContent {
+        val snapshot = renderComposeScene(width = 40, height = 40) {
             Box(
                 Modifier
                     .graphicsLayer(rotationY = 45f)
@@ -136,13 +133,12 @@ class GraphicsLayerTest {
                     .requiredSize(10f.dp, 10f.dp).background(Color.Blue)
             )
         }
-        screenshotRule.snap(window.surface)
+        screenshotRule.write(snapshot)
     }
 
     @Test
     fun `nested layer transformations`() {
-        val window = TestComposeWindow(width = 40, height = 40)
-        window.setContent {
+        val snapshot = renderComposeScene(width = 40, height = 40) {
             Box(
                 Modifier
                     .graphicsLayer(rotationZ = 45f, translationX = 10f)
@@ -155,13 +151,12 @@ class GraphicsLayerTest {
                 )
             }
         }
-        screenshotRule.snap(window.surface)
+        screenshotRule.write(snapshot)
     }
 
     @Test
     fun clip() {
-        val window = TestComposeWindow(width = 40, height = 40)
-        window.setContent {
+        val snapshot = renderComposeScene(width = 40, height = 40) {
             Box(
                 Modifier
                     .graphicsLayer(
@@ -226,13 +221,12 @@ class GraphicsLayerTest {
                 )
             }
         }
-        screenshotRule.snap(window.surface)
+        screenshotRule.write(snapshot)
     }
 
     @Test
     fun alpha() {
-        val window = TestComposeWindow(width = 40, height = 40)
-        window.setContent {
+        val snapshot = renderComposeScene(width = 40, height = 40) {
             Box(
                 Modifier
                     .padding(start = 5.dp)
@@ -278,13 +272,12 @@ class GraphicsLayerTest {
                     .background(Color.Blue)
             )
         }
-        screenshotRule.snap(window.surface)
+        screenshotRule.write(snapshot)
     }
 
     @Test
     fun elevation() {
-        val window = TestComposeWindow(width = 40, height = 40)
-        window.setContent {
+        val snapshot = renderComposeScene(width = 40, height = 40) {
             Box(
                 Modifier
                     .graphicsLayer(shadowElevation = 5f)
@@ -323,6 +316,6 @@ class GraphicsLayerTest {
                     .requiredSize(20f.dp, 20f.dp)
             )
         }
-        screenshotRule.snap(window.surface)
+        screenshotRule.write(snapshot)
     }
 }
