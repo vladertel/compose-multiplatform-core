@@ -176,15 +176,17 @@ class ComposeIrGenerationExtension(
                 metrics,
                 mangler!!
             ).lower(moduleFragment)
+        }
 
-            if (pluginContext.platform.isJs()) {
-                FixComposableLambdaCalls(
-                    pluginContext,
-                    symbolRemapper,
-                    bindingTrace,
-                    metrics,
-                ).lower(moduleFragment)
-            }
+        // this used to be under decoysEnabled flag,
+        // isJs() check should be correct as it's not related to decoys
+        if (pluginContext.platform.isJs()) {
+            FixComposableLambdaCalls(
+                pluginContext,
+                symbolRemapper,
+                bindingTrace,
+                metrics,
+            ).lower(moduleFragment)
         }
 
         if (isKlibTarget) {

@@ -270,7 +270,8 @@ class ComposeComponentRegistrar : ComponentRegistrar {
                     liveLiteralsV2Enabled = liveLiteralsV2Enabled,
                     sourceInformationEnabled = sourceInformationEnabled,
                     intrinsicRememberEnabled = intrinsicRememberEnabled,
-                    decoysEnabled = decoysEnabled,
+//                    decoysEnabled = decoysEnabled,
+                    decoysEnabled = false,
                     metricsDestination = metricsDestination,
                     reportsDestination = reportsDestination,
                 )
