@@ -26,10 +26,11 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.TestComposeWindow
 import androidx.compose.ui.test.InternalTestApi
+import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.test.junit4.DesktopScreenshotTestRule
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -79,9 +80,7 @@ class ParagraphTest {
     @Ignore
     @Test
     fun paragraphBasics() {
-        val window = TestComposeWindow(width = 1024, height = 768)
-
-        window.setContent {
+        val snapshot = renderComposeScene(width = 1024, height = 768) {
             ProvideTextStyle(TextStyle(fontFamily = fontFamily)) {
                 Column(Modifier.fillMaxSize().background(Color.White), Arrangement.SpaceEvenly) {
                     Text(
@@ -121,6 +120,6 @@ class ParagraphTest {
                 }
             }
         }
-        screenshotRule.snap(window.surface)
+        screenshotRule.write(snapshot)
     }
 }
