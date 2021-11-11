@@ -28,19 +28,23 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.swing.Swing
 import org.junit.Test
 
+@Suppress("DEPRECATION")
 class TestComposeWindowTest {
     @Test
     fun `run multiple TestComposeWindow`() {
         for (i in 1..15) {
-            TestComposeWindow(800, 800).setContent {
-                Box(Modifier.fillMaxWidth()) {
-                    ExtendedFloatingActionButton(
-                        icon = { Icon(Icons.Filled.AccountBox, "") },
-                        text = {},
-                        onClick = {},
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            TestComposeWindow(800, 800).apply {
+                setContent {
+                    Box(Modifier.fillMaxWidth()) {
+                        ExtendedFloatingActionButton(
+                            icon = { Icon(Icons.Filled.AccountBox, "") },
+                            text = {},
+                            onClick = {},
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
+                dispose()
             }
         }
     }
