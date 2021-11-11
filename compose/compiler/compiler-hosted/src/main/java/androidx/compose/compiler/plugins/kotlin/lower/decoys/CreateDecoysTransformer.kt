@@ -318,11 +318,13 @@ class CreateDecoysTransformer(
             }
     }
 
-    private fun IrFunction.shouldBeRemapped(): Boolean =
-        this.visibility != DescriptorVisibilities.PRIVATE &&
-        !isLocalFunction() &&
+    private fun IrFunction.shouldBeRemapped(): Boolean {
+        return this.visibility != DescriptorVisibilities.PRIVATE &&
+            this.visibility != DescriptorVisibilities.INTERNAL &&
+            !isLocalFunction() &&
             !isEnumConstructor() &&
             (hasComposableAnnotation() || hasComposableParameter())
+    }
 
     private fun IrFunction.isLocalFunction(): Boolean =
         origin == IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA ||
