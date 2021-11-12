@@ -43,6 +43,7 @@ internal class ModifiedFocusNode(
     override var modifier: FocusModifier
         get() = super.modifier
         set(value) {
+            clearFocusIfFocused()
             super.modifier = value
             value.focusNode = this
         }
@@ -82,6 +83,11 @@ internal class ModifiedFocusNode(
     }
 
     override fun detach() {
+        clearFocusIfFocused()
+        super.detach()
+    }
+
+    private fun clearFocusIfFocused() {
         when (focusState) {
             // If this node is focused, set the focus on the root layoutNode before removing it.
             Active, Captured -> {
@@ -113,7 +119,6 @@ internal class ModifiedFocusNode(
             // Do nothing, as the nextFocusNode is also Inactive.
             Inactive -> {}
         }
-        super.detach()
     }
 
     override fun findPreviousFocusWrapper() = this
