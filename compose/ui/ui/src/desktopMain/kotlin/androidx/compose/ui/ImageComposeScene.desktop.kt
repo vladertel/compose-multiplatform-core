@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.skia.Color
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Surface
 import java.awt.event.MouseEvent
@@ -162,6 +163,7 @@ class ImageComposeScene(
      * animations in the content (or any other code, which uses [withFrameNanos]
      */
     fun render(nanoTime: Long = 0): Image {
+        surface.canvas.clear(Color.TRANSPARENT)
         scene.render(surface.canvas, nanoTime)
         return surface.makeImageSnapshot()
     }
