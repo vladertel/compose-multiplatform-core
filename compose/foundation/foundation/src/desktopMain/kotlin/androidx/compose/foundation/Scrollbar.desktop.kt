@@ -185,7 +185,7 @@ fun HorizontalScrollbar(
 ) = Scrollbar(
     adapter,
     modifier,
-    reverseLayout xor (LocalLayoutDirection.current == LayoutDirection.Rtl),
+    if (LocalLayoutDirection.current == LayoutDirection.Rtl) !reverseLayout else reverseLayout,
     style,
     interactionSource,
     isVertical = false
