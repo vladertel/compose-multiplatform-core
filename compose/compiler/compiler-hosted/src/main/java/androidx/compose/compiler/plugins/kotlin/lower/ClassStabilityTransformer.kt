@@ -43,7 +43,7 @@ import org.jetbrains.kotlin.ir.util.isEnumEntry
 import org.jetbrains.kotlin.ir.util.isFileClass
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
-import org.jetbrains.kotlin.platform.js.isJs
+import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.BindingTrace
 
 enum class StabilityBits(val bits: Int) {
@@ -170,10 +170,10 @@ class ClassStabilityTransformer(
             )
         }
 
-        if (!context.platform.isJs()) {
+        if (context.platform.isJvm()) {
             cls.declarations += stabilityField
         } else {
-            // This ensures proper mangles in k/js (since kotlin 1.6-rc2)
+            // This ensures proper mangles in k/js and native (since kotlin 1.6-rc2)
             val stabilityProp = makeStabilityProp().also {
                 it.parent = cls
                 it.backingField = stabilityField
