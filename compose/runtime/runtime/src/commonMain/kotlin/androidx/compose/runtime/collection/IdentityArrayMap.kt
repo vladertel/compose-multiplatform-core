@@ -148,7 +148,7 @@ internal class IdentityArrayMap<Key : Any, Value : Any?>(capacity: Int = 16) {
             val mid = (low + high).ushr(1)
             val midKey = keys[mid]
             val midKeyHash = identityHashCode(midKey)
-            val comparison = midKeyHash - keyIdentity
+            val comparison = midKeyHash.toLong() - keyIdentity.toLong()
             when {
                 comparison < 0 -> low = mid + 1
                 comparison > 0 -> high = mid - 1

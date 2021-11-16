@@ -253,7 +253,7 @@ internal class IdentityScopeMap<T : Any> {
             val mid = (low + high).ushr(1)
             val midValue = valueAt(mid)
             val midValHash = identityHashCode(midValue)
-            val comparison = midValHash - valueIdentity
+            val comparison = midValHash.toLong() - valueIdentity.toLong()
             when {
                 comparison < 0 -> low = mid + 1
                 comparison > 0 -> high = mid - 1

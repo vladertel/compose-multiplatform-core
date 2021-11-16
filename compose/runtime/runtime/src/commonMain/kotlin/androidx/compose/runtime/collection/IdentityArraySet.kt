@@ -172,7 +172,7 @@ internal class IdentityArraySet<T : Any> : Set<T> {
         while (low <= high) {
             val mid = (low + high).ushr(1)
             val midVal = get(mid)
-            val comparison = identityHashCode(midVal) - valueIdentity
+            val comparison = identityHashCode(midVal).toLong() - valueIdentity.toLong()
             when {
                 comparison < 0 -> low = mid + 1
                 comparison > 0 -> high = mid - 1
