@@ -16,19 +16,20 @@
 
 package androidx.compose.ui.input.key
 
+import androidx.compose.ui.awt.awtEvent
 import java.awt.event.KeyEvent.KEY_PRESSED
 import java.awt.event.KeyEvent.KEY_RELEASED
 
 /**
  * The native desktop [KeyEvent][KeyEventAwt].
  */
-actual typealias NativeKeyEvent = java.awt.event.KeyEvent
+actual typealias NativeKeyEvent = Any
 
 /**
  * The key that was pressed.
  */
 actual val KeyEvent.key: Key
-    get() = Key(nativeKeyEvent.keyCode, nativeKeyEvent.keyLocation)
+    get() = Key(awtEvent.keyCode, awtEvent.keyLocation)
 
 /**
  * The UTF16 value corresponding to the key event that was pressed. The unicode character
@@ -47,13 +48,13 @@ actual val KeyEvent.key: Key
  * second from the low-surrogates range (\uDC00-\uDFFF).
  */
 actual val KeyEvent.utf16CodePoint: Int
-    get() = nativeKeyEvent.keyChar.code
+    get() = awtEvent.keyChar.code
 
 /**
  * The [type][KeyEventType] of key event.
  */
 actual val KeyEvent.type: KeyEventType
-    get() = when (nativeKeyEvent.id) {
+    get() = when (awtEvent.id) {
         KEY_PRESSED -> KeyEventType.KeyDown
         KEY_RELEASED -> KeyEventType.KeyUp
         else -> KeyEventType.Unknown
@@ -63,22 +64,22 @@ actual val KeyEvent.type: KeyEventType
  * Indicates whether the Alt key is pressed.
  */
 actual val KeyEvent.isAltPressed: Boolean
-    get() = nativeKeyEvent.isAltDown || nativeKeyEvent.isAltGraphDown
+    get() = awtEvent.isAltDown || awtEvent.isAltGraphDown
 
 /**
  * Indicates whether the Ctrl key is pressed.
  */
 actual val KeyEvent.isCtrlPressed: Boolean
-    get() = nativeKeyEvent.isControlDown
+    get() = awtEvent.isControlDown
 
 /**
  * Indicates whether the Meta key is pressed.
  */
 actual val KeyEvent.isMetaPressed: Boolean
-    get() = nativeKeyEvent.isMetaDown
+    get() = awtEvent.isMetaDown
 
 /**
  * Indicates whether the Shift key is pressed.
  */
 actual val KeyEvent.isShiftPressed: Boolean
-    get() = nativeKeyEvent.isShiftDown
+    get() = awtEvent.isShiftDown
