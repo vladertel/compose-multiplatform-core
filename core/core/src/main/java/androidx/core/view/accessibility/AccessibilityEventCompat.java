@@ -16,23 +16,37 @@
 
 package androidx.core.view.accessibility;
 
+import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
+
 import android.os.Build;
+import android.view.View;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityRecord;
+import android.widget.EditText;
+
+import androidx.annotation.DoNotInline;
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.annotation.RestrictTo;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * Helper for accessing features in {@link AccessibilityEvent}.
  */
 public final class AccessibilityEventCompat {
     /**
-     * Represents the event of a hover enter over a {@link android.view.View}.
+     * Represents the event of a hover enter over a {@link View}.
      * @deprecated Use {@link  AccessibilityEvent#TYPE_VIEW_HOVER_ENTER} directly.
      */
     @Deprecated
     public static final int TYPE_VIEW_HOVER_ENTER = AccessibilityEvent.TYPE_VIEW_HOVER_ENTER;
 
     /**
-     * Represents the event of a hover exit over a {@link android.view.View}.
+     * Represents the event of a hover exit over a {@link View}.
      * @deprecated Use {@link  AccessibilityEvent#TYPE_VIEW_HOVER_EXIT} directly.
      */
     @Deprecated
@@ -70,7 +84,7 @@ public final class AccessibilityEventCompat {
     public static final int TYPE_VIEW_SCROLLED = AccessibilityEvent.TYPE_VIEW_SCROLLED;
 
     /**
-     * Represents the event of changing the selection in an {@link android.widget.EditText}.
+     * Represents the event of changing the selection in an {@link EditText}.
      * @deprecated Use {@link AccessibilityEvent#TYPE_VIEW_TEXT_SELECTION_CHANGED} directly.
      */
     @Deprecated
@@ -123,7 +137,7 @@ public final class AccessibilityEventCompat {
     public static final int TYPE_WINDOWS_CHANGED = 0x00400000;
 
     /**
-     * Represents the event of a context click on a {@link android.view.View}.
+     * Represents the event of a context click on a {@link View}.
      */
     public static final int TYPE_VIEW_CONTEXT_CLICKED = 0x00800000;
 
@@ -181,6 +195,13 @@ public final class AccessibilityEventCompat {
     public static final int CONTENT_CHANGE_TYPE_PANE_DISAPPEARED = 0x00000020;
 
     /**
+     * Change type for {@link AccessibilityEvent#TYPE_WINDOW_CONTENT_CHANGED} event:
+     * state description of the node as returned by
+     * {@link AccessibilityNodeInfo#getStateDescription} was changed.
+     */
+    public static final int CONTENT_CHANGE_TYPE_STATE_DESCRIPTION = 0x00000040;
+
+    /**
      * Mask for {@link AccessibilityEvent} all types.
      *
      * @see AccessibilityEvent#TYPE_VIEW_CLICKED
@@ -209,6 +230,20 @@ public final class AccessibilityEventCompat {
      */
     public static final int TYPES_ALL_MASK = 0xFFFFFFFF;
 
+    /** @hide */
+    @IntDef(
+            flag = true,
+            value = {
+                    CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION,
+                    CONTENT_CHANGE_TYPE_STATE_DESCRIPTION,
+                    CONTENT_CHANGE_TYPE_SUBTREE,
+                    CONTENT_CHANGE_TYPE_TEXT,
+                    CONTENT_CHANGE_TYPE_UNDEFINED
+            })
+    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface ContentChangeType {}
+
     /*
      * Hide constructor from clients.
      */
@@ -229,7 +264,7 @@ public final class AccessibilityEventCompat {
     }
 
     /**
-     * Appends an {@link android.view.accessibility.AccessibilityRecord} to the end of
+     * Appends an {@link AccessibilityRecord} to the end of
      * event records.
      *
      * @param record The record to append.
@@ -261,7 +296,7 @@ public final class AccessibilityEventCompat {
     /**
      * Creates an {@link AccessibilityRecordCompat} from an {@link AccessibilityEvent}
      * that can be used to manipulate the event properties defined in
-     * {@link android.view.accessibility.AccessibilityRecord}.
+     * {@link AccessibilityRecord}.
      * <p>
      * <strong>Note:</strong> Do not call {@link AccessibilityRecordCompat#recycle()} on the
      * returned {@link AccessibilityRecordCompat}. Call {@link AccessibilityEvent#recycle()}
@@ -287,9 +322,10 @@ public final class AccessibilityEventCompat {
      * @throws IllegalStateException If called from an AccessibilityService.
      * @see #getContentChangeTypes(AccessibilityEvent)
      */
-    public static void setContentChangeTypes(AccessibilityEvent event, int changeTypes) {
+    public static void setContentChangeTypes(@NonNull AccessibilityEvent event,
+            @ContentChangeType int changeTypes) {
         if (Build.VERSION.SDK_INT >= 19) {
-            event.setContentChangeTypes(changeTypes);
+            Api19Impl.setContentChangeTypes(event, changeTypes);
         }
     }
 
@@ -301,14 +337,16 @@ public final class AccessibilityEventCompat {
      * @return The bit mask of change types. One or more of:
      *         <ul>
      *         <li>{@link AccessibilityEvent#CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION}
+     *         <li>{@link AccessibilityEvent#CONTENT_CHANGE_TYPE_STATE_DESCRIPTION}
      *         <li>{@link AccessibilityEvent#CONTENT_CHANGE_TYPE_SUBTREE}
      *         <li>{@link AccessibilityEvent#CONTENT_CHANGE_TYPE_TEXT}
      *         <li>{@link AccessibilityEvent#CONTENT_CHANGE_TYPE_UNDEFINED}
      *         </ul>
      */
-    public static int getContentChangeTypes(AccessibilityEvent event) {
+    @ContentChangeType
+    public static int getContentChangeTypes(@NonNull AccessibilityEvent event) {
         if (Build.VERSION.SDK_INT >= 19) {
-            return event.getContentChangeTypes();
+            return Api19Impl.getContentChangeTypes(event);
         } else {
             return 0;
         }
@@ -321,9 +359,9 @@ public final class AccessibilityEventCompat {
      *
      * @throws IllegalStateException If called from an AccessibilityService.
      */
-    public static void setMovementGranularity(AccessibilityEvent event, int granularity) {
+    public static void setMovementGranularity(@NonNull AccessibilityEvent event, int granularity) {
         if (Build.VERSION.SDK_INT >= 16) {
-            event.setMovementGranularity(granularity);
+            Api16Impl.setMovementGranularity(event, granularity);
         }
     }
 
@@ -332,9 +370,9 @@ public final class AccessibilityEventCompat {
      *
      * @return The granularity.
      */
-    public static int getMovementGranularity(AccessibilityEvent event) {
+    public static int getMovementGranularity(@NonNull AccessibilityEvent event) {
         if (Build.VERSION.SDK_INT >= 16) {
-            return event.getMovementGranularity();
+            return Api16Impl.getMovementGranularity(event);
         } else {
             return 0;
         }
@@ -357,9 +395,9 @@ public final class AccessibilityEventCompat {
      * @throws IllegalStateException If called from an AccessibilityService.
      * @see AccessibilityNodeInfoCompat#performAction(int)
      */
-    public static void setAction(AccessibilityEvent event, int action) {
+    public static void setAction(@NonNull AccessibilityEvent event, int action) {
         if (Build.VERSION.SDK_INT >= 16) {
-            event.setAction(action);
+            Api16Impl.setAction(event, action);
         }
     }
 
@@ -368,11 +406,55 @@ public final class AccessibilityEventCompat {
      *
      * @return The action.
      */
-    public static int getAction(AccessibilityEvent event) {
+    public static int getAction(@NonNull AccessibilityEvent event) {
         if (Build.VERSION.SDK_INT >= 16) {
-            return event.getAction();
+            return Api16Impl.getAction(event);
         } else {
             return 0;
+        }
+    }
+
+    @RequiresApi(19)
+    static class Api19Impl {
+        private Api19Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static void setContentChangeTypes(AccessibilityEvent accessibilityEvent, int changeTypes) {
+            accessibilityEvent.setContentChangeTypes(changeTypes);
+        }
+
+        @DoNotInline
+        static int getContentChangeTypes(AccessibilityEvent accessibilityEvent) {
+            return accessibilityEvent.getContentChangeTypes();
+        }
+    }
+
+    @RequiresApi(16)
+    static class Api16Impl {
+        private Api16Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static void setMovementGranularity(AccessibilityEvent accessibilityEvent, int granularity) {
+            accessibilityEvent.setMovementGranularity(granularity);
+        }
+
+        @DoNotInline
+        static int getMovementGranularity(AccessibilityEvent accessibilityEvent) {
+            return accessibilityEvent.getMovementGranularity();
+        }
+
+        @DoNotInline
+        static void setAction(AccessibilityEvent accessibilityEvent, int action) {
+            accessibilityEvent.setAction(action);
+        }
+
+        @DoNotInline
+        static int getAction(AccessibilityEvent accessibilityEvent) {
+            return accessibilityEvent.getAction();
         }
     }
 }

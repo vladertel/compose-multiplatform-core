@@ -25,6 +25,7 @@ import android.content.pm.ProviderInfo;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.tracing.Trace;
 
 import java.util.HashMap;
@@ -47,7 +48,7 @@ public final class AppInitializer {
     /**
      * The {@link AppInitializer} instance.
      */
-    private static AppInitializer sInstance;
+    private static volatile AppInitializer sInstance;
 
     /**
      * Guards app initialization.
@@ -56,6 +57,9 @@ public final class AppInitializer {
 
     @NonNull
     final Map<Class<?>, Object> mInitialized;
+
+    @NonNull
+    final Set<Class<? extends Initializer<?>>> mDiscovered;
 
     @NonNull
     final Context mContext;
@@ -67,6 +71,7 @@ public final class AppInitializer {
      */
     AppInitializer(@NonNull Context context) {
         mContext = context.getApplicationContext();
+        mDiscovered = new HashSet<>();
         mInitialized = new HashMap<>();
     }
 
@@ -77,11 +82,24 @@ public final class AppInitializer {
     @NonNull
     @SuppressWarnings("UnusedReturnValue")
     public static AppInitializer getInstance(@NonNull Context context) {
-        synchronized (sLock) {
-            if (sInstance == null) {
-                sInstance = new AppInitializer(context);
+        if (sInstance == null) {
+            synchronized (sLock) {
+                if (sInstance == null) {
+                    sInstance = new AppInitializer(context);
+                }
             }
-            return sInstance;
+        }
+        return sInstance;
+    }
+
+    /**
+     * Sets an {@link AppInitializer} delegate. Useful in the context of testing.
+     *
+     * @param delegate The instance of {@link AppInitializer} to be used as a delegate.
+     */
+    static void setDelegate(@NonNull AppInitializer delegate) {
+        synchronized (sLock) {
+            sInstance = delegate;
         }
     }
 
@@ -96,6 +114,17 @@ public final class AppInitializer {
     @SuppressWarnings("unused")
     public <T> T initializeComponent(@NonNull Class<? extends Initializer<T>> component) {
         return doInitialize(component, new HashSet<Class<?>>());
+    }
+
+    /**
+     * Returns <code>true</code> if the {@link Initializer} was eagerly initialized..
+     *
+     * @param component The {@link Initializer} class to check
+     * @return <code>true</code> if the {@link Initializer} was eagerly initialized.
+     */
+    public boolean isEagerlyInitialized(@NonNull Class<? extends Initializer<?>> component) {
+        // If discoverAndInitialize() was never called, then nothing was eagerly initialized.
+        return mDiscovered.contains(component);
     }
 
     @NonNull
@@ -154,7 +183,6 @@ public final class AppInitializer {
         }
     }
 
-    @SuppressWarnings("unchecked")
     void discoverAndInitialize() {
         try {
             Trace.beginSection(SECTION_NAME);
@@ -163,7 +191,18 @@ public final class AppInitializer {
             ProviderInfo providerInfo = mContext.getPackageManager()
                     .getProviderInfo(provider, GET_META_DATA);
             Bundle metadata = providerInfo.metaData;
-            String startup = mContext.getString(R.string.androidx_startup);
+            discoverAndInitialize(metadata);
+        } catch (PackageManager.NameNotFoundException exception) {
+            throw new StartupException(exception);
+        } finally {
+            Trace.endSection();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    void discoverAndInitialize(@Nullable Bundle metadata) {
+        String startup = mContext.getString(R.string.androidx_startup);
+        try {
             if (metadata != null) {
                 Set<Class<?>> initializing = new HashSet<>();
                 Set<String> keys = metadata.keySet();
@@ -174,18 +213,21 @@ public final class AppInitializer {
                         if (Initializer.class.isAssignableFrom(clazz)) {
                             Class<? extends Initializer<?>> component =
                                     (Class<? extends Initializer<?>>) clazz;
+                            mDiscovered.add(component);
                             if (StartupLogger.DEBUG) {
                                 StartupLogger.i(String.format("Discovered %s", key));
                             }
-                            doInitialize(component, initializing);
                         }
                     }
                 }
+                // Initialize only after discovery is complete. This way, the check for
+                // isEagerlyInitialized is correct.
+                for (Class<? extends Initializer<?>> component : mDiscovered) {
+                    doInitialize(component, initializing);
+                }
             }
-        } catch (PackageManager.NameNotFoundException | ClassNotFoundException exception) {
+        } catch (ClassNotFoundException exception) {
             throw new StartupException(exception);
-        } finally {
-            Trace.endSection();
         }
     }
 }

@@ -18,30 +18,48 @@ package androidx.appsearch.exceptions;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RestrictTo;
 import androidx.appsearch.app.AppSearchResult;
 
 /**
- * An exception thrown by {@link androidx.appsearch.app.AppSearchManager} or a subcomponent.
+ * An exception thrown by {@link androidx.appsearch.app.AppSearchSession} or a subcomponent.
  *
  * <p>These exceptions can be converted into a failed {@link AppSearchResult}
  * for propagating to the client.
- * @hide
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public class AppSearchException extends Exception {
     private final @AppSearchResult.ResultCode int mResultCode;
 
-    /** Initializes an {@link AppSearchException} with no message. */
+    /**
+     * Initializes an {@link AppSearchException} with no message.
+     *
+     * @param resultCode One of the constants documented in {@link AppSearchResult#getResultCode}.
+     */
     public AppSearchException(@AppSearchResult.ResultCode int resultCode) {
         this(resultCode, /*message=*/ null);
     }
 
+    /**
+     * Initializes an {@link AppSearchException} with a result code and message.
+     *
+     * @param resultCode One of the constants documented in {@link AppSearchResult#getResultCode}.
+     * @param message    The detail message (which is saved for later retrieval by the
+     *                   {@link #getMessage()} method).
+     */
     public AppSearchException(
             @AppSearchResult.ResultCode int resultCode, @Nullable String message) {
         this(resultCode, message, /*cause=*/ null);
     }
 
+    /**
+     * Initializes an {@link AppSearchException} with a result code, message and cause.
+     *
+     * @param resultCode One of the constants documented in {@link AppSearchResult#getResultCode}.
+     * @param message    The detail message (which is saved for later retrieval by the
+     *                   {@link #getMessage()} method).
+     * @param cause      The cause (which is saved for later retrieval by the {@link #getCause()}
+     *                   method). (A null value is permitted, and indicates that the cause is
+     *                   nonexistent or unknown.)
+     */
     public AppSearchException(
             @AppSearchResult.ResultCode int resultCode,
             @Nullable String message,
@@ -51,8 +69,15 @@ public class AppSearchException extends Exception {
     }
 
     /**
-     * Converts this {@link java.lang.Exception} into a failed {@link AppSearchResult}
+     * Returns the result code this exception was constructed with.
+     *
+     * @return One of the constants documented in {@link AppSearchResult#getResultCode}.
      */
+    public @AppSearchResult.ResultCode int getResultCode() {
+        return mResultCode;
+    }
+
+    /** Converts this {@link java.lang.Exception} into a failed {@link AppSearchResult}. */
     @NonNull
     public <T> AppSearchResult<T> toAppSearchResult() {
         return AppSearchResult.newFailedResult(mResultCode, getMessage());

@@ -31,6 +31,7 @@ import androidx.navigation.safe.args.generator.ReferenceArrayType
 import androidx.navigation.safe.args.generator.ReferenceType
 import androidx.navigation.safe.args.generator.StringArrayType
 import androidx.navigation.safe.args.generator.StringType
+import androidx.navigation.safe.args.generator.ext.capitalize
 import androidx.navigation.safe.args.generator.ext.toCamelCase
 import androidx.navigation.safe.args.generator.ext.toCamelCaseAsVar
 import androidx.navigation.safe.args.generator.models.Action
@@ -45,6 +46,7 @@ import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterSpec
 import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
+import java.util.Locale
 import javax.lang.model.element.Modifier
 
 const val L = "\$L"
@@ -98,7 +100,8 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
                     val actionTypeName = ClassName.get(
                         className.packageName(),
                         className.simpleName(),
-                        actionType.name)
+                        actionType.name
+                    )
                     MethodSpec.methodBuilder(methodName)
                         .addAnnotation(annotations.NONNULL_CLASSNAME)
                         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
@@ -117,8 +120,8 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
             val parentTypeSpec = it.wrapped.typeSpec
             parentTypeSpec.methodSpecs.filter { method ->
                 method.hasModifier(Modifier.STATIC) &&
-                        getters.none { it.name == method.name } && // de-dupe local actions
-                        parentGetters.none { it.name == method.name } // de-dupe parent actions
+                    getters.none { it.name == method.name } && // de-dupe local actions
+                    parentGetters.none { it.name == method.name } // de-dupe parent actions
             }.forEach { actionMethod ->
                 val params = actionMethod.parameters.joinToString(", ") { param -> param.name }
                 val methodSpec = MethodSpec.methodBuilder(actionMethod.name)
@@ -126,8 +129,10 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
                     .addModifiers(actionMethod.modifiers)
                     .addParameters(actionMethod.parameters)
                     .returns(actionMethod.returnType)
-                    .addStatement("return $T.$L($params)",
-                        ClassName.get(parentPackageName, parentTypeSpec.name), actionMethod.name)
+                    .addStatement(
+                        "return $T.$L($params)",
+                        ClassName.get(parentPackageName, parentTypeSpec.name), actionMethod.name
+                    )
                     .build()
                 parentGetters.add(methodSpec)
             }
@@ -135,9 +140,11 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
 
         return TypeSpec.classBuilder(className)
             .addModifiers(Modifier.PUBLIC)
-            .addTypes(actionTypes
-                .filter { (action, _) -> action.args.isNotEmpty() }
-                .map { (_, actionType) -> actionType })
+            .addTypes(
+                actionTypes
+                    .filter { (action, _) -> action.args.isNotEmpty() }
+                    .map { (_, actionType) -> actionType }
+            )
             .addMethod(constructor)
             .addMethods(getters + parentGetters)
             .build()
@@ -193,8 +200,7 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
             ?: throw IllegalStateException("Destination with arguments must have name")
         val className = ClassName.get(destName.packageName(), "${destName.simpleName()}Args")
         val args = destination.args
-        val specs =
-            ClassWithArgsSpecs(args, annotations)
+        val specs = ClassWithArgsSpecs(args, annotations)
 
         val fromBundleMethod = MethodSpec.methodBuilder("fromBundle").apply {
             addAnnotation(annotations.NONNULL_CLASSNAME)
@@ -211,32 +217,30 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
             addStatement("$T $N = new $T()", className, result, className)
             addStatement("$N.setClassLoader($T.class.getClassLoader())", bundle, className)
             args.forEach { arg ->
-                beginControlFlow("if ($N.containsKey($S))", bundle, arg.name).apply {
-                    addStatement("$T $N", arg.type.typeName(), arg.sanitizedName)
+                addReadSingleArgBlock("containsKey", bundle, result, arg, specs) {
                     arg.type.addBundleGetStatement(this, arg, arg.sanitizedName, bundle)
-                    addNullCheck(arg, arg.sanitizedName)
-                    addStatement(
-                        "$result.$N.put($S, $N)",
-                        specs.hashMapFieldSpec,
-                        arg.name,
-                        arg.sanitizedName
-                    )
                 }
-                if (arg.defaultValue == null) {
-                    nextControlFlow("else")
-                    addStatement("throw new $T($S)", IllegalArgumentException::class.java,
-                        "Required argument \"${arg.name}\" is missing and does " +
-                                "not have an android:defaultValue")
-                } else {
-                    nextControlFlow("else")
-                    addStatement(
-                        "$result.$N.put($S, $L)",
-                        specs.hashMapFieldSpec,
-                        arg.name,
-                        arg.defaultValue.write()
-                    )
+            }
+            addStatement("return $N", result)
+        }.build()
+
+        val fromSavedStateHandleMethod = MethodSpec.methodBuilder("fromSavedStateHandle").apply {
+            addAnnotation(annotations.NONNULL_CLASSNAME)
+            addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            addAnnotation(specs.suppressAnnotationSpec)
+            val savedStateHandle = "savedStateHandle"
+            addParameter(
+                ParameterSpec.builder(SAVED_STATE_HANDLE_CLASSNAME, savedStateHandle)
+                    .addAnnotation(specs.androidAnnotations.NONNULL_CLASSNAME)
+                    .build()
+            )
+            returns(className)
+            val result = "__result"
+            addStatement("$T $N = new $T()", className, result, className)
+            args.forEach { arg ->
+                addReadSingleArgBlock("contains", savedStateHandle, result, arg, specs) {
+                    addStatement("$N = $N.get($S)", arg.sanitizedName, savedStateHandle, arg.name)
                 }
-                endControlFlow()
             }
             addStatement("return $N", result)
         }.build()
@@ -246,7 +250,11 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
         val copyConstructor = MethodSpec.constructorBuilder()
             .addAnnotation(specs.suppressAnnotationSpec)
             .addModifiers(Modifier.PUBLIC)
-            .addParameter(className, "original")
+            .addParameter(
+                ParameterSpec.builder(className, "original")
+                    .addAnnotation(specs.androidAnnotations.NONNULL_CLASSNAME)
+                    .build()
+            )
             .addCode(specs.copyMapContents("this", "original"))
             .build()
 
@@ -277,13 +285,13 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
 
         val builderClassName = ClassName.get("", "Builder")
         val builderTypeSpec = TypeSpec.classBuilder("Builder")
-            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
             .addField(specs.hashMapFieldSpec)
             .addMethod(copyConstructor)
             .addMethod(specs.constructor())
             .addMethod(buildMethod)
             .addMethods(specs.setters(builderClassName))
-            .addMethods(specs.getters())
+            .addMethods(specs.getters(true))
             .build()
 
         val typeSpec = TypeSpec.classBuilder(className)
@@ -293,8 +301,10 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
             .addMethod(constructor)
             .addMethod(fromMapConstructor)
             .addMethod(fromBundleMethod)
+            .addMethod(fromSavedStateHandleMethod)
             .addMethods(specs.getters())
             .addMethod(specs.toBundleMethod("toBundle"))
+            .addMethod(specs.toSavedStateHandleMethod())
             .addMethod(specs.equalsMethod(className))
             .addMethod(specs.hashCodeMethod())
             .addMethod(specs.toStringMethod(className))
@@ -302,6 +312,42 @@ class JavaNavWriter(private val useAndroidX: Boolean = true) : NavWriter<JavaCod
             .build()
 
         return JavaFile.builder(className.packageName(), typeSpec).build().toCodeFile()
+    }
+
+    private fun MethodSpec.Builder.addReadSingleArgBlock(
+        containsMethodName: String,
+        sourceVariableName: String,
+        targetVariableName: String,
+        arg: Argument,
+        specs: ClassWithArgsSpecs,
+        addGetStatement: MethodSpec.Builder.() -> Unit
+    ) {
+        beginControlFlow("if ($N.$containsMethodName($S))", sourceVariableName, arg.name)
+        addStatement("$T $N", arg.type.typeName(), arg.sanitizedName)
+        addGetStatement()
+        addNullCheck(arg, arg.sanitizedName)
+        addStatement(
+            "$targetVariableName.$N.put($S, $N)",
+            specs.hashMapFieldSpec,
+            arg.name,
+            arg.sanitizedName
+        )
+        nextControlFlow("else")
+        if (arg.defaultValue == null) {
+            addStatement(
+                "throw new $T($S)", IllegalArgumentException::class.java,
+                "Required argument \"${arg.name}\" is missing and does not have an " +
+                    "android:defaultValue"
+            )
+        } else {
+            addStatement(
+                "$targetVariableName.$N.put($S, $L)",
+                specs.hashMapFieldSpec,
+                arg.name,
+                arg.defaultValue.write()
+            )
+        }
+        endControlFlow()
     }
 }
 
@@ -323,7 +369,8 @@ private class ClassWithArgsSpecs(
     ).initializer("new $T()", HASHMAP_CLASSNAME).build()
 
     fun setters(thisClassName: ClassName) = args.map { arg ->
-        MethodSpec.methodBuilder("set${arg.sanitizedName.capitalize()}").apply {
+        val capitalizedName = arg.sanitizedName.capitalize(Locale.US)
+        MethodSpec.methodBuilder("set$capitalizedName").apply {
             addAnnotation(androidAnnotations.NONNULL_CLASSNAME)
             addAnnotation(suppressAnnotationSpec)
             addModifiers(Modifier.PUBLIC)
@@ -392,19 +439,65 @@ private class ClassWithArgsSpecs(
         addStatement("return $N", result)
     }.build()
 
+    fun toSavedStateHandleMethod(
+        addOverrideAnnotation: Boolean = false
+    ) = MethodSpec.methodBuilder("toSavedStateHandle").apply {
+        if (addOverrideAnnotation) {
+            addAnnotation(Override::class.java)
+        }
+        addAnnotation(suppressAnnotationSpec)
+        addAnnotation(androidAnnotations.NONNULL_CLASSNAME)
+        addModifiers(Modifier.PUBLIC)
+        returns(SAVED_STATE_HANDLE_CLASSNAME)
+        val result = "__result"
+        addStatement(
+            "$T $N = new $T()", SAVED_STATE_HANDLE_CLASSNAME, result, SAVED_STATE_HANDLE_CLASSNAME
+        )
+        args.forEach { arg ->
+            beginControlFlow("if ($N.containsKey($S))", hashMapFieldSpec.name, arg.name).apply {
+                addStatement(
+                    "$T $N = ($T) $N.get($S)",
+                    arg.type.typeName(),
+                    arg.sanitizedName,
+                    arg.type.typeName(),
+                    hashMapFieldSpec.name,
+                    arg.name
+                )
+                arg.type.addSavedStateHandleSetStatement(this, arg, result, arg.sanitizedName)
+            }
+            if (arg.defaultValue != null) {
+                nextControlFlow("else").apply {
+                    arg.type.addSavedStateHandleSetStatement(
+                        this, arg, result, arg.defaultValue.write()
+                    )
+                }
+            }
+            endControlFlow()
+        }
+        addStatement("return $N", result)
+    }.build()
+
     fun copyMapContents(to: String, from: String) = CodeBlock.builder()
         .addStatement(
-        "$N.$N.putAll($N.$N)",
-        to,
-        hashMapFieldSpec.name,
-        from,
-        hashMapFieldSpec.name
+            "$N.$N.putAll($N.$N)",
+            to,
+            hashMapFieldSpec.name,
+            from,
+            hashMapFieldSpec.name
         ).build()
 
-    fun getters() = args.map { arg ->
+    fun getters(isBuilder: Boolean = false) = args.map { arg ->
         MethodSpec.methodBuilder(getterFromArgName(arg.sanitizedName)).apply {
             addModifiers(Modifier.PUBLIC)
-            addAnnotation(suppressAnnotationSpec)
+            if (!isBuilder) {
+                addAnnotation(suppressAnnotationSpec)
+            } else {
+                addAnnotation(
+                    AnnotationSpec.builder(SuppressWarnings::class.java)
+                        .addMember("value", "{$S,$S}", "unchecked", "GetterOnBuilder")
+                        .build()
+                )
+            }
             if (arg.type.allowsNullable()) {
                 if (arg.isNullable) {
                     addAnnotation(androidAnnotations.NULLABLE_CLASSNAME)
@@ -429,7 +522,8 @@ private class ClassWithArgsSpecs(
         addAnnotation(Override::class.java)
         addModifiers(Modifier.PUBLIC)
         addParameter(TypeName.OBJECT, "object")
-        addCode("""
+        addCode(
+            """
                 if (this == object) {
                     return true;
                 }
@@ -437,7 +531,8 @@ private class ClassWithArgsSpecs(
                     return false;
                 }
 
-                """.trimIndent())
+            """.trimIndent()
+        )
         addStatement("$T that = ($T) object", className, className)
         args.forEach { (name, type, _, _, sanitizedName) ->
             beginControlFlow(
@@ -474,8 +569,10 @@ private class ClassWithArgsSpecs(
         returns(TypeName.BOOLEAN)
     }.build()
 
-    private fun getterFromArgName(sanitizedName: String, suffix: String = "") =
-        "get${sanitizedName.capitalize()}$suffix"
+    private fun getterFromArgName(sanitizedName: String, suffix: String = ""): String {
+        val capitalizedName = sanitizedName.capitalize(Locale.US)
+        return "get${capitalizedName}$suffix"
+    }
 
     fun hashCodeMethod(
         additionalCode: CodeBlock? = null
@@ -512,19 +609,21 @@ private class ClassWithArgsSpecs(
     ) = MethodSpec.methodBuilder("toString").apply {
         addAnnotation(Override::class.java)
         addModifiers(Modifier.PUBLIC)
-        addCode(CodeBlock.builder().apply {
-            if (toStringHeaderBlock != null) {
-                add("${BEGIN_STMT}return $L", toStringHeaderBlock)
-            } else {
-                add("${BEGIN_STMT}return $S", "${className.simpleName()}{")
-            }
-            args.forEachIndexed { index, (_, _, _, _, sanitizedName) ->
-                val getterName = getterFromArgName(sanitizedName, "()")
-                val prefix = if (index == 0) "" else ", "
-                add("\n+ $S + $L", "$prefix$sanitizedName=", getterName)
-            }
-            add("\n+ $S;\n$END_STMT", "}")
-        }.build())
+        addCode(
+            CodeBlock.builder().apply {
+                if (toStringHeaderBlock != null) {
+                    add("${BEGIN_STMT}return $L", toStringHeaderBlock)
+                } else {
+                    add("${BEGIN_STMT}return $S", "${className.simpleName()}{")
+                }
+                args.forEachIndexed { index, (_, _, _, _, sanitizedName) ->
+                    val getterName = getterFromArgName(sanitizedName, "()")
+                    val prefix = if (index == 0) "" else ", "
+                    add("\n+ $S + $L", "$prefix$sanitizedName=", getterName)
+                }
+                add("\n+ $S;\n$END_STMT", "}")
+            }.build()
+        )
         returns(ClassName.get(String::class.java))
     }.build()
 
@@ -549,7 +648,8 @@ internal fun MethodSpec.Builder.addNullCheck(
         beginControlFlow("if ($N == null)", variableName).apply {
             addStatement(
                 "throw new $T($S)", IllegalArgumentException::class.java,
-                "Argument \"${arg.name}\" is marked as non-null but was passed a null value.")
+                "Argument \"${arg.name}\" is marked as non-null but was passed a null value."
+            )
         }
         endControlFlow()
     }

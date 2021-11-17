@@ -34,7 +34,6 @@ import androidx.versionedparcelable.VersionedParcelize;
 @RestrictTo(LIBRARY)
 @RequiresApi(21)
 public class AudioAttributesImplApi21 implements AudioAttributesImpl {
-    private static final String TAG = "AudioAttributesCompat21";
 
     /** @hide */
     // It should be public to allow Parcelizers which never be de/jetified can access the field.
@@ -73,7 +72,6 @@ public class AudioAttributesImplApi21 implements AudioAttributesImpl {
     }
 
     @Override
-    @SuppressLint("NewApi")
     public int getVolumeControlStream() {
         // TODO: address the framework change ag/4995785.
         return AudioAttributesCompat.toVolumeStreamType(true, getFlags(), getUsage());
@@ -127,6 +125,7 @@ public class AudioAttributesImplApi21 implements AudioAttributesImpl {
         return "AudioAttributesCompat: audioattributes=" + mAudioAttributes;
     }
 
+    @RequiresApi(21)
     static class Builder implements AudioAttributesImpl.Builder {
         final AudioAttributes.Builder mFwkBuilder;
 
@@ -146,6 +145,7 @@ public class AudioAttributesImplApi21 implements AudioAttributesImpl {
 
         @Override
         @NonNull
+        @SuppressLint("WrongConstant")
         public Builder setUsage(int usage) {
             if (usage == AudioAttributes.USAGE_ASSISTANT) {
                 // TODO: shouldn't we keep the origin usage?

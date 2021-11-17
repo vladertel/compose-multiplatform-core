@@ -123,6 +123,319 @@ class TestGitClient(unittest.TestCase):
 			commitWithApiChange.releaseNote
 		)
 
+	def test_parseCommitWithMultiLineTripleQuoteReleaseNote(self):
+		commitWithApiChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: """Added a new API that does something awesome and does a whole bunch
+				of other things that are also awesome and I just can't elaborate enough how
+				incredible this API is"""
+
+				"This is an extra set of quoted text"
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithApiChange = Commit(commitWithApiChangeString, "/projectdir/")
+		self.assertEqual(
+			"Added a new API that does something awesome and does a whole bunch\n" +
+			"				" +
+			"of other things that are also awesome and I just can't elaborate enough how\n" + 
+			"				" +
+			"incredible this API is",
+			commitWithApiChange.releaseNote
+		)
+
+	def test_parseCommitWithTripleQuoteReleaseNoteWithContainedQuotes(self):
+		commitWithApiChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: """
+				Added a new API `myFoo`. This means you can now
+				call `myFoo("bar")` instead of `myFooBar("barbar").myBaz()`.
+				"""
+
+				"This is an extra set of quoted text"
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithApiChange = Commit(commitWithApiChangeString, "/projectdir/")
+		self.assertEqual(
+			'Added a new API `myFoo`. This means you can now\n' +
+			'				' +
+			'call `myFoo("bar")` instead of `myFooBar("barbar").myBaz()`.',
+			commitWithApiChange.releaseNote
+		)
+
+	def test_parseCommitWithOneLineTripleQuoteReleaseNote(self):
+		commitWithApiChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: """Added a new API!"""
+
+				"This is an extra set of quoted text"
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithApiChange = Commit(commitWithApiChangeString, "/projectdir/")
+		self.assertEqual(
+			"Added a new API!",
+			commitWithApiChange.releaseNote
+		)
+
+	def test_parseCommitWithTripleQuoteAndBackslashQuoteReleaseNote(self):
+		commitWithApiChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: """
+				Added a new API `myFoo`. This means you can now
+				call `myFoo("bar")` instead of `myFooBar("barbar").myBaz()`.
+				"""
+
+				"This is an extra set of quoted text"
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithApiChange = Commit(commitWithApiChangeString, "/projectdir/")
+		self.assertEqual(
+			'Added a new API `myFoo`. This means you can now\n' +
+			'				' +
+			'call `myFoo("bar")` instead of `myFooBar("barbar").myBaz()`.',
+			commitWithApiChange.releaseNote
+		)
+
+		commitWithEdgeCaseRelnoteChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: """Testing that \\"quotes\\" work when we put ten of them in the \\"message\\" """
+
+				"This is an extra set of quoted text"
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithEdgeCaseRelnoteChange = Commit(commitWithEdgeCaseRelnoteChangeString, "/projectdir/")
+		self.assertEqual(
+			'Testing that "quotes" work when we put ten of them in the "message"',
+			commitWithEdgeCaseRelnoteChange.releaseNote
+		)
+
+	def test_parseCommitWithOneLineAndBackslashQuoteReleaseNote(self):
+		commitWithIOneLineEdgeCaseRelnoteChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: Testing that escaped quoted work on one \\"line\\"
+
+				"This is an extra set of quoted text"
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithIOneLineEdgeCaseRelnoteChange = Commit(commitWithIOneLineEdgeCaseRelnoteChangeString, "/projectdir/")
+		self.assertEqual(
+			'Testing that escaped quoted work on one "line"',
+			commitWithIOneLineEdgeCaseRelnoteChange.releaseNote
+		)
+
+		commitWithIOneLineTrailingBackslashRelnoteChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: Testing that we handle trailing back slashes properly \\
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithIOneLineTrailingBackslashRelnoteChange = Commit(commitWithIOneLineTrailingBackslashRelnoteChangeString, "/projectdir/")
+		self.assertEqual(
+			'Testing that we handle trailing back slashes properly \\',
+			commitWithIOneLineTrailingBackslashRelnoteChange.releaseNote
+		)
+
+		commitWithIOneLineMalformattedRelnoteChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: "Testing that we handle trailing back slashes properly \\"
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithIOneLineMalformattedRelnoteChange = Commit(commitWithIOneLineMalformattedRelnoteChangeString, "/projectdir/")
+		self.assertEqual(
+			'Testing that we handle trailing back slashes properly \"',
+			commitWithIOneLineMalformattedRelnoteChange.releaseNote
+		)
+
+	def test_parseCommitWithSingleQuoteAndBackslashQuoteReleaseNote(self):
+		commitWithApiChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: "
+				Added a new API `myFoo`. This means you can now
+				call `myFoo(\\"bar\\")` instead of `myFooBar(\\"barbar\\").myBaz()`.
+				"
+
+				"This is an extra set of quoted text"
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithApiChange = Commit(commitWithApiChangeString, "/projectdir/")
+		self.assertEqual(
+			'Added a new API `myFoo`. This means you can now\n' +
+			'				' +
+			'call `myFoo("bar")` instead of `myFooBar("barbar").myBaz()`.',
+			commitWithApiChange.releaseNote
+		)
+
+		commitWithEdgeCaseRelnoteChangeString = '''
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Here is an explanation of my commit
+
+				"This is a quote about why it's great!"
+
+				Relnote: "Testing that \\"quotes\\" work when we put six of them in the \\"message\\""
+
+				"This is an extra set of quoted text"
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+
+				Change-Id: myChangeId
+
+				projectdir/a.java
+			'''
+		commitWithEdgeCaseRelnoteChange = Commit(commitWithEdgeCaseRelnoteChangeString, "/projectdir/")
+		self.assertEqual(
+			'Testing that "quotes" work when we put six of them in the "message"',
+			commitWithEdgeCaseRelnoteChange.releaseNote
+		)
+
 	def test_parseAPICommitWithDefaultDelimiters(self):
 		commitWithApiChangeString = """
 				_CommitStart
@@ -168,6 +481,73 @@ class TestGitClient(unittest.TestCase):
 			commitWithApiChange.files
 		)
 		self.assertEqual("Added an awesome new API!", commitWithApiChange.releaseNote)
+		self.assertEqual(
+			"Added a new API! ([myChan]" +
+			"(https://android-review.googlesource.com/#/q/myChangeId), " +
+			"[b/123456](https://issuetracker.google.com/issues/123456), " +
+			"[b/1234567](https://issuetracker.google.com/issues/1234567), " +
+			"[b/123123](https://issuetracker.google.com/issues/123123))",
+			str(commitWithApiChange)
+		)
+
+	def test_parseAPICommitWithOneBug(self):
+		commitWithApiChangeString = """
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Relnote: Added an awesome new API!
+
+				Bug: 123456
+				Test: ./gradlew buildOnServer
+				Change-Id: myChangeId
+
+				projectdir/a.java
+				projectdir/api/current.txt
+			"""
+		commitWithApiChange = Commit(commitWithApiChangeString, "/projectdir/")
+		self.assertEqual("Added an awesome new API!", commitWithApiChange.releaseNote)
+		self.assertEqual([123456], commitWithApiChange.bugs)
+		self.assertEqual(
+			"Added a new API! ([myChan]" +
+			"(https://android-review.googlesource.com/#/q/myChangeId), " +
+			"[b/123456](https://issuetracker.google.com/issues/123456))",
+			str(commitWithApiChange)
+		)
+
+	def test_parseAPICommitWithMultipleBugs(self):
+		commitWithApiChangeString = """
+				_CommitStart
+				_CommitSHA:mySha
+				_Author:anemail@google.com
+				_Date:Tue Aug 6 15:05:55 2019 -0700
+				_Subject:Added a new API!
+				_Body:Also fixed some other bugs
+
+				Relnote: Added an awesome new API!
+
+				Bug: 123456, 1234567
+				Fixes: 123123
+				Test: ./gradlew buildOnServer
+				Change-Id: myChangeId
+
+				projectdir/a.java
+				projectdir/api/current.txt
+			"""
+		commitWithApiChange = Commit(commitWithApiChangeString, "/projectdir/")
+		self.assertEqual("Added an awesome new API!", commitWithApiChange.releaseNote)
+		self.assertEqual([123456, 1234567, 123123], commitWithApiChange.bugs)
+		self.assertEqual(
+			"Added a new API! ([myChan]" +
+			"(https://android-review.googlesource.com/#/q/myChangeId), " +
+			"[b/123456](https://issuetracker.google.com/issues/123456), " +
+			"[b/1234567](https://issuetracker.google.com/issues/1234567), " +
+			"[b/123123](https://issuetracker.google.com/issues/123123))",
+			str(commitWithApiChange)
+		)
 
 	def test_parseAPICommitWithDefaultDelimitersAndNonstandardQuoteCharacters(self):
 		commitWithApiChangeString = """
@@ -1021,6 +1401,56 @@ class TestMarkdown(unittest.TestCase):
 			" these commits.](https://android.googlesource.com/" + \
 			"platform/frameworks/support/+log/untilSHA/projectDir)"
 		)
+
+	def test_markdownCorrectlyGeneratesChannelSummary(self):
+		releaseNotes = LibraryReleaseNotes(
+			groupId = "androidx.recyclerview",
+			artifactIds = ["recyclerview"],
+			version = "1.2.0-alpha04",
+			releaseDate = "01-01-1970",
+			fromSHA = "fromSHA",
+			untilSHA = "untilSHA",
+			projectDir = "projectDir",
+			requiresSameVersion = False,
+			commitList = [],
+			forceIncludeAllCommits = False
+		)
+		self.assertEqual(str(releaseNotes.channelSummary),
+			"* [RecyclerView Version 1.2.0-alpha04]" + \
+			"(/jetpack/androidx/releases/recyclerview#recyclerview-1.2.0-alpha04)\n")
+
+		releaseNotes = LibraryReleaseNotes(
+			groupId = "groupId",
+			artifactIds = ["artifact-Id1", "artifact-Id2", "artifact-Id3",
+						   "artifact-Id4", "artifact-Id5"],
+			version = "version",
+			releaseDate = "01-01-1970",
+			fromSHA = "fromSHA",
+			untilSHA = "untilSHA",
+			projectDir = "projectDir",
+			requiresSameVersion = False,
+			commitList = [],
+			forceIncludeAllCommits = False
+		)
+		self.assertEqual(str(releaseNotes.channelSummary),
+			"* [Groupid Version version]" + \
+			"(/jetpack/androidx/releases/groupid#version)\n")
+
+		releaseNotes = LibraryReleaseNotes(
+			groupId = "groupId",
+			artifactIds = ["artifactId1", "artifactId2", "artifactId3"],
+			version = "version",
+			releaseDate = "01-01-1970",
+			fromSHA = "fromSHA",
+			untilSHA = "untilSHA",
+			projectDir = "projectDir",
+			requiresSameVersion = False,
+			commitList = [],
+			forceIncludeAllCommits = False
+		)
+		self.assertEqual(str(releaseNotes.channelSummary),
+			"* [Artifactid1 Artifactid2 Artifactid3 Version version]" + \
+			"(/jetpack/androidx/releases/groupid#version)\n")
 
 if __name__ == '__main__':
 	unittest.main()

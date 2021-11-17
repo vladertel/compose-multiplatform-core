@@ -18,9 +18,10 @@ package androidx.sqlite.inspection.test
 
 import android.app.Application
 import android.database.sqlite.SQLiteDatabase
-import androidx.inspection.InspectorEnvironment
+import androidx.inspection.ArtTooling
+import androidx.inspection.testing.DefaultTestInspectorEnvironment
 import androidx.inspection.testing.InspectorTester
-import androidx.sqlite.inspection.SqliteInspectorFactory
+import androidx.inspection.testing.TestInspectorExecutors
 import androidx.sqlite.inspection.SqliteInspectorProtocol
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Command
 import androidx.sqlite.inspection.SqliteInspectorProtocol.DatabaseOpenedEvent
@@ -28,30 +29,39 @@ import androidx.sqlite.inspection.SqliteInspectorProtocol.Event
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Response
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.junit.rules.ExternalResource
+import java.util.concurrent.Executor
 
 private const val SQLITE_INSPECTOR_ID = "androidx.sqlite.inspection"
 
 class SqliteInspectorTestEnvironment(
-    val factoryOverride: SqliteInspectorFactory? = null
+    val ioExecutorOverride: Executor? = null
 ) : ExternalResource() {
     private lateinit var inspectorTester: InspectorTester
-    private lateinit var environment: FakeInspectorEnvironment
+    private lateinit var artTooling: FakeArtTooling
+    private val job = Job()
 
     override fun before() {
-        environment = FakeInspectorEnvironment()
+
+        artTooling = FakeArtTooling()
         inspectorTester = runBlocking {
             InspectorTester(
                 inspectorId = SQLITE_INSPECTOR_ID,
-                environment = environment,
-                factoryOverride = factoryOverride
+                environment = DefaultTestInspectorEnvironment(
+                    TestInspectorExecutors(job, ioExecutorOverride), artTooling
+                )
             )
         }
     }
 
     override fun after() {
         inspectorTester.dispose()
+        runBlocking {
+            job.cancelAndJoin()
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -75,15 +85,15 @@ class SqliteInspectorTestEnvironment(
     }
 
     fun registerAlreadyOpenDatabases(databases: List<SQLiteDatabase>) {
-        environment.registerInstancesToFind(databases)
+        artTooling.registerInstancesToFind(databases)
     }
 
     fun registerApplication(application: Application) {
-        environment.registerInstancesToFind(listOf(application))
+        artTooling.registerInstancesToFind(listOf(application))
     }
 
     fun consumeRegisteredHooks(): List<Hook> =
-        environment.consumeRegisteredHooks()
+        artTooling.consumeRegisteredHooks()
 
     /** Assumes an event with the relevant database will be fired. */
     suspend fun awaitDatabaseOpenedEvent(databasePath: String): DatabaseOpenedEvent {
@@ -123,7 +133,7 @@ suspend fun SqliteInspectorTestEnvironment.inspectDatabase(
  * - [registerEntryHook] and [registerExitHook] record the calls which can later be
  * retrieved in [consumeRegisteredHooks].
  */
-private class FakeInspectorEnvironment : InspectorEnvironment {
+private class FakeArtTooling : ArtTooling {
     private val instancesToFind = mutableListOf<Any>()
     private val registeredHooks = mutableListOf<Hook>()
 
@@ -143,7 +153,7 @@ private class FakeInspectorEnvironment : InspectorEnvironment {
     override fun registerEntryHook(
         originClass: Class<*>,
         originMethod: String,
-        entryHook: InspectorEnvironment.EntryHook
+        entryHook: ArtTooling.EntryHook
     ) {
         // TODO: implement actual registerEntryHook behaviour
         registeredHooks.add(Hook.EntryHook(originClass, originMethod, entryHook))
@@ -152,7 +162,7 @@ private class FakeInspectorEnvironment : InspectorEnvironment {
     override fun <T : Any?> registerExitHook(
         originClass: Class<*>,
         originMethod: String,
-        exitHook: InspectorEnvironment.ExitHook<T>
+        exitHook: ArtTooling.ExitHook<T>
     ) {
         // TODO: implement actual registerExitHook behaviour
         registeredHooks.add(Hook.ExitHook(originClass, originMethod, exitHook))
@@ -168,13 +178,13 @@ sealed class Hook(val originClass: Class<*>, val originMethod: String) {
     class ExitHook(
         originClass: Class<*>,
         originMethod: String,
-        val exitHook: InspectorEnvironment.ExitHook<*>
+        val exitHook: ArtTooling.ExitHook<*>
     ) : Hook(originClass, originMethod)
 
     class EntryHook(
         originClass: Class<*>,
         originMethod: String,
-        @Suppress("unused") val entryHook: InspectorEnvironment.EntryHook
+        @Suppress("unused") val entryHook: ArtTooling.EntryHook
     ) : Hook(originClass, originMethod)
 }
 

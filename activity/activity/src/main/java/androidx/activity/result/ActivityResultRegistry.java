@@ -35,7 +35,7 @@ import androidx.lifecycle.LifecycleOwner;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Random;
 
 /**
  * A registry that stores {@link ActivityResultCallback activity result callbacks} for
@@ -53,19 +53,31 @@ public abstract class ActivityResultRegistry {
             "KEY_COMPONENT_ACTIVITY_REGISTERED_RCS";
     private static final String KEY_COMPONENT_ACTIVITY_REGISTERED_KEYS =
             "KEY_COMPONENT_ACTIVITY_REGISTERED_KEYS";
+    private static final String KEY_COMPONENT_ACTIVITY_LAUNCHED_KEYS =
+            "KEY_COMPONENT_ACTIVITY_LAUNCHED_KEYS";
     private static final String KEY_COMPONENT_ACTIVITY_PENDING_RESULTS =
             "KEY_COMPONENT_ACTIVITY_PENDING_RESULT";
+    private static final String KEY_COMPONENT_ACTIVITY_RANDOM_OBJECT =
+            "KEY_COMPONENT_ACTIVITY_RANDOM_OBJECT";
 
     private static final String LOG_TAG = "ActivityResultRegistry";
 
     // Use upper 16 bits for request codes
-    private final AtomicInteger mNextRc = new AtomicInteger(0x0000ffff);
+    private static final int INITIAL_REQUEST_CODE_VALUE = 0x00010000;
+    private Random mRandom = new Random();
+
     private final Map<Integer, String> mRcToKey = new HashMap<>();
-    private final Map<String, Integer> mKeyToRc = new HashMap<>();
+    final Map<String, Integer> mKeyToRc = new HashMap<>();
+    private final Map<String, LifecycleContainer> mKeyToLifecycleContainers = new HashMap<>();
+    ArrayList<String> mLaunchedKeys = new ArrayList<>();
 
-    private final transient Map<String, CallbackAndContract<?>> mKeyToCallback = new HashMap<>();
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    final transient Map<String, CallbackAndContract<?>> mKeyToCallback = new HashMap<>();
 
-    private final Bundle/*<String, ActivityResult>*/ mPendingResults = new Bundle();
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    final Map<String, Object> mParsedPendingResults = new HashMap<>();
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    final Bundle/*<String, ActivityResult>*/ mPendingResults = new Bundle();
 
     /**
      * Start the process of executing an {@link ActivityResultContract} in a type-safe way,
@@ -103,48 +115,67 @@ public abstract class ActivityResultRegistry {
             @NonNull final ActivityResultContract<I, O> contract,
             @NonNull final ActivityResultCallback<O> callback) {
 
-        final int requestCode = registerKey(key);
-        mKeyToCallback.put(key, new CallbackAndContract<>(callback, contract));
-
         Lifecycle lifecycle = lifecycleOwner.getLifecycle();
 
-        final ActivityResult pendingResult = mPendingResults.getParcelable(key);
-        if (pendingResult != null) {
-            mPendingResults.remove(key);
-            if (lifecycle.getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
-                callback.onActivityResult(contract.parseResult(
-                        pendingResult.getResultCode(),
-                        pendingResult.getData()));
-            } else {
-                lifecycle.addObserver(new LifecycleEventObserver() {
-                    @Override
-                    public void onStateChanged(
-                            @NonNull LifecycleOwner lifecycleOwner,
-                            @NonNull Lifecycle.Event event) {
-                        if (Lifecycle.Event.ON_START.equals(event)) {
-                            callback.onActivityResult(contract.parseResult(
-                                    pendingResult.getResultCode(),
-                                    pendingResult.getData()));
-                        }
-                    }
-                });
-            }
+        if (lifecycle.getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+            throw new IllegalStateException("LifecycleOwner " + lifecycleOwner + " is "
+                    + "attempting to register while current state is "
+                    + lifecycle.getCurrentState() + ". LifecycleOwners must call register before "
+                    + "they are STARTED.");
         }
 
-        lifecycle.addObserver(new LifecycleEventObserver() {
+        registerKey(key);
+        LifecycleContainer lifecycleContainer = mKeyToLifecycleContainers.get(key);
+        if (lifecycleContainer == null) {
+            lifecycleContainer = new LifecycleContainer(lifecycle);
+        }
+        LifecycleEventObserver observer = new LifecycleEventObserver() {
             @Override
-            public void onStateChanged(@NonNull LifecycleOwner lifecycleOwner,
+            public void onStateChanged(
+                    @NonNull LifecycleOwner lifecycleOwner,
                     @NonNull Lifecycle.Event event) {
-                if (Lifecycle.Event.ON_DESTROY.equals(event)) {
+                if (Lifecycle.Event.ON_START.equals(event)) {
+                    mKeyToCallback.put(key, new CallbackAndContract<>(callback, contract));
+                    if (mParsedPendingResults.containsKey(key)) {
+                        @SuppressWarnings("unchecked")
+                        final O parsedPendingResult = (O) mParsedPendingResults.get(key);
+                        mParsedPendingResults.remove(key);
+                        callback.onActivityResult(parsedPendingResult);
+                    }
+                    final ActivityResult pendingResult = mPendingResults.getParcelable(key);
+                    if (pendingResult != null) {
+                        mPendingResults.remove(key);
+                        callback.onActivityResult(contract.parseResult(
+                                pendingResult.getResultCode(),
+                                pendingResult.getData()));
+                    }
+                } else if (Lifecycle.Event.ON_STOP.equals(event)) {
+                    mKeyToCallback.remove(key);
+                } else if (Lifecycle.Event.ON_DESTROY.equals(event)) {
                     unregister(key);
                 }
             }
-        });
+        };
+        lifecycleContainer.addObserver(observer);
+        mKeyToLifecycleContainers.put(key, lifecycleContainer);
 
         return new ActivityResultLauncher<I>() {
             @Override
             public void launch(I input, @Nullable ActivityOptionsCompat options) {
-                onLaunch(requestCode, contract, input, options);
+                Integer innerCode = mKeyToRc.get(key);
+                if (innerCode == null) {
+                    throw new IllegalStateException("Attempting to launch an unregistered "
+                            + "ActivityResultLauncher with contract " + contract + " and input "
+                            + input + ". You must ensure the ActivityResultLauncher is registered "
+                            + "before calling launch().");
+                }
+                mLaunchedKeys.add(key);
+                try {
+                    onLaunch(innerCode, contract, input, options);
+                } catch (Exception e) {
+                    mLaunchedKeys.remove(key);
+                    throw e;
+                }
             }
 
             @Override
@@ -181,9 +212,15 @@ public abstract class ActivityResultRegistry {
             @NonNull final String key,
             @NonNull final ActivityResultContract<I, O> contract,
             @NonNull final ActivityResultCallback<O> callback) {
-        final int requestCode = registerKey(key);
+        registerKey(key);
         mKeyToCallback.put(key, new CallbackAndContract<>(callback, contract));
 
+        if (mParsedPendingResults.containsKey(key)) {
+            @SuppressWarnings("unchecked")
+            final O parsedPendingResult = (O) mParsedPendingResults.get(key);
+            mParsedPendingResults.remove(key);
+            callback.onActivityResult(parsedPendingResult);
+        }
         final ActivityResult pendingResult = mPendingResults.getParcelable(key);
         if (pendingResult != null) {
             mPendingResults.remove(key);
@@ -195,7 +232,15 @@ public abstract class ActivityResultRegistry {
         return new ActivityResultLauncher<I>() {
             @Override
             public void launch(I input, @Nullable ActivityOptionsCompat options) {
-                onLaunch(requestCode, contract, input, options);
+                Integer innerCode = mKeyToRc.get(key);
+                if (innerCode == null) {
+                    throw new IllegalStateException("Attempting to launch an unregistered "
+                            + "ActivityResultLauncher with contract " + contract + " and input "
+                            + input + ". You must ensure the ActivityResultLauncher is registered "
+                            + "before calling launch().");
+                }
+                mLaunchedKeys.add(key);
+                onLaunch(innerCode, contract, input, options);
             }
 
             @Override
@@ -219,15 +264,28 @@ public abstract class ActivityResultRegistry {
      */
     @MainThread
     final void unregister(@NonNull String key) {
-        Integer rc = mKeyToRc.remove(key);
-        if (rc != null) {
-            mRcToKey.remove(rc);
+        if (!mLaunchedKeys.contains(key)) {
+            // Only remove the key -> requestCode mapping if there isn't a launch in flight
+            Integer rc = mKeyToRc.remove(key);
+            if (rc != null) {
+                mRcToKey.remove(rc);
+            }
         }
         mKeyToCallback.remove(key);
+        if (mParsedPendingResults.containsKey(key)) {
+            Log.w(LOG_TAG, "Dropping pending result for request " + key + ": "
+                    + mParsedPendingResults.get(key));
+            mParsedPendingResults.remove(key);
+        }
         if (mPendingResults.containsKey(key)) {
             Log.w(LOG_TAG, "Dropping pending result for request " + key + ": "
                     + mPendingResults.<ActivityResult>getParcelable(key));
             mPendingResults.remove(key);
+        }
+        LifecycleContainer lifecycleContainer = mKeyToLifecycleContainers.get(key);
+        if (lifecycleContainer != null) {
+            lifecycleContainer.clearObservers();
+            mKeyToLifecycleContainers.remove(key);
         }
     }
 
@@ -238,10 +296,14 @@ public abstract class ActivityResultRegistry {
      */
     public final void onSaveInstanceState(@NonNull Bundle outState) {
         outState.putIntegerArrayList(KEY_COMPONENT_ACTIVITY_REGISTERED_RCS,
-                new ArrayList<>(mRcToKey.keySet()));
+                new ArrayList<>(mKeyToRc.values()));
         outState.putStringArrayList(KEY_COMPONENT_ACTIVITY_REGISTERED_KEYS,
-                new ArrayList<>(mRcToKey.values()));
-        outState.putBundle(KEY_COMPONENT_ACTIVITY_PENDING_RESULTS, mPendingResults);
+                new ArrayList<>(mKeyToRc.keySet()));
+        outState.putStringArrayList(KEY_COMPONENT_ACTIVITY_LAUNCHED_KEYS,
+                new ArrayList<>(mLaunchedKeys));
+        outState.putBundle(KEY_COMPONENT_ACTIVITY_PENDING_RESULTS,
+                (Bundle) mPendingResults.clone());
+        outState.putSerializable(KEY_COMPONENT_ACTIVITY_RANDOM_OBJECT, mRandom);
     }
 
     /**
@@ -260,13 +322,28 @@ public abstract class ActivityResultRegistry {
         if (keys == null || rcs == null) {
             return;
         }
-        int numKeys = keys.size();
-        for (int i = 0; i < numKeys; i++) {
-            bindRcKey(rcs.get(i), keys.get(i));
-        }
-        mNextRc.set(numKeys);
+        mLaunchedKeys =
+                savedInstanceState.getStringArrayList(KEY_COMPONENT_ACTIVITY_LAUNCHED_KEYS);
+        mRandom = (Random) savedInstanceState.getSerializable(KEY_COMPONENT_ACTIVITY_RANDOM_OBJECT);
         mPendingResults.putAll(
                 savedInstanceState.getBundle(KEY_COMPONENT_ACTIVITY_PENDING_RESULTS));
+        for (int i = 0; i < keys.size(); i++) {
+            String key = keys.get(i);
+            // Developers may have already registered with this same key by the time we restore
+            // state, which caused us to generate a new requestCode that doesn't match what we're
+            // about to restore. Clear out the new requestCode to ensure that we use the
+            // previously saved requestCode.
+            if (mKeyToRc.containsKey(key)) {
+                Integer newRequestCode = mKeyToRc.remove(key);
+                // On the chance that developers have already called launch() with this new
+                // requestCode, keep the mapping around temporarily to ensure the result is
+                // properly delivered to both the new requestCode and the restored requestCode
+                if (!mPendingResults.containsKey(key)) {
+                    mRcToKey.remove(newRequestCode);
+                }
+            }
+            bindRcKey(rcs.get(i), keys.get(i));
+        }
     }
 
     /**
@@ -308,34 +385,61 @@ public abstract class ActivityResultRegistry {
 
         CallbackAndContract<?> callbackAndContract = mKeyToCallback.get(key);
         if (callbackAndContract == null || callbackAndContract.mCallback == null) {
-            return false;
+            // Remove any pending result
+            mPendingResults.remove(key);
+            // And add these pre-parsed pending results in their place
+            mParsedPendingResults.put(key, result);
+        } else {
+            @SuppressWarnings("unchecked")
+            ActivityResultCallback<O> callback =
+                    (ActivityResultCallback<O>) callbackAndContract.mCallback;
+            if (mLaunchedKeys.remove(key)) {
+                callback.onActivityResult(result);
+            }
         }
-        @SuppressWarnings("unchecked")
-        ActivityResultCallback<O> callback =
-                (ActivityResultCallback<O>) callbackAndContract.mCallback;
-        callback.onActivityResult(result);
         return true;
     }
 
     private <O> void doDispatch(String key, int resultCode, @Nullable Intent data,
             @Nullable CallbackAndContract<O> callbackAndContract) {
-        if (callbackAndContract != null && callbackAndContract.mCallback != null) {
+        if (callbackAndContract != null && callbackAndContract.mCallback != null
+                && mLaunchedKeys.contains(key)) {
             ActivityResultCallback<O> callback = callbackAndContract.mCallback;
             ActivityResultContract<?, O> contract = callbackAndContract.mContract;
             callback.onActivityResult(contract.parseResult(resultCode, data));
+            mLaunchedKeys.remove(key);
         } else {
+            // Remove any parsed pending result
+            mParsedPendingResults.remove(key);
+            // And add these pending results in their place
             mPendingResults.putParcelable(key, new ActivityResult(resultCode, data));
         }
     }
 
-    private int registerKey(String key) {
+    private void registerKey(String key) {
         Integer existing = mKeyToRc.get(key);
         if (existing != null) {
-            return existing;
+            return;
         }
-        int rc = mNextRc.getAndIncrement();
+        int rc = generateRandomNumber();
         bindRcKey(rc, key);
-        return rc;
+    }
+
+    /**
+     * Generate a random number between the initial value (00010000) inclusive, and the max
+     * integer value. If that number is already an existing request code, generate another until
+     * we find one that is new.
+     *
+     * @return the number
+     */
+    private int generateRandomNumber() {
+        int number = mRandom.nextInt((Integer.MAX_VALUE - INITIAL_REQUEST_CODE_VALUE) + 1)
+                + INITIAL_REQUEST_CODE_VALUE;
+        while (mRcToKey.containsKey(number)) {
+            number = mRandom.nextInt((Integer.MAX_VALUE - INITIAL_REQUEST_CODE_VALUE) + 1)
+                    + INITIAL_REQUEST_CODE_VALUE;
+        }
+        return number;
     }
 
     private void bindRcKey(int rc, String key) {
@@ -352,6 +456,28 @@ public abstract class ActivityResultRegistry {
                 ActivityResultContract<?, O> contract) {
             mCallback = callback;
             mContract = contract;
+        }
+    }
+
+    private static class LifecycleContainer {
+        final Lifecycle mLifecycle;
+        private final ArrayList<LifecycleEventObserver> mObservers;
+
+        LifecycleContainer(@NonNull Lifecycle lifecycle) {
+            mLifecycle = lifecycle;
+            mObservers = new ArrayList<>();
+        }
+
+        void addObserver(@NonNull LifecycleEventObserver observer) {
+            mLifecycle.addObserver(observer);
+            mObservers.add(observer);
+        }
+
+        void clearObservers() {
+            for (LifecycleEventObserver observer: mObservers) {
+                mLifecycle.removeObserver(observer);
+            }
+            mObservers.clear();
         }
     }
 }

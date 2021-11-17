@@ -80,6 +80,7 @@ public class RecyclerViewNestedScrollingChildTest {
                 ApplicationProvider.getApplicationContext()).getScaledTouchSlop();
 
         mRecyclerView = new RecyclerView(context);
+        mRecyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         mRecyclerView.setMinimumWidth(1000);
         mRecyclerView.setMinimumHeight(1000);
 
@@ -377,7 +378,7 @@ public class RecyclerViewNestedScrollingChildTest {
         SimpleGestureGeneratorKt
                 .dispatchTouchEvents(mRecyclerView, firstDownTime, motionEventData);
 
-        // Sanity check that onStopNestedScroll has not yet been called of type TYPE_NON_TOUCH.
+        // Assumption check that onStopNestedScroll has not yet been called of type TYPE_NON_TOUCH.
         verify(mParentSpy, never())
                 .onStopNestedScroll(mRecyclerView, ViewCompat.TYPE_NON_TOUCH);
 
@@ -663,4 +664,5 @@ public class RecyclerViewNestedScrollingChildTest {
             super(itemView);
         }
     }
+
 }

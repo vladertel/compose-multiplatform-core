@@ -16,19 +16,23 @@
 
 package androidx.appcompat.app
 
-import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
+import androidx.appcompat.Orientation
+import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
 import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
 import androidx.appcompat.testutils.NightModeActivityTestRule
 import androidx.appcompat.testutils.NightModeUtils.NightSetMode
 import androidx.appcompat.testutils.NightModeUtils.assertConfigurationNightModeEquals
 import androidx.appcompat.testutils.NightModeUtils.setNightModeAndWaitForRecreate
-import androidx.appcompat.testutils.TestUtilsActions.rotateScreenOrientation
-import androidx.appcompat.testutils.TestUtilsActions.setScreenOrientation
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.matcher.ViewMatchers.isRoot
+import androidx.appcompat.withOrientation
+import androidx.lifecycle.Lifecycle
 import androidx.test.filters.LargeTest
+import androidx.test.filters.SdkSuppress
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
+import androidx.testutils.LifecycleOwnerUtils
+import org.junit.After
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Rule
@@ -38,59 +42,74 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
-class NightModeRotateDoesNotRecreateActivityTestCase(private val setMode: NightSetMode) {
+@SdkSuppress(minSdkVersion = 18)
+public class NightModeRotateDoesNotRecreateActivityTestCase(private val setMode: NightSetMode) {
+
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+
     @get:Rule
-    val activityRule = NightModeActivityTestRule(NightModeRotateDoesNotRecreateActivity::class.java)
+    public val activityRule: NightModeActivityTestRule<NightModeRotateDoesNotRecreateActivity> =
+        NightModeActivityTestRule(
+            NightModeRotateDoesNotRecreateActivity::class.java,
+            initialTouchMode = false,
+            // Let the test method launch its own activity so that we can ensure it's RESUMED.
+            launchActivity = false
+        )
+
+    @After
+    public fun teardown() {
+        device.setOrientationNatural()
+        device.waitForIdle(5000)
+
+        // Clean up after the default mode test.
+        if (setMode == NightSetMode.DEFAULT) {
+            activityRule.runOnUiThread {
+                AppCompatDelegate.setDefaultNightMode(MODE_NIGHT_FOLLOW_SYSTEM)
+            }
+        }
+    }
 
     @Test
-    fun testRotateDoesNotRecreateActivity() {
-        // Don't run this test on SDK 26 because it has issues with setRequestedOrientation. Also
-        // don't run it on SDK 24 (Nexus Player) or SDK 23 (Pixel C) because those devices only
-        // support a single orientation and there doesn't seem to be a way to query supported
-        // screen orientations.
-        val sdkInt = Build.VERSION.SDK_INT
-        if (sdkInt == 26 || sdkInt == 24 || sdkInt == 23) {
-            return
-        }
+    public fun testRotateDoesNotRecreateActivity() {
+        // Set local night mode to MODE_NIGHT_YES and wait for state RESUMED.
+        val initialActivity = activityRule.launchActivity(null)
+        LifecycleOwnerUtils.waitUntilState(initialActivity, Lifecycle.State.RESUMED)
+        setNightModeAndWaitForRecreate(initialActivity, MODE_NIGHT_YES, setMode)
 
-        // Set local night mode to YES
-        setNightModeAndWaitForRecreate(activityRule, MODE_NIGHT_YES, setMode)
-
-        val activity = activityRule.activity
-        val config = activity.resources.configuration
+        val nightModeActivity = activityRule.activity
+        val config = nightModeActivity.resources.configuration
 
         // On API level 26 and below, the configuration object is going to be identical
         // across configuration changes, so we need to pull the orientation value now.
         val orientation = config.orientation
 
-        // Assert that the current Activity is 'dark'
+        // Assert that the current Activity is 'dark'.
         assertConfigurationNightModeEquals(Configuration.UI_MODE_NIGHT_YES, config)
 
-        // Now rotate the device
-        activity.resetOnConfigurationChange()
-        onView(isRoot()).perform(rotateScreenOrientation(activity))
-        activity.expectOnConfigurationChange(5000)
+        // Now rotate the device. This should NOT result in a lifecycle event, just a call to
+        // onConfigurationChanged.
+        nightModeActivity.resetOnConfigurationChange()
+        device.withOrientation(Orientation.LEFT) {
+            instrumentation.waitForIdleSync()
+            nightModeActivity.expectOnConfigurationChange(5000)
 
-        // Assert that we got the same activity.
-        val activity2 = activityRule.activity
-        val config2 = activity2.resources.configuration
+            // Assert that we got the same activity and thus it was not recreated.
+            val rotatedNightModeActivity = activityRule.activity
+            val rotatedConfig = rotatedNightModeActivity.resources.configuration
+            assertSame(nightModeActivity, rotatedNightModeActivity)
+            assertConfigurationNightModeEquals(Configuration.UI_MODE_NIGHT_YES, rotatedConfig)
 
-        // And assert that we have the same Activity, and thus was not recreated.
-        assertSame(activity, activity2)
-        assertNotSame(orientation, config2.orientation)
-        assertConfigurationNightModeEquals(Configuration.UI_MODE_NIGHT_YES, config2)
-
-        // Reset the requested orientation and wait for it to apply.
-        activity.resetOnConfigurationChange()
-        onView(isRoot()).perform(setScreenOrientation(activity,
-            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED))
-        activity.expectOnConfigurationChange(5000)
+            // On API level 26 and below, the configuration object is going to be identical
+            // across configuration changes, so we need to compare against the cached value.
+            assertNotSame(orientation, rotatedConfig.orientation)
+        }
     }
 
-    companion object {
+    public companion object {
         @JvmStatic
         @Parameterized.Parameters
-        fun data() = if (Build.VERSION.SDK_INT >= 17) {
+        public fun data(): List<NightSetMode> = if (Build.VERSION.SDK_INT >= 17) {
             listOf(NightSetMode.DEFAULT, NightSetMode.LOCAL)
         } else {
             listOf(NightSetMode.DEFAULT)

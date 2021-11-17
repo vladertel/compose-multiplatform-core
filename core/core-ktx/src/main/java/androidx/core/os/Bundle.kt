@@ -29,7 +29,7 @@ import java.io.Serializable
  *
  * @throws IllegalArgumentException When a value is not a supported type of [Bundle].
  */
-fun bundleOf(vararg pairs: Pair<String, Any?>) = Bundle(pairs.size).apply {
+public fun bundleOf(vararg pairs: Pair<String, Any?>): Bundle = Bundle(pairs.size).apply {
     for ((key, value) in pairs) {
         when (value) {
             null -> putString(key, null) // Any nullable type will suffice.
@@ -79,7 +79,8 @@ fun bundleOf(vararg pairs: Pair<String, Any?>) = Bundle(pairs.size).apply {
                     else -> {
                         val valueType = componentType.canonicalName
                         throw IllegalArgumentException(
-                            "Illegal value array type $valueType for key \"$key\"")
+                            "Illegal value array type $valueType for key \"$key\""
+                        )
                     }
                 }
             }

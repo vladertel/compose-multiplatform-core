@@ -28,20 +28,22 @@ import androidx.lifecycle.Lifecycle;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
-import androidx.test.rule.ActivityTestRule;
+import androidx.testutils.PollingCheck;
 
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+@SuppressWarnings("deprecation")
 @LargeTest
 @RunWith(AndroidJUnit4.class)
 public class ActivityCompatRecreateTestCase {
     @Rule
-    public final ActivityTestRule<TestActivityWithLifecycle> mActivityTestRule;
+    public final androidx.test.rule.ActivityTestRule<TestActivityWithLifecycle> mActivityTestRule;
 
     public ActivityCompatRecreateTestCase() {
-        mActivityTestRule = new ActivityTestRule<>(TestActivityWithLifecycle.class);
+        mActivityTestRule = new androidx.test.rule.ActivityTestRule<>(
+                TestActivityWithLifecycle.class);
     }
 
     @Test
@@ -51,6 +53,14 @@ public class ActivityCompatRecreateTestCase {
         // Wait and assert that the Activity is resumed
         waitUntilState(firstActivity, Lifecycle.State.RESUMED);
 
+        // Wait just a bit longer to ensure that it's done doing... whatever it does.
+        PollingCheck.waitFor(new PollingCheck.PollingCheckCondition() {
+            @Override
+            public boolean canProceed() {
+                return firstActivity.hasWindowFocus();
+            }
+        });
+
         // Now recreate() the activity
         mActivityTestRule.runOnUiThread(new Runnable() {
             @Override
@@ -58,12 +68,20 @@ public class ActivityCompatRecreateTestCase {
                 ActivityCompat.recreate(firstActivity);
             }
         });
+
         // Wait until the original activity is destroyed
         waitUntilState(firstActivity, Lifecycle.State.DESTROYED);
 
+        // And wait just a tiny bit more for the new activity to do... whatever it does.
+        PollingCheck.waitFor(new PollingCheck.PollingCheckCondition() {
+            @Override
+            public boolean canProceed() {
+                return mActivityTestRule.getActivity() != firstActivity;
+            }
+        });
+
         // Assert that the recreated Activity is resumed
         final TestActivityWithLifecycle newActivity = mActivityTestRule.getActivity();
-        assertNotSame(firstActivity, newActivity);
         assertEquals(Lifecycle.State.RESUMED, newActivity.getLifecycle().getCurrentState());
     }
 

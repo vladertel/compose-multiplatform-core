@@ -30,19 +30,19 @@ import android.view.ViewGroup;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.filters.SmallTest;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.MediumTest;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@SmallTest
-@RunWith(JUnit4.class)
+@MediumTest
+@RunWith(AndroidJUnit4.class)
 public class ItemBridgeAdapterTest {
     private static final int sViewWidth = 100;
     private static final int sViewHeight = 100;
@@ -91,8 +91,8 @@ public class ItemBridgeAdapterTest {
         mRecyclerView.setHasFixedSize(false); // force layout items in layout pass
     }
 
-    List populateData() {
-        List data = new ArrayList();
+    List<Integer> populateData() {
+        List<Integer> data = new ArrayList<>();
         for (int i = 0; i < 10000; i++) {
             data.add(i);
         }

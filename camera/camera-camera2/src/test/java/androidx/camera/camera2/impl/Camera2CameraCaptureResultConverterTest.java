@@ -18,12 +18,15 @@ package androidx.camera.camera2.impl;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureResult;
 import android.os.Build;
 
+import androidx.camera.camera2.internal.Camera2CameraCaptureFailure;
 import androidx.camera.camera2.internal.Camera2CameraCaptureResult;
+import androidx.camera.core.impl.CameraCaptureFailure;
 import androidx.camera.core.impl.CameraCaptureResult;
-import androidx.test.filters.SmallTest;
+import androidx.camera.core.impl.TagBundle;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,7 +35,6 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.internal.DoNotInstrument;
 
-@SmallTest
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
@@ -41,8 +43,8 @@ public final class Camera2CameraCaptureResultConverterTest {
 
     @Test
     public void canRetrieveCaptureResult() {
-        CameraCaptureResult cameraCaptureResult = new Camera2CameraCaptureResult(null,
-                mCaptureResult);
+        CameraCaptureResult cameraCaptureResult =
+                new Camera2CameraCaptureResult(TagBundle.emptyBundle(), mCaptureResult);
 
         CaptureResult captureResult = Camera2CameraCaptureResultConverter.getCaptureResult(
                 cameraCaptureResult);
@@ -59,5 +61,29 @@ public final class Camera2CameraCaptureResultConverterTest {
                 cameraCaptureResult);
 
         assertThat(captureResult).isNull();
+    }
+
+    @Test
+    public void canRetrieveCaptureFailure() {
+        CaptureFailure captureFailure = Mockito.mock(CaptureFailure.class);
+        CameraCaptureFailure cameraCaptureFailure =
+                new Camera2CameraCaptureFailure(CameraCaptureFailure.Reason.ERROR, captureFailure);
+
+        CaptureFailure retrievedCaptureResult =
+                Camera2CameraCaptureResultConverter.getCaptureFailure(
+                cameraCaptureFailure);
+
+        assertThat(retrievedCaptureResult).isSameInstanceAs(captureFailure);
+    }
+
+    @Test
+    public void retrieveNullIfNotCamera2CameraCaptureFailure() {
+        CameraCaptureFailure cameraCaptureFailure =
+                new CameraCaptureFailure(CameraCaptureFailure.Reason.ERROR);
+
+        CaptureFailure captureFailure = Camera2CameraCaptureResultConverter.getCaptureFailure(
+                cameraCaptureFailure);
+
+        assertThat(captureFailure).isNull();
     }
 }

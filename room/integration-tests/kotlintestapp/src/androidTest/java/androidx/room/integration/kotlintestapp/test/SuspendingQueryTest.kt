@@ -31,6 +31,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.async
@@ -667,7 +668,8 @@ class SuspendingQueryTest : TestDatabaseTest() {
         }
         val wrappedExecutor = WrappedService(Executors.newCachedThreadPool())
         val localDatabase = Room.inMemoryDatabaseBuilder(
-            ApplicationProvider.getApplicationContext(), TestDatabase::class.java)
+            ApplicationProvider.getApplicationContext(), TestDatabase::class.java
+        )
             .setQueryExecutor(ArchTaskExecutor.getIOThreadExecutor())
             .setTransactionExecutor(wrappedExecutor)
             .build()
@@ -699,7 +701,8 @@ class SuspendingQueryTest : TestDatabaseTest() {
         runBlocking {
             val executorService = Executors.newSingleThreadExecutor()
             val localDatabase = Room.inMemoryDatabaseBuilder(
-                ApplicationProvider.getApplicationContext(), TestDatabase::class.java)
+                ApplicationProvider.getApplicationContext(), TestDatabase::class.java
+            )
                 .setTransactionExecutor(executorService)
                 .build()
 
@@ -734,7 +737,8 @@ class SuspendingQueryTest : TestDatabaseTest() {
         runBlocking {
             val executorService = Executors.newCachedThreadPool()
             val localDatabase = Room.inMemoryDatabaseBuilder(
-                ApplicationProvider.getApplicationContext(), TestDatabase::class.java)
+                ApplicationProvider.getApplicationContext(), TestDatabase::class.java
+            )
                 .setTransactionExecutor(executorService)
                 .build()
 
@@ -756,7 +760,8 @@ class SuspendingQueryTest : TestDatabaseTest() {
     fun withTransaction_databaseOpenError() {
         runBlocking {
             val localDatabase = Room.inMemoryDatabaseBuilder(
-                ApplicationProvider.getApplicationContext(), TestDatabase::class.java)
+                ApplicationProvider.getApplicationContext(), TestDatabase::class.java
+            )
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         // this causes all transaction methods to throw, this can happen IRL
@@ -781,7 +786,8 @@ class SuspendingQueryTest : TestDatabaseTest() {
         runBlocking {
             // delegate and delegate just so that we can throw in beginTransaction()
             val localDatabase = Room.inMemoryDatabaseBuilder(
-                ApplicationProvider.getApplicationContext(), TestDatabase::class.java)
+                ApplicationProvider.getApplicationContext(), TestDatabase::class.java
+            )
                 .openHelperFactory(
                     object : SupportSQLiteOpenHelper.Factory {
                         val factoryDelegate = FrameworkSQLiteOpenHelperFactory()
@@ -794,6 +800,9 @@ class SuspendingQueryTest : TestDatabaseTest() {
                                     val databaseDelegate = helperDelegate.writableDatabase
                                     return object : SupportSQLiteDatabase by databaseDelegate {
                                         override fun beginTransaction() {
+                                            throw RuntimeException("Error beginning transaction.")
+                                        }
+                                        override fun beginTransactionNonExclusive() {
                                             throw RuntimeException("Error beginning transaction.")
                                         }
                                     }
@@ -830,7 +839,7 @@ class SuspendingQueryTest : TestDatabaseTest() {
                     assertThat(ex).hasMessageThat()
                         .contains(
                             "Cannot perform this operation because there is no current " +
-                                    "transaction"
+                                "transaction"
                         )
                 } else {
                     assertThat(ex).hasMessageThat()
@@ -858,7 +867,7 @@ class SuspendingQueryTest : TestDatabaseTest() {
                     assertThat(ex).hasMessageThat()
                         .contains(
                             "Cannot perform this operation because there is no current " +
-                                    "transaction"
+                                "transaction"
                         )
                 } else {
                     assertThat(ex).hasMessageThat()
@@ -866,5 +875,101 @@ class SuspendingQueryTest : TestDatabaseTest() {
                 }
             }
         }
+    }
+
+    @Test
+    fun transactionFunctionWithSuspendFunctionalParamCommits() = runBlocking {
+        // GIVEN a database with a book
+        val bookPublisher = TestUtil.PUBLISHER
+        val addedBook = TestUtil.BOOK_1.copy(bookPublisherId = bookPublisher.publisherId)
+        booksDao.addPublishers(bookPublisher)
+        booksDao.addBooks(addedBook)
+
+        // WHEN a transaction is run
+        val output = kotlin.runCatching {
+            booksDao.functionWithSuspendFunctionalParam(addedBook) { book ->
+                booksDao.deleteBookSuspend(book)
+                return@functionWithSuspendFunctionalParam book
+            }
+        }
+
+        // THEN the change has been committed
+        assertWithMessage("The higher-order fun ran successfully")
+            .that(output.isSuccess)
+            .isEqualTo(true)
+        assertThat(booksDao.getBooksSuspend())
+            .doesNotContain(addedBook)
+    }
+
+    @Test
+    fun transactionFunctionWithSuspendFunctionalParamDoesntCommitWhenError() = runBlocking {
+        // GIVEN a database with a book
+        val bookPublisher = TestUtil.PUBLISHER
+        val addedBook = TestUtil.BOOK_1.copy(bookPublisherId = bookPublisher.publisherId)
+        booksDao.addPublishers(bookPublisher)
+        booksDao.addBooks(addedBook)
+
+        // WHEN a transaction is started and then fails before completing
+        val output = kotlin.runCatching {
+            booksDao.functionWithSuspendFunctionalParam(addedBook) { book ->
+                booksDao.deleteBookSuspend(book)
+                error("Fake error in transaction")
+            }
+        }
+
+        // THEN the change hasn't been committed
+        assertWithMessage("RunCatching caught the thrown error")
+            .that(output.isFailure)
+            .isEqualTo(true)
+        assertThat(booksDao.getBooksSuspend())
+            .contains(addedBook)
+    }
+
+    @Test
+    fun suspendTransactionFunctionWithSuspendFunctionalParamCommits() = runBlocking {
+        // GIVEN a database with a book
+        val bookPublisher = TestUtil.PUBLISHER
+        val addedBook = TestUtil.BOOK_1.copy(bookPublisherId = bookPublisher.publisherId)
+        booksDao.addPublishers(bookPublisher)
+        booksDao.addBooks(addedBook)
+
+        // WHEN a transaction is run
+        val output = kotlin.runCatching {
+            booksDao.functionWithSuspendFunctionalParam(addedBook) { book ->
+                booksDao.deleteBookSuspend(book)
+                return@functionWithSuspendFunctionalParam book
+            }
+        }
+
+        // THEN the change has been committed
+        assertWithMessage("The higher-order fun ran successfully")
+            .that(output.isSuccess)
+            .isEqualTo(true)
+        assertThat(booksDao.getBooksSuspend())
+            .doesNotContain(addedBook)
+    }
+
+    @Test
+    fun suspendTransactionFunctionWithSuspendFunctionalParamDoesntCommitWhenError() = runBlocking {
+        // GIVEN a database with a book
+        val bookPublisher = TestUtil.PUBLISHER
+        val addedBook = TestUtil.BOOK_1.copy(bookPublisherId = bookPublisher.publisherId)
+        booksDao.addPublishers(bookPublisher)
+        booksDao.addBooks(addedBook)
+
+        // WHEN a transaction is started and then fails before completing
+        val output = runCatching {
+            booksDao.suspendFunctionWithSuspendFunctionalParam(addedBook) { book ->
+                booksDao.deleteBookSuspend(book)
+                error("Fake error in transaction")
+            }
+        }
+
+        // THEN the change hasn't been committed
+        assertWithMessage("RunCatching caught the thrown error")
+            .that(output.isFailure)
+            .isEqualTo(true)
+        assertThat(booksDao.getBooksSuspend())
+            .contains(addedBook)
     }
 }

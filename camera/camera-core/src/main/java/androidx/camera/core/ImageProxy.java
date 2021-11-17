@@ -22,11 +22,12 @@ import android.media.Image;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RestrictTo;
+import androidx.annotation.RequiresApi;
 
 import java.nio.ByteBuffer;
 
 /** An image proxy which has a similar interface as {@link android.media.Image}. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface ImageProxy extends AutoCloseable {
     /**
      * Closes the underlying {@link android.media.Image}.
@@ -52,30 +53,10 @@ public interface ImageProxy extends AutoCloseable {
     void setCropRect(@Nullable Rect rect);
 
     /**
-     * Returns the rectangle defined by {@link ViewPort}.
-     *
-     * <p> Returns the value of {@link #getCropRect()} if {@link ViewPort} is not provided.
-     *
-     * @hide
-     * @see ViewPort
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    @NonNull
-    Rect getViewPortRect();
-
-    /**
-     * Sets the rectangle based on {@link ViewPort}.
-     *
-     * <p> If the value is null, {@link #getViewPortRect()} will return the value of
-     * {@link #getCropRect()}.
-     *
-     * @hide
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    void setViewPortRect(@Nullable Rect viewPortRect);
-
-    /**
      * Returns the image format.
+     *
+     * <p> The image format can be one of the {@link android.graphics.ImageFormat} or
+     * {@link android.graphics.PixelFormat} constants.
      *
      * @see android.media.Image#getFormat()
      */

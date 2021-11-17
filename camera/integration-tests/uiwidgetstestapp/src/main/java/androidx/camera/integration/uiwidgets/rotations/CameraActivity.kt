@@ -23,6 +23,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.util.Size
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.Camera
@@ -32,30 +33,41 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
-import androidx.camera.core.impl.utils.Exif
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
-import androidx.camera.integration.uiwidgets.R
+import androidx.camera.integration.uiwidgets.databinding.ActivityRotationsMainBinding
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import kotlinx.android.synthetic.main.activity_rotations_main.previewView
+import androidx.lifecycle.Lifecycle
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 
 open class CameraActivity : AppCompatActivity() {
 
+    private lateinit var mBinding: ActivityRotationsMainBinding
     private lateinit var mCamera: Camera
     protected lateinit var mImageAnalysis: ImageAnalysis
     protected lateinit var mImageCapture: ImageCapture
+    private lateinit var mAnalysisExecutor: ExecutorService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_rotations_main)
+        mBinding = ActivityRotationsMainBinding.inflate(layoutInflater)
+        setContentView(mBinding.root)
+        mAnalysisExecutor = Executors.newSingleThreadExecutor()
         if (shouldRequestPermissionsAtRuntime() && !hasPermissions()) {
-            requestPermissions(PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+            ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         } else {
             setUpCamera()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mAnalysisExecutor.shutdown()
     }
 
     override fun onRequestPermissionsResult(
@@ -86,22 +98,29 @@ open class CameraActivity : AppCompatActivity() {
 
     private fun setUpCamera() {
         val cameraProcessFuture = ProcessCameraProvider.getInstance(this)
-        cameraProcessFuture.addListener(Runnable {
-            val cameraProvider = cameraProcessFuture.get()
-            setUpCamera(cameraProvider)
-        }, CameraXExecutors.mainThreadExecutor())
+        cameraProcessFuture.addListener(
+            Runnable {
+                val cameraProvider = cameraProcessFuture.get()
+                if (lifecycle.currentState != Lifecycle.State.DESTROYED) {
+                    setUpCamera(cameraProvider)
+                } else {
+                    Log.d(TAG, "Skip camera setup since activity is closed")
+                }
+            },
+            ContextCompat.getMainExecutor(this)
+        )
     }
 
     private fun setUpCamera(cameraProvider: ProcessCameraProvider) {
         val preview = Preview.Builder()
             .build()
             .apply {
-                setSurfaceProvider(previewView.createSurfaceProvider())
+                setSurfaceProvider(mBinding.previewView.getSurfaceProvider())
             }
         mImageAnalysis = ImageAnalysis.Builder()
             .build()
             .apply {
-                setAnalyzer(CameraXExecutors.ioExecutor(), createAnalyzer())
+                setAnalyzer(mAnalysisExecutor, createAnalyzer())
             }
         mImageCapture = ImageCapture.Builder()
             .build()
@@ -128,13 +147,13 @@ open class CameraActivity : AppCompatActivity() {
         return ImageAnalysis.Analyzer { imageProxy ->
             mAnalysisImageRotation = imageProxy.imageInfo.rotationDegrees
             mAnalysisRunning.release()
-            Log.d(TAG, "Analyzed image rotation = $mAnalysisImageRotation")
+            Log.d(TAG, "Analyzed image rotation = $mAnalysisImageRotation, $mAnalysisRunning")
             imageProxy.close()
         }
     }
 
     private fun ImageCapture.setCallback() {
-        previewView.setOnClickListener {
+        mBinding.previewView.setOnClickListener {
             val imageCaptureMode =
                 intent.getIntExtra(KEY_IMAGE_CAPTURE_MODE, IMAGE_CAPTURE_MODE_IN_MEMORY)
             when (imageCaptureMode) {
@@ -151,17 +170,18 @@ open class CameraActivity : AppCompatActivity() {
             CameraXExecutors.mainThreadExecutor(),
             object : ImageCapture.OnImageCapturedCallback() {
                 override fun onCaptureSuccess(image: ImageProxy) {
-                    mCapturedImageRotation = image.imageInfo.rotationDegrees
+                    mCaptureResult = ImageCaptureResult.InMemory(image)
                     mCaptureDone.release()
-                    Log.d(TAG, "InMemory captured image rotation = $mCapturedImageRotation")
                     image.close()
+                    Log.d(TAG, "InMemory image capture successful")
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    Log.e(TAG, "InMemory capture failed", exception)
                     mCaptureDone.release()
+                    Log.e(TAG, "InMemory image capture failed", exception)
                 }
-            })
+            }
+        )
     }
 
     private fun ImageCapture.setFileCallback() {
@@ -172,16 +192,17 @@ open class CameraActivity : AppCompatActivity() {
             CameraXExecutors.mainThreadExecutor(),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    mCapturedImageRotation = Exif.createFromFile(imageFile).rotation
+                    mCaptureResult = ImageCaptureResult.FileOrOutputStream(imageFile)
                     mCaptureDone.release()
-                    Log.d(TAG, "File captured image rotation = $mCapturedImageRotation")
+                    Log.d(TAG, "File image capture successful")
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    Log.e(TAG, "File capture failed", exception)
                     mCaptureDone.release()
+                    Log.e(TAG, "File image capture failed", exception)
                 }
-            })
+            }
+        )
     }
 
     private fun ImageCapture.setOutputStreamCallback() {
@@ -193,16 +214,17 @@ open class CameraActivity : AppCompatActivity() {
             CameraXExecutors.mainThreadExecutor(),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    mCapturedImageRotation = Exif.createFromFile(imageFile).rotation
+                    mCaptureResult = ImageCaptureResult.FileOrOutputStream(imageFile)
                     mCaptureDone.release()
-                    Log.d(TAG, "OutputStream captured image rotation = $mCapturedImageRotation")
+                    Log.d(TAG, "OutputStream image capture successful")
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    Log.e(TAG, "OutputStream capture failed", exception)
                     mCaptureDone.release()
+                    Log.e(TAG, "OutputStream image capture failed", exception)
                 }
-            })
+            }
+        )
     }
 
     private fun ImageCapture.setMediaStoreCallback() {
@@ -218,17 +240,18 @@ open class CameraActivity : AppCompatActivity() {
             CameraXExecutors.mainThreadExecutor(),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    val inputStream = contentResolver.openInputStream(outputFileResults.savedUri!!)
-                    mCapturedImageRotation = Exif.createFromInputStream(inputStream!!).rotation
+                    mCaptureResult =
+                        ImageCaptureResult.MediaStore(contentResolver, outputFileResults.savedUri!!)
                     mCaptureDone.release()
-                    Log.d(TAG, "MediaStore captured image rotation = $mCapturedImageRotation")
+                    Log.d(TAG, "MediaStore image capture successful")
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    Log.e(TAG, "MediaStore capture failed", exception)
                     mCaptureDone.release()
+                    Log.e(TAG, "MediaStore image capture failed", exception)
                 }
-            })
+            }
+        )
     }
 
     protected fun isImageAnalysisInitialized(): Boolean {
@@ -250,13 +273,32 @@ open class CameraActivity : AppCompatActivity() {
     val mCaptureDone = Semaphore(0)
 
     @VisibleForTesting
-    var mCapturedImageRotation = -1
-    // Todo: Delete captured images when test finishes
+    var mCaptureResult: ImageCaptureResult? = null
 
     @VisibleForTesting
     fun getSensorRotationRelativeToAnalysisTargetRotation(): Int {
         val targetRotation = mImageAnalysis.targetRotation
         return mCamera.cameraInfo.getSensorRotationDegrees(targetRotation)
+    }
+
+    @VisibleForTesting
+    fun getSensorRotationRelativeToCaptureTargetRotation(): Int {
+        val targetRotation = mImageCapture.targetRotation
+        return mCamera.cameraInfo.getSensorRotationDegrees(targetRotation)
+    }
+
+    @Suppress("RestrictedApi")
+    @VisibleForTesting
+    fun getCaptureResolution(): Size {
+        val resolution = mImageCapture.attachedSurfaceResolution
+            ?: throw IllegalStateException("ImageCapture surface resolution is null")
+
+        val rotation = getSensorRotationRelativeToCaptureTargetRotation()
+        return if (rotation == 90 || rotation == 270) {
+            Size(resolution.height, resolution.width)
+        } else {
+            resolution
+        }
     }
     // endregion
 
@@ -270,7 +312,7 @@ open class CameraActivity : AppCompatActivity() {
 
         private const val TAG = "MainActivity"
         private const val REQUEST_CODE_PERMISSIONS = 20
-        private val PERMISSIONS =
-            arrayOf(Manifest.permission.CAMERA)
+        val PERMISSIONS =
+            arrayOf(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE)
     }
 }

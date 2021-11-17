@@ -18,44 +18,29 @@ package androidx.camera.camera2.pipe
 
 import android.os.Build
 import android.util.Size
-import androidx.camera.camera2.pipe.testing.CameraPipeRobolectricTestRunner
-import androidx.test.filters.SmallTest
+import androidx.camera.camera2.pipe.testing.RobolectricCameraPipeTestRunner
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-@SmallTest
-@RunWith(CameraPipeRobolectricTestRunner::class)
+@RunWith(RobolectricCameraPipeTestRunner::class)
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
-class StreamTest {
-
-    private val streamConfig1 = StreamConfig(
+internal class StreamTest {
+    private val streamConfig1 = CameraStream.Config.create(
         size = Size(640, 480),
-        format = StreamFormat.YUV_420_888,
-        camera = CameraId("test"),
-        type = StreamType.SURFACE
+        format = StreamFormat.YUV_420_888
     )
 
-    private val streamConfig2 = StreamConfig(
+    private val streamConfig2 = CameraStream.Config.create(
         size = Size(640, 480),
-        format = StreamFormat.YUV_420_888,
-        camera = CameraId("test"),
-        type = StreamType.SURFACE
+        format = StreamFormat.YUV_420_888
     )
 
-    private val streamConfig3 = StreamConfig(
+    private val streamConfig3 = CameraStream.Config.create(
         size = Size(640, 480),
-        format = StreamFormat.JPEG,
-        camera = CameraId("test"),
-        type = StreamType.SURFACE
+        format = StreamFormat.JPEG
     )
-
-    @Test
-    fun equivalentStreamConfigsAreEqual() {
-        assertThat(streamConfig1).isEqualTo(streamConfig2)
-        assertThat(streamConfig1).isNotSameInstanceAs(streamConfig2)
-    }
 
     @Test
     fun differentStreamConfigsAreNotEqual() {
@@ -64,14 +49,28 @@ class StreamTest {
     }
 
     @Test
-    fun streamsFromSameConfigAreDifferent() {
-        val stream1 = Stream(streamConfig1, StreamId(1))
-        val stream2 = Stream(streamConfig1, StreamId(2))
+    fun equivalentStreamConfigsAreNotEqual() {
+        assertThat(streamConfig1).isNotEqualTo(streamConfig2)
+        assertThat(streamConfig1).isNotSameInstanceAs(streamConfig2)
+    }
 
-        assertThat(stream1).isNotEqualTo(stream2)
-        assertThat(stream1).isNotEqualTo(streamConfig1)
-        assertThat(stream2).isNotEqualTo(streamConfig1)
+    @Test
+    fun equivalentOutputsAreNotEqual() {
+        assertThat(streamConfig1.outputs.single()).isNotEqualTo(streamConfig2.outputs.single())
+        assertThat(streamConfig1.outputs.single())
+            .isNotSameInstanceAs(streamConfig2.outputs.single())
+    }
 
-        assertThat(stream1.config).isEqualTo(stream2.config)
+    @Test
+    fun sharedOutputsAreShared() {
+        val outputConfig = OutputStream.Config.create(
+            size = Size(640, 480),
+            format = StreamFormat.YUV_420_888
+        )
+        val sharedConfig1 = CameraStream.Config.create(outputConfig)
+        val sharedConfig2 = CameraStream.Config.create(outputConfig)
+        assertThat(sharedConfig1).isNotEqualTo(sharedConfig2)
+        assertThat(sharedConfig1.outputs.single()).isEqualTo(sharedConfig2.outputs.single())
+        assertThat(sharedConfig1.outputs.single()).isSameInstanceAs(sharedConfig2.outputs.single())
     }
 }

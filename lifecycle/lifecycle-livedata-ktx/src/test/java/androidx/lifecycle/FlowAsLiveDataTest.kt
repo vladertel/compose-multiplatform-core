@@ -57,10 +57,10 @@ class FlowAsLiveDataTest {
     @Test
     fun removeObserverInBetween() {
         val ld = flow {
-                emit(1)
-                emit(2)
-                delay(1000)
-                emit(3)
+            emit(1)
+            emit(2)
+            delay(1000)
+            emit(3)
         }.asLiveData(timeoutInMs = 10)
 
         ld.addObserver().apply {
@@ -83,10 +83,10 @@ class FlowAsLiveDataTest {
         var closeCalled = false
         val ld = callbackFlow {
             testScope.launch {
-                offer(1)
-                offer(2)
+                trySend(1)
+                trySend(2)
                 delay(1000)
-                offer(3)
+                trySend(3)
             }
             awaitClose {
                 closeCalled = true

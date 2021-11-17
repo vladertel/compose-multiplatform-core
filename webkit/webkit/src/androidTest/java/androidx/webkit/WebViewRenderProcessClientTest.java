@@ -23,6 +23,7 @@ import android.webkit.WebView;
 import androidx.annotation.Nullable;
 import androidx.concurrent.futures.ResolvableFuture;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.FlakyTest;
 import androidx.test.filters.LargeTest;
 
 import org.junit.After;
@@ -36,6 +37,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@FlakyTest(bugId = 204197604)
 @LargeTest
 @RunWith(AndroidJUnit4.class)
 public class WebViewRenderProcessClientTest {
@@ -54,7 +56,7 @@ public class WebViewRenderProcessClientTest {
     }
 
     private static class JSBlocker {
-        // A CoundDownLatch is used here, instead of a Future, because that makes it
+        // A CountDownLatch is used here, instead of a Future, because that makes it
         // easier to support requiring variable numbers of releaseBlock() calls
         // to unblock.
         private CountDownLatch mLatch;
@@ -136,9 +138,7 @@ public class WebViewRenderProcessClientTest {
         final ResolvableFuture<Void> rendererUnblocked = ResolvableFuture.create();
 
         WebViewRenderProcessClient client = makeWebViewRenderProcessClient(
-                () -> blocker.releaseBlock(),
-                () -> rendererUnblocked.set(null)
-            );
+                blocker::releaseBlock, () -> rendererUnblocked.set(null));
         if (executor == null) {
             mWebViewOnUiThread.setWebViewRenderProcessClient(client);
         } else {
@@ -159,12 +159,9 @@ public class WebViewRenderProcessClientTest {
     @Test
     public void testWebViewRenderProcessClientWithExecutor() throws Throwable {
         final AtomicInteger executorCount = new AtomicInteger();
-        testWebViewRenderProcessClientOnExecutor(new Executor() {
-            @Override
-            public void execute(Runnable r) {
-                executorCount.incrementAndGet();
-                r.run();
-            }
+        testWebViewRenderProcessClientOnExecutor(r -> {
+            executorCount.incrementAndGet();
+            r.run();
         });
         Assert.assertEquals(2, executorCount.get());
     }

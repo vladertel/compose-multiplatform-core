@@ -18,24 +18,27 @@ package androidx.camera.camera2.internal;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertTrue;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.graphics.ImageFormat;
+import android.graphics.SurfaceTexture;
+import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.CamcorderProfile;
 import android.os.Build;
-import android.util.Rational;
 import android.util.Size;
-import android.view.Surface;
 import android.view.WindowManager;
 
+import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat;
+import androidx.camera.camera2.internal.compat.CameraManagerCompat;
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraUnavailableException;
@@ -47,26 +50,21 @@ import androidx.camera.core.Preview;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.VideoCapture;
 import androidx.camera.core.impl.CameraDeviceSurfaceManager;
-import androidx.camera.core.impl.ExtendableUseCaseConfigFactory;
-import androidx.camera.core.impl.ImageAnalysisConfig;
-import androidx.camera.core.impl.ImageCaptureConfig;
 import androidx.camera.core.impl.ImageFormatConstants;
-import androidx.camera.core.impl.PreviewConfig;
 import androidx.camera.core.impl.SurfaceCombination;
 import androidx.camera.core.impl.SurfaceConfig;
 import androidx.camera.core.impl.SurfaceConfig.ConfigSize;
 import androidx.camera.core.impl.SurfaceConfig.ConfigType;
 import androidx.camera.core.impl.UseCaseConfig;
 import androidx.camera.core.impl.UseCaseConfigFactory;
-import androidx.camera.core.impl.VideoCaptureConfig;
 import androidx.camera.testing.CameraUtil;
+import androidx.camera.testing.CameraXUtil;
 import androidx.camera.testing.Configs;
-import androidx.camera.testing.StreamConfigurationMapUtil;
 import androidx.camera.testing.fakes.FakeCamera;
 import androidx.camera.testing.fakes.FakeCameraFactory;
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.filters.SmallTest;
 
+import org.apache.maven.artifact.ant.shaded.ReflectionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -85,14 +83,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /** Robolectric test for {@link Camera2DeviceSurfaceManager} class */
-@SmallTest
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
-@Config(minSdk = Build.VERSION_CODES.LOLLIPOP,
-        maxSdk = Build.VERSION_CODES.P //TODO (b/149669465) : Some robolectric tests will fail on Q
-)
+@Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 public final class Camera2DeviceSurfaceManagerTest {
     private static final String LEGACY_CAMERA_ID = "0";
     private static final String LIMITED_CAMERA_ID = "1";
@@ -107,7 +104,7 @@ public final class Camera2DeviceSurfaceManagerTest {
     private final Size mMaximumVideoSize = new Size(1920, 1080);
     private final CamcorderProfileHelper mMockCamcorderProfileHelper =
             Mockito.mock(CamcorderProfileHelper.class);
-
+    private final CamcorderProfile mMockCamcorderProfile = Mockito.mock(CamcorderProfile.class);
     /**
      * Except for ImageFormat.JPEG or ImageFormat.YUV, other image formats will be mapped to
      * ImageFormat.PRIVATE (0x22) including SurfaceTexture or MediaCodec classes. Before Android
@@ -135,31 +132,51 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     private final Context mContext = ApplicationProvider.getApplicationContext();
     private CameraDeviceSurfaceManager mSurfaceManager;
+    private UseCaseConfigFactory mUseCaseConfigFactory;
     private FakeCameraFactory mCameraFactory;
 
     @Before
-    public void setUp() {
+    @SuppressWarnings("deprecation")  /* defaultDisplay */
+    public void setUp() throws IllegalAccessException {
         WindowManager windowManager =
                 (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
         Shadows.shadowOf(windowManager.getDefaultDisplay()).setRealWidth(mDisplaySize.getWidth());
         Shadows.shadowOf(windowManager.getDefaultDisplay()).setRealHeight(mDisplaySize.getHeight());
 
         when(mMockCamcorderProfileHelper.hasProfile(anyInt(), anyInt())).thenReturn(true);
+        ReflectionUtils.setVariableValueInObject(mMockCamcorderProfile, "videoFrameWidth", 3840);
+        ReflectionUtils.setVariableValueInObject(mMockCamcorderProfile, "videoFrameHeight", 2160);
+        when(mMockCamcorderProfileHelper.get(anyInt(), anyInt())).thenReturn(mMockCamcorderProfile);
 
         setupCamera();
     }
 
     @After
-    public void tearDown() throws ExecutionException, InterruptedException {
-        CameraX.shutdown().get();
+    public void tearDown() throws ExecutionException, InterruptedException, TimeoutException {
+        CameraXUtil.shutdown().get(10000, TimeUnit.MILLISECONDS);
+    }
+
+    private CameraManagerCompat getCameraManagerCompat() {
+        return CameraManagerCompat.from((Context) ApplicationProvider.getApplicationContext());
+    }
+
+    private CameraCharacteristicsCompat getCameraCharacteristicsCompat(String cameraId)
+            throws CameraAccessException {
+        CameraManager cameraManager =
+                (CameraManager) ApplicationProvider.getApplicationContext().getSystemService(
+                        Context.CAMERA_SERVICE);
+
+        return CameraCharacteristicsCompat.toCameraCharacteristicsCompat(
+                cameraManager.getCameraCharacteristics(cameraId));
     }
 
     @Test
     public void checkLegacySurfaceCombinationSupportedInLegacyDevice()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, LEGACY_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, LEGACY_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getLegacySupportedCombinationList();
@@ -174,10 +191,11 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     @Test
     public void checkLimitedSurfaceCombinationNotSupportedInLegacyDevice()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, LEGACY_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, LEGACY_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getLimitedSupportedCombinationList();
@@ -192,10 +210,11 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     @Test
     public void checkFullSurfaceCombinationNotSupportedInLegacyDevice()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, LEGACY_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, LEGACY_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getFullSupportedCombinationList();
@@ -210,10 +229,11 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     @Test
     public void checkLevel3SurfaceCombinationNotSupportedInLegacyDevice()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, LEGACY_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, LEGACY_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getLevel3SupportedCombinationList();
@@ -228,10 +248,11 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     @Test
     public void checkLimitedSurfaceCombinationSupportedInLimitedDevice()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, LIMITED_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, LIMITED_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getLimitedSupportedCombinationList();
@@ -246,10 +267,11 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     @Test
     public void checkFullSurfaceCombinationNotSupportedInLimitedDevice()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, LIMITED_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, LIMITED_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getFullSupportedCombinationList();
@@ -264,10 +286,11 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     @Test
     public void checkLevel3SurfaceCombinationNotSupportedInLimitedDevice()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, LIMITED_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, LIMITED_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getLevel3SupportedCombinationList();
@@ -282,10 +305,11 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     @Test
     public void checkFullSurfaceCombinationSupportedInFullDevice()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, FULL_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, FULL_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getFullSupportedCombinationList();
@@ -300,10 +324,11 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     @Test
     public void checkLevel3SurfaceCombinationNotSupportedInFullDevice()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, FULL_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, FULL_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getLevel3SupportedCombinationList();
@@ -318,10 +343,11 @@ public final class Camera2DeviceSurfaceManagerTest {
 
     @Test
     public void checkLevel3SurfaceCombinationSupportedInLevel3Device()
-            throws CameraUnavailableException {
+            throws Exception {
         SupportedSurfaceCombination supportedSurfaceCombination =
                 new SupportedSurfaceCombination(
-                        mContext, LEVEL3_CAMERA_ID, mMockCamcorderProfileHelper);
+                        mContext, LEVEL3_CAMERA_ID, getCameraManagerCompat(),
+                        mMockCamcorderProfileHelper);
 
         List<SurfaceCombination> combinationList =
                 supportedSurfaceCombination.getLevel3SupportedCombinationList();
@@ -334,12 +360,12 @@ public final class Camera2DeviceSurfaceManagerTest {
         }
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void suggestedResolutionsForMixedUseCaseNotSupportedInLegacyDevice() {
         ImageCapture imageCapture = new ImageCapture.Builder()
                 .setTargetAspectRatio(AspectRatio.RATIO_16_9)
                 .build();
-        VideoCapture videoCapture = new VideoCaptureConfig.Builder()
+        VideoCapture videoCapture = new VideoCapture.Builder()
                 .setTargetAspectRatio(AspectRatio.RATIO_16_9)
                 .build();
         Preview preview = new Preview.Builder()
@@ -351,17 +377,16 @@ public final class Camera2DeviceSurfaceManagerTest {
         useCases.add(videoCapture);
         useCases.add(preview);
 
-        boolean exceptionHappened = false;
-
-        try {
-            // Will throw IllegalArgumentException
-            mSurfaceManager.getSuggestedResolutions(LEGACY_CAMERA_ID, Collections.emptyList(),
-                    Configs.useCaseConfigListFromUseCaseList(useCases));
-        } catch (IllegalArgumentException e) {
-            exceptionHappened = true;
-        }
-
-        assertTrue(exceptionHappened);
+        Map<UseCase, UseCaseConfig<?>> useCaseToConfigMap =
+                Configs.useCaseConfigMapWithDefaultSettingsFromUseCaseList(
+                        mCameraFactory.getCamera(LEGACY_CAMERA_ID).getCameraInfoInternal(),
+                        useCases,
+                        mUseCaseConfigFactory);
+        // A legacy level camera device can't support JPEG (ImageCapture) + PRIV (VideoCapture) +
+        // PRIV (Preview) combination. An IllegalArgumentException will be thrown when trying to
+        // bind these use cases at the same time.
+        mSurfaceManager.getSuggestedResolutions(LEGACY_CAMERA_ID, Collections.emptyList(),
+                new ArrayList<>(useCaseToConfigMap.values()));
     }
 
     @Test
@@ -369,7 +394,7 @@ public final class Camera2DeviceSurfaceManagerTest {
         ImageCapture imageCapture = new ImageCapture.Builder()
                 .setTargetAspectRatio(AspectRatio.RATIO_16_9)
                 .build();
-        VideoCapture videoCapture = new VideoCaptureConfig.Builder()
+        VideoCapture videoCapture = new VideoCapture.Builder()
                 .setTargetAspectRatio(AspectRatio.RATIO_16_9)
                 .build();
         Preview preview = new Preview.Builder()
@@ -380,16 +405,23 @@ public final class Camera2DeviceSurfaceManagerTest {
         useCases.add(imageCapture);
         useCases.add(videoCapture);
         useCases.add(preview);
+
+        Map<UseCase, UseCaseConfig<?>> useCaseToConfigMap =
+                Configs.useCaseConfigMapWithDefaultSettingsFromUseCaseList(
+                        mCameraFactory.getCamera(LIMITED_CAMERA_ID).getCameraInfoInternal(),
+                        useCases,
+                        mUseCaseConfigFactory);
         Map<UseCaseConfig<?>, Size> suggestedResolutionMap =
                 mSurfaceManager.getSuggestedResolutions(LIMITED_CAMERA_ID, Collections.emptyList(),
-                        Configs.useCaseConfigListFromUseCaseList(useCases));
+                        new ArrayList<>(useCaseToConfigMap.values()));
 
         // (PRIV, PREVIEW) + (PRIV, RECORD) + (JPEG, RECORD)
-        assertThat(suggestedResolutionMap).containsEntry(imageCapture.getUseCaseConfig(),
+        assertThat(suggestedResolutionMap).containsEntry(useCaseToConfigMap.get(imageCapture),
                 mRecordSize);
-        assertThat(suggestedResolutionMap).containsEntry(videoCapture.getUseCaseConfig(),
+        assertThat(suggestedResolutionMap).containsEntry(useCaseToConfigMap.get(videoCapture),
                 mMaximumVideoSize);
-        assertThat(suggestedResolutionMap).containsEntry(preview.getUseCaseConfig(), mPreviewSize);
+        assertThat(suggestedResolutionMap).containsEntry(useCaseToConfigMap.get(preview),
+                mPreviewSize);
     }
 
     @Test
@@ -491,43 +523,6 @@ public final class Camera2DeviceSurfaceManagerTest {
         assertEquals(expectedSurfaceConfig, surfaceConfig);
     }
 
-    @Test
-    public void getMaximumSizeForImageFormat() {
-        Size maximumYUVSize =
-                mSurfaceManager.getMaxOutputSize(LEGACY_CAMERA_ID, ImageFormat.YUV_420_888);
-        assertEquals(mMaximumSize, maximumYUVSize);
-        Size maximumJPEGSize = mSurfaceManager.getMaxOutputSize(LEGACY_CAMERA_ID, ImageFormat.JPEG);
-        assertEquals(mMaximumSize, maximumJPEGSize);
-    }
-
-    @Test
-    public void checkPreviewAspectRatioInLegacyDevice() throws CameraUnavailableException {
-        SupportedSurfaceCombination supportedSurfaceCombination =
-                new SupportedSurfaceCombination(
-                        mContext, LEGACY_CAMERA_ID, mMockCamcorderProfileHelper);
-
-        Rational targetAspectRatio = new Rational(9, 16);
-        PreviewConfig previewConfig = new Preview.Builder()
-                .setTargetAspectRatio(AspectRatio.RATIO_16_9)
-                .getUseCaseConfig();
-
-        Rational resultAspectRatio = mSurfaceManager.getCorrectedAspectRatio(LEGACY_CAMERA_ID,
-                previewConfig.getTargetRotation(Surface.ROTATION_0));
-
-        Size maxJpegSize = supportedSurfaceCombination.getMaxOutputSizeByFormat(ImageFormat.JPEG);
-        Rational maxJpegAspectRatio = new Rational(maxJpegSize.getHeight(), maxJpegSize.getWidth());
-
-        if (Build.VERSION.SDK_INT == 21) {
-            // Checks targetAspectRatio and maxJpegAspectRatio, which is the ratio of maximum size
-            // in the mSupportedSizes, are not equal to make sure this test case is valid.
-            assertFalse(targetAspectRatio.equals(maxJpegAspectRatio));
-            assertTrue(resultAspectRatio.equals(maxJpegAspectRatio));
-        } else {
-            // Checks no correction is needed.
-            assertThat(resultAspectRatio).isNull();
-        }
-    }
-
     private void setupCamera() {
         mCameraFactory = new FakeCameraFactory();
 
@@ -575,52 +570,54 @@ public final class Camera2DeviceSurfaceManagerTest {
         ((ShadowCameraManager) Shadow.extract(cameraManager))
                 .addCamera(cameraId, characteristics);
 
-        shadowCharacteristics.set(
-                CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP,
-                StreamConfigurationMapUtil.generateFakeStreamConfigurationMap(
-                        mSupportedFormats, mSupportedSizes));
+        CameraManagerCompat cameraManagerCompat =
+                CameraManagerCompat.from((Context) ApplicationProvider.getApplicationContext());
+        StreamConfigurationMap mockMap = mock(StreamConfigurationMap.class);
+        when(mockMap.getOutputSizes(anyInt())).thenReturn(mSupportedSizes);
+        // ImageFormat.PRIVATE was supported since API level 23. Before that, the supported
+        // output sizes need to be retrieved via SurfaceTexture.class.
+        when(mockMap.getOutputSizes(SurfaceTexture.class)).thenReturn(mSupportedSizes);
+        shadowCharacteristics.set(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP, mockMap);
 
         @CameraSelector.LensFacing int lensFacingEnum = CameraUtil.getLensFacingEnumFromInt(
                 lensFacing);
         mCameraFactory.insertCamera(lensFacingEnum, cameraId, () -> new FakeCamera(cameraId, null,
-                new Camera2CameraInfoImpl(cameraId, characteristics,
-                        mock(Camera2CameraControl.class))));
+                new Camera2CameraInfoImpl(cameraId, cameraManagerCompat)));
     }
 
     private void initCameraX() {
         CameraXConfig cameraXConfig = createFakeAppConfig();
-        CameraX.initialize(mContext, cameraXConfig);
-        mSurfaceManager = CameraX.getSurfaceManager();
+        CameraX cameraX;
+        try {
+            cameraX = CameraXUtil.getOrCreateInstance(mContext, () -> cameraXConfig).get();
+        } catch (ExecutionException | InterruptedException e) {
+            throw new IllegalStateException("Unable to initialize CameraX for test.");
+        }
+        mSurfaceManager = cameraX.getCameraDeviceSurfaceManager();
+        mUseCaseConfigFactory = cameraX.getDefaultConfigFactory();
     }
 
     private CameraXConfig createFakeAppConfig() {
 
         // Create the DeviceSurfaceManager for Camera2
-        CameraDeviceSurfaceManager.Provider surfaceManagerProvider = context -> {
-            try {
-                return new Camera2DeviceSurfaceManager(mContext, mMockCamcorderProfileHelper);
-            } catch (CameraUnavailableException e) {
-                throw new InitializationException(e);
-            }
-        };
+        CameraDeviceSurfaceManager.Provider surfaceManagerProvider =
+                (context, cameraManager, availableCameraIds) -> {
+                    try {
+                        return new Camera2DeviceSurfaceManager(context,
+                                mMockCamcorderProfileHelper,
+                                (CameraManagerCompat) cameraManager, availableCameraIds);
+                    } catch (CameraUnavailableException e) {
+                        throw new InitializationException(e);
+                    }
+                };
 
         // Create default configuration factory
-        UseCaseConfigFactory.Provider factoryProvider = context -> {
-            ExtendableUseCaseConfigFactory configFactory = new ExtendableUseCaseConfigFactory();
-            configFactory.installDefaultProvider(
-                    ImageAnalysisConfig.class, new ImageAnalysisConfigProvider(context));
-            configFactory.installDefaultProvider(
-                    ImageCaptureConfig.class, new ImageCaptureConfigProvider(context));
-            configFactory.installDefaultProvider(
-                    VideoCaptureConfig.class, new VideoCaptureConfigProvider(context));
-            configFactory.installDefaultProvider(
-                    PreviewConfig.class, new PreviewConfigProvider(context));
-            return configFactory;
-        };
+        UseCaseConfigFactory.Provider factoryProvider = context -> new Camera2UseCaseConfigFactory(
+                context);
 
         CameraXConfig.Builder appConfigBuilder =
                 new CameraXConfig.Builder()
-                        .setCameraFactoryProvider((ignored0, ignored1) -> mCameraFactory)
+                        .setCameraFactoryProvider((ignored0, ignored1, ignored2) -> mCameraFactory)
                         .setDeviceSurfaceManagerProvider(surfaceManagerProvider)
                         .setUseCaseConfigFactoryProvider(factoryProvider);
 

@@ -16,35 +16,35 @@
 
 package androidx.camera.core
 
-import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
-
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
-
 import android.graphics.ImageFormat
 import android.media.ImageWriter
+import android.util.Pair
 import android.util.Size
 import android.view.Surface
-
 import androidx.camera.core.impl.CameraCaptureCallback
 import androidx.camera.core.impl.CaptureBundle
 import androidx.camera.core.impl.CaptureProcessor
 import androidx.camera.core.impl.ImageProxyBundle
 import androidx.camera.core.impl.ImageReaderProxy
+import androidx.camera.core.impl.TagBundle
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
 import androidx.camera.testing.fakes.FakeCameraCaptureResult
 import androidx.camera.testing.fakes.FakeCaptureStage
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
-
+import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 @SmallTest
 @RunWith(AndroidJUnit4::class)
+@SdkSuppress(minSdkVersion = 23) // This test uses ImageWriter which is supported from api 23.
 class ProcessingImageReaderDeviceTest {
     private companion object Bundle {
         private const val CAPTURE_ID_0 = 0
@@ -83,12 +83,14 @@ class ProcessingImageReaderDeviceTest {
 
     @Test
     fun processesImage_whenImageInBundleEnqueued() = runBlocking {
-        val processingImageReader = ProcessingImageReader(
-            640, 480,
-            ImageFormat.YUV_420_888, 2,
-            CameraXExecutors.mainThreadExecutor(), mCaptureBundle,
+        val processingImageReader = ProcessingImageReader.Builder(
+            640,
+            480,
+            ImageFormat.YUV_420_888,
+            2,
+            mCaptureBundle,
             mProcessor
-        )
+        ).build()
 
         val job = async {
             suspendCoroutine<ImageProxy?> { cont ->
@@ -101,7 +103,7 @@ class ProcessingImageReaderDeviceTest {
                 )
 
                 processingImageReader.setCaptureBundle(mCaptureBundle)
-                val imageWriter = ImageWriter.newInstance(processingImageReader.surface, 2)
+                val imageWriter = ImageWriter.newInstance(processingImageReader.surface!!, 2)
                 val callback = processingImageReader.cameraCaptureCallback!!
 
                 // Trigger the bundle of images required for processing to occur
@@ -127,7 +129,13 @@ class ProcessingImageReaderDeviceTest {
         imageWriter.queueInputImage(image)
         val fakeCameraCaptureResult = FakeCameraCaptureResult()
         fakeCameraCaptureResult.timestamp = timestamp
-        fakeCameraCaptureResult.tag = captureId
+        val tagBundle = TagBundle.create(
+            Pair(
+                mCaptureBundle.hashCode().toString(),
+                captureId
+            )
+        )
+        fakeCameraCaptureResult.setTag(tagBundle)
         callback.onCaptureCompleted(fakeCameraCaptureResult)
     }
 }

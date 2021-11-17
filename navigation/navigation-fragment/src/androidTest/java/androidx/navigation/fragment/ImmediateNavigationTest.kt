@@ -23,9 +23,10 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.test.R
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
-import androidx.test.rule.ActivityTestRule
+import androidx.testutils.withActivity
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,12 +37,15 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class ImmediateNavigationTest {
 
+    @Suppress("DEPRECATION")
     @get:Rule
-    var activityRule = ActivityTestRule(ImmediateNavigationActivity::class.java)
+    var activityRule = ActivityScenarioRule(
+        ImmediateNavigationActivity::class.java
+    )
 
     @Test
     fun testNavigateInOnResume() {
-        val activity = activityRule.activity
+        val activity = activityRule.withActivity { this }
         val navController = activity.navController
         val countDownLatch = CountDownLatch(3)
         navController.addOnDestinationChangedListener { _, destination, _ ->
@@ -59,7 +63,9 @@ class ImmediateNavigationTest {
                 }
             }
         }
-        navController.navigate(R.id.immediate_test)
+        activityRule.withActivity {
+            navController.navigate(R.id.immediate_test)
+        }
         countDownLatch.await(1, TimeUnit.SECONDS)
     }
 }
@@ -80,7 +86,7 @@ class NavigateOnResumeFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         return FrameLayout(requireContext())
     }
 

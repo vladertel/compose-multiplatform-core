@@ -18,12 +18,12 @@ package androidx.webkit.internal;
 
 import androidx.annotation.NonNull;
 import androidx.webkit.JavaScriptReplyProxy;
-import androidx.webkit.WebViewFeature;
 
 import org.chromium.support_lib_boundary.JsReplyProxyBoundaryInterface;
 import org.chromium.support_lib_boundary.util.BoundaryInterfaceReflectionUtil;
 
 import java.lang.reflect.InvocationHandler;
+import java.util.concurrent.Callable;
 
 /**
  * Internal implementation of {@link androidx.webkit.JavaScriptReplyProxy}.
@@ -45,13 +45,17 @@ public class JavaScriptReplyProxyImpl extends JavaScriptReplyProxy {
                 BoundaryInterfaceReflectionUtil.castToSuppLibClass(
                         JsReplyProxyBoundaryInterface.class, invocationHandler);
         return (JavaScriptReplyProxyImpl) boundaryInterface.getOrCreatePeer(
-                () -> new JavaScriptReplyProxyImpl(boundaryInterface));
+                new Callable<Object>() {
+                    @Override
+                    public Object call() {
+                        return new JavaScriptReplyProxyImpl(boundaryInterface);
+                    }
+                });
     }
 
     @Override
     public void postMessage(@NonNull final String message) {
-        final WebViewFeatureInternal feature =
-                WebViewFeatureInternal.getFeature(WebViewFeature.WEB_MESSAGE_LISTENER);
+        final WebViewFeatureInternal feature = WebViewFeatureInternal.WEB_MESSAGE_LISTENER;
         if (feature.isSupportedByWebView()) {
             mBoundaryInterface.postMessage(message);
         } else {

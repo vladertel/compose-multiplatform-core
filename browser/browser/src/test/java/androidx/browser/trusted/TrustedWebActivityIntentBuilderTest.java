@@ -29,6 +29,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
+import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabColorSchemeParams;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.browser.customtabs.CustomTabsSession;
@@ -37,7 +38,6 @@ import androidx.browser.trusted.TrustedWebActivityDisplayMode.ImmersiveMode;
 import androidx.browser.trusted.sharing.ShareData;
 import androidx.browser.trusted.sharing.ShareTarget;
 import androidx.browser.trusted.splashscreens.SplashScreenParamKey;
-import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,15 +54,17 @@ import java.util.List;
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
 // minSdk For Bundle#getBinder
+@RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 @Config(minSdk = Build.VERSION_CODES.JELLY_BEAN_MR2)
-@SmallTest
 public class TrustedWebActivityIntentBuilderTest {
 
+    @SuppressWarnings("deprecation")
     @Test
     public void intentIsConstructedCorrectly() {
         Uri url = Uri.parse("https://test.com/page");
         int toolbarColor = 0xffaabbcc;
         int navigationBarColor = 0xffccaabb;
+        int navigationBarDividerColor = 0xffdddddd;
         List<String> additionalTrustedOrigins =
                 Arrays.asList("https://m.test.com", "https://test.org");
 
@@ -71,7 +73,10 @@ public class TrustedWebActivityIntentBuilderTest {
         splashScreenParams.putInt(SplashScreenParamKey.KEY_BACKGROUND_COLOR, splashBgColor);
 
         CustomTabColorSchemeParams colorSchemeParams = new CustomTabColorSchemeParams.Builder()
-                    .setToolbarColor(0xff112233).build();
+                    .setToolbarColor(toolbarColor).build();
+
+        CustomTabColorSchemeParams defaultColorSchemeParams =
+                new CustomTabColorSchemeParams.Builder().setToolbarColor(toolbarColor).build();
 
         ShareData shareData = new ShareData("share_title", "share_text", null);
         ShareTarget shareTarget = new ShareTarget("action", null, null,
@@ -82,10 +87,11 @@ public class TrustedWebActivityIntentBuilderTest {
         ImmersiveMode displayMode = new ImmersiveMode(true,
                 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES);
         Intent intent = new TrustedWebActivityIntentBuilder(url)
-                        .setToolbarColor(toolbarColor)
                         .setNavigationBarColor(navigationBarColor)
+                        .setNavigationBarDividerColor(navigationBarDividerColor)
                         .setColorScheme(COLOR_SCHEME_DARK)
                         .setColorSchemeParams(COLOR_SCHEME_DARK, colorSchemeParams)
+                        .setDefaultColorSchemeParams(defaultColorSchemeParams)
                         .setAdditionalTrustedOrigins(additionalTrustedOrigins)
                         .setSplashScreenParams(splashScreenParams)
                         .setShareParams(shareTarget, shareData)
@@ -99,10 +105,12 @@ public class TrustedWebActivityIntentBuilderTest {
         assertEquals(toolbarColor, intent.getIntExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR, 0));
         assertEquals(navigationBarColor, intent.getIntExtra(
                 CustomTabsIntent.EXTRA_NAVIGATION_BAR_COLOR, 0));
+        assertEquals(navigationBarDividerColor, intent.getIntExtra(
+                CustomTabsIntent.EXTRA_NAVIGATION_BAR_DIVIDER_COLOR, 0));
         assertEquals(additionalTrustedOrigins, intent.getStringArrayListExtra(
                 TrustedWebActivityIntentBuilder.EXTRA_ADDITIONAL_TRUSTED_ORIGINS));
-        assertEquals(COLOR_SCHEME_DARK, intent.getIntExtra(CustomTabsIntent.EXTRA_COLOR_SCHEME,
-                -1));
+        assertEquals(COLOR_SCHEME_DARK, intent.getIntExtra(
+                CustomTabsIntent.EXTRA_COLOR_SCHEME, -1));
         assertEquals(colorSchemeParams.toolbarColor,
                 CustomTabsIntent.getColorSchemeParams(intent, COLOR_SCHEME_DARK).toolbarColor);
 

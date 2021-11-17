@@ -14,6 +14,7 @@
 
 package androidx.leanback.widget.picker;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Rect;
@@ -47,14 +48,16 @@ import java.util.List;
  * the current value of PickerColumn.
  * <p>
  * Picker has two states and will change height:
+ * <ul>
  * <li>{@link #isActivated()} is true: Picker shows typically three items vertically (see
  * {@link #getActivatedVisibleItemCount()}}. Columns other than {@link #getSelectedColumn()} still
  * shows one item if the Picker is focused. On a touch screen device, the Picker will not get focus
  * so it always show three items on all columns. On a non-touch device (a TV), the Picker will show
  * three items only on currently activated column. If the Picker has focus, it will intercept DPAD
- * directions and select activated column.
+ * directions and select activated column.</li>
  * <li>{@link #isActivated()} is false: Picker shows one item vertically (see
- * {@link #getVisibleItemCount()}) on all columns. The size of Picker shrinks.
+ * {@link #getVisibleItemCount()}) on all columns. The size of Picker shrinks.</li>
+ * </ul>
  */
 public class Picker extends FrameLayout {
 
@@ -190,6 +193,7 @@ public class Picker extends FrameLayout {
     /**
      * Creates a Picker widget.
      */
+    @SuppressLint("CustomViewStyleable")
     public Picker(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         final TypedArray a = context.obtainStyledAttributes(

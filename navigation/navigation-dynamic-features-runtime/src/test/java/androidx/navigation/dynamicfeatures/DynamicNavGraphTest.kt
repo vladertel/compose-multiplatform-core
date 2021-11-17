@@ -16,52 +16,63 @@
 
 package androidx.navigation.dynamicfeatures
 
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.navigation.NavDestination
 import androidx.navigation.NavigatorProvider
 import androidx.navigation.NoOpNavigator
 import androidx.navigation.dynamicfeatures.DynamicGraphNavigator.DynamicNavGraph
 import androidx.navigation.dynamicfeatures.shared.TestDynamicInstallManager
-import androidx.test.filters.SmallTest
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
+import androidx.navigation.testing.TestNavigatorState
+import com.google.common.truth.Truth.assertThat
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
-@SmallTest
-class DynamicNavGraphTest {
+public class DynamicNavGraphTest {
+
+    @get:Rule
+    public val instantTaskExecutorRule: InstantTaskExecutorRule = InstantTaskExecutorRule()
 
     private val progressId = 1
     private lateinit var provider: NavigatorProvider
+    private lateinit var navigatorState: TestNavigatorState
     private lateinit var navigator: DynamicGraphNavigator
     private lateinit var dynamicNavGraph: DynamicNavGraph
+    private lateinit var noOpState: TestNavigatorState
     private lateinit var noOpNavigator: NoOpNavigator
 
     @Before
-    fun setup() {
+    public fun setup() {
         provider = NavigatorProvider()
         noOpNavigator = NoOpNavigator()
-        navigator = DynamicGraphNavigator(provider,
+        navigator = DynamicGraphNavigator(
+            provider,
             TestDynamicInstallManager()
         )
         provider.addNavigator(noOpNavigator)
+        noOpState = TestNavigatorState()
+        noOpNavigator.onAttach(noOpState)
         dynamicNavGraph = navigator.createDestination()
     }
 
     @Test(expected = IllegalStateException::class)
-    fun testGetOrThrow_NoParent() {
+    public fun testGetOrThrow_NoParent() {
         DynamicNavGraph.getOrThrow(noOpNavigator.createDestination())
     }
 
     @Test
-    fun testGetOrThrow_CorrectParent() {
-        setupProgressDestination(noOpNavigator.createDestination().apply {
-            id = progressId
-        })
-        val progressDestination = navigator.navigateToProgressDestination(dynamicNavGraph, null)
-        assertNotNull(progressDestination)
+    public fun testGetOrThrow_CorrectParent() {
+        setupProgressDestination(
+            noOpNavigator.createDestination().apply {
+                id = progressId
+            }
+        )
+        navigator.navigateToProgressDestination(dynamicNavGraph, null)
+        val progressDestination = noOpState.backStack.value.lastOrNull()?.destination
+        assertThat(progressDestination).isNotNull()
         progressDestination?.let {
             DynamicNavGraph.getOrThrow(progressDestination)
             // Assume not having thrown an exception
@@ -69,18 +80,21 @@ class DynamicNavGraphTest {
     }
 
     @Test(expected = IllegalStateException::class)
-    fun testNavigateToProgressDestination_withoutProgressDestination() {
+    public fun testNavigateToProgressDestination_withoutProgressDestination() {
         setupProgressDestination(null)
         navigator.navigateToProgressDestination(dynamicNavGraph, null)
     }
 
     @Test
-    fun testNavigateToProgressDestination_withProviderAndDestination() {
-        setupProgressDestination(noOpNavigator.createDestination().apply {
-            id = progressId
-        })
-        val destination = navigator.navigateToProgressDestination(dynamicNavGraph, null)
-        assertTrue(destination?.parent is DynamicNavGraph)
+    public fun testNavigateToProgressDestination_withProviderAndDestination() {
+        setupProgressDestination(
+            noOpNavigator.createDestination().apply {
+                id = progressId
+            }
+        )
+        navigator.navigateToProgressDestination(dynamicNavGraph, null)
+        val destination = noOpState.backStack.value.lastOrNull()?.destination
+        assertThat(destination?.parent).isInstanceOf(DynamicNavGraph::class.java)
     }
 
     private fun setupProgressDestination(progressDestination: NavDestination?) {
@@ -88,6 +102,8 @@ class DynamicNavGraphTest {
             navigator.installDefaultProgressDestination { it }
         }
         provider.addNavigator(navigator)
+        navigatorState = TestNavigatorState()
+        navigator.onAttach(navigatorState)
         dynamicNavGraph = navigator.createDestination()
     }
 }

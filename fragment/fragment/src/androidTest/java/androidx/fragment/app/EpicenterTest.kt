@@ -28,7 +28,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.rule.ActivityTestRule
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -39,8 +38,9 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = 21) // FragmentTransitionCompat21 requires API 21
 class EpicenterTest {
 
+    @Suppress("DEPRECATION")
     @get:Rule
-    val activityRule = ActivityTestRule(FragmentTestActivity::class.java)
+    val activityRule = androidx.test.rule.ActivityTestRule(FragmentTestActivity::class.java)
 
     @Test
     fun defaultEpicenter() {
@@ -98,11 +98,14 @@ class EpicenterTest {
         val view = View(activityRule.activity)
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val root = activityRule.activity.findViewById<ViewGroup>(R.id.content)
-            root.addView(view, FrameLayout.LayoutParams(100, 100)
-                .apply {
-                    leftMargin = 50
-                    topMargin = 50
-                })
+            root.addView(
+                view,
+                FrameLayout.LayoutParams(100, 100)
+                    .apply {
+                        leftMargin = 50
+                        topMargin = 50
+                    }
+            )
             view.left = 50
             view.top = 50
             view.right = 150

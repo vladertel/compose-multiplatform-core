@@ -21,12 +21,14 @@ import static androidx.camera.camera2.impl.Camera2ImplConfig.SESSION_CAPTURE_CAL
 import static androidx.camera.camera2.impl.Camera2ImplConfig.SESSION_STATE_CALLBACK_OPTION;
 import static androidx.camera.camera2.impl.Camera2ImplConfig.TEMPLATE_TYPE_OPTION;
 
+import android.annotation.SuppressLint;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
@@ -35,6 +37,7 @@ import androidx.camera.core.impl.Config;
 
 /** Utilities related to interoperability with the {@link android.hardware.camera2} APIs. */
 @ExperimentalCamera2Interop
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class Camera2Interop {
 
     /**
@@ -42,6 +45,7 @@ public final class Camera2Interop {
      *
      * @param <T> the type being built by the extendable builder.
      */
+    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
     public static final class Extender<T> {
 
         ExtendableBuilder<T> mBaseBuilder;
@@ -111,6 +115,7 @@ public final class Camera2Interop {
          * @param stateCallback The {@link CameraDevice.StateCallback}.
          * @return The current Extender.
          */
+        @SuppressLint("ExecutorRegistration")
         @NonNull
         public Extender<T> setDeviceStateCallback(
                 @NonNull CameraDevice.StateCallback stateCallback) {
@@ -135,6 +140,7 @@ public final class Camera2Interop {
          * @param stateCallback The {@link CameraCaptureSession.StateCallback}.
          * @return The current Extender.
          */
+        @SuppressLint("ExecutorRegistration")
         @NonNull
         public Extender<T> setSessionStateCallback(
                 @NonNull CameraCaptureSession.StateCallback stateCallback) {
@@ -161,6 +167,7 @@ public final class Camera2Interop {
          * @param captureCallback The {@link CameraCaptureSession.CaptureCallback}.
          * @return The current Extender.
          */
+        @SuppressLint("ExecutorRegistration")
         @NonNull
         public Extender<T> setSessionCaptureCallback(
                 @NonNull CameraCaptureSession.CaptureCallback captureCallback) {

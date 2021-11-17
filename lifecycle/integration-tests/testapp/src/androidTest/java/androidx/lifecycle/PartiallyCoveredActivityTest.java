@@ -39,7 +39,6 @@ import android.app.Instrumentation;
 import android.content.Intent;
 import android.os.Build;
 
-import androidx.core.util.Pair;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.testapp.CollectingLifecycleOwner;
 import androidx.lifecycle.testapp.CollectingSupportActivity;
@@ -60,6 +59,8 @@ import org.junit.runners.Parameterized;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+
+import kotlin.Pair;
 
 /**
  * Runs tests about the state when an activity is partially covered by another activity. Pre
@@ -121,14 +122,13 @@ public class PartiallyCoveredActivityTest {
     }
 
     @Test
-    @FlakyTest
     public void coveredWithDialog_activity() throws Throwable {
         final CollectingSupportActivity activity = activityRule.getActivity();
         runTest(activity);
     }
 
+    @FlakyTest(bugId = 206645367)
     @Test
-    @FlakyTest
     public void coveredWithDialog_fragment() throws Throwable {
         CollectingSupportFragment fragment = new CollectingSupportFragment();
         activityRule.runOnUiThread(() -> activityRule.getActivity().replaceFragment(fragment));
@@ -136,7 +136,6 @@ public class PartiallyCoveredActivityTest {
     }
 
     @Test
-    @FlakyTest
     public void coveredWithDialog_childFragment() throws Throwable {
         CollectingSupportFragment parentFragment = new CollectingSupportFragment();
         CollectingSupportFragment childFragment = new CollectingSupportFragment();

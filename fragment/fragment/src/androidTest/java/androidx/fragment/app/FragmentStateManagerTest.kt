@@ -31,7 +31,8 @@ import org.mockito.Mockito.mock
 class FragmentStateManagerTest {
 
     private val dispatcher = FragmentLifecycleCallbacksDispatcher(
-        mock(FragmentManager::class.java))
+        mock(FragmentManager::class.java)
+    )
     private lateinit var fragmentStore: FragmentStore
     private val classLoader get() = InstrumentationRegistry.getInstrumentation()
         .targetContext.classLoader
@@ -53,10 +54,13 @@ class FragmentStateManagerTest {
     @Test
     fun constructorFragmentFactory() {
         val fragment = StrictFragment()
-        val fragmentState = FragmentStateManager(dispatcher, fragmentStore, fragment).saveState()
+        FragmentStateManager(dispatcher, fragmentStore, fragment).saveState()
+        val fragmentState = fragmentStore.getSavedState(fragment.mWho)!!
 
-        val fragmentStateManager = FragmentStateManager(dispatcher, fragmentStore,
-            classLoader, FragmentFactory(), fragmentState)
+        val fragmentStateManager = FragmentStateManager(
+            dispatcher, fragmentStore,
+            classLoader, FragmentFactory(), fragmentState
+        )
 
         val restoredFragment = fragmentStateManager.fragment
         assertThat(restoredFragment)
@@ -68,12 +72,15 @@ class FragmentStateManagerTest {
     @Test
     fun constructorRetainedFragment() {
         val fragment = StrictFragment()
-        val fragmentState = FragmentStateManager(dispatcher, fragmentStore, fragment).saveState()
+        FragmentStateManager(dispatcher, fragmentStore, fragment).saveState()
+        val fragmentState = fragmentStore.getSavedState(fragment.mWho)!!
         assertThat(fragment.mSavedFragmentState)
             .isNull()
 
-        val fragmentStateManager = FragmentStateManager(dispatcher, fragmentStore,
-            fragment, fragmentState)
+        val fragmentStateManager = FragmentStateManager(
+            dispatcher, fragmentStore,
+            fragment, fragmentState
+        )
 
         val restoredFragment = fragmentStateManager.fragment
         assertThat(restoredFragment)

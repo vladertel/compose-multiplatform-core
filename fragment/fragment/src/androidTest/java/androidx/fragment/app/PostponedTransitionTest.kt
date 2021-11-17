@@ -23,17 +23,16 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.test.FragmentTestActivity
 import androidx.fragment.test.R
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.rule.ActivityTestRule
 import androidx.testutils.runOnUiThreadRethrow
 import androidx.testutils.waitForExecution
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
-import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -44,9 +43,11 @@ import java.util.concurrent.TimeUnit
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.LOLLIPOP)
-class PostponedTransitionTest {
+class PostponedTransitionTest() {
+
+    @Suppress("DEPRECATION")
     @get:Rule
-    val activityRule = ActivityTestRule(FragmentTestActivity::class.java)
+    var activityRule = androidx.test.rule.ActivityTestRule(FragmentTestActivity::class.java)
 
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val beginningFragment = PostponedFragment1()
@@ -110,8 +111,10 @@ class PostponedTransitionTest {
         fragment.startPostponedEnterTransition()
 
         // make sure it ran
-        assertForwardTransition(startBlue, startBlueBounds, startGreen,
-            beginningFragment, fragment)
+        assertForwardTransition(
+            startBlue, startBlueBounds, startGreen,
+            beginningFragment, fragment
+        )
 
         val startBlue2 = activityRule.findBlue()
         val startGreen2 = activityRule.findGreen()
@@ -126,8 +129,45 @@ class PostponedTransitionTest {
         beginningFragment.startPostponedEnterTransition()
 
         // make sure it ran
-        assertBackTransition(startBlue2, startBlueBounds2, startGreen2,
-            fragment, beginningFragment)
+        assertBackTransition(
+            startBlue2, startBlueBounds2, startGreen2,
+            fragment, beginningFragment
+        )
+    }
+
+    @Test
+    fun changePostponedFragmentVisibility() {
+        val fm = activityRule.activity.supportFragmentManager
+        val startBlue = activityRule.findBlue()
+
+        val fragment = PostponedFragment1()
+        fm.beginTransaction()
+            .addSharedElement(startBlue, "blueSquare")
+            .replace(R.id.fragmentContainer, fragment)
+            .addToBackStack(null)
+            .setReorderingAllowed(true)
+            .commit()
+
+        activityRule.waitForExecution()
+
+        activityRule.runOnUiThread {
+            fragment.requireView().visibility = View.INVISIBLE
+        }
+
+        activityRule.waitForExecution(1)
+
+        // should be postponed now
+        assertPostponedTransition(beginningFragment, fragment, toFragmentVisible = false)
+
+        // should be invisible
+        assertThat(fragment.requireView().visibility).isEqualTo(View.INVISIBLE)
+
+        // start the postponed transition
+        fragment.startPostponedEnterTransition()
+
+        // nothing should run since the fragment is INVISIBLE
+        verifyNoOtherTransitions(beginningFragment)
+        verifyNoOtherTransitions(fragment)
     }
 
     // Ensure that replacing a fragment doesn't cause problems with the back stack nesting level
@@ -147,8 +187,10 @@ class PostponedTransitionTest {
             .commit()
 
         // make sure transition ran
-        assertForwardTransition(startBlue, startBlueBounds, startGreen,
-            beginningFragment, fragment1)
+        assertForwardTransition(
+            startBlue, startBlueBounds, startGreen,
+            beginningFragment, fragment1
+        )
 
         val endBlue = activityRule.findBlue()
         val endGreen = activityRule.findGreen()
@@ -178,8 +220,10 @@ class PostponedTransitionTest {
             .commit()
 
         // make sure transition ran
-        assertForwardTransition(startBlue2, startBlueBounds2, startGreen2,
-            beginningFragment, fragment2)
+        assertForwardTransition(
+            startBlue2, startBlueBounds2, startGreen2,
+            beginningFragment, fragment2
+        )
 
         val endBlue2 = activityRule.findBlue()
         val endGreen2 = activityRule.findGreen()
@@ -229,22 +273,20 @@ class PostponedTransitionTest {
         }
         activityRule.waitForExecution()
 
-        // transition to fragment2 should be started
-        assertForwardTransition(startBlue, startBlueBounds, startGreen,
-            beginningFragment, fragment2)
+        // fragment2 should have been put on the back stack without any transitions
+        verifyNoOtherTransitions(fragment2)
 
-        // fragment3 should be postponed, but fragment2 should be executed with no transition.
-        assertPostponedTransition(fragment2, fragment3, beginningFragment)
-
-        val startBlue2 = fragment2.requireView().findViewById<View>(R.id.blueSquare)
-        val startGreen2 = fragment2.requireView().findViewById<View>(R.id.greenSquare)
-        val startBlueBounds2 = startBlue2.boundsOnScreen
+        // fragment3 should be postponed
+        assertPostponedTransition(beginningFragment, fragment3)
 
         // start the postponed transition
         fragment3.startPostponedEnterTransition()
 
         // make sure it ran
-        assertForwardTransition(startBlue2, startBlueBounds2, startGreen2, fragment2, fragment3)
+        assertForwardTransition(
+            startBlue, startBlueBounds, startGreen,
+            beginningFragment, fragment3
+        )
 
         val startBlue3 = fragment3.requireView().findViewById<View>(R.id.blueSquare)
         val startGreen3 = fragment3.requireView().findViewById<View>(R.id.greenSquare)
@@ -252,20 +294,18 @@ class PostponedTransitionTest {
 
         activityRule.popBackStackImmediate(commit, FragmentManager.POP_BACK_STACK_INCLUSIVE)
 
-        assertBackTransition(startBlue3, startBlueBounds3, startGreen3, fragment3, fragment2)
-
-        assertPostponedTransition(fragment2, beginningFragment, fragment3)
-
-        val endBlue2 = fragment2.requireView().findViewById<View>(R.id.blueSquare)
-        val endGreen2 = fragment2.requireView().findViewById<View>(R.id.greenSquare)
-        val endBlueBounds2 = endBlue2.boundsOnScreen
+        // The transition back to beginningFragment should be postponed
+        // and fragment2 should be removed without any transitions
+        assertPostponedTransition(fragment3, beginningFragment, fragment2)
 
         // start the postponed transition
         beginningFragment.startPostponedEnterTransition()
 
         // make sure it ran
-        assertBackTransition(endBlue2, endBlueBounds2, endGreen2,
-            fragment2, beginningFragment)
+        assertBackTransition(
+            startBlue3, startBlueBounds3, startGreen3,
+            fragment3, beginningFragment
+        )
     }
 
     // Ensure that postponed transition is forced after another has been committed.
@@ -274,6 +314,8 @@ class PostponedTransitionTest {
     fun forcedTransition2() {
         val fm = activityRule.activity.supportFragmentManager
         val startBlue = activityRule.findBlue()
+        val startGreen = activityRule.findGreen()
+        val startBlueBounds = startBlue.boundsOnScreen
 
         val fragment2 = PostponedFragment2()
 
@@ -300,18 +342,24 @@ class PostponedTransitionTest {
         // and start fragment2 -> fragment3 transition postponed
         activityRule.waitForExecution()
 
-        // fragment3 should be postponed, but fragment2 should be executed with no transition.
-        assertPostponedTransition(fragment2, fragment3, beginningFragment)
+        // fragment2 should have been put on the back stack without any transitions
+        verifyNoOtherTransitions(fragment2)
 
-        val startBlue2 = activityRule.findBlue()
-        val startGreen2 = activityRule.findGreen()
-        val startBlueBounds2 = startBlue2.boundsOnScreen
+        // fragment3 should be postponed
+        assertPostponedTransition(beginningFragment, fragment3)
 
         // start the postponed transition
         fragment3.startPostponedEnterTransition()
 
         // make sure it ran
-        assertForwardTransition(startBlue2, startBlueBounds2, startGreen2, fragment2, fragment3)
+        assertForwardTransition(
+            startBlue, startBlueBounds, startGreen,
+            beginningFragment, fragment3
+        )
+
+        val startBlue3 = fragment3.requireView().findViewById<View>(R.id.blueSquare)
+        val startGreen3 = fragment3.requireView().findViewById<View>(R.id.greenSquare)
+        val startBlueBounds3 = startBlue3.boundsOnScreen
 
         // Pop back to fragment2, but it should be postponed
         activityRule.popBackStackImmediate()
@@ -322,23 +370,25 @@ class PostponedTransitionTest {
         // start the beginningFragment transaction postponed
         activityRule.popBackStackImmediate()
 
-        assertPostponedTransition(fragment2, beginningFragment, fragment3)
-
-        val endBlue2 = fragment2.requireView().findViewById<View>(R.id.blueSquare)
-        val endGreen2 = fragment2.requireView().findViewById<View>(R.id.greenSquare)
-        val endBlueBounds2 = endBlue2.boundsOnScreen
+        // The transition back to beginningFragment should be postponed
+        // and no transitions should be done on fragment2
+        assertPostponedTransition(fragment3, beginningFragment)
+        verifyNoOtherTransitions(fragment2)
 
         // start the postponed transition
         beginningFragment.startPostponedEnterTransition()
 
         // make sure it ran
-        assertBackTransition(endBlue2, endBlueBounds2, endGreen2,
-            fragment2, beginningFragment)
+        assertBackTransition(
+            startBlue3, startBlueBounds3, startGreen3,
+            fragment3, beginningFragment
+        )
+        verifyNoOtherTransitions(fragment2)
     }
 
     // Do a bunch of things to one fragment in a transaction and see if it can screw things up.
     @Test
-    fun crazyTransition() {
+    fun extensiveTransition() {
         val fm = activityRule.activity.supportFragmentManager
         val startBlue = activityRule.findBlue()
         val startGreen = activityRule.findGreen()
@@ -366,8 +416,10 @@ class PostponedTransitionTest {
         fragment2.startPostponedEnterTransition()
 
         // make sure it ran
-        assertForwardTransition(startBlue, startBlueBounds, startGreen,
-            beginningFragment, fragment2)
+        assertForwardTransition(
+            startBlue, startBlueBounds, startGreen,
+            beginningFragment, fragment2
+        )
 
         val startBlue2 = activityRule.findBlue()
         val startGreen2 = activityRule.findGreen()
@@ -382,8 +434,10 @@ class PostponedTransitionTest {
         beginningFragment.startPostponedEnterTransition()
 
         // make sure it ran
-        assertBackTransition(startBlue2, startBlueBounds2, startGreen2,
-            fragment2, beginningFragment)
+        assertBackTransition(
+            startBlue2, startBlueBounds2, startGreen2,
+            fragment2, beginningFragment
+        )
     }
 
     // Execute transactions on different containers and ensure that they don't conflict
@@ -690,13 +744,15 @@ class PostponedTransitionTest {
     @Test
     fun commitNowStartsPostponed() {
         val fm = activityRule.activity.supportFragmentManager
-        val startBlue1 = activityRule.findBlue()
+        val startBlue = activityRule.findBlue()
+        val startGreen = activityRule.findGreen()
+        val startBlueBounds = startBlue.boundsOnScreen
 
         val fragment2 = PostponedFragment2()
-        val fragment1 = PostponedFragment1()
+        val fragment3 = PostponedFragment1()
 
         fm.beginTransaction()
-            .addSharedElement(startBlue1, "blueSquare")
+            .addSharedElement(startBlue, "blueSquare")
             .replace(R.id.fragmentContainer, fragment2)
             .addToBackStack(null)
             .setReorderingAllowed(true)
@@ -704,23 +760,28 @@ class PostponedTransitionTest {
         activityRule.waitForExecution()
 
         val startBlue2 = fragment2.requireView().findViewById<View>(R.id.blueSquare)
-        val startGreen2 = fragment2.requireView().findViewById<View>(R.id.greenSquare)
-        val startBlueBounds2 = startBlue2.boundsOnScreen
 
         instrumentation.runOnMainSync {
             fm.beginTransaction()
                 .addSharedElement(startBlue2, "blueSquare")
-                .replace(R.id.fragmentContainer, fragment1)
+                .replace(R.id.fragmentContainer, fragment3)
                 .setReorderingAllowed(true)
                 .commitNow()
         }
 
-        assertPostponedTransition(fragment2, fragment1, beginningFragment)
+        // fragment2 should have been put on the back stack without any transitions
+        verifyNoOtherTransitions(fragment2)
+
+        // fragment3 should be postponed
+        assertPostponedTransition(beginningFragment, fragment3)
 
         // start the postponed transition
-        fragment1.startPostponedEnterTransition()
+        fragment3.startPostponedEnterTransition()
 
-        assertForwardTransition(startBlue2, startBlueBounds2, startGreen2, fragment2, fragment1)
+        assertForwardTransition(
+            startBlue, startBlueBounds, startGreen,
+            beginningFragment, fragment3
+        )
     }
 
     // Make sure that when a transaction that removes a view is postponed that
@@ -867,16 +928,9 @@ class PostponedTransitionTest {
         activityRule.runOnUiThread {
             // start the postponed transition
             fragment.startPostponedEnterTransition()
-
-            try {
-                // This should trigger an IllegalStateException
-                fm.executePendingTransactions()
-                fail("commitNow() while executing a transaction should cause an" +
-                        " IllegalStateException")
-            } catch (e: IllegalStateException) {
-                assertThat(e)
-                    .hasMessageThat().contains("FragmentManager is already executing transactions")
-            }
+            // This should succeed since onResume() is called outside of the
+            // transaction completing
+            fm.executePendingTransactions()
         }
     }
 
@@ -934,8 +988,10 @@ class PostponedTransitionTest {
 
         fragment.startPostponedEnterTransition()
 
-        assertForwardTransition(startBlue, startBlueBounds, startGreen,
-            beginningFragment, fragment)
+        assertForwardTransition(
+            startBlue, startBlueBounds, startGreen,
+            beginningFragment, fragment
+        )
 
         assertWithMessage("After startPostponed is called the transition should not be postponed")
             .that(fragment.isPostponed).isFalse()
@@ -1002,6 +1058,8 @@ class PostponedTransitionTest {
         assertWithMessage(
             "After startPostponed is called the transition should not be postponed"
         ).that(fragment.isPostponed).isFalse()
+
+        fragment.waitForTransition()
     }
 
     // Ensure postponedEnterTransaction(long, TimeUnit) works even if called in constructor
@@ -1038,7 +1096,8 @@ class PostponedTransitionTest {
     private fun assertPostponedTransition(
         fromFragment: TransitionFragment,
         toFragment: TransitionFragment,
-        removedFragment: TransitionFragment? = null
+        removedFragment: TransitionFragment? = null,
+        toFragmentVisible: Boolean = true
     ) {
         if (removedFragment != null) {
             assertThat(removedFragment.view).isNull()
@@ -1051,12 +1110,17 @@ class PostponedTransitionTest {
         assertThat(fromFragment.requireView().isAttachedToWindow).isTrue()
         assertThat(toFragment.requireView().isAttachedToWindow).isTrue()
         assertThat(fromFragment.requireView().visibility).isEqualTo(View.VISIBLE)
-        assertThat(toFragment.requireView().visibility).isEqualTo(View.VISIBLE)
+        if (toFragmentVisible) {
+            assertThat(toFragment.requireView().visibility).isEqualTo(View.VISIBLE)
+        } else {
+            assertThat(toFragment.requireView().visibility).isEqualTo(View.INVISIBLE)
+        }
         assertThat(toFragment.requireView().alpha).isWithin(0f).of(0f)
+
         verifyNoOtherTransitions(fromFragment)
         verifyNoOtherTransitions(toFragment)
-        assertThat(fromFragment.isResumed).isTrue()
-        assertThat(toFragment.isResumed).isFalse()
+        assertThat(fromFragment.lifecycle.currentState).isEqualTo(Lifecycle.State.CREATED)
+        assertThat(toFragment.lifecycle.currentState).isEqualTo(Lifecycle.State.STARTED)
     }
 
     private fun clearTargets(fragment: TransitionFragment) {
@@ -1159,12 +1223,12 @@ class PostponedTransitionTest {
     }
 
     private fun assertNoTargets(fragment: TransitionFragment) {
-        assertThat(fragment.enterTransition.targets.isEmpty()).isTrue()
-        assertThat(fragment.reenterTransition.targets.isEmpty()).isTrue()
-        assertThat(fragment.exitTransition.targets.isEmpty()).isTrue()
-        assertThat(fragment.returnTransition.targets.isEmpty()).isTrue()
-        assertThat(fragment.sharedElementEnter.targets.isEmpty()).isTrue()
-        assertThat(fragment.sharedElementReturn.targets.isEmpty()).isTrue()
+        assertThat(fragment.enterTransition.targets).isEmpty()
+        assertThat(fragment.reenterTransition.targets).isEmpty()
+        assertThat(fragment.exitTransition.targets).isEmpty()
+        assertThat(fragment.returnTransition.targets).isEmpty()
+        assertThat(fragment.sharedElementEnter.targets).isEmpty()
+        assertThat(fragment.sharedElementReturn.targets).isEmpty()
     }
 
     open class PostponedFragment1 : TransitionFragment(R.layout.scene1) {

@@ -13,112 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+// @exportToFramework:skipFile()
 package androidx.appsearch.app;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.RestrictTo;
 
-import com.google.android.icing.proto.SearchResultProto;
-import com.google.android.icing.proto.SnippetMatchProto;
-import com.google.android.icing.proto.SnippetProto;
+import com.google.common.util.concurrent.ListenableFuture;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.io.Closeable;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 /**
- * SearchResults are a list of results that are returned from a query. Each result from this
- * list contains a document and may contain other fields like snippets based on request.
- * This iterator class is not thread safe.
- * @hide
+ * Encapsulates results of a search operation.
+ *
+ * <p>Each {@link AppSearchSession#search} operation returns a list of {@link SearchResult}
+ * objects, referred to as a "page", limited by the size configured by
+ * {@link SearchSpec.Builder#setResultCountPerPage}.
+ *
+ * <p>To fetch a page of results, call {@link #getNextPage()}.
+ *
+ * <p>All instances of {@link SearchResults} must call {@link SearchResults#close()} after the
+ * results are fetched.
+ *
+ * <p>This class is not thread safe.
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public final class SearchResults implements Iterator<SearchResults.Result> {
-
-    private final SearchResultProto mSearchResultProto;
-    private int mNextIdx;
-
-    public SearchResults(@NonNull SearchResultProto searchResultProto) {
-        mSearchResultProto = searchResultProto;
-    }
-
-    @Override
-    public boolean hasNext() {
-        return mNextIdx < mSearchResultProto.getResultsCount();
-    }
-
-    @NonNull
-    @Override
-    public Result next() {
-        if (!hasNext()) {
-            throw new NoSuchElementException();
-        }
-        Result result = new Result(mSearchResultProto.getResults(mNextIdx));
-        mNextIdx++;
-        return result;
-    }
-
+public interface SearchResults extends Closeable {
     /**
-     * This class represents the result obtained from the query. It will contain the document which
-     * which matched the specified query string and specifications.
+     * Retrieves the next page of {@link SearchResult} objects.
+     *
+     * <p>The page size is configured by {@link SearchSpec.Builder#setResultCountPerPage}.
+     *
+     * <p>Continue calling this method to access results until it returns an empty list,
+     * signifying there are no more results.
+     *
+     * @return a {@link ListenableFuture} which resolves to a list of {@link SearchResult}
+     * objects.
      */
-    public static final class Result {
-        private final SearchResultProto.ResultProto mResultProto;
-
-        @Nullable
-        private GenericDocument mDocument;
-
-        Result(@NonNull SearchResultProto.ResultProto resultProto) {
-            mResultProto = resultProto;
-        }
-
-        /**
-         * Contains the matching {@link GenericDocument}.
-         * @return Document object which matched the query.
-         */
-        @NonNull
-        public GenericDocument getDocument() {
-            if (mDocument == null) {
-                mDocument = new GenericDocument(mResultProto.getDocument());
-            }
-            return mDocument;
-        }
-
-        /**
-         * Contains a list of Snippets that matched the request. Only populated when requested in
-         * {@link SearchSpec.Builder#setMaxSnippetSize}.
-         * @return  List of matches based on {@link SearchSpec}, if snippeting is disabled and this
-         * method is called it will return {@code null}. Users can also restrict snippet population
-         * using {@link SearchSpec.Builder#setNumToSnippet} and
-         * {@link SearchSpec.Builder#setNumMatchesPerProperty}, for all results after that value
-         * this method will return {@code null}.
-         */
-        // TODO(sidchhabra): Replace Document with proper constructor.
-        @Nullable
-        public List<MatchInfo> getMatchInfo() {
-            if (!mResultProto.hasSnippet()) {
-                return null;
-            }
-            GenericDocument document = getDocument();
-            List<MatchInfo> matchList = new ArrayList<>();
-            for (Iterator entryProtoIterator = mResultProto.getSnippet()
-                    .getEntriesList().iterator(); entryProtoIterator.hasNext(); ) {
-                SnippetProto.EntryProto entry = (SnippetProto.EntryProto) entryProtoIterator.next();
-                for (Iterator snippetMatchProtoIterator = entry.getSnippetMatchesList().iterator();
-                        snippetMatchProtoIterator.hasNext(); ) {
-                    matchList.add(new MatchInfo(entry.getPropertyName(),
-                            (SnippetMatchProto) snippetMatchProtoIterator.next(), document));
-                }
-            }
-            return matchList;
-        }
-    }
+    @NonNull
+    ListenableFuture<List<SearchResult>> getNextPage();
 
     @Override
-    public String toString() {
-        return mSearchResultProto.toString();
-    }
+    void close();
 }

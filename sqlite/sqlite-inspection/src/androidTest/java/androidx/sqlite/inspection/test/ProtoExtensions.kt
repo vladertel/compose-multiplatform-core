@@ -69,7 +69,8 @@ object MessageFactory {
     fun createQueryCommand(
         databaseId: Int,
         query: String,
-        queryParams: List<String?>? = null
+        queryParams: List<String?>? = null,
+        responseSizeLimitHint: Long? = null
     ): Command =
         Command.newBuilder().setQuery(
             QueryCommand.newBuilder()
@@ -81,7 +82,11 @@ object MessageFactory {
                             QueryParameterValue.newBuilder()
                                 .also { builder -> if (param != null) builder.stringValue = param }
                                 .build()
-                        })
+                        }
+                    )
+                    if (responseSizeLimitHint != null) {
+                        queryCommandBuilder.responseSizeLimitHint = responseSizeLimitHint
+                    }
                 }
                 .build()
         ).build()

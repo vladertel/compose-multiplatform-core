@@ -78,7 +78,8 @@ class SpecialEffectsControllerTest {
 
         // Recreating the controller shouldn't cause the count to increase
         val recreatedController = SpecialEffectsController.getOrCreateController(
-            container, factory)
+            container, factory
+        )
         assertThat(recreatedController)
             .isEqualTo(controller)
         assertThat(recreatedController.container)
@@ -89,13 +90,23 @@ class SpecialEffectsControllerTest {
         // But creating a controller for a different view returns a new instance
         val secondContainer = FrameLayout(InstrumentationRegistry.getInstrumentation().context)
         val secondController = SpecialEffectsController.getOrCreateController(
-            secondContainer, factory)
+            secondContainer, factory
+        )
         assertThat(secondController)
             .isEqualTo(map[secondContainer])
         assertThat(secondController.container)
             .isEqualTo(secondContainer)
         assertThat(count)
             .isEqualTo(2)
+    }
+
+    @Test
+    fun noExecuteIfEmpty() {
+        val container = FrameLayout(InstrumentationRegistry.getInstrumentation().context)
+        val controller = InstantSpecialEffectsController(container)
+        controller.executePendingOperations()
+
+        assertThat(controller.executeOperationsCallCount).isEqualTo(0)
     }
 
     @MediumTest
@@ -110,8 +121,10 @@ class SpecialEffectsControllerTest {
             val fragment = StrictViewFragment()
             val fragmentStore = FragmentStore()
             fragmentStore.nonConfig = FragmentManagerViewModel(true)
-            val fragmentStateManager = FragmentStateManager(fm.lifecycleCallbacksDispatcher,
-                fragmentStore, fragment)
+            val fragmentStateManager = FragmentStateManager(
+                fm.lifecycleCallbacksDispatcher,
+                fragmentStore, fragment
+            )
             // Set up the Fragment and FragmentStateManager as if the Fragment was
             // added to the container via a FragmentTransaction
             fragment.mFragmentManager = fm
@@ -128,15 +141,15 @@ class SpecialEffectsControllerTest {
             // setFragmentManagerState() doesn't call moveToExpectedState() itself
             fragmentStateManager.setFragmentManagerState(Fragment.STARTED)
             val controller = SpecialEffectsController.getOrCreateController(container, fm)
-            assertThat(controller.getAwaitingCompletionType(fragmentStateManager))
-                .isEqualTo(SpecialEffectsController.Operation.Type.ADD)
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.ADDING)
             onActivity {
                 // However, executePendingOperations(), since we're using our
                 // TestSpecialEffectsController, does immediately call complete()
                 // which in turn calls moveToExpectedState()
                 controller.executePendingOperations()
             }
-            assertThat(controller.getAwaitingCompletionType(fragmentStateManager))
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
                 .isNull()
             // Assert that we actually moved to the STARTED state
             assertThat(fragment.lifecycle.currentState)
@@ -156,8 +169,10 @@ class SpecialEffectsControllerTest {
             val fragment = StrictViewFragment()
             val fragmentStore = FragmentStore()
             fragmentStore.nonConfig = FragmentManagerViewModel(true)
-            val fragmentStateManager = FragmentStateManager(fm.lifecycleCallbacksDispatcher,
-                fragmentStore, fragment)
+            val fragmentStateManager = FragmentStateManager(
+                fm.lifecycleCallbacksDispatcher,
+                fragmentStore, fragment
+            )
             // Set up the Fragment and FragmentStateManager as if the Fragment was
             // added to the container via a FragmentTransaction
             fragment.mFragmentManager = fm
@@ -206,8 +221,10 @@ class SpecialEffectsControllerTest {
             val fragment = StrictViewFragment()
             val fragmentStore = FragmentStore()
             fragmentStore.nonConfig = FragmentManagerViewModel(true)
-            val fragmentStateManager = FragmentStateManager(fm.lifecycleCallbacksDispatcher,
-                fragmentStore, fragment)
+            val fragmentStateManager = FragmentStateManager(
+                fm.lifecycleCallbacksDispatcher,
+                fragmentStore, fragment
+            )
             // Set up the Fragment and FragmentStateManager as if the Fragment was
             // added to the container via a FragmentTransaction
             fragment.mFragmentManager = fm
@@ -224,17 +241,16 @@ class SpecialEffectsControllerTest {
             }
             assertThat(fragment.view)
                 .isNotNull()
-            controller.executePendingOperations()
             val operations = controller.operationsToExecute
             assertThat(operations)
                 .hasSize(1)
             val firstOperation = operations[0]
-            assertThat(firstOperation.type)
-                .isEqualTo(SpecialEffectsController.Operation.Type.ADD)
+            assertThat(firstOperation.lifecycleImpact)
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.ADDING)
             assertThat(firstOperation.fragment)
                 .isSameInstanceAs(fragment)
-            assertThat(controller.getAwaitingCompletionType(fragmentStateManager))
-                .isEqualTo(SpecialEffectsController.Operation.Type.ADD)
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.ADDING)
             fragmentStateManager.setFragmentManagerState(Fragment.CREATED)
             onActivity {
                 // move the Fragment's state back down, which
@@ -242,20 +258,20 @@ class SpecialEffectsControllerTest {
                 fragmentStateManager.moveToExpectedState()
                 controller.executePendingOperations()
             }
-            assertThat(firstOperation.cancellationSignal.isCanceled)
+            assertThat(firstOperation.isCanceled)
                 .isTrue()
             assertThat(controller.operationsToExecute)
                 .doesNotContain(firstOperation)
             assertThat(controller.operationsToExecute)
                 .hasSize(1)
-            assertThat(controller.getAwaitingCompletionType(fragmentStateManager))
-                .isEqualTo(SpecialEffectsController.Operation.Type.REMOVE)
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.REMOVING)
             onActivity {
                 controller.completeAllOperations()
             }
             assertThat(controller.operationsToExecute)
                 .isEmpty()
-            assertThat(controller.getAwaitingCompletionType(fragmentStateManager))
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
                 .isNull()
             assertThat(fragment.lifecycle.currentState)
                 .isEqualTo(Lifecycle.State.CREATED)
@@ -264,7 +280,7 @@ class SpecialEffectsControllerTest {
 
     @MediumTest
     @Test
-    fun enqueueAddAndCancelAllPending() {
+    fun enqueueAddAndForceCompleteAllPending() {
         with(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
             val container = withActivity { findViewById<ViewGroup>(android.R.id.content) }
             val fm = withActivity { supportFragmentManager }
@@ -274,8 +290,10 @@ class SpecialEffectsControllerTest {
             val fragment = StrictViewFragment()
             val fragmentStore = FragmentStore()
             fragmentStore.nonConfig = FragmentManagerViewModel(true)
-            val fragmentStateManager = FragmentStateManager(fm.lifecycleCallbacksDispatcher,
-                fragmentStore, fragment)
+            val fragmentStateManager = FragmentStateManager(
+                fm.lifecycleCallbacksDispatcher,
+                fragmentStore, fragment
+            )
             // Set up the Fragment and FragmentStateManager as if the Fragment was
             // added to the container via a FragmentTransaction
             fragment.mFragmentManager = fm
@@ -291,22 +309,24 @@ class SpecialEffectsControllerTest {
             }
             assertThat(controller.operationsToExecute)
                 .isEmpty()
-            assertThat(controller.getAwaitingCompletionType(fragmentStateManager))
-                .isEqualTo(SpecialEffectsController.Operation.Type.ADD)
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.ADDING)
 
-            // Now cancel all the operations
-            controller.cancelAllOperations()
+            onActivity {
+                // Now force all operations to immediately complete
+                controller.forceCompleteAllOperations()
+            }
 
             assertThat(controller.operationsToExecute)
                 .isEmpty()
-            assertThat(controller.getAwaitingCompletionType(fragmentStateManager))
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
                 .isNull()
         }
     }
 
     @MediumTest
     @Test
-    fun enqueueAddAndCancelAllExecuting() {
+    fun enqueueAddAndForceCompleteAllExecuting() {
         with(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
             val container = withActivity { findViewById<ViewGroup>(android.R.id.content) }
             val fm = withActivity { supportFragmentManager }
@@ -316,8 +336,10 @@ class SpecialEffectsControllerTest {
             val fragment = StrictViewFragment()
             val fragmentStore = FragmentStore()
             fragmentStore.nonConfig = FragmentManagerViewModel(true)
-            val fragmentStateManager = FragmentStateManager(fm.lifecycleCallbacksDispatcher,
-                fragmentStore, fragment)
+            val fragmentStateManager = FragmentStateManager(
+                fm.lifecycleCallbacksDispatcher,
+                fragmentStore, fragment
+            )
             // Set up the Fragment and FragmentStateManager as if the Fragment was
             // added to the container via a FragmentTransaction
             fragment.mFragmentManager = fm
@@ -336,22 +358,100 @@ class SpecialEffectsControllerTest {
             assertThat(operations)
                 .hasSize(1)
             val firstOperation = operations[0]
-            assertThat(firstOperation.type)
-                .isEqualTo(SpecialEffectsController.Operation.Type.ADD)
+            assertThat(firstOperation.lifecycleImpact)
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.ADDING)
             assertThat(firstOperation.fragment)
                 .isSameInstanceAs(fragment)
-            assertThat(controller.getAwaitingCompletionType(fragmentStateManager))
-                .isEqualTo(SpecialEffectsController.Operation.Type.ADD)
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.ADDING)
 
-            // Now cancel all the operations
-            controller.cancelAllOperations()
+            var lifecycleImpactOnCompletion:
+                SpecialEffectsController.Operation.LifecycleImpact? = null
+            firstOperation.addCompletionListener {
+                lifecycleImpactOnCompletion = controller.getAwaitingCompletionLifecycleImpact(
+                    fragmentStateManager
+                )
+            }
+            onActivity {
+                // Now force all operations to immediately complete
+                controller.forceCompleteAllOperations()
+            }
 
-            assertThat(firstOperation.cancellationSignal.isCanceled)
+            assertThat(firstOperation.isCanceled)
                 .isTrue()
+            assertThat(lifecycleImpactOnCompletion).isNull()
             assertThat(controller.operationsToExecute)
                 .isEmpty()
-            assertThat(controller.getAwaitingCompletionType(fragmentStateManager))
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
                 .isNull()
+        }
+    }
+
+    @MediumTest
+    @Test
+    fun enqueueAddAndPostpone() {
+        with(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
+            val container = withActivity { findViewById<ViewGroup>(android.R.id.content) }
+            val fm = withActivity { supportFragmentManager }
+            fm.specialEffectsControllerFactory = SpecialEffectsControllerFactory {
+                TestSpecialEffectsController(it)
+            }
+            val fragment = StrictViewFragment()
+            fragment.postponeEnterTransition()
+            val fragmentStore = FragmentStore()
+            fragmentStore.nonConfig = FragmentManagerViewModel(true)
+            val fragmentStateManager = FragmentStateManager(
+                fm.lifecycleCallbacksDispatcher,
+                fragmentStore, fragment
+            )
+            // Set up the Fragment and FragmentStateManager as if the Fragment was
+            // added to the container via a FragmentTransaction
+            fragment.mFragmentManager = fm
+            fragment.mAdded = true
+            fragment.mContainerId = android.R.id.content
+            fragmentStateManager.setFragmentManagerState(Fragment.STARTED)
+            val controller = SpecialEffectsController
+                .getOrCreateController(container, fm) as TestSpecialEffectsController
+            onActivity {
+                // This moves the Fragment up to STARTED,
+                // calling enqueueAdd() under the hood
+                fragmentStateManager.moveToExpectedState()
+            }
+            assertThat(controller.operationsToExecute)
+                .isEmpty()
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.ADDING)
+
+            // Mark the postponed state
+            controller.markPostponedState()
+            controller.executePendingOperations()
+
+            // Verify that executePendingOperations() didn't actually execute
+            // anything since we are postponed
+            assertThat(controller.operationsToExecute)
+                .isEmpty()
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.ADDING)
+
+            onActivity {
+                fragment.startPostponedEnterTransition()
+            }
+            // Wait for idle thread to handle the post() that startPostponedEnterTransition() does.
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+            // Verify that the operation was sent for execution
+            assertThat(controller.operationsToExecute)
+                .hasSize(1)
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
+                .isEqualTo(SpecialEffectsController.Operation.LifecycleImpact.ADDING)
+
+            controller.completeAllOperations()
+
+            assertThat(controller.getAwaitingCompletionLifecycleImpact(fragmentStateManager))
+                .isNull()
+            // Assert that we actually moved to the STARTED state
+            assertThat(fragment.lifecycle.currentState)
+                .isEqualTo(Lifecycle.State.STARTED)
         }
     }
 }
@@ -364,7 +464,7 @@ internal class TestSpecialEffectsController(
     override fun executeOperations(operations: MutableList<Operation>, isPop: Boolean) {
         operationsToExecute.addAll(operations)
         operations.forEach { operation ->
-            operation.cancellationSignal.setOnCancelListener {
+            operation.addCompletionListener {
                 operationsToExecute.remove(operation)
             }
         }
@@ -379,7 +479,10 @@ internal class TestSpecialEffectsController(
 internal class InstantSpecialEffectsController(
     container: ViewGroup
 ) : SpecialEffectsController(container) {
+    var executeOperationsCallCount = 0
+
     override fun executeOperations(operations: MutableList<Operation>, isPop: Boolean) {
+        executeOperationsCallCount++
         operations.forEach(Operation::complete)
     }
 }

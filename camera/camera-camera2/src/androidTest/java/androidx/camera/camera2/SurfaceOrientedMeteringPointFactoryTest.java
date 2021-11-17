@@ -20,22 +20,21 @@ import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assume.assumeTrue;
 
-import android.app.Instrumentation;
 import android.content.Context;
 import android.util.Rational;
 
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.CameraSelector;
-import androidx.camera.core.CameraX;
 import androidx.camera.core.CameraXConfig;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.MeteringPoint;
 import androidx.camera.core.MeteringPointFactory;
 import androidx.camera.core.SurfaceOrientedMeteringPointFactory;
+import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.camera.testing.CameraUtil;
-import androidx.camera.testing.fakes.FakeLifecycleOwner;
-import androidx.lifecycle.LifecycleOwner;
+import androidx.camera.testing.CameraXUtil;
 import androidx.test.core.app.ApplicationProvider;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.After;
@@ -43,30 +42,28 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+@SdkSuppress(minSdkVersion = 21)
 public final class SurfaceOrientedMeteringPointFactoryTest {
     private static final float WIDTH = 480;
     private static final float HEIGHT = 640;
-    private final Instrumentation mInstrumentation = InstrumentationRegistry.getInstrumentation();
-    private LifecycleOwner mLifecycle;
     SurfaceOrientedMeteringPointFactory mPointFactory;
+    private Context mContext;
 
     @Before
     public void setUp() {
-        Context context = ApplicationProvider.getApplicationContext();
+        mContext = ApplicationProvider.getApplicationContext();
         CameraXConfig config = Camera2Config.defaultConfig();
 
-        CameraX.initialize(context, config);
-        mLifecycle = new FakeLifecycleOwner();
+        CameraXUtil.initialize(mContext, config);
         mPointFactory = new SurfaceOrientedMeteringPointFactory(WIDTH, HEIGHT);
     }
 
     @After
-    public void tearDown() throws ExecutionException, InterruptedException {
-        if (CameraX.isInitialized()) {
-            mInstrumentation.runOnMainSync(CameraX::unbindAll);
-        }
-        CameraX.shutdown().get();
+    public void tearDown() throws ExecutionException, InterruptedException, TimeoutException {
+        CameraXUtil.shutdown().get(10000, TimeUnit.MILLISECONDS);
     }
 
     @Test
@@ -123,17 +120,19 @@ public final class SurfaceOrientedMeteringPointFactoryTest {
         CameraSelector cameraSelector =
                 new CameraSelector.Builder().requireLensFacing(
                         CameraSelector.LENS_FACING_BACK).build();
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, cameraSelector, imageAnalysis);
-            }
-        });
+        CameraUseCaseAdapter camera = CameraUtil.createCameraAndAttachUseCase(mContext,
+                cameraSelector, imageAnalysis);
 
         SurfaceOrientedMeteringPointFactory factory = new SurfaceOrientedMeteringPointFactory(
                 WIDTH, HEIGHT, imageAnalysis);
         MeteringPoint point = factory.createPoint(0f, 0f);
         assertThat(point.getSurfaceAspectRatio()).isEqualTo(new Rational(4, 3));
+
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() ->
+                //TODO: The removeUseCases() call might be removed after clarifying the
+                // abortCaptures() issue in b/162314023.
+                camera.removeUseCases(camera.getUseCases())
+        );
     }
 
     @Test(expected = IllegalStateException.class)

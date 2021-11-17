@@ -37,7 +37,8 @@ import org.mockito.Mockito.mock
 class FragmentStoreTest {
 
     private val dispatcher = FragmentLifecycleCallbacksDispatcher(
-        mock(FragmentManager::class.java))
+        mock(FragmentManager::class.java)
+    )
 
     private lateinit var fragmentStore: FragmentStore
     private lateinit var emptyFragment: Fragment
@@ -158,7 +159,7 @@ class FragmentStoreTest {
         val savedActiveFragments = fragmentStore.saveActiveFragments()
         assertThat(savedActiveFragments)
             .hasSize(1)
-        assertThat(savedActiveFragments[0].mWho)
+        assertThat(savedActiveFragments[0])
             .isEqualTo(emptyFragment.mWho)
     }
 
@@ -325,8 +326,10 @@ class FragmentStoreTest {
             executePendingTransactions(parentFragment.childFragmentManager)
 
             // Now fake that the parent Fragment is actually attached to our FragmentStore
-            val parentStateManager = FragmentStateManager(dispatcher, fragmentStore,
-                parentFragment)
+            val parentStateManager = FragmentStateManager(
+                dispatcher, fragmentStore,
+                parentFragment
+            )
             fragmentStore.makeActive(parentStateManager)
             fragmentStore.addFragment(parentFragment)
 

@@ -31,12 +31,6 @@ import androidx.annotation.RestrictTo;
  * responsible for creating a view that performs an action that accomplishes the task. This class
  * also implements other functions such a performing a default action.
  *
- * <p class="note"><strong>Note:</strong> This class is included in the <a
- * href="{@docRoot}tools/extras/support-library.html">support library</a> for compatibility
- * with API level 4 and higher. If you're developing your app for API level 14 and higher
- * <em>only</em>, you should instead use the framework {@link android.view.ActionProvider}
- * class.</p>
- *
  * <p>An ActionProvider can be
  * optionally specified for a {@link android.view.MenuItem} and in such a case it will be
  * responsible for
@@ -64,7 +58,7 @@ import androidx.annotation.RestrictTo;
  * </code></pre>
  * </li></ul></p>
  *
- * <h3>Creating a custom action provider</h3>
+ * ### Creating a custom action provider
  *
  * <p>To create a custom action provider, extend ActionProvider and implement
  * its callback methods as necessary. In particular, implement the following

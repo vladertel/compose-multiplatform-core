@@ -22,7 +22,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
-import android.os.AsyncTask;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
@@ -31,6 +30,7 @@ import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.MediumTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -50,6 +50,7 @@ import java.util.concurrent.TimeoutException;
 
 @SmallTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = 21)
 public class DeferrableSurfacesTest {
 
     private ScheduledExecutorService mScheduledExecutorService;
@@ -77,16 +78,18 @@ public class DeferrableSurfacesTest {
 
     @Test
     @MediumTest
+    @SuppressWarnings({"deprecation", "unchecked"}) /* AsyncTask */
     public void getSurfaceTimeoutTest() {
         DeferrableSurface fakeDeferrableSurface = getFakeDeferrableSurface();
 
         List<DeferrableSurface> surfaces = Arrays.asList(fakeDeferrableSurface);
         ListenableFuture<List<Surface>> listenableFuture =
                 DeferrableSurfaces.surfaceListWithTimeout(surfaces, false, 50,
-                        AsyncTask.THREAD_POOL_EXECUTOR, mScheduledExecutorService);
+                        android.os.AsyncTask.THREAD_POOL_EXECUTOR, mScheduledExecutorService);
 
         FutureCallback<List<Surface>> mockFutureCallback = mock(FutureCallback.class);
-        Futures.addCallback(listenableFuture, mockFutureCallback, AsyncTask.THREAD_POOL_EXECUTOR);
+        Futures.addCallback(listenableFuture, mockFutureCallback,
+                android.os.AsyncTask.THREAD_POOL_EXECUTOR);
 
         ArgumentCaptor<Throwable> throwableCaptor = ArgumentCaptor.forClass(Throwable.class);
         verify(mockFutureCallback, timeout(3000).times(1)).onFailure(throwableCaptor.capture());

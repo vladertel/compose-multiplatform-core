@@ -16,7 +16,11 @@
 
 package androidx.camera.core.impl;
 
+import static android.os.Looper.getMainLooper;
+
 import static com.google.common.truth.Truth.assertThat;
+
+import static org.robolectric.Shadows.shadowOf;
 
 import android.os.Build;
 
@@ -25,7 +29,6 @@ import androidx.camera.core.InitializationException;
 import androidx.camera.testing.fakes.FakeCamera;
 import androidx.camera.testing.fakes.FakeCameraFactory;
 import androidx.camera.testing.fakes.FakeCameraInfoInternal;
-import androidx.test.filters.SmallTest;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -35,14 +38,12 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.internal.DoNotInstrument;
-import org.robolectric.shadows.ShadowLooper;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-@SmallTest
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
@@ -111,18 +112,22 @@ public final class CameraRepositoryTest {
     public void camerasAreReleasedByDeinit() throws ExecutionException, InterruptedException {
         List<CameraInternal> cameraInternals = new ArrayList<>();
         for (String cameraId : mCameraRepository.getCameraIds()) {
-            cameraInternals.add(mCameraRepository.getCamera(cameraId));
+            cameraInternals.add(
+                    mCameraRepository.getCamera(cameraId));
         }
 
         ListenableFuture<Void> deinitFuture = mCameraRepository.deinit();
 
         // Needed since FakeCamera uses LiveDataObservable
-        ShadowLooper.runUiThreadTasks();
+        shadowOf(getMainLooper()).idle();
 
         assertThat(deinitFuture.isDone()).isTrue();
         for (CameraInternal cameraInternal : cameraInternals) {
-            assertThat(cameraInternal.getCameraState().fetchData().get()).isEqualTo(
-                    CameraInternal.State.RELEASED);
+            ListenableFuture<CameraInternal.State> stateFuture =
+                    cameraInternal.getCameraState().fetchData();
+            // Needed since FakeCamera uses LiveDataObservable
+            shadowOf(getMainLooper()).idle();
+            assertThat(stateFuture.get()).isEqualTo(CameraInternal.State.RELEASED);
         }
     }
 }

@@ -48,7 +48,7 @@ class NavInflaterTest {
         val graph = navInflater.inflate(R.navigation.nav_simple)
 
         assertThat(graph).isNotNull()
-        assertThat(graph.startDestination)
+        assertThat(graph.startDestinationId)
             .isEqualTo(R.id.start_test)
     }
 
@@ -84,8 +84,10 @@ class NavInflaterTest {
         val graph = navInflater.inflate(R.navigation.nav_simple)
 
         assertThat(graph).isNotNull()
-        val expectedUri = Uri.parse("android-app://" +
-                instrumentation.targetContext.packageName + "/test")
+        val expectedUri = Uri.parse(
+            "android-app://" +
+                instrumentation.targetContext.packageName + "/test/arg2"
+        )
         val expectedDeepLinkRequest = NavDeepLinkRequest.Builder.fromUri(expectedUri).build()
         val result = graph.matchDeepLink(expectedDeepLinkRequest)
         assertThat(result)
@@ -119,8 +121,12 @@ class NavInflaterTest {
 
         assertThat(graph).isNotNull()
         val expectedDeepLinkRequest = NavDeepLinkRequest.Builder
-            .fromUri(Uri.parse("android-app://" +
-                    instrumentation.targetContext.packageName + "/test/param1/param2")).build()
+            .fromUri(
+                Uri.parse(
+                    "android-app://" +
+                        instrumentation.targetContext.packageName + "/test/param1/param2"
+                )
+            ).build()
         val result = graph.matchDeepLink(expectedDeepLinkRequest)
         assertThat(result)
             .isNotNull()
@@ -179,9 +185,11 @@ class NavInflaterTest {
             .isEqualTo(NavType.BoolType to false)
         assertThat(defaultArguments["test_boolean_with_argType"]?.run { type to defaultValue })
             .isEqualTo(NavType.BoolType to true)
-        assertThat(defaultArguments["test_boolean_with_argType_false"]?.run {
-            type to defaultValue
-        }).isEqualTo(NavType.BoolType to false)
+        assertThat(
+            defaultArguments["test_boolean_with_argType_false"]?.run {
+                type to defaultValue
+            }
+        ).isEqualTo(NavType.BoolType to false)
     }
 
     @Test
@@ -217,9 +225,19 @@ class NavInflaterTest {
         assertThat(defaultArguments["test_string_integer"]?.run { type to defaultValue })
             .isEqualTo(NavType.StringType to "123")
 
-        assertThat(defaultArguments["test_string_no_default"]?.run {
-            type to isDefaultValuePresent
-        }).isEqualTo(NavType.StringType to false)
+        assertThat(
+            defaultArguments["test_string_no_default"]?.run {
+                type to isDefaultValuePresent
+            }
+        ).isEqualTo(NavType.StringType to false)
+    }
+
+    @Test
+    fun testDefaultArgumentsStringArray() {
+        val defaultArguments = inflateDefaultArgumentsFromGraph()
+
+        assertThat(defaultArguments["test_string_array"]?.run { type to defaultValue })
+            .isEqualTo(NavType.StringArrayType to null)
     }
 
     @Test
@@ -254,7 +272,7 @@ class NavInflaterTest {
         val context = ApplicationProvider.getApplicationContext() as Context
         val navInflater = NavInflater(context, TestNavigatorProvider())
         val graph = navInflater.inflate(R.navigation.nav_default_arguments)
-        val startDestination = graph.findNode(graph.startDestination)
+        val startDestination = graph.findNode(graph.startDestinationId)
         val action = startDestination?.getAction(R.id.my_action)
         assertThat(action?.defaultArguments?.get("test_action_arg"))
             .isEqualTo(123L)
@@ -265,10 +283,10 @@ class NavInflaterTest {
         val navInflater = NavInflater(context, TestNavigatorProvider())
         val graph = navInflater.inflate(R.navigation.nav_default_arguments)
 
-        val startDestination = graph.findNode(graph.startDestination)
+        val startDestination = graph.findNode(graph.startDestinationId)
         val defaultArguments = startDestination?.arguments
 
         assertThat(defaultArguments).isNotNull()
-        return defaultArguments!!
+        return defaultArguments as Map<String, NavArgument>
     }
 }

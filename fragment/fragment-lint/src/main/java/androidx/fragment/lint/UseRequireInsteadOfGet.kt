@@ -38,6 +38,8 @@ import org.jetbrains.uast.UQualifiedReferenceExpression
 import org.jetbrains.uast.USimpleNameReferenceExpression
 import org.jetbrains.uast.getContainingUClass
 import org.jetbrains.uast.kotlin.KotlinUFunctionCallExpression
+import org.jetbrains.uast.skipParenthesizedExprDown
+import org.jetbrains.uast.skipParenthesizedExprUp
 import org.jetbrains.uast.toUElement
 import org.jetbrains.uast.tryResolve
 import java.util.Locale
@@ -56,7 +58,7 @@ class UseRequireInsteadOfGet : Detector(), SourceCodeScanner {
         val ISSUE: Issue = Issue.create(
             "UseRequireInsteadOfGet",
             "Use the 'require_____()' API rather than 'get____()' API for more " +
-                    "descriptive error messages when it's null.",
+                "descriptive error messages when it's null.",
             """
             AndroidX added new "require____()" versions of common "get___()" APIs, such as \
             getContext/getActivity/getArguments/etc. Rather than wrap these in something like \
@@ -103,7 +105,7 @@ class UseRequireInsteadOfGet : Detector(), SourceCodeScanner {
 
             /** This covers Kotlin accessor syntax expressions like "fragment.arguments" */
             override fun visitSimpleNameReferenceExpression(node: USimpleNameReferenceExpression) {
-                val parent = node.uastParent
+                val parent = skipParenthesizedExprUp(node.uastParent)
                 if (parent is UQualifiedReferenceExpression) {
                     checkReferenceExpression(parent, node.identifier) {
                         parent.receiver.getExpressionType()
@@ -143,12 +145,13 @@ class UseRequireInsteadOfGet : Detector(), SourceCodeScanner {
                 val targetMethod = node.resolve() ?: return
                 val containingClass = targetMethod.containingClass ?: return
                 if (targetMethod.name in REQUIRABLE_METHODS &&
-                    context.evaluator.extendsClass(containingClass, FRAGMENT_FQCN, false)) {
+                    context.evaluator.extendsClass(containingClass, FRAGMENT_FQCN, false)
+                ) {
                     checkForIssue(node, targetMethod.name, "${targetMethod.name}()")
                 }
             }
 
-            /** Called only when we know we're looking at a whitelisted method call type. */
+            /** Called only when we know we're looking at an exempted method call type. */
             private fun checkForIssue(
                 node: UExpression,
                 targetMethodName: String,
@@ -156,7 +159,7 @@ class UseRequireInsteadOfGet : Detector(), SourceCodeScanner {
             ) {
                 // Note we go up potentially two parents - the first one may just be the qualified reference expression
                 val nearestNonQualifiedReferenceParent =
-                    node.nearestNonQualifiedReferenceParent ?: return
+                    skipParenthesizedExprUp(node.nearestNonQualifiedReferenceParent) ?: return
                 if (isKotlin && nearestNonQualifiedReferenceParent.isNullCheckBlock()) {
                     // We're a double-bang expression (!!)
                     val parentSourceToReplace =
@@ -166,17 +169,20 @@ class UseRequireInsteadOfGet : Detector(), SourceCodeScanner {
                         "$targetExpression!!",
                         targetMethodName
                     )
-                    if (correctMethod == parentSourceToReplace) {
-                        correctMethod = parentSourceToReplace.replace(
-                            "$targetExpression?",
-                            "$targetExpression!!"
+                    if (correctMethod == parentSourceToReplace.removeSingleParentheses()) {
+                        correctMethod = parentSourceToReplace.removeSingleParentheses().replace(
+                            "$targetExpression?", "$targetExpression!!"
                         ).replaceFirstOccurrenceAfter("!!", "", "$targetExpression!!")
                     }
                     report(nearestNonQualifiedReferenceParent, parentSourceToReplace, correctMethod)
                 } else if (nearestNonQualifiedReferenceParent is UCallExpression) {
                     // See if we're in a "requireNotNull(...)" or similar expression
                     val enclosingMethodCall =
-                        nearestNonQualifiedReferenceParent.resolve() ?: return
+                        (
+                            skipParenthesizedExprUp(
+                                nearestNonQualifiedReferenceParent
+                            ) as UCallExpression
+                            ).resolve() ?: return
 
                     if (enclosingMethodCall.name in KNOWN_NULLCHECKS) {
                         // Only match for single (specified) parameter. If existing code had a
@@ -190,7 +196,7 @@ class UseRequireInsteadOfGet : Detector(), SourceCodeScanner {
                         if (singleParameterSpecified) {
                             // Grab the source of this argument as it's represented.
                             val source = nearestNonQualifiedReferenceParent.valueArguments[0]
-                                    .asSourceString()
+                                .skipParenthesizedExprDown()!!.asSourceString()
                             val parentToReplace =
                                 nearestNonQualifiedReferenceParent.fullyQualifiedNearestParent()
                                     .asSourceString()
@@ -210,16 +216,18 @@ class UseRequireInsteadOfGet : Detector(), SourceCodeScanner {
                 enclosingMethodCall: PsiMethod,
                 nearestNonQualifiedRefParent: UCallExpression
             ) = enclosingMethodCall.parameterList.parametersCount == 1 ||
-                    (isKotlin &&
-                            nearestNonQualifiedRefParent is KotlinUFunctionCallExpression &&
-                            nearestNonQualifiedRefParent.getArgumentForParameter(1) == null)
+                (
+                    isKotlin &&
+                        nearestNonQualifiedRefParent is KotlinUFunctionCallExpression &&
+                        nearestNonQualifiedRefParent.getArgumentForParameter(1) == null
+                    )
 
             private fun correctMethod(
                 source: String,
                 targetExpression: String,
                 targetMethodName: String
             ): String {
-                return source.replace(
+                return source.removeSingleParentheses().replace(
                     targetExpression,
                     "require${targetMethodName.removePrefix("get").capitalize(Locale.US)}()"
                 )
@@ -256,7 +264,7 @@ class UseRequireInsteadOfGet : Detector(), SourceCodeScanner {
  */
 internal fun String.decapitalize(locale: Locale): String {
     return if (isNotEmpty() && !this[0].isLowerCase()) {
-        substring(0, 1).toLowerCase(locale) + substring(1)
+        substring(0, 1).lowercase(locale) + substring(1)
     } else {
         this
     }
@@ -271,11 +279,11 @@ internal fun String.capitalize(locale: Locale): String {
         val firstChar = this[0]
         if (firstChar.isLowerCase()) {
             return buildString {
-                val titleChar = firstChar.toTitleCase()
-                if (titleChar != firstChar.toUpperCase()) {
+                val titleChar = firstChar.titlecaseChar()
+                if (titleChar != firstChar.uppercaseChar()) {
                     append(titleChar)
                 } else {
-                    append(this@capitalize.substring(0, 1).toUpperCase(locale))
+                    append(this@capitalize.substring(0, 1).uppercase(locale))
                 }
                 append(this@capitalize.substring(1))
             }
@@ -286,4 +294,9 @@ internal fun String.capitalize(locale: Locale): String {
 
 internal fun UElement.isNullCheckBlock(): Boolean {
     return this is UPostfixExpression && operator.text == "!!"
+}
+
+internal fun String.removeSingleParentheses(): String {
+    return this.replace("[(](?=[^)])".toRegex(), "")
+        .replace("(?<![(])[)]".toRegex(), "")
 }

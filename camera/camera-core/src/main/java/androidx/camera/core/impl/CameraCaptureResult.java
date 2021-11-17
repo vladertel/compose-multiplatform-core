@@ -17,17 +17,19 @@
 package androidx.camera.core.impl;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.CameraCaptureMetaData.AeState;
 import androidx.camera.core.impl.CameraCaptureMetaData.AfMode;
 import androidx.camera.core.impl.CameraCaptureMetaData.AfState;
 import androidx.camera.core.impl.CameraCaptureMetaData.AwbState;
 import androidx.camera.core.impl.CameraCaptureMetaData.FlashState;
+import androidx.camera.core.impl.utils.ExifData;
 
 /**
  * The result of a single image capture.
  *
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraCaptureResult {
 
     /** Returns the current auto focus mode of operation. */
@@ -57,9 +59,14 @@ public interface CameraCaptureResult {
      */
     long getTimestamp();
 
-    /** Returns the tag associated with the capture request. */
-    @Nullable
-    Object getTag();
+    /** Returns the TagBundle object associated with the capture request. */
+    @NonNull
+    TagBundle getTagBundle();
+
+    /** Populates the given Exif.Builder with attributes from this CameraCaptureResult. */
+    default void populateExifData(@NonNull ExifData.Builder exifBuilder) {
+        exifBuilder.setFlashState(getFlashState());
+    }
 
     /** An implementation of CameraCaptureResult which always return default results. */
     final class EmptyCameraCaptureResult implements CameraCaptureResult {
@@ -105,9 +112,9 @@ public interface CameraCaptureResult {
         }
 
         @Override
-        @Nullable
-        public Object getTag() {
-            return null;
+        @NonNull
+        public TagBundle getTagBundle() {
+            return TagBundle.emptyBundle();
         }
     }
 }

@@ -19,7 +19,12 @@ package androidx.core.content;
 import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
 import static org.xmlpull.v1.XmlPullParser.START_TAG;
 
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.Service;
+import android.content.ClipData;
 import android.content.ContentProvider;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -36,9 +41,11 @@ import android.provider.OpenableColumns;
 import android.text.TextUtils;
 import android.webkit.MimeTypeMap;
 
+import androidx.annotation.DoNotInline;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -58,9 +65,9 @@ import java.util.Map;
  * a content URI, in order to send the content URI
  * to a client app, you can also call {@link Intent#setFlags(int) Intent.setFlags()} to add
  * permissions. These permissions are available to the client app for as long as the stack for
- * a receiving {@link android.app.Activity} is active. For an {@link Intent} going to a
- * {@link android.app.Service}, the permissions are available as long as the
- * {@link android.app.Service} is running.
+ * a receiving {@link Activity} is active. For an {@link Intent} going to a
+ * {@link Service}, the permissions are available as long as the
+ * {@link Service} is running.
  * <p>
  * In comparison, to control access to a <code>file:///</code> {@link Uri} you have to modify the
  * file system permissions of the underlying file. The permissions you provide become available to
@@ -75,11 +82,11 @@ import java.util.Map;
  * <ol>
  *     <li><a href="#ProviderDefinition">Defining a FileProvider</a></li>
  *     <li><a href="#SpecifyFiles">Specifying Available Files</a></li>
- *     <li><a href="#GetUri">Retrieving the Content URI for a File</li>
+ *     <li><a href="#GetUri">Retrieving the Content URI for a File</a></li>
  *     <li><a href="#Permissions">Granting Temporary Permissions to a URI</a></li>
  *     <li><a href="#ServeUri">Serving a Content URI to Another App</a></li>
  * </ol>
- * <h3 id="ProviderDefinition">Defining a FileProvider</h3>
+ * ### Defining a FileProvider
  * <p>
  * Since the default functionality of FileProvider includes content URI generation for files, you
  * don't need to define a subclass in code. Instead, you can include a FileProvider in your app
@@ -113,7 +120,7 @@ import java.util.Map;
  * If you want to override any of the default behavior of FileProvider methods, extend
  * the FileProvider class and use the fully-qualified class name in the <code>android:name</code>
  * attribute of the <code>&lt;provider&gt;</code> element.
- * <h3 id="SpecifyFiles">Specifying Available Files</h3>
+ * ### Specifying Available Files
  * A FileProvider can only generate a content URI for files in directories that you specify
  * beforehand. To specify a directory, specify its storage area and path in XML, using child
  * elements of the <code>&lt;paths&gt;</code> element.
@@ -244,15 +251,15 @@ import java.util.Map;
  *        android:resource="&#64;xml/file_paths" /&gt;
  *&lt;/provider&gt;
  *</pre>
- * <h3 id="GetUri">Generating the Content URI for a File</h3>
+ * ### Generating the Content URI for a File
  * <p>
  * To share a file with another app using a content URI, your app has to generate the content URI.
  * To generate the content URI, create a new {@link File} for the file, then pass the {@link File}
  * to {@link #getUriForFile(Context, String, File) getUriForFile()}. You can send the content URI
  * returned by {@link #getUriForFile(Context, String, File) getUriForFile()} to another app in an
- * {@link android.content.Intent}. The client app that receives the content URI can open the file
+ * {@link Intent}. The client app that receives the content URI can open the file
  * and access its contents by calling
- * {@link android.content.ContentResolver#openFileDescriptor(Uri, String)
+ * {@link ContentResolver#openFileDescriptor(Uri, String)
  * ContentResolver.openFileDescriptor} to get a {@link ParcelFileDescriptor}.
  * <p>
  * For example, suppose your app is offering files to other apps with a FileProvider that has the
@@ -260,18 +267,20 @@ import java.util.Map;
  * <code>default_image.jpg</code> in the <code>images/</code> subdirectory of your internal storage
  * add the following code:
  * <pre class="prettyprint">
- *File imagePath = new File(Context.getFilesDir(), "images");
+ *File imagePath = new File(Context.getFilesDir(), "my_images");
  *File newFile = new File(imagePath, "default_image.jpg");
  *Uri contentUri = getUriForFile(getContext(), "com.mydomain.fileprovider", newFile);
  *</pre>
  * As a result of the previous snippet,
  * {@link #getUriForFile(Context, String, File) getUriForFile()} returns the content URI
  * <code>content://com.mydomain.fileprovider/my_images/default_image.jpg</code>.
- * <h3 id="Permissions">Granting Temporary Permissions to a URI</h3>
+ * ### Granting Temporary Permissions to a URI
  * To grant an access permission to a content URI returned from
- * {@link #getUriForFile(Context, String, File) getUriForFile()}, do one of the following:
- * <ul>
- * <li>
+ * {@link #getUriForFile(Context, String, File) getUriForFile()}, you can either grant the
+ * permission to a specific package or include the permission in an intent, as shown in the
+ * following sections.
+ * <h4>Grant Permission to a Specific Package</h4>
+ * <p>
  *     Call the method
  *     {@link Context#grantUriPermission(String, Uri, int)
  *     Context.grantUriPermission(package, Uri, mode_flags)} for the <code>content://</code>
@@ -282,43 +291,61 @@ import java.util.Map;
  *     or both. The permission remains in effect until you revoke it by calling
  *     {@link Context#revokeUriPermission(Uri, int) revokeUriPermission()} or until the device
  *     reboots.
- * </li>
+ * </p>
+ * <h4>Include the Permission in an Intent</h4>
+ * <p>
+ *     To allow the user to choose which app receives the intent, and the permission to access the
+ *     content, do the following:
+ * </p>
+ * <ol>
  * <li>
  *     Put the content URI in an {@link Intent} by calling {@link Intent#setData(Uri) setData()}.
  * </li>
  * <li>
- *     Next, call the method {@link Intent#setFlags(int) Intent.setFlags()} with either
+ * <p>
+ *     Call the method {@link Intent#setFlags(int) Intent.setFlags()} with either
  *     {@link Intent#FLAG_GRANT_READ_URI_PERMISSION} or
  *     {@link Intent#FLAG_GRANT_WRITE_URI_PERMISSION} or both.
+ * </p>
+ * <p>
+ *     To support devices that run a version between Android 4.1 (API level 16) and Android 5.1
+ *     (API level 22) inclusive, create a {@link ClipData} object from the content
+ *     URI, and set the access permissions on the <code>ClipData</code> object:
+ * </p>
+ * <pre class="prettyprint">
+ *shareContentIntent.setClipData(ClipData.newRawUri("", contentUri));
+ *shareContentIntent.addFlags(
+ *         Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+ *</pre>
  * </li>
  * <li>
- *     Finally, send the {@link Intent} to
+ *     Send the {@link Intent} to
  *     another app. Most often, you do this by calling
- *     {@link android.app.Activity#setResult(int, android.content.Intent) setResult()}.
- *     <p>
- *     Permissions granted in an {@link Intent} remain in effect while the stack of the receiving
- *     {@link android.app.Activity} is active. When the stack finishes, the permissions are
- *     automatically removed. Permissions granted to one {@link android.app.Activity} in a client
- *     app are automatically extended to other components of that app.
- *     </p>
+ *     {@link Activity#setResult(int, Intent) setResult()}.
  * </li>
- * </ul>
- * <h3 id="ServeUri">Serving a Content URI to Another App</h3>
+ * </ol>
+ * <p>
+ * Permissions granted in an {@link Intent} remain in effect while the stack of the receiving
+ * {@link Activity} is active. When the stack finishes, the permissions are
+ * automatically removed. Permissions granted to one {@link Activity} in a client
+ * app are automatically extended to other components of that app.
+ * </p>
+ * ### Serving a Content URI to Another App
  * <p>
  * There are a variety of ways to serve the content URI for a file to a client app. One common way
  * is for the client app to start your app by calling
- * {@link android.app.Activity#startActivityForResult(Intent, int, Bundle) startActivityResult()},
- * which sends an {@link Intent} to your app to start an {@link android.app.Activity} in your app.
+ * {@link Activity#startActivityForResult(Intent, int, Bundle) startActivityResult()},
+ * which sends an {@link Intent} to your app to start an {@link Activity} in your app.
  * In response, your app can immediately return a content URI to the client app or present a user
  * interface that allows the user to pick a file. In the latter case, once the user picks the file
  * your app can return its content URI. In both cases, your app returns the content URI in an
- * {@link Intent} sent via {@link android.app.Activity#setResult(int, Intent) setResult()}.
+ * {@link Intent} sent via {@link Activity#setResult(int, Intent) setResult()}.
  * </p>
  * <p>
- *  You can also put the content URI in a {@link android.content.ClipData} object and then add the
+ *  You can also put the content URI in a {@link ClipData} object and then add the
  *  object to an {@link Intent} you send to a client app. To do this, call
  *  {@link Intent#setClipData(ClipData) Intent.setClipData()}. When you use this approach, you can
- *  add multiple {@link android.content.ClipData} objects to the {@link Intent}, each with its own
+ *  add multiple {@link ClipData} objects to the {@link Intent}, each with its own
  *  content URI. When you call {@link Intent#setFlags(int) Intent.setFlags()} on the {@link Intent}
  *  to set temporary access permissions, the same permissions are applied to all of the content
  *  URIs.
@@ -330,7 +357,7 @@ import java.util.Map;
  *  {@link Intent}. Set the action to {@link Intent#ACTION_SEND} and put the URI in data by calling
  *  {@link Intent#setData setData()}.
  * </p>
- * <h3 id="">More Information</h3>
+ * ### More Information
  * <p>
  *    To learn more about FileProvider, see the Android training class
  *    <a href="{@docRoot}training/secure-file-sharing/index.html">Sharing Files Securely with URIs</a>.
@@ -354,10 +381,12 @@ public class FileProvider extends ContentProvider {
     private static final String ATTR_NAME = "name";
     private static final String ATTR_PATH = "path";
 
+    private static final String DISPLAYNAME_FIELD = "displayName";
+
     private static final File DEVICE_ROOT = new File("/");
 
     @GuardedBy("sCache")
-    private static HashMap<String, PathStrategy> sCache = new HashMap<String, PathStrategy>();
+    private static final HashMap<String, PathStrategy> sCache = new HashMap<>();
 
     private PathStrategy mStrategy;
 
@@ -377,11 +406,12 @@ public class FileProvider extends ContentProvider {
      * @param context A {@link Context} for the current component.
      * @param info A {@link ProviderInfo} for the new provider.
      */
+    @SuppressWarnings("StringSplitter")
     @Override
     public void attachInfo(@NonNull Context context, @NonNull ProviderInfo info) {
         super.attachInfo(context, info);
 
-        // Sanity check our security
+        // Check our security attributes
         if (info.exported) {
             throw new SecurityException("Provider must not be exported");
         }
@@ -389,7 +419,7 @@ public class FileProvider extends ContentProvider {
             throw new SecurityException("Provider must grant uri permissions");
         }
 
-        mStrategy = getPathStrategy(context, info.authority);
+        mStrategy = getPathStrategy(context, info.authority.split(";")[0]);
     }
 
     /**
@@ -419,13 +449,43 @@ public class FileProvider extends ContentProvider {
     }
 
     /**
+     * Return a content URI for a given {@link File}. Specific temporary
+     * permissions for the content URI can be set with
+     * {@link Context#grantUriPermission(String, Uri, int)}, or added
+     * to an {@link Intent} by calling {@link Intent#setData(Uri) setData()} and then
+     * {@link Intent#setFlags(int) setFlags()}; in both cases, the applicable flags are
+     * {@link Intent#FLAG_GRANT_READ_URI_PERMISSION} and
+     * {@link Intent#FLAG_GRANT_WRITE_URI_PERMISSION}. A FileProvider can only return a
+     * <code>content</code> {@link Uri} for file paths defined in their <code>&lt;paths&gt;</code>
+     * meta-data element. See the Class Overview for more information.
+     *
+     * @param context A {@link Context} for the current component.
+     * @param authority The authority of a {@link FileProvider} defined in a
+     *            {@code <provider>} element in your app's manifest.
+     * @param file A {@link File} pointing to the filename for which you want a
+     * <code>content</code> {@link Uri}.
+     * @param displayName The filename to be displayed. This can be used if the original filename
+     * is undesirable.
+     * @return A content URI for the file.
+     * @throws IllegalArgumentException When the given {@link File} is outside
+     * the paths supported by the provider.
+     */
+    @SuppressLint("StreamFiles")
+    @NonNull
+    public static Uri getUriForFile(@NonNull Context context, @NonNull String authority,
+            @NonNull File file, @NonNull String displayName) {
+        Uri uri = getUriForFile(context, authority, file);
+        return uri.buildUpon().appendQueryParameter(DISPLAYNAME_FIELD, displayName).build();
+    }
+
+    /**
      * Use a content URI returned by
      * {@link #getUriForFile(Context, String, File) getUriForFile()} to get information about a file
      * managed by the FileProvider.
-     * FileProvider reports the column names defined in {@link android.provider.OpenableColumns}:
+     * FileProvider reports the column names defined in {@link OpenableColumns}:
      * <ul>
-     * <li>{@link android.provider.OpenableColumns#DISPLAY_NAME}</li>
-     * <li>{@link android.provider.OpenableColumns#SIZE}</li>
+     * <li>{@link OpenableColumns#DISPLAY_NAME}</li>
+     * <li>{@link OpenableColumns#SIZE}</li>
      * </ul>
      * For more information, see
      * {@link ContentProvider#query(Uri, String[], String, String[], String)
@@ -436,22 +496,24 @@ public class FileProvider extends ContentProvider {
      * included.
      * @param selection Selection criteria to apply. If null then all data that matches the content
      * URI is returned.
-     * @param selectionArgs An array of {@link java.lang.String}, containing arguments to bind to
+     * @param selectionArgs An array of {@link String}, containing arguments to bind to
      * the <i>selection</i> parameter. The <i>query</i> method scans <i>selection</i> from left to
      * right and iterates through <i>selectionArgs</i>, replacing the current "?" character in
      * <i>selection</i> with the value at the current position in <i>selectionArgs</i>. The
-     * values are bound to <i>selection</i> as {@link java.lang.String} values.
-     * @param sortOrder A {@link java.lang.String} containing the column name(s) on which to sort
+     * values are bound to <i>selection</i> as {@link String} values.
+     * @param sortOrder A {@link String} containing the column name(s) on which to sort
      * the resulting {@link Cursor}.
      * @return A {@link Cursor} containing the results of the query.
      *
      */
+    @NonNull
     @Override
     public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection,
             @Nullable String[] selectionArgs,
             @Nullable String sortOrder) {
         // ContentProvider has already checked granted permissions
         final File file = mStrategy.getFileForUri(uri);
+        String displayName = uri.getQueryParameter(DISPLAYNAME_FIELD);
 
         if (projection == null) {
             projection = COLUMNS;
@@ -463,7 +525,7 @@ public class FileProvider extends ContentProvider {
         for (String col : projection) {
             if (OpenableColumns.DISPLAY_NAME.equals(col)) {
                 cols[i] = OpenableColumns.DISPLAY_NAME;
-                values[i++] = file.getName();
+                values[i++] = (displayName == null) ? file.getName() : displayName;
             } else if (OpenableColumns.SIZE.equals(col)) {
                 cols[i] = OpenableColumns.SIZE;
                 values[i++] = file.length();
@@ -487,6 +549,7 @@ public class FileProvider extends ContentProvider {
      * @return If the associated file has an extension, the MIME type associated with that
      * extension; otherwise <code>application/octet-stream</code>.
      */
+    @Nullable
     @Override
     public String getType(@NonNull Uri uri) {
         // ContentProvider has already checked granted permissions
@@ -505,20 +568,20 @@ public class FileProvider extends ContentProvider {
     }
 
     /**
-     * By default, this method throws an {@link java.lang.UnsupportedOperationException}. You must
+     * By default, this method throws an {@link UnsupportedOperationException}. You must
      * subclass FileProvider if you want to provide different functionality.
      */
     @Override
-    public Uri insert(@NonNull Uri uri, ContentValues values) {
+    public Uri insert(@NonNull Uri uri, @NonNull ContentValues values) {
         throw new UnsupportedOperationException("No external inserts");
     }
 
     /**
-     * By default, this method throws an {@link java.lang.UnsupportedOperationException}. You must
+     * By default, this method throws an {@link UnsupportedOperationException}. You must
      * subclass FileProvider if you want to provide different functionality.
      */
     @Override
-    public int update(@NonNull Uri uri, ContentValues values, @Nullable String selection,
+    public int update(@NonNull Uri uri, @NonNull ContentValues values, @Nullable String selection,
             @Nullable String[] selectionArgs) {
         throw new UnsupportedOperationException("No external updates");
     }
@@ -526,7 +589,7 @@ public class FileProvider extends ContentProvider {
     /**
      * Deletes the file associated with the specified content URI, as
      * returned by {@link #getUriForFile(Context, String, File) getUriForFile()}. Notice that this
-     * method does <b>not</b> throw an {@link java.io.IOException}; you must check its return value.
+     * method does <b>not</b> throw an {@link IOException}; you must check its return value.
      *
      * @param uri A content URI for a file, as returned by
      * {@link #getUriForFile(Context, String, File) getUriForFile()}.
@@ -546,7 +609,7 @@ public class FileProvider extends ContentProvider {
      * By default, FileProvider automatically returns the
      * {@link ParcelFileDescriptor} for a file associated with a <code>content://</code>
      * {@link Uri}. To get the {@link ParcelFileDescriptor}, call
-     * {@link android.content.ContentResolver#openFileDescriptor(Uri, String)
+     * {@link ContentResolver#openFileDescriptor(Uri, String)
      * ContentResolver.openFileDescriptor}.
      *
      * To override this method, you must provide your own subclass of FileProvider.
@@ -557,6 +620,7 @@ public class FileProvider extends ContentProvider {
      * write access, or "rwt" for read and write access that truncates any existing file.
      * @return A new {@link ParcelFileDescriptor} with which you can access the file.
      */
+    @SuppressLint("UnknownNullness") // b/171012356
     @Override
     public ParcelFileDescriptor openFile(@NonNull Uri uri, @NonNull String mode)
             throws FileNotFoundException {
@@ -643,7 +707,7 @@ public class FileProvider extends ContentProvider {
                     }
                 } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
                         && TAG_EXTERNAL_MEDIA.equals(tag)) {
-                    File[] externalMediaDirs = context.getExternalMediaDirs();
+                    File[] externalMediaDirs = Api21Impl.getExternalMediaDirs(context);
                     if (externalMediaDirs.length > 0) {
                         target = externalMediaDirs[0];
                     }
@@ -684,8 +748,8 @@ public class FileProvider extends ContentProvider {
     }
 
     /**
-     * Strategy that provides access to files living under a narrow whitelist of
-     * filesystem roots. It will throw {@link SecurityException} if callers try
+     * Strategy that provides access to files living under a narrow allowed list
+     * of filesystem roots. It will throw {@link SecurityException} if callers try
      * accessing files outside the configured roots.
      * <p>
      * For example, if configured with
@@ -695,7 +759,7 @@ public class FileProvider extends ContentProvider {
      */
     static class SimplePathStrategy implements PathStrategy {
         private final String mAuthority;
-        private final HashMap<String, File> mRoots = new HashMap<String, File>();
+        private final HashMap<String, File> mRoots = new HashMap<>();
 
         SimplePathStrategy(String authority) {
             mAuthority = authority;
@@ -835,5 +899,18 @@ public class FileProvider extends ContentProvider {
         final Object[] result = new Object[newLength];
         System.arraycopy(original, 0, result, 0, newLength);
         return result;
+    }
+
+    @RequiresApi(21)
+    static class Api21Impl {
+        private Api21Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static File[] getExternalMediaDirs(Context context) {
+            // Deprecated, otherwise this would belong on ContextCompat as a public method.
+            return context.getExternalMediaDirs();
+        }
     }
 }

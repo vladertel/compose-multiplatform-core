@@ -57,4 +57,29 @@ public class ObjectsCompatTest {
         assertEquals(ObjectsCompat.hashCode(a), a.hashCode());
         assertEquals(ObjectsCompat.hashCode(n), 0);
     }
+
+    @Test
+    public void testToString() {
+        String a = "aaa";
+        String b = "bbb";
+
+        assertEquals(ObjectsCompat.toString(a, b), a);
+        assertEquals(ObjectsCompat.toString(null, b), b);
+    }
+
+    @Test
+    public void testRequireNotNull() {
+        ObjectsCompat.requireNonNull(new Object(), "Message");
+        ObjectsCompat.requireNonNull(new Object());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testRequireNonNullException() {
+        ObjectsCompat.requireNonNull(null);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testRequireNotNullExceptionWithMessage() {
+        ObjectsCompat.requireNonNull(null, "Message");
+    }
 }

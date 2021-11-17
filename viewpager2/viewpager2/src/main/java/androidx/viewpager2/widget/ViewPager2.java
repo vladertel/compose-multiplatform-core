@@ -64,6 +64,15 @@ import java.lang.annotation.Retention;
  * predecessor’s pain-points, including right-to-left layout support, vertical orientation,
  * modifiable Fragment collections, etc.
  *
+ * <p>A note on WindowInsets: due to a bug in API 29 and before, WindowInsets were incorrectly
+ * dispatched to a View's children and siblings. ViewPager2 offers a fix to make sure that all
+ * pages receive the correct insets, but it comes at the cost of not dispatching insets to any
+ * siblings of ViewPager2 or siblings of its ancestors that haven't received the insets yet. If
+ * you want to handle insets on each page separately (instead of on ViewPager2 or one of its
+ * parents), you should install a {@link WindowInsetsApplier} by calling
+ * {@code WindowInsetsApplier.install(viewPager2)}. If you don't handle insets on any of the
+ * pages, we recommend you don't use the {@link WindowInsetsApplier}.
+ *
  * @see androidx.viewpager.widget.ViewPager
  */
 public final class ViewPager2 extends ViewGroup {

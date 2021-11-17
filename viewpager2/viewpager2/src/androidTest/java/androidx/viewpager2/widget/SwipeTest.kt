@@ -16,6 +16,7 @@
 
 package androidx.viewpager2.widget
 
+import androidx.test.filters.FlakyTest
 import androidx.test.filters.LargeTest
 import androidx.viewpager2.widget.SwipeTest.TestConfig
 import androidx.viewpager2.widget.ViewPager2.ORIENTATION_HORIZONTAL
@@ -34,6 +35,7 @@ private const val RANDOM_TESTS_PER_CONFIG = 0 // increase to have random tests g
 
 @RunWith(Parameterized::class)
 @LargeTest
+@FlakyTest(bugId = 187830562)
 class SwipeTest(private val testConfig: TestConfig) : BaseTest() {
     @Test
     fun test() {
@@ -52,8 +54,10 @@ class SwipeTest(private val testConfig: TestConfig) : BaseTest() {
                     if (modifiedPageValue != null) {
                         expectedValues[currentPage] = modifiedPageValue
                         runOnUiThreadSync {
-                            PageView.setPageText(PageView.findPageInActivity(activity)!!,
-                                    modifiedPageValue)
+                            PageView.setPageText(
+                                PageView.findPageInActivity(activity)!!,
+                                modifiedPageValue
+                            )
                         }
                     }
 
@@ -111,59 +115,64 @@ private fun createTestSet(
     orientation: Int
 ): List<TestConfig> {
     return listOf(
-            TestConfig(
-                    title = "basic pass",
-                    adapterProvider = adapterProvider,
-                    orientation = orientation,
-                    totalPages = 4,
-                    pageSequence = listOf(0, 1, 2, 3, 3, 2, 1, 0, 0)
-            ),
-            TestConfig(
-                    title = "full pass",
-                    adapterProvider = adapterProvider,
-                    orientation = orientation,
-                    totalPages = 8,
-                    pageSequence = listOf(1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0)
-            ),
-            TestConfig(
-                    title = "swipe beyond edge pages",
-                    adapterProvider = adapterProvider,
-                    orientation = orientation,
-                    totalPages = 4,
-                    pageSequence = listOf(0, 0, 1, 2, 3, 3, 3, 2, 1, 0, 0, 0)
-            ),
-            TestConfig(
-                    title = "config change",
-                    adapterProvider = adapterProvider,
-                    orientation = orientation,
-                    totalPages = 7,
-                    pageSequence = listOf(1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0),
-                    configChangeSteps = setOf(3, 5, 7)
-            ),
-            TestConfig(
-                    title = "regression1",
-                    adapterProvider = adapterProvider,
-                    orientation = orientation,
-                    totalPages = 10,
-                    pageSequence = listOf(1, 2, 3, 2, 1, 2, 3, 4)
-            ),
-            TestConfig(
-                    title = "regression2",
-                    adapterProvider = adapterProvider,
-                    orientation = orientation,
-                    totalPages = 10,
-                    pageSequence = listOf(1, 2, 3, 4, 3, 2, 1, 2, 3, 4, 5)
-            ),
-            TestConfig(
-                    title = "regression3",
-                    adapterProvider = adapterProvider,
-                    orientation = orientation,
-                    totalPages = 10,
-                    pageSequence = listOf(1, 2, 3, 2, 1, 2, 3, 2, 1, 0)
-            ))
-            .plus(if (adapterProvider.supportsMutations) createMutationTests(adapterProvider,
-                    orientation) else emptyList())
-            .plus(createRandomTests(adapterProvider, orientation))
+        TestConfig(
+            title = "basic pass",
+            adapterProvider = adapterProvider,
+            orientation = orientation,
+            totalPages = 4,
+            pageSequence = listOf(0, 1, 2, 3, 3, 2, 1, 0, 0)
+        ),
+        TestConfig(
+            title = "full pass",
+            adapterProvider = adapterProvider,
+            orientation = orientation,
+            totalPages = 8,
+            pageSequence = listOf(1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0)
+        ),
+        TestConfig(
+            title = "swipe beyond edge pages",
+            adapterProvider = adapterProvider,
+            orientation = orientation,
+            totalPages = 4,
+            pageSequence = listOf(0, 0, 1, 2, 3, 3, 3, 2, 1, 0, 0, 0)
+        ),
+        TestConfig(
+            title = "config change",
+            adapterProvider = adapterProvider,
+            orientation = orientation,
+            totalPages = 7,
+            pageSequence = listOf(1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0),
+            configChangeSteps = setOf(3, 5, 7)
+        ),
+        TestConfig(
+            title = "regression1",
+            adapterProvider = adapterProvider,
+            orientation = orientation,
+            totalPages = 10,
+            pageSequence = listOf(1, 2, 3, 2, 1, 2, 3, 4)
+        ),
+        TestConfig(
+            title = "regression2",
+            adapterProvider = adapterProvider,
+            orientation = orientation,
+            totalPages = 10,
+            pageSequence = listOf(1, 2, 3, 4, 3, 2, 1, 2, 3, 4, 5)
+        ),
+        TestConfig(
+            title = "regression3",
+            adapterProvider = adapterProvider,
+            orientation = orientation,
+            totalPages = 10,
+            pageSequence = listOf(1, 2, 3, 2, 1, 2, 3, 2, 1, 0)
+        )
+    )
+        .plus(
+            if (adapterProvider.supportsMutations) createMutationTests(
+                adapterProvider,
+                orientation
+            ) else emptyList()
+        )
+        .plus(createRandomTests(adapterProvider, orientation))
 }
 
 // region mutation testing
@@ -176,15 +185,16 @@ private fun createMutationTests(
     @Orientation orientation: Int
 ): List<TestConfig> {
     return listOf(
-            TestConfig(
-                    title = "mutations",
-                    adapterProvider = adapterProvider,
-                    orientation = orientation,
-                    totalPages = 7,
-                    pageSequence = listOf(1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0),
-                    configChangeSteps = setOf(8),
-                    stepToNewValue = mapOf(0 to "999", 1 to "100", 3 to "300", 5 to "500")
-            ))
+        TestConfig(
+            title = "mutations",
+            adapterProvider = adapterProvider,
+            orientation = orientation,
+            totalPages = 7,
+            pageSequence = listOf(1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0),
+            configChangeSteps = setOf(8),
+            stepToNewValue = mapOf(0 to "999", 1 to "100", 3 to "300", 5 to "500")
+        )
+    )
 }
 
 // endregion
@@ -197,44 +207,47 @@ private fun createRandomTests(
 ): List<TestConfig> {
     return (1..RANDOM_TESTS_PER_CONFIG).flatMap {
         listOf(
-                createRandomTest(
+            createRandomTest(
+                totalPages = 8,
+                sequenceLength = 50,
+                configChangeProbability = 0.0,
+                mutationProbability = 0.0,
+                advanceProbability = 0.875,
+                adapterProvider = adapterProvider,
+                orientation = orientation
+            ),
+            createRandomTest(
+                totalPages = 8,
+                sequenceLength = 10,
+                configChangeProbability = 0.5,
+                mutationProbability = 0.0,
+                advanceProbability = 0.875,
+                adapterProvider = adapterProvider,
+                orientation = orientation
+            )
+        )
+            .plus(
+                if (!adapterProvider.supportsMutations) emptyList() else listOf(
+                    createRandomTest(
                         totalPages = 8,
                         sequenceLength = 50,
                         configChangeProbability = 0.0,
-                        mutationProbability = 0.0,
+                        mutationProbability = 0.125,
                         advanceProbability = 0.875,
                         adapterProvider = adapterProvider,
                         orientation = orientation
-                ),
-                createRandomTest(
+                    ),
+                    createRandomTest(
                         totalPages = 8,
                         sequenceLength = 10,
                         configChangeProbability = 0.5,
-                        mutationProbability = 0.0,
+                        mutationProbability = 0.125,
                         advanceProbability = 0.875,
                         adapterProvider = adapterProvider,
                         orientation = orientation
-                ))
-                .plus(if (!adapterProvider.supportsMutations) emptyList() else listOf(
-                        createRandomTest(
-                                totalPages = 8,
-                                sequenceLength = 50,
-                                configChangeProbability = 0.0,
-                                mutationProbability = 0.125,
-                                advanceProbability = 0.875,
-                                adapterProvider = adapterProvider,
-                                orientation = orientation
-                        ),
-                        createRandomTest(
-                                totalPages = 8,
-                                sequenceLength = 10,
-                                configChangeProbability = 0.5,
-                                mutationProbability = 0.125,
-                                advanceProbability = 0.875,
-                                adapterProvider = adapterProvider,
-                                orientation = orientation
-                        )
-                ))
+                    )
+                )
+            )
     }
 }
 
@@ -283,13 +296,13 @@ private fun createRandomTest(
     }
 
     return TestConfig(
-            title = "random_$seed",
-            adapterProvider = adapterProvider,
-            orientation = orientation,
-            totalPages = totalPages,
-            pageSequence = pageSequence,
-            configChangeSteps = configChanges,
-            stepToNewValue = stepToNewValue.mapValues { it.toString() }
+        title = "random_$seed",
+        adapterProvider = adapterProvider,
+        orientation = orientation,
+        totalPages = totalPages,
+        pageSequence = pageSequence,
+        configChangeSteps = configChanges,
+        stepToNewValue = stepToNewValue.mapValues { it.toString() }
     )
 }
 

@@ -36,6 +36,8 @@ import android.util.Log;
 import android.view.KeyEvent;
 
 import androidx.annotation.RestrictTo;
+import androidx.core.content.ContextCompat;
+import androidx.core.os.BuildCompat;
 import androidx.media.MediaBrowserServiceCompat;
 
 import java.util.List;
@@ -111,7 +113,7 @@ public class MediaButtonReceiver extends BroadcastReceiver {
                 getServiceComponentByAction(context, Intent.ACTION_MEDIA_BUTTON);
         if (mediaButtonServiceComponentName != null) {
             intent.setComponent(mediaButtonServiceComponentName);
-            startForegroundService(context, intent);
+            ContextCompat.startForegroundService(context, intent);
             return;
         }
         ComponentName mediaBrowserServiceComponentName = getServiceComponentByAction(context,
@@ -266,7 +268,11 @@ public class MediaButtonReceiver extends BroadcastReceiver {
         Intent intent = new Intent(Intent.ACTION_MEDIA_BUTTON);
         intent.setComponent(mbrComponent);
         intent.putExtra(Intent.EXTRA_KEY_EVENT, new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
-        return PendingIntent.getBroadcast(context, keyCode, intent, 0);
+        if (Build.VERSION.SDK_INT >= 16) {
+            intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+        }
+        return PendingIntent.getBroadcast(context, keyCode, intent,
+                BuildCompat.isAtLeastS() ? PendingIntent.FLAG_MUTABLE : 0);
     }
 
     /**
@@ -287,14 +293,6 @@ public class MediaButtonReceiver extends BroadcastReceiver {
                     + Intent.ACTION_MEDIA_BUTTON + " was found, returning null.");
         }
         return null;
-    }
-
-    private static void startForegroundService(Context context, Intent intent) {
-        if (Build.VERSION.SDK_INT >= 26) {
-            context.startForegroundService(intent);
-        } else {
-            context.startService(intent);
-        }
     }
 
     private static ComponentName getServiceComponentByAction(Context context, String action) {

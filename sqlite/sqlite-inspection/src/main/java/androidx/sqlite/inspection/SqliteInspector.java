@@ -18,7 +18,14 @@ package androidx.sqlite.inspection;
 
 import static android.database.DatabaseUtils.getSqlStatementType;
 
-import static androidx.sqlite.inspection.SqliteInspectionExecutors.directExecutor;
+import static androidx.sqlite.inspection.DatabaseExtensions.isAttemptAtUsingClosedDatabase;
+import static androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_DB_CLOSED_DURING_OPERATION;
+import static androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_ISSUE_WITH_LOCKING_DATABASE;
+import static androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_ISSUE_WITH_PROCESSING_NEW_DATABASE_CONNECTION;
+import static androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_ISSUE_WITH_PROCESSING_QUERY;
+import static androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_NO_OPEN_DATABASE_WITH_REQUESTED_ID;
+import static androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_UNKNOWN;
+import static androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_UNRECOGNISED_COMMAND;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
@@ -32,14 +39,20 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteQuery;
 import android.database.sqlite.SQLiteStatement;
+import android.os.Build;
 import android.os.CancellationSignal;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.inspection.ArtTooling;
+import androidx.inspection.ArtTooling.EntryHook;
+import androidx.inspection.ArtTooling.ExitHook;
 import androidx.inspection.Connection;
 import androidx.inspection.Inspector;
 import androidx.inspection.InspectorEnvironment;
+import androidx.sqlite.inspection.SqliteInspectorProtocol.AcquireDatabaseLockCommand;
+import androidx.sqlite.inspection.SqliteInspectorProtocol.AcquireDatabaseLockResponse;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.CellValue;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Column;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Command;
@@ -47,6 +60,7 @@ import androidx.sqlite.inspection.SqliteInspectorProtocol.DatabaseClosedEvent;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.DatabaseOpenedEvent;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.DatabasePossiblyChangedEvent;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent;
+import androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorOccurredEvent;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorOccurredResponse;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorRecoverability;
@@ -58,6 +72,8 @@ import androidx.sqlite.inspection.SqliteInspectorProtocol.KeepDatabasesOpenRespo
 import androidx.sqlite.inspection.SqliteInspectorProtocol.QueryCommand;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.QueryParameterValue;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.QueryResponse;
+import androidx.sqlite.inspection.SqliteInspectorProtocol.ReleaseDatabaseLockCommand;
+import androidx.sqlite.inspection.SqliteInspectorProtocol.ReleaseDatabaseLockResponse;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Response;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Row;
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Table;
@@ -78,8 +94,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Inspector to work with SQLite databases
@@ -87,25 +101,34 @@ import java.util.concurrent.TimeUnit;
 @SuppressWarnings({"TryFinallyCanBeTryWithResources", "SameParameterValue"})
 @SuppressLint("SyntheticAccessor")
 final class SqliteInspector extends Inspector {
-    // TODO: identify all SQLiteDatabase openDatabase methods
-    private static final String sOpenDatabaseCommandSignature = "openDatabase"
+    private static final String OPEN_DATABASE_COMMAND_SIGNATURE_API_11 = "openDatabase"
+            + "("
+            + "Ljava/lang/String;"
+            + "Landroid/database/sqlite/SQLiteDatabase$CursorFactory;"
+            + "I"
+            + "Landroid/database/DatabaseErrorHandler;"
+            + ")"
+            + "Landroid/database/sqlite/SQLiteDatabase;";
+
+    private static final String OPEN_DATABASE_COMMAND_SIGNATURE_API_27 = "openDatabase"
             + "("
             + "Ljava/io/File;"
             + "Landroid/database/sqlite/SQLiteDatabase$OpenParams;"
             + ")"
             + "Landroid/database/sqlite/SQLiteDatabase;";
 
-    private static final String sCreateInMemoryDatabaseCommandSignature = "createInMemory"
+    private static final String CREATE_IN_MEMORY_DATABASE_COMMAND_SIGNATURE_API_27 =
+            "createInMemory"
             + "("
             + "Landroid/database/sqlite/SQLiteDatabase$OpenParams;"
             + ")"
             + "Landroid/database/sqlite/SQLiteDatabase;";
 
-    private static final String sAllReferencesReleaseCommandSignature =
+    private static final String ALL_REFERENCES_RELEASE_COMMAND_SIGNATURE =
             "onAllReferencesReleased()V";
 
     // SQLiteStatement methods
-    private static final List<String> sSqliteStatementExecuteMethodsSignatures = Arrays.asList(
+    private static final List<String> SQLITE_STATEMENT_EXECUTE_METHODS_SIGNATURES = Arrays.asList(
             "execute()V",
             "executeInsert()J",
             "executeUpdateDelete()I");
@@ -151,9 +174,10 @@ final class SqliteInspector extends Inspector {
             "android_metadata", "sqlite_sequence"));
 
     private final DatabaseRegistry mDatabaseRegistry;
+    private final DatabaseLockRegistry mDatabaseLockRegistry;
     private final InspectorEnvironment mEnvironment;
     private final Executor mIOExecutor;
-    private final ScheduledExecutorService mScheduledExecutor;
+
     /**
      * Utility instance that handles communication with Room's InvalidationTracker instances.
      */
@@ -162,12 +186,10 @@ final class SqliteInspector extends Inspector {
     @NonNull
     private final SqlDelightInvalidation mSqlDelightInvalidation;
 
-    SqliteInspector(@NonNull Connection connection, InspectorEnvironment environment,
-            Executor ioExecutor, ScheduledExecutorService scheduledExecutor) {
+    SqliteInspector(@NonNull Connection connection, @NonNull InspectorEnvironment environment) {
         super(connection);
         mEnvironment = environment;
-        mIOExecutor = ioExecutor;
-        mScheduledExecutor = scheduledExecutor;
+        mIOExecutor = environment.executors().io();
         mRoomInvalidationRegistry = new RoomInvalidationRegistry(mEnvironment);
         mSqlDelightInvalidation = SqlDelightInvalidation.create(mEnvironment);
 
@@ -184,6 +206,8 @@ final class SqliteInspector extends Inspector {
                         dispatchDatabaseClosedEvent(databaseId, path);
                     }
                 });
+
+        mDatabaseLockRegistry = new DatabaseLockRegistry();
     }
 
     @Override
@@ -203,13 +227,19 @@ final class SqliteInspector extends Inspector {
                 case KEEP_DATABASES_OPEN:
                     handleKeepDatabasesOpen(command.getKeepDatabasesOpen(), callback);
                     break;
+                case ACQUIRE_DATABASE_LOCK:
+                    handleAcquireDatabaseLock(command.getAcquireDatabaseLock(), callback);
+                    break;
+                case RELEASE_DATABASE_LOCK:
+                    handleReleaseDatabaseLock(command.getReleaseDatabaseLock(), callback);
+                    break;
                 default:
                     callback.reply(
                         createErrorOccurredResponse(
                                 "Unrecognised command type: " + command.getOneOfCase().name(),
                                 null,
-                                true
-                        ).toByteArray());
+                                true,
+                                ERROR_UNRECOGNISED_COMMAND).toByteArray());
             }
         } catch (Exception exception) {
             callback.reply(
@@ -217,10 +247,16 @@ final class SqliteInspector extends Inspector {
                             "Unhandled Exception while processing the command: "
                                     + exception.getMessage(),
                             stackTraceFromException(exception),
-                            null
-                    ).toByteArray()
+                            null,
+                            ERROR_UNKNOWN).toByteArray()
             );
         }
+    }
+
+    @Override
+    public void onDispose() {
+        super.onDispose();
+        // TODO(161081452): release database locks and keep-open references
     }
 
     private void handleTrackDatabases(CommandCallback callback) {
@@ -239,7 +275,8 @@ final class SqliteInspector extends Inspector {
         registerDatabaseClosedHooks(hookRegistry);
 
         // Check for database instances in memory
-        for (SQLiteDatabase instance : mEnvironment.findInstances(SQLiteDatabase.class)) {
+        for (SQLiteDatabase instance :
+                mEnvironment.artTooling().findInstances(SQLiteDatabase.class)) {
             /** the race condition here will be handled by mDatabaseRegistry */
             if (instance.isOpen()) {
                 onDatabaseOpened(instance);
@@ -249,7 +286,7 @@ final class SqliteInspector extends Inspector {
         }
 
         // Check for database instances on disk
-        for (Application instance : mEnvironment.findInstances(Application.class)) {
+        for (Application instance : mEnvironment.artTooling().findInstances(Application.class)) {
             for (String name : instance.databaseList()) {
                 File path = instance.getDatabasePath(name);
                 if (path.exists() && !isHelperSqliteFile(path)) {
@@ -260,10 +297,87 @@ final class SqliteInspector extends Inspector {
     }
 
     /**
-     * Tracking potential database closed events via {@link #sAllReferencesReleaseCommandSignature}
+     * Secures a lock (transaction) on the database. Note that while the lock is in place, no
+     * changes to the database are possible:
+     * - the lock prevents other threads from modifying the database,
+     * - lock thread, on releasing the lock, rolls-back all changes (transaction is rolled-back).
+     */
+    @SuppressWarnings("FutureReturnValueIgnored") // code inside the future is exception-proofed
+    private void handleAcquireDatabaseLock(
+            AcquireDatabaseLockCommand command,
+            final CommandCallback callback) {
+        final int databaseId = command.getDatabaseId();
+        final DatabaseConnection connection = acquireConnection(databaseId, callback);
+        if (connection == null) return;
+
+        // Timeout is covered by mDatabaseLockRegistry
+        SqliteInspectionExecutors.submit(mIOExecutor, new Runnable() {
+            @Override
+            public void run() {
+                int lockId;
+                try {
+                    lockId = mDatabaseLockRegistry.acquireLock(databaseId, connection.mDatabase);
+                } catch (Exception e) {
+                    processLockingException(callback, e, true);
+                    return;
+                }
+
+                callback.reply(Response.newBuilder().setAcquireDatabaseLock(
+                        AcquireDatabaseLockResponse.newBuilder().setLockId(lockId)
+                ).build().toByteArray());
+            }
+        });
+    }
+
+    @SuppressWarnings("FutureReturnValueIgnored") // code inside the future is exception-proofed
+    private void handleReleaseDatabaseLock(
+            final ReleaseDatabaseLockCommand command,
+            final CommandCallback callback) {
+        // Timeout is covered by mDatabaseLockRegistry
+        SqliteInspectionExecutors.submit(mIOExecutor, new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    mDatabaseLockRegistry.releaseLock(command.getLockId());
+                } catch (Exception e) {
+                    processLockingException(callback, e, false);
+                    return;
+                }
+                callback.reply(Response.newBuilder().setReleaseDatabaseLock(
+                        ReleaseDatabaseLockResponse.getDefaultInstance()
+                ).build().toByteArray());
+            }
+        });
+    }
+
+    /**
+     * @param isLockingStage provide true for acquiring a lock; false for releasing a lock
+     */
+    private void processLockingException(CommandCallback callback, Exception exception,
+            boolean isLockingStage) {
+        ErrorCode errorCode = ((exception instanceof IllegalStateException)
+                && isAttemptAtUsingClosedDatabase((IllegalStateException) exception))
+                ? ERROR_DB_CLOSED_DURING_OPERATION
+                : ERROR_ISSUE_WITH_LOCKING_DATABASE;
+
+        String message = isLockingStage
+                ? "Issue while trying to lock the database for the export operation: "
+                : "Issue while trying to unlock the database after the export operation: ";
+
+        Boolean isRecoverable = isLockingStage
+                ? true // failure to lock the db should be recoverable
+                : null; // not sure if we can recover from a failure to unlock the db, so UNKNOWN
+
+        callback.reply(createErrorOccurredResponse(message, isRecoverable, exception,
+                errorCode).toByteArray());
+    }
+
+    /**
+     * Tracking potential database closed events via
+     * {@link #ALL_REFERENCES_RELEASE_COMMAND_SIGNATURE}
      */
     private void registerDatabaseClosedHooks(EntryExitMatchingHookRegistry hookRegistry) {
-        hookRegistry.registerHook(SQLiteDatabase.class, sAllReferencesReleaseCommandSignature,
+        hookRegistry.registerHook(SQLiteDatabase.class, ALL_REFERENCES_RELEASE_COMMAND_SIGNATURE,
                 new EntryExitMatchingHookRegistry.OnExitCallback() {
                     @Override
                     public void onExit(EntryExitMatchingHookRegistry.Frame exitFrame) {
@@ -276,36 +390,41 @@ final class SqliteInspector extends Inspector {
     }
 
     private void registerDatabaseOpenedHooks() {
-        for (String method : Arrays.asList(sOpenDatabaseCommandSignature,
-                sCreateInMemoryDatabaseCommandSignature)) {
-            mEnvironment.registerExitHook(
-                    SQLiteDatabase.class,
-                    method,
-                    new InspectorEnvironment.ExitHook<SQLiteDatabase>() {
-                        @SuppressLint("SyntheticAccessor")
-                        @Override
-                        public SQLiteDatabase onExit(SQLiteDatabase database) {
-                            try {
-                                onDatabaseOpened(database);
-                            } catch (Exception exception) {
-                                getConnection().sendEvent(createErrorOccurredEvent(
-                                        "Unhandled Exception while processing an onDatabaseAdded "
-                                                + "event: "
-                                                + exception.getMessage(),
-                                        stackTraceFromException(exception), null)
-                                        .toByteArray());
-                            }
-                            return database;
+        List<String> methods = (Build.VERSION.SDK_INT < 27)
+                ? Arrays.asList(OPEN_DATABASE_COMMAND_SIGNATURE_API_11)
+                : Arrays.asList(OPEN_DATABASE_COMMAND_SIGNATURE_API_27,
+                        OPEN_DATABASE_COMMAND_SIGNATURE_API_11,
+                        CREATE_IN_MEMORY_DATABASE_COMMAND_SIGNATURE_API_27);
+
+        ExitHook<SQLiteDatabase> hook =
+                new ExitHook<SQLiteDatabase>() {
+                    @SuppressLint("SyntheticAccessor")
+                    @Override
+                    public SQLiteDatabase onExit(SQLiteDatabase database) {
+                        try {
+                            onDatabaseOpened(database);
+                        } catch (Exception exception) {
+                            getConnection().sendEvent(createErrorOccurredEvent(
+                                    "Unhandled Exception while processing an onDatabaseAdded "
+                                            + "event: "
+                                            + exception.getMessage(),
+                                    stackTraceFromException(exception), null,
+                                    ERROR_ISSUE_WITH_PROCESSING_NEW_DATABASE_CONNECTION)
+                                    .toByteArray());
                         }
-                    });
+                        return database;
+                    }
+                };
+        for (String method : methods) {
+            mEnvironment.artTooling().registerExitHook(SQLiteDatabase.class, method, hook);
         }
     }
 
     private void registerReleaseReferenceHooks() {
-        mEnvironment.registerEntryHook(
+        mEnvironment.artTooling().registerEntryHook(
                 SQLiteClosable.class,
                 "releaseReference()V",
-                new InspectorEnvironment.EntryHook() {
+                new EntryHook() {
                     @Override
                     public void onEntry(@Nullable Object thisObject,
                             @NonNull List<Object> args) {
@@ -325,12 +444,12 @@ final class SqliteInspector extends Inspector {
                     @Override
                     @SuppressWarnings("FutureReturnValueIgnored") // TODO: handle errors from Future
                     public void schedule(final Runnable command, final long delayMs) {
-                        mScheduledExecutor.schedule(new Runnable() {
+                        mEnvironment.executors().handler().postDelayed(new Runnable() {
                             @Override
                             public void run() {
                                 mIOExecutor.execute(command);
                             }
-                        }, delayMs, TimeUnit.MILLISECONDS);
+                        }, delayMs);
                     }
                 };
         final RequestCollapsingThrottler throttler = new RequestCollapsingThrottler(
@@ -343,7 +462,26 @@ final class SqliteInspector extends Inspector {
                 }, deferredExecutor);
 
         registerInvalidationHooksSqliteStatement(throttler);
+        registerInvalidationHooksTransaction(throttler);
         registerInvalidationHooksSQLiteCursor(throttler, hookRegistry);
+    }
+
+    /**
+     * Triggering invalidation on {@link SQLiteDatabase#endTransaction} allows us to avoid
+     * showing incorrect stale values that could originate from a mid-transaction query.
+     *
+     * TODO: track if transaction committed or rolled back by observing if
+     * {@link SQLiteDatabase#setTransactionSuccessful} was called
+     */
+    private void registerInvalidationHooksTransaction(final RequestCollapsingThrottler throttler) {
+        mEnvironment.artTooling().registerExitHook(SQLiteDatabase.class, "endTransaction()V",
+                new ExitHook<Object>() {
+                    @Override
+                    public Object onExit(Object result) {
+                        throttler.submitRequest();
+                        return result;
+                    }
+                });
     }
 
     /**
@@ -356,9 +494,9 @@ final class SqliteInspector extends Inspector {
      */
     private void registerInvalidationHooksSqliteStatement(
             final RequestCollapsingThrottler throttler) {
-        for (String method : sSqliteStatementExecuteMethodsSignatures) {
-            mEnvironment.registerExitHook(SQLiteStatement.class, method,
-                    new InspectorEnvironment.ExitHook<Object>() {
+        for (String method : SQLITE_STATEMENT_EXECUTE_METHODS_SIGNATURES) {
+            mEnvironment.artTooling().registerExitHook(SQLiteStatement.class, method,
+                    new ExitHook<Object>() {
                         @Override
                         public Object onExit(Object result) {
                             throttler.submitRequest();
@@ -369,8 +507,8 @@ final class SqliteInspector extends Inspector {
     }
 
     /**
-     * Invalidation hooks triggered by {@link SQLiteCursor#getCount} and
-     * {@link SQLiteCursor#onMove} both of which lead to cursor's query being executed.
+     * Invalidation hooks triggered by {@link SQLiteCursor#close()}
+     * which means that the cursor's query was executed.
      * <p>
      * In order to access cursor's query, we also use {@link SQLiteDatabase#rawQueryWithFactory}
      * which takes a query String and constructs a cursor based on it.
@@ -405,18 +543,16 @@ final class SqliteInspector extends Inspector {
                     }
                 });
 
-        for (final String method : Arrays.asList("getCount()I", "onMove(II)Z")) {
-            hookRegistry.registerHook(SQLiteCursor.class, method,
-                    new EntryExitMatchingHookRegistry.OnExitCallback() {
-                        @Override
-                        public void onExit(EntryExitMatchingHookRegistry.Frame exitFrame) {
-                            SQLiteCursor cursor = (SQLiteCursor) exitFrame.mThisObject;
-                            if (trackedCursors.containsKey(cursor)) {
-                                throttler.submitRequest();
-                            }
+
+        mEnvironment.artTooling().registerEntryHook(SQLiteCursor.class, "close()V",
+                new ArtTooling.EntryHook() {
+                    @Override
+                    public void onEntry(@Nullable Object thisObject, @NonNull List<Object> args) {
+                        if (trackedCursors.containsKey(thisObject)) {
+                            throttler.submitRequest();
                         }
-                    });
-        }
+                    }
+                });
     }
 
     // Gets a SQLiteCursor from a passed-in Object (if possible)
@@ -459,47 +595,72 @@ final class SqliteInspector extends Inspector {
         ).build().toByteArray());
     }
 
-    private void handleGetSchema(GetSchemaCommand command, CommandCallback callback) {
-        SQLiteDatabase reference = acquireReference(command.getDatabaseId(), callback);
-        if (reference == null) return;
+    @SuppressWarnings("FutureReturnValueIgnored") // code inside the future is exception-proofed
+    private void handleGetSchema(GetSchemaCommand command, final CommandCallback callback) {
+        final DatabaseConnection connection = acquireConnection(command.getDatabaseId(), callback);
+        if (connection == null) return;
 
-        callback.reply(querySchema(reference).toByteArray());
+        // TODO: consider a timeout
+        SqliteInspectionExecutors.submit(connection.mExecutor, new Runnable() {
+            @Override
+            public void run() {
+                callback.reply(querySchema(connection.mDatabase).toByteArray());
+            }
+        });
     }
 
     private void handleQuery(final QueryCommand command, final CommandCallback callback) {
-        final SQLiteDatabase reference = acquireReference(command.getDatabaseId(), callback);
-        if (reference == null) return;
+        final DatabaseConnection connection = acquireConnection(command.getDatabaseId(), callback);
+        if (connection == null) return;
 
         final CancellationSignal cancellationSignal = new CancellationSignal();
-        final Future<?> future = SqliteInspectionExecutors.submit(mIOExecutor, new Runnable() {
+        final Executor executor = connection.mExecutor;
+        // TODO: consider a timeout
+        final Future<?> future = SqliteInspectionExecutors.submit(executor, new Runnable() {
             @Override
             public void run() {
                 String[] params = parseQueryParameterValues(command);
                 Cursor cursor = null;
                 try {
-                    cursor = rawQuery(reference, command.getQuery(), params,
+                    cursor = rawQuery(connection.mDatabase, command.getQuery(), params,
                             cancellationSignal);
+
+                    long responseSizeLimitHint = command.getResponseSizeLimitHint();
+                    // treating unset field as unbounded
+                    if (responseSizeLimitHint <= 0) responseSizeLimitHint = Long.MAX_VALUE;
+
                     List<String> columnNames = Arrays.asList(cursor.getColumnNames());
                     callback.reply(Response.newBuilder()
                             .setQuery(QueryResponse.newBuilder()
-                                    .addAllRows(convert(cursor))
+                                    .addAllRows(convert(cursor, responseSizeLimitHint))
                                     .addAllColumnNames(columnNames)
                                     .build())
                             .build()
                             .toByteArray()
                     );
                     triggerInvalidation(command.getQuery());
-                } catch (SQLiteException | IllegalArgumentException exception) {
-                    callback.reply(createErrorOccurredResponse(exception, true).toByteArray());
+                } catch (SQLiteException | IllegalArgumentException e) {
+                    callback.reply(createErrorOccurredResponse(e, true,
+                            ERROR_ISSUE_WITH_PROCESSING_QUERY).toByteArray());
+                } catch (IllegalStateException e) {
+                    if (isAttemptAtUsingClosedDatabase(e)) {
+                        callback.reply(createErrorOccurredResponse(e, true,
+                                ERROR_DB_CLOSED_DURING_OPERATION).toByteArray());
+                    } else {
+                        callback.reply(createErrorOccurredResponse(e, null,
+                                ERROR_UNKNOWN).toByteArray());
+                    }
+                } catch (Exception e) {
+                    callback.reply(createErrorOccurredResponse(e, null,
+                            ERROR_UNKNOWN).toByteArray());
                 } finally {
                     if (cursor != null) {
                         cursor.close();
                     }
                 }
-
             }
         });
-        callback.addCancellationListener(directExecutor(), new Runnable() {
+        callback.addCancellationListener(mEnvironment.executors().primary(), new Runnable() {
             @Override
             public void run() {
                 cancellationSignal.cancel();
@@ -573,30 +734,57 @@ final class SqliteInspector extends Inspector {
      * Tries to find a database for an id. If no such database is found, it replies with an
      * {@link ErrorOccurredResponse} via the {@code callback} provided.
      *
-     * Consumer of this method must release the reference when done using it.
+     * TODO: remove race condition (affects WAL=off)
+     * - lock request is received and in the process of being secured
+     * - query request is received and since no lock in place, receives an IO Executor
+     * - lock request completes and holds a lock on the database
+     * - query cannot run because there is a lock in place
+     *
+     * The race condition can be mitigated by clients by securing a lock synchronously with no
+     * other queries in place.
      *
      * @return null if no database found for the provided id. A database reference otherwise.
      */
     @Nullable
-    private SQLiteDatabase acquireReference(int databaseId, CommandCallback callback) {
-        SQLiteDatabase database = mDatabaseRegistry.acquireReference(databaseId);
+    private DatabaseConnection acquireConnection(int databaseId, CommandCallback callback) {
+        DatabaseConnection connection = mDatabaseLockRegistry.getConnection(databaseId);
+        if (connection != null) {
+            // With WAL enabled, we prefer to use the IO executor. With WAL off we don't have a
+            // choice and must use the executor that has a lock (transaction) on the database.
+            return connection.mDatabase.isWriteAheadLoggingEnabled()
+                    ? new DatabaseConnection(connection.mDatabase, mIOExecutor)
+                    : connection;
+        }
+
+        SQLiteDatabase database = mDatabaseRegistry.getConnection(databaseId);
         if (database == null) {
             replyNoDatabaseWithId(callback, databaseId);
             return null;
         }
-        return database;
+
+        // Given no lock, IO executor is appropriate.
+        return new DatabaseConnection(database, mIOExecutor);
     }
 
-    private static List<Row> convert(Cursor cursor) {
+    /**
+     * @param responseSizeLimitHint expressed in bytes
+     */
+    private static List<Row> convert(Cursor cursor, long responseSizeLimitHint) {
+        long responseSize = 0;
         List<Row> result = new ArrayList<>();
         int columnCount = cursor.getColumnCount();
-        while (cursor.moveToNext()) {
+        while (cursor.moveToNext() && responseSize < responseSizeLimitHint) {
             Row.Builder rowBuilder = Row.newBuilder();
             for (int i = 0; i < columnCount; i++) {
                 CellValue value = readValue(cursor, i);
                 rowBuilder.addValues(value);
             }
-            result.add(rowBuilder.build());
+            Row row = rowBuilder.build();
+            // Optimistically adding a row before checking the limit. Eliminates the case when a
+            // misconfigured client (limit too low) is unable to fetch any results. Row size in
+            // SQLite Android is limited to (~2MB), so the worst case scenario is very manageable.
+            result.add(row);
+            responseSize += row.getSerializedSize();
         }
         return result;
     }
@@ -628,7 +816,8 @@ final class SqliteInspector extends Inspector {
     private void replyNoDatabaseWithId(CommandCallback callback, int databaseId) {
         String message = String.format("Unable to perform an operation on database (id=%s)."
                 + " The database may have already been closed.", databaseId);
-        callback.reply(createErrorOccurredResponse(message, null, true).toByteArray());
+        callback.reply(createErrorOccurredResponse(message, null, true,
+                ERROR_NO_OPEN_DATABASE_WITH_REQUESTED_ID).toByteArray());
     }
 
     private @NonNull Response querySchema(SQLiteDatabase database) {
@@ -679,6 +868,17 @@ final class SqliteInspector extends Inspector {
             }
 
             return Response.newBuilder().setGetSchema(schemaBuilder.build()).build();
+        } catch (IllegalStateException e) {
+            if (isAttemptAtUsingClosedDatabase(e)) {
+                return createErrorOccurredResponse(e, true,
+                        ERROR_DB_CLOSED_DURING_OPERATION);
+            } else {
+                return createErrorOccurredResponse(e, null,
+                        ERROR_UNKNOWN);
+            }
+        } catch (Exception e) {
+            return createErrorOccurredResponse(e, null,
+                    ERROR_UNKNOWN);
         } finally {
             if (cursor != null) {
                 cursor.close();
@@ -698,19 +898,20 @@ final class SqliteInspector extends Inspector {
     }
 
     private Event createErrorOccurredEvent(@Nullable String message, @Nullable String stackTrace,
-            Boolean isRecoverable) {
+            Boolean isRecoverable, ErrorCode errorCode) {
         return Event.newBuilder().setErrorOccurred(
                 ErrorOccurredEvent.newBuilder()
                         .setContent(
                                 createErrorContentMessage(message,
                                         stackTrace,
-                                        isRecoverable))
+                                        isRecoverable,
+                                        errorCode))
                         .build())
                 .build();
     }
 
     private static ErrorContent createErrorContentMessage(@Nullable String message,
-            @Nullable String stackTrace, Boolean isRecoverable) {
+            @Nullable String stackTrace, Boolean isRecoverable, ErrorCode errorCode) {
         ErrorContent.Builder builder = ErrorContent.newBuilder();
         if (message != null) {
             builder.setMessage(message);
@@ -723,22 +924,30 @@ final class SqliteInspector extends Inspector {
             recoverability.setIsRecoverable(isRecoverable);
         }
         builder.setRecoverability(recoverability.build());
+        builder.setErrorCode(errorCode);
         return builder.build();
     }
 
     private static Response createErrorOccurredResponse(@NonNull Exception exception,
-            Boolean isRecoverable) {
-        return createErrorOccurredResponse(exception.getMessage(),
-                stackTraceFromException(exception), isRecoverable);
+            Boolean isRecoverable, ErrorCode errorCode) {
+        return createErrorOccurredResponse("", isRecoverable, exception, errorCode);
+    }
+
+    private static Response createErrorOccurredResponse(@NonNull String messagePrefix,
+            Boolean isRecoverable, @NonNull Exception exception, ErrorCode errorCode) {
+        String message = exception.getMessage();
+        if (message == null) message = exception.toString();
+        return createErrorOccurredResponse(messagePrefix + message,
+                stackTraceFromException(exception), isRecoverable, errorCode);
     }
 
     private static Response createErrorOccurredResponse(@Nullable String message,
-            @Nullable String stackTrace, Boolean isRecoverable) {
+            @Nullable String stackTrace, Boolean isRecoverable, ErrorCode errorCode) {
         return Response.newBuilder()
                 .setErrorOccurred(
                         ErrorOccurredResponse.newBuilder()
                                 .setContent(createErrorContentMessage(message, stackTrace,
-                                        isRecoverable)))
+                                        isRecoverable, errorCode)))
                 .build();
     }
 
@@ -752,5 +961,21 @@ final class SqliteInspector extends Inspector {
     private static boolean isHelperSqliteFile(File file) {
         String path = file.getPath();
         return path.endsWith("-journal") || path.endsWith("-shm") || path.endsWith("-wal");
+    }
+
+    /**
+     * Provides a reference to the database and an executor to access the database.
+     *
+     * Executor is relevant in the context of locking, where a locked database with WAL disabled
+     * needs to run queries on the thread that locked it.
+     */
+    static final class DatabaseConnection {
+        @NonNull final SQLiteDatabase mDatabase;
+        @NonNull final Executor mExecutor;
+
+        DatabaseConnection(@NonNull SQLiteDatabase database, @NonNull Executor executor) {
+            mDatabase = database;
+            mExecutor = executor;
+        }
     }
 }

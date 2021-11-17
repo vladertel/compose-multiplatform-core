@@ -30,10 +30,10 @@ import androidx.annotation.NonNull;
 import androidx.camera.core.SurfaceRequest;
 import androidx.camera.core.impl.DeferrableSurface;
 import androidx.camera.testing.fakes.FakeCamera;
-import androidx.camera.view.preview.transform.PreviewTransform;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 import androidx.test.filters.MediumTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -50,6 +50,7 @@ import java.util.concurrent.TimeoutException;
 
 @SmallTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = 21)
 public class TextureViewImplementationTest {
 
     private static final int ANY_WIDTH = 1600;
@@ -65,9 +66,8 @@ public class TextureViewImplementationTest {
     public void setUp() {
         final Context mContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
         mSurfaceTexture = new SurfaceTexture(0);
-        mImplementation = new TextureViewImplementation();
         mParent = new FrameLayout(mContext);
-        mImplementation.init(mParent, new PreviewTransform());
+        mImplementation = new TextureViewImplementation(mParent, new PreviewTransformation());
     }
 
     @After
@@ -101,7 +101,6 @@ public class TextureViewImplementationTest {
 
         final Surface surface = surfaceListenableFuture.get();
         assertThat(surface).isNotNull();
-        assertThat(mImplementation.mSurfaceRequest).isNull();
     }
 
     @Test
@@ -152,7 +151,7 @@ public class TextureViewImplementationTest {
         SurfaceRequest surfaceRequest = getSurfaceRequest();
         CountDownLatch latchForSurfaceNotInUse = new CountDownLatch(1);
         PreviewViewImplementation.OnSurfaceNotInUseListener onSurfaceNotInUseListener =
-                () -> latchForSurfaceNotInUse.countDown();
+                latchForSurfaceNotInUse::countDown;
 
         mImplementation.onSurfaceRequested(surfaceRequest, onSurfaceNotInUseListener);
         DeferrableSurface deferrableSurface = surfaceRequest.getDeferrableSurface();
@@ -175,7 +174,7 @@ public class TextureViewImplementationTest {
         SurfaceRequest surfaceRequest = getSurfaceRequest();
         CountDownLatch latchForSurfaceNotInUse = new CountDownLatch(1);
         PreviewViewImplementation.OnSurfaceNotInUseListener onSurfaceNotInUseListener =
-                () -> latchForSurfaceNotInUse.countDown();
+                latchForSurfaceNotInUse::countDown;
 
         mImplementation.onSurfaceRequested(surfaceRequest, onSurfaceNotInUseListener);
         DeferrableSurface deferrableSurface = surfaceRequest.getDeferrableSurface();
@@ -254,10 +253,8 @@ public class TextureViewImplementationTest {
         assertThat(mParent.getChildCount()).isEqualTo(0);
     }
 
-
     @Test
     public void resetSurfaceTextureOnDetachAndAttachWindow() throws Exception {
-
         SurfaceRequest surfaceRequest = getSurfaceRequest();
         mImplementation.onSurfaceRequested(surfaceRequest, null);
         DeferrableSurface deferrableSurface = surfaceRequest.getDeferrableSurface();
@@ -341,7 +338,7 @@ public class TextureViewImplementationTest {
     @NonNull
     private SurfaceRequest getSurfaceRequest() {
         if (mSurfaceRequest == null) {
-            mSurfaceRequest = new SurfaceRequest(ANY_SIZE, new FakeCamera());
+            mSurfaceRequest = new SurfaceRequest(ANY_SIZE, new FakeCamera(), false);
         }
 
         return mSurfaceRequest;

@@ -35,7 +35,6 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
-import androidx.test.rule.ActivityTestRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -52,8 +51,9 @@ import org.junit.runner.RunWith
 @LargeTest
 class PreferenceViewHolderStateTest {
 
+    @Suppress("DEPRECATION")
     @get:Rule
-    val activityRule = ActivityTestRule(PreferenceTestHelperActivity::class.java)
+    val activityRule = androidx.test.rule.ActivityTestRule(PreferenceTestHelperActivity::class.java)
 
     private lateinit var fragment: PreferenceFragmentCompat
 
@@ -158,11 +158,13 @@ class PreferenceViewHolderStateTest {
 
         // Scroll until the end, ensuring all Preferences have been bound.
         onView(withId(R.id.recycler_view))
-            .perform(repeatedlyUntil(
-                swipeUp(),
-                hasDescendant(withText("${disabledTitle}40")),
-                maxAttempts
-            ))
+            .perform(
+                repeatedlyUntil(
+                    swipeUp(),
+                    hasDescendant(withText("${disabledTitle}40")),
+                    maxAttempts
+                )
+            )
 
         // All preferences should have the correct title color
         preferences.forEach { preference ->
@@ -180,9 +182,9 @@ private class TestPreference(context: Context) : Preference(context) {
     var titleColor: Int? = null
     var summaryColor: Int? = null
 
-    override fun onBindViewHolder(holder: PreferenceViewHolder?) {
+    override fun onBindViewHolder(holder: PreferenceViewHolder) {
         super.onBindViewHolder(holder)
-        background = holder!!.itemView.background
+        background = holder.itemView.background
         titleColor = (holder.findViewById(android.R.id.title) as TextView).currentTextColor
         summaryColor = (holder.findViewById(android.R.id.summary) as TextView).currentTextColor
     }

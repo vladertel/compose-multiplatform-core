@@ -21,10 +21,11 @@ import static androidx.camera.core.ImageCapture.FLASH_MODE_OFF;
 import android.graphics.Rect;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraControl;
 import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.FocusMeteringResult;
+import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCapture.FlashMode;
 import androidx.camera.core.impl.utils.futures.Futures;
 
@@ -39,16 +40,8 @@ import java.util.List;
  * triggering
  * AF/AE.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraControlInternal extends CameraControl {
-    /**
-     * Set the desired crop region of the sensor to read out for all capture requests.
-     *
-     * <p>This crop region can be used to implement digital zoom. It is applied to every single and
-     * re peating requests.
-     *
-     * @param crop rectangle with dimensions in sensor pixel coordinate.
-     */
-    void setCropRegion(@Nullable Rect crop);
 
     /** Returns the current flash mode. */
     @FlashMode
@@ -71,21 +64,43 @@ public interface CameraControlInternal extends CameraControl {
     ListenableFuture<CameraCaptureResult> triggerAf();
 
     /**
-     * Performs a AE Precapture trigger.
+     * Starts a flash sequence.
      *
+     * @param flashType Uses one shot flash or use torch as flash when taking a picture.
      * @return a {@link ListenableFuture} which completes when the request is completed.
      * Cancelling the ListenableFuture is a no-op.
      */
     @NonNull
-    ListenableFuture<CameraCaptureResult> triggerAePrecapture();
+    ListenableFuture<Void> startFlashSequence(@ImageCapture.FlashType int flashType);
 
-    /** Cancel AF trigger AND/OR AE Precapture trigger.* */
-    void cancelAfAeTrigger(boolean cancelAfTrigger, boolean cancelAePrecaptureTrigger);
+    /** Cancels AF trigger AND/OR finishes flash sequence.* */
+    void cancelAfAndFinishFlashSequence(boolean cancelAfTrigger, boolean finishFlashSequence);
 
     /**
-     * Performs capture requests.
+     * Set a exposure compensation to the camera
+     *
+     * @param exposure the exposure compensation value to set
+     * @return a ListenableFuture which is completed when the new exposure compensation reach the
+     * target.
      */
-    void submitCaptureRequests(@NonNull List<CaptureConfig> captureConfigs);
+    @NonNull
+    @Override
+    ListenableFuture<Integer> setExposureCompensationIndex(int exposure);
+
+    /**
+     * Performs still capture requests.
+     */
+    void submitStillCaptureRequests(@NonNull List<CaptureConfig> captureConfigs);
+
+    /**
+     * Gets the current SessionConfig.
+     *
+     * <p>When the SessionConfig is changed,
+     * {@link ControlUpdateCallback#onCameraControlUpdateSessionConfig()} will be called to
+     * notify the change.
+     */
+    @NonNull
+    SessionConfig getSessionConfig();
 
     /**
      * Gets the full sensor rect.
@@ -93,11 +108,23 @@ public interface CameraControlInternal extends CameraControl {
     @NonNull
     Rect getSensorRect();
 
-    CameraControlInternal DEFAULT_EMPTY_INSTANCE = new CameraControlInternal() {
-        @Override
-        public void setCropRegion(@Nullable Rect crop) {
-        }
+    /**
+     * Adds the Interop configuration.
+     */
+    void addInteropConfig(@NonNull Config config);
 
+    /**
+     * Clears the Interop configuration set previously.
+     */
+    void clearInteropConfig();
+
+    /**
+     * Gets the Interop configuration.
+     */
+    @NonNull
+    Config getInteropConfig();
+
+    CameraControlInternal DEFAULT_EMPTY_INSTANCE = new CameraControlInternal() {
         @FlashMode
         @Override
         public int getFlashMode() {
@@ -122,17 +149,29 @@ public interface CameraControlInternal extends CameraControl {
 
         @Override
         @NonNull
-        public ListenableFuture<CameraCaptureResult> triggerAePrecapture() {
-            return Futures.immediateFuture(CameraCaptureResult.EmptyCameraCaptureResult.create());
+        public ListenableFuture<Void> startFlashSequence(@ImageCapture.FlashType int flashType) {
+            return Futures.immediateFuture(null);
         }
 
         @Override
-        public void cancelAfAeTrigger(boolean cancelAfTrigger, boolean cancelAePrecaptureTrigger) {
+        public void cancelAfAndFinishFlashSequence(boolean cancelAfTrigger,
+                boolean finishFlashSequence) {
+        }
 
+        @NonNull
+        @Override
+        public ListenableFuture<Integer> setExposureCompensationIndex(int exposure) {
+            return Futures.immediateFuture(0);
         }
 
         @Override
-        public void submitCaptureRequests(@NonNull List<CaptureConfig> captureConfigs) {
+        public void submitStillCaptureRequests(@NonNull List<CaptureConfig> captureConfigs) {
+        }
+
+        @NonNull
+        @Override
+        public SessionConfig getSessionConfig() {
+            return SessionConfig.defaultEmptySessionConfig();
         }
 
         @NonNull
@@ -165,13 +204,31 @@ public interface CameraControlInternal extends CameraControl {
         public ListenableFuture<Void> setLinearZoom(float linearZoom) {
             return Futures.immediateFuture(null);
         }
+
+        @Override
+        public void addInteropConfig(@NonNull Config config) {
+        }
+
+        @Override
+        public void clearInteropConfig() {
+        }
+
+        @NonNull
+        @Override
+        public Config getInteropConfig() {
+            return null;
+        }
     };
 
     /** Listener called when CameraControlInternal need to notify event. */
     interface ControlUpdateCallback {
 
-        /** Called when CameraControlInternal has updated session configuration. */
-        void onCameraControlUpdateSessionConfig(@NonNull SessionConfig sessionConfig);
+        /**
+         * Called when CameraControlInternal has updated session configuration.
+         *
+         * <p>The latest SessionConfig can be obtained by calling {@link #getSessionConfig()}.
+         */
+        void onCameraControlUpdateSessionConfig();
 
         /** Called when CameraControlInternal need to send capture requests. */
         void onCameraControlCaptureRequests(@NonNull List<CaptureConfig> captureConfigs);
@@ -183,6 +240,7 @@ public interface CameraControlInternal extends CameraControl {
     final class CameraControlException extends Exception {
         @NonNull
         private CameraCaptureFailure mCameraCaptureFailure;
+
         public CameraControlException(@NonNull CameraCaptureFailure failure) {
             super();
             mCameraCaptureFailure = failure;

@@ -86,11 +86,12 @@ import androidx.recyclerview.widget.RecyclerView;
  *     <li>
  *         App may manually call {@link #showControlsOverlay(boolean)} or
  *         {@link #hideControlsOverlay(boolean)} to show or hide the controls.
- *     <li>
+ *     </li>
  *     <li>
  *         The controls are visible by default upon onViewCreated(). To make it initially invisible,
  *         call hideControlsOverlay(false) in overridden onViewCreated().
  *     </li>
+ *     <li>
  *         Upon play or pause, PlaybackControlGlue or PlaybackTransportControlGlue will fade-in
  *         the controls and automatically fade out after a delay customized by
  *         {@link R.attr#playbackControlsAutoHideTimeout}. To disable the fade in and fade out
@@ -107,7 +108,6 @@ import androidx.recyclerview.widget.RecyclerView;
  * @deprecated use {@link PlaybackSupportFragment}
  */
 @Deprecated
-@SuppressWarnings("unchecked")
 public class PlaybackFragment extends Fragment {
     static final String BUNDLE_CONTROL_VISIBLE_ON_CREATEVIEW = "controlvisible_oncreateview";
 
@@ -171,6 +171,7 @@ public class PlaybackFragment extends Fragment {
     private final BaseOnItemViewClickedListener mOnItemViewClickedListener =
             new BaseOnItemViewClickedListener() {
                 @Override
+                @SuppressWarnings("unchecked")
                 public void onItemClicked(Presenter.ViewHolder itemViewHolder,
                                           Object item,
                                           RowPresenter.ViewHolder rowViewHolder,
@@ -190,6 +191,7 @@ public class PlaybackFragment extends Fragment {
     private final BaseOnItemViewSelectedListener mOnItemViewSelectedListener =
             new BaseOnItemViewSelectedListener() {
                 @Override
+                @SuppressWarnings("unchecked")
                 public void onItemSelected(Presenter.ViewHolder itemViewHolder,
                                            Object item,
                                            RowPresenter.ViewHolder rowViewHolder,

@@ -30,6 +30,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Parcelable;
 import android.text.TextUtils;
+import android.view.Display;
 import android.view.DragEvent;
 import android.view.View;
 
@@ -40,6 +41,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.LocusIdCompat;
+import androidx.core.os.BuildCompat;
 import androidx.core.view.DragAndDropPermissionsCompat;
 
 import java.util.Arrays;
@@ -100,7 +103,7 @@ public class ActivityCompat extends ContextCompat {
          * further requests for permission.
          *
          * @param activity The target activity.
-         * @param permissions The requested permissions. Must me non-null and not empty.
+         * @param permissions The requested permissions. Must be non-null and not empty.
          * @param requestCode Application specific request code to match with a result reported to
          *    {@link
          *    OnRequestPermissionsResultCallback#onRequestPermissionsResult(int, String[], int[])}.
@@ -483,7 +486,7 @@ public class ActivityCompat extends ContextCompat {
      * </p>
      *
      * @param activity The target activity.
-     * @param permissions The requested permissions. Must me non-null and not empty.
+     * @param permissions The requested permissions. Must be non-null and not empty.
      * @param requestCode Application specific request code to match with a result
      *    reported to {@link OnRequestPermissionsResultCallback#onRequestPermissionsResult(int, String[], int[])}.
      *    Should be >= 0.
@@ -555,6 +558,42 @@ public class ActivityCompat extends ContextCompat {
     }
 
     /**
+     * Indicates whether this activity is launched from a bubble. A bubble is a floating shortcut
+     * on the screen that expands to show an activity.
+     *
+     * If your activity can be used normally or as a bubble, you might use this method to check
+     * if the activity is bubbled to modify any behaviour that might be different between the
+     * normal activity and the bubbled activity. For example, if you normally cancel the
+     * notification associated with the activity when you open the activity, you might not want to
+     * do that when you're bubbled as that would remove the bubble.
+     *
+     * @return {@code true} if the activity is launched from a bubble.
+     *
+     * @see NotificationCompat.Builder#setBubbleMetadata(NotificationCompat.BubbleMetadata)
+     * @see NotificationCompat.BubbleMetadata.Builder#Builder(String)
+     *
+     * Compatibility behavior:
+     * <ul>
+     *     <li>API 31 and above, this method matches platform behavior</li>
+     *     <li>API 29, 30, this method checks the window display ID</li>
+     *     <li>API 28 and earlier, this method is a no-op</li>
+     * </ul>
+     */
+    public static boolean isLaunchedFromBubble(@NonNull Activity activity) {
+        if (BuildCompat.isAtLeastS()) {
+            return Api31Impl.isLaunchedFromBubble(activity);
+        } else if (Build.VERSION.SDK_INT == 30) {
+            return activity.getDisplay() != null
+                    && activity.getDisplay().getDisplayId() != Display.DEFAULT_DISPLAY;
+        } else if (Build.VERSION.SDK_INT == 29) {
+            return activity.getWindowManager().getDefaultDisplay() != null
+                    && activity.getWindowManager().getDefaultDisplay().getDisplayId()
+                    != Display.DEFAULT_DISPLAY;
+        }
+        return false;
+    }
+
+    /**
      * Create {@link DragAndDropPermissionsCompat} object bound to this activity and controlling
      * the access permissions for content URIs associated with the {@link android.view.DragEvent}.
      * @param dragEvent Drag event to request permission for
@@ -575,15 +614,69 @@ public class ActivityCompat extends ContextCompat {
      *
      * @param activity The activity to recreate
      */
-    public static void recreate(@NonNull Activity activity) {
-        // On Android P and later we can safely rely on the platform recreate()
+    public static void recreate(@NonNull final Activity activity) {
         if (Build.VERSION.SDK_INT >= 28) {
+            // On Android P and later, we can safely rely on the platform recreate()
             activity.recreate();
+        } else if (Build.VERSION.SDK_INT <= 23) {
+            // Prior to Android M, we can't call recreate() before the Activity has fully resumed,
+            // but we also can't inspect its current lifecycle state, so we'll just schedule the
+            // recreate for later.
+            Handler handler = new Handler(activity.getMainLooper());
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (!activity.isFinishing()) {
+                        if (!ActivityRecreator.recreate(activity)) {
+                            // Fall back to the platform method if ActivityRecreator failed for any
+                            // reason.
+                            activity.recreate();
+                        }
+                    }
+                }
+            });
         } else {
             if (!ActivityRecreator.recreate(activity)) {
-                // If ActivityRecreator did not start a recreation, we'll just invoke the platform
+                // Fall back to the platform method if ActivityRecreator failed for any reason.
                 activity.recreate();
             }
+        }
+    }
+
+    /**
+     * Sets the {@link LocusIdCompat} for this activity. The locus id helps identify different
+     * instances of the same {@code Activity} class.
+     * <p> For example, a locus id based on a specific conversation could be set on a
+     * conversation app's chat {@code Activity}. The system can then use this locus id
+     * along with app's contents to provide ranking signals in various UI surfaces
+     * including sharing, notifications, shortcuts and so on.
+     * <p> It is recommended to set the same locus id in the shortcut's locus id using
+     * {@link androidx.core.content.pm.ShortcutInfoCompat.Builder#setLocusId(LocusIdCompat)}
+     * so that the system can learn appropriate ranking signals linking the activity's
+     * locus id with the matching shortcut.
+     *
+     * @param locusId  a unique, stable id that identifies this {@code Activity} instance. LocusId
+     *      is an opaque ID that links this Activity's state to different Android concepts:
+     *      {@link androidx.core.content.pm.ShortcutInfoCompat.Builder#setLocusId(LocusIdCompat)}.
+     *      LocusID is null by default or if you explicitly reset it.
+     * @param bundle extras set or updated as part of this locus context. This may help provide
+     *      additional metadata such as URLs, conversation participants specific to this
+     *      {@code Activity}'s context. Bundle can be null if additional metadata is not needed.
+     *      Bundle should always be null for null locusId.
+     *
+     * @see android.view.contentcapture.ContentCaptureManager
+     * @see android.view.contentcapture.ContentCaptureContext
+     *
+     * Compatibility behavior:
+     * <ul>
+     *      <li>API 30 and above, this method matches platform behavior.
+     *      <li>API 29 and earlier, this method is no-op.
+     * </ul>
+     */
+    public static void setLocusContext(@NonNull final Activity activity,
+            @Nullable final LocusIdCompat locusId, @Nullable final Bundle bundle) {
+        if (Build.VERSION.SDK_INT >= 30) {
+            Api30Impl.setLocusContext(activity, locusId, bundle);
         }
     }
 
@@ -642,6 +735,37 @@ public class ActivityCompat extends ContextCompat {
                             listener.onSharedElementsReady();
                         }
                     });
+        }
+    }
+
+    @RequiresApi(30)
+    static class Api30Impl {
+
+        /**
+         * This class should not be instantiated.
+         */
+        private Api30Impl() {
+            // Not intented for instantiation.
+        }
+
+        static void setLocusContext(@NonNull final Activity activity,
+                @Nullable final LocusIdCompat locusId, @Nullable final Bundle bundle) {
+            activity.setLocusContext(locusId == null ? null : locusId.toLocusId(), bundle);
+        }
+    }
+
+    @RequiresApi(31)
+    static class Api31Impl  {
+
+      /**
+       * This class should not be instantiated.
+       */
+        private Api31Impl() {
+            // Not intended for instantiation.
+        }
+
+        static boolean isLaunchedFromBubble(@NonNull final Activity activity)  {
+            return activity.isLaunchedFromBubble();
         }
     }
 }

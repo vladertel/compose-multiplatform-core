@@ -188,6 +188,10 @@ public class WearableActionDrawerView extends WearableDrawerView {
         mActionList.setId(R.id.action_list);
         mActionList.setLayoutManager(new LinearLayoutManager(context));
         mActionListAdapter = new ActionListAdapter(getMenu());
+        // Do not bind the mActionListAdapter to the action list here. We will bind it when/if the
+        // drawer is first opened to avoid the inflation cost in the case that the drawer is never
+        // used
+        setDrawerContent(mActionList);
     }
 
     @Override
@@ -204,7 +208,6 @@ public class WearableActionDrawerView extends WearableDrawerView {
     private void setContentIfFirstCall() {
         if (mActionList.getAdapter() == null) {
             mActionList.setAdapter(mActionListAdapter);
-            setDrawerContent(mActionList);
         }
     }
 

@@ -1,4 +1,4 @@
-// Signature format: 3.0
+// Signature format: 4.0
 package androidx.textclassifier {
 
   public final class ConversationAction {
@@ -271,7 +271,7 @@ package androidx.textclassifier {
   }
 
   public final class TextLinksParams {
-    field public static final androidx.textclassifier.TextLinksParams! DEFAULT_PARAMS;
+    field public static final androidx.textclassifier.TextLinksParams DEFAULT_PARAMS;
   }
 
   public static final class TextLinksParams.Builder {

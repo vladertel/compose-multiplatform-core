@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import static androidx.build.dependencies.DependenciesKt.*
 import androidx.build.LibraryGroups
-import androidx.build.LibraryVersions
 import androidx.build.Publish
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("AndroidXPlugin")
@@ -28,24 +27,27 @@ plugins {
 dependencies {
     api(project(":activity:activity"))
     api("androidx.core:core-ktx:1.1.0") {
+        because "Mirror activity dependency graph for -ktx artifacts"
+    }
+    api("androidx.lifecycle:lifecycle-runtime-ktx:2.3.1") {
         because 'Mirror activity dependency graph for -ktx artifacts'
     }
-    api(project(":lifecycle:lifecycle-runtime-ktx")) {
+    api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1")
+    api(projectOrArtifact(":savedstate:savedstate-ktx")) {
         because 'Mirror activity dependency graph for -ktx artifacts'
     }
-    api(project(":lifecycle:lifecycle-viewmodel-ktx"))
-    api(KOTLIN_STDLIB)
+    api(libs.kotlinStdlib)
 
-    androidTestImplementation(project(":lifecycle:lifecycle-runtime-testing"))
-    androidTestImplementation(JUNIT)
-    androidTestImplementation(TRUTH)
-    androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
-    androidTestImplementation(ANDROIDX_TEST_CORE)
-    androidTestImplementation(ANDROIDX_TEST_RUNNER)
-    androidTestImplementation(ANDROIDX_TEST_RULES)
-    androidTestImplementation project(':internal-testutils-runtime'), {
-        exclude group: 'androidx.activity', module: 'activity'
-    }
+    androidTestImplementation("androidx.lifecycle:lifecycle-runtime-testing:2.3.1")
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.testExtJunit)
+    androidTestImplementation(libs.testCore)
+    androidTestImplementation(libs.testRunner)
+    androidTestImplementation(libs.testRules)
+    androidTestImplementation(project(":internal-testutils-runtime"), {
+        exclude group: "androidx.activity", module: "activity"
+    })
 }
 
 androidx {
@@ -54,4 +56,16 @@ androidx {
     mavenGroup = LibraryGroups.ACTIVITY
     inceptionYear = "2018"
     description = "Kotlin extensions for 'activity' artifact"
+}
+
+// needed only while https://youtrack.jetbrains.com/issue/KT-47000 isn't resolved which is
+// targeted to 1.6
+if (project.hasProperty("androidx.useMaxDepVersions")){
+    tasks.withType(KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += [
+                    "-Xjvm-default=enable",
+            ]
+        }
+    }
 }

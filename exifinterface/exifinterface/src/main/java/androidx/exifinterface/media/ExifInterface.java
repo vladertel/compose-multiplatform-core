@@ -16,6 +16,14 @@
 
 package androidx.exifinterface.media;
 
+import static androidx.exifinterface.media.ExifInterfaceUtils.byteArrayToHexString;
+import static androidx.exifinterface.media.ExifInterfaceUtils.closeFileDescriptor;
+import static androidx.exifinterface.media.ExifInterfaceUtils.closeQuietly;
+import static androidx.exifinterface.media.ExifInterfaceUtils.convertToLongArray;
+import static androidx.exifinterface.media.ExifInterfaceUtils.copy;
+import static androidx.exifinterface.media.ExifInterfaceUtils.parseSubSeconds;
+import static androidx.exifinterface.media.ExifInterfaceUtils.startsWith;
+
 import android.annotation.SuppressLint;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
@@ -24,7 +32,6 @@ import android.location.Location;
 import android.media.MediaDataSource;
 import android.media.MediaMetadataRetriever;
 import android.os.Build;
-import android.system.Os;
 import android.system.OsConstants;
 import android.util.Log;
 import android.util.Pair;
@@ -33,12 +40,13 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
+import androidx.exifinterface.media.ExifInterfaceUtils.Api21Impl;
+import androidx.exifinterface.media.ExifInterfaceUtils.Api23Impl;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -77,7 +85,11 @@ import java.util.zip.CRC32;
  * <p>
  * Supported for reading: JPEG, PNG, WebP, HEIF, DNG, CR2, NEF, NRW, ARW, RW2, ORF, PEF, SRW, RAF.
  * <p>
- * Supported for writing: JPEG, PNG, WebP.
+ * Supported for writing: JPEG, PNG, WebP, DNG.
+ * <p>
+ * Note: JPEG and HEIF files may contain XMP data either inside the Exif data chunk or outside of
+ * it. This class will search both locations for XMP data, but if XMP data exist both inside and
+ * outside Exif, will favor the XMP data inside Exif over the one outside.
  */
 public class ExifInterface {
     private static final String TAG = "ExifInterface";
@@ -453,6 +465,10 @@ public class ExifInterface {
      *      <li>Length = 19</li>
      *      <li>Default = None</li>
      *  </ul>
+     *
+     *  <p>Note: The format "YYYY-MM-DD HH:MM:SS" is also supported for reading. For writing,
+     *  however, calling {@link #setAttribute(String, String)} with the "YYYY-MM-DD HH:MM:SS"
+     *  format will automatically convert it to the primary format, "YYYY:MM:DD HH:MM:SS".
      */
     public static final String TAG_DATETIME = "DateTime";
     /**
@@ -744,6 +760,10 @@ public class ExifInterface {
      *      <li>Length = 19</li>
      *      <li>Default = None</li>
      *  </ul>
+     *
+     *  <p>Note: The format "YYYY-MM-DD HH:MM:SS" is also supported for reading. For writing,
+     *  however, calling {@link #setAttribute(String, String)} with the "YYYY-MM-DD HH:MM:SS"
+     *  format will automatically convert it to the primary format, "YYYY:MM:DD HH:MM:SS".
      */
     public static final String TAG_DATETIME_ORIGINAL = "DateTimeOriginal";
     /**
@@ -762,6 +782,10 @@ public class ExifInterface {
      *      <li>Length = 19</li>
      *      <li>Default = None</li>
      *  </ul>
+     *
+     *  <p>Note: The format "YYYY-MM-DD HH:MM:SS" is also supported for reading. For writing,
+     *  however, calling {@link #setAttribute(String, String)} with the "YYYY-MM-DD HH:MM:SS"
+     *  format will automatically convert it to the primary format, "YYYY:MM:DD HH:MM:SS".
      */
     public static final String TAG_DATETIME_DIGITIZED = "DateTimeDigitized";
     /**
@@ -2969,7 +2993,7 @@ public class ExifInterface {
     // 3.1. PNG file signature
     private static final byte[] PNG_SIGNATURE = new byte[] {(byte) 0x89, (byte) 0x50, (byte) 0x4e,
             (byte) 0x47, (byte) 0x0d, (byte) 0x0a, (byte) 0x1a, (byte) 0x0a};
-    // See PNG (Portable Network Graphics) Specification, Version 1.2,
+    // See "Extensions to the PNG 1.2 Specification, Version 1.5.0",
     // 3.7. eXIf Exchangeable Image File (Exif) Profile
     private static final byte[] PNG_CHUNK_TYPE_EXIF = new byte[]{(byte) 0x65, (byte) 0x58,
             (byte) 0x49, (byte) 0x66};
@@ -2998,7 +3022,8 @@ public class ExifInterface {
     private static final int WEBP_CHUNK_TYPE_BYTE_LENGTH = 4;
     private static final int WEBP_CHUNK_SIZE_BYTE_LENGTH = 4;
 
-    private static SimpleDateFormat sFormatter;
+    private static SimpleDateFormat sFormatterPrimary;
+    private static SimpleDateFormat sFormatterSecondary;
 
     // See Exchangeable image file format for digital still cameras: Exif version 2.2.
     // The following values are for parsing EXIF data area. There are tag groups in EXIF data area.
@@ -3028,6 +3053,9 @@ public class ExifInterface {
     private static final int IFD_FORMAT_DOUBLE = 12;
     // Format indicating a new IFD entry (See Adobe PageMaker® 6.0 TIFF Technical Notes, "New Tag")
     private static final int IFD_FORMAT_IFD = 13;
+
+    private static final int SKIP_BUFFER_SIZE = 8192;
+
     // Names for the data formats for debugging purpose.
     static final String[] IFD_FORMAT_NAMES = new String[] {
             "", "BYTE", "STRING", "USHORT", "ULONG", "URATIONAL", "SBYTE", "UNDEFINED", "SSHORT",
@@ -3621,13 +3649,15 @@ public class ExifInterface {
             new ExifTag(TAG_DEFAULT_CROP_SIZE, 50720, IFD_FORMAT_USHORT, IFD_FORMAT_ULONG)
     };
 
-    // Primary image IFD GPS Info tags (See JEITA CP-3451C Section 4.6.8 Tag Support Levels)
+    // Primary image IFD GPS Info tags (See JEITA CP-3451C Section 4.6.6 Tag Support Levels)
     private static final ExifTag[] IFD_GPS_TAGS = new ExifTag[] {
             new ExifTag(TAG_GPS_VERSION_ID, 0, IFD_FORMAT_BYTE),
             new ExifTag(TAG_GPS_LATITUDE_REF, 1, IFD_FORMAT_STRING),
-            new ExifTag(TAG_GPS_LATITUDE, 2, IFD_FORMAT_URATIONAL),
+            // Allow SRATIONAL to be compatible with apps using wrong format and
+            // even if it is negative, it may be valid latitude / longitude.
+            new ExifTag(TAG_GPS_LATITUDE, 2, IFD_FORMAT_URATIONAL, IFD_FORMAT_SRATIONAL),
             new ExifTag(TAG_GPS_LONGITUDE_REF, 3, IFD_FORMAT_STRING),
-            new ExifTag(TAG_GPS_LONGITUDE, 4, IFD_FORMAT_URATIONAL),
+            new ExifTag(TAG_GPS_LONGITUDE, 4, IFD_FORMAT_URATIONAL, IFD_FORMAT_SRATIONAL),
             new ExifTag(TAG_GPS_ALTITUDE_REF, 5, IFD_FORMAT_BYTE),
             new ExifTag(TAG_GPS_ALTITUDE, 6, IFD_FORMAT_URATIONAL),
             new ExifTag(TAG_GPS_TIMESTAMP, 7, IFD_FORMAT_URATIONAL),
@@ -3696,6 +3726,7 @@ public class ExifInterface {
             new ExifTag(TAG_Y_CB_CR_SUB_SAMPLING, 530, IFD_FORMAT_USHORT),
             new ExifTag(TAG_Y_CB_CR_POSITIONING, 531, IFD_FORMAT_USHORT),
             new ExifTag(TAG_REFERENCE_BLACK_WHITE, 532, IFD_FORMAT_URATIONAL),
+            new ExifTag(TAG_XMP, 700, IFD_FORMAT_BYTE),
             new ExifTag(TAG_COPYRIGHT, 33432, IFD_FORMAT_STRING),
             new ExifTag(TAG_EXIF_IFD_POINTER, 34665, IFD_FORMAT_ULONG),
             new ExifTag(TAG_GPS_INFO_IFD_POINTER, 34853, IFD_FORMAT_ULONG),
@@ -3764,12 +3795,6 @@ public class ExifInterface {
             new ExifTag(TAG_ORF_IMAGE_PROCESSING_IFD_POINTER, 8256, IFD_FORMAT_BYTE)
     };
 
-    // Tags for indicating the thumbnail offset and length
-    private static final ExifTag JPEG_INTERCHANGE_FORMAT_TAG =
-            new ExifTag(TAG_JPEG_INTERCHANGE_FORMAT, 513, IFD_FORMAT_ULONG);
-    private static final ExifTag JPEG_INTERCHANGE_FORMAT_LENGTH_TAG =
-            new ExifTag(TAG_JPEG_INTERCHANGE_FORMAT_LENGTH, 514, IFD_FORMAT_ULONG);
-
     // Mappings from tag number to tag name and each item represents one IFD tag group.
     @SuppressWarnings("unchecked")
     private static final HashMap<Integer, ExifTag>[] sExifTagMapsForReading =
@@ -3820,25 +3845,27 @@ public class ExifInterface {
     static final byte MARKER_EOI = (byte) 0xd9;
 
     // Supported Image File Types
-    private static final int IMAGE_TYPE_UNKNOWN = 0;
-    private static final int IMAGE_TYPE_ARW = 1;
-    private static final int IMAGE_TYPE_CR2 = 2;
-    private static final int IMAGE_TYPE_DNG = 3;
-    private static final int IMAGE_TYPE_JPEG = 4;
-    private static final int IMAGE_TYPE_NEF = 5;
-    private static final int IMAGE_TYPE_NRW = 6;
-    private static final int IMAGE_TYPE_ORF = 7;
-    private static final int IMAGE_TYPE_PEF = 8;
-    private static final int IMAGE_TYPE_RAF = 9;
-    private static final int IMAGE_TYPE_RW2 = 10;
-    private static final int IMAGE_TYPE_SRW = 11;
-    private static final int IMAGE_TYPE_HEIF = 12;
-    private static final int IMAGE_TYPE_PNG = 13;
-    private static final int IMAGE_TYPE_WEBP = 14;
+    static final int IMAGE_TYPE_UNKNOWN = 0;
+    static final int IMAGE_TYPE_ARW = 1;
+    static final int IMAGE_TYPE_CR2 = 2;
+    static final int IMAGE_TYPE_DNG = 3;
+    static final int IMAGE_TYPE_JPEG = 4;
+    static final int IMAGE_TYPE_NEF = 5;
+    static final int IMAGE_TYPE_NRW = 6;
+    static final int IMAGE_TYPE_ORF = 7;
+    static final int IMAGE_TYPE_PEF = 8;
+    static final int IMAGE_TYPE_RAF = 9;
+    static final int IMAGE_TYPE_RW2 = 10;
+    static final int IMAGE_TYPE_SRW = 11;
+    static final int IMAGE_TYPE_HEIF = 12;
+    static final int IMAGE_TYPE_PNG = 13;
+    static final int IMAGE_TYPE_WEBP = 14;
 
     static {
-        sFormatter = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
-        sFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+        sFormatterPrimary = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+        sFormatterPrimary.setTimeZone(TimeZone.getTimeZone("UTC"));
+        sFormatterSecondary = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+        sFormatterSecondary.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         // Build up the hash tables to look up Exif tags for reading Exif tags.
         for (int ifdType = 0; ifdType < EXIF_TAGS.length; ++ifdType) {
@@ -3887,10 +3914,17 @@ public class ExifInterface {
     private boolean mXmpIsFromSeparateMarker;
 
     // Pattern to check non zero timestamp
-    private static final Pattern sNonZeroTimePattern = Pattern.compile(".*[1-9].*");
+    private static final Pattern NON_ZERO_TIME_PATTERN = Pattern.compile(".*[1-9].*");
     // Pattern to check gps timestamp
-    private static final Pattern sGpsTimestampPattern =
-            Pattern.compile("^([0-9][0-9]):([0-9][0-9]):([0-9][0-9])$");
+    private static final Pattern GPS_TIMESTAMP_PATTERN =
+            Pattern.compile("^(\\d{2}):(\\d{2}):(\\d{2})$");
+    // Pattern to check date time primary format (e.g. 2020:01:01 00:00:00)
+    private static final Pattern DATETIME_PRIMARY_FORMAT_PATTERN =
+            Pattern.compile("^(\\d{4}):(\\d{2}):(\\d{2})\\s(\\d{2}):(\\d{2}):(\\d{2})$");
+    // Pattern to check date time secondary format (e.g. 2020-01-01 00:00:00)
+    private static final Pattern DATETIME_SECONDARY_FORMAT_PATTERN =
+            Pattern.compile("^(\\d{4})-(\\d{2})-(\\d{2})\\s(\\d{2}):(\\d{2}):(\\d{2})$");
+    private static final int DATETIME_VALUE_STRING_LENGTH = 19;
 
     /**
      * Reads Exif tags from the specified image file.
@@ -3929,8 +3963,7 @@ public class ExifInterface {
      *
      * @param fileDescriptor the file descriptor of the image data
      * @throws NullPointerException if file descriptor is null
-     * @throws IOException if an error occurs while duplicating the file descriptor via
-     *         {@link Os#dup(FileDescriptor)}.
+     * @throws IOException if an error occurs while duplicating the file descriptor.
      */
     public ExifInterface(@NonNull FileDescriptor fileDescriptor) throws IOException {
         if (fileDescriptor == null) {
@@ -3946,7 +3979,7 @@ public class ExifInterface {
             // Otherwise, just close the given file descriptor after reading it because the save
             // feature won't be working.
             try {
-                fileDescriptor = Os.dup(fileDescriptor);
+                fileDescriptor = Api21Impl.dup(fileDescriptor);
                 isFdDuped = true;
             } catch (Exception e) {
                 throw new IOException("Failed to duplicate file descriptor", e);
@@ -3976,7 +4009,7 @@ public class ExifInterface {
      * @throws NullPointerException if the input stream is null
      */
     public ExifInterface(@NonNull InputStream inputStream) throws IOException {
-        this(inputStream, false);
+        this(inputStream, STREAM_TYPE_FULL_IMAGE_DATA);
     }
 
     /**
@@ -3993,18 +4026,14 @@ public class ExifInterface {
      */
     public ExifInterface(@NonNull InputStream inputStream, @ExifStreamType int streamType)
             throws IOException {
-        this(inputStream, (streamType == STREAM_TYPE_EXIF_DATA_ONLY) ? true : false);
-    }
-
-    private ExifInterface(@NonNull InputStream inputStream, boolean shouldBeExifDataOnly)
-            throws IOException {
         if (inputStream == null) {
             throw new NullPointerException("inputStream cannot be null");
         }
         mFilename = null;
 
+        boolean shouldBeExifDataOnly = (streamType == STREAM_TYPE_EXIF_DATA_ONLY);
         if (shouldBeExifDataOnly) {
-            inputStream = new BufferedInputStream(inputStream, SIGNATURE_CHECK_SIZE);
+            inputStream = new BufferedInputStream(inputStream, IDENTIFIER_EXIF_APP1.length);
             if (!isExifDataOnly((BufferedInputStream) inputStream)) {
                 Log.w(TAG, "Given data does not follow the structure of an Exif-only data.");
                 return;
@@ -4193,6 +4222,28 @@ public class ExifInterface {
         if (tag == null) {
             throw new NullPointerException("tag shouldn't be null");
         }
+        // Validate and convert if necessary.
+        if (TAG_DATETIME.equals(tag) || TAG_DATETIME_ORIGINAL.equals(tag)
+                || TAG_DATETIME_DIGITIZED.equals(tag)) {
+            if (value != null) {
+                boolean isPrimaryFormat = DATETIME_PRIMARY_FORMAT_PATTERN.matcher(value).find();
+                boolean isSecondaryFormat = DATETIME_SECONDARY_FORMAT_PATTERN.matcher(value).find();
+                // Validate
+                if (value.length() != DATETIME_VALUE_STRING_LENGTH
+                        || (!isPrimaryFormat && !isSecondaryFormat)) {
+                    Log.w(TAG, "Invalid value for " + tag + " : " + value);
+                    return;
+                }
+                // If datetime value has secondary format (e.g. 2020-01-01 00:00:00), convert it to
+                // primary format (e.g. 2020:01:01 00:00:00) since it is the format in the
+                // official documentation.
+                // See JEITA CP-3451C Section 4.6.4. D. Other Tags, DateTime
+                if (isSecondaryFormat) {
+                    // Replace "-" with ":" to match the primary format.
+                    value = value.replaceAll("-", ":");
+                }
+            }
+        }
         // Maintain compatibility.
         if (TAG_ISO_SPEED_RATINGS.equals(tag)) {
             if (DEBUG) {
@@ -4204,7 +4255,7 @@ public class ExifInterface {
         // Convert the given value to rational values for backwards compatibility.
         if (value != null && sTagSetForCompatibility.contains(tag)) {
             if (tag.equals(TAG_GPS_TIMESTAMP)) {
-                Matcher m = sGpsTimestampPattern.matcher(value);
+                Matcher m = GPS_TIMESTAMP_PATTERN.matcher(value);
                 if (!m.find()) {
                     Log.w(TAG, "Invalid value for " + tag + " : " + value);
                     return;
@@ -4535,62 +4586,39 @@ public class ExifInterface {
                 mMimeType = getMimeType((BufferedInputStream) in);
             }
 
-            // Create byte-ordered input stream
-            ByteOrderedDataInputStream inputStream = new ByteOrderedDataInputStream(in);
-
-            if (!mIsExifDataOnly) {
-                switch (mMimeType) {
-                    case IMAGE_TYPE_JPEG: {
-                        getJpegAttributes(inputStream, /* offsetToJpeg= */ 0,
-                                IFD_TYPE_PRIMARY);
-                        return;
-                    }
-                    case IMAGE_TYPE_RAF: {
-                        getRafAttributes(inputStream);
-                        return;
-                    }
-                    case IMAGE_TYPE_HEIF: {
+            if (shouldSupportSeek(mMimeType)) {
+                SeekableByteOrderedDataInputStream inputStream =
+                        new SeekableByteOrderedDataInputStream(in);
+                if (mIsExifDataOnly) {
+                    getStandaloneAttributes(inputStream);
+                } else {
+                    if (mMimeType == IMAGE_TYPE_HEIF) {
                         getHeifAttributes(inputStream);
-                        break;
-                    }
-                    case IMAGE_TYPE_ORF: {
+                    } else if (mMimeType == IMAGE_TYPE_ORF) {
                         getOrfAttributes(inputStream);
-                        break;
-                    }
-                    case IMAGE_TYPE_RW2: {
+                    } else if (mMimeType == IMAGE_TYPE_RW2) {
                         getRw2Attributes(inputStream);
-                        return;
-                    }
-                    case IMAGE_TYPE_PNG: {
-                        getPngAttributes(inputStream);
-                        return;
-                    }
-                    case IMAGE_TYPE_WEBP: {
-                        getWebpAttributes(inputStream);
-                        return;
-                    }
-                    case IMAGE_TYPE_ARW:
-                    case IMAGE_TYPE_CR2:
-                    case IMAGE_TYPE_DNG:
-                    case IMAGE_TYPE_NEF:
-                    case IMAGE_TYPE_NRW:
-                    case IMAGE_TYPE_PEF:
-                    case IMAGE_TYPE_SRW:
-                    case IMAGE_TYPE_UNKNOWN: {
+                    } else {
                         getRawAttributes(inputStream);
-                        break;
-                    }
-                    default: {
-                        break;
                     }
                 }
+                // Set thumbnail image offset and length
+                inputStream.seek(mOffsetToExifData);
+                setThumbnailData(inputStream);
             } else {
-                getStandaloneAttributes(inputStream);
+                ByteOrderedDataInputStream inputStream = new ByteOrderedDataInputStream(in);
+                if (mMimeType == IMAGE_TYPE_JPEG) {
+                    getJpegAttributes(inputStream, /* offsetToJpeg= */ 0,
+                            IFD_TYPE_PRIMARY);
+                } else if (mMimeType == IMAGE_TYPE_PNG) {
+                    getPngAttributes(inputStream);
+                } else if (mMimeType == IMAGE_TYPE_RAF) {
+                    getRafAttributes(inputStream);
+                } else if (mMimeType == IMAGE_TYPE_WEBP) {
+                    getWebpAttributes(inputStream);
+                }
             }
-            // Set thumbnail image offset and length
-            inputStream.seek(mOffsetToExifData);
-            setThumbnailData(inputStream);
-        } catch (IOException e) {
+        } catch (IOException | UnsupportedOperationException e) {
             // Ignore exceptions in order to keep the compatibility with the old versions of
             // ExifInterface.
             if (DEBUG) {
@@ -4610,7 +4638,7 @@ public class ExifInterface {
     private static boolean isSeekableFD(FileDescriptor fd) {
         if (Build.VERSION.SDK_INT >= 21) {
             try {
-                Os.lseek(fd, 0, OsConstants.SEEK_CUR);
+                Api21Impl.lseek(fd, 0, OsConstants.SEEK_CUR);
                 return true;
             } catch (Exception e) {
                 if (DEBUG) {
@@ -4640,7 +4668,7 @@ public class ExifInterface {
      * other. It's best to use {@link #setAttribute(String,String)} to set all attributes to write
      * and make a single call rather than multiple calls for each attribute.
      * <p>
-     * This method is supported for JPEG, PNG and WebP files.
+     * This method is supported for JPEG, PNG, WebP, and DNG formats.
      * <p class="note">
      * Note: after calling this method, any attempts to obtain range information
      * from {@link #getAttributeRange(String)} or {@link #getThumbnailRange()}
@@ -4649,16 +4677,22 @@ public class ExifInterface {
      * <p>
      * For WebP format, the Exif data will be stored as an Extended File Format, and it may not be
      * supported for older readers.
-     * </p>
+     * <p>
+     * For PNG format, the Exif data will be stored as an "eXIf" chunk as per
+     * "Extensions to the PNG 1.2 Specification, Version 1.5.0".
      */
     public void saveAttributes() throws IOException {
-        if (!isSupportedFormatForSavingAttributes()) {
-            throw new IOException("ExifInterface only supports saving attributes on JPEG, PNG, "
-                    + "or WebP formats.");
+        if (!isSupportedFormatForSavingAttributes(mMimeType)) {
+            throw new IOException("ExifInterface only supports saving attributes for JPEG, PNG, "
+                    + "WebP, and DNG formats.");
         }
         if (mSeekableFileDescriptor == null && mFilename == null) {
             throw new IOException(
                     "ExifInterface does not support saving attributes for the current input.");
+        }
+        if (mHasThumbnail && mHasThumbnailStrips && !mAreThumbnailStripsConsecutive) {
+            throw new IOException("ExifInterface does not support saving attributes when the image "
+                    + "file has non-consecutive thumbnail strips");
         }
 
         // Remember the fact that we've changed the file on disk from what was
@@ -4670,25 +4704,22 @@ public class ExifInterface {
 
         FileInputStream in = null;
         FileOutputStream out = null;
-        File originalFile = null;
-        if (mFilename != null) {
-            originalFile = new File(mFilename);
-        }
         File tempFile = null;
         try {
-            // Move the original file to temporary file.
+            // Copy the original file to temporary file.
+            tempFile = File.createTempFile("temp", "tmp");
             if (mFilename != null) {
-                tempFile = new File(mFilename + ".tmp");
-                if (!originalFile.renameTo(tempFile)) {
-                    throw new IOException("Couldn't rename to " + tempFile.getAbsolutePath());
+                in = new FileInputStream(mFilename);
+            } else {
+                // mSeekableFileDescriptor will be non-null only for SDK_INT >= 21, but this check
+                // is needed to prevent calling Os.lseek at runtime for SDK < 21.
+                if (Build.VERSION.SDK_INT >= 21) {
+                    Api21Impl.lseek(mSeekableFileDescriptor, 0, OsConstants.SEEK_SET);
+                    in = new FileInputStream(mSeekableFileDescriptor);
                 }
-            } else if (Build.VERSION.SDK_INT >= 21 && mSeekableFileDescriptor != null) {
-                tempFile = File.createTempFile("temp", "tmp");
-                Os.lseek(mSeekableFileDescriptor, 0, OsConstants.SEEK_SET);
-                in = new FileInputStream(mSeekableFileDescriptor);
-                out = new FileOutputStream(tempFile);
-                copy(in, out);
             }
+            out = new FileOutputStream(tempFile);
+            copy(in, out);
         } catch (Exception e) {
             throw new IOException("Failed to copy original file to temp file", e);
         } finally {
@@ -4700,14 +4731,19 @@ public class ExifInterface {
         out = null;
         BufferedInputStream bufferedIn = null;
         BufferedOutputStream bufferedOut = null;
+        boolean shouldKeepTempFile = false;
         try {
             // Save the new file.
             in = new FileInputStream(tempFile);
             if (mFilename != null) {
                 out = new FileOutputStream(mFilename);
-            } else if (Build.VERSION.SDK_INT >= 21 && mSeekableFileDescriptor != null) {
-                Os.lseek(mSeekableFileDescriptor, 0, OsConstants.SEEK_SET);
-                out = new FileOutputStream(mSeekableFileDescriptor);
+            } else {
+                // mSeekableFileDescriptor will be non-null only for SDK_INT >= 21, but this check
+                // is needed to prevent calling Os.lseek at runtime for SDK < 21.
+                if (Build.VERSION.SDK_INT >= 21) {
+                    Api21Impl.lseek(mSeekableFileDescriptor, 0, OsConstants.SEEK_SET);
+                    out = new FileOutputStream(mSeekableFileDescriptor);
+                }
             }
             bufferedIn = new BufferedInputStream(in);
             bufferedOut = new BufferedOutputStream(out);
@@ -4717,19 +4753,41 @@ public class ExifInterface {
                 savePngAttributes(bufferedIn, bufferedOut);
             } else if (mMimeType == IMAGE_TYPE_WEBP) {
                 saveWebpAttributes(bufferedIn, bufferedOut);
+            } else if (mMimeType == IMAGE_TYPE_DNG || mMimeType == IMAGE_TYPE_UNKNOWN) {
+                ByteOrderedDataOutputStream dataOutputStream =
+                        new ByteOrderedDataOutputStream(bufferedOut, ByteOrder.BIG_ENDIAN);
+                writeExifSegment(dataOutputStream);
             }
         } catch (Exception e) {
-            if (mFilename != null) {
-                if (!tempFile.renameTo(originalFile)) {
-                    throw new IOException("Couldn't restore original file: "
-                            + originalFile.getAbsolutePath());
+            try {
+                // Restore original file
+                in = new FileInputStream(tempFile);
+                if (mFilename != null) {
+                    out = new FileOutputStream(mFilename);
+                } else {
+                    // mSeekableFileDescriptor will be non-null only for SDK_INT >= 21, but this
+                    // check is needed to prevent calling Os.lseek at runtime for SDK < 21.
+                    if (Build.VERSION.SDK_INT >= 21) {
+                        Api21Impl.lseek(mSeekableFileDescriptor, 0, OsConstants.SEEK_SET);
+                        out = new FileOutputStream(mSeekableFileDescriptor);
+                    }
                 }
+                copy(in, out);
+            } catch (Exception exception) {
+                shouldKeepTempFile = true;
+                throw new IOException("Failed to save new file. Original file is stored in "
+                        + tempFile.getAbsolutePath(), exception);
+            } finally {
+                closeQuietly(in);
+                closeQuietly(out);
             }
             throw new IOException("Failed to save new file", e);
         } finally {
             closeQuietly(bufferedIn);
             closeQuietly(bufferedOut);
-            tempFile.delete();
+            if (!shouldKeepTempFile) {
+                tempFile.delete();
+            }
         }
 
         // Discard the thumbnail in memory
@@ -4793,10 +4851,14 @@ public class ExifInterface {
                 }
             } else if (mFilename != null) {
                 in = new FileInputStream(mFilename);
-            } else if (Build.VERSION.SDK_INT >= 21 && mSeekableFileDescriptor != null) {
-                newFileDescriptor = Os.dup(mSeekableFileDescriptor);
-                Os.lseek(newFileDescriptor, 0, OsConstants.SEEK_SET);
-                in = new FileInputStream(newFileDescriptor);
+            } else {
+                // mSeekableFileDescriptor will be non-null only for SDK_INT >= 21, but this check
+                // is needed to prevent calling Os.lseek and Os.dup at runtime for SDK < 21.
+                if (Build.VERSION.SDK_INT >= 21) {
+                    newFileDescriptor = Api21Impl.dup(mSeekableFileDescriptor);
+                    Api21Impl.lseek(newFileDescriptor, 0, OsConstants.SEEK_SET);
+                    in = new FileInputStream(newFileDescriptor);
+                }
             }
             if (in == null) {
                 // Should not be reached this.
@@ -4849,9 +4911,9 @@ public class ExifInterface {
             }
 
             ExifAttribute imageLengthAttribute =
-                    (ExifAttribute) mAttributes[IFD_TYPE_THUMBNAIL].get(TAG_IMAGE_LENGTH);
+                    mAttributes[IFD_TYPE_THUMBNAIL].get(TAG_THUMBNAIL_IMAGE_LENGTH);
             ExifAttribute imageWidthAttribute =
-                    (ExifAttribute) mAttributes[IFD_TYPE_THUMBNAIL].get(TAG_IMAGE_WIDTH);
+                    mAttributes[IFD_TYPE_THUMBNAIL].get(TAG_THUMBNAIL_IMAGE_WIDTH);
             if (imageLengthAttribute != null && imageWidthAttribute != null) {
                 int imageLength = imageLengthAttribute.getIntValue(mExifByteOrder);
                 int imageWidth = imageWidthAttribute.getIntValue(mExifByteOrder);
@@ -5015,7 +5077,8 @@ public class ExifInterface {
         setAttribute(TAG_GPS_SPEED_REF, "K");
         setAttribute(TAG_GPS_SPEED, new Rational(location.getSpeed()
                 * TimeUnit.HOURS.toSeconds(1) / 1000).toString());
-        String[] dateTime = sFormatter.format(new Date(location.getTime())).split("\\s+", -1);
+        String[] dateTime = sFormatterPrimary.format(
+                new Date(location.getTime())).split("\\s+", -1);
         setAttribute(ExifInterface.TAG_GPS_DATESTAMP, dateTime[0]);
         setAttribute(ExifInterface.TAG_GPS_TIMESTAMP, dateTime[1]);
     }
@@ -5077,14 +5140,30 @@ public class ExifInterface {
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     public void setDateTime(@NonNull Long timeStamp) {
-        long sub = timeStamp % 1000;
-        setAttribute(TAG_DATETIME, sFormatter.format(new Date(timeStamp)));
-        setAttribute(TAG_SUBSEC_TIME, Long.toString(sub));
+        if (timeStamp == null) {
+            throw new NullPointerException("Timestamp should not be null.");
+        }
+
+        if (timeStamp < 0) {
+            throw new IllegalArgumentException("Timestamp should a positive value.");
+        }
+
+        long subsec = timeStamp % 1000;
+        String subsecString = Long.toString(subsec);
+        for (int i = subsecString.length(); i < 3; i++) {
+            subsecString = "0" + subsecString;
+        }
+        setAttribute(TAG_DATETIME, sFormatterPrimary.format(new Date(timeStamp)));
+        setAttribute(TAG_SUBSEC_TIME, subsecString);
     }
 
     /**
      * Returns parsed {@link ExifInterface#TAG_DATETIME} value as number of milliseconds since
      * Jan. 1, 1970, midnight local time.
+     *
+     * <p>Note: The return value includes the first three digits (or less depending on the length
+     * of the string) of {@link ExifInterface#TAG_SUBSEC_TIME}.
+     *
      * @return null if date time information is unavailable or invalid.
      *
      * @hide
@@ -5100,6 +5179,10 @@ public class ExifInterface {
     /**
      * Returns parsed {@link ExifInterface#TAG_DATETIME_DIGITIZED} value as number of
      * milliseconds since Jan. 1, 1970, midnight local time.
+     *
+     * <p>Note: The return value includes the first three digits (or less depending on the length
+     * of the string) of {@link ExifInterface#TAG_SUBSEC_TIME_DIGITIZED}.
+     *
      * @return null if digitized date time information is unavailable or invalid.
      *
      * @hide
@@ -5115,6 +5198,10 @@ public class ExifInterface {
     /**
      * Returns parsed {@link ExifInterface#TAG_DATETIME_ORIGINAL} value as number of
      * milliseconds since Jan. 1, 1970, midnight local time.
+     *
+     * <p>Note: The return value includes the first three digits (or less depending on the length
+     * of the string) of {@link ExifInterface#TAG_SUBSEC_TIME_ORIGINAL}.
+     *
      * @return null if original date time information is unavailable or invalid.
      *
      * @hide
@@ -5129,16 +5216,22 @@ public class ExifInterface {
 
     private static Long parseDateTime(@Nullable String dateTimeString, @Nullable String subSecs,
             @Nullable String offsetString) {
-        if (dateTimeString == null
-                || !sNonZeroTimePattern.matcher(dateTimeString).matches()) return null;
+        if (dateTimeString == null || !NON_ZERO_TIME_PATTERN.matcher(dateTimeString).matches()) {
+            return null;
+        }
 
         ParsePosition pos = new ParsePosition(0);
         try {
             // The exif field is in local time. Parsing it as if it is UTC will yield time
             // since 1/1/1970 local time
-            Date datetime = sFormatter.parse(dateTimeString, pos);
-            if (datetime == null) return null;
-            long msecs = datetime.getTime();
+            Date dateTime = sFormatterPrimary.parse(dateTimeString, pos);
+            if (dateTime == null) {
+                dateTime = sFormatterSecondary.parse(dateTimeString, pos);
+                if (dateTime == null) {
+                    return null;
+                }
+            }
+            long msecs = dateTime.getTime();
             if (offsetString != null) {
                 String sign = offsetString.substring(0, 1);
                 int hour = Integer.parseInt(offsetString.substring(1, 3));
@@ -5151,15 +5244,7 @@ public class ExifInterface {
             }
 
             if (subSecs != null) {
-                try {
-                    long sub = Long.parseLong(subSecs);
-                    while (sub > 1000) {
-                        sub /= 10;
-                    }
-                    msecs += sub;
-                } catch (NumberFormatException e) {
-                    // Ignored
-                }
+                msecs += parseSubSeconds(subSecs);
             }
             return msecs;
         } catch (IllegalArgumentException e) {
@@ -5177,8 +5262,8 @@ public class ExifInterface {
         String date = getAttribute(TAG_GPS_DATESTAMP);
         String time = getAttribute(TAG_GPS_TIMESTAMP);
         if (date == null || time == null
-                || (!sNonZeroTimePattern.matcher(date).matches()
-                && !sNonZeroTimePattern.matcher(time).matches())) {
+                || (!NON_ZERO_TIME_PATTERN.matcher(date).matches()
+                && !NON_ZERO_TIME_PATTERN.matcher(time).matches())) {
             return null;
         }
 
@@ -5186,9 +5271,14 @@ public class ExifInterface {
 
         ParsePosition pos = new ParsePosition(0);
         try {
-            Date datetime = sFormatter.parse(dateTimeString, pos);
-            if (datetime == null) return null;
-            return datetime.getTime();
+            Date dateTime = sFormatterPrimary.parse(dateTimeString, pos);
+            if (dateTime == null) {
+                dateTime = sFormatterSecondary.parse(dateTimeString, pos);
+                if (dateTime == null) {
+                    return null;
+                }
+            }
+            return dateTime.getTime();
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -5255,7 +5345,6 @@ public class ExifInterface {
 
     // Checks the type of image file
     private int getMimeType(BufferedInputStream in) throws IOException {
-        // TODO (b/142218289): Need to handle case where input stream does not support mark
         in.mark(SIGNATURE_CHECK_SIZE);
         byte[] signatureCheckBytes = new byte[SIGNATURE_CHECK_SIZE];
         in.read(signatureCheckBytes);
@@ -5499,10 +5588,6 @@ public class ExifInterface {
         if (DEBUG) {
             Log.d(TAG, "getJpegAttributes starting with: " + in);
         }
-        // Do not buffer any bytes from this input stream since we don't need to rewind to an
-        // earlier position.
-        in.mark(0);
-
         // JPEG uses Big Endian by default. See https://people.cs.umass.edu/~verts/cs32/endian.html
         in.setByteOrder(ByteOrder.BIG_ENDIAN);
 
@@ -5603,13 +5688,13 @@ public class ExifInterface {
                 case MARKER_SOF13:
                 case MARKER_SOF14:
                 case MARKER_SOF15: {
-                    if (in.skipBytes(1) != 1) {
-                        throw new IOException("Invalid SOFx");
-                    }
-                    mAttributes[imageType].put(TAG_IMAGE_LENGTH, ExifAttribute.createULong(
-                            in.readUnsignedShort(), mExifByteOrder));
-                    mAttributes[imageType].put(TAG_IMAGE_WIDTH, ExifAttribute.createULong(
-                            in.readUnsignedShort(), mExifByteOrder));
+                    in.skipFully(1);
+                    mAttributes[imageType].put(imageType != IFD_TYPE_THUMBNAIL
+                                    ? TAG_IMAGE_LENGTH : TAG_THUMBNAIL_IMAGE_LENGTH,
+                            ExifAttribute.createULong(in.readUnsignedShort(), mExifByteOrder));
+                    mAttributes[imageType].put(imageType != IFD_TYPE_THUMBNAIL
+                                    ? TAG_IMAGE_WIDTH : TAG_THUMBNAIL_IMAGE_WIDTH,
+                            ExifAttribute.createULong(in.readUnsignedShort(), mExifByteOrder));
                     length -= 5;
                     break;
                 }
@@ -5621,18 +5706,16 @@ public class ExifInterface {
             if (length < 0) {
                 throw new IOException("Invalid length");
             }
-            if (in.skipBytes(length) != length) {
-                throw new IOException("Invalid JPEG segment");
-            }
+            in.skipFully(length);
             bytesRead += length;
         }
         // Restore original byte order
         in.setByteOrder(mExifByteOrder);
     }
 
-    private void getRawAttributes(ByteOrderedDataInputStream in) throws IOException {
+    private void getRawAttributes(SeekableByteOrderedDataInputStream in) throws IOException {
         // Parse TIFF Headers. See JEITA CP-3451C Section 4.5.2. Table 1.
-        parseTiffHeaders(in, in.available());
+        parseTiffHeaders(in);
 
         // Read TIFF image file directories. See JEITA CP-3451C Section 4.5.2. Figure 6.
         readImageFileDirectory(in, IFD_TYPE_PRIMARY);
@@ -5652,12 +5735,12 @@ public class ExifInterface {
                     (ExifAttribute) mAttributes[IFD_TYPE_EXIF].get(TAG_MAKER_NOTE);
             if (makerNoteAttribute != null) {
                 // Create an ordered DataInputStream for MakerNote
-                ByteOrderedDataInputStream makerNoteDataInputStream =
-                        new ByteOrderedDataInputStream(makerNoteAttribute.bytes);
+                SeekableByteOrderedDataInputStream makerNoteDataInputStream =
+                        new SeekableByteOrderedDataInputStream(makerNoteAttribute.bytes);
                 makerNoteDataInputStream.setByteOrder(mExifByteOrder);
 
-                // Seek to MakerNote data
-                makerNoteDataInputStream.seek(PEF_MAKER_NOTE_SKIP_SIZE);
+                // Skip to MakerNote data
+                makerNoteDataInputStream.skipFully(PEF_MAKER_NOTE_SKIP_SIZE);
 
                 // Read IFD data from MakerNote
                 readImageFileDirectory(makerNoteDataInputStream, IFD_TYPE_PEF);
@@ -5685,11 +5768,8 @@ public class ExifInterface {
         if (DEBUG) {
             Log.d(TAG, "getRafAttributes starting with: " + in);
         }
-        // Do not buffer any bytes from this input stream since we don't need to rewind to an
-        // earlier position.
-        in.mark(0);
         // Retrieve offset & length values
-        in.skipBytes(RAF_OFFSET_TO_JPEG_IMAGE_OFFSET);
+        in.skipFully(RAF_OFFSET_TO_JPEG_IMAGE_OFFSET);
         byte[] offsetToJpegBytes = new byte[4];
         byte[] jpegLengthBytes = new byte[4];
         byte[] cfaHeaderOffsetBytes = new byte[4];
@@ -5701,7 +5781,7 @@ public class ExifInterface {
         int cfaHeaderOffset = ByteBuffer.wrap(cfaHeaderOffsetBytes).getInt();
 
         byte[] jpegBytes = new byte[jpegLength];
-        in.seek(offsetToJpeg);
+        in.skipFully(offsetToJpeg - in.position());
         in.read(jpegBytes);
 
         // Retrieve JPEG image metadata
@@ -5709,7 +5789,7 @@ public class ExifInterface {
         getJpegAttributes(jpegInputStream, offsetToJpeg, IFD_TYPE_PREVIEW);
 
         // Skip to CFA header offset.
-        in.seek(cfaHeaderOffset);
+        in.skipFully(cfaHeaderOffset - in.position());
 
         // Retrieve primary image length/width values, if TAG_RAF_IMAGE_SIZE exists
         in.setByteOrder(ByteOrder.BIG_ENDIAN);
@@ -5737,15 +5817,17 @@ public class ExifInterface {
                 }
                 return;
             }
-            in.skipBytes(numberOfBytes);
+            in.skipFully(numberOfBytes);
         }
     }
 
-    private void getHeifAttributes(final ByteOrderedDataInputStream in) throws IOException {
-        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-        try {
-            if (Build.VERSION.SDK_INT >= 23) {
-                retriever.setDataSource(new MediaDataSource() {
+    // Support for getting MediaMetadataRetriever.METADATA_KEY_EXIF_OFFSET and
+    // MediaMetadataRetriever.METADATA_KEY_EXIF_LENGTH was added SDK 28.
+    private void getHeifAttributes(final SeekableByteOrderedDataInputStream in) throws IOException {
+        if (Build.VERSION.SDK_INT >= 28) {
+            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+            try {
+                Api23Impl.setDataSource(retriever, new MediaDataSource() {
                     long mPosition;
 
                     @Override
@@ -5797,115 +5879,131 @@ public class ExifInterface {
                         return -1;
                     }
                 });
-            } else {
-                if (mSeekableFileDescriptor != null) {
-                    retriever.setDataSource(mSeekableFileDescriptor);
-                } else if (mFilename != null) {
-                    retriever.setDataSource(mFilename);
-                } else {
-                    return;
-                }
-            }
 
-            String exifOffsetStr = retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_EXIF_OFFSET);
-            String exifLengthStr = retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_EXIF_LENGTH);
-            String hasImage = retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_HAS_IMAGE);
-            String hasVideo = retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO);
+                String exifOffsetStr = retriever.extractMetadata(
+                        MediaMetadataRetriever.METADATA_KEY_EXIF_OFFSET);
+                String exifLengthStr = retriever.extractMetadata(
+                        MediaMetadataRetriever.METADATA_KEY_EXIF_LENGTH);
+                String hasImage = retriever.extractMetadata(
+                        MediaMetadataRetriever.METADATA_KEY_HAS_IMAGE);
+                String hasVideo = retriever.extractMetadata(
+                        MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO);
 
-            String width = null;
-            String height = null;
-            String rotation = null;
-            final String metadataValueYes = "yes";
-            // If the file has both image and video, prefer image info over video info.
-            // App querying ExifInterface is most likely using the bitmap path which
-            // picks the image first.
-            if (metadataValueYes.equals(hasImage)) {
-                width = retriever.extractMetadata(
-                        MediaMetadataRetriever.METADATA_KEY_IMAGE_WIDTH);
-                height = retriever.extractMetadata(
-                        MediaMetadataRetriever.METADATA_KEY_IMAGE_HEIGHT);
-                rotation = retriever.extractMetadata(
-                        MediaMetadataRetriever.METADATA_KEY_IMAGE_ROTATION);
-            } else if (metadataValueYes.equals(hasVideo)) {
-                width = retriever.extractMetadata(
-                        MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH);
-                height = retriever.extractMetadata(
-                        MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
-                rotation = retriever.extractMetadata(
-                        MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);
-            }
-
-            if (width != null) {
-                mAttributes[IFD_TYPE_PRIMARY].put(TAG_IMAGE_WIDTH,
-                        ExifAttribute.createUShort(Integer.parseInt(width), mExifByteOrder));
-            }
-
-            if (height != null) {
-                mAttributes[IFD_TYPE_PRIMARY].put(TAG_IMAGE_LENGTH,
-                        ExifAttribute.createUShort(Integer.parseInt(height), mExifByteOrder));
-            }
-
-            if (rotation != null) {
-                int orientation = ExifInterface.ORIENTATION_NORMAL;
-
-                // all rotation angles in CW
-                switch (Integer.parseInt(rotation)) {
-                    case 90:
-                        orientation = ExifInterface.ORIENTATION_ROTATE_90;
-                        break;
-                    case 180:
-                        orientation = ExifInterface.ORIENTATION_ROTATE_180;
-                        break;
-                    case 270:
-                        orientation = ExifInterface.ORIENTATION_ROTATE_270;
-                        break;
+                String width = null;
+                String height = null;
+                String rotation = null;
+                final String metadataValueYes = "yes";
+                // If the file has both image and video, prefer image info over video info.
+                // App querying ExifInterface is most likely using the bitmap path which
+                // picks the image first.
+                if (metadataValueYes.equals(hasImage)) {
+                    width = retriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_IMAGE_WIDTH);
+                    height = retriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_IMAGE_HEIGHT);
+                    rotation = retriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_IMAGE_ROTATION);
+                } else if (metadataValueYes.equals(hasVideo)) {
+                    width = retriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH);
+                    height = retriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
+                    rotation = retriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);
                 }
 
-                mAttributes[IFD_TYPE_PRIMARY].put(TAG_ORIENTATION,
-                        ExifAttribute.createUShort(orientation, mExifByteOrder));
-            }
-
-            if (exifOffsetStr != null && exifLengthStr != null) {
-                int offset = Integer.parseInt(exifOffsetStr);
-                int length = Integer.parseInt(exifLengthStr);
-                if (length <= 6) {
-                    throw new IOException("Invalid exif length");
-                }
-                in.seek(offset);
-                byte[] identifier = new byte[6];
-                if (in.read(identifier) != 6) {
-                    throw new IOException("Can't read identifier");
-                }
-                offset += 6;
-                length -= 6;
-                if (!Arrays.equals(identifier, IDENTIFIER_EXIF_APP1)) {
-                    throw new IOException("Invalid identifier");
+                if (width != null) {
+                    mAttributes[IFD_TYPE_PRIMARY].put(TAG_IMAGE_WIDTH,
+                            ExifAttribute.createUShort(Integer.parseInt(width), mExifByteOrder));
                 }
 
-                // TODO: Need to handle potential OutOfMemoryError
-                byte[] bytes = new byte[length];
-                if (in.read(bytes) != length) {
-                    throw new IOException("Can't read exif");
+                if (height != null) {
+                    mAttributes[IFD_TYPE_PRIMARY].put(TAG_IMAGE_LENGTH,
+                            ExifAttribute.createUShort(Integer.parseInt(height), mExifByteOrder));
                 }
-                // Save offset to EXIF data for handling thumbnail and attribute offsets.
-                mOffsetToExifData = offset;
-                readExifSegment(bytes, IFD_TYPE_PRIMARY);
-            }
 
-            if (DEBUG) {
-                Log.d(TAG, "Heif meta: " + width + "x" + height + ", rotation " + rotation);
+                if (rotation != null) {
+                    int orientation = ExifInterface.ORIENTATION_NORMAL;
+
+                    // all rotation angles in CW
+                    switch (Integer.parseInt(rotation)) {
+                        case 90:
+                            orientation = ExifInterface.ORIENTATION_ROTATE_90;
+                            break;
+                        case 180:
+                            orientation = ExifInterface.ORIENTATION_ROTATE_180;
+                            break;
+                        case 270:
+                            orientation = ExifInterface.ORIENTATION_ROTATE_270;
+                            break;
+                    }
+
+                    mAttributes[IFD_TYPE_PRIMARY].put(TAG_ORIENTATION,
+                            ExifAttribute.createUShort(orientation, mExifByteOrder));
+                }
+
+                if (exifOffsetStr != null && exifLengthStr != null) {
+                    int offset = Integer.parseInt(exifOffsetStr);
+                    int length = Integer.parseInt(exifLengthStr);
+                    if (length <= 6) {
+                        throw new IOException("Invalid exif length");
+                    }
+                    in.seek(offset);
+                    byte[] identifier = new byte[6];
+                    if (in.read(identifier) != 6) {
+                        throw new IOException("Can't read identifier");
+                    }
+                    offset += 6;
+                    length -= 6;
+                    if (!Arrays.equals(identifier, IDENTIFIER_EXIF_APP1)) {
+                        throw new IOException("Invalid identifier");
+                    }
+
+                    // TODO: Need to handle potential OutOfMemoryError
+                    byte[] bytes = new byte[length];
+                    if (in.read(bytes) != length) {
+                        throw new IOException("Can't read exif");
+                    }
+                    // Save offset to EXIF data for handling thumbnail and attribute offsets.
+                    mOffsetToExifData = offset;
+                    readExifSegment(bytes, IFD_TYPE_PRIMARY);
+                }
+
+                String xmpOffsetStr = retriever.extractMetadata(
+                        MediaMetadataRetriever.METADATA_KEY_XMP_OFFSET);
+                String xmpLengthStr = retriever.extractMetadata(
+                        MediaMetadataRetriever.METADATA_KEY_XMP_LENGTH);
+                if (xmpOffsetStr != null && xmpLengthStr != null) {
+                    int offset = Integer.parseInt(xmpOffsetStr);
+                    int length = Integer.parseInt(xmpLengthStr);
+                    in.seek(offset);
+                    byte[] xmpBytes = new byte[length];
+                    if (in.read(xmpBytes) != length) {
+                        throw new IOException("Failed to read XMP from HEIF");
+                    }
+                    if (getAttribute(TAG_XMP) == null) {
+                        mAttributes[IFD_TYPE_PRIMARY].put(TAG_XMP, new ExifAttribute(
+                                IFD_FORMAT_BYTE, xmpBytes.length, offset, xmpBytes));
+                    }
+                }
+
+                if (DEBUG) {
+                    Log.d(TAG, "Heif meta: " + width + "x" + height + ", rotation " + rotation);
+                }
+            } catch (RuntimeException e) {
+                throw new UnsupportedOperationException("Failed to read EXIF from HEIF file. "
+                        + "Given stream is either malformed or unsupported.");
+            } finally {
+                retriever.release();
             }
-        } finally {
-            retriever.release();
+        } else {
+            throw new UnsupportedOperationException("Reading EXIF from HEIF files "
+                    + "is supported from SDK 28 and above");
         }
     }
 
-    private void getStandaloneAttributes(ByteOrderedDataInputStream in) throws IOException {
-        in.skipBytes(IDENTIFIER_EXIF_APP1.length);
+    private void getStandaloneAttributes(SeekableByteOrderedDataInputStream in) throws IOException {
+        in.skipFully(IDENTIFIER_EXIF_APP1.length);
         // TODO: Need to handle potential OutOfMemoryError
         byte[] data = new byte[in.available()];
         in.readFully(data);
@@ -5924,7 +6022,7 @@ public class ExifInterface {
      * http://fileformats.archiveteam.org/wiki/Olympus_ORF
      * https://libopenraw.freedesktop.org/wiki/Olympus_ORF
      */
-    private void getOrfAttributes(ByteOrderedDataInputStream in) throws IOException {
+    private void getOrfAttributes(SeekableByteOrderedDataInputStream in) throws IOException {
         // Retrieve primary image data
         // Other Exif data will be located in the Makernote.
         getRawAttributes(in);
@@ -5936,8 +6034,8 @@ public class ExifInterface {
                 (ExifAttribute) mAttributes[IFD_TYPE_EXIF].get(TAG_MAKER_NOTE);
         if (makerNoteAttribute != null) {
             // Create an ordered DataInputStream for MakerNote
-            ByteOrderedDataInputStream makerNoteDataInputStream =
-                    new ByteOrderedDataInputStream(makerNoteAttribute.bytes);
+            SeekableByteOrderedDataInputStream makerNoteDataInputStream =
+                    new SeekableByteOrderedDataInputStream(makerNoteAttribute.bytes);
             makerNoteDataInputStream.setByteOrder(mExifByteOrder);
 
             // There are two types of headers for Olympus MakerNotes
@@ -6007,7 +6105,7 @@ public class ExifInterface {
     // RW2 contains the primary image data in IFD0 and the preview and/or thumbnail image data in
     // the JpgFromRaw tag
     // See https://libopenraw.freedesktop.org/wiki/Panasonic_RAW/ and piex.cc Rw2GetPreviewData()
-    private void getRw2Attributes(ByteOrderedDataInputStream in) throws IOException {
+    private void getRw2Attributes(SeekableByteOrderedDataInputStream in) throws IOException {
         if (DEBUG) {
             Log.d(TAG, "getRw2Attributes starting with: " + in);
         }
@@ -6040,10 +6138,6 @@ public class ExifInterface {
         if (DEBUG) {
             Log.d(TAG, "getPngAttributes starting with: " + in);
         }
-        // Do not buffer any bytes from this input stream since we don't need to rewind to an
-        // earlier position.
-        in.mark(0);
-
         // PNG uses Big Endian by default.
         // See PNG (Portable Network Graphics) Specification, Version 1.2,
         // 2.1. Integers and byte order
@@ -6052,7 +6146,7 @@ public class ExifInterface {
         int bytesRead = 0;
 
         // Skip the signature bytes
-        in.skipBytes(PNG_SIGNATURE.length);
+        in.skipFully(PNG_SIGNATURE.length);
         bytesRead += PNG_SIGNATURE.length;
 
         // Each chunk is made up of four parts:
@@ -6114,7 +6208,7 @@ public class ExifInterface {
                     break;
                 } else {
                     // Skip to next chunk
-                    in.skipBytes(length + PNG_CHUNK_CRC_BYTE_LENGTH);
+                    in.skipFully(length + PNG_CHUNK_CRC_BYTE_LENGTH);
                     bytesRead += length + PNG_CHUNK_CRC_BYTE_LENGTH;
                 }
             }
@@ -6132,20 +6226,18 @@ public class ExifInterface {
         if (DEBUG) {
             Log.d(TAG, "getWebpAttributes starting with: " + in);
         }
-        // Do not buffer any bytes from this input stream since we don't need to rewind to an
-        // earlier position.
-        in.mark(0);
-
         // WebP uses little-endian by default.
         // See Section "Terminology & Basics"
         in.setByteOrder(ByteOrder.LITTLE_ENDIAN);
 
-        in.skipBytes(WEBP_SIGNATURE_1.length);
+        in.skipFully(WEBP_SIGNATURE_1.length);
         // File size corresponds to the size of the entire file from offset 8.
         // See Section "WebP File Header"
         int fileSize = in.readInt() + 8;
         int bytesRead = 8;
-        bytesRead += in.skipBytes(WEBP_SIGNATURE_2.length);
+
+        in.skipFully(WEBP_SIGNATURE_2.length);
+        bytesRead += WEBP_SIGNATURE_2.length;
 
         try {
             while (true) {
@@ -6195,11 +6287,8 @@ public class ExifInterface {
                     }
 
                     // Skip to next chunk
-                    int skipped = in.skipBytes(chunkSize);
-                    if (skipped != chunkSize) {
-                        throw new IOException("Encountered WebP file with invalid chunk size");
-                    }
-                    bytesRead += skipped;
+                    in.skipFully(chunkSize);
+                    bytesRead += chunkSize;
                 }
             }
         } catch (EOFException e) {
@@ -6217,7 +6306,7 @@ public class ExifInterface {
             Log.d(TAG, "saveJpegAttributes starting with (inputStream: " + inputStream
                     + ", outputStream: " + outputStream + ")");
         }
-        DataInputStream dataInputStream = new DataInputStream(inputStream);
+        ByteOrderedDataInputStream dataInputStream = new ByteOrderedDataInputStream(inputStream);
         ByteOrderedDataOutputStream dataOutputStream =
                 new ByteOrderedDataOutputStream(outputStream, ByteOrder.BIG_ENDIAN);
         if (dataInputStream.readByte() != MARKER) {
@@ -6268,9 +6357,7 @@ public class ExifInterface {
                         }
                         if (Arrays.equals(identifier, IDENTIFIER_EXIF_APP1)) {
                             // Skip the original EXIF APP1 segment.
-                            if (dataInputStream.skipBytes(length - 6) != length - 6) {
-                                throw new IOException("Invalid length");
-                            }
+                            dataInputStream.skipFully(length - 6);
                             break;
                         }
                     }
@@ -6326,7 +6413,7 @@ public class ExifInterface {
             Log.d(TAG, "savePngAttributes starting with (inputStream: " + inputStream
                     + ", outputStream: " + outputStream + ")");
         }
-        DataInputStream dataInputStream = new DataInputStream(inputStream);
+        ByteOrderedDataInputStream dataInputStream = new ByteOrderedDataInputStream(inputStream);
         ByteOrderedDataOutputStream dataOutputStream =
                 new ByteOrderedDataOutputStream(outputStream, ByteOrder.BIG_ENDIAN);
 
@@ -6354,7 +6441,7 @@ public class ExifInterface {
 
             // Skip to the start of the chunk after the EXIF chunk
             int exifChunkLength = dataInputStream.readInt();
-            dataInputStream.skipBytes(PNG_CHUNK_TYPE_BYTE_LENGTH + exifChunkLength
+            dataInputStream.skipFully(PNG_CHUNK_TYPE_BYTE_LENGTH + exifChunkLength
                     + PNG_CHUNK_CRC_BYTE_LENGTH);
         }
 
@@ -6434,7 +6521,7 @@ public class ExifInterface {
         // WebP signature
         copy(totalInputStream, totalOutputStream, WEBP_SIGNATURE_1.length);
         // File length will be written after all the chunks have been written
-        totalInputStream.skipBytes(WEBP_FILE_SIZE_BYTE_LENGTH + WEBP_SIGNATURE_2.length);
+        totalInputStream.skipFully(WEBP_FILE_SIZE_BYTE_LENGTH + WEBP_SIGNATURE_2.length);
 
         // Create a separate byte array to calculate file length
         ByteArrayOutputStream nonHeaderByteArrayOutputStream = null;
@@ -6454,9 +6541,9 @@ public class ExifInterface {
                                 - WEBP_CHUNK_SIZE_BYTE_LENGTH);
 
                 // Skip input stream to the end of the EXIF chunk
-                totalInputStream.skipBytes(WEBP_CHUNK_TYPE_BYTE_LENGTH);
+                totalInputStream.skipFully(WEBP_CHUNK_TYPE_BYTE_LENGTH);
                 int exifChunkLength = totalInputStream.readInt();
-                totalInputStream.skipBytes(exifChunkLength);
+                totalInputStream.skipFully(exifChunkLength);
 
                 // Write new EXIF chunk to output stream
                 writeExifSegment(nonHeaderOutputStream);
@@ -6648,11 +6735,11 @@ public class ExifInterface {
 
     // Reads the given EXIF byte area and save its tag data into attributes.
     private void readExifSegment(byte[] exifBytes, int imageType) throws IOException {
-        ByteOrderedDataInputStream dataInputStream =
-                new ByteOrderedDataInputStream(exifBytes);
+        SeekableByteOrderedDataInputStream dataInputStream =
+                new SeekableByteOrderedDataInputStream(exifBytes);
 
         // Parse TIFF Headers. See JEITA CP-3451C Section 4.5.2. Table 1.
-        parseTiffHeaders(dataInputStream, exifBytes.length);
+        parseTiffHeaders(dataInputStream);
 
         // Read TIFF image file directories. See JEITA CP-3451C Section 4.5.2. Figure 6.
         readImageFileDirectory(dataInputStream, imageType);
@@ -6705,8 +6792,7 @@ public class ExifInterface {
         }
     }
 
-    private void parseTiffHeaders(ByteOrderedDataInputStream dataInputStream,
-            int exifBytesLength) throws IOException {
+    private void parseTiffHeaders(ByteOrderedDataInputStream dataInputStream) throws IOException {
         // Read byte order
         mExifByteOrder = readByteOrder(dataInputStream);
         // Set byte order
@@ -6720,35 +6806,28 @@ public class ExifInterface {
 
         // Read and skip to first ifd offset
         int firstIfdOffset = dataInputStream.readInt();
-        if (firstIfdOffset < 8 || firstIfdOffset >= exifBytesLength) {
+        if (firstIfdOffset < 8) {
             throw new IOException("Invalid first Ifd offset: " + firstIfdOffset);
         }
         firstIfdOffset -= 8;
         if (firstIfdOffset > 0) {
-            if (dataInputStream.skipBytes(firstIfdOffset) != firstIfdOffset) {
-                throw new IOException("Couldn't jump to first Ifd: " + firstIfdOffset);
-            }
+            dataInputStream.skipFully(firstIfdOffset);
         }
     }
 
     // Reads image file directory, which is a tag group in EXIF.
-    private void readImageFileDirectory(ByteOrderedDataInputStream dataInputStream,
+    private void readImageFileDirectory(SeekableByteOrderedDataInputStream dataInputStream,
             @IfdType int ifdType) throws IOException {
         // Save offset of current IFD to prevent reading an IFD that is already read.
         mAttributesOffsets.add(dataInputStream.mPosition);
 
-        if (dataInputStream.mPosition + 2 > dataInputStream.mLength) {
-            // Return if there is no data from the offset.
-            return;
-        }
         // See TIFF 6.0 Section 2: TIFF Structure, Figure 1.
         short numberOfDirectoryEntry = dataInputStream.readShort();
         if (DEBUG) {
             Log.d(TAG, "numberOfDirectoryEntry: " + numberOfDirectoryEntry);
         }
-        if (dataInputStream.mPosition + 12 * numberOfDirectoryEntry > dataInputStream.mLength
-                || numberOfDirectoryEntry <= 0) {
-            // Return if the size of entries is either too big or negative.
+        if (numberOfDirectoryEntry <= 0) {
+            // Return if the size of entries is negative.
             return;
         }
 
@@ -6758,7 +6837,7 @@ public class ExifInterface {
             int dataFormat = dataInputStream.readUnsignedShort();
             int numberOfComponents = dataInputStream.readInt();
             // Next four bytes is for data offset or value.
-            long nextEntryOffset = dataInputStream.peek() + 4L;
+            long nextEntryOffset = dataInputStream.position() + 4L;
 
             // Look up a corresponding tag from tag number
             ExifTag tag = (ExifTag) sExifTagMapsForReading[ifdType].get(tagNumber);
@@ -6835,16 +6914,7 @@ public class ExifInterface {
                                 jpegInterchangeFormatLengthAttribute);
                     }
                 }
-                if (offset + byteCount <= dataInputStream.mLength) {
-                    dataInputStream.seek(offset);
-                } else {
-                    // Skip if invalid data offset.
-                    if (DEBUG) {
-                        Log.d(TAG, "Skip the tag entry since data offset is invalid: " + offset);
-                    }
-                    dataInputStream.seek(nextEntryOffset);
-                    continue;
-                }
+                dataInputStream.seek(offset);
             }
 
             // Recursively parse IFD when a IFD pointer tag appears.
@@ -6884,9 +6954,9 @@ public class ExifInterface {
                 }
 
                 // Check if the next IFD offset
-                // 1. Exists within the boundaries of the input stream
+                // 1. Is a non-negative value, and
                 // 2. Does not point to a previously read IFD.
-                if (offset > 0L && offset < dataInputStream.mLength) {
+                if (offset > 0L) {
                     if (!mAttributesOffsets.contains((int) offset)) {
                         dataInputStream.seek(offset);
                         readImageFileDirectory(dataInputStream, nextIfdType);
@@ -6906,7 +6976,7 @@ public class ExifInterface {
                 continue;
             }
 
-            final int bytesOffset = dataInputStream.peek() + mOffsetToExifData;
+            final int bytesOffset = dataInputStream.position() + mOffsetToExifData;
             final byte[] bytes = new byte[(int) byteCount];
             dataInputStream.readFully(bytes);
             ExifAttribute attribute = new ExifAttribute(dataFormat, numberOfComponents,
@@ -6931,39 +7001,37 @@ public class ExifInterface {
             }
 
             // Seek to next tag offset
-            if (dataInputStream.peek() != nextEntryOffset) {
+            if (dataInputStream.position() != nextEntryOffset) {
                 dataInputStream.seek(nextEntryOffset);
             }
         }
 
-        if (dataInputStream.peek() + 4 <= dataInputStream.mLength) {
-            int nextIfdOffset = dataInputStream.readInt();
-            if (DEBUG) {
-                Log.d(TAG, String.format("nextIfdOffset: %d", nextIfdOffset));
-            }
-            // Check if the next IFD offset
-            // 1. Exists within the boundaries of the input stream
-            // 2. Does not point to a previously read IFD.
-            if (nextIfdOffset > 0L && nextIfdOffset < dataInputStream.mLength) {
-                if (!mAttributesOffsets.contains(nextIfdOffset)) {
-                    dataInputStream.seek(nextIfdOffset);
-                    if (mAttributes[IFD_TYPE_THUMBNAIL].isEmpty()) {
-                        // Do not overwrite thumbnail IFD data if it alreay exists.
-                        readImageFileDirectory(dataInputStream, IFD_TYPE_THUMBNAIL);
-                    } else if (mAttributes[IFD_TYPE_PREVIEW].isEmpty()) {
-                        readImageFileDirectory(dataInputStream, IFD_TYPE_PREVIEW);
-                    }
-                } else {
-                    if (DEBUG) {
-                        Log.d(TAG, "Stop reading file since re-reading an IFD may cause an "
-                                + "infinite loop: " + nextIfdOffset);
-                    }
+        int nextIfdOffset = dataInputStream.readInt();
+        if (DEBUG) {
+            Log.d(TAG, String.format("nextIfdOffset: %d", nextIfdOffset));
+        }
+        // Check if the next IFD offset
+        // 1. Is a non-negative value, and
+        // 2. Does not point to a previously read IFD.
+        if (nextIfdOffset > 0L) {
+            if (!mAttributesOffsets.contains(nextIfdOffset)) {
+                dataInputStream.seek(nextIfdOffset);
+                if (mAttributes[IFD_TYPE_THUMBNAIL].isEmpty()) {
+                    // Do not overwrite thumbnail IFD data if it already exists.
+                    readImageFileDirectory(dataInputStream, IFD_TYPE_THUMBNAIL);
+                } else if (mAttributes[IFD_TYPE_PREVIEW].isEmpty()) {
+                    readImageFileDirectory(dataInputStream, IFD_TYPE_PREVIEW);
                 }
             } else {
                 if (DEBUG) {
-                    Log.d(TAG, "Stop reading file since a wrong offset may cause an infinite loop: "
-                            + nextIfdOffset);
+                    Log.d(TAG, "Stop reading file since re-reading an IFD may cause an "
+                            + "infinite loop: " + nextIfdOffset);
                 }
+            }
+        } else {
+            if (DEBUG) {
+                Log.d(TAG, "Stop reading file since a wrong offset may cause an infinite loop: "
+                        + nextIfdOffset);
             }
         }
     }
@@ -6974,7 +7042,7 @@ public class ExifInterface {
      * to locate SOF(Start of Frame) marker and update the image length & width values.
      * See JEITA CP-3451C Table 5 and Section 4.8.1. B.
      */
-    private void retrieveJpegImageSize(ByteOrderedDataInputStream in, int imageType)
+    private void retrieveJpegImageSize(SeekableByteOrderedDataInputStream in, int imageType)
             throws IOException {
         // Check if image already has IMAGE_LENGTH & IMAGE_WIDTH values
         ExifAttribute imageLengthAttribute =
@@ -7050,8 +7118,6 @@ public class ExifInterface {
                 // Update offset value since RAF files have IFD data preceding MakerNote data.
                 thumbnailOffset += mOrfMakerNoteOffset;
             }
-            // The following code limits the size of thumbnail size not to overflow EXIF data area.
-            thumbnailLength = Math.min(thumbnailLength, in.getLength() - thumbnailOffset);
 
             if (thumbnailOffset > 0 && thumbnailLength > 0) {
                 mHasThumbnail = true;
@@ -7241,6 +7307,17 @@ public class ExifInterface {
         if (!isThumbnail(mAttributes[IFD_TYPE_THUMBNAIL])) {
             Log.d(TAG, "No image meets the size requirements of a thumbnail image.");
         }
+
+        // TAG_THUMBNAIL_* tags should be replaced with TAG_* equivalents and vice versa if needed.
+        replaceInvalidTags(IFD_TYPE_PRIMARY, TAG_THUMBNAIL_ORIENTATION, TAG_ORIENTATION);
+        replaceInvalidTags(IFD_TYPE_PRIMARY, TAG_THUMBNAIL_IMAGE_LENGTH, TAG_IMAGE_LENGTH);
+        replaceInvalidTags(IFD_TYPE_PRIMARY, TAG_THUMBNAIL_IMAGE_WIDTH, TAG_IMAGE_WIDTH);
+        replaceInvalidTags(IFD_TYPE_PREVIEW, TAG_THUMBNAIL_ORIENTATION, TAG_ORIENTATION);
+        replaceInvalidTags(IFD_TYPE_PREVIEW, TAG_THUMBNAIL_IMAGE_LENGTH, TAG_IMAGE_LENGTH);
+        replaceInvalidTags(IFD_TYPE_PREVIEW, TAG_THUMBNAIL_IMAGE_WIDTH, TAG_IMAGE_WIDTH);
+        replaceInvalidTags(IFD_TYPE_THUMBNAIL, TAG_ORIENTATION, TAG_THUMBNAIL_ORIENTATION);
+        replaceInvalidTags(IFD_TYPE_THUMBNAIL, TAG_IMAGE_LENGTH, TAG_THUMBNAIL_IMAGE_LENGTH);
+        replaceInvalidTags(IFD_TYPE_THUMBNAIL, TAG_IMAGE_WIDTH, TAG_THUMBNAIL_IMAGE_WIDTH);
     }
 
     /**
@@ -7253,7 +7330,7 @@ public class ExifInterface {
      * If image is a RW2 file, valid image sizes are stored in SensorBorder tags.
      * See tiff_parser.cc GetFullDimension32()
      * */
-    private void updateImageSizeValues(ByteOrderedDataInputStream in, int imageType)
+    private void updateImageSizeValues(SeekableByteOrderedDataInputStream in, int imageType)
             throws IOException {
         // Uncompressed image valid image size values
         ExifAttribute defaultCropSizeAttribute =
@@ -7331,8 +7408,15 @@ public class ExifInterface {
             removeAttribute(tag.name);
         }
         // Remove old thumbnail data
-        removeAttribute(JPEG_INTERCHANGE_FORMAT_TAG.name);
-        removeAttribute(JPEG_INTERCHANGE_FORMAT_LENGTH_TAG.name);
+        if (mHasThumbnail) {
+            if (mHasThumbnailStrips) {
+                removeAttribute(TAG_STRIP_OFFSETS);
+                removeAttribute(TAG_STRIP_BYTE_COUNTS);
+            } else {
+                removeAttribute(TAG_JPEG_INTERCHANGE_FORMAT);
+                removeAttribute(TAG_JPEG_INTERCHANGE_FORMAT_LENGTH);
+            }
+        }
 
         // Remove null value tags.
         for (int ifdType = 0; ifdType < EXIF_TAGS.length; ++ifdType) {
@@ -7359,10 +7443,17 @@ public class ExifInterface {
                     ExifAttribute.createULong(0, mExifByteOrder));
         }
         if (mHasThumbnail) {
-            mAttributes[IFD_TYPE_THUMBNAIL].put(JPEG_INTERCHANGE_FORMAT_TAG.name,
-                    ExifAttribute.createULong(0, mExifByteOrder));
-            mAttributes[IFD_TYPE_THUMBNAIL].put(JPEG_INTERCHANGE_FORMAT_LENGTH_TAG.name,
-                    ExifAttribute.createULong(mThumbnailLength, mExifByteOrder));
+            if (mHasThumbnailStrips) {
+                mAttributes[IFD_TYPE_THUMBNAIL].put(TAG_STRIP_OFFSETS,
+                        ExifAttribute.createUShort(0, mExifByteOrder));
+                mAttributes[IFD_TYPE_THUMBNAIL].put(TAG_STRIP_BYTE_COUNTS,
+                        ExifAttribute.createUShort(mThumbnailLength, mExifByteOrder));
+            } else {
+                mAttributes[IFD_TYPE_THUMBNAIL].put(TAG_JPEG_INTERCHANGE_FORMAT,
+                        ExifAttribute.createULong(0, mExifByteOrder));
+                mAttributes[IFD_TYPE_THUMBNAIL].put(TAG_JPEG_INTERCHANGE_FORMAT_LENGTH,
+                        ExifAttribute.createULong(mThumbnailLength, mExifByteOrder));
+            }
         }
 
         // Calculate IFD group data area sizes. IFD group data area is assigned to save the entry
@@ -7391,8 +7482,13 @@ public class ExifInterface {
         }
         if (mHasThumbnail) {
             int thumbnailOffset = position;
-            mAttributes[IFD_TYPE_THUMBNAIL].put(JPEG_INTERCHANGE_FORMAT_TAG.name,
-                    ExifAttribute.createULong(thumbnailOffset, mExifByteOrder));
+            if (mHasThumbnailStrips) {
+                mAttributes[IFD_TYPE_THUMBNAIL].put(TAG_STRIP_OFFSETS,
+                        ExifAttribute.createUShort(thumbnailOffset, mExifByteOrder));
+            } else {
+                mAttributes[IFD_TYPE_THUMBNAIL].put(TAG_JPEG_INTERCHANGE_FORMAT,
+                        ExifAttribute.createULong(thumbnailOffset, mExifByteOrder));
+            }
             mThumbnailOffset = thumbnailOffset;
             position += mThumbnailLength;
         }
@@ -7600,56 +7696,79 @@ public class ExifInterface {
         return new Pair<>(IFD_FORMAT_STRING, -1);
     }
 
-    // An input stream to parse EXIF data area, which can be written in either little or big endian
-    // order.
+    // An input stream class that can parse both little and big endian order data and also
+    // supports seeking to any position in the stream via mark/reset.
+    private static class SeekableByteOrderedDataInputStream extends ByteOrderedDataInputStream {
+        SeekableByteOrderedDataInputStream(byte[] bytes) throws IOException {
+            super(bytes);
+            // No need to check if mark is supported here since ByteOrderedDataInputStream will
+            // create a ByteArrayInputStream, which supports mark by default.
+            mDataInputStream.mark(Integer.MAX_VALUE);
+        }
+
+        /**
+         * Given input stream should support mark/reset, and should be set to the beginning of
+         * the stream.
+         */
+        SeekableByteOrderedDataInputStream(InputStream in) throws IOException {
+            super(in);
+            if (!in.markSupported()) {
+                throw new IllegalArgumentException("Cannot create "
+                        + "SeekableByteOrderedDataInputStream with stream that does not support "
+                        + "mark/reset");
+            }
+            // Mark given InputStream to the maximum value (we can't know the length of the
+            // stream for certain) so that InputStream.reset() may be called at any point in the
+            // stream to reset the stream to an earlier position.
+            mDataInputStream.mark(Integer.MAX_VALUE);
+        }
+
+        /**
+         * Seek to the given absolute position in the stream (i.e. the number of bytes from the
+         * beginning of the stream).
+         */
+        public void seek(long position) throws IOException {
+            if (mPosition > position) {
+                mPosition = 0;
+                mDataInputStream.reset();
+            } else {
+                position -= mPosition;
+            }
+            skipFully((int) position);
+        }
+    }
+
+    // An input stream class that can parse both little and big endian order data.
     private static class ByteOrderedDataInputStream extends InputStream implements DataInput {
         private static final ByteOrder LITTLE_ENDIAN = ByteOrder.LITTLE_ENDIAN;
         private static final ByteOrder BIG_ENDIAN = ByteOrder.BIG_ENDIAN;
 
-        private DataInputStream mDataInputStream;
+        final DataInputStream mDataInputStream;
         private ByteOrder mByteOrder = ByteOrder.BIG_ENDIAN;
         @SuppressWarnings("WeakerAccess") /* synthetic access */
-        final int mLength;
-        @SuppressWarnings("WeakerAccess") /* synthetic access */
         int mPosition;
+        private byte[] mSkipBuffer;
 
-        public ByteOrderedDataInputStream(InputStream in) throws IOException {
+        ByteOrderedDataInputStream(byte[] bytes) throws IOException {
+            this(new ByteArrayInputStream(bytes), ByteOrder.BIG_ENDIAN);
+        }
+
+        ByteOrderedDataInputStream(InputStream in) throws IOException {
             this(in, ByteOrder.BIG_ENDIAN);
         }
 
         ByteOrderedDataInputStream(InputStream in, ByteOrder byteOrder) throws IOException {
             mDataInputStream = new DataInputStream(in);
-            mLength = mDataInputStream.available();
+            mDataInputStream.mark(0);
             mPosition = 0;
-            // TODO (b/142218289): Need to handle case where input stream does not support mark
-            mDataInputStream.mark(mLength);
             mByteOrder = byteOrder;
-        }
-
-        public ByteOrderedDataInputStream(byte[] bytes) throws IOException {
-            this(new ByteArrayInputStream(bytes));
         }
 
         public void setByteOrder(ByteOrder byteOrder) {
             mByteOrder = byteOrder;
         }
 
-        public void seek(long byteCount) throws IOException {
-            if (mPosition > byteCount) {
-                mPosition = 0;
-                mDataInputStream.reset();
-                // TODO (b/142218289): Need to handle case where input stream does not support mark
-                mDataInputStream.mark(mLength);
-            } else {
-                byteCount -= mPosition;
-            }
-
-            if (skipBytes((int) byteCount) != (int) byteCount) {
-                throw new IOException("Couldn't seek up to the byteCount");
-            }
-        }
-
-        public int peek() {
+        public int position() {
             return mPosition;
         }
 
@@ -7704,31 +7823,18 @@ public class ExifInterface {
         @Override
         public void readFully(byte[] buffer, int offset, int length) throws IOException {
             mPosition += length;
-            if (mPosition > mLength) {
-                throw new EOFException();
-            }
-            if (mDataInputStream.read(buffer, offset, length) != length) {
-                throw new IOException("Couldn't read up to the length of buffer");
-            }
+            mDataInputStream.readFully(buffer, offset, length);
         }
 
         @Override
         public void readFully(byte[] buffer) throws IOException {
             mPosition += buffer.length;
-            if (mPosition > mLength) {
-                throw new EOFException();
-            }
-            if (mDataInputStream.read(buffer, 0, buffer.length) != buffer.length) {
-                throw new IOException("Couldn't read up to the length of buffer");
-            }
+            mDataInputStream.readFully(buffer);
         }
 
         @Override
         public byte readByte() throws IOException {
             ++mPosition;
-            if (mPosition > mLength) {
-                throw new EOFException();
-            }
             int ch = mDataInputStream.read();
             if (ch < 0) {
                 throw new EOFException();
@@ -7739,9 +7845,6 @@ public class ExifInterface {
         @Override
         public short readShort() throws IOException {
             mPosition += 2;
-            if (mPosition > mLength) {
-                throw new EOFException();
-            }
             int ch1 = mDataInputStream.read();
             int ch2 = mDataInputStream.read();
             if ((ch1 | ch2) < 0) {
@@ -7758,9 +7861,6 @@ public class ExifInterface {
         @Override
         public int readInt() throws IOException {
             mPosition += 4;
-            if (mPosition > mLength) {
-                throw new EOFException();
-            }
             int ch1 = mDataInputStream.read();
             int ch2 = mDataInputStream.read();
             int ch3 = mDataInputStream.read();
@@ -7777,22 +7877,36 @@ public class ExifInterface {
         }
 
         @Override
-        public int skipBytes(int byteCount) throws IOException {
-            int totalSkip = Math.min(byteCount, mLength - mPosition);
-            int skipped = 0;
-            while (skipped < totalSkip) {
-                skipped += mDataInputStream.skipBytes(totalSkip - skipped);
+        public int skipBytes(int n) throws IOException {
+            throw new UnsupportedOperationException("skipBytes is currently unsupported");
+        }
+
+        /**
+         * Discards n bytes of data from the input stream. This method will block until either
+         * the full amount has been skipped or the end of the stream is reached, whichever happens
+         * first.
+         */
+        public void skipFully(int n) throws IOException {
+            int totalSkipped = 0;
+            while (totalSkipped < n) {
+                int skipped = (int) mDataInputStream.skip(n - totalSkipped);
+                if (skipped <= 0) {
+                    if (mSkipBuffer == null) {
+                        mSkipBuffer = new byte[SKIP_BUFFER_SIZE];
+                    }
+                    int bytesToSkip = Math.min(SKIP_BUFFER_SIZE, n - totalSkipped);
+                    if ((skipped = mDataInputStream.read(mSkipBuffer, 0, bytesToSkip)) == -1) {
+                        throw new EOFException("Reached EOF while skipping " + n + " bytes.");
+                    }
+                }
+                totalSkipped += skipped;
             }
-            mPosition += skipped;
-            return skipped;
+            mPosition += totalSkipped;
         }
 
         @Override
         public int readUnsignedShort() throws IOException {
             mPosition += 2;
-            if (mPosition > mLength) {
-                throw new EOFException();
-            }
             int ch1 = mDataInputStream.read();
             int ch2 = mDataInputStream.read();
             if ((ch1 | ch2) < 0) {
@@ -7813,9 +7927,6 @@ public class ExifInterface {
         @Override
         public long readLong() throws IOException {
             mPosition += 8;
-            if (mPosition > mLength) {
-                throw new EOFException();
-            }
             int ch1 = mDataInputStream.read();
             int ch2 = mDataInputStream.read();
             int ch3 = mDataInputStream.read();
@@ -7850,12 +7961,13 @@ public class ExifInterface {
         }
 
         @Override
-        public synchronized void mark(int readlimit) {
-            mDataInputStream.mark(readlimit);
+        public void mark(int readlimit) {
+            throw new UnsupportedOperationException("Mark is currently unsupported");
         }
 
-        public int getLength() {
-            return mLength;
+        @Override
+        public void reset() {
+            throw new UnsupportedOperationException("Reset is currently unsupported");
         }
     }
 
@@ -7964,116 +8076,34 @@ public class ExifInterface {
         }
     }
 
-    /**
-     * Closes 'closeable', ignoring any checked exceptions. Does nothing if 'closeable' is null.
-     */
-    private static void closeQuietly(Closeable closeable) {
-        if (closeable != null) {
-            try {
-                closeable.close();
-            } catch (RuntimeException rethrown) {
-                throw rethrown;
-            } catch (Exception ignored) {
+    private void replaceInvalidTags(@IfdType int ifdType, String invalidTag, String validTag) {
+        if (!mAttributes[ifdType].isEmpty()) {
+            if (mAttributes[ifdType].get(invalidTag) != null) {
+                mAttributes[ifdType].put(validTag,
+                        mAttributes[ifdType].get(invalidTag));
+                mAttributes[ifdType].remove(invalidTag);
             }
         }
     }
 
     /**
-     * Closes a file descriptor that has been duplicated.
+     * Parsing EXIF data requires seek (moving to any position in the stream), so all MIME
+     * types should support seek via mark/reset, unless the MIME type specifies the position and
+     * length of the EXIF data and the EXIF data can be read from the file and wrapped with a
+     * ByteArrayInputStream.
      */
-    private static void closeFileDescriptor(FileDescriptor fd) {
-        // Os.dup and Os.close was introduced in API 21 so this method shouldn't be called
-        // in API < 21.
-        if (Build.VERSION.SDK_INT >= 21) {
-            try {
-                Os.close(fd);
-                // Catching ErrnoException will raise error in API < 21
-            } catch (Exception ex) {
-                Log.e(TAG, "Error closing fd.");
-            }
-        } else {
-            Log.e(TAG, "closeFileDescriptor is called in API < 21, which must be wrong.");
-        }
-    }
-
-    /**
-     * Copies all of the bytes from {@code in} to {@code out}. Neither stream is closed.
-     * Returns the total number of bytes transferred.
-     */
-    private static int copy(InputStream in, OutputStream out) throws IOException {
-        int total = 0;
-        byte[] buffer = new byte[8192];
-        int c;
-        while ((c = in.read(buffer)) != -1) {
-            total += c;
-            out.write(buffer, 0, c);
-        }
-        return total;
-    }
-
-    /**
-     * Copies the given number of the bytes from {@code in} to {@code out}. Neither stream is
-     * closed.
-     */
-    private static void copy(InputStream in, OutputStream out, int numBytes) throws IOException {
-        int remainder = numBytes;
-        byte[] buffer = new byte[8192];
-        while (remainder > 0) {
-            int bytesToRead = Math.min(remainder, 8192);
-            int bytesRead = in.read(buffer, 0, bytesToRead);
-            if (bytesRead != bytesToRead) {
-                throw new IOException("Failed to copy the given amount of bytes from the input"
-                        + "stream to the output stream.");
-            }
-            remainder -= bytesRead;
-            out.write(buffer, 0, bytesRead);
-        }
-    }
-
-    /**
-     * Convert given int[] to long[]. If long[] is given, just return it.
-     * Return null for other types of input.
-     */
-    private static long[] convertToLongArray(Object inputObj) {
-        if (inputObj instanceof int[]) {
-            int[] input = (int[]) inputObj;
-            long[] result = new long[input.length];
-            for (int i = 0; i < input.length; i++) {
-                result[i] = input[i];
-            }
-            return result;
-        } else if (inputObj instanceof long[]) {
-            return (long[]) inputObj;
-        }
-        return null;
-    }
-
-    private static boolean startsWith(byte[] cur, byte[] val) {
-        if (cur == null || val == null) {
+    private static boolean shouldSupportSeek(int mimeType) {
+        if (mimeType == IMAGE_TYPE_JPEG || mimeType == IMAGE_TYPE_RAF || mimeType == IMAGE_TYPE_PNG
+                || mimeType == IMAGE_TYPE_WEBP) {
             return false;
-        }
-        if (cur.length < val.length) {
-            return false;
-        }
-        for (int i = 0; i < val.length; i++) {
-            if (cur[i] != val[i]) {
-                return false;
-            }
         }
         return true;
     }
 
-    private static String byteArrayToHexString(byte[] bytes) {
-        StringBuilder sb = new StringBuilder(bytes.length * 2);
-        for (int i = 0; i < bytes.length; i++) {
-            sb.append(String.format("%02x", bytes[i]));
-        }
-        return sb.toString();
-    }
-
-    private boolean isSupportedFormatForSavingAttributes() {
-        if (mMimeType == IMAGE_TYPE_JPEG || mMimeType == IMAGE_TYPE_PNG
-                || mMimeType == IMAGE_TYPE_WEBP) {
+    private static boolean isSupportedFormatForSavingAttributes(int mimeType) {
+        if (mimeType == IMAGE_TYPE_JPEG || mimeType == IMAGE_TYPE_PNG
+                || mimeType == IMAGE_TYPE_WEBP || mimeType == IMAGE_TYPE_DNG
+                || mimeType == IMAGE_TYPE_UNKNOWN) {
             return true;
         }
         return false;

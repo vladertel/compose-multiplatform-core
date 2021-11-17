@@ -21,7 +21,6 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
 import java.io.File
-import java.lang.IllegalStateException
 import java.util.Properties
 
 /**
@@ -43,13 +42,27 @@ class ProjectSetupRule : ExternalResource() {
     val gradlePropertiesFile: File
         get() = File(rootDir, "gradle.properties")
 
+    /**
+     * Combined list of local build repo and remote repositories (prebuilts etc).
+     * Local build repo is the first in line to ensure it is prioritized.
+     */
+    val allRepositoryPaths: List<String> by lazy {
+        listOf(props.localSupportRepo) + props.repositoryUrls
+    }
+
     private val repositories: String
-        get() = """
-            repositories {
-                maven { url "${props.prebuiltsRoot}/androidx/external" }
-                maven { url "${props.prebuiltsRoot}/androidx/internal" }
+        get() = buildString {
+            appendLine("repositories {")
+            append(defaultRepoLines)
+            appendLine("}")
+        }
+
+    val defaultRepoLines
+        get() = buildString {
+            props.repositoryUrls.forEach {
+                appendLine("    maven { url '$it' }")
             }
-        """.trimIndent()
+        }
 
     val androidProject: String
         get() = """
@@ -89,12 +102,52 @@ class ProjectSetupRule : ExternalResource() {
         writeGradleProperties()
     }
 
+    fun getSdkDirectory(): String {
+        val localProperties = File(props.rootProjectPath, "local.properties")
+        when {
+            localProperties.exists() -> {
+                val stream = localProperties.inputStream()
+                val properties = Properties()
+                properties.load(stream)
+                return properties.getProperty("sdk.dir")
+            }
+            System.getenv("ANDROID_HOME") != null -> {
+                return System.getenv("ANDROID_HOME")
+            }
+            System.getenv("ANDROID_SDK_ROOT") != null -> {
+                return System.getenv("ANDROID_SDK_ROOT")
+            }
+            else -> {
+                throw IllegalStateException(
+                    "ProjectSetupRule did find local.properties at: $localProperties and " +
+                        "neither ANDROID_HOME or ANDROID_SDK_ROOT was set."
+                )
+            }
+        }
+    }
+
     private fun copyLocalProperties() {
+        var foundSdk = false
+
         val localProperties = File(props.rootProjectPath, "local.properties")
         if (localProperties.exists()) {
             localProperties.copyTo(File(rootDir, "local.properties"), overwrite = true)
-        } else {
-            throw IllegalStateException("local.properties doesn't exist at: $localProperties")
+            foundSdk = true
+        }
+
+        if (System.getenv("ANDROID_HOME") != null) {
+            foundSdk = true
+        }
+
+        if (System.getenv("ANDROID_SDK_ROOT") != null) {
+            foundSdk = true
+        }
+
+        if (!foundSdk) {
+            throw IllegalStateException(
+                "ProjectSetupRule was unable to copy local.properties at: $localProperties and " +
+                    "neither ANDROID_HOME or ANDROID_SDK_ROOT was set."
+            )
         }
     }
 
@@ -113,11 +166,14 @@ data class ProjectProps(
     val buildToolsVersion: String,
     val minSdkVersion: String,
     val debugKeystore: String,
-    var navigationCommon: String,
+    var navigationRuntime: String,
     val kotlinStblib: String,
+    val kotlinVersion: String,
+    val kspVersion: String,
     val rootProjectPath: String,
     val localSupportRepo: String,
-    val agpDependency: String
+    val agpDependency: String,
+    val repositoryUrls: List<String>
 ) {
     companion object {
         fun load(): ProjectProps {
@@ -130,11 +186,14 @@ data class ProjectProps(
                 buildToolsVersion = properties.getProperty("buildToolsVersion"),
                 minSdkVersion = properties.getProperty("minSdkVersion"),
                 debugKeystore = properties.getProperty("debugKeystore"),
-                navigationCommon = properties.getProperty("navigationCommon"),
+                navigationRuntime = properties.getProperty("navigationRuntime"),
                 kotlinStblib = properties.getProperty("kotlinStdlib"),
+                kotlinVersion = properties.getProperty("kotlinVersion"),
+                kspVersion = properties.getProperty("kspVersion"),
                 rootProjectPath = properties.getProperty("rootProjectPath"),
                 localSupportRepo = properties.getProperty("localSupportRepo"),
-                agpDependency = properties.getProperty("agpDependency")
+                agpDependency = properties.getProperty("agpDependency"),
+                repositoryUrls = properties.getProperty("repositoryUrls").split(",")
             )
         }
     }

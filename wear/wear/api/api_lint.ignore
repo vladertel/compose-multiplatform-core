@@ -13,8 +13,18 @@ ActionValue: androidx.wear.ambient.AmbientModeSupport#EXTRA_LOWBIT_AMBIENT:
     Inconsistent extra value; expected `androidx.wear.ambient.extra.LOWBIT_AMBIENT`, was `com.google.android.wearable.compat.extra.LOWBIT_AMBIENT`
 
 
+CallbackMethodName: androidx.wear.widget.CurvingLayoutCallback#adjustAnchorOffsetXY(android.view.View, float[]):
+    Callback method names must follow the on<Something> style: adjustAnchorOffsetXY
+
+
 ForbiddenSuperClass: androidx.wear.activity.ConfirmationActivity:
     ConfirmationActivity should not extend `Activity`. Activity subclasses are impossible to compose. Expose a composable API instead.
+
+
+GetterSetterNames: androidx.wear.widget.drawer.WearableDrawerView#setIsAutoPeekEnabled(boolean):
+    Symmetric method for `isAutoPeekEnabled` must be named `setAutoPeekEnabled`; was `setIsAutoPeekEnabled`
+GetterSetterNames: androidx.wear.widget.drawer.WearableDrawerView#setIsLocked(boolean):
+    Symmetric method for `isLocked` must be named `setLocked`; was `setIsLocked`
 
 
 MissingNullability: androidx.wear.activity.ConfirmationActivity#onCreate(android.os.Bundle) parameter #0:

@@ -16,12 +16,12 @@
 
 package androidx.webkit;
 
-import android.annotation.SuppressLint;
 import android.os.Build;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.annotation.RequiresApi;
 import androidx.concurrent.futures.ResolvableFuture;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
@@ -40,7 +40,7 @@ import org.junit.runner.RunWith;
 public class WebViewRenderProcessTest {
     private boolean terminateRenderProcessOnUiThread(
             final WebViewRenderProcess renderer) {
-        return WebkitUtils.onMainThreadSync(() -> renderer.terminate());
+        return WebkitUtils.onMainThreadSync(renderer::terminate);
     }
 
     WebViewRenderProcess getRenderProcessOnUiThread(final WebView webView) {
@@ -69,18 +69,14 @@ public class WebViewRenderProcessTest {
     ListenableFuture<Boolean> catchRenderProcessTermination(final WebView webView) {
         final ResolvableFuture<Boolean> future = ResolvableFuture.create();
 
-        WebkitUtils.onMainThread(() -> {
-            webView.setWebViewClient(new WebViewClient() {
-                @Override
-                public boolean onRenderProcessGone(
-                        WebView view,
-                        RenderProcessGoneDetail detail) {
-                    view.destroy();
-                    future.set(true);
-                    return true;
-                }
-            });
-        });
+        WebkitUtils.onMainThread(() -> webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                view.destroy();
+                future.set(true);
+                return true;
+            }
+        }));
 
         return future;
     }
@@ -113,7 +109,7 @@ public class WebViewRenderProcessTest {
 
     @LargeTest
     @Test
-    @SuppressLint("NewApi")
+    @RequiresApi(Build.VERSION_CODES.O)
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     public void testGetWebViewRenderProcess() throws Throwable {
         if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROCESS)

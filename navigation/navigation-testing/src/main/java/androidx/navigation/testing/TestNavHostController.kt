@@ -26,12 +26,12 @@ import java.lang.IllegalArgumentException
 /**
  * Subclass of [NavHostController] that offers additional APIs for testing Navigation.
  */
-class TestNavHostController(context: Context) : NavHostController(context) {
+public class TestNavHostController(context: Context) : NavHostController(context) {
 
     /**
      * Gets an immutable copy of the [elements][NavBackStackEntry] currently on the back stack.
      */
-    val backStack: List<NavBackStackEntry> get() = getBackStack().toList()
+    public val backStack: List<NavBackStackEntry> get() = backQueue.toList()
 
     init {
         navigatorProvider = TestNavigatorProvider()
@@ -47,9 +47,29 @@ class TestNavHostController(context: Context) : NavHostController(context) {
      * @throws IllegalArgumentException If the [destination][destId] does not exist on the NavGraph.
      */
     @JvmOverloads
-    fun setCurrentDestination(@IdRes destId: Int, args: Bundle = Bundle()) {
+    public fun setCurrentDestination(@IdRes destId: Int, args: Bundle = Bundle()) {
         val taskStackBuilder = createDeepLink()
             .setDestination(destId)
+            .setArguments(args)
+            .createTaskStackBuilder()
+        val intent = taskStackBuilder.editIntentAt(0)
+        require(handleDeepLink(intent)) { "Destination does not exist on the NavGraph." }
+    }
+
+    /**
+     * Navigate directly to any destination on the current [androidx.navigation.NavGraph] via an
+     * explicit deep link. If an implicit deep link exists for this destination use
+     * [#navigate(Uri)] instead.
+     *
+     * @param destRoute The destination route to navigate to.
+     * @param args The arguments to pass to the destination.
+     * @throws IllegalArgumentException If the [destination][destRoute] does not exist on the
+     * NavGraph.
+     */
+    @JvmOverloads
+    public fun setCurrentDestination(destRoute: String, args: Bundle = Bundle()) {
+        val taskStackBuilder = createDeepLink()
+            .setDestination(destRoute)
             .setArguments(args)
             .createTaskStackBuilder()
         val intent = taskStackBuilder.editIntentAt(0)

@@ -29,7 +29,7 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.hasDescendant
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
-import androidx.test.rule.ActivityTestRule
+import androidx.testutils.setSystemExclusionRectsForEspressoSwipes
 import androidx.viewpager2.integration.testapp.R
 import androidx.viewpager2.integration.testapp.test.util.ViewPagerIdleWatcher
 import androidx.viewpager2.integration.testapp.test.util.onCurrentPage
@@ -56,9 +56,10 @@ import java.util.Locale
  * @see TabLayoutTest
  */
 abstract class BaseTest<T : FragmentActivity>(clazz: Class<T>) {
+    @Suppress("DEPRECATION")
     @Rule
     @JvmField
-    var activityTestRule = ActivityTestRule(clazz)
+    var activityTestRule = androidx.test.rule.ActivityTestRule(clazz)
 
     @get:LayoutRes
     abstract val layoutId: Int
@@ -66,11 +67,12 @@ abstract class BaseTest<T : FragmentActivity>(clazz: Class<T>) {
     lateinit var idleWatcher: ViewPagerIdleWatcher
     lateinit var viewPager: ViewPager2
     val isRtl = TextUtilsCompat.getLayoutDirectionFromLocale(Locale.getDefault()) ==
-            ViewCompat.LAYOUT_DIRECTION_RTL
+        ViewCompat.LAYOUT_DIRECTION_RTL
 
     @Before
     open fun setUp() {
         viewPager = activityTestRule.activity.findViewById(layoutId)
+        viewPager.setSystemExclusionRectsForEspressoSwipes()
         idleWatcher = ViewPagerIdleWatcher(viewPager)
         onView(withId(layoutId)).perform(waitForInjectMotionEvents())
     }
@@ -82,13 +84,15 @@ abstract class BaseTest<T : FragmentActivity>(clazz: Class<T>) {
 
     fun selectOrientation(orientation: Int) {
         onView(withId(R.id.orientation_spinner)).perform(click())
-        onData(equalTo(
-            when (orientation) {
-                ORIENTATION_HORIZONTAL -> "horizontal"
-                ORIENTATION_VERTICAL -> "vertical"
-                else -> throw IllegalArgumentException("Orientation $orientation doesn't exist")
-            }
-        )).perform(click())
+        onData(
+            equalTo(
+                when (orientation) {
+                    ORIENTATION_HORIZONTAL -> "horizontal"
+                    ORIENTATION_VERTICAL -> "vertical"
+                    else -> throw IllegalArgumentException("Orientation $orientation doesn't exist")
+                }
+            )
+        ).perform(click())
     }
 
     fun swipeToNextPage() {

@@ -16,6 +16,7 @@
 
 package androidx.core.app;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.os.Build;
@@ -54,6 +55,7 @@ public final class AlarmManagerCompat {
      * @see android.content.Context#registerReceiver
      * @see android.content.Intent#filterEquals
      */
+    @SuppressLint("MissingPermission")
     public static void setAlarmClock(@NonNull AlarmManager alarmManager, long triggerTime,
             @NonNull PendingIntent showIntent, @NonNull PendingIntent operation) {
         if (Build.VERSION.SDK_INT >= 21) {
@@ -71,7 +73,7 @@ public final class AlarmManagerCompat {
      * be used for situations where it is actually required that the alarm go off while in
      * idle -- a reasonable example would be for a calendar notification that should make a
      * sound so the user is aware of it.  When the alarm is dispatched, the app will also be
-     * added to the system's temporary whitelist for approximately 10 seconds to allow that
+     * added to the system's temporary allow-list for approximately 10 seconds to allow that
      * application to acquire further wake locks in which to complete its work.</p>
      *
      * <p>These alarms can significantly impact the power use
@@ -174,7 +176,7 @@ public final class AlarmManagerCompat {
      * be used for situations where it is actually required that the alarm go off while in
      * idle -- a reasonable example would be for a calendar notification that should make a
      * sound so the user is aware of it.  When the alarm is dispatched, the app will also be
-     * added to the system's temporary whitelist for approximately 10 seconds to allow that
+     * added to the system's temporary allow-list for approximately 10 seconds to allow that
      * application to acquire further wake locks in which to complete its work.</p>
      *
      * <p>These alarms can significantly impact the power use

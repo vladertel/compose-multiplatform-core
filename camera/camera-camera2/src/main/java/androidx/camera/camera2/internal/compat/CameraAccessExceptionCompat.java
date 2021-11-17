@@ -18,11 +18,13 @@ package androidx.camera.camera2.internal.compat;
 
 import android.app.NotificationManager;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
 
@@ -36,6 +38,7 @@ import java.util.Set;
 /**
  * Helper for accessing features in {@link CameraAccessException} in a backwards compatible fashion.
  */
+@RequiresApi(21)
 public class CameraAccessExceptionCompat extends Exception {
 
     // Start of the CameraAccessException error
@@ -115,9 +118,16 @@ public class CameraAccessExceptionCompat extends Exception {
      */
     public static final int CAMERA_UNAVAILABLE_DO_NOT_DISTURB = 10001;
 
+    /**
+     * Error occurs when creating {@link CameraCharacteristics}. Some devices may throw
+     * {@link AssertionError} when creating CameraCharacteristics and FPS ranges are null.
+     */
+    public static final int CAMERA_CHARACTERISTICS_CREATION_ERROR = 10002;
+
     @VisibleForTesting
     static final Set<Integer> COMPAT_ERRORS = Collections.unmodifiableSet(
-            new HashSet<>(Arrays.asList(CAMERA_UNAVAILABLE_DO_NOT_DISTURB)));
+            new HashSet<>(Arrays.asList(CAMERA_UNAVAILABLE_DO_NOT_DISTURB,
+                    CAMERA_CHARACTERISTICS_CREATION_ERROR)));
 
     // End of the CameraAccessExceptionCompat error
     // *********************************************************************************************
@@ -137,7 +147,8 @@ public class CameraAccessExceptionCompat extends Exception {
             CAMERA_ERROR,
 
             // Start of the compat error
-            CAMERA_UNAVAILABLE_DO_NOT_DISTURB
+            CAMERA_UNAVAILABLE_DO_NOT_DISTURB,
+            CAMERA_CHARACTERISTICS_CREATION_ERROR
     })
     public @interface AccessError {
     }
@@ -234,6 +245,9 @@ public class CameraAccessExceptionCompat extends Exception {
                 return "Some API 28 devices cannot access the camera when the device is in \"Do "
                         + "Not Disturb\" mode. The camera will not be accessible until \"Do Not "
                         + "Disturb\" mode is disabled.";
+
+            case CAMERA_CHARACTERISTICS_CREATION_ERROR:
+                return "Failed to create CameraCharacteristics.";
         }
         return null;
     }
@@ -269,6 +283,9 @@ public class CameraAccessExceptionCompat extends Exception {
             // Start of the compat errors
             case CAMERA_UNAVAILABLE_DO_NOT_DISTURB:
                 problemString = "CAMERA_UNAVAILABLE_DO_NOT_DISTURB";
+                break;
+            case CAMERA_CHARACTERISTICS_CREATION_ERROR:
+                problemString = "CAMERA_CHARACTERISTICS_CREATION_ERROR";
                 break;
             default:
                 problemString = "<UNKNOWN ERROR>";

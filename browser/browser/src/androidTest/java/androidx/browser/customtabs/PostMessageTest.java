@@ -24,13 +24,11 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
-import androidx.test.rule.ActivityTestRule;
 import androidx.test.rule.ServiceTestRule;
 import androidx.testutils.PollingCheck;
 
@@ -40,7 +38,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.concurrent.TimeoutException;
-
 
 /**
  * Tests for a complete loop between a browser side {@link CustomTabsService}
@@ -53,9 +50,10 @@ import java.util.concurrent.TimeoutException;
 public class PostMessageTest {
     @Rule
     public final ServiceTestRule mServiceRule = new ServiceTestRule();
+    @SuppressWarnings("deprecation")
     @Rule
-    public final ActivityTestRule<TestActivity> mActivityTestRule =
-            new ActivityTestRule<>(TestActivity.class);
+    public final androidx.test.rule.ActivityTestRule<TestActivity> mActivityTestRule =
+            new androidx.test.rule.ActivityTestRule<>(TestActivity.class);
     @Rule
     public final EnableComponentsTestRule mEnableComponents = new EnableComponentsTestRule(
             TestActivity.class,
@@ -71,6 +69,7 @@ public class PostMessageTest {
     private CustomTabsSession mSession;
 
     @Before
+    @SuppressWarnings("deprecation") /* AsyncTask */
     public void setup() {
         // Bind to PostMessageService only after CustomTabsService sends the callback to do so. This
         // callback is sent after requestPostMessageChannel is called.
@@ -79,7 +78,7 @@ public class PostMessageTest {
             public void extraCallback(@NonNull String callbackName, Bundle args) {
                 if (TestCustomTabsService.CALLBACK_BIND_TO_POST_MESSAGE.equals(callbackName)) {
                     // This gets run on the UI thread, where mServiceRule.bindService will not work.
-                    AsyncTask.THREAD_POOL_EXECUTOR.execute(new Runnable() {
+                    android.os.AsyncTask.THREAD_POOL_EXECUTOR.execute(new Runnable() {
                         @Override
                         public void run() {
                             try {

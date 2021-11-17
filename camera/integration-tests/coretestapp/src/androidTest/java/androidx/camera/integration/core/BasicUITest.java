@@ -16,7 +16,6 @@
 
 package androidx.camera.integration.core;
 
-import static androidx.camera.testing.CoreAppTestUtil.clearDeviceUI;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
@@ -32,6 +31,7 @@ import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.Preview;
 import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.CoreAppTestUtil;
+import androidx.camera.testing.CoreAppTestUtil.ForegroundOccupiedError;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.espresso.IdlingRegistry;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -45,6 +45,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 
 import leakcanary.FailTestOnLeak;
@@ -66,8 +67,8 @@ public final class BasicUITest {
             new ActivityTestRule<>(CameraXActivity.class, true, false);
 
     @Rule
-    public GrantPermissionRule mCameraPermissionRule =
-            GrantPermissionRule.grant(android.Manifest.permission.CAMERA);
+    public TestRule mUseCamera = CameraUtil.grantCameraPermissionAndPreTest();
+
     @Rule
     public GrantPermissionRule mStoragePermissionRule =
             GrantPermissionRule.grant(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -76,12 +77,13 @@ public final class BasicUITest {
             GrantPermissionRule.grant(android.Manifest.permission.RECORD_AUDIO);
 
     @Before
-    public void setUp() {
+    public void setUp() throws ForegroundOccupiedError {
         assumeTrue(CameraUtil.deviceHasCamera());
         CoreAppTestUtil.assumeCompatibleDevice();
 
-        // Clear the device UI before start each test.
-        clearDeviceUI(InstrumentationRegistry.getInstrumentation());
+        // Clear the device UI and check if there is no dialog or lock screen on the top of the
+        // window before start the test.
+        CoreAppTestUtil.prepareDeviceUI(InstrumentationRegistry.getInstrumentation());
 
         // Launch Activity
         mActivityRule.launchActivity(mIntent);

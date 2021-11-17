@@ -21,20 +21,23 @@ import android.util.Rational;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 
 /**
  * A factory to create a {@link MeteringPoint}.
  *
  * <p>Users can call {@link #createPoint(float, float)} to
- * create a {@link MeteringPoint} with x, y, default size. There are also another
+ * create a {@link MeteringPoint} with x, y, default size. There is also another
  * variant, {@link #createPoint(float, float, float)} for apps that want to also specify size.
  *
  * @see MeteringPoint
  * @see #createPoint(float, float)
  * @see #createPoint(float, float, float)
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public abstract class MeteringPointFactory {
+
     /**
      * Surface aspect ratio used to created {@link MeteringPoint}s. Null for using Preview
      * aspect ratio.
@@ -66,7 +69,7 @@ public abstract class MeteringPointFactory {
 
     /**
      * Returns default point size. It is the default size of the MeteringPoint width and height
-     * (ranging from 0 to 1) which is a (noramlized) percentage of the sensor width/height (or crop
+     * (ranging from 0 to 1) which is a (normalized) percentage of the sensor width/height (or crop
      * region width/height if crop region is set).
      *
      * @see MeteringPoint#getSize()
@@ -84,14 +87,13 @@ public abstract class MeteringPointFactory {
      * <p>The meaning of (x, y) is defined by {@link MeteringPointFactory} implementations. It is
      * tailored by specific needs. For example, when performing focus and metering on a point
      * in preview,  the (x, y) could be defined as (x, y) in a View. Each implementations is
-     * responsible to convert this (x, y) into a normalized surface coordinates.
+     * responsible to convert this (x, y) into normalized surface coordinates.
      *
      * Implementation must implement this method for coordinates conversion.
      *
      * @param x x to be converted.
      * @param y y to be converted.
      * @return a {@link PointF} consisting of converted normalized surface coordinates.
-     *
      * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -105,13 +107,11 @@ public abstract class MeteringPointFactory {
      * {@link MeteringPointFactory} implementation, such as
      * {@link DisplayOrientedMeteringPointFactory} or {@link SurfaceOrientedMeteringPointFactory}.
      *
-     * @see DisplayOrientedMeteringPointFactory
-     * @see SurfaceOrientedMeteringPointFactory
-     *
      * @param x x to be converted.
      * @param y y to be converted.
      * @return A {@link MeteringPoint} that is converted into normalized surface (x, y).
-     *
+     * @see DisplayOrientedMeteringPointFactory
+     * @see SurfaceOrientedMeteringPointFactory
      */
     @NonNull
     public final MeteringPoint createPoint(float x, float y) {
@@ -125,15 +125,14 @@ public abstract class MeteringPointFactory {
      * {@link MeteringPointFactory} implementation, such as
      * {@link DisplayOrientedMeteringPointFactory} or {@link SurfaceOrientedMeteringPointFactory}.
      *
-     * @see DisplayOrientedMeteringPointFactory
-     * @see SurfaceOrientedMeteringPointFactory
-     *
      * @param x    x to be converted.
      * @param y    y to be converted.
      * @param size size of the MeteringPoint width and height(ranging from 0 to 1). It is the
      *             (normalized) percentage of the sensor width/height (or crop region
      *             width/height if crop region is set).
      * @return A {@link MeteringPoint} that is converted into normalized surface (x, y).
+     * @see DisplayOrientedMeteringPointFactory
+     * @see SurfaceOrientedMeteringPointFactory
      */
     @NonNull
     public final MeteringPoint createPoint(float x, float y, float size) {

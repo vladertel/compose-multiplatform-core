@@ -21,11 +21,11 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.mock;
 
 import android.os.Build;
+import android.util.Log;
 
 import androidx.camera.core.impl.CameraDeviceSurfaceManager;
 import androidx.camera.core.impl.CameraFactory;
 import androidx.camera.testing.fakes.FakeAppConfig;
-import androidx.test.filters.SmallTest;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -36,7 +36,6 @@ import org.robolectric.annotation.internal.DoNotInstrument;
 
 import java.util.concurrent.Executor;
 
-@SmallTest
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
@@ -78,5 +77,32 @@ public class CameraXConfigTest {
                 .build();
         Executor cameraExecutor = cameraXConfig.getCameraExecutor(/*valueIfMissing=*/ null);
         assertThat(cameraExecutor).isEqualTo(mockExecutor);
+    }
+
+    @Test
+    public void canGetMinimumLoggingLevel() {
+        final CameraXConfig cameraXConfig = new CameraXConfig.Builder()
+                .setMinimumLoggingLevel(Log.WARN)
+                .build();
+
+        final Integer minLoggingLevel = cameraXConfig.getMinimumLoggingLevel();
+        assertThat(minLoggingLevel).isEqualTo(Log.WARN);
+    }
+
+    @Test
+    public void canGetDefaultMinimumLoggingLevel() {
+        final CameraXConfig cameraXConfig = new CameraXConfig.Builder().build();
+
+        final Integer minLoggingLevel = cameraXConfig.getMinimumLoggingLevel();
+        assertThat(minLoggingLevel).isEqualTo(Logger.DEFAULT_MIN_LOG_LEVEL);
+    }
+
+    @Test
+    public void canGetAvailableCamerasSelector() {
+        CameraSelector cameraSelector = new CameraSelector.Builder().build();
+        CameraXConfig cameraXConfig = new CameraXConfig.Builder()
+                .setAvailableCamerasLimiter(cameraSelector)
+                .build();
+        assertThat(cameraXConfig.getAvailableCamerasLimiter(null)).isEqualTo(cameraSelector);
     }
 }

@@ -25,14 +25,14 @@ import com.android.tools.lint.detector.api.Scope
 import com.android.tools.lint.detector.api.Severity
 
 // Flags usage of Context.getDrawable and Resources.getDrawable and suggests converting them
-// to either ContextCompat.getDrawable or ResourcesCompat.getDrawable
+// to either AppCompatResources.getDrawable or ResourcesCompat.getDrawable
 @Suppress("UnstableApiUsage")
 class DrawableLoadingDetector : BaseMethodDeprecationDetector(
     NOT_USING_COMPAT_LOADING,
     // Suggest using ContextCompat.getDrawable
     DeprecationCondition(
         MethodLocation("android.content.Context", "getDrawable", TYPE_INT),
-        "Use `ContextCompat.getDrawable()`"
+        "Use `AppCompatResources.getDrawable()`"
     ),
     // Suggest using ResourcesCompat.getDrawable for one-parameter Resources.getDrawable calls
     DeprecationCondition(
@@ -41,8 +41,10 @@ class DrawableLoadingDetector : BaseMethodDeprecationDetector(
     ),
     // Suggest using ResourcesCompat.getDrawable for two-parameter Resources.getDrawable calls
     DeprecationCondition(
-        MethodLocation("android.content.res.Resources", "getDrawable", TYPE_INT,
-            "android.content.res.Resources.Theme"),
+        MethodLocation(
+            "android.content.res.Resources", "getDrawable", TYPE_INT,
+            "android.content.res.Resources.Theme"
+        ),
         "Use `ResourcesCompat.getDrawable()`"
     )
 ) {

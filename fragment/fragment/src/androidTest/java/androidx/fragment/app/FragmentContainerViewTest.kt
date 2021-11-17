@@ -21,17 +21,21 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Insets
 import android.os.Bundle
+import android.view.InflateException
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.animation.Animation
+import androidx.core.app.ActivityCompat
+import androidx.core.view.OnApplyWindowInsetsListener
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.test.FragmentTestActivity
 import androidx.fragment.test.R
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
-import androidx.test.rule.ActivityTestRule
 import androidx.testutils.waitForExecution
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
@@ -46,14 +50,33 @@ import java.util.concurrent.TimeUnit
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class FragmentContainerViewTest {
+    @Suppress("DEPRECATION")
     @get:Rule
-    var activityRule = ActivityTestRule(FragmentTestActivity::class.java)
+    var activityRule = androidx.test.rule.ActivityTestRule(FragmentTestActivity::class.java)
     lateinit var context: Context
 
     @Before
     fun setupContainer() {
         activityRule.setContentView(R.layout.fragment_container_view)
         context = activityRule.activity.applicationContext
+    }
+
+    @Test
+    fun inflateFragmentContainerNoActivity() {
+        val layoutInflater = LayoutInflater.from(context)
+        layoutInflater.inflate(R.layout.fragment_container_view, null)
+    }
+
+    @Test(expected = InflateException::class)
+    fun inflatedFragmentContainerNoActivityWithName() {
+        val layoutInflater = LayoutInflater.from(context)
+        layoutInflater.inflate(R.layout.inflated_fragment_container_view, null)
+    }
+
+    @Test(expected = InflateException::class)
+    fun inflatedFragmentContainerNoActivityWithClass() {
+        val layoutInflater = LayoutInflater.from(context)
+        layoutInflater.inflate(R.layout.inflated_fragment_container_view_with_class, null)
     }
 
     @SdkSuppress(minSdkVersion = 18) // androidx.transition needs setLayoutTransition for API < 18
@@ -68,8 +91,10 @@ class FragmentContainerViewTest {
         } catch (e: UnsupportedOperationException) {
             assertThat(e)
                 .hasMessageThat()
-                .contains("FragmentContainerView does not support Layout Transitions or " +
-                        "animateLayoutChanges=\"true\".")
+                .contains(
+                    "FragmentContainerView does not support Layout Transitions or " +
+                        "animateLayoutChanges=\"true\"."
+                )
         }
     }
 
@@ -95,8 +120,10 @@ class FragmentContainerViewTest {
         } catch (e: UnsupportedOperationException) {
             assertThat(e)
                 .hasMessageThat()
-                .contains("FragmentContainerView does not support Layout Transitions or " +
-                        "animateLayoutChanges=\"true\".")
+                .contains(
+                    "FragmentContainerView does not support Layout Transitions or " +
+                        "animateLayoutChanges=\"true\"."
+                )
         }
     }
 
@@ -116,6 +143,7 @@ class FragmentContainerViewTest {
             .isInstanceOf(FragmentContainerView::class.java)
     }
 
+    @Suppress("DEPRECATION") /* systemWindowInsets */
     @SdkSuppress(minSdkVersion = 29) // WindowInsets.Builder requires API 29
     @Test
     fun windowInsetsDispatchToChildren() {
@@ -128,20 +156,96 @@ class FragmentContainerViewTest {
             .setSystemWindowInsets(Insets.of(4, 3, 2, 1))
             .build()
 
-        var dispatchedToChild = false
-        childView.setOnApplyWindowInsetsListener { _, insets ->
-            // Ensure insets received by child are not consumed at all by the parent
-            assertThat(insets.systemWindowInsets).isEqualTo(sentInsets.systemWindowInsets)
-            dispatchedToChild = true
-            insets
-        }
+        var dispatchedToChild = 0
+        childView.setOnApplyWindowInsetsListener(object : View.OnApplyWindowInsetsListener {
+            override fun onApplyWindowInsets(p0: View?, insets: WindowInsets?): WindowInsets {
+                assertThat(insets!!.systemWindowInsets).isEqualTo(sentInsets.systemWindowInsets)
+                dispatchedToChild++
+                return insets
+            }
+        })
 
         childView.setTag(R.id.fragment_container_view_tag, Fragment())
 
         parentView.addView(childView)
         parentView.dispatchApplyWindowInsets(sentInsets)
 
-        assertThat(dispatchedToChild).isTrue()
+        assertThat(dispatchedToChild).isEqualTo(1)
+    }
+
+    @Suppress("DEPRECATION") /* systemWindowInsets */
+    @SdkSuppress(minSdkVersion = 29) // WindowInsets.Builder requires API 29
+    @Test
+    fun windowInsetsDispatchToMultipleChildren() {
+        val parentView = FragmentContainerView(context)
+        val childView = FragmentContainerView(context)
+        val childView2 = FragmentContainerView(context)
+
+        parentView.fitsSystemWindows = true
+
+        val sentInsets = WindowInsets.Builder()
+            .setSystemWindowInsets(Insets.of(4, 3, 2, 1))
+            .build()
+
+        var dispatchedToChild = 0
+        childView.setOnApplyWindowInsetsListener(object : View.OnApplyWindowInsetsListener {
+            override fun onApplyWindowInsets(p0: View?, insets: WindowInsets?): WindowInsets {
+                assertThat(insets!!.systemWindowInsets).isEqualTo(sentInsets.systemWindowInsets)
+                dispatchedToChild++
+                return WindowInsets.Builder()
+                    .setSystemWindowInsets(Insets.of(0, 0, 0, 0))
+                    .build()
+            }
+        })
+
+        var dispatchedToChild2 = 0
+        childView2.setOnApplyWindowInsetsListener(object : View.OnApplyWindowInsetsListener {
+            override fun onApplyWindowInsets(p0: View?, insets: WindowInsets?): WindowInsets {
+                assertThat(insets!!.systemWindowInsets).isEqualTo(sentInsets.systemWindowInsets)
+                dispatchedToChild2++
+                return insets
+            }
+        })
+
+        childView.setTag(R.id.fragment_container_view_tag, Fragment())
+        childView2.setTag(R.id.fragment_container_view_tag, Fragment())
+
+        parentView.addView(childView)
+        parentView.addView(childView2)
+        parentView.dispatchApplyWindowInsets(sentInsets)
+
+        assertThat(dispatchedToChild).isEqualTo(1)
+        assertThat(dispatchedToChild2).isEqualTo(1)
+    }
+
+    @Suppress("DEPRECATION") /* systemWindowInsets */
+    @SdkSuppress(minSdkVersion = 29) // WindowInsets.Builder requires API 29
+    @Test
+    fun onApplyWindowInsets() {
+        val fragmentContainerView = FragmentContainerView(context)
+        var calledListener = false
+        fragmentContainerView.fitsSystemWindows = true
+
+        val sentInsets = WindowInsets.Builder()
+            .setSystemWindowInsets(Insets.of(4, 3, 2, 1))
+            .build()
+
+        ViewCompat.setOnApplyWindowInsetsListener(
+            fragmentContainerView,
+            object : OnApplyWindowInsetsListener {
+                override fun onApplyWindowInsets(
+                    v: View,
+                    insets: WindowInsetsCompat
+                ): WindowInsetsCompat {
+                    calledListener = true
+                    return insets
+                }
+            }
+        )
+
+        fragmentContainerView.onApplyWindowInsets(sentInsets)
+
+        assertThat(calledListener).isFalse()
     }
 
     @Test
@@ -175,23 +279,7 @@ class FragmentContainerViewTest {
             assertThat(e)
                 .hasMessageThat().contains(
                     "Views added to a FragmentContainerView must be associated with a Fragment. " +
-                            "View " + view + " is not associated with a Fragment."
-                )
-        }
-    }
-
-    @Test
-    fun addViewInLayoutNotAssociatedWithFragment() {
-        val view = View(context)
-
-        try {
-            FragmentContainerView(context).addViewInLayout(view, 0, null, false)
-            fail("View without a Fragment added to FragmentContainerView should throw an exception")
-        } catch (e: IllegalStateException) {
-            assertThat(e)
-                .hasMessageThat().contains(
-                    "Views added to a FragmentContainerView must be associated with a Fragment. " +
-                            "View " + view + " is not associated with a Fragment."
+                        "View " + view + " is not associated with a Fragment."
                 )
         }
     }
@@ -269,23 +357,9 @@ class FragmentContainerViewTest {
 
         view.removeAllViewsInLayout()
 
-        assertThat(removingView1.getAnimationCount).isEqualTo(2)
-        assertThat(removingView2.getAnimationCount).isEqualTo(2)
+        assertThat(removingView1.getAnimationCount).isEqualTo(1)
+        assertThat(removingView2.getAnimationCount).isEqualTo(1)
         assertThat(view.childCount).isEqualTo(0)
-    }
-
-    // removeDetachedView should not actually remove the view
-    @Test
-    fun removeDetachedView() {
-        val childView1 = FragmentContainerView(context)
-        val childView2 = FragmentContainerView(context)
-
-        val view = setupRemoveTestsView(childView1, childView2)
-
-        view.removeDetachedView(childView1, false)
-
-        assertThat(view.childCount).isEqualTo(2)
-        assertThat(view.getChildAt(1)).isEqualTo(childView2)
     }
 
     private fun setupRemoveTestsView(
@@ -358,8 +432,10 @@ class FragmentContainerViewTest {
         val fragment2 = ChildViewFragment()
 
         fm.beginTransaction()
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment1, "1")
             .commit()
         activityRule.waitForExecution()
@@ -367,8 +443,10 @@ class FragmentContainerViewTest {
         val frag1View = fragment1.mView as ChildView
 
         fm.beginTransaction()
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment2, "2")
             .addToBackStack(null)
             .commit()
@@ -407,12 +485,14 @@ class FragmentContainerViewTest {
     fun drawDisappearingChildViewsLastAfterPopNoReordering() {
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment1 = ChildViewFragment()
-        val fragment2 = ChildViewFragment()
+        val fragment1 = ChildViewFragment("child1")
+        val fragment2 = ChildViewFragment("child2")
 
         fm.beginTransaction()
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment1, "1")
             .commit()
         activityRule.waitForExecution()
@@ -420,8 +500,10 @@ class FragmentContainerViewTest {
         val frag1View = fragment1.mView as ChildView
 
         fm.beginTransaction()
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment2, "2")
             .setPrimaryNavigationFragment(fragment2)
             .addToBackStack(null)
@@ -444,8 +526,10 @@ class FragmentContainerViewTest {
 
         fm.popBackStack()
         fm.beginTransaction()
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment1, "1")
             .commit()
         activityRule.waitForExecution()
@@ -465,13 +549,15 @@ class FragmentContainerViewTest {
     fun drawDisappearingChildViewsLastAfterPopReorderingAllowed() {
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment1 = ChildViewFragment()
-        val fragment2 = ChildViewFragment()
+        val fragment1 = ChildViewFragment("child1")
+        val fragment2 = ChildViewFragment("child2")
 
         fm.beginTransaction()
             .setReorderingAllowed(true)
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment1, "1")
             .commit()
         activityRule.waitForExecution()
@@ -480,8 +566,10 @@ class FragmentContainerViewTest {
 
         fm.beginTransaction()
             .setReorderingAllowed(true)
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment2, "2")
             .setPrimaryNavigationFragment(fragment2)
             .addToBackStack(null)
@@ -505,8 +593,10 @@ class FragmentContainerViewTest {
         fm.popBackStack()
         fm.beginTransaction()
             .setReorderingAllowed(true)
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment1, "1")
             .commit()
         activityRule.waitForExecution()
@@ -526,13 +616,15 @@ class FragmentContainerViewTest {
     fun drawDisappearingChildViewsLastAfterPopReorderingAllowedAddNewFragment() {
         val fm = activityRule.activity.supportFragmentManager
 
-        val fragment1 = ChildViewFragment()
-        val fragment2 = ChildViewFragment()
+        val fragment1 = ChildViewFragment("child1")
+        val fragment2 = ChildViewFragment("child2")
 
         fm.beginTransaction()
             .setReorderingAllowed(true)
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment1, "1")
             .commit()
         activityRule.waitForExecution()
@@ -541,8 +633,10 @@ class FragmentContainerViewTest {
 
         fm.beginTransaction()
             .setReorderingAllowed(true)
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .replace(R.id.fragment_container_view, fragment2, "2")
             .setPrimaryNavigationFragment(fragment2)
             .addToBackStack(null)
@@ -566,8 +660,10 @@ class FragmentContainerViewTest {
         fm.popBackStack()
         fm.beginTransaction()
             .setReorderingAllowed(true)
-            .setCustomAnimations(android.R.anim.slide_in_left, android.R.anim.slide_out_right,
-                android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+            .setCustomAnimations(
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right,
+                android.R.anim.slide_in_left, android.R.anim.slide_out_right
+            )
             .add(R.id.fragment_container_view, ChildViewFragment(), "1")
             .commit()
         activityRule.waitForExecution()
@@ -584,12 +680,72 @@ class FragmentContainerViewTest {
         assertThat(drawnFirst!!).isEqualTo(frag2View)
     }
 
-    class ChildViewFragment : StrictViewFragment() {
+    @Test
+    fun getFragmentNoneAdded() {
+        val fragmentContainerView = ActivityCompat.requireViewById<FragmentContainerView>(
+            activityRule.activity,
+            R.id.fragment_container_view
+        )
+
+        assertThat(fragmentContainerView.getFragment<StrictViewFragment?>()).isNull()
+    }
+
+    @Test
+    fun getFragmentTwoAdds() {
+        val fragmentContainerView = ActivityCompat.requireViewById<FragmentContainerView>(
+            activityRule.activity,
+            R.id.fragment_container_view
+        )
+        val fm = activityRule.activity.supportFragmentManager
+
+        val fragment1 = StrictViewFragment()
+        val fragment2 = StrictViewFragment()
+
+        fm.beginTransaction()
+            .add(R.id.fragment_container_view, fragment1)
+            .commit()
+        activityRule.waitForExecution()
+
+        fm.beginTransaction()
+            .add(R.id.fragment_container_view, fragment2)
+            .commit()
+        activityRule.waitForExecution()
+
+        val topFragment = fragmentContainerView.getFragment<StrictViewFragment>()
+        assertThat(topFragment).isSameInstanceAs(fragment2)
+    }
+
+    @Test
+    fun getFragmentAddAndReplace() {
+        val fragmentContainerView = ActivityCompat.requireViewById<FragmentContainerView>(
+            activityRule.activity,
+            R.id.fragment_container_view
+        )
+        val fm = activityRule.activity.supportFragmentManager
+
+        val fragment1 = StrictViewFragment(R.layout.fragment_container_view)
+        val fragment2 = StrictViewFragment(R.layout.fragment_container_view)
+
+        fm.beginTransaction()
+            .add(R.id.fragment_container_view, fragment1)
+            .commit()
+        activityRule.waitForExecution()
+
+        fm.beginTransaction()
+            .replace(R.id.fragment_container_view, fragment2)
+            .commit()
+        activityRule.waitForExecution()
+
+        val topFragment = fragmentContainerView.getFragment<StrictViewFragment>()
+        assertThat(topFragment).isSameInstanceAs(fragment2)
+    }
+
+    class ChildViewFragment(val viewTag: String? = null) : StrictViewFragment() {
         override fun onCreateView(
             inflater: LayoutInflater,
             container: ViewGroup?,
             savedInstanceState: Bundle?
-        ) = ChildView(context)
+        ) = ChildView(context).apply { this.tag = viewTag }
     }
 
     class ChildView(context: Context?) : View(context) {

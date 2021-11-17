@@ -31,7 +31,6 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.test.R
 import androidx.preference.tests.helpers.PreferenceTestHelperActivity
 import androidx.test.filters.LargeTest
-import androidx.test.rule.ActivityTestRule
 import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Rule
 import org.junit.Test
@@ -53,8 +52,11 @@ class PreferenceDialogFragmentCompatTest(private val xmlLayoutId: Int) {
         }
     }
 
+    @Suppress("DEPRECATION")
     @get:Rule
-    val activityTestRule = ActivityTestRule(PreferenceTestHelperActivity::class.java)
+    val activityTestRule = androidx.test.rule.ActivityTestRule(
+        PreferenceTestHelperActivity::class.java
+    )
 
     @Test
     fun testInflatedChildDialogFragment() {
@@ -70,7 +72,7 @@ class PreferenceDialogFragmentCompatTest(private val xmlLayoutId: Int) {
         }
 
         // Show the dialog
-        fragment.preferenceManager.showDialog(fragment.preferenceManager.findPreference("key"))
+        fragment.preferenceManager.showDialog(fragment.preferenceManager.findPreference("key")!!)
 
         // Assert on UI thread so we wait for the dialog to show
         activityTestRule.runOnUiThread {
@@ -88,6 +90,7 @@ class InflatedFragment(val xmlLayoutId: Int) : PreferenceFragmentCompat() {
         setPreferencesFromResource(xmlLayoutId, rootKey)
     }
 
+    @Suppress("DEPRECATION")
     override fun onDisplayPreferenceDialog(preference: Preference) {
         dialogFragment = DialogFragment(preference.key)
             .also { it.setTargetFragment(this, 0) }
@@ -97,12 +100,12 @@ class InflatedFragment(val xmlLayoutId: Int) : PreferenceFragmentCompat() {
 
 class NestedFragment : Fragment(R.layout.simple_layout)
 
-class TestFragmentContainerViewDialogPreference(context: Context?, attrs: AttributeSet?) :
+class TestFragmentContainerViewDialogPreference(context: Context, attrs: AttributeSet?) :
     DialogPreference(context, attrs) {
     init { dialogLayoutResource = R.layout.inflated_fragment_container_view }
 }
 
-class TestFragmentTagDialogPreference(context: Context?, attrs: AttributeSet?) :
+class TestFragmentTagDialogPreference(context: Context, attrs: AttributeSet?) :
     DialogPreference(context, attrs) {
     init { dialogLayoutResource = R.layout.inflated_fragment_tag }
 }

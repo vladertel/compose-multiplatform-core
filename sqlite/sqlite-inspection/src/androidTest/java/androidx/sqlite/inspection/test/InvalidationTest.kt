@@ -22,7 +22,7 @@ import android.database.CursorWrapper
 import android.database.sqlite.SQLiteCursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteStatement
-import androidx.inspection.InspectorEnvironment
+import androidx.inspection.ArtTooling
 import androidx.sqlite.inspection.SqliteInspectorProtocol.DatabasePossiblyChangedEvent
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Event.OneOfCase.DATABASE_POSSIBLY_CHANGED
 import androidx.test.core.app.ApplicationProvider
@@ -48,17 +48,30 @@ class InvalidationTest {
     val temporaryFolder = TemporaryFolder(getInstrumentation().context.cacheDir)
 
     @Test
-    fun test_exec_methods(): Unit = runBlocking {
-        // Starting to track databases makes the inspector register hooks
-        testEnvironment.sendCommand(MessageFactory.createTrackDatabasesCommand())
+    @FlakyTest(bugId = 159202455)
+    fun test_exec_hook_methods() = test_simple_hook_methods(
+        listOf(
+            "execute()V",
+            "executeInsert()J",
+            "executeUpdateDelete()I"
+        ).map { it to SQLiteStatement::class.java }
+    )
 
-        // Verification of hooks being registered and triggering the DatabasePossiblyChangedEvent
-        testEnvironment.consumeRegisteredHooks().let { hooks ->
-            listOf("execute()V", "executeInsert()J", "executeUpdateDelete()I")
-                .forEach { method ->
+    @Test
+    fun test_end_transaction_hook_method() =
+        test_simple_hook_methods(listOf("endTransaction()V" to SQLiteDatabase::class.java))
+
+    private fun test_simple_hook_methods(expectedHooks: List<Pair<String, Class<*>>>) =
+        runBlocking {
+            // Starting to track databases makes the inspector register hooks
+            testEnvironment.sendCommand(MessageFactory.createTrackDatabasesCommand())
+
+            // Verification of hooks registration and triggering the DatabasePossiblyChangedEvent
+            testEnvironment.consumeRegisteredHooks().let { hooks ->
+                expectedHooks.forEach { (method, clazz) ->
                     val hook = hooks.filter { hook ->
                         hook.originMethod == method &&
-                                hook.originClass == SQLiteStatement::class.java
+                            hook.originClass == clazz
                     }
                     assertThat(hook).hasSize(1)
 
@@ -72,8 +85,8 @@ class InvalidationTest {
                     }
                     testEnvironment.assertNoQueuedEvents()
                 }
+            }
         }
-    }
 
     @Test
     @FlakyTest // TODO: deflake
@@ -113,30 +126,26 @@ class InvalidationTest {
 
         // Hook method signatures
         val rawQueryMethodSignature = "rawQueryWithFactory(" +
-                "Landroid/database/sqlite/SQLiteDatabase\$CursorFactory;" +
-                "Ljava/lang/String;" +
-                "[Ljava/lang/String;" +
-                "Ljava/lang/String;" +
-                "Landroid/os/CancellationSignal;" +
-                ")Landroid/database/Cursor;"
-        val getCountMethodSignature = "getCount()I"
-        val onMoveSignatureMethodSignature = "onMove(II)Z"
+            "Landroid/database/sqlite/SQLiteDatabase\$CursorFactory;" +
+            "Ljava/lang/String;" +
+            "[Ljava/lang/String;" +
+            "Ljava/lang/String;" +
+            "Landroid/os/CancellationSignal;" +
+            ")Landroid/database/Cursor;"
+        val closeMethodSignature = "close()V"
+
+        val hooks: List<Hook> = testEnvironment.consumeRegisteredHooks()
 
         // Check for hooks being registered
-        val hooks: List<Hook> = testEnvironment.consumeRegisteredHooks()
-        listOf(
-            SQLiteDatabase::class.java to rawQueryMethodSignature,
-            SQLiteCursor::class.java to getCountMethodSignature,
-            SQLiteCursor::class.java to onMoveSignatureMethodSignature
-        ).forEach { (clazz, method) ->
-            val methodHooks = hooks
-                .filter { it.originMethod == method && it.originClass == clazz }
-                .sortedBy { it.javaClass.canonicalName }
-            assertThat(methodHooks).hasSize(2)
-            assertThat(methodHooks.first()).isInstanceOf(Hook.EntryHook::class.java)
-            assertThat(methodHooks.last()).isInstanceOf(Hook.ExitHook::class.java)
-        }
+        val hooksByClass = hooks.groupBy { it.originClass }
+        val rawQueryHooks = hooksByClass[SQLiteDatabase::class.java]!!.filter {
+            it.originMethod == rawQueryMethodSignature
+        }.map { it::class }
 
+        assertThat(rawQueryHooks).containsExactly(Hook.EntryHook::class, Hook.ExitHook::class)
+        val hook = hooksByClass[SQLiteCursor::class.java]!!.single()
+        assertThat(hook).isInstanceOf(Hook.EntryHook::class.java)
+        assertThat(hook.originMethod).isEqualTo(closeMethodSignature)
         // Check for hook behaviour
         fun wrap(cursor: Cursor): Cursor = object : CursorWrapper(cursor) {}
         fun noOp(c: Cursor): Cursor = c
@@ -150,8 +159,7 @@ class InvalidationTest {
                 val cursor = cursorForQuery(query)
                 hooks.entryHookFor(rawQueryMethodSignature).onEntry(null, listOf(null, query))
                 hooks.exitHookFor(rawQueryMethodSignature).onExit(wrap(wrap(cursor)))
-                hooks.entryHookFor(getCountMethodSignature).onEntry(cursor, emptyList())
-                hooks.exitHookFor(getCountMethodSignature).onExit(null)
+                hooks.entryHookFor(closeMethodSignature).onEntry(cursor, emptyList())
 
                 if (shouldCauseInvalidation) {
                     testEnvironment.receiveEvent()
@@ -186,11 +194,11 @@ class InvalidationTest {
         return cursor as SQLiteCursor
     }
 
-    private fun List<Hook>.entryHookFor(m: String): InspectorEnvironment.EntryHook =
+    private fun List<Hook>.entryHookFor(m: String): ArtTooling.EntryHook =
         this.first { it.originMethod == m && it is Hook.EntryHook }.asEntryHook
 
     @Suppress("UNCHECKED_CAST")
-    private fun List<Hook>.exitHookFor(m: String): InspectorEnvironment.ExitHook<Any> =
+    private fun List<Hook>.exitHookFor(m: String): ArtTooling.ExitHook<Any> =
         this.first { it.originMethod == m && it is Hook.ExitHook }
-            .asExitHook as InspectorEnvironment.ExitHook<Any>
+            .asExitHook as ArtTooling.ExitHook<Any>
 }

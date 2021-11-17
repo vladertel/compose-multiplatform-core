@@ -26,8 +26,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
-import android.Manifest;
-import android.app.Instrumentation;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -37,47 +35,44 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.experimental.UseExperimental;
+import androidx.annotation.OptIn;
 import androidx.camera.camera2.Camera2Config;
 import androidx.camera.camera2.internal.util.SemaphoreReleasingCamera2Callbacks;
 import androidx.camera.camera2.internal.util.SemaphoreReleasingCamera2Callbacks.DeviceStateCallback;
 import androidx.camera.camera2.internal.util.SemaphoreReleasingCamera2Callbacks.SessionCaptureCallback;
 import androidx.camera.camera2.interop.Camera2Interop;
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
-import androidx.camera.core.Camera;
-import androidx.camera.core.CameraControl;
-import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraSelector;
-import androidx.camera.core.CameraX;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.impl.CameraInternal;
+import androidx.camera.core.ImageProxy;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
+import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.camera.testing.CameraUtil;
+import androidx.camera.testing.CameraXUtil;
 import androidx.camera.testing.fakes.FakeLifecycleOwner;
-import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.Observer;
-import androidx.test.annotation.UiThreadTest;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.FlakyTest;
 import androidx.test.filters.LargeTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
-import androidx.test.rule.GrantPermissionRule;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Contains tests for {@link androidx.camera.core.CameraX} which require an actual implementation to
@@ -87,78 +82,56 @@ import java.util.concurrent.atomic.AtomicLong;
 @FlakyTest
 @LargeTest
 @RunWith(AndroidJUnit4.class)
-@UseExperimental(markerClass = ExperimentalCamera2Interop.class)
+@OptIn(markerClass = ExperimentalCamera2Interop.class)
+@SdkSuppress(minSdkVersion = 21)
 public final class Camera2ImplCameraXTest {
     @CameraSelector.LensFacing
     private static final int DEFAULT_LENS_FACING = CameraSelector.LENS_FACING_BACK;
     private static final CameraSelector DEFAULT_SELECTOR =
             new CameraSelector.Builder().requireLensFacing(DEFAULT_LENS_FACING).build();
-    private final MutableLiveData<Long> mAnalysisResult = new MutableLiveData<>();
-    private final MutableLiveData<Long> mAnalysisResult2 = new MutableLiveData<>();
-    private final ImageAnalysis.Analyzer mImageAnalyzer =
-            (image) -> {
-                mAnalysisResult.postValue(image.getImageInfo().getTimestamp());
-                image.close();
-            };
-    private final ImageAnalysis.Analyzer mImageAnalyzer2 =
-            (image) -> {
-                mAnalysisResult2.postValue(image.getImageInfo().getTimestamp());
-                image.close();
-            };
-    @Rule
-    public GrantPermissionRule mRuntimePermissionRule = GrantPermissionRule.grant(
-            Manifest.permission.CAMERA);
 
-    private final Instrumentation mInstrumentation = InstrumentationRegistry.getInstrumentation();
+    @Rule
+    public TestRule mCameraRule = CameraUtil.grantCameraPermissionAndPreTest();
 
     private CameraDevice.StateCallback mDeviceStateCallback;
     private FakeLifecycleOwner mLifecycle;
 
-    private static Observer<Long> createCountIncrementingObserver(final AtomicLong counter) {
-        return new Observer<Long>() {
-            @Override
-            public void onChanged(Long value) {
-                counter.incrementAndGet();
-            }
-        };
-    }
+    private Context mContext;
+    private CameraUseCaseAdapter mCamera;
 
     @Before
     public void setUp() {
-        assumeTrue(CameraUtil.deviceHasCamera());
-        Context context = ApplicationProvider.getApplicationContext();
-        CameraX.initialize(context, Camera2Config.defaultConfig());
+        mContext = ApplicationProvider.getApplicationContext();
+        CameraXUtil.initialize(mContext, Camera2Config.defaultConfig());
         mLifecycle = new FakeLifecycleOwner();
 
         mDeviceStateCallback = mock(CameraDevice.StateCallback.class);
     }
 
     @After
-    public void tearDown() throws InterruptedException, ExecutionException {
-        if (CameraX.isInitialized()) {
-            mInstrumentation.runOnMainSync(CameraX::unbindAll);
+    public void tearDown() throws InterruptedException, ExecutionException, TimeoutException {
+        if (mCamera != null) {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() ->
+                    //TODO: The removeUseCases() call might be removed after clarifying the
+                    // abortCaptures() issue in b/162314023.
+                    mCamera.removeUseCases(mCamera.getUseCases())
+            );
         }
-        CameraX.shutdown().get();
+
+        CameraXUtil.shutdown().get(10000, TimeUnit.MILLISECONDS);
     }
 
     @Test
     public void lifecycleResume_opensCameraAndStreamsFrames() {
-        Observer<Long> mockObserver = mock(Observer.class);
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-                new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
-                ImageAnalysis useCase = builder.build();
+        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
+        new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
+        ImageAnalysis useCase = builder.build();
 
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-                useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
-                mAnalysisResult.observe(mLifecycle, mockObserver);
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase);
+        WaitingAnalyzer waitingAnalyzer = new WaitingAnalyzer(10);
+        useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), waitingAnalyzer);
 
-                mLifecycle.startAndResume();
-            }
-        });
-        verify(mockObserver, timeout(5000).atLeast(10)).onChanged(any());
+        assertThat(waitingAnalyzer.waitForCount(5000, TimeUnit.MILLISECONDS)).isTrue();
     }
 
     @Test
@@ -173,84 +146,73 @@ public final class Camera2ImplCameraXTest {
         assumeTrue(
                 hardwareLevelValue != CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY);
 
-        Observer<Long> mockObserver = mock(Observer.class);
-        Observer<Long> mockObserver2 = mock(Observer.class);
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-                new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
-                ImageAnalysis useCase = builder.build();
+        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
+        new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
+        ImageAnalysis useCase = builder.build();
 
-                ImageAnalysis useCase2 = new ImageAnalysis.Builder().build();
+        ImageAnalysis useCase2 = new ImageAnalysis.Builder().build();
 
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase, useCase2);
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase,
+                useCase2);
 
-                useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
-                useCase2.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer2);
-                mAnalysisResult.observe(mLifecycle, mockObserver);
-                mAnalysisResult2.observe(mLifecycle, mockObserver2);
+        CountingAnalyzer countingAnalyzer = new CountingAnalyzer();
+        WaitingAnalyzer waitingAnalyzer = new WaitingAnalyzer(3);
 
-                CameraX.unbind(useCase);
+        useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), countingAnalyzer);
+        useCase2.setAnalyzer(CameraXExecutors.mainThreadExecutor(), waitingAnalyzer);
 
-                mLifecycle.startAndResume();
-            }
-        });
+        // TODO(b/160249108) move off of main thread once UseCases can be attached on any
+        //  thread
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() ->
+                mCamera.removeUseCases(Arrays.asList(useCase))
+        );
+
+        mLifecycle.startAndResume();
 
         // Let second ImageAnalysis get some images. This shows that the first ImageAnalysis has
         // not observed any images, even though the camera has started to stream.
-        verify(mockObserver2, timeout(3000).atLeast(3)).onChanged(any());
-        verify(mockObserver, never()).onChanged(any());
+        waitingAnalyzer.waitForCount(3000, TimeUnit.MILLISECONDS);
+        assertThat(countingAnalyzer.getCount()).isEqualTo(0);
     }
 
     @Test
-    public void lifecyclePause_closesCameraAndStopsStreamingFrames() throws InterruptedException {
-        final AtomicLong observedCount = new AtomicLong(0);
+    public void detach_closesCameraAndStopsStreamingFrames() throws InterruptedException {
         final SessionCaptureCallback sessionCaptureCallback = new SessionCaptureCallback();
         final DeviceStateCallback deviceStateCallback = new DeviceStateCallback();
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                ImageAnalysis.Builder configBuilder = new ImageAnalysis.Builder();
-                new Camera2Interop.Extender<>(configBuilder)
-                        .setDeviceStateCallback(deviceStateCallback)
-                        .setSessionCaptureCallback(sessionCaptureCallback);
-                ImageAnalysis useCase = configBuilder.build();
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-                useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
-                mAnalysisResult.observe(mLifecycle, createCountIncrementingObserver(observedCount));
 
-                mLifecycle.startAndResume();
-            }
-        });
+        ImageAnalysis.Builder configBuilder = new ImageAnalysis.Builder();
+        new Camera2Interop.Extender<>(configBuilder)
+                .setDeviceStateCallback(deviceStateCallback)
+                .setSessionCaptureCallback(sessionCaptureCallback);
+        ImageAnalysis useCase = configBuilder.build();
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase);
+        CountingAnalyzer countingAnalyzer = new CountingAnalyzer();
+        useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), countingAnalyzer);
+
+        mLifecycle.startAndResume();
 
         // Wait a little bit for the camera to open and stream frames.
         sessionCaptureCallback.waitForOnCaptureCompleted(5);
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                mLifecycle.pauseAndStop();
-            }
-        });
+        mCamera.detachUseCases();
 
         // Wait a little bit for the camera to close.
         deviceStateCallback.waitForOnClosed(1);
 
-        final Long firstObservedCount = observedCount.get();
-        assertThat(firstObservedCount).isGreaterThan(1L);
+        final int firstObservedCount = countingAnalyzer.getCount();
+        assertThat(firstObservedCount).isGreaterThan(1);
 
         // Stay in idle state for a while.
         Thread.sleep(5000);
 
         // Additional frames should not be observed.
-        final Long secondObservedCount = observedCount.get();
+        final int secondObservedCount = countingAnalyzer.getCount();
         assertThat(secondObservedCount).isEqualTo(firstObservedCount);
     }
 
     @Test
-    public void resumePauseInShortTime_theCaptureSessionShouldOpenAndCloseCorrectly()
+    public void detachAndAttachInShortTime_theCaptureSessionShouldOpenAndCloseCorrectly()
             throws InterruptedException {
         // To test the CaptureSession should open/close correctly or we might fail to close the
         // camera device due to the wrong capture session state.
@@ -280,60 +242,44 @@ public final class Camera2ImplCameraXTest {
                         lock.countDown();
                     }
                 };
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                ImageAnalysis.Builder configBuilder = new ImageAnalysis.Builder();
-                new Camera2Interop.Extender<>(configBuilder).setSessionCaptureCallback(
-                        callback).setSessionStateCallback(sessionStateCallback);
-                ImageAnalysis useCase = configBuilder.build();
-                CameraSelector selectorBack = new CameraSelector.Builder().requireLensFacing(
-                        CameraSelector.LENS_FACING_BACK).build();
-                CameraX.bindToLifecycle(mLifecycle, selectorBack, useCase);
-                useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
 
-                mLifecycle.startAndResume();
-            }
-        });
+        ImageAnalysis.Builder configBuilder0 = new ImageAnalysis.Builder();
+        new Camera2Interop.Extender<>(configBuilder0).setSessionCaptureCallback(
+                callback).setSessionStateCallback(sessionStateCallback);
+        ImageAnalysis useCase0 = configBuilder0.build();
+        CameraSelector selectorBack = new CameraSelector.Builder().requireLensFacing(
+                CameraSelector.LENS_FACING_BACK).build();
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, selectorBack, useCase0);
+
+        mLifecycle.startAndResume();
 
         // Wait a little bit for the camera to open and stream frames.
         lock.await(3000, TimeUnit.MILLISECONDS);
 
         // Pause/Resume the lifeCycle twice to simulate the test step (2) and (3).
         for (int i = 0; i < 2; i++) {
-            mInstrumentation.runOnMainSync(new Runnable() {
-                @Override
-                public void run() {
-                    // Pause/Resume the lifeCycle to create and close the capture session. the new
-                    // camera capture session will be opened immediately after a previous
-                    // CaptureSession is opened, and the previous CaptureSession will going to close
-                    // right after the new CaptureSession is opened.
-                    mLifecycle.pauseAndStop();
-                    mLifecycle.startAndResume();
-                }
-            });
+            // Attach/Detach the useCases to create and close the capture session. the new
+            // camera capture session will be opened immediately after a previous
+            // CaptureSession is opened, and the previous CaptureSession will going to close
+            // right after the new CaptureSession is opened.
+            mCamera.detachUseCases();
+            mCamera.attachUseCases();
             // Wait for the capture session is configured.
             assertTrue(sessionStateCallback.waitForOnConfigured(1));
         }
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                // Unbind all useCase and switch to another camera to verify the camera close flow.
-                CameraX.unbindAll();
+        // Detach all useCase and switch to another camera to verify the camera close flow.
+        mCamera.detachUseCases();
 
-                // The camera switch only success after all the exist CaptureSession was
-                // closed successfully.
-                ImageAnalysis.Builder configBuilder = new ImageAnalysis.Builder();
-                new Camera2Interop.Extender<>(configBuilder).setDeviceStateCallback(
-                        mDeviceStateCallback);
-                ImageAnalysis useCase = configBuilder.build();
-                CameraSelector selectorFront = new CameraSelector.Builder().requireLensFacing(
-                        CameraSelector.LENS_FACING_FRONT).build();
-                CameraX.bindToLifecycle(mLifecycle, selectorFront, useCase);
-                useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
-            }
-        });
+        // The camera switch only succeeds after all the exist CaptureSession was
+        // closed successfully.
+        ImageAnalysis.Builder configBuilder1 = new ImageAnalysis.Builder();
+        new Camera2Interop.Extender<>(configBuilder1).setDeviceStateCallback(
+                mDeviceStateCallback);
+        ImageAnalysis useCase1 = configBuilder1.build();
+        CameraSelector selectorFront = new CameraSelector.Builder().requireLensFacing(
+                CameraSelector.LENS_FACING_FRONT).build();
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, selectorFront, useCase1);
 
         // The front camera should open successfully. If the test fail, the CameraX might
         // in wrong internal state, and the CameraX#shutdown() might stuck.
@@ -346,14 +292,7 @@ public final class Camera2ImplCameraXTest {
         new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
         ImageAnalysis useCase = builder.build();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-                useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
-                mLifecycle.startAndResume();
-            }
-        });
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase);
 
         verify(mDeviceStateCallback, timeout(3000)).onOpened(any(CameraDevice.class));
     }
@@ -364,13 +303,7 @@ public final class Camera2ImplCameraXTest {
         new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
         ImageAnalysis useCase = builder.build();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-                mLifecycle.startAndResume();
-            }
-        });
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase);
 
         verify(mDeviceStateCallback, timeout(3000)).onOpened(any(CameraDevice.class));
     }
@@ -386,13 +319,7 @@ public final class Camera2ImplCameraXTest {
 
         ImageAnalysis useCase = builder.build();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-                mLifecycle.startAndResume();
-            }
-        });
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase);
 
         // When no analyzer is set, there will be no active surface for repeating request
         // CaptureSession#mSessionConfig will be null. Thus we wait until capture session
@@ -402,7 +329,7 @@ public final class Camera2ImplCameraXTest {
     }
 
     @Test
-    public void bind_unbind_loopWithOutAnalyzer() {
+    public void attach_detach_loopWithOutAnalyzer() {
         ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
         mLifecycle.startAndResume();
 
@@ -411,21 +338,11 @@ public final class Camera2ImplCameraXTest {
             new Camera2Interop.Extender<>(builder).setDeviceStateCallback(callback);
             ImageAnalysis useCase = builder.build();
 
-            mInstrumentation.runOnMainSync(new Runnable() {
-                @Override
-                public void run() {
-                    CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-                }
-            });
+            mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase);
 
             verify(callback, timeout(5000)).onOpened(any(CameraDevice.class));
 
-            mInstrumentation.runOnMainSync(new Runnable() {
-                @Override
-                public void run() {
-                    CameraX.unbind(useCase);
-                }
-            });
+            mCamera.detachUseCases();
 
             verify(callback, timeout(3000)).onClosed(any(CameraDevice.class));
         }
@@ -441,81 +358,36 @@ public final class Camera2ImplCameraXTest {
             new Camera2Interop.Extender<>(builder).setDeviceStateCallback(callback);
             ImageAnalysis useCase = builder.build();
 
-            mInstrumentation.runOnMainSync(new Runnable() {
-                @Override
-                public void run() {
-                    CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-                    useCase.setAnalyzer(CameraXExecutors.mainThreadExecutor(), mImageAnalyzer);
-                }
-            });
+            mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase);
 
             verify(callback, timeout(5000)).onOpened(any(CameraDevice.class));
 
-            mInstrumentation.runOnMainSync(new Runnable() {
-                @Override
-                public void run() {
-                    CameraX.unbind(useCase);
-                }
-            });
+            mCamera.detachUseCases();
 
             verify(callback, timeout(3000)).onClosed(any(CameraDevice.class));
         }
     }
 
     @Test
-    public void unbindAll_closesAllCameras() {
+    public void removeAllAssociatedUseCase_closesCamera() {
         ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
         new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
         ImageAnalysis useCase = builder.build();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-                mLifecycle.startAndResume();
-            }
-        });
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase);
 
         verify(mDeviceStateCallback, timeout(3000)).onOpened(any(CameraDevice.class));
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.unbindAll();
-            }
-        });
-
+        // TODO(b/160249108) move off of main thread once UseCases can be attached on any
+        //  thread
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() ->
+                mCamera.removeUseCases(Collections.singletonList(useCase))
+        );
         verify(mDeviceStateCallback, timeout(3000)).onClosed(any(CameraDevice.class));
     }
 
     @Test
-    public void unbindAllAssociatedUseCase_closesCamera() {
-        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-        new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
-        ImageAnalysis useCase = builder.build();
-
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-                mLifecycle.startAndResume();
-            }
-        });
-
-        verify(mDeviceStateCallback, timeout(3000)).onOpened(any(CameraDevice.class));
-
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.unbind(useCase);
-            }
-        });
-
-        verify(mDeviceStateCallback, timeout(3000)).onClosed(any(CameraDevice.class));
-    }
-
-    @Test
-    public void unbindPartialAssociatedUseCase_doesNotCloseCamera() throws InterruptedException {
+    public void removePartialAssociatedUseCase_doesNotCloseCamera() throws InterruptedException {
         ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
         new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
         ImageAnalysis useCase0 = builder.build();
@@ -524,30 +396,23 @@ public final class Camera2ImplCameraXTest {
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                 .build();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase0, useCase1);
-                mLifecycle.startAndResume();
-            }
-        });
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase0,
+                useCase1);
 
         verify(mDeviceStateCallback, timeout(3000)).onOpened(any(CameraDevice.class));
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.unbind(useCase1);
-            }
-        });
-
+        // TODO(b/160249108) move off of main thread once UseCases can be attached on any
+        //  thread
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() ->
+                mCamera.removeUseCases(Collections.singletonList(useCase1))
+        );
         Thread.sleep(3000);
 
         verify(mDeviceStateCallback, never()).onClosed(any(CameraDevice.class));
     }
 
     @Test
-    public void unbindAllAssociatedUseCaseInParts_ClosesCamera() {
+    public void removeAllAssociatedUseCaseInParts_ClosesCamera() {
         ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
         new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
         ImageAnalysis useCase0 = builder.build();
@@ -556,80 +421,25 @@ public final class Camera2ImplCameraXTest {
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                 .build();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase0, useCase1);
-                mLifecycle.startAndResume();
-            }
-        });
+        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase0,
+                useCase1);
 
         verify(mDeviceStateCallback, timeout(3000)).onOpened(any(CameraDevice.class));
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.unbind(useCase0);
-                CameraX.unbind(useCase1);
-            }
-        });
+        // TODO(b/160249108) move off of main thread once UseCases can be attached on any
+        //  thread
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+                    mCamera.removeUseCases(Collections.singleton(useCase0));
+                    mCamera.removeUseCases(Collections.singleton(useCase1));
+                }
+        );
 
         verify(mDeviceStateCallback, timeout(3000).times(1)).onClosed(any(CameraDevice.class));
     }
 
     @Test
-    @UiThreadTest
-    public void cameraInfo_getCameraInfoFromCamera() {
-        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-        ImageAnalysis useCase = builder.build();
-
-        Camera camera = CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-
-        assertThat(camera.getCameraInfo()).isInstanceOf(CameraInfo.class);
-    }
-
-    @Test
-    @UiThreadTest
-    public void cameraControl_getCameraControlFromCamera() {
-        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-        ImageAnalysis useCase = builder.build();
-
-        Camera camera = CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, useCase);
-
-        assertThat(camera.getCameraControl()).isInstanceOf(CameraControl.class);
-    }
-
-    @Test
-    @UiThreadTest
-    public void cameraSelector_selectFirstCameraByDefault() throws CameraAccessException {
-        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-        ImageAnalysis useCase = builder.build();
-
-        Camera camera = CameraX.bindToLifecycle(mLifecycle,
-                new CameraSelector.Builder().build(),
-                useCase);
-
-        List<String> camera2IdList = Arrays.asList(CameraUtil.getCameraManager().getCameraIdList());
-        assertThat(((CameraInternal) camera).getCameraInfoInternal().getCameraId()).isEqualTo(
-                camera2IdList.iterator().next());
-    }
-
-    @Test
-    @UiThreadTest
-    public void cameraSelector_selectFirstCameraWithLensFacing() {
-        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-        ImageAnalysis useCase = builder.build();
-
-        Camera camera = CameraX.bindToLifecycle(mLifecycle,
-                new CameraSelector.Builder().requireLensFacing(DEFAULT_LENS_FACING).build(),
-                useCase);
-
-        assertThat(((CameraInternal) camera).getCameraInfoInternal().getCameraId()).isEqualTo(
-                CameraUtil.getCameraIdWithLensFacing(DEFAULT_LENS_FACING));
-    }
-
-    @Test
-    public void sequentialBindUnbindUseCases_closeCamera() throws InterruptedException {
+    public void sequentialBindUnbindUseCases_closeCamera() throws
+            CameraUseCaseAdapter.CameraException {
         ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().build();
 
         ImageCapture.Builder builder1 = new ImageCapture.Builder()
@@ -637,29 +447,66 @@ public final class Camera2ImplCameraXTest {
         new Camera2Interop.Extender<>(builder1).setDeviceStateCallback(mDeviceStateCallback);
         ImageCapture imageCapture = builder1.build();
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                mLifecycle.startAndResume();
-                // Bind ImageCapture only
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, imageCapture);
+        mCamera = CameraUtil.createCameraUseCaseAdapter(mContext, DEFAULT_SELECTOR);
 
-                // Then bind another ImageAnalysis
-                CameraX.bindToLifecycle(mLifecycle, DEFAULT_SELECTOR, imageAnalysis);
+        // TODO(b/160249108) move off of main thread once UseCases can be attached on any
+        //  thread
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            try {
+                mCamera.addUseCases(Collections.singleton(imageCapture));
+                mCamera.addUseCases(Collections.singleton(imageAnalysis));
+            } catch (CameraUseCaseAdapter.CameraException e) {
+                throw new IllegalArgumentException(e);
             }
         });
 
         verify(mDeviceStateCallback, timeout(3000)).onOpened(any(CameraDevice.class));
 
-        mInstrumentation.runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                CameraX.unbind(imageCapture);
-                CameraX.unbind(imageAnalysis);
-            }
+
+        // TODO(b/160249108) move off of main thread once UseCases can be attached on any
+        //  thread
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            mCamera.removeUseCases(Collections.singleton(imageCapture));
+            mCamera.removeUseCases(Collections.singleton(imageAnalysis));
         });
 
         verify(mDeviceStateCallback, timeout(3000)).onClosed(any(CameraDevice.class));
     }
 
+    private class CountingAnalyzer implements ImageAnalysis.Analyzer {
+        AtomicInteger mCount = new AtomicInteger(0);
+
+        @Override
+        public void analyze(@NonNull ImageProxy image) {
+            mCount.incrementAndGet();
+            image.close();
+        }
+
+        // Should not be used for exact value
+        int getCount() {
+            return mCount.get();
+        }
+    }
+
+    private class WaitingAnalyzer implements ImageAnalysis.Analyzer {
+        private final CountDownLatch mCountDownLatch;
+        WaitingAnalyzer(int waitCount) {
+            mCountDownLatch = new CountDownLatch(waitCount);
+        }
+
+        @Override
+        public void analyze(@NonNull ImageProxy image) {
+            mCountDownLatch.countDown();
+            image.close();
+        }
+
+        boolean waitForCount(long timeout, TimeUnit unit) {
+            try {
+                return mCountDownLatch.await(timeout, unit);
+            } catch (InterruptedException e) {
+                // If it is interrupted then it is a failure
+                return false;
+            }
+        }
+    }
 }

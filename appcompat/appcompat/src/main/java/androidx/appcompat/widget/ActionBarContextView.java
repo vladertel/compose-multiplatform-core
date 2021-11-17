@@ -24,7 +24,6 @@ import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.accessibility.AccessibilityEvent;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -45,6 +44,7 @@ public class ActionBarContextView extends AbsActionBarView {
     private CharSequence mSubtitle;
 
     private View mClose;
+    private View mCloseButton;
     private View mCustomView;
     private LinearLayout mTitleLayout;
     private TextView mTitleView;
@@ -116,6 +116,7 @@ public class ActionBarContextView extends AbsActionBarView {
     public void setTitle(CharSequence title) {
         mTitle = title;
         initTitle();
+        ViewCompat.setAccessibilityPaneTitle(this, title);
     }
 
     public void setSubtitle(CharSequence subtitle) {
@@ -167,8 +168,8 @@ public class ActionBarContextView extends AbsActionBarView {
             addView(mClose);
         }
 
-        View closeButton = mClose.findViewById(R.id.action_mode_close_button);
-        closeButton.setOnClickListener(new OnClickListener() {
+        mCloseButton = mClose.findViewById(R.id.action_mode_close_button);
+        mCloseButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 mode.finish();
@@ -201,6 +202,10 @@ public class ActionBarContextView extends AbsActionBarView {
         removeAllViews();
         mCustomView = null;
         mMenuView = null;
+        mActionMenuPresenter = null;
+        if (mCloseButton != null) {
+            mCloseButton.setOnClickListener(null);
+        }
     }
 
     @Override
@@ -353,19 +358,6 @@ public class ActionBarContextView extends AbsActionBarView {
     @Override
     public boolean shouldDelayChildPressedState() {
         return false;
-    }
-
-    @Override
-    public void onInitializeAccessibilityEvent(AccessibilityEvent event) {
-        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            // Action mode started
-            event.setSource(this);
-            event.setClassName(getClass().getName());
-            event.setPackageName(getContext().getPackageName());
-            event.setContentDescription(mTitle);
-        } else {
-            super.onInitializeAccessibilityEvent(event);
-        }
     }
 
     public void setTitleOptional(boolean titleOptional) {

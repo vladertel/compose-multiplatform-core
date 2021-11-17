@@ -16,11 +16,11 @@
 
 package androidx.camera.testing;
 
-import android.os.AsyncTask;
 import android.os.Looper;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.DeferrableSurface;
 import androidx.camera.core.impl.DeferrableSurfaces;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 
 /** Utility functions for DeferrableSurfaces. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class DeferrableSurfacesUtil {
     private DeferrableSurfacesUtil() {
     }
@@ -56,6 +57,7 @@ public class DeferrableSurfacesUtil {
      * @param removeNullSurfaces If true remove all Surfaces that were not retrieved.
      */
     @NonNull
+    @SuppressWarnings("deprecation") /* AsyncTask */
     public static List<Surface> surfaceList(
             @NonNull Collection<DeferrableSurface> deferrableSurfaces, boolean removeNullSurfaces) {
         ScheduledExecutorService scheduledExecutorService =
@@ -63,7 +65,7 @@ public class DeferrableSurfacesUtil {
                         HandlerCompat.createAsync(Looper.getMainLooper()));
         try {
             return DeferrableSurfaces.surfaceListWithTimeout(deferrableSurfaces, removeNullSurfaces,
-                    Long.MAX_VALUE, AsyncTask.THREAD_POOL_EXECUTOR,
+                    Long.MAX_VALUE, android.os.AsyncTask.THREAD_POOL_EXECUTOR,
                     scheduledExecutorService).get();
         } catch (InterruptedException | ExecutionException e) {
             return Collections.unmodifiableList(Collections.emptyList());

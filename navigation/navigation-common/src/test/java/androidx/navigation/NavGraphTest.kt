@@ -23,8 +23,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import java.util.Arrays
-import java.util.NoSuchElementException
 
 @RunWith(JUnit4::class)
 class NavGraphTest {
@@ -44,9 +42,11 @@ class NavGraphTest {
     fun setup() {
         provider = NavigatorProvider().apply {
             addNavigator(NoOpNavigator().also { noOpNavigator = it })
-            addNavigator(NavGraphNavigator(this).also {
-                navGraphNavigator = it
-            })
+            addNavigator(
+                NavGraphNavigator(this).also {
+                    navGraphNavigator = it
+                }
+            )
         }
     }
 
@@ -59,14 +59,14 @@ class NavGraphTest {
     }
 
     private fun createGraphWithDestination(destination: NavDestination) =
-            navGraphNavigator.createDestination().apply {
-                addDestination(destination)
-            }
+        navGraphNavigator.createDestination().apply {
+            addDestination(destination)
+        }
 
     private fun createGraphWithDestinations(vararg destinations: NavDestination) =
-            navGraphNavigator.createDestination().apply {
-                addDestinations(*destinations)
-            }
+        navGraphNavigator.createDestination().apply {
+            addDestinations(*destinations)
+        }
 
     @Test(expected = IllegalArgumentException::class)
     fun addDestinationWithoutId() {
@@ -96,7 +96,7 @@ class NavGraphTest {
             assertWithMessage("Adding destination with same id as its parent should fail")
                 .that(e).hasMessageThat().contains(
                     "Destination $destination cannot have the same id as graph $graph"
-            )
+                )
         }
     }
 
@@ -107,10 +107,11 @@ class NavGraphTest {
             id = FIRST_DESTINATION_ID
         }
         try {
-            graph.startDestination = destination.id
+            graph.setStartDestination(destination.id)
         } catch (e: IllegalArgumentException) {
             assertWithMessage("Setting a start destination with same id as its parent should fail")
-                .that(e).hasMessageThat().contains("Start destination " + destination.id +
+                .that(e).hasMessageThat().contains(
+                    "Start destination " + destination.id +
                         " cannot use the same id as the graph $graph"
                 )
         }
@@ -121,7 +122,7 @@ class NavGraphTest {
         val graph = navGraphNavigator.createDestination()
         val destination = createFirstDestination()
         val secondDestination = createSecondDestination()
-        graph.addDestinations(Arrays.asList(destination, secondDestination))
+        graph.addDestinations(listOf(destination, secondDestination))
 
         assertThat(destination.parent).isEqualTo(graph)
         assertThat(graph.findNode(FIRST_DESTINATION_ID)).isEqualTo(destination)
@@ -258,5 +259,48 @@ class NavGraphTest {
         assertThat(graph.findNode(FIRST_DESTINATION_ID)).isNull()
         assertThat(secondDestination.parent).isNull()
         assertThat(graph.findNode(SECOND_DESTINATION_ID)).isNull()
+    }
+
+    @Test
+    fun equalsNull() {
+        val destination = createFirstDestination()
+        val graph = createGraphWithDestination(destination)
+
+        assertThat(graph).isNotNull()
+    }
+
+    @Test
+    fun equals() {
+        val destination = createFirstDestination()
+        val secondDestination = createSecondDestination()
+        val graph = createGraphWithDestinations(destination, secondDestination)
+
+        val graph2 = createGraphWithDestinations(
+            createFirstDestination(),
+            createSecondDestination()
+        )
+        assertThat(graph2).isEqualTo(graph)
+    }
+
+    @Test
+    fun equalsDifferentSizes() {
+        val destination = createFirstDestination()
+        val secondDestination = createSecondDestination()
+        val graph = createGraphWithDestinations(destination, secondDestination)
+
+        val graph2 = createGraphWithDestination(createFirstDestination())
+        assertThat(graph2).isNotEqualTo(graph)
+    }
+
+    @Test
+    fun equalsDifferentStartDestination() {
+        val destination = createFirstDestination()
+        val secondDestination = createSecondDestination()
+        val graph = createGraphWithDestinations(destination, secondDestination)
+        graph.setStartDestination(FIRST_DESTINATION_ID)
+
+        val graph2 = createGraphWithDestination(createFirstDestination())
+        graph2.setStartDestination(SECOND_DESTINATION_ID)
+        assertThat(graph2).isNotEqualTo(graph)
     }
 }

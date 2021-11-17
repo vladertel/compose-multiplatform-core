@@ -20,13 +20,37 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.core.CameraInfo;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.InitializationException;
 
 /**
  * A Repository for generating use case configurations.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface UseCaseConfigFactory {
+
+    enum CaptureType {
+        /**
+         * Capture type for still image capture. A still capture which can be a single or
+         * multiple frames which are combined into a single image.
+         */
+        IMAGE_CAPTURE,
+
+        /**
+         * Capture type for preview. A use case of this type is consuming a stream of frames.
+         */
+        PREVIEW,
+
+        /**
+         * Capture type for image analysis. A use case of this type is consuming a stream of frames.
+         */
+        IMAGE_ANALYSIS,
+
+        /**
+         * Capture type for video capture. A use case of this type is consuming a stream of frames.
+         */
+        VIDEO_CAPTURE
+    }
 
     /**
      * Interface for deferring creation of a UseCaseConfigFactory.
@@ -44,13 +68,17 @@ public interface UseCaseConfigFactory {
     }
 
     /**
-     * Returns the configuration for the given type, or <code>null</code> if the configuration
-     * cannot be produced.
-     *
-     * @param cameraInfo The {@link CameraInfo} of the camera that the configuration will target
-     *                   to, null if it doesn't target to any camera.
+     * Returns the configuration for the given capture type, or <code>null</code> if the
+     * configuration cannot be produced.
      */
     @Nullable
-    <C extends UseCaseConfig<?>> C getConfig(@NonNull Class<C> configType,
-            @Nullable CameraInfo cameraInfo);
+    Config getConfig(@NonNull CaptureType captureType);
+
+    UseCaseConfigFactory EMPTY_INSTANCE = new UseCaseConfigFactory() {
+        @Nullable
+        @Override
+        public Config getConfig(@NonNull CaptureType captureType) {
+            return null;
+        }
+    };
 }

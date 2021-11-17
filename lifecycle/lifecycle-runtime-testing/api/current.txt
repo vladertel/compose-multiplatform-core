@@ -1,9 +1,9 @@
-// Signature format: 3.0
+// Signature format: 4.0
 package androidx.lifecycle.testing {
 
   public final class TestLifecycleOwner implements androidx.lifecycle.LifecycleOwner {
-    ctor public TestLifecycleOwner(androidx.lifecycle.Lifecycle.State initialState, kotlinx.coroutines.CoroutineDispatcher coroutineDispatcher);
-    ctor public TestLifecycleOwner(androidx.lifecycle.Lifecycle.State initialState);
+    ctor public TestLifecycleOwner(optional androidx.lifecycle.Lifecycle.State initialState, optional kotlinx.coroutines.CoroutineDispatcher coroutineDispatcher);
+    ctor public TestLifecycleOwner(optional androidx.lifecycle.Lifecycle.State initialState);
     ctor public TestLifecycleOwner();
     method public androidx.lifecycle.Lifecycle.State getCurrentState();
     method public androidx.lifecycle.LifecycleRegistry getLifecycle();

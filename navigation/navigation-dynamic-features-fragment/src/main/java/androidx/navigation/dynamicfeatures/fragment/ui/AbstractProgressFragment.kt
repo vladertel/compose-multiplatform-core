@@ -17,11 +17,12 @@
 package androidx.navigation.dynamicfeatures.fragment.ui
 
 import android.app.Activity
-import android.content.Intent
 import android.content.IntentSender
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RestrictTo
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -30,6 +31,7 @@ import androidx.navigation.dynamicfeatures.Constants
 import androidx.navigation.dynamicfeatures.DynamicExtras
 import androidx.navigation.dynamicfeatures.DynamicInstallMonitor
 import androidx.navigation.fragment.findNavController
+import com.google.android.play.core.common.IntentSenderForResultStarter
 import com.google.android.play.core.splitinstall.SplitInstallSessionState
 import com.google.android.play.core.splitinstall.model.SplitInstallErrorCode
 import com.google.android.play.core.splitinstall.model.SplitInstallSessionStatus
@@ -43,7 +45,7 @@ import com.google.android.play.core.splitinstall.model.SplitInstallSessionStatus
  * The installation process itself is handled within the [AbstractProgressFragment] itself.
  * Navigation to the target destination will occur once the installation is completed.
  */
-abstract class AbstractProgressFragment : Fragment {
+public abstract class AbstractProgressFragment : Fragment {
 
     internal companion object {
         private const val INSTALL_REQUEST_CODE = 1
@@ -61,9 +63,17 @@ abstract class AbstractProgressFragment : Fragment {
     }
     private var navigated = false
 
-    constructor()
+    public constructor()
 
-    constructor(contentLayoutId: Int) : super(contentLayoutId)
+    public constructor(contentLayoutId: Int) : super(contentLayoutId)
+
+    private val intentSenderLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_CANCELED) {
+            onCancelled()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -126,16 +136,34 @@ abstract class AbstractProgressFragment : Fragment {
                         onInstalled()
                         navigate()
                     }
-                    SplitInstallSessionStatus.REQUIRES_USER_CONFIRMATION -> try {
-                        @Suppress("DEPRECATION")
-                        // TODO replace once PlayCore ships with code landed in b/145276704.
-                        startIntentSenderForResult(
-                            sessionState.resolutionIntent()?.intentSender,
-                            INSTALL_REQUEST_CODE, null, 0, 0, 0, null
-                        )
-                    } catch (e: IntentSender.SendIntentException) {
-                        onFailed(SplitInstallErrorCode.INTERNAL_ERROR)
-                    }
+                    SplitInstallSessionStatus.REQUIRES_USER_CONFIRMATION ->
+                        try {
+                            val splitInstallManager = monitor.splitInstallManager
+                            if (splitInstallManager == null) {
+                                onFailed(SplitInstallErrorCode.INTERNAL_ERROR)
+                                return
+                            }
+                            splitInstallManager.startConfirmationDialogForResult(
+                                sessionState,
+                                IntentSenderForResultStarter { intent,
+                                    _,
+                                    fillInIntent,
+                                    flagsMask,
+                                    flagsValues,
+                                    _,
+                                    _ ->
+                                    intentSenderLauncher.launch(
+                                        IntentSenderRequest.Builder(intent)
+                                            .setFillInIntent(fillInIntent)
+                                            .setFlags(flagsValues, flagsMask)
+                                            .build()
+                                    )
+                                },
+                                INSTALL_REQUEST_CODE
+                            )
+                        } catch (e: IntentSender.SendIntentException) {
+                            onFailed(SplitInstallErrorCode.INTERNAL_ERROR)
+                        }
                     SplitInstallSessionStatus.CANCELED -> onCancelled()
                     SplitInstallSessionStatus.FAILED -> onFailed(sessionState.errorCode())
                     SplitInstallSessionStatus.UNKNOWN ->
@@ -152,15 +180,6 @@ abstract class AbstractProgressFragment : Fragment {
                         )
                     }
                 }
-            }
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == INSTALL_REQUEST_CODE) {
-            if (resultCode == Activity.RESULT_CANCELED) {
-                onCancelled()
             }
         }
     }
@@ -196,5 +215,5 @@ abstract class AbstractProgressFragment : Fragment {
      * Called when requested module has been successfully installed, just before the
      * [NavController][androidx.navigation.NavController] navigates to the final destination.
      */
-    protected open fun onInstalled() = Unit
+    protected open fun onInstalled(): Unit = Unit
 }

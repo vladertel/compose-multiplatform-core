@@ -20,12 +20,12 @@ import android.app.Activity
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.os.Build
-import androidx.test.rule.ActivityTestRule
 import androidx.test.runner.intercepting.SingleActivityFactory
 
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
 import java.lang.RuntimeException
+import java.lang.reflect.Method
 
 /**
  * To solve the issue that androidx changes system settings to make animation duration to 0:
@@ -35,7 +35,8 @@ import java.lang.RuntimeException
  * Activity (launchActivity = false).
  */
 
-open class AnimationActivityTestRule<T : Activity> : ActivityTestRule<T> {
+@Suppress("DEPRECATION")
+open class AnimationActivityTestRule<T : Activity> : androidx.test.rule.ActivityTestRule<T> {
 
     private enum class TestType {
         NORMAL, // Test without the @AnimationTest
@@ -49,7 +50,7 @@ open class AnimationActivityTestRule<T : Activity> : ActivityTestRule<T> {
         ValueAnimator::class.java.getDeclaredMethod("setDurationScale", Float::class.java)
 
     @SuppressLint("DiscouragedPrivateApi")
-    val durationGetter =
+    val durationGetter: Method =
         ValueAnimator::class.java.getDeclaredMethod("getDurationScale")
 
     private lateinit var testType: TestType
@@ -86,9 +87,12 @@ open class AnimationActivityTestRule<T : Activity> : ActivityTestRule<T> {
     override fun apply(base: Statement, description: Description): Statement {
         testType = TestType.NORMAL
         if (Build.VERSION.SDK_INT >= 16 &&
-            (description.annotations.any { it.annotationClass == AnimationTest::class } ||
-                description.testClass.annotations.any
-                    { it.annotationClass == AnimationTest::class })) {
+            (
+                description.annotations.any { it.annotationClass == AnimationTest::class } ||
+                    description.testClass.annotations.any
+                    { it.annotationClass == AnimationTest::class }
+                )
+        ) {
             testType = TestType.ANIMATION
             val wrappedStatement = super.apply(base, description)
             return object : Statement() {

@@ -1,5 +1,126 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="5" by="lint 3.6.0-beta05" client="gradle" variant="debug" version="3.6.0-beta05">
+<issues format="6" by="lint 7.1.0-beta02" type="baseline" client="gradle" dependencies="false" name="AGP (7.1.0-beta02)" variant="all" version="7.1.0-beta02">
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 21 (current min is 14): `android.graphics.drawable.Drawable#getColorFilter`"
+        errorLine1="        assertNotNull(ld.getDrawable(0).getColorFilter());"
+        errorLine2="                                        ~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/widget/TintResourcesTest.java"
+            line="79"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    /**"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="93"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    public synchronized void setHooks(ResourceManagerHooks hooks) {"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="131"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    public synchronized Drawable getDrawable(@NonNull Context context, @DrawableRes int resId) {"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="135"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    synchronized Drawable getDrawable(@NonNull Context context, @DrawableRes int resId,"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="139"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    public synchronized void onConfigurationChanged(@NonNull Context context) {"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="162"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    private synchronized Drawable getCachedDrawable(@NonNull final Context context,"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="317"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    private synchronized boolean addDrawableToCache(@NonNull final Context context, final long key,"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="338"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    synchronized Drawable onDrawableLoadedFromResources(@NonNull Context context,"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="353"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    synchronized ColorStateList getTintList(@NonNull Context context, @DrawableRes int resId) {"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="381"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="BanSynchronizedMethods"
+        message="Use of synchronized methods is not recommended"
+        errorLine1="    public static synchronized PorterDuffColorFilter getPorterDuffColorFilter("
+        errorLine2="    ^">
+        <location
+            file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
+            line="471"
+            column="5"/>
+    </issue>
 
     <issue
         id="KotlinPropertyAccess"
@@ -13,7 +134,8 @@
         <location
             file="src/main/java/androidx/appcompat/widget/TintContextWrapper.java"
             line="112"
-            column="17"/>
+            column="17"
+            message="Setter here"/>
     </issue>
 
     <issue
@@ -34,7 +156,7 @@
         errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/graphics/drawable/AnimatedStateListDrawableCompat.java"
-            line="164"
+            line="165"
             column="19"/>
     </issue>
 
@@ -45,7 +167,7 @@
         errorLine2="                                    ~~~~~">
         <location
             file="src/main/java/androidx/appcompat/graphics/drawable/AnimatedStateListDrawableCompat.java"
-            line="275"
+            line="276"
             column="37"/>
     </issue>
 
@@ -56,7 +178,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/graphics/drawable/AnimatedStateListDrawableCompat.java"
-            line="604"
+            line="605"
             column="12"/>
     </issue>
 
@@ -67,30 +189,8 @@
         errorLine2="                  ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/content/res/AppCompatResources.java"
-            line="66"
+            line="47"
             column="19"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public static Rect getOpticalBounds(Drawable drawable) {"
-        errorLine2="                  ~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/DrawableUtils.java"
-            line="72"
-            column="19"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public static Rect getOpticalBounds(Drawable drawable) {"
-        errorLine2="                                        ~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/DrawableUtils.java"
-            line="72"
-            column="41"/>
     </issue>
 
     <issue
@@ -100,7 +200,7 @@
         errorLine2="                  ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/DrawableUtils.java"
-            line="199"
+            line="159"
             column="19"/>
     </issue>
 
@@ -111,7 +211,7 @@
         errorLine2="                                                           ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/DrawableUtils.java"
-            line="199"
+            line="159"
             column="60"/>
     </issue>
 
@@ -320,7 +420,7 @@
         errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
-            line="93"
+            line="96"
             column="32"/>
     </issue>
 
@@ -331,7 +431,7 @@
         errorLine2="                                      ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
-            line="127"
+            line="131"
             column="39"/>
     </issue>
 
@@ -342,7 +442,7 @@
         errorLine2="                        ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
-            line="131"
+            line="135"
             column="25"/>
     </issue>
 
@@ -353,7 +453,7 @@
         errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
-            line="467"
+            line="471"
             column="32"/>
     </issue>
 
@@ -364,7 +464,7 @@
         errorLine2="                       ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ResourceManagerInternal.java"
-            line="468"
+            line="472"
             column="24"/>
     </issue>
 
@@ -441,7 +541,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/VectorEnabledTintResources.java"
-            line="67"
+            line="66"
             column="12"/>
     </issue>
 

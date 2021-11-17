@@ -17,13 +17,13 @@
 package androidx.camera.core.impl;
 
 import android.content.Context;
-import android.util.Log;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraUnavailableException;
 import androidx.camera.core.InitializationException;
-import androidx.camera.core.UseCase;
+import androidx.camera.core.Logger;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
@@ -40,11 +40,10 @@ import java.util.Set;
 /**
  * A collection of {@link CameraInternal} instances.
  */
-public final class CameraRepository implements UseCaseMediator.StateChangeCallback {
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+public final class CameraRepository {
     private static final String TAG = "CameraRepository";
-
     private final Object mCamerasLock = new Object();
-
     @GuardedBy("mCamerasLock")
     private final Map<String, CameraInternal> mCameras = new LinkedHashMap<>();
     @GuardedBy("mCamerasLock")
@@ -53,7 +52,6 @@ public final class CameraRepository implements UseCaseMediator.StateChangeCallba
     private ListenableFuture<Void> mDeinitFuture;
     @GuardedBy("mCamerasLock")
     private CallbackToFutureAdapter.Completer<Void> mDeinitCompleter;
-
     /**
      * Initializes the repository from a {@link Context}.
      *
@@ -64,7 +62,7 @@ public final class CameraRepository implements UseCaseMediator.StateChangeCallba
             try {
                 Set<String> camerasList = cameraFactory.getAvailableCameraIds();
                 for (String id : camerasList) {
-                    Log.d(TAG, "Added camera: " + id);
+                    Logger.d(TAG, "Added camera: " + id);
                     mCameras.put(id, cameraFactory.getCamera(id));
                 }
             } catch (CameraUnavailableException e) {
@@ -72,7 +70,6 @@ public final class CameraRepository implements UseCaseMediator.StateChangeCallba
             }
         }
     }
-
     /**
      * Clear and release all cameras from the repository.
      */
@@ -85,7 +82,6 @@ public final class CameraRepository implements UseCaseMediator.StateChangeCallba
             if (mCameras.isEmpty()) {
                 return mDeinitFuture == null ? Futures.immediateFuture(null) : mDeinitFuture;
             }
-
             ListenableFuture<Void> currentFuture = mDeinitFuture;
             if (currentFuture == null) {
                 // Create a single future that will be used to track closing of all cameras.
@@ -101,7 +97,6 @@ public final class CameraRepository implements UseCaseMediator.StateChangeCallba
                 });
                 mDeinitFuture = currentFuture;
             }
-
             // Ensure all of the cameras have been added here before we start releasing so that
             // if the first camera release finishes inline it won't complete the future prematurely.
             mReleasingCameras.addAll(mCameras.values());
@@ -126,15 +121,12 @@ public final class CameraRepository implements UseCaseMediator.StateChangeCallba
                     }
                 }, CameraXExecutors.directExecutor());
             }
-
             // Ensure all cameras are removed from the active "mCameras" map. This map can be
             // repopulated by #init().
             mCameras.clear();
-
             return currentFuture;
         }
     }
-
     /**
      * Gets a {@link CameraInternal} for the given id.
      *
@@ -146,27 +138,23 @@ public final class CameraRepository implements UseCaseMediator.StateChangeCallba
     public CameraInternal getCamera(@NonNull String cameraId) {
         synchronized (mCamerasLock) {
             CameraInternal cameraInternal = mCameras.get(cameraId);
-
             if (cameraInternal == null) {
                 throw new IllegalArgumentException("Invalid camera: " + cameraId);
             }
-
             return cameraInternal;
         }
     }
-
     /**
      * Gets the set of all cameras.
      *
      * @return set of all cameras
      */
     @NonNull
-    public Set<CameraInternal> getCameras() {
+    public LinkedHashSet<CameraInternal> getCameras() {
         synchronized (mCamerasLock) {
             return new LinkedHashSet<>(mCameras.values());
         }
     }
-
     /**
      * Gets the set of all camera ids.
      *
@@ -177,54 +165,5 @@ public final class CameraRepository implements UseCaseMediator.StateChangeCallba
         synchronized (mCamerasLock) {
             return new LinkedHashSet<>(mCameras.keySet());
         }
-    }
-
-    /**
-     * Attaches all the use cases in the {@link UseCaseMediator} and opens all the associated
-     * cameras.
-     *
-     * <p>This will start streaming data to the uses cases which are also online.
-     */
-    @Override
-    public void onActive(@NonNull UseCaseMediator useCaseMediator) {
-        synchronized (mCamerasLock) {
-            Map<String, Set<UseCase>> cameraIdToUseCaseMap =
-                    useCaseMediator.getCameraIdToUseCaseMap();
-            for (Map.Entry<String, Set<UseCase>> cameraUseCaseEntry :
-                    cameraIdToUseCaseMap.entrySet()) {
-                CameraInternal cameraInternal = getCamera(cameraUseCaseEntry.getKey());
-                attachUseCasesToCamera(cameraInternal, cameraUseCaseEntry.getValue());
-            }
-        }
-    }
-
-    /** Attaches a set of use cases to a camera. */
-    @GuardedBy("mCamerasLock")
-    private void attachUseCasesToCamera(CameraInternal cameraInternal, Set<UseCase> useCases) {
-        cameraInternal.attachUseCases(useCases);
-    }
-
-    /**
-     * Detaches all the use cases in the {@link UseCaseMediator} and closes the camera with no
-     * attached
-     * use cases.
-     */
-    @Override
-    public void onInactive(@NonNull UseCaseMediator useCaseMediator) {
-        synchronized (mCamerasLock) {
-            Map<String, Set<UseCase>> cameraIdToUseCaseMap =
-                    useCaseMediator.getCameraIdToUseCaseMap();
-            for (Map.Entry<String, Set<UseCase>> cameraUseCaseEntry :
-                    cameraIdToUseCaseMap.entrySet()) {
-                CameraInternal cameraInternal = getCamera(cameraUseCaseEntry.getKey());
-                detachUseCasesFromCamera(cameraInternal, cameraUseCaseEntry.getValue());
-            }
-        }
-    }
-
-    /** Detaches a set of use cases from a camera. */
-    @GuardedBy("mCamerasLock")
-    private void detachUseCasesFromCamera(CameraInternal cameraInternal, Set<UseCase> useCases) {
-        cameraInternal.detachUseCases(useCases);
     }
 }

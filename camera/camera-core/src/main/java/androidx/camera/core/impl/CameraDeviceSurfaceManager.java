@@ -17,20 +17,22 @@
 package androidx.camera.core.impl;
 
 import android.content.Context;
-import android.util.Rational;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.InitializationException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Camera device manager to provide the guaranteed supported stream capabilities related info for
  * all camera devices
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraDeviceSurfaceManager {
 
     /**
@@ -41,11 +43,14 @@ public interface CameraDeviceSurfaceManager {
          * Creates a new, initialized instance of a CameraDeviceSurfaceManager.
          *
          * @param context the android context
+         * @param cameraManager the camera manager object used to query the camera information.
+         * @param availableCameraIds current available camera ids.
          * @return the factory instance
          * @throws InitializationException if it fails to create the factory
          */
         @NonNull
-        CameraDeviceSurfaceManager newInstance(@NonNull Context context)
+        CameraDeviceSurfaceManager newInstance(@NonNull Context context,
+                @Nullable Object cameraManager, @NonNull Set<String> availableCameraIds)
                 throws InitializationException;
     }
 
@@ -70,16 +75,6 @@ public interface CameraDeviceSurfaceManager {
     SurfaceConfig transformSurfaceConfig(String cameraId, int imageFormat, Size size);
 
     /**
-     * Get max supported output size for specific camera device and image format
-     *
-     * @param cameraId    the camera Id
-     * @param imageFormat the image format info
-     * @return the max supported output size for the image format
-     */
-    @Nullable
-    Size getMaxOutputSize(String cameraId, int imageFormat);
-
-    /**
      * Retrieves a map of suggested resolutions for the given list of use cases.
      *
      * @param cameraId          the camera id of the camera device used by the use cases
@@ -99,32 +94,4 @@ public interface CameraDeviceSurfaceManager {
             @NonNull String cameraId,
             @NonNull List<SurfaceConfig> existingSurfaces,
             @NonNull List<UseCaseConfig<?>> newUseCaseConfigs);
-
-    /**
-     * Retrieves the preview size, choosing the smaller of the display size and 1080P.
-     *
-     * @return the size used for the on screen preview
-     */
-    Size getPreviewSize();
-
-    /**
-     * Checks whether a corrected aspect ratio is required due to device constraints.
-     *
-     * @param cameraId the camera id of the camera device used by the use cases
-     * @return the check result that whether aspect ratio need to be corrected
-     */
-    boolean requiresCorrectedAspectRatio(@NonNull String cameraId);
-
-
-    /**
-     * Returns the corrected aspect ratio for the given use case configuration or {@code null} if
-     * no correction is needed.
-     *
-     * @param cameraId the camera id of the camera device used by the use cases
-     * @param rotation desired rotation of output aspect ratio relative to natural orientation
-     * @return the corrected aspect ratio for the use case
-     */
-    @Nullable
-    Rational getCorrectedAspectRatio(@NonNull String cameraId,
-            @ImageOutputConfig.RotationValue int rotation);
 }

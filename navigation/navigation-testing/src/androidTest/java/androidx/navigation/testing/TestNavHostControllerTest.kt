@@ -17,6 +17,12 @@
 package androidx.navigation.testing
 
 import android.os.Bundle
+import androidx.test.annotation.UiThreadTest
+import androidx.navigation.ActivityNavigator
+import androidx.navigation.NavOptions
+import androidx.navigation.Navigator
+import androidx.navigation.activity
+import androidx.navigation.createGraph
 import androidx.navigation.plusAssign
 import androidx.navigation.testing.test.R
 import androidx.test.core.app.ApplicationProvider
@@ -40,6 +46,7 @@ class TestNavHostControllerTest {
         navController = TestNavHostController(ApplicationProvider.getApplicationContext())
     }
 
+    @UiThreadTest
     @Test
     fun testStartBackStack() {
         navController.setGraph(R.navigation.test_graph)
@@ -49,6 +56,7 @@ class TestNavHostControllerTest {
         assertThat(backStack[1].destination.id).isEqualTo(R.id.start_test)
     }
 
+    @UiThreadTest
     @Test
     fun testNavigateBackStack() {
         navController.setGraph(R.navigation.test_graph)
@@ -58,6 +66,7 @@ class TestNavHostControllerTest {
         assertThat(backStack[2].destination.id).isEqualTo(R.id.second_test)
     }
 
+    @UiThreadTest
     @Test
     fun testCustomNavigator() {
         navController.navigatorProvider += TestNavigator()
@@ -67,6 +76,22 @@ class TestNavHostControllerTest {
         assertThat(backStack[1].destination).isInstanceOf(TestNavigator.Destination::class.java)
     }
 
+    @Suppress("DEPRECATION")
+    @UiThreadTest
+    @Test
+    fun testDsl() {
+        navController.navigatorProvider += NoOpActivityNavigator()
+        navController.graph = navController.createGraph(R.id.test_graph, R.id.start_test) {
+            activity(R.id.start_test) {
+            }
+        }
+        val backStack = navController.backStack
+        assertThat(backStack).hasSize(2)
+        assertThat(backStack[1].destination)
+            .isInstanceOf(ActivityNavigator.Destination::class.java)
+    }
+
+    @UiThreadTest
     @Test
     fun testSetDestinationId() {
         navController.setGraph(R.navigation.test_graph)
@@ -78,6 +103,7 @@ class TestNavHostControllerTest {
         assertThat(backStack[2].destination.id).isEqualTo(R.id.third_test)
     }
 
+    @UiThreadTest
     @Test
     fun testSetDestinationWithArgs() {
         navController.setGraph(R.navigation.test_graph)
@@ -91,4 +117,18 @@ class TestNavHostControllerTest {
         assertThat(actualArgs).containsKey("arg")
         assertThat(actualArgs).string("arg").isEqualTo("test")
     }
+}
+
+@Navigator.Name("activity")
+class NoOpActivityNavigator : ActivityNavigator(
+    ApplicationProvider.getApplicationContext()
+) {
+    override fun popBackStack() = true
+
+    override fun navigate(
+        destination: Destination,
+        args: Bundle?,
+        navOptions: NavOptions?,
+        navigatorExtras: Navigator.Extras?
+    ) = destination
 }

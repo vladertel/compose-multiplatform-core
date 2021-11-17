@@ -22,15 +22,17 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.R;
+import androidx.fragment.app.strictmode.FragmentStrictMode;
 
 class FragmentLayoutInflaterFactory implements LayoutInflater.Factory2 {
     private static final String TAG = FragmentManager.TAG;
 
-    private final FragmentManager mFragmentManager;
+    final FragmentManager mFragmentManager;
 
     FragmentLayoutInflaterFactory(FragmentManager fragmentManager) {
         mFragmentManager = fragmentManager;
@@ -45,8 +47,8 @@ class FragmentLayoutInflaterFactory implements LayoutInflater.Factory2 {
 
     @Nullable
     @Override
-    public View onCreateView(@Nullable View parent, @NonNull String name, @NonNull Context context,
-            @NonNull AttributeSet attrs) {
+    public View onCreateView(@Nullable final View parent, @NonNull String name,
+            @NonNull Context context, @NonNull AttributeSet attrs) {
         if (FragmentContainerView.class.getName().equals(name)) {
             return new FragmentContainerView(context, attrs, mFragmentManager);
         }
@@ -88,12 +90,7 @@ class FragmentLayoutInflaterFactory implements LayoutInflater.Factory2 {
             fragment = mFragmentManager.findFragmentById(containerId);
         }
 
-        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
-            Log.v(TAG, "onCreateView: id=0x"
-                    + Integer.toHexString(id) + " fname=" + fname
-                    + " existing=" + fragment);
-        }
-        FragmentStateManager fragmentStateManager;
+        final FragmentStateManager fragmentStateManager;
         if (fragment == null) {
             fragment = mFragmentManager.getFragmentFactory().instantiate(
                     context.getClassLoader(), fname);
@@ -106,8 +103,11 @@ class FragmentLayoutInflaterFactory implements LayoutInflater.Factory2 {
             fragment.mHost = mFragmentManager.getHost();
             fragment.onInflate(mFragmentManager.getHost().getContext(), attrs,
                     fragment.mSavedFragmentState);
-            fragmentStateManager = mFragmentManager.createOrGetFragmentStateManager(fragment);
-            mFragmentManager.addFragment(fragment);
+            fragmentStateManager = mFragmentManager.addFragment(fragment);
+            if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                Log.v(FragmentManager.TAG, "Fragment " + fragment + " has been inflated via "
+                        + "the <fragment> tag: id=0x" + Integer.toHexString(id));
+            }
 
         } else if (fragment.mInLayout) {
             // A fragment already exists and it is not one we restored from
@@ -126,7 +126,16 @@ class FragmentLayoutInflaterFactory implements LayoutInflater.Factory2 {
             fragment.onInflate(mFragmentManager.getHost().getContext(), attrs,
                     fragment.mSavedFragmentState);
             fragmentStateManager = mFragmentManager.createOrGetFragmentStateManager(fragment);
+            if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                Log.v(FragmentManager.TAG, "Retained Fragment " + fragment + " has been "
+                        + "re-attached via the <fragment> tag: id=0x" + Integer.toHexString(id));
+            }
         }
+        FragmentStrictMode.onFragmentTagUsage(fragment, (ViewGroup) parent);
+
+        // Explicitly set the container for the fragment as we already know
+        // the parent that the fragment will be added to by the LayoutInflater
+        fragment.mContainer = (ViewGroup) parent;
 
         // The <fragment> tag is the one case where we:
         // 1) Move the Fragment to CREATED even if the FragmentManager isn't yet CREATED
@@ -144,6 +153,25 @@ class FragmentLayoutInflaterFactory implements LayoutInflater.Factory2 {
         if (fragment.mView.getTag() == null) {
             fragment.mView.setTag(tag);
         }
+        // Fragments added via the <fragment> tag cannot move above VIEW_CREATED
+        // during inflation. Instead, we'll wait for the view to be attached to
+        // window and its parent view and trigger moveToExpectedState() at that point.
+        fragment.mView.addOnAttachStateChangeListener(
+                new View.OnAttachStateChangeListener() {
+                    @Override
+                    public void onViewAttachedToWindow(View v) {
+                        Fragment fragment = fragmentStateManager.getFragment();
+                        fragmentStateManager.moveToExpectedState();
+                        SpecialEffectsController controller = SpecialEffectsController
+                                .getOrCreateController((ViewGroup) fragment.mView.getParent(),
+                                        mFragmentManager);
+                        controller.forceCompleteAllOperations();
+                    }
+
+                    @Override
+                    public void onViewDetachedFromWindow(View v) { }
+                }
+        );
         return fragment.mView;
     }
 }

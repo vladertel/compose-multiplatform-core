@@ -26,7 +26,6 @@ import androidx.annotation.GuardedBy;
 import androidx.camera.testing.fakes.FakeCamera;
 import androidx.camera.testing.fakes.FakeCameraFactory;
 import androidx.camera.testing.fakes.FakeCameraInfoInternal;
-import androidx.test.filters.SmallTest;
 
 import org.junit.After;
 import org.junit.Before;
@@ -36,9 +35,6 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.internal.DoNotInstrument;
 
-import java.util.concurrent.RejectedExecutionException;
-
-@SmallTest
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
@@ -90,8 +86,8 @@ public class CameraExecutorTest {
         blockRun1.unblock();
     }
 
-    @Test(expected = RejectedExecutionException.class)
-    public void canNotExecuteAfterDeinit() {
+    @Test
+    public void noRejectedExecutionException_afterDeinit() {
         mCameraExecutor.deinit();
         mCameraExecutor.execute(mock(Runnable.class));
     }

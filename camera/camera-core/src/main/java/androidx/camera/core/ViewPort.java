@@ -17,22 +17,45 @@
 package androidx.camera.core;
 
 import android.util.Rational;
+import android.view.Surface;
+import android.view.SurfaceView;
+import android.view.View;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.camera.core.impl.ImageOutputConfig;
 import androidx.core.util.Preconditions;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.concurrent.Executor;
 
 /**
- * The FOV of one or many {@link UseCase}s.
+ * The field of view of one or many {@link UseCase}s.
  *
- * @hide
+ * <p> The {@link ViewPort} defines a FOV which is used by CameraX to calculate output crop rects.
+ * For use cases associated with the same {@link ViewPort} in a {@link UseCaseGroup}, the output
+ * crop rect will be mapped to the same camera sensor area. Usually {@link ViewPort} is
+ * configured to optimize for {@link Preview} so that {@link ImageAnalysis} and
+ * {@link ImageCapture} produce the same crop rect in a WYSIWYG way.
+ *
+ * <p> If the {@link ViewPort} is used with a {@link ImageCapture} and
+ * {@link ImageCapture#takePicture(
+ *ImageCapture.OutputFileOptions, Executor, ImageCapture.OnImageSavedCallback)} is called,
+ * the image may be cropped before saving to disk which introduces an additional
+ * latency. To avoid the latency and get the uncropped image, please use the in-memory method
+ * {@link ImageCapture#takePicture(Executor, ImageCapture.OnImageCapturedCallback)}.
+ *
+ * <p> For {@link ImageAnalysis} and in-memory {@link ImageCapture}, the output crop rect is
+ * {@link ImageProxy#getCropRect()}; for on-disk {@link ImageCapture}, the image is cropped before
+ * saving; for {@link Preview}, the crop rect is
+ * {@link SurfaceRequest.TransformationInfo#getCropRect()}. Caller should transform the output in
+ * a way that only the area defined by the crop rect is visible to end users. Once the crop rect
+ * is applied, all the use cases will produce the same image with possibly different resolutions.
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class ViewPort {
 
     /**
@@ -41,9 +64,9 @@ public final class ViewPort {
      * @hide
      * @see android.util.LayoutDirection
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @IntDef({android.util.LayoutDirection.LTR, android.util.LayoutDirection.RTL})
     @Retention(RetentionPolicy.SOURCE)
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public @interface LayoutDirection {
     }
 
@@ -52,77 +75,76 @@ public final class ViewPort {
      *
      * @hide
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    @IntDef({FILL_START, FILL_CENTER, FILL_END, FIT_START, FIT_CENTER, FIT_END})
+    @IntDef({FILL_START, FILL_CENTER, FILL_END, FIT})
     @Retention(RetentionPolicy.SOURCE)
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public @interface ScaleType {
     }
 
     /**
-     * Scale the preview, maintaining the source aspect ratio, so it fills the entire
-     * container, and align it to the top left corner of the view.
-     * This may cause the preview to be cropped if the camera preview aspect ratio does not
-     * match that of its container.
-     *
-     * @hide
+     * Generate a crop rect that once applied, it scales the output while maintaining its aspect
+     * ratio, so it fills the entire {@link ViewPort}, and align it to the start of the
+     * {@link ViewPort}, which is the top left corner in a left-to-right (LTR) layout, or the top
+     * right corner in a right-to-left (RTL) layout.
+     * <p>
+     * This may cause the output to be cropped if the output aspect ratio does not match that of
+     * the {@link ViewPort}.
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public static final int FILL_START = 0;
 
     /**
-     * Scale the preview, maintaining the source aspect ratio, so it fills the entire
-     * container, and center it inside the view.
-     * This may cause the preview to be cropped if the camera preview aspect ratio does not
-     * match that of its container.
-     *
-     * @hide
+     * Generate a crop rect that once applied, it scales the output while maintaining its aspect
+     * ratio, so it fills the entire {@link ViewPort} and center it.
+     * <p>
+     * This may cause the output to be cropped if the output aspect ratio does not match that of
+     * the {@link ViewPort}.
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public static final int FILL_CENTER = 1;
 
     /**
-     * Scale the preview, maintaining the source aspect ratio, so it fills the entire
-     * container, and align it to the bottom right corner of the view.
-     * This may cause the preview to be cropped if the camera preview aspect ratio does not
-     * match that of its container.
-     *
-     * @hide
+     * Generate a crop rect that once applied, it scales the output while maintaining its aspect
+     * ratio, so it fills the entire {@link ViewPort}, and align it to the end of the
+     * {@link ViewPort}, which is the bottom right corner in a left-to-right (LTR) layout, or the
+     * bottom left corner in a right-to-left (RTL) layout.
+     * <p>
+     * This may cause the output to be cropped if the output aspect ratio does not match that of
+     * the {@link ViewPort}.
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public static final int FILL_END = 2;
 
     /**
-     * Scale the preview, maintaining the source aspect ratio, so it is entirely contained
-     * within the container, and align it to the top left corner of the view.
-     * Both dimensions of the preview will be equal or less than the corresponding dimensions
-     * of its container.
+     * Generate the max possible crop rect ignoring the aspect ratio. For {@link ImageAnalysis}
+     * and {@link ImageCapture}, the output will be an image defined by the crop rect.
      *
-     * @hide
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public static final int FIT_START = 3;
-
-    /**
-     * Scale the preview, maintaining the source aspect ratio, so it is entirely contained
-     * within the container, and center it inside the view.
-     * Both dimensions of the preview will be equal or less than the corresponding dimensions
-     * of its container.
+     * <p> For {@link Preview}, further calculation is needed to to fit the crop rect into the
+     * viewfinder. Code sample below is a simplified version assuming {@link Surface}
+     * orientation is the same as the camera sensor orientation, the viewfinder is a
+     * {@link SurfaceView} and the viewfinder's pixel width/height is the same as the size
+     * request by CameraX in {@link SurfaceRequest#getResolution()}. For more complicated
+     * scenarios, please check out the source code of PreviewView in androidx.camera.view artifact.
      *
-     * @hide
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public static final int FIT_CENTER = 4;
-
-    /**
-     * Scale the preview, maintaining the source aspect ratio, so it is entirely contained
-     * within the container, and align it to the bottom right corner of the view.
-     * Both dimensions of the preview will be equal or less than the corresponding dimensions
-     * of its container.
+     * <p> First, calculate the transformation to fit the crop rect in the center of the viewfinder:
      *
-     * @hide
+     * <pre>{@code
+     *   val transformation = Matrix()
+     *   transformation.setRectToRect(
+     *       cropRect, new RectF(0, 0, viewFinder.width, viewFinder.height, ScaleToFit.CENTER))
+     * }</pre>
+     *
+     * <p> Then apply the transformation to the viewfinder:
+     *
+     * <pre>{@code
+     *   val transformedRect = RectF(0, 0, viewFinder.width, viewFinder.height)
+     *   transformation.mapRect(surfaceRect)
+     *   viewFinder.pivotX = 0
+     *   viewFinder.pivotY = 0
+     *   viewFinder.translationX = transformedRect.left
+     *   viewFinder.translationY = transformedRect.top
+     *   viewFinder.scaleX = surfaceRect.width/transformedRect.width
+     *   viewFinder.scaleY = surfaceRect.height/transformedRect.height
+     * }</pre>
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public static final int FIT_END = 5;
+    public static final int FIT = 3;
 
     @ScaleType
     private int mScaleType;
@@ -146,32 +168,23 @@ public final class ViewPort {
 
     /**
      * Gets the aspect ratio of the {@link ViewPort}.
-     *
-     * @hide
      */
     @NonNull
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public Rational getAspectRatio() {
         return mAspectRatio;
     }
 
     /**
      * Gets the rotation of the {@link ViewPort}.
-     *
-     * @hide
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @ImageOutputConfig.RotationValue
     public int getRotation() {
         return mRotation;
     }
 
     /**
-     * Gets the {@link ScaleType} of the {@link ViewPort}.
-     *
-     * @hide
+     * Gets the scale type of the {@link ViewPort}.
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @ScaleType
     public int getScaleType() {
         return mScaleType;
@@ -179,22 +192,16 @@ public final class ViewPort {
 
     /**
      * Gets the layout direction of the {@link ViewPort}.
-     *
-     * @hide
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    @ScaleType
+    @LayoutDirection
     public int getLayoutDirection() {
         return mLayoutDirection;
     }
 
     /**
      * Builder for {@link ViewPort}.
-     *
-     * @hide
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public static class Builder {
+    public static final class Builder {
 
         private static final int DEFAULT_LAYOUT_DIRECTION = android.util.LayoutDirection.LTR;
         @ScaleType
@@ -211,7 +218,31 @@ public final class ViewPort {
         @LayoutDirection
         private int mLayoutDirection = DEFAULT_LAYOUT_DIRECTION;
 
-
+        /**
+         * Creates {@link ViewPort.Builder} with aspect ratio and rotation.
+         *
+         * <p> To create a {@link ViewPort} that is based on the {@link Preview} use
+         * case, the aspect ratio should be the dimension of the {@link View} and
+         * the rotation should be the value of {@link Preview#getTargetRotation()}:
+         *
+         * <pre>{@code
+         * val aspectRatio = Rational(viewFinder.width, viewFinder.height)
+         * val viewport = ViewPort.Builder(aspectRatio, preview.getTargetRotation()).build()
+         * }</pre>
+         *
+         * <p> In a scenario where {@link Preview} is not used, for example, face detection in
+         * {@link ImageAnalysis} and taking pictures with {@link ImageCapture} when faces are
+         * found, the {@link ViewPort} should be created with the aspect ratio and rotation of the
+         * {@link ImageCapture} use case.
+         *
+         * @param aspectRatio aspect ratio of the output crop rect if the scale type
+         *                    is FILL_START, FILL_CENTER or FILL_END. This is usually the
+         *                    width/height of the preview viewfinder that displays the camera
+         *                    feed. The value is ignored if the scale type is FIT.
+         * @param rotation    The rotation value is one of four valid values:
+         *                    {@link Surface#ROTATION_0}, {@link Surface#ROTATION_90},
+         *                    {@link Surface#ROTATION_180}, {@link Surface#ROTATION_270}.
+         */
         public Builder(@NonNull Rational aspectRatio,
                 @ImageOutputConfig.RotationValue int rotation) {
             mAspectRatio = aspectRatio;
@@ -219,15 +250,13 @@ public final class ViewPort {
         }
 
         /**
-         * Sets the {@link ScaleType} of the {@link ViewPort}.
+         * Sets the scale type of the {@link ViewPort}.
          *
-         * <p> The value is used by {@link UseCase} to calculate the crop rect. The default value is
-         * {@link #FILL_CENTER} if not set.
+         * <p> The value is used by {@link UseCase} to calculate the crop rect.
          *
-         * @hide
+         * <p> The default value is {@link #FILL_CENTER} if not set.
          */
         @NonNull
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public Builder setScaleType(@ScaleType int scaleType) {
             mScaleType = scaleType;
             return this;
@@ -236,16 +265,12 @@ public final class ViewPort {
         /**
          * Sets the layout direction of the {@link ViewPort}.
          *
-         * <p> The {@link LayoutDirection} decides the start and the end of the crop rect if
-         * the {@link ScaleType} is one of the following types: {@link #FILL_END},
-         * {@link #FILL_START},{@link #FIT_START} or {@link #FIT_END}.
+         * <p> The layout direction decides the start and the end of the crop rect if
+         * the scale type is {@link #FILL_END} or {@link #FILL_START}.
          *
          * <p> The default value is {@link android.util.LayoutDirection#LTR} if not set.
-         *
-         * @hide
          */
         @NonNull
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public Builder setLayoutDirection(@LayoutDirection int layoutDirection) {
             mLayoutDirection = layoutDirection;
             return this;
@@ -253,10 +278,7 @@ public final class ViewPort {
 
         /**
          * Builds the {@link ViewPort}.
-         *
-         * @hide
          */
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         @NonNull
         public ViewPort build() {
             Preconditions.checkNotNull(mAspectRatio, "The crop aspect ratio must be set.");

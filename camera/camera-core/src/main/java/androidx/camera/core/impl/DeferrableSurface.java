@@ -16,13 +16,18 @@
 
 package androidx.camera.core.impl;
 
+import android.graphics.ImageFormat;
 import android.util.Log;
+import android.util.Size;
 import android.view.Surface;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
+import androidx.camera.core.Logger;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
@@ -35,13 +40,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * A class for creating and tracking use of a {@link Surface} in an asynchronous manner.
  *
  * <p>Once the deferrable surface has been closed via {@link #close()} and is no longer in
- * use ({@link #decrementUseCount() has been called equal to the number of times to
- * {@link #incrementUseCount()}, then the surface is considered terminated.
+ * use ({@link #decrementUseCount()} has been called equal to the number of times to
+ * {@link #incrementUseCount()}), then the surface is considered terminated.
  *
- * <p>Resources managed by this class can be safely cleaned up upon completion of the {
- *
- * @link ListenableFuture} returned by {@link #getTerminationFuture()}.
+ * <p>Resources managed by this class can be safely cleaned up upon completion of the
+ * {@link ListenableFuture} returned by {@link #getTerminationFuture()}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public abstract class DeferrableSurface {
 
     /**
@@ -80,14 +85,17 @@ public abstract class DeferrableSurface {
         }
     }
 
+    // The size of the surface is not defined.
+    public static final Size SIZE_UNDEFINED = new Size(0, 0);
+
     private static final String TAG = "DeferrableSurface";
-    private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean DEBUG = Logger.isDebugEnabled(TAG);
 
     // Debug only, used to track total count of surfaces in use.
-    private static AtomicInteger sUsedCount = new AtomicInteger(0);
+    private static final AtomicInteger USED_COUNT = new AtomicInteger(0);
     // Debug only, used to track total count of surfaces, including those not in use. Will be
     // decremented once surface is cleaned.
-    private static AtomicInteger sTotalCount = new AtomicInteger(0);
+    private static final AtomicInteger TOTAL_COUNT = new AtomicInteger(0);
 
     // Lock used for accessing states.
     private final Object mLock = new Object();
@@ -103,10 +111,28 @@ public abstract class DeferrableSurface {
     private CallbackToFutureAdapter.Completer<Void> mTerminationCompleter;
     private final ListenableFuture<Void> mTerminationFuture;
 
+    @NonNull
+    private final Size mPrescribedSize;
+    private final int mPrescribedStreamFormat;
+    @Nullable
+    Class<?> mContainerClass;
+
     /**
      * Creates a new DeferrableSurface which has no use count.
      */
     public DeferrableSurface() {
+        this(SIZE_UNDEFINED, ImageFormat.UNKNOWN);
+    }
+
+    /**
+     * Creates a new DeferrableSurface which has no use count.
+     *
+     * @param size  the {@link Size} of the surface
+     * @param format the stream configuration format that the provided Surface will be used on.
+     */
+    public DeferrableSurface(@NonNull Size size, int format) {
+        mPrescribedSize = size;
+        mPrescribedStreamFormat = format;
         mTerminationFuture = CallbackToFutureAdapter.getFuture(completer -> {
             synchronized (mLock) {
                 mTerminationCompleter = completer;
@@ -114,28 +140,40 @@ public abstract class DeferrableSurface {
             return "DeferrableSurface-termination(" + DeferrableSurface.this + ")";
         });
 
-        if (DEBUG) {
-            printGlobalDebugCounts("Surface created", sTotalCount.incrementAndGet(),
-                    sUsedCount.get());
+        if (Logger.isDebugEnabled(TAG)) {
+            printGlobalDebugCounts("Surface created", TOTAL_COUNT.incrementAndGet(),
+                    USED_COUNT.get());
 
             String creationStackTrace = Log.getStackTraceString(new Exception());
             mTerminationFuture.addListener(() -> {
                 try {
                     mTerminationFuture.get();
-                    printGlobalDebugCounts("Surface terminated", sTotalCount.decrementAndGet(),
-                            sUsedCount.get());
+                    printGlobalDebugCounts("Surface terminated", TOTAL_COUNT.decrementAndGet(),
+                            USED_COUNT.get());
                 } catch (Exception e) {
-                    Log.e(TAG, "Unexpected surface termination for " + DeferrableSurface.this
+                    Logger.e(TAG, "Unexpected surface termination for " + DeferrableSurface.this
                             + "\nStack Trace:\n" + creationStackTrace);
-                    throw new IllegalArgumentException("DeferrableSurface terminated with "
-                            + "unexpected exception.", e);
+                    synchronized (mLock) {
+                        throw new IllegalArgumentException(String.format(
+                                "DeferrableSurface %s [closed: %b, use_count: %s] terminated with"
+                                        + " unexpected exception.",
+                                DeferrableSurface.this, mClosed, mUseCount), e);
+                    }
                 }
             }, CameraXExecutors.directExecutor());
         }
     }
 
     private void printGlobalDebugCounts(@NonNull String prefix, int totalCount, int useCount) {
-        Log.d(TAG, prefix + "[total_surfaces=" + totalCount + ", used_surfaces=" + useCount
+        //  If debug logging was not enabled at static initialization time but is now enabled,
+        //  sUsedCount and sTotalCount may be inaccurate.
+        if (!DEBUG && Logger.isDebugEnabled(TAG)) {
+            Logger.d(TAG,
+                    "DeferrableSurface usage statistics may be inaccurate since debug logging was"
+                            + " not enabled at static initialization time. App restart may be "
+                            + "required to enable accurate usage statistics.");
+        }
+        Logger.d(TAG, prefix + "[total_surfaces=" + totalCount + ", used_surfaces=" + useCount
                 + "](" + this + "}");
     }
 
@@ -195,12 +233,12 @@ public abstract class DeferrableSurface {
             }
             mUseCount++;
 
-            if (DEBUG) {
+            if (Logger.isDebugEnabled(TAG)) {
                 if (mUseCount == 1) {
-                    printGlobalDebugCounts("New surface in use", sTotalCount.get(),
-                            sUsedCount.incrementAndGet());
+                    printGlobalDebugCounts("New surface in use", TOTAL_COUNT.get(),
+                            USED_COUNT.incrementAndGet());
                 }
-                Log.d(TAG, "use count+1, useCount=" + mUseCount + " " + this);
+                Logger.d(TAG, "use count+1, useCount=" + mUseCount + " " + this);
             }
         }
     }
@@ -230,8 +268,8 @@ public abstract class DeferrableSurface {
                     mTerminationCompleter = null;
                 }
 
-                if (DEBUG) {
-                    Log.d(TAG,
+                if (Logger.isDebugEnabled(TAG)) {
+                    Logger.d(TAG,
                             "surface closed,  useCount=" + mUseCount + " closed=true " + this);
                 }
             }
@@ -263,15 +301,13 @@ public abstract class DeferrableSurface {
                 mTerminationCompleter = null;
             }
 
-            if (DEBUG) {
-                Log.d(TAG, "use count-1,  useCount=" + mUseCount + " closed=" + mClosed
+            if (Logger.isDebugEnabled(TAG)) {
+                Logger.d(TAG, "use count-1,  useCount=" + mUseCount + " closed=" + mClosed
                         + " " + this);
 
                 if (mUseCount == 0) {
-                    if (DEBUG) {
-                        printGlobalDebugCounts("Surface no longer in use",
-                                sTotalCount.get(), sUsedCount.decrementAndGet());
-                    }
+                    printGlobalDebugCounts("Surface no longer in use", TOTAL_COUNT.get(),
+                            USED_COUNT.decrementAndGet());
                 }
             }
         }
@@ -281,11 +317,43 @@ public abstract class DeferrableSurface {
         }
     }
 
+    /**
+     * @return the {@link Size} of the surface
+     */
+    @NonNull
+    public Size getPrescribedSize() {
+        return mPrescribedSize;
+    }
+
+    /**
+     * @return the stream configuration format that the provided Surface will be used on.
+     */
+    public int getPrescribedStreamFormat() {
+        return mPrescribedStreamFormat;
+    }
+
     /** @hide */
     @RestrictTo(Scope.TESTS)
     public int getUseCount() {
         synchronized (mLock) {
             return mUseCount;
         }
+    }
+
+    /**
+     * Returns the {@link Class} that contains this {@link DeferrableSurface} to provide more
+     * context about it.
+     */
+    @Nullable
+    public Class<?> getContainerClass() {
+        return mContainerClass;
+    }
+
+    /**
+     * Set the {@link Class} that contains this {@link DeferrableSurface} to provide more
+     * context about it.
+     */
+    public void setContainerClass(@NonNull Class<?> containerClass) {
+        mContainerClass = containerClass;
     }
 }

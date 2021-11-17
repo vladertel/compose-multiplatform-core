@@ -25,7 +25,6 @@ import androidx.fragment.app.test.FragmentTestActivity.ParentFragment
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.rule.ActivityTestRule
 import com.google.common.truth.Truth.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -38,8 +37,9 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 class NestedFragmentTest {
+    @Suppress("DEPRECATION")
     @get:Rule
-    val activityRule = ActivityTestRule(FragmentTestActivity::class.java)
+    var activityRule = androidx.test.rule.ActivityTestRule(FragmentTestActivity::class.java)
 
     private lateinit var instrumentation: Instrumentation
     private lateinit var parentFragment: ParentFragment
@@ -66,7 +66,7 @@ class NestedFragmentTest {
             IntentFilter(Intent.ACTION_CALL), activityResult, true /* block */
         )
 
-        // Sanity check that onActivityResult hasn't been called yet.
+        // Verify that onActivityResult hasn't been called yet.
         assertThat(parentFragment.childFragment.onActivityResultCalled).isFalse()
 
         val latch = CountDownLatch(1)
@@ -95,7 +95,7 @@ class NestedFragmentTest {
             IntentFilter(Intent.ACTION_CALL), activityResult, true /* block */
         )
 
-        // Sanity check that onActivityResult hasn't been called yet.
+        // Verify that onActivityResult hasn't been called yet.
         assertThat(parentFragment.childFragment.onActivityResultCalled).isFalse()
 
         val latch = CountDownLatch(1)

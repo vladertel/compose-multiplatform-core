@@ -24,6 +24,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Ignore
 import org.junit.Test
 
 @SmallTest
@@ -35,6 +36,7 @@ class SparseArrayTest {
         assertEquals(1, array.size)
     }
 
+    @Ignore("SparseArray.contains exists in R, need to work out what to do")
     @Test fun containsOperator() {
         val array = SparseArray<String>()
         assertFalse(1 in array)
@@ -42,6 +44,7 @@ class SparseArrayTest {
         assertTrue(1 in array)
     }
 
+    @Ignore("SparseArray.contains exists in R, need to work out what to do")
     @Test fun containsOperatorWithItem() {
         val array = SparseArray<String>()
 
@@ -52,6 +55,7 @@ class SparseArrayTest {
         assertTrue(2 in array)
     }
 
+    @Ignore("b/184340872")
     @Test fun setOperator() {
         val array = SparseArray<String>()
         array[1] = "one"

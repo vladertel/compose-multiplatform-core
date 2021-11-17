@@ -22,14 +22,16 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.file.FileCollection
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
-import org.gradle.api.provider.Provider
-import org.gradle.api.resources.TextResource
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.ChangeType
 import org.gradle.work.Incremental
@@ -39,66 +41,63 @@ import javax.inject.Inject
 
 private const val MAPPING_FILE = "file_mappings.json"
 
-open class ArgumentsGenerationTask @Inject constructor(private val projectLayout: ProjectLayout) :
-    DefaultTask() {
+@CacheableTask
+abstract class ArgumentsGenerationTask @Inject constructor(
+    private val projectLayout: ProjectLayout
+) : DefaultTask() {
     @get:Input
-    lateinit var rFilePackage: Provider<String>
-
-    @get:Internal
-    var applicationIdResource: TextResource? = null // null on AGP 3.2.1 and below
-
-    @get:Internal
-    var applicationId: String? = null // null on AGP 3.3.0 and above
+    abstract val rFilePackage: Property<String>
 
     @get:Input
-    var useAndroidX: Boolean = true
+    abstract val applicationId: Property<String>
 
     @get:Input
-    var generateKotlin: Boolean = false
+    abstract val useAndroidX: Property<Boolean>
+
+    @get:Input
+    abstract val generateKotlin: Property<Boolean>
 
     @get:OutputDirectory
-    lateinit var outputDir: File
+    abstract val outputDir: DirectoryProperty
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:Incremental
     @get:InputFiles
-    lateinit var navigationFiles: FileCollection
+    abstract val navigationFiles: ConfigurableFileCollection
 
     @get:OutputDirectory
-    lateinit var incrementalFolder: File
-
-    /**
-     * Gets the app id from either the [applicationIdResource] if available or [applicationId].
-     * The availability from which the app id string is retrieved from is based on the Android
-     * Gradle Plugin version of the project.
-     */
-    @Input
-    fun getApplicationIdResourceString() = applicationIdResource?.asString() ?: applicationId
+    abstract val incrementalFolder: DirectoryProperty
 
     private fun generateArgs(navFiles: Collection<File>, out: File) = navFiles.map { file ->
         val output = SafeArgsGenerator(
             rFilePackage = rFilePackage.get(),
-            applicationId = getApplicationIdResourceString() ?: "",
+            applicationId = applicationId.orNull ?: "",
             navigationXml = file,
             outputDir = out,
-            useAndroidX = useAndroidX,
-            generateKotlin = generateKotlin).generate()
-        Mapping(file.relativeTo(
-            projectLayout.projectDirectory.asFile).path,
+            useAndroidX = useAndroidX.get(),
+            generateKotlin = generateKotlin.get()
+        ).generate()
+        Mapping(
+            file.relativeTo(
+                projectLayout.projectDirectory.asFile
+            ).path,
             output.fileNames
         ) to output.errors
     }.unzip().let { (mappings, errorLists) -> mappings to errorLists.flatten() }
 
     private fun writeMappings(mappings: List<Mapping>) {
-        File(incrementalFolder, MAPPING_FILE).writer().use { Gson().toJson(mappings, it) }
+        File(incrementalFolder.asFile.get(), MAPPING_FILE).writer().use {
+            Gson().toJson(mappings, it)
+        }
     }
 
     private fun readMappings(): List<Mapping> {
         val type = object : TypeToken<List<Mapping>>() {}.type
-        val mappingsFile = File(incrementalFolder, MAPPING_FILE)
-        if (mappingsFile.exists()) {
-            return mappingsFile.reader().use { Gson().fromJson(it, type) }
+        val mappingsFile = File(incrementalFolder.asFile.get(), MAPPING_FILE)
+        return if (mappingsFile.exists()) {
+            mappingsFile.reader().use { Gson().fromJson(it, type) }
         } else {
-            return emptyList()
+            emptyList()
         }
     }
 
@@ -113,13 +112,14 @@ open class ArgumentsGenerationTask @Inject constructor(private val projectLayout
     }
 
     private fun doFullTaskAction() {
-        if (outputDir.exists() && !outputDir.deleteRecursively()) {
+        val outputDirFile = outputDir.asFile.get()
+        if (outputDirFile.exists() && !outputDirFile.deleteRecursively()) {
             logger.warn("Failed to clear directory for navigation arguments")
         }
-        if (!outputDir.exists() && !outputDir.mkdirs()) {
+        if (!outputDirFile.exists() && !outputDirFile.mkdirs()) {
             throw GradleException("Failed to create directory for navigation arguments")
         }
-        val (mappings, errors) = generateArgs(navigationFiles.files, outputDir)
+        val (mappings, errors) = generateArgs(navigationFiles.files, outputDirFile)
         writeMappings(mappings)
         failIfErrors(errors)
     }
@@ -136,23 +136,23 @@ open class ArgumentsGenerationTask @Inject constructor(private val projectLayout
         }
 
         val oldMapping = readMappings()
-        val (newMapping, errors) = generateArgs(modifiedFiles, outputDir)
+        val (newMapping, errors) = generateArgs(modifiedFiles, outputDir.asFile.get())
         val newJavaFiles = newMapping.flatMap { it.javaFiles }.toSet()
         val changedInputs = removedFiles + modifiedFiles
         val (modified, unmodified) = oldMapping.partition {
             File(projectLayout.projectDirectory.asFile, it.navFile) in changedInputs
         }
         modified.flatMap { it.javaFiles }
-                .filter { name -> name !in newJavaFiles }
-                .forEach { javaName ->
-                    val fileExtension = if (generateKotlin) { ".kt" } else { ".java" }
-                    val fileName =
-                        "${javaName.replace('.', File.separatorChar)}$fileExtension"
-                    val file = File(outputDir, fileName)
-                    if (file.exists()) {
-                        file.delete()
-                    }
+            .filter { name -> name !in newJavaFiles }
+            .forEach { javaName ->
+                val fileExtension = if (generateKotlin.get()) { ".kt" } else { ".java" }
+                val fileName =
+                    "${javaName.replace('.', File.separatorChar)}$fileExtension"
+                val file = File(outputDir.asFile.get(), fileName)
+                if (file.exists()) {
+                    file.delete()
                 }
+            }
         writeMappings(unmodified + newMapping)
         failIfErrors(errors)
     }
@@ -161,14 +161,15 @@ open class ArgumentsGenerationTask @Inject constructor(private val projectLayout
         if (errors.isNotEmpty()) {
             val errString = errors.joinToString("\n") { it.toClickableText() }
             throw GradleException(
-                    "androidx.navigation.safeargs plugin failed.\n " +
-                            "Following errors found: \n$errString")
+                "androidx.navigation.safeargs plugin failed.\n " +
+                    "Following errors found: \n$errString"
+            )
         }
     }
 }
 
 private fun ErrorMessage.toClickableText() = "$path:$line:$column " +
-        "(${File(path).name}:$line): \n" +
-        "error: $message"
+    "(${File(path).name}:$line): \n" +
+    "error: $message"
 
 private data class Mapping(val navFile: String, val javaFiles: List<String>)

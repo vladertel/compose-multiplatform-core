@@ -55,6 +55,7 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.TouchDelegate;
 import android.view.View;
@@ -71,14 +72,18 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
+import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.appcompat.R;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.view.CollapsibleActionView;
 import androidx.core.view.ViewCompat;
 import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.customview.view.AbsSavedState;
+import androidx.resourceinspection.annotation.Attribute;
 
 import java.lang.reflect.Method;
 import java.util.WeakHashMap;
@@ -88,13 +93,8 @@ import java.util.WeakHashMap;
  * to a search provider. Shows a list of query suggestions or results, if available, and allows the
  * user to pick a suggestion or result to launch into.
  *
- * <p class="note"><strong>Note:</strong> This class is included in the <a
- * href="{@docRoot}tools/extras/support-library.html">support library</a> for compatibility
- * with API level 7 and higher. If you're developing your app for API level 11 and higher
- * <em>only</em>, you should instead use the framework {@link android.widget.SearchView} class.</p>
- *
  * <p>
- * When the SearchView is used in an {@link androidx.appcompat.app.ActionBar}
+ * When the SearchView is used in an {@link ActionBar}
  * as an action view, it's collapsed by default, so you must provide an icon for the action.
  * </p>
  * <p>
@@ -110,7 +110,7 @@ import java.util.WeakHashMap;
  * href="{@docRoot}guide/topics/ui/actionbar.html#ActionView">Action Bar</a> API guide</p>
  * </div>
  *
- * @see android.view.MenuItem#SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW
+ * @see MenuItem#SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW
  */
 public class SearchView extends LinearLayoutCompat implements CollapsibleActionView {
 
@@ -281,6 +281,8 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
 
         final TintTypedArray a = TintTypedArray.obtainStyledAttributes(context,
                 attrs, R.styleable.SearchView, defStyleAttr, 0);
+        ViewCompat.saveAttributeDataForStyleable(this, context, R.styleable.SearchView, attrs,
+                a.getWrappedTypeArray(), defStyleAttr, 0);
 
         final LayoutInflater inflater = LayoutInflater.from(context);
         final int layoutResId = a.getResourceId(
@@ -453,6 +455,7 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
      *
      * {@link android.R.attr#imeOptions}
      */
+    @Attribute("android:imeOptions")
     public int getImeOptions() {
         return mSearchSrcTextView.getImeOptions();
     }
@@ -593,7 +596,7 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
      * from being displayed.
      *
      * @param hint the hint text to display or {@code null} to clear
-     * {@link androidx.appcompat.R.attr#queryHint}
+     * {@link R.attr#queryHint}
      */
     public void setQueryHint(@Nullable CharSequence hint) {
         mQueryHint = hint;
@@ -616,8 +619,9 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
      *
      *
      * @return the displayed query hint text, or {@code null} if none set
-     * {@link androidx.appcompat.R.attr#queryHint}
+     * {@link R.attr#queryHint}
      */
+    @Attribute("androidx.appcompat:queryHint")
     @Nullable
     public CharSequence getQueryHint() {
         final CharSequence hint;
@@ -641,7 +645,7 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
      *
      * @param iconified whether the search field should be iconified by default
      *
-     * {@link androidx.appcompat.R.attr#iconifiedByDefault}
+     * {@link R.attr#iconifiedByDefault}
      */
     public void setIconifiedByDefault(boolean iconified) {
         if (mIconifiedByDefault == iconified) return;
@@ -654,8 +658,9 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
      * Returns the default iconified state of the search field.
      * @return
      *
-     * {@link androidx.appcompat.R.attr#iconifiedByDefault}
+     * {@link R.attr#iconifiedByDefault}
      */
+    @Attribute("androidx.appcompat:iconifiedByDefault")
     public boolean isIconfiedByDefault() {
         return mIconifiedByDefault;
     }
@@ -778,6 +783,7 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
      *
      * {@link android.R.attr#maxWidth}
      */
+    @Attribute("android:maxWidth")
     public int getMaxWidth() {
         return mMaxWidth;
     }
@@ -1000,7 +1006,7 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
      * the search box. This handles these special keys while the edit box has
      * focus.
      */
-    View.OnKeyListener mTextKeyListener = new View.OnKeyListener() {
+    OnKeyListener mTextKeyListener = new OnKeyListener() {
         @Override
         public boolean onKey(View v, int keyCode, KeyEvent event) {
             // guard against possible race conditions
@@ -1592,7 +1598,7 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
         Intent queryIntent = new Intent(Intent.ACTION_SEARCH);
         queryIntent.setComponent(searchActivity);
         PendingIntent pending = PendingIntent.getActivity(getContext(), 0, queryIntent,
-                PendingIntent.FLAG_ONE_SHOT);
+                PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_MUTABLE);
 
         // Now set up the bundle that will be inserted into the pending intent
         // when it's time to do the search.  We always build it here (even if empty)
@@ -1687,7 +1693,7 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
             return createIntent(action, dataUri, extraData, query, actionKey, actionMsg);
         } catch (RuntimeException e ) {
             int rowNum;
-            try {                       // be really paranoid now
+            try {
                 rowNum = c.getPosition();
             } catch (RuntimeException e2 ) {
                 rowNum = -1;
@@ -1700,7 +1706,7 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
 
     void forceSuggestionQuery() {
         if (Build.VERSION.SDK_INT >= 29) {
-            mSearchSrcTextView.refreshAutoCompleteResults();
+            Api29Impl.refreshAutoCompleteResults(mSearchSrcTextView);
         } else {
             PRE_API_29_HIDDEN_METHOD_INVOKER.doBeforeTextChanged(mSearchSrcTextView);
             PRE_API_29_HIDDEN_METHOD_INVOKER.doAfterTextChanged(mSearchSrcTextView);
@@ -2107,5 +2113,18 @@ public class SearchView extends LinearLayoutCompat implements CollapsibleActionV
                         "This function can only be used for API Level < 29.");
             }
         }
+    }
+
+    @RequiresApi(29)
+    static class Api29Impl {
+        private Api29Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static void refreshAutoCompleteResults(AutoCompleteTextView autoCompleteTextView) {
+            autoCompleteTextView.refreshAutoCompleteResults();
+        }
+
     }
 }

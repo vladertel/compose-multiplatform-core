@@ -18,6 +18,8 @@ package androidx.mediarouter.app;
 
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.mediarouter.media.MediaRouteSelector;
 import androidx.mediarouter.media.MediaRouter;
@@ -25,9 +27,13 @@ import androidx.mediarouter.media.MediaRouter;
 /**
  * Media route discovery fragment.
  * <p>
- * This fragment takes care of registering a callback for media route discovery
- * during the {@link Fragment#onStart onStart()} phase
- * and removing it during the {@link Fragment#onStop onStop()} phase.
+ * This fragment takes care of registering a callback with proper flags for media route discovery:
+ * <ul>
+ *      <li>In {@link Fragment#onCreate} phase, the callback is registered with zero flags. </li>
+ *      <li>In {@link Fragment#onStart} phase, the callback's flags are set to the value
+ *          which is provided by {@link #onPrepareCallbackFlags()}.</li>
+ *      <li>In {@link Fragment#onStop()} phase, the callback's flags are set to zero. </li>
+ * </ul>
  * </p><p>
  * The application must supply a route selector to specify the kinds of routes
  * to discover.  The application may also override {@link #onCreateCallback} to
@@ -51,6 +57,7 @@ public class MediaRouteDiscoveryFragment extends Fragment {
     /**
      * Gets the media router instance.
      */
+    @NonNull
     public MediaRouter getMediaRouter() {
         ensureRouter();
         return mRouter;
@@ -67,6 +74,7 @@ public class MediaRouteDiscoveryFragment extends Fragment {
      *
      * @return The selector, never null.
      */
+    @NonNull
     public MediaRouteSelector getRouteSelector() {
         ensureRouteSelector();
         return mSelector;
@@ -78,7 +86,7 @@ public class MediaRouteDiscoveryFragment extends Fragment {
      *
      * @param selector The selector to set.
      */
-    public void setRouteSelector(MediaRouteSelector selector) {
+    public void setRouteSelector(@NonNull MediaRouteSelector selector) {
         if (selector == null) {
             throw new IllegalArgumentException("selector must not be null");
         }
@@ -123,6 +131,7 @@ public class MediaRouteDiscoveryFragment extends Fragment {
      *
      * @return The new callback, or null if no callback should be registered.
      */
+    @Nullable
     public MediaRouter.Callback onCreateCallback() {
         return new MediaRouter.Callback() { };
     }
@@ -141,12 +150,19 @@ public class MediaRouteDiscoveryFragment extends Fragment {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         ensureRouteSelector();
         ensureRouter();
         mCallback = onCreateCallback();
+        if (mCallback != null) {
+            mRouter.addCallback(mSelector, mCallback, 0);
+        }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
         if (mCallback != null) {
             mRouter.addCallback(mSelector, mCallback, onPrepareCallbackFlags());
         }
@@ -155,10 +171,16 @@ public class MediaRouteDiscoveryFragment extends Fragment {
     @Override
     public void onStop() {
         if (mCallback != null) {
-            mRouter.removeCallback(mCallback);
-            mCallback = null;
+            mRouter.addCallback(mSelector, mCallback, 0);
         }
-
         super.onStop();
+    }
+
+    @Override
+    public void onDestroy() {
+        if (mCallback != null) {
+            mRouter.removeCallback(mCallback);
+        }
+        super.onDestroy();
     }
 }

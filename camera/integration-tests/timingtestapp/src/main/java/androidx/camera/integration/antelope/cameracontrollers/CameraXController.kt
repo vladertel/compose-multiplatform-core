@@ -22,7 +22,7 @@ import android.hardware.camera2.CameraDevice
 import android.util.Log
 import android.view.Surface
 import android.view.ViewGroup
-import androidx.annotation.experimental.UseExperimental
+import androidx.annotation.OptIn
 import androidx.camera.camera2.interop.Camera2Interop
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraSelector
@@ -42,6 +42,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.concurrent.futures.await
 import androidx.core.util.Consumer
 import androidx.lifecycle.LifecycleOwner
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -57,6 +58,7 @@ import kotlinx.coroutines.launch
  * All the needed Cmaera X use cases should be bound before starting the lifecycle. Depending on
  * the test, bind either the preview case, or both the preview and image capture case.
  */
+@kotlin.OptIn(DelicateCoroutinesApi::class)
 internal fun cameraXOpenCamera(
     activity: MainActivity,
     params: CameraParams,
@@ -104,8 +106,10 @@ internal fun cameraXOpenCamera(
             previewUseCase.setSurfaceProvider { surfaceRequest ->
                 // Create the SurfaceTexture and Surface
                 val surfaceTexture = SurfaceTexture(0)
-                surfaceTexture.setDefaultBufferSize(surfaceRequest.resolution.width,
-                    surfaceRequest.resolution.height)
+                surfaceTexture.setDefaultBufferSize(
+                    surfaceRequest.resolution.width,
+                    surfaceRequest.resolution.height
+                )
                 surfaceTexture.detachFromGLContext()
                 val surface = Surface(surfaceTexture)
 
@@ -114,15 +118,18 @@ internal fun cameraXOpenCamera(
                     val viewGroup = params.cameraXPreviewTexture?.parent as ViewGroup
                     viewGroup.removeView(params.cameraXPreviewTexture)
                     viewGroup.addView(params.cameraXPreviewTexture)
-                    params.cameraXPreviewTexture?.surfaceTexture = surfaceTexture
+                    params.cameraXPreviewTexture?.setSurfaceTexture(surfaceTexture)
                 }
 
                 // Surface provided to camera for producing buffers into and
                 // Release the SurfaceTexture and Surface once camera is done with it
-                surfaceRequest.provideSurface(surface, CameraXExecutors.directExecutor(), Consumer {
+                surfaceRequest.provideSurface(
+                    surface, CameraXExecutors.directExecutor(),
+                    Consumer {
                         surface.release()
                         surfaceTexture.release()
-                })
+                    }
+                )
             }
         }
 
@@ -189,6 +196,7 @@ internal fun cameraXOpenCamera(
 /**
  * End Camera X custom lifecycle, unbind use cases, and start timing the camera close.
  */
+@kotlin.OptIn(DelicateCoroutinesApi::class)
 internal fun closeCameraX(activity: MainActivity, params: CameraParams, testConfig: TestConfig) {
     logd("In closecameraX, camera: " + params.id + ",  test: " + testConfig.currentRunningTest)
 
@@ -232,7 +240,7 @@ internal fun cameraXTakePicture(
     // Pause in multi-captures to make sure HDR routines don't get overloaded
     logd(
         "CameraX TakePicture. Pausing for " +
-                PrefHelper.getPreviewBuffer(activity) + "ms to let preview run."
+            PrefHelper.getPreviewBuffer(activity) + "ms to let preview run."
     )
 
     params.timer.previewFillStart = System.currentTimeMillis()
@@ -302,7 +310,7 @@ private fun isCameraSurfaceTextureReleased(texture: SurfaceTexture): Boolean {
 /**
  * Setup the Camera X preview use case
  */
-@UseExperimental(markerClass = ExperimentalCamera2Interop::class)
+@OptIn(ExperimentalCamera2Interop::class)
 private fun cameraXPreviewUseCaseBuilder(
     focusMode: FocusMode,
     deviceStateCallback: CameraDevice.StateCallback,
@@ -323,11 +331,11 @@ private fun cameraXPreviewUseCaseBuilder(
 /**
  * Setup the Camera X image capture use case
  */
-@UseExperimental(markerClass = ExperimentalCamera2Interop::class)
+@OptIn(ExperimentalCamera2Interop::class)
 private fun cameraXImageCaptureUseCaseBuilder(
     focusMode: FocusMode,
     deviceStateCallback:
-    CameraDevice.StateCallback,
+        CameraDevice.StateCallback,
     sessionCaptureCallback: CameraCaptureSession.CaptureCallback
 ): ImageCapture.Builder {
 

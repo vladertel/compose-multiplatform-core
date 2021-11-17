@@ -20,6 +20,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.content.Context;
 import android.graphics.Rect;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
@@ -27,14 +28,17 @@ import android.view.animation.Animation;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.collection.ArrayMap;
+import androidx.core.app.SharedElementCallback;
 import androidx.core.os.CancellationSignal;
+import androidx.core.util.Preconditions;
 import androidx.core.view.OneShotPreDrawListener;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.ViewGroupCompat;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -44,48 +48,8 @@ import java.util.Map;
  */
 class DefaultSpecialEffectsController extends SpecialEffectsController {
 
-    private final HashMap<Operation, HashSet<CancellationSignal>>
-            mRunningOperations = new HashMap<>();
-
     DefaultSpecialEffectsController(@NonNull ViewGroup container) {
         super(container);
-    }
-
-    /**
-     * Add new {@link CancellationSignal} for special effects
-     */
-    private void addCancellationSignal(@NonNull Operation operation,
-            @NonNull CancellationSignal signal) {
-        if (mRunningOperations.get(operation) == null) {
-            mRunningOperations.put(operation, new HashSet<CancellationSignal>());
-        }
-        mRunningOperations.get(operation).add(signal);
-    }
-
-    /**
-     * Remove a {@link CancellationSignal} that was previously added with
-     * {@link #addCancellationSignal(Operation, CancellationSignal)}.
-     *
-     * This calls through to {@link Operation#complete()} when the last special effect is complete.
-     */
-    @SuppressWarnings("WeakerAccess") /* synthetic access */
-    void removeCancellationSignal(@NonNull Operation operation,
-            @NonNull CancellationSignal signal) {
-        HashSet<CancellationSignal> signals = mRunningOperations.get(operation);
-        if (signals != null && signals.remove(signal) && signals.isEmpty()) {
-            mRunningOperations.remove(operation);
-            operation.complete();
-        }
-    }
-
-    @SuppressWarnings("WeakerAccess") /* synthetic access */
-    void cancelAllSpecialEffects(@NonNull Operation operation) {
-        HashSet<CancellationSignal> signals = mRunningOperations.remove(operation);
-        if (signals != null) {
-            for (CancellationSignal signal : signals) {
-                signal.cancel();
-            }
-        }
     }
 
     @Override
@@ -95,20 +59,26 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
         Operation firstOut = null;
         Operation lastIn = null;
         for (final Operation operation : operations) {
-            switch (operation.getType()) {
-                case REMOVE:
-                    if (firstOut == null) {
+            Operation.State currentState = Operation.State.from(operation.getFragment().mView);
+            switch (operation.getFinalState()) {
+                case GONE:
+                case INVISIBLE:
+                case REMOVED:
+                    if (currentState == Operation.State.VISIBLE && firstOut == null) {
+                        // The firstOut Operation is the first Operation moving from VISIBLE
                         firstOut = operation;
                     }
                     break;
-                case ADD:
-                    // To transition from the firstOut to the lastIn, we need
-                    // the firstOut operation to occur first. Only after that
-                    // is set do we set the lastIn
-                    if (firstOut != null) {
+                case VISIBLE:
+                    if (currentState != Operation.State.VISIBLE) {
+                        // The last Operation that moves to VISIBLE is the lastIn Operation
                         lastIn = operation;
                     }
+                    break;
             }
+        }
+        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+            Log.v(FragmentManager.TAG, "Executing operations from " + firstOut + " to " + lastIn);
         }
 
         // Now iterate through the operations, collecting the set of animations
@@ -120,13 +90,13 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
         for (final Operation operation : operations) {
             // Create the animation CancellationSignal
             CancellationSignal animCancellationSignal = new CancellationSignal();
-            addCancellationSignal(operation, animCancellationSignal);
+            operation.markStartedSpecialEffect(animCancellationSignal);
             // Add the animation special effect
-            animations.add(new AnimationInfo(operation, animCancellationSignal));
+            animations.add(new AnimationInfo(operation, animCancellationSignal, isPop));
 
             // Create the transition CancellationSignal
             CancellationSignal transitionCancellationSignal = new CancellationSignal();
-            addCancellationSignal(operation, transitionCancellationSignal);
+            operation.markStartedSpecialEffect(transitionCancellationSignal);
             // Add the transition special effect
             transitions.add(new TransitionInfo(operation, transitionCancellationSignal, isPop,
                     isPop ? operation == firstOut : operation == lastIn));
@@ -142,101 +112,222 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
                     }
                 }
             });
-            // Ensure that when the Operation is cancelled, we cancel all special effects
-            operation.getCancellationSignal().setOnCancelListener(
-                    new CancellationSignal.OnCancelListener() {
-                        @Override
-                        public void onCancel() {
-                            cancelAllSpecialEffects(operation);
-                        }
-                    });
         }
 
         // Start transition special effects
-        startTransitions(transitions, isPop, firstOut, lastIn);
+        Map<Operation, Boolean> startedTransitions = startTransitions(transitions,
+                awaitingContainerChanges, isPop, firstOut, lastIn);
+        boolean startedAnyTransition = startedTransitions.containsValue(true);
 
         // Start animation special effects
-        for (AnimationInfo animationInfo : animations) {
-            startAnimation(animationInfo.getOperation(), animationInfo.getSignal());
-        }
+        startAnimations(animations, awaitingContainerChanges,
+                startedAnyTransition, startedTransitions);
 
         for (final Operation operation : awaitingContainerChanges) {
             applyContainerChanges(operation);
         }
         awaitingContainerChanges.clear();
+        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+            Log.v(FragmentManager.TAG,
+                    "Completed executing operations from " + firstOut + " to " + lastIn);
+        }
     }
 
-    private void startAnimation(final @NonNull Operation operation,
-            final @NonNull CancellationSignal signal) {
+    private void startAnimations(@NonNull List<AnimationInfo> animationInfos,
+            @NonNull List<Operation> awaitingContainerChanges,
+            boolean startedAnyTransition, @NonNull Map<Operation, Boolean> startedTransitions) {
         final ViewGroup container = getContainer();
         final Context context = container.getContext();
-        final Fragment fragment = operation.getFragment();
-        final View viewToAnimate = fragment.mView;
-        FragmentAnim.AnimationOrAnimator anim = FragmentAnim.loadAnimation(context,
-                fragment, operation.getType() == Operation.Type.ADD);
-        if (anim == null) {
-            // No animation, so we can immediately remove the CancellationSignal
-            removeCancellationSignal(operation, signal);
-            return;
-        }
-        // We have an animation to run!
-        container.startViewTransition(viewToAnimate);
-        // Kick off the respective type of animation
-        if (anim.animation != null) {
-            final Animation animation = operation.getType() == Operation.Type.ADD
-                    ? new FragmentAnim.EnterViewTransitionAnimation(anim.animation)
-                    : new FragmentAnim.EndViewTransitionAnimation(anim.animation, container,
-                            viewToAnimate);
-            animation.setAnimationListener(new Animation.AnimationListener() {
-                @Override
-                public void onAnimationStart(Animation animation) {
-                }
+        ArrayList<AnimationInfo> animationsToRun = new ArrayList<>();
 
-                @Override
-                public void onAnimationEnd(Animation animation) {
-                    // onAnimationEnd() comes during draw(), so there can still be some
-                    // draw events happening after this call. We don't want to remove the
-                    // CancellationSignal until after the onAnimationEnd()
-                    container.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            container.endViewTransition(viewToAnimate);
-                            removeCancellationSignal(operation, signal);
-                        }
-                    });
-                }
+        // First run Animators
+        boolean startedAnyAnimator = false;
+        for (final AnimationInfo animationInfo : animationInfos) {
+            if (animationInfo.isVisibilityUnchanged()) {
+                // No change in visibility, so we can immediately complete the animation
+                animationInfo.completeSpecialEffect();
+                continue;
+            }
+            FragmentAnim.AnimationOrAnimator anim = animationInfo.getAnimation(context);
+            if (anim == null) {
+                // No Animator or Animation, so we can immediately complete the animation
+                animationInfo.completeSpecialEffect();
+                continue;
+            }
+            final Animator animator = anim.animator;
+            if (animator == null) {
+                // We must have an Animation to run. Save those for a second pass
+                animationsToRun.add(animationInfo);
+                continue;
+            }
 
-                @Override
-                public void onAnimationRepeat(Animation animation) {
+            // First make sure we haven't already started a Transition for this Operation
+            final Operation operation = animationInfo.getOperation();
+            final Fragment fragment = operation.getFragment();
+            boolean startedTransition = Boolean.TRUE.equals(startedTransitions.get(operation));
+            if (startedTransition) {
+                if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(FragmentManager.TAG, "Ignoring Animator set on "
+                            + fragment + " as this Fragment was involved in a Transition.");
                 }
-            });
-            viewToAnimate.startAnimation(animation);
-        } else { // anim.animator != null
-            anim.animator.addListener(new AnimatorListenerAdapter() {
+                animationInfo.completeSpecialEffect();
+                continue;
+            }
+
+            // Okay, let's run the Animator!
+            startedAnyAnimator = true;
+            final boolean isHideOperation = operation.getFinalState() == Operation.State.GONE;
+            if (isHideOperation) {
+                // We don't want to immediately applyState() to hide operations as that
+                // immediately stops the Animator. Instead we'll applyState() manually
+                // when the Animator ends.
+                awaitingContainerChanges.remove(operation);
+            }
+            final View viewToAnimate = fragment.mView;
+            container.startViewTransition(viewToAnimate);
+            animator.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator anim) {
                     container.endViewTransition(viewToAnimate);
-                    removeCancellationSignal(operation, signal);
+                    if (isHideOperation) {
+                        // Specifically for hide operations with Animator, we can't
+                        // applyState until the Animator finishes
+                        operation.getFinalState().applyState(viewToAnimate);
+                    }
+                    animationInfo.completeSpecialEffect();
+                    if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                        Log.v(FragmentManager.TAG, "Animator from operation " + operation + " has "
+                                + "ended.");
+                    }
                 }
             });
-            anim.animator.setTarget(viewToAnimate);
-            anim.animator.start();
+            animator.setTarget(viewToAnimate);
+            animator.start();
+            if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                Log.v(FragmentManager.TAG, "Animator from operation " + operation + " has "
+                        + "started.");
+            }
+            // Listen for cancellation and use that to cancel the Animator
+            CancellationSignal signal = animationInfo.getSignal();
+            signal.setOnCancelListener(new CancellationSignal.OnCancelListener() {
+                @Override
+                public void onCancel() {
+                    animator.end();
+                    if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                        Log.v(FragmentManager.TAG, "Animator from operation " + operation + " has "
+                                + "been canceled.");
+                    }
+                }
+            });
         }
 
-        // Listen for cancellation and use that to cancel any running animations
-        signal.setOnCancelListener(new CancellationSignal.OnCancelListener() {
-            @Override
-            public void onCancel() {
-                viewToAnimate.clearAnimation();
+        // Now run Animations
+        for (final AnimationInfo animationInfo : animationsToRun) {
+            // First make sure we haven't already started any Transition
+            final Operation operation = animationInfo.getOperation();
+            final Fragment fragment = operation.getFragment();
+            if (startedAnyTransition) {
+                if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(FragmentManager.TAG, "Ignoring Animation set on "
+                            + fragment + " as Animations cannot run alongside Transitions.");
+                }
+                animationInfo.completeSpecialEffect();
+                continue;
             }
-        });
+            // Then make sure we haven't already started any Animator
+            if (startedAnyAnimator) {
+                if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(FragmentManager.TAG, "Ignoring Animation set on "
+                            + fragment + " as Animations cannot run alongside Animators.");
+                }
+                animationInfo.completeSpecialEffect();
+                continue;
+            }
+
+            // Okay, let's run the Animation!
+            final View viewToAnimate = fragment.mView;
+            Animation anim = Preconditions.checkNotNull(
+                    Preconditions.checkNotNull(animationInfo.getAnimation(context)).animation);
+            Operation.State finalState = operation.getFinalState();
+            if (finalState != Operation.State.REMOVED) {
+                // If the operation does not remove the view, we can't use a
+                // AnimationSet due that causing the introduction of visual artifacts (b/163084315).
+                viewToAnimate.startAnimation(anim);
+                // This means we can't use setAnimationListener() without overriding
+                // any listener that the Fragment has set themselves, so we
+                // just mark the special effect as complete immediately.
+                animationInfo.completeSpecialEffect();
+            } else {
+                container.startViewTransition(viewToAnimate);
+                final Animation animation = new FragmentAnim.EndViewTransitionAnimation(
+                        anim, container, viewToAnimate);
+                animation.setAnimationListener(new Animation.AnimationListener() {
+                    @Override
+                    public void onAnimationStart(Animation animation) {
+                        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                            Log.v(FragmentManager.TAG, "Animation from operation " + operation
+                                    + " has reached onAnimationStart.");
+                        }
+                    }
+
+                    @Override
+                    public void onAnimationEnd(Animation animation) {
+                        // onAnimationEnd() comes during draw(), so there can still be some
+                        // draw events happening after this call. We don't want to complete the
+                        // animation until after the onAnimationEnd()
+                        container.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                container.endViewTransition(viewToAnimate);
+                                animationInfo.completeSpecialEffect();
+                            }
+                        });
+                        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                            Log.v(FragmentManager.TAG, "Animation from operation " + operation
+                                    + " has ended.");
+                        }
+                    }
+
+                    @Override
+                    public void onAnimationRepeat(Animation animation) {
+                    }
+                });
+                viewToAnimate.startAnimation(animation);
+                if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(FragmentManager.TAG, "Animation from operation " + operation
+                            + " has started.");
+                }
+            }
+            // Listen for cancellation and use that to cancel the Animation
+            CancellationSignal signal = animationInfo.getSignal();
+            signal.setOnCancelListener(new CancellationSignal.OnCancelListener() {
+                @Override
+                public void onCancel() {
+                    viewToAnimate.clearAnimation();
+                    container.endViewTransition(viewToAnimate);
+                    animationInfo.completeSpecialEffect();
+                    if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                        Log.v(FragmentManager.TAG, "Animation from operation " + operation
+                                + " has been cancelled.");
+                    }
+                }
+            });
+        }
     }
 
-    private void startTransitions(@NonNull List<TransitionInfo> transitionInfos,
-            boolean isPop, @Nullable Operation firstOut, @Nullable Operation lastIn) {
+    @NonNull
+    private Map<Operation, Boolean> startTransitions(@NonNull List<TransitionInfo> transitionInfos,
+            @NonNull List<Operation> awaitingContainerChanges,
+            final boolean isPop, @Nullable final Operation firstOut,
+            @Nullable final Operation lastIn) {
+        Map<Operation, Boolean> startedTransitions = new HashMap<>();
         // First verify that we can run all transitions together
         FragmentTransitionImpl transitionImpl = null;
         for (TransitionInfo transitionInfo : transitionInfos) {
+            if (transitionInfo.isVisibilityUnchanged()) {
+                // No change in visibility, so we can skip this TransitionInfo
+                continue;
+            }
             FragmentTransitionImpl handlingImpl = transitionInfo.getHandlingImpl();
             if (transitionImpl == null) {
                 transitionImpl = handlingImpl;
@@ -249,12 +340,12 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
             }
         }
         if (transitionImpl == null) {
-            // There were no transitions at all so we can just cancel all of them
+            // There were no transitions at all so we can just complete all of them
             for (TransitionInfo transitionInfo : transitionInfos) {
-                removeCancellationSignal(transitionInfo.getOperation(),
-                        transitionInfo.getSignal());
+                startedTransitions.put(transitionInfo.getOperation(), false);
+                transitionInfo.completeSpecialEffect();
             }
-            return;
+            return startedTransitions;
         }
 
         // Every transition needs to target at least one View so that they
@@ -269,39 +360,161 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
         final Rect lastInEpicenterRect = new Rect();
         ArrayList<View> sharedElementFirstOutViews = new ArrayList<>();
         ArrayList<View> sharedElementLastInViews = new ArrayList<>();
+        ArrayMap<String, String> sharedElementNameMapping = new ArrayMap<>();
         for (final TransitionInfo transitionInfo : transitionInfos) {
             boolean hasSharedElementTransition = transitionInfo.hasSharedElementTransition();
-            if (hasSharedElementTransition) {
-                sharedElementTransition = transitionImpl.cloneTransition(
-                        transitionInfo.getSharedElementTransition());
-                Fragment sharedElementFragment = transitionInfo.getOperation().getFragment();
-                ArrayList<String> exitingNames;
-                ArrayList<String> enteringNames;
-                if (!isPop) {
-                    // Forward transitions have the source shared elements exiting
-                    // and the target shared elements entering
-                    exitingNames = sharedElementFragment.getSharedElementSourceNames();
-                    enteringNames = sharedElementFragment.getSharedElementTargetNames();
-                } else {
-                    // A pop is the reverse: the target elements are now the ones exiting
-                    // and the source shared elements are entering
-                    exitingNames = sharedElementFragment.getSharedElementTargetNames();
-                    enteringNames = sharedElementFragment.getSharedElementSourceNames();
-                }
-                if (firstOut != null) {
-                    // Capture all of the Views from the firstOut fragment that are
-                    // part of the shared element transition
-                    ArrayMap<String, View> firstOutViews = new ArrayMap<>();
-                    findNamedViews(firstOutViews, firstOut.getFragment().mView);
-                    // TODO call through to onMapSharedElements
-                    firstOutViews.retainAll(exitingNames);
-
-                    // Find all views under the shared element views and add them
-                    // to the shared element transition
-                    for (View sharedElementView : firstOutViews.values()) {
-                        captureTransitioningViews(sharedElementFirstOutViews,
-                                sharedElementView);
+            // Compute the shared element transition between the firstOut and lastIn Fragments
+            if (hasSharedElementTransition && firstOut != null && lastIn != null) {
+                // swapSharedElementTargets requires wrapping this in a TransitionSet
+                sharedElementTransition = transitionImpl.wrapTransitionInSet(
+                        transitionImpl.cloneTransition(
+                                transitionInfo.getSharedElementTransition()));
+                // The exiting shared elements default to the source names from the
+                // last in fragment
+                ArrayList<String> exitingNames = lastIn.getFragment()
+                        .getSharedElementSourceNames();
+                // But if we're doing multiple transactions, we may need to re-map
+                // the names from the first out fragment
+                ArrayList<String> firstOutSourceNames = firstOut.getFragment()
+                        .getSharedElementSourceNames();
+                ArrayList<String> firstOutTargetNames = firstOut.getFragment()
+                        .getSharedElementTargetNames();
+                // We do this by iterating through each first out target,
+                // seeing if there is a match from the last in sources
+                for (int index = 0; index < firstOutTargetNames.size(); index++) {
+                    int nameIndex = exitingNames.indexOf(firstOutTargetNames.get(index));
+                    if (nameIndex != -1) {
+                        // If we found a match, replace the last in source name
+                        // with the first out source name
+                        exitingNames.set(nameIndex, firstOutSourceNames.get(index));
                     }
+                }
+                ArrayList<String> enteringNames = lastIn.getFragment()
+                        .getSharedElementTargetNames();
+                SharedElementCallback exitingCallback;
+                SharedElementCallback enteringCallback;
+                if (!isPop) {
+                    // Forward transitions have firstOut fragment exiting and the
+                    // lastIn fragment entering
+                    exitingCallback = firstOut.getFragment().getExitTransitionCallback();
+                    enteringCallback = lastIn.getFragment().getEnterTransitionCallback();
+                } else {
+                    // A pop is the reverse: the firstOut fragment is entering and the
+                    // lastIn fragment is exiting
+                    exitingCallback = firstOut.getFragment().getEnterTransitionCallback();
+                    enteringCallback = lastIn.getFragment().getExitTransitionCallback();
+                }
+                int numSharedElements = exitingNames.size();
+                for (int i = 0; i < numSharedElements; i++) {
+                    String exitingName = exitingNames.get(i);
+                    String enteringName = enteringNames.get(i);
+                    sharedElementNameMapping.put(exitingName, enteringName);
+                }
+
+                if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(FragmentManager.TAG, ">>> entering view names <<<");
+                    for (String name: enteringNames) {
+                        Log.v(FragmentManager.TAG,  "Name: " + name);
+                    }
+                    Log.v(FragmentManager.TAG, ">>> exiting view names <<<");
+                    for (String name: exitingNames) {
+                        Log.v(FragmentManager.TAG,  "Name: " + name);
+                    }
+                }
+
+                // Find all of the Views from the firstOut fragment that are
+                // part of the shared element transition
+                final ArrayMap<String, View> firstOutViews = new ArrayMap<>();
+                findNamedViews(firstOutViews, firstOut.getFragment().mView);
+                firstOutViews.retainAll(exitingNames);
+                if (exitingCallback != null) {
+                    if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                        Log.v(FragmentManager.TAG,
+                                "Executing exit callback for operation " + firstOut);
+                    }
+                    // Give the SharedElementCallback a chance to override the default mapping
+                    exitingCallback.onMapSharedElements(exitingNames, firstOutViews);
+                    for (int i = exitingNames.size() - 1; i >= 0; i--) {
+                        String name = exitingNames.get(i);
+                        View view = firstOutViews.get(name);
+                        if (view == null) {
+                            sharedElementNameMapping.remove(name);
+                        } else if (!name.equals(ViewCompat.getTransitionName(view))) {
+                            String targetValue = sharedElementNameMapping.remove(name);
+                            sharedElementNameMapping.put(ViewCompat.getTransitionName(view),
+                                    targetValue);
+                        }
+                    }
+                } else {
+                    // Only keep the mapping of elements that were found in the firstOut Fragment
+                    sharedElementNameMapping.retainAll(firstOutViews.keySet());
+                }
+
+                // Find all of the Views from the lastIn fragment that are
+                // part of the shared element transition
+                final ArrayMap<String, View> lastInViews = new ArrayMap<>();
+                findNamedViews(lastInViews, lastIn.getFragment().mView);
+                lastInViews.retainAll(enteringNames);
+                lastInViews.retainAll(sharedElementNameMapping.values());
+                if (enteringCallback != null) {
+                    if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                        Log.v(FragmentManager.TAG,
+                                "Executing enter callback for operation " + lastIn);
+                    }
+                    // Give the SharedElementCallback a chance to override the default mapping
+                    enteringCallback.onMapSharedElements(enteringNames, lastInViews);
+                    for (int i = enteringNames.size() - 1; i >= 0; i--) {
+                        String name = enteringNames.get(i);
+                        View view = lastInViews.get(name);
+                        if (view == null) {
+                            String key = FragmentTransition.findKeyForValue(
+                                    sharedElementNameMapping, name);
+                            if (key != null) {
+                                sharedElementNameMapping.remove(key);
+                            }
+                        } else if (!name.equals(ViewCompat.getTransitionName(view))) {
+                            String key = FragmentTransition.findKeyForValue(
+                                    sharedElementNameMapping, name);
+                            if (key != null) {
+                                sharedElementNameMapping.put(key,
+                                        ViewCompat.getTransitionName(view));
+                            }
+                        }
+                    }
+                } else {
+                    // Only keep the mapping of elements that were found in the lastIn Fragment
+                    FragmentTransition.retainValues(sharedElementNameMapping, lastInViews);
+                }
+
+                // Now make a final pass through the Views list to ensure they
+                // don't still have elements that were removed from the mapping
+                retainMatchingViews(firstOutViews, sharedElementNameMapping.keySet());
+                retainMatchingViews(lastInViews, sharedElementNameMapping.values());
+
+                if (sharedElementNameMapping.isEmpty()) {
+                    // We couldn't find any valid shared element mappings, so clear out
+                    // the shared element transition information entirely
+                    sharedElementTransition = null;
+                    sharedElementFirstOutViews.clear();
+                    sharedElementLastInViews.clear();
+                } else {
+                    // Call through to onSharedElementStart() before capturing the
+                    // starting values for the shared element transition
+                    FragmentTransition.callSharedElementStartEnd(
+                            lastIn.getFragment(), firstOut.getFragment(), isPop,
+                            firstOutViews, true);
+                    // Trigger the onSharedElementEnd callback in the next frame after
+                    // the starting values are captured and before capturing the end states
+                    OneShotPreDrawListener.add(getContainer(), new Runnable() {
+                        @Override
+                        public void run() {
+                            FragmentTransition.callSharedElementStartEnd(
+                                    lastIn.getFragment(), firstOut.getFragment(), isPop,
+                                    lastInViews, false);
+                        }
+                    });
+
+                    sharedElementFirstOutViews.addAll(firstOutViews.values());
 
                     // Compute the epicenter of the firstOut transition
                     if (!exitingNames.isEmpty()) {
@@ -310,23 +523,10 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
                         transitionImpl.setEpicenter(sharedElementTransition,
                                 firstOutEpicenterView);
                     }
-                }
-                if (lastIn != null) {
-                    // Capture all of the Views from the lastIn fragment that are
-                    // part of the shared element transition
-                    ArrayMap<String, View> lastInViews = new ArrayMap<>();
-                    findNamedViews(lastInViews, lastIn.getFragment().mView);
-                    // TODO call through to onMapSharedElements
-                    lastInViews.retainAll(enteringNames);
 
-                    // Find all views under the shared element views and add them
-                    // to the shared element transition
-                    for (View sharedElementView : lastInViews.values()) {
-                        captureTransitioningViews(sharedElementLastInViews,
-                                sharedElementView);
-                    }
+                    sharedElementLastInViews.addAll(lastInViews.values());
 
-                    // Compute the epicenter of the firstOut transition
+                    // Compute the epicenter of the lastIn transition
                     if (!enteringNames.isEmpty()) {
                         String epicenterViewName = enteringNames.get(0);
                         final View lastInEpicenterView = lastInViews.get(epicenterViewName);
@@ -345,13 +545,23 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
                             });
                         }
                     }
+
+                    // Now set the transition's targets to only the firstOut Fragment's views
+                    // It'll be swapped to the lastIn Fragment's views after the
+                    // transition is started
+                    transitionImpl.setSharedElementTargets(sharedElementTransition,
+                            nonExistentView, sharedElementFirstOutViews);
+                    // After the swap to the lastIn Fragment's view (done below), we
+                    // need to clean up those targets. We schedule this here so that it
+                    // runs directly after the swap
+                    transitionImpl.scheduleRemoveTargets(sharedElementTransition,
+                            null, null, null, null,
+                            sharedElementTransition, sharedElementLastInViews);
+                    // Both the firstOut and lastIn Operations are now associated
+                    // with a Transition
+                    startedTransitions.put(firstOut, true);
+                    startedTransitions.put(lastIn, true);
                 }
-                // Now set the transition's targets
-                ArrayList<View> sharedElementTargets = new ArrayList<>();
-                sharedElementTargets.add(nonExistentView);
-                sharedElementTargets.addAll(sharedElementFirstOutViews);
-                sharedElementTargets.addAll(sharedElementLastInViews);
-                transitionImpl.addTargets(sharedElementTransition, sharedElementTargets);
             }
         }
         ArrayList<View> enteringViews = new ArrayList<>();
@@ -361,6 +571,12 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
         Object mergedNonOverlappingTransition = null;
         // Now iterate through the set of transitions and merge them together
         for (final TransitionInfo transitionInfo : transitionInfos) {
+            if (transitionInfo.isVisibilityUnchanged()) {
+                // No change in visibility, so we can immediately complete the transition
+                startedTransitions.put(transitionInfo.getOperation(), false);
+                transitionInfo.completeSpecialEffect();
+                continue;
+            }
             Object transition = transitionImpl.cloneTransition(transitionInfo.getTransition());
             Operation operation = transitionInfo.getOperation();
             boolean involvedInSharedElementTransition = sharedElementTransition != null
@@ -368,17 +584,17 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
             if (transition == null) {
                 // Nothing more to do if the transition is null
                 if (!involvedInSharedElementTransition) {
-                    // Only remove the cancellation signal if this fragment isn't involved
+                    // Only complete the transition if this fragment isn't involved
                     // in the shared element transition (as otherwise we need to wait
                     // for that to finish)
-                    removeCancellationSignal(transitionInfo.getOperation(),
-                            transitionInfo.getSignal());
+                    startedTransitions.put(operation, false);
+                    transitionInfo.completeSpecialEffect();
                 }
             } else {
                 // Target the Transition to *only* the set of transitioning views
-                ArrayList<View> transitioningViews = new ArrayList<>();
+                final ArrayList<View> transitioningViews = new ArrayList<>();
                 captureTransitioningViews(transitioningViews,
-                        transitionInfo.getOperation().getFragment().mView);
+                        operation.getFragment().mView);
                 if (involvedInSharedElementTransition) {
                     // Remove all of the shared element views from the transition
                     if (operation == firstOut) {
@@ -387,8 +603,41 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
                         transitioningViews.removeAll(sharedElementLastInViews);
                     }
                 }
-                transitionImpl.addTargets(transition, transitioningViews);
-                if (transitionInfo.getOperation().getType().equals(Operation.Type.ADD)) {
+                if (transitioningViews.isEmpty()) {
+                    transitionImpl.addTarget(transition, nonExistentView);
+                } else {
+                    transitionImpl.addTargets(transition, transitioningViews);
+                    transitionImpl.scheduleRemoveTargets(transition,
+                            transition, transitioningViews,
+                            null, null, null, null);
+                    if (operation.getFinalState() == Operation.State.GONE) {
+                        // We're hiding the Fragment. This requires a bit of extra work
+                        // First, we need to avoid immediately applying the container change as
+                        // that will stop the Transition from occurring.
+                        awaitingContainerChanges.remove(operation);
+                        // Then schedule the actual hide of the fragment's view,
+                        // essentially doing what applyState() would do for us
+                        ArrayList<View> transitioningViewsToHide =
+                                new ArrayList<>(transitioningViews);
+                        transitioningViewsToHide.remove(operation.getFragment().mView);
+                        transitionImpl.scheduleHideFragmentView(transition,
+                                operation.getFragment().mView, transitioningViewsToHide);
+                        // This OneShotPreDrawListener gets fired before the delayed start of
+                        // the Transition and changes the visibility of any exiting child views
+                        // that *ARE NOT* shared element transitions. The TransitionManager then
+                        // properly considers exiting views and marks them as disappearing,
+                        // applying a transition and a listener to take proper actions once the
+                        // transition is complete.
+                        OneShotPreDrawListener.add(getContainer(), new Runnable() {
+                            @Override
+                            public void run() {
+                                FragmentTransition.setViewVisibility(transitioningViews,
+                                        View.INVISIBLE);
+                            }
+                        });
+                    }
+                }
+                if (operation.getFinalState() == Operation.State.VISIBLE) {
                     enteringViews.addAll(transitioningViews);
                     if (hasLastInEpicenter) {
                         transitionImpl.setEpicenter(transition, lastInEpicenterRect);
@@ -396,6 +645,7 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
                 } else {
                     transitionImpl.setEpicenter(transition, firstOutEpicenterView);
                 }
+                startedTransitions.put(operation, true);
                 // Now determine how this transition should be merged together
                 if (transitionInfo.isOverlapAllowed()) {
                     // Overlap is allowed, so add them to the mergeTransition set
@@ -414,39 +664,111 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
         mergedTransition = transitionImpl.mergeTransitionsInSequence(mergedTransition,
                 mergedNonOverlappingTransition, sharedElementTransition);
 
-        // Now set up our cancellation and completion signal on the completely
-        // merged transition set
+        // If there's no transitions playing together, no non-overlapping transitions,
+        // and no shared element transitions, mergedTransition will be null and
+        // there's nothing else we need to do
+        if (mergedTransition == null) {
+            return startedTransitions;
+        }
+
+        // Now set up our completion signal on the completely merged transition set
         for (final TransitionInfo transitionInfo : transitionInfos) {
-            Object transition = transitionInfo.getTransition();
-            if (transition != null) {
-                transitionImpl.setListenerForTransitionEnd(
-                        transitionInfo.getOperation().getFragment(),
-                        mergedTransition,
-                        transitionInfo.getSignal(),
-                        new Runnable() {
-                            @Override
-                            public void run() {
-                                removeCancellationSignal(transitionInfo.getOperation(),
-                                        transitionInfo.getSignal());
-                            }
-                        });
+            if (transitionInfo.isVisibilityUnchanged()) {
+                // No change in visibility, so we've already completed the transition
+                continue;
             }
+            Object transition = transitionInfo.getTransition();
+            Operation operation = transitionInfo.getOperation();
+            boolean involvedInSharedElementTransition = sharedElementTransition != null
+                    && (operation == firstOut || operation == lastIn);
+            if (transition != null || involvedInSharedElementTransition) {
+                // If the container has never been laid out, transitions will not start so
+                // so lets instantly complete them.
+                if (!ViewCompat.isLaidOut(getContainer())) {
+                    if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                        Log.v(FragmentManager.TAG,
+                                "SpecialEffectsController: Container " + getContainer()
+                                        + " has not been laid out. Completing operation "
+                                        + operation);
+                    }
+                    transitionInfo.completeSpecialEffect();
+                } else {
+                    transitionImpl.setListenerForTransitionEnd(
+                            transitionInfo.getOperation().getFragment(),
+                            mergedTransition,
+                            transitionInfo.getSignal(),
+                            new Runnable() {
+                                @Override
+                                public void run() {
+                                    transitionInfo.completeSpecialEffect();
+                                    if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                                        Log.v(FragmentManager.TAG,
+                                                "Transition for operation " + operation + "has "
+                                                        + "completed");
+                                    }
+                                }
+                            });
+                }
+            }
+        }
+        // Transitions won't run if the container isn't laid out so
+        // we can return early here to avoid doing unnecessary work.
+        if (!ViewCompat.isLaidOut(getContainer())) {
+            return startedTransitions;
         }
         // First, hide all of the entering views so they're in
         // the correct initial state
         FragmentTransition.setViewVisibility(enteringViews, View.INVISIBLE);
+        ArrayList<String> inNames =
+                transitionImpl.prepareSetNameOverridesReordered(sharedElementLastInViews);
+        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+            Log.v(FragmentManager.TAG, ">>>>> Beginning transition <<<<<");
+            Log.v(FragmentManager.TAG, ">>>>> SharedElementFirstOutViews <<<<<");
+            for (View view: sharedElementFirstOutViews) {
+                Log.v(FragmentManager.TAG,
+                        "View: " + view + " Name: " + ViewCompat.getTransitionName(view));
+            }
+            Log.v(FragmentManager.TAG, ">>>>> SharedElementLastInViews <<<<<");
+            for (View view: sharedElementLastInViews) {
+                Log.v(FragmentManager.TAG,  "View: " + view + " Name: "
+                        + ViewCompat.getTransitionName(view));
+            }
+        }
         // Now actually start the transition
         transitionImpl.beginDelayedTransition(getContainer(), mergedTransition);
+        transitionImpl.setNameOverridesReordered(getContainer(), sharedElementFirstOutViews,
+                sharedElementLastInViews, inNames, sharedElementNameMapping);
         // Then, show all of the entering views, putting them into
         // the correct final state
         FragmentTransition.setViewVisibility(enteringViews, View.VISIBLE);
+        transitionImpl.swapSharedElementTargets(sharedElementTransition,
+                sharedElementFirstOutViews, sharedElementLastInViews);
+        return startedTransitions;
+    }
+
+    /**
+     * Retain only the shared element views that have a transition name that is in
+     * the set of transition names.
+     *
+     * @param sharedElementViews The map of shared element transitions that should be filtered.
+     * @param transitionNames The set of transition names to be retained.
+     */
+    void retainMatchingViews(@NonNull ArrayMap<String, View> sharedElementViews,
+            @NonNull Collection<String> transitionNames) {
+        Iterator<Map.Entry<String, View>> iterator = sharedElementViews.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, View> entry = iterator.next();
+            if (!transitionNames.contains(ViewCompat.getTransitionName(entry.getValue()))) {
+                iterator.remove();
+            }
+        }
     }
 
     /**
      * Gets the Views in the hierarchy affected by entering and exiting transitions.
      *
-     * @param transitioningViews This View will be added to transitioningViews if it is VISIBLE and
-     *                           a normal View or a ViewGroup with
+     * @param transitioningViews This View will be added to transitioningViews if it has a
+     *                           transition name, is VISIBLE and a normal View, or a ViewGroup with
      *                           {@link android.view.ViewGroup#isTransitionGroup()} true.
      * @param view               The base of the view hierarchy to look in.
      */
@@ -454,7 +776,9 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
         if (view instanceof ViewGroup) {
             ViewGroup viewGroup = (ViewGroup) view;
             if (ViewGroupCompat.isTransitionGroup(viewGroup)) {
-                transitioningViews.add(viewGroup);
+                if (!transitioningViews.contains(view)) {
+                    transitioningViews.add(viewGroup);
+                }
             } else {
                 int count = viewGroup.getChildCount();
                 for (int i = 0; i < count; i++) {
@@ -465,7 +789,9 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
                 }
             }
         } else {
-            transitioningViews.add(view);
+            if (!transitioningViews.contains(view)) {
+                transitioningViews.add(view);
+            }
         }
     }
 
@@ -493,20 +819,16 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     void applyContainerChanges(@NonNull Operation operation) {
         View view = operation.getFragment().mView;
-        if (operation.getType() == Operation.Type.ADD) {
-            view.setVisibility(View.VISIBLE);
-        } else {
-            getContainer().removeView(view);
-        }
+        operation.getFinalState().applyState(view);
     }
 
-    private static class AnimationInfo {
+    private static class SpecialEffectsInfo {
         @NonNull
         private final Operation mOperation;
         @NonNull
         private final CancellationSignal mSignal;
 
-        AnimationInfo(@NonNull Operation operation, @NonNull CancellationSignal signal) {
+        SpecialEffectsInfo(@NonNull Operation operation, @NonNull CancellationSignal signal) {
             mOperation = operation;
             mSignal = signal;
         }
@@ -520,13 +842,48 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
         CancellationSignal getSignal() {
             return mSignal;
         }
+
+        boolean isVisibilityUnchanged() {
+            Operation.State currentState = Operation.State.from(
+                    mOperation.getFragment().mView);
+            Operation.State finalState = mOperation.getFinalState();
+            return currentState == finalState || (currentState != Operation.State.VISIBLE
+                    && finalState != Operation.State.VISIBLE);
+        }
+
+        void completeSpecialEffect() {
+            mOperation.completeSpecialEffect(mSignal);
+        }
     }
 
-    private static class TransitionInfo {
-        @NonNull
-        private final Operation mOperation;
-        @NonNull
-        private final CancellationSignal mSignal;
+    private static class AnimationInfo extends SpecialEffectsInfo {
+
+        private boolean mIsPop;
+        private boolean mLoadedAnim = false;
+        @Nullable
+        private FragmentAnim.AnimationOrAnimator mAnimation;
+
+        AnimationInfo(@NonNull Operation operation, @NonNull CancellationSignal signal,
+                boolean isPop) {
+            super(operation, signal);
+            mIsPop = isPop;
+        }
+
+        @Nullable
+        FragmentAnim.AnimationOrAnimator getAnimation(@NonNull Context context) {
+            if (mLoadedAnim) {
+                return mAnimation;
+            }
+            mAnimation = FragmentAnim.loadAnimation(context,
+                    getOperation().getFragment(),
+                    getOperation().getFinalState() == Operation.State.VISIBLE,
+                    mIsPop);
+            mLoadedAnim = true;
+            return mAnimation;
+        }
+    }
+
+    private static class TransitionInfo extends SpecialEffectsInfo {
         @Nullable
         private final Object mTransition;
         private final boolean mOverlapAllowed;
@@ -536,17 +893,16 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
         TransitionInfo(@NonNull Operation operation,
                 @NonNull CancellationSignal signal, boolean isPop,
                 boolean providesSharedElementTransition) {
-            mOperation = operation;
-            mSignal = signal;
-            if (operation.getType() == Operation.Type.ADD) {
+            super(operation, signal);
+            if (operation.getFinalState() == Operation.State.VISIBLE) {
                 mTransition = isPop
                         ? operation.getFragment().getReenterTransition()
                         : operation.getFragment().getEnterTransition();
                 // Entering transitions can choose to run after all exit
                 // transitions complete, rather than overlapping with them
                 mOverlapAllowed = isPop
-                        ? operation.getFragment().getAllowEnterTransitionOverlap()
-                        : operation.getFragment().getAllowReturnTransitionOverlap();
+                        ? operation.getFragment().getAllowReturnTransitionOverlap()
+                        : operation.getFragment().getAllowEnterTransitionOverlap();
             } else {
                 mTransition = isPop
                         ? operation.getFragment().getReturnTransition()
@@ -565,16 +921,6 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
             } else {
                 mSharedElementTransition = null;
             }
-        }
-
-        @NonNull
-        Operation getOperation() {
-            return mOperation;
-        }
-
-        @NonNull
-        CancellationSignal getSignal() {
-            return mSignal;
         }
 
         @Nullable
@@ -604,7 +950,7 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
                     && transitionImpl != sharedElementTransitionImpl) {
                 throw new IllegalArgumentException("Mixing framework transitions and "
                         + "AndroidX transitions is not allowed. Fragment "
-                        + mOperation.getFragment() + " returned Transition "
+                        + getOperation().getFragment() + " returned Transition "
                         + mTransition + " which uses a different Transition "
                         + " type than its shared element transition "
                         + mSharedElementTransition);
@@ -626,7 +972,7 @@ class DefaultSpecialEffectsController extends SpecialEffectsController {
                 return FragmentTransition.SUPPORT_IMPL;
             }
             throw new IllegalArgumentException("Transition " + transition + " for fragment "
-                    + mOperation.getFragment() + " is not a valid framework Transition or "
+                    + getOperation().getFragment() + " is not a valid framework Transition or "
                     + "AndroidX Transition");
         }
     }

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("UnstableApiUsage")
+
 package androidx.build.lint
 
 import com.android.tools.lint.detector.api.Category
@@ -28,17 +30,17 @@ import org.jetbrains.uast.UCallExpression
 
 class ObsoleteBuildCompatUsageDetector : Detector(), Detector.UastScanner {
     private val methodsToApiLevels = mapOf(
-            "isAtLeastN" to 24,
-            "isAtLeastNMR1" to 25,
-            "isAtLeastO" to 26,
-            "isAtLeastOMR1" to 27,
-            "isAtLeastP" to 28,
-            "isAtLeastQ" to 29
+        "isAtLeastN" to 24,
+        "isAtLeastNMR1" to 25,
+        "isAtLeastO" to 26,
+        "isAtLeastOMR1" to 27,
+        "isAtLeastP" to 28,
+        "isAtLeastQ" to 29
     )
 
     override fun getApplicableMethodNames() = methodsToApiLevels.keys.toList()
 
-    override fun visitMethod(context: JavaContext, node: UCallExpression, method: PsiMethod) {
+    override fun visitMethodCall(context: JavaContext, node: UCallExpression, method: PsiMethod) {
         if (!context.evaluator.isMemberInClass(method, "androidx.core.os.BuildCompat")) {
             return
         }
@@ -48,22 +50,26 @@ class ObsoleteBuildCompatUsageDetector : Detector(), Detector.UastScanner {
 
         val apiLevel = methodsToApiLevels[node.methodName]
         val fix = fix().name("Use SDK_INT >= $apiLevel")
-                .replace()
-                .text(target.asRenderString())
-                .with("Build.VERSION.SDK_INT >= $apiLevel")
-                .build()
+            .replace()
+            .text(target.asRenderString())
+            .with("Build.VERSION.SDK_INT >= $apiLevel")
+            .build()
 
-        context.report(ISSUE, node, context.getLocation(node),
-                "Using deprecated BuildCompat methods", fix)
+        context.report(
+            ISSUE, node, context.getLocation(node),
+            "Using deprecated BuildCompat methods", fix
+        )
     }
 
     companion object {
-        val ISSUE = Issue.create("ObsoleteBuildCompat",
-                "Using deprecated BuildCompat methods",
-                "BuildConfig methods should only be used prior to an API level's finalization. " +
-                        "Once an API level number is assigned, comparing directly with SDK_INT " +
-                        "is preferred as it enables other lint checks to correctly work.",
-                Category.CORRECTNESS, 5, Severity.ERROR,
-                Implementation(ObsoleteBuildCompatUsageDetector::class.java, Scope.JAVA_FILE_SCOPE))
+        val ISSUE = Issue.create(
+            "ObsoleteBuildCompat",
+            "Using deprecated BuildCompat methods",
+            "BuildConfig methods should only be used prior to an API level's finalization. " +
+                "Once an API level number is assigned, comparing directly with SDK_INT " +
+                "is preferred as it enables other lint checks to correctly work.",
+            Category.CORRECTNESS, 5, Severity.ERROR,
+            Implementation(ObsoleteBuildCompatUsageDetector::class.java, Scope.JAVA_FILE_SCOPE)
+        )
     }
 }

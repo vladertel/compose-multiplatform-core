@@ -59,12 +59,14 @@ import androidx.activity.result.contract.ActivityResultContract;
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions;
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult;
 import androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult;
+import androidx.annotation.AnimRes;
 import androidx.annotation.CallSuper;
 import androidx.annotation.ContentView;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.StringRes;
 import androidx.annotation.UiThread;
@@ -72,6 +74,7 @@ import androidx.arch.core.util.Function;
 import androidx.core.app.ActivityOptionsCompat;
 import androidx.core.app.SharedElementCallback;
 import androidx.core.view.LayoutInflaterCompat;
+import androidx.fragment.app.strictmode.FragmentStrictMode;
 import androidx.lifecycle.HasDefaultViewModelProviderFactory;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
@@ -124,17 +127,19 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     static final int INITIALIZING = -1;          // Not yet attached.
     static final int ATTACHED = 0;               // Attached to the host.
     static final int CREATED = 1;                // Created.
-    static final int AWAITING_EXIT_EFFECTS = 2;  // Downward state, awaiting exit effects
-    static final int ACTIVITY_CREATED = 3;       // Fully created, not started.
-    static final int STARTED = 4;                // Created and started, not resumed.
-    static final int AWAITING_ENTER_EFFECTS = 5; // Upward state, awaiting enter effects
-    static final int RESUMED = 6;                // Created started and resumed.
+    static final int VIEW_CREATED = 2;           // View Created.
+    static final int AWAITING_EXIT_EFFECTS = 3;  // Downward state, awaiting exit effects
+    static final int ACTIVITY_CREATED = 4;       // Fully created, not started.
+    static final int STARTED = 5;                // Created and started, not resumed.
+    static final int AWAITING_ENTER_EFFECTS = 6; // Upward state, awaiting enter effects
+    static final int RESUMED = 7;                // Created started and resumed.
 
     int mState = INITIALIZING;
 
     // When instantiated from saved state, this is the saved state.
     Bundle mSavedFragmentState;
     SparseArray<Parcelable> mSavedViewState;
+    Bundle mSavedViewRegistryState;
     // If the userVisibleHint is changed before the state is set,
     // it is stored here
     @Nullable Boolean mSavedUserVisibleHint;
@@ -163,6 +168,8 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
 
     // If set this fragment is being removed from its activity.
     boolean mRemoving;
+
+    boolean mBeingSaved;
 
     // Set to true if this fragment was instantiated from a layout file.
     boolean mFromLayout;
@@ -258,18 +265,8 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         }
     };
 
-    // True if the View was added, and its animation has yet to be run. This could
-    // also indicate that the fragment view hasn't been made visible, even if there is no
-    // animation for this fragment.
-    boolean mIsNewlyAdded;
-
     // True if mHidden has been changed and the animation should be scheduled.
     boolean mHiddenChanged;
-
-    // The alpha of the view when the view was added and then postponed. If the value is less
-    // than zero, this means that the view's add was canceled and should not participate in
-    // removal animations.
-    float mPostponedAlpha;
 
     // The cached value from onGetLayoutInflater(Bundle) that will be returned from
     // getLayoutInflater()
@@ -279,6 +276,13 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     // fragments can have mRetaining set to true without going through creation, so we must
     // track it separately.
     boolean mIsCreated;
+
+    // Holds the unique ID for the previous instance of the fragment if it had already been
+    // added to a FragmentManager and has since been removed.
+    /** @hide */
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @Nullable
+    public String mPreviousWho;
 
     // Max Lifecycle state this Fragment can achieve.
     Lifecycle.State mMaxState = Lifecycle.State.RESUMED;
@@ -290,7 +294,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     @Nullable FragmentViewLifecycleOwner mViewLifecycleOwner;
     MutableLiveData<LifecycleOwner> mViewLifecycleOwnerLiveData = new MutableLiveData<>();
 
-    private ViewModelProvider.Factory mDefaultFactory;
+    ViewModelProvider.Factory mDefaultFactory;
 
     SavedStateRegistryController mSavedStateRegistryController;
 
@@ -298,6 +302,12 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     private int mContentLayoutId;
 
     private final AtomicInteger mNextLocalRequestCode = new AtomicInteger();
+
+    private final ArrayList<OnPreAttachedListener> mOnPreAttachedListeners = new ArrayList<>();
+
+    private abstract static class OnPreAttachedListener {
+        abstract void onPreAttached();
+    }
 
     /**
      * {@inheritDoc}
@@ -389,7 +399,20 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         if (mFragmentManager == null) {
             throw new IllegalStateException("Can't access ViewModels from detached fragment");
         }
+        if (getMinimumMaxLifecycleState() == Lifecycle.State.INITIALIZED.ordinal()) {
+            throw new IllegalStateException("Calling getViewModelStore() before a Fragment "
+                    + "reaches onCreate() when using setMaxLifecycle(INITIALIZED) is not "
+                    + "supported");
+        }
         return mFragmentManager.getViewModelStore(this);
+    }
+
+
+    private int getMinimumMaxLifecycleState() {
+        if (mMaxState == Lifecycle.State.INITIALIZED || mParentFragment == null) {
+            return mMaxState.ordinal();
+        }
+        return Math.min(mMaxState.ordinal(), mParentFragment.getMinimumMaxLifecycleState());
     }
 
     /**
@@ -546,19 +569,9 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     private void initLifecycle() {
         mLifecycleRegistry = new LifecycleRegistry(this);
         mSavedStateRegistryController = SavedStateRegistryController.create(this);
-        if (Build.VERSION.SDK_INT >= 19) {
-            mLifecycleRegistry.addObserver(new LifecycleEventObserver() {
-                @Override
-                public void onStateChanged(@NonNull LifecycleOwner source,
-                        @NonNull Lifecycle.Event event) {
-                    if (event == Lifecycle.Event.ON_STOP) {
-                        if (mView != null) {
-                            mView.cancelPendingInputEvents();
-                        }
-                    }
-                }
-            });
-        }
+        // The default factory depends on the SavedStateRegistry so it
+        // needs to be reset when the SavedStateRegistry is reset
+        mDefaultFactory = null;
     }
 
     /**
@@ -628,6 +641,10 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             mView.restoreHierarchyState(mSavedViewState);
             mSavedViewState = null;
         }
+        if (mView != null) {
+            mViewLifecycleOwner.performRestore(mSavedViewRegistryState);
+            mSavedViewRegistryState = null;
+        }
         mCalled = false;
         onViewStateRestored(savedInstanceState);
         if (!mCalled) {
@@ -668,16 +685,15 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         sb.append("}");
         sb.append(" (");
         sb.append(mWho);
-        sb.append(")");
         if (mFragmentId != 0) {
             sb.append(" id=0x");
             sb.append(Integer.toHexString(mFragmentId));
         }
         if (mTag != null) {
-            sb.append(" ");
+            sb.append(" tag=");
             sb.append(mTag);
         }
-        sb.append('}');
+        sb.append(")");
         return sb.toString();
     }
 
@@ -791,6 +807,9 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     @SuppressWarnings("ReferenceEquality, deprecation")
     @Deprecated
     public void setTargetFragment(@Nullable Fragment fragment, int requestCode) {
+        if (fragment != null) {
+            FragmentStrictMode.onSetTargetFragmentUsage(this, fragment, requestCode);
+        }
         // Don't allow a caller to set a target fragment in another FragmentManager,
         // but there's a snag: people do set target fragments before fragments get added.
         // We'll have the FragmentManager check that for validity when we move
@@ -804,7 +823,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         }
 
         // Don't let someone create a cycle.
-        for (Fragment check = fragment; check != null; check = check.getTargetFragment()) {
+        for (Fragment check = fragment; check != null; check = check.getTargetFragment(false)) {
             if (check.equals(this)) {
                 throw new IllegalArgumentException("Setting " + fragment + " as the target of "
                         + this + " would create a target cycle");
@@ -838,6 +857,19 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     @Nullable
     @Deprecated
     final public Fragment getTargetFragment() {
+        return getTargetFragment(true);
+    }
+
+    /**
+     * Use with {@param logViolations} set to {@code false} for all internal calls instead of the
+     * public {@link #getTargetFragment}.
+     */
+    @Nullable
+    private Fragment getTargetFragment(boolean logViolations) {
+        if (logViolations) {
+            FragmentStrictMode.onGetTargetFragmentUsage(this);
+        }
+
         if (mTarget != null) {
             // Ensure that any Fragment set with setTargetFragment is immediately
             // available here
@@ -860,6 +892,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      */
     @Deprecated
     final public int getTargetRequestCode() {
+        FragmentStrictMode.onGetTargetFragmentRequestCodeUsage(this);
         return mTargetRequestCode;
     }
 
@@ -1009,7 +1042,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
 
     /**
      * Return the FragmentManager for interacting with fragments associated
-     * with this fragment's activity.  Note that this will available slightly
+     * with this fragment's activity.  Note that this will be available slightly
      * before {@link #getActivity()}, during the time from when the fragment is
      * placed in a {@link FragmentTransaction} until it is committed and
      * attached to its activity.
@@ -1031,7 +1064,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
 
     /**
      * Return the FragmentManager for interacting with fragments associated
-     * with this fragment's activity.  Note that this will available slightly
+     * with this fragment's activity.  Note that this will be available slightly
      * before {@link #getActivity()}, during the time from when the fragment is
      * placed in a {@link FragmentTransaction} until it is committed and
      * attached to its activity.
@@ -1121,16 +1154,6 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     }
 
     /**
-     * Return <code>true</code> if this fragment or any of its ancestors are currently being removed
-     * from its activity.  This is <em>not</em> whether its activity is finishing, but rather
-     * whether it, or its ancestors are in the process of being removed from its activity.
-     */
-    final boolean isRemovingParent() {
-        Fragment parent = getParentFragment();
-        return parent != null && (parent.isRemoving() || parent.isRemovingParent());
-    }
-
-    /**
      * Return true if the layout is included as part of an activity view
      * hierarchy via the &lt;fragment&gt; tag.  This will always be true when
      * fragments are created through the &lt;fragment&gt; tag, <em>except</em>
@@ -1160,14 +1183,16 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     }
 
     /**
-     * Return true if the fragment has been hidden.  By default fragments
+     * Return true if the fragment has been hidden. This includes the case if the fragment is
+     * hidden because its parent is hidden. By default fragments
      * are shown.  You can find out about changes to this state with
      * {@link #onHiddenChanged}.  Note that the hidden state is orthogonal
      * to other states -- that is, to be visible to the user, a fragment
      * must be both started and not hidden.
      */
     final public boolean isHidden() {
-        return mHidden;
+        return mHidden || (mFragmentManager != null
+                && mFragmentManager.isParentHidden(mParentFragment));
     }
 
     /** @hide */
@@ -1186,8 +1211,8 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
 
     /**
      * Called when the hidden state (as returned by {@link #isHidden()} of
-     * the fragment has changed.  Fragments start out not hidden; this will
-     * be called whenever the fragment changes state from that.
+     * the fragment or another fragment in its hierarchy has changed.  Fragments start out not
+     * hidden; this will be called whenever the fragment changes state from that.
      * @param hidden True if the fragment is now hidden, false otherwise.
      */
     @MainThread
@@ -1218,6 +1243,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      */
     @Deprecated
     public void setRetainInstance(boolean retain) {
+        FragmentStrictMode.onSetRetainInstanceUsage(this);
         mRetainInstance = retain;
         if (mFragmentManager != null) {
             if (retain) {
@@ -1244,6 +1270,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      */
     @Deprecated
     final public boolean getRetainInstance() {
+        FragmentStrictMode.onGetRetainInstanceUsage(this);
         return mRetainInstance;
     }
 
@@ -1305,6 +1332,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      */
     @Deprecated
     public void setUserVisibleHint(boolean isVisibleToUser) {
+        FragmentStrictMode.onSetUserVisibleHint(this, isVisibleToUser);
         if (!mUserVisibleHint && isVisibleToUser && mState < STARTED
                 && mFragmentManager != null && isAdded() && mIsCreated) {
             mFragmentManager.performPendingDeferredStart(
@@ -1373,7 +1401,12 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      *                    between 0 and 65535 to be considered valid. If given requestCode is
      *                    greater than 65535, an IllegalArgumentException would be thrown.
      *
-     * @deprecated use
+     * @deprecated This method has been deprecated in favor of using the Activity Result API
+     * which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
+     * contracts for common intents available in
+     * {@link androidx.activity.result.contract.ActivityResultContracts}, provides hooks for
+     * testing, and allow receiving results in separate, testable classes independent from your
+     * fragment. Use
      * {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)}
      * passing in a {@link StartActivityForResult} object for the {@link ActivityResultContract}.
      */
@@ -1396,7 +1429,12 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      * @param options Additional options for how the Activity should be started. See
      * {@link Context#startActivity(Intent, Bundle)} for more details. This value may be null.
      *
-     * @deprecated use
+     * @deprecated This method has been deprecated in favor of using the Activity Result API
+     * which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
+     * contracts for common intents available in
+     * {@link androidx.activity.result.contract.ActivityResultContracts}, provides hooks for
+     * testing, and allow receiving results in separate, testable classes independent from your
+     * fragment. Use
      * {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)}
      * passing in a {@link StartActivityForResult} object for the {@link ActivityResultContract}.
      */
@@ -1429,7 +1467,12 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      * @param options Additional options for how the Activity should be started. See
      * {@link Context#startActivity(Intent, Bundle)} for more details. This value may be null.
      *
-     * @deprecated use
+     * @deprecated This method has been deprecated in favor of using the Activity Result API
+     * which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
+     * contracts for common intents available in
+     * {@link androidx.activity.result.contract.ActivityResultContracts}, provides hooks for
+     * testing, and allow receiving results in separate, testable classes independent from your
+     * fragment. Use
      * {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)}
      * passing in a {@link StartIntentSenderForResult} object for the
      * {@link ActivityResultContract}.
@@ -1440,6 +1483,11 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             int extraFlags, @Nullable Bundle options) throws IntentSender.SendIntentException {
         if (mHost == null) {
             throw new IllegalStateException("Fragment " + this + " not attached to Activity");
+        }
+        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+            Log.v(FragmentManager.TAG, "Fragment " + this + " received the following in "
+                    + "startIntentSenderForResult() requestCode: " + requestCode + " IntentSender: "
+                    + intent + " fillInIntent: " + fillInIntent + " options: " + options);
         }
         getParentFragmentManager().launchStartIntentSenderForResult(this, intent, requestCode,
                 fillInIntent, flagsMask, flagsValues, extraFlags, options);
@@ -1459,7 +1507,12 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      * @param data An Intent, which can return result data to the caller
      *               (various data can be attached to Intent "extras").
      *
-     * @deprecated use
+     * @deprecated This method has been deprecated in favor of using the Activity Result API
+     * which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
+     * contracts for common intents available in
+     * {@link androidx.activity.result.contract.ActivityResultContracts}, provides hooks for
+     * testing, and allow receiving results in separate, testable classes independent from your
+     * fragment. Use
      * {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)}
      * with the appropriate {@link ActivityResultContract} and handling the result in the
      * {@link ActivityResultCallback#onActivityResult(Object) callback}.
@@ -1467,6 +1520,11 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     @SuppressWarnings("DeprecatedIsStillUsed")
     @Deprecated
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+            Log.v(FragmentManager.TAG, "Fragment " + this + " received the following in "
+                    + "onActivityResult(): requestCode: " + requestCode + " resultCode: "
+                    + resultCode + " data: " + data);
+        }
     }
 
     /**
@@ -1524,7 +1582,12 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      *
      * @see #onRequestPermissionsResult(int, String[], int[])
      * @see android.content.Context#checkSelfPermission(String)
-     * @deprecated use
+     * @deprecated This method has been deprecated in favor of using the Activity Result API
+     * which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
+     * contracts for common intents available in
+     * {@link androidx.activity.result.contract.ActivityResultContracts}, provides hooks for
+     * testing, and allow receiving results in separate, testable classes independent from your
+     * fragment. Use
      * {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)} passing
      * in a {@link RequestMultiplePermissions} object for the {@link ActivityResultContract} and
      * handling the result in the {@link ActivityResultCallback#onActivityResult(Object) callback}.
@@ -1554,7 +1617,12 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      *
      * @see #requestPermissions(String[], int)
      *
-     * @deprecated use
+     * @deprecated This method has been deprecated in favor of using the Activity Result API
+     * which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
+     * contracts for common intents available in
+     * {@link androidx.activity.result.contract.ActivityResultContracts}, provides hooks for
+     * testing, and allow receiving results in separate, testable classes independent from your
+     * fragment. Use
      * {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)} passing
      * in a {@link RequestMultiplePermissions} object for the {@link ActivityResultContract} and
      * handling the result in the {@link ActivityResultCallback#onActivityResult(Object) callback}.
@@ -1732,10 +1800,11 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      *
      * @param childFragment child fragment being attached
      *
-     * @deprecated Call
+     * @deprecated The responsibility for listening for fragments being attached has been moved
+     * to FragmentManager. You can add a listener to
+     * {@link #getChildFragmentManager()} the child FragmentManager} by calling
      * {@link FragmentManager#addFragmentOnAttachListener(FragmentOnAttachListener)}
-     * with this Fragment's {@link #getChildFragmentManager()} in {@link #onAttach(Context)}
-     * to get callbacks when a child fragment is attached.
+     *  in {@link #onAttach(Context)} to get callbacks when a child fragment is attached.
      */
     @SuppressWarnings({"unused", "DeprecatedIsStillUsed"})
     @Deprecated
@@ -1860,9 +1929,9 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     void restoreChildFragmentState(@Nullable Bundle savedInstanceState) {
         if (savedInstanceState != null) {
             Parcelable p = savedInstanceState.getParcelable(
-                    FragmentActivity.FRAGMENTS_TAG);
+                    FragmentManager.SAVED_STATE_TAG);
             if (p != null) {
-                mChildFragmentManager.restoreSaveState(p);
+                mChildFragmentManager.restoreSaveStateInternal(p);
                 mChildFragmentManager.dispatchCreate();
             }
         }
@@ -1956,7 +2025,8 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      * a previous saved state, this is the state.
      *
      * @deprecated use {@link #onViewCreated(View, Bundle)} for code touching
-     * the Fragment's view and {@link #onCreate(Bundle)} for other initialization.
+     * the view created by {@link #onCreateView} and {@link #onCreate(Bundle)} for other
+     * initialization.
      * To get a callback specifically when a Fragment activity's
      * {@link Activity#onCreate(Bundle)} is called, register a
      * {@link androidx.lifecycle.LifecycleObserver} on the Activity's
@@ -2137,6 +2207,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      */
     void initState() {
         initLifecycle();
+        mPreviousWho = mWho;
         mWho = UUID.randomUUID().toString();
         mAdded = false;
         mRemoving = false;
@@ -2637,9 +2708,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      * independent containers will not interfere with each other's postponement.
      * <p>
      * Calling postponeEnterTransition on Fragments with a null View will not postpone the
-     * transition. Likewise, postponement only works if
-     * {@link FragmentTransaction#setReorderingAllowed(boolean) FragmentTransaction reordering} is
-     * enabled.
+     * transition.
      *
      * @see Activity#postponeEnterTransition()
      * @see FragmentTransaction#setReorderingAllowed(boolean)
@@ -2669,9 +2738,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      * independent containers will not interfere with each other's postponement.
      * <p>
      * Calling postponeEnterTransition on Fragments with a null View will not postpone the
-     * transition. Likewise, postponement only works if
-     * {@link FragmentTransaction#setReorderingAllowed(boolean) FragmentTransaction reordering} is
-     * enabled.
+     * transition.
      *
      * @param duration The length of the delay in {@code timeUnit} units
      * @param timeUnit The units of time for {@code duration}
@@ -2711,29 +2778,44 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             mHost.getHandler().postAtFrontOfQueue(new Runnable() {
                 @Override
                 public void run() {
-                    callStartTransitionListener();
+                    callStartTransitionListener(false);
                 }
             });
         } else {
-            callStartTransitionListener();
+            callStartTransitionListener(true);
         }
     }
 
     /**
      * Calls the start transition listener. This must be called on the UI thread.
+     *
+     * @param calledDirectly Whether this was called directly or if it was already posted
+     *                       to the UI thread
      */
     @SuppressWarnings("WeakerAccess") /* synthetic access */
-    void callStartTransitionListener() {
-        final OnStartEnterTransitionListener listener;
-        if (mAnimationInfo == null) {
-            listener = null;
-        } else {
+    void callStartTransitionListener(boolean calledDirectly) {
+        if (mAnimationInfo != null) {
             mAnimationInfo.mEnterTransitionPostponed = false;
-            listener = mAnimationInfo.mStartEnterTransitionListener;
-            mAnimationInfo.mStartEnterTransitionListener = null;
         }
-        if (listener != null) {
-            listener.onStartEnterTransition();
+        if (mView != null && mContainer != null && mFragmentManager != null) {
+            // Mark the updated postponed state with the SpecialEffectsController immediately
+            final SpecialEffectsController controller = SpecialEffectsController
+                    .getOrCreateController(mContainer, mFragmentManager);
+            controller.markPostponedState();
+            if (calledDirectly) {
+                // But if this call was called directly, we need to post the
+                // executePendingOperations() to avoid re-entrant calls
+                // and avoid calling execute during layout / draw calls
+                mHost.getHandler().post(new Runnable() {
+                    @Override
+                    public void run() {
+                        controller.executePendingOperations();
+                    }
+                });
+            } else {
+                // We've already posted our call, so we can execute directly
+                controller.executePendingOperations();
+            }
         }
     }
 
@@ -2790,14 +2872,29 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             writer.print(prefix); writer.print("mSavedViewState=");
                     writer.println(mSavedViewState);
         }
-        Fragment target = getTargetFragment();
+        if (mSavedViewRegistryState != null) {
+            writer.print(prefix); writer.print("mSavedViewRegistryState=");
+                    writer.println(mSavedViewRegistryState);
+        }
+        Fragment target = getTargetFragment(false);
         if (target != null) {
             writer.print(prefix); writer.print("mTarget="); writer.print(target);
                     writer.print(" mTargetRequestCode=");
                     writer.println(mTargetRequestCode);
         }
-        if (getNextAnim() != 0) {
-            writer.print(prefix); writer.print("mNextAnim="); writer.println(getNextAnim());
+        writer.print(prefix); writer.print("mPopDirection="); writer.println(getPopDirection());
+        if (getEnterAnim() != 0) {
+            writer.print(prefix); writer.print("getEnterAnim="); writer.println(getEnterAnim());
+        }
+        if (getExitAnim() != 0) {
+            writer.print(prefix); writer.print("getExitAnim="); writer.println(getExitAnim());
+        }
+        if (getPopEnterAnim() != 0) {
+            writer.print(prefix); writer.print("getPopEnterAnim=");
+            writer.println(getPopEnterAnim());
+        }
+        if (getPopExitAnim() != 0) {
+            writer.print(prefix); writer.print("getPopExitAnim="); writer.println(getPopExitAnim());
         }
         if (mContainer != null) {
             writer.print(prefix); writer.print("mContainer="); writer.println(mContainer);
@@ -2847,6 +2944,10 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     }
 
     void performAttach() {
+        for (OnPreAttachedListener listener: mOnPreAttachedListeners) {
+            listener.onPreAttached();
+        }
+        mOnPreAttachedListeners.clear();
         mChildFragmentManager.attachController(mHost, createFragmentContainer(), this);
         mState = ATTACHED;
         mCalled = false;
@@ -2863,6 +2964,19 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         mChildFragmentManager.noteStateNotSaved();
         mState = CREATED;
         mCalled = false;
+        if (Build.VERSION.SDK_INT >= 19) {
+            mLifecycleRegistry.addObserver(new LifecycleEventObserver() {
+                @Override
+                public void onStateChanged(@NonNull LifecycleOwner source,
+                        @NonNull Lifecycle.Event event) {
+                    if (event == Lifecycle.Event.ON_STOP) {
+                        if (mView != null) {
+                            Api19Impl.cancelPendingInputEvents(mView);
+                        }
+                    }
+                }
+            });
+        }
         mSavedStateRegistryController.performRestore(savedInstanceState);
         onCreate(savedInstanceState);
         mIsCreated = true;
@@ -2877,7 +2991,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             @Nullable Bundle savedInstanceState) {
         mChildFragmentManager.noteStateNotSaved();
         mPerformedCreateView = true;
-        mViewLifecycleOwner = new FragmentViewLifecycleOwner();
+        mViewLifecycleOwner = new FragmentViewLifecycleOwner(this, getViewModelStore());
         mView = onCreateView(inflater, container, savedInstanceState);
         if (mView != null) {
             // Initialize the view lifecycle
@@ -2886,8 +3000,8 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             // to mViewLifecycleOwnerLiveData and before onViewCreated, so that calls to
             // ViewTree get() methods return something meaningful
             ViewTreeLifecycleOwner.set(mView, mViewLifecycleOwner);
-            ViewTreeViewModelStoreOwner.set(mView, this);
-            ViewTreeSavedStateRegistryOwner.set(mView, this);
+            ViewTreeViewModelStoreOwner.set(mView, mViewLifecycleOwner);
+            ViewTreeSavedStateRegistryOwner.set(mView, mViewLifecycleOwner);
             // Then inform any Observers of the new LifecycleOwner
             mViewLifecycleOwnerLiveData.setValue(mViewLifecycleOwner);
         } else {
@@ -2897,6 +3011,13 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             }
             mViewLifecycleOwner = null;
         }
+    }
+
+    void performViewCreated() {
+        // since calling super.onViewCreated() is not required, we do not need to set and check the
+        // `mCalled` flag
+        onViewCreated(mView, mSavedFragmentState);
+        mChildFragmentManager.dispatchViewCreated();
     }
 
     @SuppressWarnings("deprecation")
@@ -3061,9 +3182,9 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     void performSaveInstanceState(Bundle outState) {
         onSaveInstanceState(outState);
         mSavedStateRegistryController.performSave(outState);
-        Parcelable p = mChildFragmentManager.saveAllState();
+        Parcelable p = mChildFragmentManager.saveAllStateInternal();
         if (p != null) {
-            outState.putParcelable(FragmentActivity.FRAGMENTS_TAG, p);
+            outState.putParcelable(FragmentManager.SAVED_STATE_TAG, p);
         }
     }
 
@@ -3102,7 +3223,8 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
     @SuppressWarnings("ConstantConditions")
     void performDestroyView() {
         mChildFragmentManager.dispatchDestroyView();
-        if (mView != null) {
+        if (mView != null && mViewLifecycleOwner.getLifecycle().getCurrentState()
+                        .isAtLeast(Lifecycle.State.CREATED)) {
             mViewLifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
         }
         mState = CREATED;
@@ -3152,23 +3274,6 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         }
     }
 
-    void setOnStartEnterTransitionListener(OnStartEnterTransitionListener listener) {
-        ensureAnimationInfo();
-        if (listener == mAnimationInfo.mStartEnterTransitionListener) {
-            return;
-        }
-        if (listener != null && mAnimationInfo.mStartEnterTransitionListener != null) {
-            throw new IllegalStateException("Trying to set a replacement "
-                    + "startPostponedEnterTransition on " + this);
-        }
-        if (mAnimationInfo.mEnterTransitionPostponed) {
-            mAnimationInfo.mStartEnterTransitionListener = listener;
-        }
-        if (listener != null) {
-            listener.startListening();
-        }
-    }
-
     private AnimationInfo ensureAnimationInfo() {
         if (mAnimationInfo == null) {
             mAnimationInfo = new AnimationInfo();
@@ -3176,18 +3281,64 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         return mAnimationInfo;
     }
 
-    int getNextAnim() {
+    void setAnimations(
+            @AnimRes int enter,
+            @AnimRes int exit,
+            @AnimRes int popEnter,
+            @AnimRes int popExit) {
+        if (mAnimationInfo == null && enter == 0 && exit == 0 && popEnter == 0 && popExit == 0) {
+            return; // no change!
+        }
+        ensureAnimationInfo().mEnterAnim = enter;
+        ensureAnimationInfo().mExitAnim = exit;
+        ensureAnimationInfo().mPopEnterAnim = popEnter;
+        ensureAnimationInfo().mPopExitAnim = popExit;
+    }
+
+    @AnimRes
+    int getEnterAnim() {
         if (mAnimationInfo == null) {
             return 0;
         }
-        return mAnimationInfo.mNextAnim;
+        return mAnimationInfo.mEnterAnim;
     }
 
-    void setNextAnim(int animResourceId) {
-        if (mAnimationInfo == null && animResourceId == 0) {
+    @AnimRes
+    int getExitAnim() {
+        if (mAnimationInfo == null) {
+            return 0;
+        }
+        return mAnimationInfo.mExitAnim;
+    }
+
+    @AnimRes
+    int getPopEnterAnim() {
+        if (mAnimationInfo == null) {
+            return 0;
+        }
+        return mAnimationInfo.mPopEnterAnim;
+    }
+
+    @AnimRes
+    int getPopExitAnim() {
+        if (mAnimationInfo == null) {
+            return 0;
+        }
+        return mAnimationInfo.mPopExitAnim;
+    }
+
+    boolean getPopDirection() {
+        if (mAnimationInfo == null) {
+            return false;
+        }
+        return mAnimationInfo.mIsPop;
+    }
+
+    void setPopDirection(boolean isPop) {
+        if (mAnimationInfo == null) {
             return; // no change!
         }
-        ensureAnimationInfo().mNextAnim = animResourceId;
+        ensureAnimationInfo().mIsPop = isPop;
     }
 
     int getNextTransition() {
@@ -3249,19 +3400,26 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         return mAnimationInfo.mAnimatingAway;
     }
 
-    void setAnimatingAway(View view) {
-        ensureAnimationInfo().mAnimatingAway = view;
+    void setPostOnViewCreatedAlpha(float alpha) {
+        ensureAnimationInfo().mPostOnViewCreatedAlpha = alpha;
     }
 
-    void setAnimator(Animator animator) {
-        ensureAnimationInfo().mAnimator = animator;
+    float getPostOnViewCreatedAlpha() {
+        if (mAnimationInfo == null) {
+            return 1f;
+        }
+        return mAnimationInfo.mPostOnViewCreatedAlpha;
     }
 
-    Animator getAnimator() {
+    void setFocusedView(View view) {
+        ensureAnimationInfo().mFocusedView = view;
+    }
+
+    View getFocusedView() {
         if (mAnimationInfo == null) {
             return null;
         }
-        return mAnimationInfo.mAnimator;
+        return mAnimationInfo.mFocusedView;
     }
 
     boolean isPostponed() {
@@ -3269,17 +3427,6 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             return false;
         }
         return mAnimationInfo.mEnterTransitionPostponed;
-    }
-
-    boolean isHideReplaced() {
-        if (mAnimationInfo == null) {
-            return false;
-        }
-        return mAnimationInfo.mIsHideReplaced;
-    }
-
-    void setHideReplaced(boolean replaced) {
-        ensureAnimationInfo().mIsHideReplaced = replaced;
     }
 
     /**
@@ -3290,6 +3437,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
      * {@link ActivityResultRegistry} of the host will be used. Otherwise, this will use the
      * registry of the Fragment's Activity.
      */
+    @MainThread
     @NonNull
     @Override
     public final <I, O> ActivityResultLauncher<I> registerForActivityResult(
@@ -3306,6 +3454,7 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         }, callback);
     }
 
+    @MainThread
     @NonNull
     @Override
     public final <I, O> ActivityResultLauncher<I> registerForActivityResult(
@@ -3325,21 +3474,25 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
             @NonNull final ActivityResultContract<I, O> contract,
             @NonNull final Function<Void, ActivityResultRegistry> registryProvider,
             @NonNull final ActivityResultCallback<O> callback) {
+        // Throw if attempting to register after the Fragment is CREATED.
+        if (mState > CREATED) {
+            throw new IllegalStateException("Fragment " + this + " is attempting to "
+                    + "registerForActivityResult after being created. Fragments must call "
+                    + "registerForActivityResult() before they are created (i.e. initialization, "
+                    + "onAttach(), or onCreate()).");
+        }
         final AtomicReference<ActivityResultLauncher<I>> ref = new AtomicReference<>();
-
         // We can't call generateActivityResultKey during initialization of the Fragment
         // since we need to wait for the mWho to be restored from saved instance state
-        // so we'll wait until the Lifecycle is CREATED to actually generate the key
-        // and register.
-        getLifecycle().addObserver(new LifecycleEventObserver() {
+        // so we'll wait until we have all the information needed to register  to actually
+        // generate the key and register.
+
+        registerOnPreAttachListener(new OnPreAttachedListener() {
             @Override
-            public void onStateChanged(@NonNull LifecycleOwner lifecycleOwner,
-                    @NonNull Lifecycle.Event event) {
-                if (Lifecycle.Event.ON_CREATE.equals(event)) {
-                    final String key = generateActivityResultKey();
-                    ActivityResultRegistry registry = registryProvider.apply(null);
-                    ref.set(registry.register(key, Fragment.this, contract, callback));
-                }
+            void onPreAttached() {
+                final String key = generateActivityResultKey();
+                ActivityResultRegistry registry = registryProvider.apply(null);
+                ref.set(registry.register(key, Fragment.this, contract, callback));
             }
         });
 
@@ -3370,19 +3523,19 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         };
     }
 
+    private void registerOnPreAttachListener(@NonNull final OnPreAttachedListener callback) {
+        //If we are already attached, we can register immediately
+        if (mState >= ATTACHED) {
+            callback.onPreAttached();
+        } else {
+            // else we need to wait until we are attached
+            mOnPreAttachedListeners.add(callback);
+        }
+    }
+
     @NonNull
     String generateActivityResultKey() {
         return "fragment_" + mWho + "_rq#" + mNextLocalRequestCode.getAndIncrement();
-    }
-
-    /**
-     * Used internally to be notified when {@link #startPostponedEnterTransition()} has
-     * been called. This listener will only be called once and then be removed from the
-     * listeners.
-     */
-    interface OnStartEnterTransitionListener {
-        void onStartEnterTransition();
-        void startListening();
     }
 
     /**
@@ -3395,12 +3548,14 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         // view that is animating.
         View mAnimatingAway;
 
-        // Non-null if the fragment's view hierarchy is currently animating away with an
-        // animator instead of an animation.
-        Animator mAnimator;
+        // If app requests the animation direction, this is what to use
+        boolean mIsPop;
 
-        // If app has requested a specific animation, this is the one to use.
-        int mNextAnim;
+        // All possible animations
+        @AnimRes int mEnterAnim;
+        @AnimRes int mExitAnim;
+        @AnimRes int mPopEnterAnim;
+        @AnimRes int mPopExitAnim;
 
         // If app has requested a specific transition, this is the one to use.
         int mNextTransition;
@@ -3421,15 +3576,20 @@ public class Fragment implements ComponentCallbacks, OnCreateContextMenuListener
         SharedElementCallback mEnterTransitionCallback = null;
         SharedElementCallback mExitTransitionCallback = null;
 
+        float mPostOnViewCreatedAlpha = 1f;
+        View mFocusedView = null;
+
         // True when postponeEnterTransition has been called and startPostponeEnterTransition
         // hasn't been called yet.
         boolean mEnterTransitionPostponed;
+    }
 
-        // Listener to wait for startPostponeEnterTransition. After being called, it will
-        // be set to null
-        OnStartEnterTransitionListener mStartEnterTransitionListener;
+    @RequiresApi(19)
+    static class Api19Impl {
+        private Api19Impl() { }
 
-        // True if the View was hidden, but the transition is handling the hide
-        boolean mIsHideReplaced;
+        static void cancelPendingInputEvents(@NonNull View view) {
+            view.cancelPendingInputEvents();
+        }
     }
 }

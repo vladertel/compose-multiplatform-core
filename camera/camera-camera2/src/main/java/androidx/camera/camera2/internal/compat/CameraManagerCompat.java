@@ -23,13 +23,16 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.os.Build;
 import android.os.Handler;
+import android.util.ArrayMap;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RequiresPermission;
+import androidx.annotation.RestrictTo;
 import androidx.camera.core.impl.utils.MainThreadAsyncHandler;
 
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
@@ -39,10 +42,13 @@ import java.util.concurrent.Executor;
 public final class CameraManagerCompat {
     private final CameraManagerCompatImpl mImpl;
 
+    @GuardedBy("mCameraCharacteristicsMap")
+    private final Map<String, CameraCharacteristicsCompat> mCameraCharacteristicsMap =
+            new ArrayMap<>(4);
+
     private CameraManagerCompat(CameraManagerCompatImpl impl) {
         mImpl = impl;
     }
-
 
     /** Get a {@link CameraManagerCompat} instance for a provided context. */
     @NonNull
@@ -63,16 +69,18 @@ public final class CameraManagerCompat {
     @NonNull
     public static CameraManagerCompat from(@NonNull Context context,
             @NonNull Handler compatHandler) {
-        if (Build.VERSION.SDK_INT >= 29) {
-            return new CameraManagerCompat(new CameraManagerCompatApi29Impl(context));
-        } else if (Build.VERSION.SDK_INT >= 28) {
-            // Can use Executor directly on API 28+
-            return new CameraManagerCompat(CameraManagerCompatApi28Impl.create(context));
-        }
+        return new CameraManagerCompat(CameraManagerCompatImpl.from(context, compatHandler));
+    }
 
-        // Pass compat handler to implementation.
-        return new CameraManagerCompat(CameraManagerCompatBaseImpl.create(context,
-                compatHandler));
+    /**
+     * Get a {@link CameraManagerCompat} instance from a provided {@link CameraManagerCompatImpl}.
+     *
+     * @hide
+     */
+    @RestrictTo(RestrictTo.Scope.TESTS)
+    @NonNull
+    public static CameraManagerCompat from(@NonNull final CameraManagerCompatImpl impl) {
+        return new CameraManagerCompat(impl);
     }
 
     /**
@@ -133,26 +141,48 @@ public final class CameraManagerCompat {
     }
 
     /**
-     * Query the capabilities of a camera device. These capabilities are immutable for a given
-     * camera.
+     * Returns a {@link CameraCharacteristicsCompat} associated with the given camera id.
      *
-     * <p>The behavior of this method matches that of
-     * {@link CameraManager#getCameraCharacteristics(String)}.
+     * <p>It will return cached instance if the {@link CameraCharacteristicsCompat} has been
+     * retrieved by the same camera id. If cached instance is returned, it won't throw any
+     * {@link CameraAccessExceptionCompat} exception even when camera is disconnected.
+     *
+     * <p>The returned {@link CameraCharacteristicsCompat} will also cache the retrieved values to
+     * speed up the subsequent query.
      *
      * @param cameraId The id of the camera device to query. This could be either a standalone
-     * camera ID which can be directly opened by {@link #openCamera}, or a physical camera ID that
-     * can only used as part of a logical multi-camera.
-     * @return The properties of the given camera
-     *
+     *                 camera ID which can be directly opened by {@link #openCamera}, or a
+     *                 physical camera ID that can only used as part of a logical multi-camera.
+     * @return a {@link CameraCharacteristicsCompat} associated with the given camera id.
      * @throws IllegalArgumentException    if the cameraId does not match any known camera device.
      * @throws CameraAccessExceptionCompat if the camera device has been disconnected or the
      *                                     device is in Do Not Disturb mode with an early version
      *                                     of Android P.
      */
     @NonNull
-    public CameraCharacteristics getCameraCharacteristics(@NonNull String cameraId)
+    public CameraCharacteristicsCompat getCameraCharacteristicsCompat(@NonNull String cameraId)
             throws CameraAccessExceptionCompat {
-        return mImpl.getCameraCharacteristics(cameraId);
+        CameraCharacteristicsCompat characteristics;
+        synchronized (mCameraCharacteristicsMap) {
+            characteristics = mCameraCharacteristicsMap.get(cameraId);
+            if (characteristics == null) {
+                try {
+                    characteristics =
+                            CameraCharacteristicsCompat.toCameraCharacteristicsCompat(
+                                    mImpl.getCameraCharacteristics(cameraId));
+                    mCameraCharacteristicsMap.put(cameraId, characteristics);
+                } catch (AssertionError e) {
+                    // Some devices may throw AssertionError when creating CameraCharacteristics
+                    // and FPS ranges are null. Catch the AssertionError and throw a
+                    // CameraAccessExceptionCompat to make the app be able to receive an
+                    // exception to gracefully handle it.
+                    throw new CameraAccessExceptionCompat(
+                            CameraAccessExceptionCompat.CAMERA_CHARACTERISTICS_CREATION_ERROR,
+                            e.getMessage(), e);
+                }
+            }
+        }
+        return characteristics;
     }
 
     /**
@@ -196,8 +226,14 @@ public final class CameraManagerCompat {
         return mImpl.getCameraManager();
     }
 
-    interface CameraManagerCompatImpl {
+    /** Provides backwards compatibility to {@link CameraManager} features. */
+    public interface CameraManagerCompatImpl {
 
+        /**
+         * Return the list of currently connected camera devices by identifier, including cameras
+         * that may be in use by other camera API clients.
+         */
+        @NonNull
         String[] getCameraIdList() throws CameraAccessExceptionCompat;
 
         void registerAvailabilityCallback(
@@ -218,8 +254,31 @@ public final class CameraManagerCompat {
 
         @NonNull
         CameraManager getCameraManager();
+
+        /**
+         * Returns a {@link CameraManagerCompatImpl} instance depending on the API level
+         *
+         * @param context       Context used to retrieve the {@link CameraManager}.
+         * @param compatHandler {@link Handler} used for all APIs taking an {@link Executor}
+         *                      argument on lower API levels. If the API level does not support
+         *                      directly executing on an Executor, it will first be posted to
+         *                      this handler and the executor will be called from there.
+         */
+        @NonNull
+        static CameraManagerCompatImpl from(@NonNull Context context,
+                @NonNull Handler compatHandler) {
+            if (Build.VERSION.SDK_INT >= 29) {
+                return new CameraManagerCompatApi29Impl(context);
+            } else if (Build.VERSION.SDK_INT >= 28) {
+                // Can use Executor directly on API 28+
+                return CameraManagerCompatApi28Impl.create(context);
+            }
+            // Pass compat handler to implementation.
+            return CameraManagerCompatBaseImpl.create(context, compatHandler);
+        }
     }
 
+    @RequiresApi(21)
     static final class AvailabilityCallbackExecutorWrapper extends
             CameraManager.AvailabilityCallback {
 
@@ -248,12 +307,8 @@ public final class CameraManagerCompat {
         public void onCameraAccessPrioritiesChanged() {
             synchronized (mLock) {
                 if (!mDisabled) {
-                    mExecutor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            mWrappedCallback.onCameraAccessPrioritiesChanged();
-                        }
-                    });
+                    mExecutor.execute(() -> ApiCompat.Api29Impl.onCameraAccessPrioritiesChanged(
+                            mWrappedCallback));
                 }
             }
         }
@@ -262,12 +317,7 @@ public final class CameraManagerCompat {
         public void onCameraAvailable(@NonNull final String cameraId) {
             synchronized (mLock) {
                 if (!mDisabled) {
-                    mExecutor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            mWrappedCallback.onCameraAvailable(cameraId);
-                        }
-                    });
+                    mExecutor.execute(() -> mWrappedCallback.onCameraAvailable(cameraId));
                 }
             }
         }
@@ -276,12 +326,7 @@ public final class CameraManagerCompat {
         public void onCameraUnavailable(@NonNull final String cameraId) {
             synchronized (mLock) {
                 if (!mDisabled) {
-                    mExecutor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            mWrappedCallback.onCameraUnavailable(cameraId);
-                        }
-                    });
+                    mExecutor.execute(() -> mWrappedCallback.onCameraUnavailable(cameraId));
                 }
             }
         }

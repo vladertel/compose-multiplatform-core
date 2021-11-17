@@ -25,7 +25,6 @@ import android.app.job.JobWorkItem;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
@@ -87,7 +86,12 @@ import java.util.HashMap;
  *
  * {@sample frameworks/support/samples/Support4Demos/src/main/java/com/example/android/supportv4/app/SimpleJobIntentService.java
  *      complete}
+ * @deprecated This class has been deprecated in favor of the Android Jetpack
+ * <a href="https://developer.android.com/topic/libraries/architecture/workmanager>WorkManager</a>
+ * library, which makes it easy to schedule deferrable, asynchronous tasks that are expected to run
+ * even if the app exits or the device restarts.
  */
+@Deprecated
 public abstract class JobIntentService extends Service {
     static final String TAG = "JobIntentService";
 
@@ -380,7 +384,7 @@ public abstract class JobIntentService extends Service {
     /**
      * This is a task to dequeue and process work in the background.
      */
-    final class CommandProcessor extends AsyncTask<Void, Void, Void> {
+    final class CommandProcessor extends android.os.AsyncTask<Void, Void, Void> {
         @Override
         protected Void doInBackground(Void... params) {
             GenericWorkItem work;
@@ -562,7 +566,7 @@ public abstract class JobIntentService extends Service {
      * Control whether code executing in {@link #onHandleWork(Intent)} will be interrupted
      * if the job is stopped.  By default this is false.  If called and set to true, any
      * time {@link #onStopCurrentWork()} is called, the class will first call
-     * {@link AsyncTask#cancel(boolean) AsyncTask.cancel(true)} to interrupt the running
+     * {@link android.os.AsyncTask#cancel(boolean) AsyncTask.cancel(true)} to interrupt the running
      * task.
      *
      * @param interruptIfStopped Set to true to allow the system to interrupt actively
@@ -603,6 +607,7 @@ public abstract class JobIntentService extends Service {
         return onStopCurrentWork();
     }
 
+    @SuppressWarnings({"deprecation", "ObjectToString"}) /* AsyncTask */
     void ensureProcessorRunningLocked(boolean reportStarted) {
         if (mCurProcessor == null) {
             mCurProcessor = new CommandProcessor();
@@ -610,7 +615,7 @@ public abstract class JobIntentService extends Service {
                 mCompatWorkEnqueuer.serviceProcessingStarted();
             }
             if (DEBUG) Log.d(TAG, "Starting processor: " + mCurProcessor);
-            mCurProcessor.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+            mCurProcessor.executeOnExecutor(android.os.AsyncTask.THREAD_POOL_EXECUTOR);
         }
     }
 

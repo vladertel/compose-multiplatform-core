@@ -26,10 +26,7 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.AsyncTask;
 
-import androidx.ads.identifier.AdvertisingIdClient;
-import androidx.ads.identifier.AdvertisingIdInfo;
 import androidx.ads.identifier.provider.internal.AdvertisingIdService;
 import androidx.ads.identifier.testing.MockPackageManagerHelper;
 import androidx.annotation.NonNull;
@@ -60,6 +57,7 @@ import java.util.concurrent.CountDownLatch;
 
 @LargeTest
 @RunWith(AndroidJUnit4.class)
+@SuppressWarnings("deprecation")
 public class AdvertisingIdBenchmark {
 
     private static final int CONCURRENCY_NUM = 10;
@@ -102,7 +100,8 @@ public class AdvertisingIdBenchmark {
     }
 
     private void clearAdvertisingIdConnection() throws Exception {
-        Method method = AdvertisingIdClient.class.getDeclaredMethod("clearConnectionClient");
+        Method method = androidx.ads.identifier.AdvertisingIdClient.class.getDeclaredMethod(
+                "clearConnectionClient");
         method.setAccessible(true);
         method.invoke(null);
     }
@@ -124,12 +123,14 @@ public class AdvertisingIdBenchmark {
     }
 
     private void getAdvertisingIdInfoListenableFuture(CountDownLatch countDownLatch) {
-        ListenableFuture<AdvertisingIdInfo> advertisingIdInfoListenableFuture =
-                AdvertisingIdClient.getAdvertisingIdInfo(mContext);
+        ListenableFuture<androidx.ads.identifier.AdvertisingIdInfo>
+                advertisingIdInfoListenableFuture =
+                androidx.ads.identifier.AdvertisingIdClient.getAdvertisingIdInfo(mContext);
         Futures.addCallback(advertisingIdInfoListenableFuture,
-                new FutureCallback<AdvertisingIdInfo>() {
+                new FutureCallback<androidx.ads.identifier.AdvertisingIdInfo>() {
                     @Override
-                    public void onSuccess(AdvertisingIdInfo advertisingIdInfo) {
+                    public void onSuccess(
+                            androidx.ads.identifier.AdvertisingIdInfo advertisingIdInfo) {
                         assertThat(advertisingIdInfo.getId()).isEqualTo(DUMMY_AD_ID);
                         countDownLatch.countDown();
                     }
@@ -162,8 +163,9 @@ public class AdvertisingIdBenchmark {
         public Result doWork() {
             try {
                 Context context = mockContext(getApplicationContext());
-                AdvertisingIdInfo advertisingIdInfo =
-                        AdvertisingIdClient.getAdvertisingIdInfo(context).get();
+                androidx.ads.identifier.AdvertisingIdInfo advertisingIdInfo =
+                        androidx.ads.identifier.AdvertisingIdClient.getAdvertisingIdInfo(
+                                context).get();
                 assertThat(advertisingIdInfo.getId()).isEqualTo(DUMMY_AD_ID);
             } catch (Exception e) {
                 return Result.failure();
@@ -173,19 +175,24 @@ public class AdvertisingIdBenchmark {
     }
 
     @Test
+    @SuppressWarnings("deprecation") /* AsyncTask */
     public void getAdvertisingIdInfo_asyncTask() throws Exception {
         final BenchmarkState state = mBenchmarkRule.getState();
         while (state.keepRunning()) {
-            AdvertisingIdInfo advertisingIdInfo = new AsyncTask<Void, Void, AdvertisingIdInfo>() {
-                @Override
-                protected AdvertisingIdInfo doInBackground(Void... voids) {
-                    try {
-                        return AdvertisingIdClient.getAdvertisingIdInfo(mContext).get();
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }.execute().get();
+            androidx.ads.identifier.AdvertisingIdInfo advertisingIdInfo =
+                    new android.os.AsyncTask<Void, Void,
+                            androidx.ads.identifier.AdvertisingIdInfo>() {
+                        @Override
+                        protected androidx.ads.identifier.AdvertisingIdInfo doInBackground(
+                                Void... voids) {
+                            try {
+                                return androidx.ads.identifier.AdvertisingIdClient
+                                        .getAdvertisingIdInfo(mContext).get();
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    }.execute().get();
             assertThat(advertisingIdInfo.getId()).isEqualTo(DUMMY_AD_ID);
         }
     }
@@ -196,8 +203,9 @@ public class AdvertisingIdBenchmark {
         while (state.keepRunning()) {
             Thread thread = new Thread(() -> {
                 try {
-                    AdvertisingIdInfo advertisingIdInfo =
-                            AdvertisingIdClient.getAdvertisingIdInfo(mContext).get();
+                    androidx.ads.identifier.AdvertisingIdInfo advertisingIdInfo =
+                            androidx.ads.identifier.AdvertisingIdClient.getAdvertisingIdInfo(
+                                    mContext).get();
                     assertThat(advertisingIdInfo.getId()).isEqualTo(DUMMY_AD_ID);
                 } catch (Exception e) {
                     throw new RuntimeException(e);

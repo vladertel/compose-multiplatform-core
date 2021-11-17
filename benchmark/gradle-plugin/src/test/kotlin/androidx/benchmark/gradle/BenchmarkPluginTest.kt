@@ -28,7 +28,6 @@ import java.io.File
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlin.test.assertEquals
 
 private val PLUGINS_HEADER = """
     plugins {
@@ -70,10 +69,10 @@ class BenchmarkPluginTest {
             dependencies {
                 androidTestImplementation "androidx.benchmark:benchmark:1.0.0-alpha01"
             }
-        """.trimIndent()
+            """.trimIndent()
         )
 
-        val output = gradleRunner.withArguments("tasks").build()
+        val output = gradleRunner.withArguments("tasks", "--stacktrace").build()
         assertTrue { output.output.contains("lockClocks - ") }
         assertTrue { output.output.contains("unlockClocks - ") }
     }
@@ -91,17 +90,16 @@ class BenchmarkPluginTest {
             dependencies {
                 androidTestImplementation "androidx.benchmark:benchmark:1.0.0-alpha01"
             }
-        """.trimIndent()
+            """.trimIndent()
         )
 
-        val output = gradleRunner.withArguments("tasks").build()
+        val output = gradleRunner.withArguments("tasks", "--stacktrace").build()
         assertTrue { output.output.contains("lockClocks - ") }
         assertTrue { output.output.contains("unlockClocks - ") }
     }
 
     @Test
     fun applyPluginNonAndroidProject() {
-        val prebuiltsRoot = projectSetup.props.prebuiltsRoot
         projectSetup.buildFile.writeText(
             """
             plugins {
@@ -110,14 +108,13 @@ class BenchmarkPluginTest {
             }
 
             repositories {
-                maven { url "$prebuiltsRoot/androidx/external" }
-                maven { url "$prebuiltsRoot/androidx/internal" }
+                ${projectSetup.defaultRepoLines}
             }
 
             dependencies {
                 testImplementation "androidx.benchmark:benchmark:1.0.0-alpha01"
             }
-        """.trimIndent()
+            """.trimIndent()
         )
 
         assertFailsWith(UnexpectedBuildFailure::class) {
@@ -132,7 +129,7 @@ class BenchmarkPluginTest {
             suffix = ""
         )
 
-        val output = gradleRunner.withArguments("tasks").build()
+        val output = gradleRunner.withArguments("tasks", "--stacktrace").build()
         assertTrue { output.output.contains("lockClocks - ") }
         assertTrue { output.output.contains("unlockClocks - ") }
     }
@@ -145,10 +142,10 @@ class BenchmarkPluginTest {
             dependencies {
                 androidTestImplementation "androidx.benchmark:benchmark:1.0.0-alpha01"
             }
-        """.trimIndent()
+            """.trimIndent()
         )
 
-        val output = gradleRunner.withArguments("tasks").build()
+        val output = gradleRunner.withArguments("tasks", "--stacktrace").build()
         assertTrue { output.output.contains("lockClocks - ") }
         assertTrue { output.output.contains("unlockClocks - ") }
     }
@@ -171,20 +168,22 @@ class BenchmarkPluginTest {
             tasks.register("printTestBuildType") {
                 println android.testBuildType
             }
-        """.trimIndent()
+            """.trimIndent()
         )
 
         projectSetup.gradlePropertiesFile.appendText("android.enableAdditionalTestOutput=true")
         versionPropertiesFile.writeText("buildVersion=3.6.0-alpha05")
 
-        val output = gradleRunner.withArguments("tasks").build()
+        val output = gradleRunner.withArguments("tasks", "--stacktrace").build()
         assertTrue { output.output.contains("lockClocks - ") }
         assertTrue { output.output.contains("unlockClocks - ") }
 
         // Should depend on AGP to pull benchmark reports via additionalTestOutputDir.
         assertFalse { output.output.contains("benchmarkReport - ") }
 
-        val testBuildTypeOutput = gradleRunner.withArguments("printTestBuildType").build()
+        val testBuildTypeOutput = gradleRunner
+            .withArguments("printTestBuildType", "--stacktrace")
+            .build()
         assertTrue { testBuildTypeOutput.output.contains("release") }
     }
 
@@ -215,7 +214,7 @@ class BenchmarkPluginTest {
 
         versionPropertiesFile.writeText("buildVersion=3.5.0-rc03")
 
-        val output = gradleRunner.withArguments("tasks").build()
+        val output = gradleRunner.withArguments("tasks", "--stacktrace").build()
         assertTrue { output.output.contains("lockClocks - ") }
         assertTrue { output.output.contains("unlockClocks - ") }
 
@@ -287,7 +286,7 @@ class BenchmarkPluginTest {
                 def extension = project.extensions.getByType(TestedExtension)
                 println extension.buildTypes.getByName("debug").testCoverageEnabled
             }
-        """.trimIndent()
+            """.trimIndent()
         )
 
         val runnerOutput = gradleRunner.withArguments("printTestInstrumentationRunner").build()
@@ -338,7 +337,7 @@ class BenchmarkPluginTest {
             dependencies {
                 androidTestImplementation "androidx.benchmark:benchmark:1.0.0-alpha04"
             }
-        """.trimIndent()
+            """.trimIndent()
         )
 
         assertFailsWith(UnexpectedBuildFailure::class) {
@@ -363,12 +362,16 @@ class BenchmarkPluginTest {
 
             tasks.register("printReleaseSigningConfig") {
                 def extension = project.extensions.getByType(TestedExtension)
-                println extension.buildTypes.getByName("release").signingConfig.name
+                def signingConfigName = extension.buildTypes.getByName("release").signingConfig.name
+                println "BenchmarkPluginTestKt_applyPluginSigningConfig_${"$"}signingConfigName"
             }
-        """.trimIndent()
+            """.trimIndent()
         )
 
         val releaseTask = gradleRunner.withArguments("printReleaseSigningConfig").build()
-        assertEquals("debug", releaseTask.output.lines().first())
+        assertTrue(
+            releaseTask.output.lines()
+                .contains("BenchmarkPluginTestKt_applyPluginSigningConfig_debug")
+        )
     }
 }

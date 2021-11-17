@@ -22,13 +22,13 @@ import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.CameraCaptureCallback;
 import androidx.camera.core.impl.CaptureProcessor;
 import androidx.camera.core.impl.CaptureStage;
@@ -46,6 +46,7 @@ import java.util.concurrent.Executor;
 /**
  * A {@link DeferrableSurface} that does processing and outputs a {@link SurfaceTexture}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 final class ProcessingSurface extends DeferrableSurface {
     private static final String TAG = "ProcessingSurfaceTextur";
 
@@ -93,27 +94,30 @@ final class ProcessingSurface extends DeferrableSurface {
     private final CameraCaptureCallback mCameraCaptureCallback;
     private final DeferrableSurface mOutputDeferrableSurface;
 
+    private String mTagBundleKey;
     /**
      * Create a {@link ProcessingSurface} with specific configurations.
-     * @param width                     Width of the ImageReader
-     * @param height                    Height of the ImageReader
-     * @param format                    Image format
-     * @param handler                   Handler for executing
-     *                                  {@link ImageReaderProxy.OnImageAvailableListener}. If
-     *                                  this is
-     *                                  {@code null} then execution will be done on the calling
-     *                                  thread's
-     *                                  {@link Looper}.
-     * @param captureStage              The {@link CaptureStage} includes the processing information
-     * @param captureProcessor          The {@link CaptureProcessor} to be invoked when the
-     *                                  Images are ready
-     * @param outputSurface             The {@link DeferrableSurface} used as the output of
-     *                                  processing.
+     * @param width            Width of the ImageReader
+     * @param height           Height of the ImageReader
+     * @param format           Image format
+     * @param handler          Handler for executing
+     *                         {@link ImageReaderProxy.OnImageAvailableListener}. If
+     *                         this is
+     *                         {@code null} then execution will be done on the calling
+     *                         thread's
+     *                         {@link Looper}.
+     * @param captureStage     The {@link CaptureStage} includes the processing information
+     * @param captureProcessor The {@link CaptureProcessor} to be invoked when the
+     *                         Images are ready
+     * @param outputSurface    The {@link DeferrableSurface} used as the output of
+     *                         processing.
+     * @param tagBundleKey     The key for tagBundle to get correct image. Usually the key comes
+     *                         from the CaptureStage's hash code.
      */
     ProcessingSurface(int width, int height, int format, @Nullable Handler handler,
             @NonNull CaptureStage captureStage, @NonNull CaptureProcessor captureProcessor,
-            @NonNull DeferrableSurface outputSurface) {
-
+            @NonNull DeferrableSurface outputSurface, @NonNull String tagBundleKey) {
+        super(new Size(width, height), format);
         mResolution = new Size(width, height);
 
         if (handler != null) {
@@ -150,6 +154,8 @@ final class ProcessingSurface extends DeferrableSurface {
         // output
         mOutputDeferrableSurface = outputSurface;
 
+        mTagBundleKey = tagBundleKey;
+
         Futures.addCallback(outputSurface.getSurface(),
                 new FutureCallback<Surface>() {
                     @Override
@@ -161,7 +167,7 @@ final class ProcessingSurface extends DeferrableSurface {
 
                     @Override
                     public void onFailure(Throwable t) {
-                        Log.e(TAG, "Failed to extract Listenable<Surface>.", t);
+                        Logger.e(TAG, "Failed to extract Listenable<Surface>.", t);
                     }
                 }, directExecutor());
 
@@ -231,7 +237,7 @@ final class ProcessingSurface extends DeferrableSurface {
         try {
             image = imageReader.acquireNextImage();
         } catch (IllegalStateException e) {
-            Log.e(TAG, "Failed to acquire next image.", e);
+            Logger.e(TAG, "Failed to acquire next image.", e);
         }
 
         if (image == null) {
@@ -244,24 +250,18 @@ final class ProcessingSurface extends DeferrableSurface {
             return;
         }
 
-        Object tagObject = imageInfo.getTag();
-        if (tagObject == null) {
+        Integer tagValue = (Integer) imageInfo.getTagBundle().getTag(mTagBundleKey);
+        if (tagValue == null) {
             image.close();
             return;
         }
 
-        if (!(tagObject instanceof Integer)) {
-            image.close();
-            return;
-        }
-
-        Integer tag = (Integer) tagObject;
-
-        if (mCaptureStage.getId() != tag) {
-            Log.w(TAG, "ImageProxyBundle does not contain this id: " + tag);
+        if (mCaptureStage.getId() != tagValue) {
+            Logger.w(TAG, "ImageProxyBundle does not contain this id: " + tagValue);
             image.close();
         } else {
-            SingleImageProxyBundle imageProxyBundle = new SingleImageProxyBundle(image);
+            SingleImageProxyBundle imageProxyBundle = new SingleImageProxyBundle(image,
+                    mTagBundleKey);
             mCaptureProcessor.process(imageProxyBundle);
             imageProxyBundle.close();
         }

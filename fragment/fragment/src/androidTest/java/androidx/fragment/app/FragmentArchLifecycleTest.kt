@@ -46,17 +46,17 @@ class FragmentArchLifecycleTest {
             val second = Fragment()
             fm.beginTransaction().add(first, "first").commit()
             executePendingTransactions()
-            first.lifecycle.addObserver(object : LifecycleEventObserver {
-                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-                    if (event == Lifecycle.Event.ON_STOP) {
-                        fm.beginTransaction().add(second, "second").commitNow()
-                        first.lifecycle.removeObserver(this)
-                    }
-                }
-            })
             onActivity {
-                it.onSaveInstanceState(Bundle())
+                first.lifecycle.addObserver(object : LifecycleEventObserver {
+                    override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                        if (event == Lifecycle.Event.ON_STOP) {
+                            fm.beginTransaction().add(second, "second").commitNow()
+                            first.lifecycle.removeObserver(this)
+                        }
+                    }
+                })
             }
+            moveToState(Lifecycle.State.CREATED)
             assertThat(first.lifecycle.currentState).isEqualTo(Lifecycle.State.CREATED)
             assertThat(second.lifecycle.currentState).isEqualTo(Lifecycle.State.CREATED)
             assertThat(activityLifecycle.currentState).isEqualTo(Lifecycle.State.CREATED)
@@ -73,17 +73,17 @@ class FragmentArchLifecycleTest {
             val second = StrictFragment()
             fm.beginTransaction().add(android.R.id.content, first).commit()
             executePendingTransactions()
-            first.viewLifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
-                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-                    if (event == Lifecycle.Event.ON_STOP) {
-                        fm.beginTransaction().add(second, "second").commitNow()
-                        first.viewLifecycleOwner.lifecycle.removeObserver(this)
-                    }
-                }
-            })
             onActivity {
-                it.onSaveInstanceState(Bundle())
+                first.viewLifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
+                    override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                        if (event == Lifecycle.Event.ON_STOP) {
+                            fm.beginTransaction().add(second, "second").commitNow()
+                            first.viewLifecycleOwner.lifecycle.removeObserver(this)
+                        }
+                    }
+                })
             }
+            moveToState(Lifecycle.State.CREATED)
             assertThat(first.lifecycle.currentState).isEqualTo(Lifecycle.State.CREATED)
             assertThat(first.viewLifecycleOwner.lifecycle.currentState)
                 .isEqualTo(Lifecycle.State.CREATED)
@@ -254,9 +254,11 @@ class NestedLifecycleFragmentParent : StrictFragment(), FragmentOnAttachListener
     }
 
     init {
-        lifecycle.addObserver(LifecycleEventObserver { _, event ->
-            archLifecycleActivity.collectedEvents.add("parent" to event)
-        })
+        lifecycle.addObserver(
+            LifecycleEventObserver { _, event ->
+                archLifecycleActivity.collectedEvents.add("parent" to event)
+            }
+        )
     }
 
     override fun onAttach(context: Context) {
@@ -274,9 +276,11 @@ class NestedLifecycleFragmentParent : StrictFragment(), FragmentOnAttachListener
     }
 
     override fun onAttachFragment(fragmentManager: FragmentManager, childFragment: Fragment) {
-        childFragment.lifecycle.addObserver(LifecycleEventObserver { _, event ->
-            archLifecycleActivity.collectedEvents.add("child" to event)
-        })
+        childFragment.lifecycle.addObserver(
+            LifecycleEventObserver { _, event ->
+                archLifecycleActivity.collectedEvents.add("child" to event)
+            }
+        )
     }
 }
 

@@ -1,3 +1,0 @@
-// Baseline format: 1.0
-HiddenTypeParameter: androidx.ui.layout.Arrangement#Companion:
-    Field Arrangement.Companion references hidden type androidx.ui.layout.Arrangement.Companion.

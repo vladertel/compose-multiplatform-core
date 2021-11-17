@@ -21,6 +21,7 @@ import android.app.Activity
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
@@ -33,8 +34,10 @@ import android.widget.LinearLayout
 import android.widget.LinearLayout.VERTICAL
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.CaptureVideo
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
@@ -48,7 +51,8 @@ import java.io.File
 class MainActivity : ComponentActivity() {
 
     val requestLocation = registerForActivityResult(
-        RequestPermission(), ACCESS_FINE_LOCATION) { isGranted ->
+        RequestPermission(), ACCESS_FINE_LOCATION
+    ) { isGranted ->
         toast("Location granted: $isGranted")
     }
 
@@ -60,25 +64,39 @@ class MainActivity : ComponentActivity() {
         toast("Got picture: $success")
     }
 
-    val getContent = registerForActivityResult(GetContent()) { uri ->
+    val captureVideo: ActivityResultLauncher<Uri> = registerForActivityResult(
+        CaptureVideo()
+    ) { success ->
+        toast("Got video: $success")
+    }
+
+    val getContent: ActivityResultLauncher<String> = registerForActivityResult(
+        GetContent()
+    ) { uri ->
         toast("Got image: $uri")
     }
 
-    val openDocuments = registerForActivityResult(OpenMultipleDocuments()) { uris ->
-        var docs = ""
-        uris.forEach {
-            docs += "uri: $it \n"
-        }
-        toast("Got documents: $docs")
-    }
+    lateinit var openDocuments: ActivityResultLauncher<Array<String>>
 
-    val intentSender = registerForActivityResult(ActivityResultContracts
-        .StartIntentSenderForResult()) {
+    private val intentSender = registerForActivityResult(
+        ActivityResultContracts
+            .StartIntentSenderForResult()
+    ) {
         toast("Received intent sender callback")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (android.os.Build.VERSION.SDK_INT >= 19) {
+            openDocuments = registerForActivityResult(OpenMultipleDocuments()) { uris ->
+                var docs = ""
+                uris.forEach {
+                    docs += "uri: $it \n"
+                }
+                toast("Got documents: $docs")
+            }
+        }
 
         setContentView {
             add(::LinearLayout) {
@@ -95,15 +113,26 @@ class MainActivity : ComponentActivity() {
                     val uri = FileProvider.getUriForFile(this@MainActivity, packageName, file)
                     takePicture.launch(uri)
                 }
+                button("Capture video") {
+                    val file = File(filesDir, "video")
+                    val uri = FileProvider.getUriForFile(this@MainActivity, packageName, file)
+                    captureVideo.launch(uri)
+                }
                 button("Pick an image") {
                     getContent.launch("image/*")
                 }
-                button("Open documents") {
-                    openDocuments.launch(arrayOf("*/*"))
+                if (android.os.Build.VERSION.SDK_INT >= 19) {
+                    button("Open documents") {
+                        openDocuments.launch(arrayOf("*/*"))
+                    }
                 }
                 button("Start IntentSender") {
-                    val request = IntentSenderRequest.Builder(PendingIntent.getActivity(context,
-                        0, Intent(MediaStore.ACTION_IMAGE_CAPTURE), 0).intentSender)
+                    val request = IntentSenderRequest.Builder(
+                        PendingIntent.getActivity(
+                            context,
+                            0, Intent(MediaStore.ACTION_IMAGE_CAPTURE), 0
+                        ).intentSender
+                    )
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK, 1)
                         .build()
                     intentSender.launch(request)

@@ -13,34 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package androidx.appsearch.app;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RestrictTo;
 import androidx.collection.ArrayMap;
+import androidx.core.util.Preconditions;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
- * Provides access to multiple {@link AppSearchResult}s from a batch operation accepting multiple
- * inputs.
+ * Provides results for AppSearch batch operations which encompass multiple documents.
  *
- * @param <KeyType> The type of the keys for {@link #getSuccesses} and {@link #getFailures}.
- * @param <ValueType> The type of result objects associated with the keys.
- * @hide
+ * <p>Individual results of a batch operation are separated into two maps: one for successes and
+ * one for failures. For successes, {@link #getSuccesses()} will return a map of keys to
+ * instances of the value type. For failures, {@link #getFailures()} will return a map of keys to
+ * {@link AppSearchResult} objects.
+ *
+ * <p>Alternatively, {@link #getAll()} returns a map of keys to {@link AppSearchResult} objects for
+ * both successes and failures.
+ *
+ * @param <KeyType> The type of the keys for which the results will be reported.
+ * @param <ValueType> The type of the result objects for successful results.
+ *
+ * @see AppSearchSession#put
+ * @see AppSearchSession#getByDocumentId
+ * @see AppSearchSession#remove
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public final class AppSearchBatchResult<KeyType, ValueType> {
     @NonNull private final Map<KeyType, ValueType> mSuccesses;
     @NonNull private final Map<KeyType, AppSearchResult<ValueType>> mFailures;
+    @NonNull private final Map<KeyType, AppSearchResult<ValueType>> mAll;
 
     AppSearchBatchResult(
             @NonNull Map<KeyType, ValueType> successes,
-            @NonNull Map<KeyType, AppSearchResult<ValueType>> failures) {
-        mSuccesses = successes;
-        mFailures = failures;
+            @NonNull Map<KeyType, AppSearchResult<ValueType>> failures,
+            @NonNull Map<KeyType, AppSearchResult<ValueType>> all) {
+        mSuccesses = Preconditions.checkNotNull(successes);
+        mFailures = Preconditions.checkNotNull(failures);
+        mAll = Preconditions.checkNotNull(all);
     }
 
     /** Returns {@code true} if this {@link AppSearchBatchResult} has no failures. */
@@ -49,70 +61,133 @@ public final class AppSearchBatchResult<KeyType, ValueType> {
     }
 
     /**
-     * Returns a {@link Map} of all successful keys mapped to the successful
-     * {@link AppSearchResult}s they produced.
+     * Returns a {@link Map} of keys mapped to instances of the value type for all successful
+     * individual results.
+     *
+     * <p>Example: {@link AppSearchSession#getByDocumentId} returns an {@link AppSearchBatchResult}.
+     * Each key (the document ID, of {@code String} type) will map to a {@link GenericDocument}
+     * object.
      *
      * <p>The values of the {@link Map} will not be {@code null}.
      */
     @NonNull
     public Map<KeyType, ValueType> getSuccesses() {
-        return mSuccesses;
+        return Collections.unmodifiableMap(mSuccesses);
     }
 
     /**
-     * Returns a {@link Map} of all failed keys mapped to the failed {@link AppSearchResult}s they
-     * produced.
+     * Returns a {@link Map} of keys mapped to instances of {@link AppSearchResult} for all
+     * failed individual results.
      *
      * <p>The values of the {@link Map} will not be {@code null}.
      */
     @NonNull
     public Map<KeyType, AppSearchResult<ValueType>> getFailures() {
-        return mFailures;
+        return Collections.unmodifiableMap(mFailures);
+    }
+
+    /**
+     * Returns a {@link Map} of keys mapped to instances of {@link AppSearchResult} for all
+     * individual results.
+     *
+     * <p>The values of the {@link Map} will not be {@code null}.
+     */
+    @NonNull
+    public Map<KeyType, AppSearchResult<ValueType>> getAll() {
+        return Collections.unmodifiableMap(mAll);
+    }
+
+    /**
+     * Asserts that this {@link AppSearchBatchResult} has no failures.
+     * @hide
+     */
+    public void checkSuccess() {
+        if (!isSuccess()) {
+            throw new IllegalStateException("AppSearchBatchResult has failures: " + this);
+        }
+    }
+
+    @Override
+    @NonNull
+    public String toString() {
+        return "{\n  successes: " + mSuccesses + "\n  failures: " + mFailures + "\n}";
     }
 
     /**
      * Builder for {@link AppSearchBatchResult} objects.
      *
-     * @param <KeyType> The type of keys.
-     * @param <ValueType> The type of result objects associated with the keys.
+     * @param <KeyType> The type of the keys for which the results will be reported.
+     * @param <ValueType> The type of the result objects for successful results.
      */
     public static final class Builder<KeyType, ValueType> {
-        private final Map<KeyType, ValueType> mSuccesses = new ArrayMap<>();
-        private final Map<KeyType, AppSearchResult<ValueType>> mFailures = new ArrayMap<>();
-
-        /** Creates a new {@link Builder} for this {@link AppSearchBatchResult}. */
-        public Builder() {}
+        private ArrayMap<KeyType, ValueType> mSuccesses = new ArrayMap<>();
+        private ArrayMap<KeyType, AppSearchResult<ValueType>> mFailures = new ArrayMap<>();
+        private ArrayMap<KeyType, AppSearchResult<ValueType>> mAll = new ArrayMap<>();
+        private boolean mBuilt = false;
 
         /**
-         * Associates the {@code key} with the given successful return value.
+         * Associates the {@code key} with the provided successful return value.
          *
          * <p>Any previous mapping for a key, whether success or failure, is deleted.
+         *
+         * <p>This is a convenience function which is equivalent to
+         * {@code setResult(key, AppSearchResult.newSuccessfulResult(value))}.
+         *
+         * @param key   The key to associate the result with; usually corresponds to some
+         *              identifier from the input like an ID or name.
+         * @param value An optional value to associate with the successful result of the operation
+         *              being performed.
          */
+        @SuppressWarnings("MissingGetterMatchingBuilder")  // See getSuccesses
         @NonNull
-        public Builder setSuccess(@NonNull KeyType key, @Nullable ValueType result) {
-            return setResult(key, AppSearchResult.newSuccessfulResult(result));
+        public Builder<KeyType, ValueType> setSuccess(
+                @NonNull KeyType key, @Nullable ValueType value) {
+            Preconditions.checkNotNull(key);
+            resetIfBuilt();
+            return setResult(key, AppSearchResult.newSuccessfulResult(value));
         }
 
         /**
-         * Associates the {@code key} with the given failure code and error message.
+         * Associates the {@code key} with the provided failure code and error message.
          *
          * <p>Any previous mapping for a key, whether success or failure, is deleted.
+         *
+         * <p>This is a convenience function which is equivalent to
+         * {@code setResult(key, AppSearchResult.newFailedResult(resultCode, errorMessage))}.
+         *
+         * @param key          The key to associate the result with; usually corresponds to some
+         *                     identifier from the input like an ID or name.
+         * @param resultCode   One of the constants documented in
+         *                     {@link AppSearchResult#getResultCode}.
+         * @param errorMessage An optional string describing the reason or nature of the failure.
          */
+        @SuppressWarnings("MissingGetterMatchingBuilder")  // See getFailures
         @NonNull
-        public Builder setFailure(
+        public Builder<KeyType, ValueType> setFailure(
                 @NonNull KeyType key,
                 @AppSearchResult.ResultCode int resultCode,
                 @Nullable String errorMessage) {
+            Preconditions.checkNotNull(key);
+            resetIfBuilt();
             return setResult(key, AppSearchResult.newFailedResult(resultCode, errorMessage));
         }
 
         /**
-         * Associates the {@code key} with the given {@code result}.
+         * Associates the {@code key} with the provided {@code result}.
          *
          * <p>Any previous mapping for a key, whether success or failure, is deleted.
+         *
+         * @param key    The key to associate the result with; usually corresponds to some
+         *               identifier from the input like an ID or name.
+         * @param result The result to associate with the key.
          */
+        @SuppressWarnings("MissingGetterMatchingBuilder")  // See getAll
         @NonNull
-        public Builder setResult(@NonNull KeyType key, @NonNull AppSearchResult<ValueType> result) {
+        public Builder<KeyType, ValueType> setResult(
+                @NonNull KeyType key, @NonNull AppSearchResult<ValueType> result) {
+            Preconditions.checkNotNull(key);
+            Preconditions.checkNotNull(result);
+            resetIfBuilt();
             if (result.isSuccess()) {
                 mSuccesses.put(key, result.getResultValue());
                 mFailures.remove(key);
@@ -120,13 +195,26 @@ public final class AppSearchBatchResult<KeyType, ValueType> {
                 mFailures.put(key, result);
                 mSuccesses.remove(key);
             }
+            mAll.put(key, result);
             return this;
         }
 
-        /** Builds an {@link AppSearchBatchResult} from the contents of this {@link Builder}. */
+        /**
+         * Builds an {@link AppSearchBatchResult} object from the contents of this {@link Builder}.
+         */
         @NonNull
         public AppSearchBatchResult<KeyType, ValueType> build() {
-            return new AppSearchBatchResult<>(mSuccesses, mFailures);
+            mBuilt = true;
+            return new AppSearchBatchResult<>(mSuccesses, mFailures, mAll);
+        }
+
+        private void resetIfBuilt() {
+            if (mBuilt) {
+                mSuccesses = new ArrayMap<>(mSuccesses);
+                mFailures = new ArrayMap<>(mFailures);
+                mAll = new ArrayMap<>(mAll);
+                mBuilt = false;
+            }
         }
     }
 }

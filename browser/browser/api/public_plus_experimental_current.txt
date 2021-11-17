@@ -1,4 +1,4 @@
-// Signature format: 3.0
+// Signature format: 4.0
 package androidx.browser.browseractions {
 
   @Deprecated public class BrowserActionItem {
@@ -55,6 +55,7 @@ package androidx.browser.customtabs {
 
   public final class CustomTabColorSchemeParams {
     field @ColorInt public final Integer? navigationBarColor;
+    field @ColorInt public final Integer? navigationBarDividerColor;
     field @ColorInt public final Integer? secondaryToolbarColor;
     field @ColorInt public final Integer? toolbarColor;
   }
@@ -63,6 +64,7 @@ package androidx.browser.customtabs {
     ctor public CustomTabColorSchemeParams.Builder();
     method public androidx.browser.customtabs.CustomTabColorSchemeParams build();
     method public androidx.browser.customtabs.CustomTabColorSchemeParams.Builder setNavigationBarColor(@ColorInt int);
+    method public androidx.browser.customtabs.CustomTabColorSchemeParams.Builder setNavigationBarDividerColor(@ColorInt int);
     method public androidx.browser.customtabs.CustomTabColorSchemeParams.Builder setSecondaryToolbarColor(@ColorInt int);
     method public androidx.browser.customtabs.CustomTabColorSchemeParams.Builder setToolbarColor(@ColorInt int);
   }
@@ -85,6 +87,7 @@ package androidx.browser.customtabs {
 
   public class CustomTabsClient {
     method public static boolean bindCustomTabsService(android.content.Context, String?, androidx.browser.customtabs.CustomTabsServiceConnection);
+    method public static boolean bindCustomTabsServicePreservePriority(android.content.Context, String?, androidx.browser.customtabs.CustomTabsServiceConnection);
     method public static boolean connectAndInitialize(android.content.Context, String);
     method public android.os.Bundle? extraCommand(String, android.os.Bundle?);
     method public static String? getPackageName(android.content.Context, java.util.List<java.lang.String!>?);
@@ -107,18 +110,20 @@ package androidx.browser.customtabs {
     field public static final String EXTRA_CLOSE_BUTTON_ICON = "android.support.customtabs.extra.CLOSE_BUTTON_ICON";
     field public static final String EXTRA_COLOR_SCHEME = "androidx.browser.customtabs.extra.COLOR_SCHEME";
     field public static final String EXTRA_COLOR_SCHEME_PARAMS = "androidx.browser.customtabs.extra.COLOR_SCHEME_PARAMS";
-    field public static final String EXTRA_DEFAULT_SHARE_MENU_ITEM = "android.support.customtabs.extra.SHARE_MENU_ITEM";
+    field @Deprecated public static final String EXTRA_DEFAULT_SHARE_MENU_ITEM = "android.support.customtabs.extra.SHARE_MENU_ITEM";
     field public static final String EXTRA_ENABLE_INSTANT_APPS = "android.support.customtabs.extra.EXTRA_ENABLE_INSTANT_APPS";
     field public static final String EXTRA_ENABLE_URLBAR_HIDING = "android.support.customtabs.extra.ENABLE_URLBAR_HIDING";
     field public static final String EXTRA_EXIT_ANIMATION_BUNDLE = "android.support.customtabs.extra.EXIT_ANIMATION_BUNDLE";
     field public static final String EXTRA_MENU_ITEMS = "android.support.customtabs.extra.MENU_ITEMS";
     field public static final String EXTRA_NAVIGATION_BAR_COLOR = "androidx.browser.customtabs.extra.NAVIGATION_BAR_COLOR";
+    field public static final String EXTRA_NAVIGATION_BAR_DIVIDER_COLOR = "androidx.browser.customtabs.extra.NAVIGATION_BAR_DIVIDER_COLOR";
     field public static final String EXTRA_REMOTEVIEWS = "android.support.customtabs.extra.EXTRA_REMOTEVIEWS";
     field public static final String EXTRA_REMOTEVIEWS_CLICKED_ID = "android.support.customtabs.extra.EXTRA_REMOTEVIEWS_CLICKED_ID";
     field public static final String EXTRA_REMOTEVIEWS_PENDINGINTENT = "android.support.customtabs.extra.EXTRA_REMOTEVIEWS_PENDINGINTENT";
     field public static final String EXTRA_REMOTEVIEWS_VIEW_IDS = "android.support.customtabs.extra.EXTRA_REMOTEVIEWS_VIEW_IDS";
     field public static final String EXTRA_SECONDARY_TOOLBAR_COLOR = "android.support.customtabs.extra.SECONDARY_TOOLBAR_COLOR";
     field public static final String EXTRA_SESSION = "android.support.customtabs.extra.SESSION";
+    field public static final String EXTRA_SHARE_STATE = "androidx.browser.customtabs.extra.SHARE_STATE";
     field public static final String EXTRA_TINT_ACTION_BUTTON = "android.support.customtabs.extra.TINT_ACTION_BUTTON";
     field public static final String EXTRA_TITLE_VISIBILITY_STATE = "android.support.customtabs.extra.TITLE_VISIBILITY";
     field public static final String EXTRA_TOOLBAR_COLOR = "android.support.customtabs.extra.TOOLBAR_COLOR";
@@ -129,6 +134,9 @@ package androidx.browser.customtabs {
     field public static final String KEY_MENU_ITEM_TITLE = "android.support.customtabs.customaction.MENU_ITEM_TITLE";
     field public static final String KEY_PENDING_INTENT = "android.support.customtabs.customaction.PENDING_INTENT";
     field public static final int NO_TITLE = 0; // 0x0
+    field public static final int SHARE_STATE_DEFAULT = 0; // 0x0
+    field public static final int SHARE_STATE_OFF = 2; // 0x2
+    field public static final int SHARE_STATE_ON = 1; // 0x1
     field public static final int SHOW_PAGE_TITLE = 1; // 0x1
     field public static final int TOOLBAR_ACTION_BUTTON_ID = 0; // 0x0
     field public final android.content.Intent intent;
@@ -148,16 +156,19 @@ package androidx.browser.customtabs {
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setCloseButtonIcon(android.graphics.Bitmap);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setColorScheme(int);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setColorSchemeParams(int, androidx.browser.customtabs.CustomTabColorSchemeParams);
-    method public androidx.browser.customtabs.CustomTabsIntent.Builder setDefaultShareMenuItemEnabled(boolean);
+    method public androidx.browser.customtabs.CustomTabsIntent.Builder setDefaultColorSchemeParams(androidx.browser.customtabs.CustomTabColorSchemeParams);
+    method @Deprecated public androidx.browser.customtabs.CustomTabsIntent.Builder setDefaultShareMenuItemEnabled(boolean);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setExitAnimations(android.content.Context, @AnimRes int, @AnimRes int);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setInstantAppsEnabled(boolean);
-    method public androidx.browser.customtabs.CustomTabsIntent.Builder setNavigationBarColor(@ColorInt int);
-    method public androidx.browser.customtabs.CustomTabsIntent.Builder setSecondaryToolbarColor(@ColorInt int);
+    method @Deprecated public androidx.browser.customtabs.CustomTabsIntent.Builder setNavigationBarColor(@ColorInt int);
+    method @Deprecated public androidx.browser.customtabs.CustomTabsIntent.Builder setNavigationBarDividerColor(@ColorInt int);
+    method @Deprecated public androidx.browser.customtabs.CustomTabsIntent.Builder setSecondaryToolbarColor(@ColorInt int);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setSecondaryToolbarViews(android.widget.RemoteViews, int[]?, android.app.PendingIntent?);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setSession(androidx.browser.customtabs.CustomTabsSession);
+    method public androidx.browser.customtabs.CustomTabsIntent.Builder setShareState(int);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setShowTitle(boolean);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setStartAnimations(android.content.Context, @AnimRes int, @AnimRes int);
-    method public androidx.browser.customtabs.CustomTabsIntent.Builder setToolbarColor(@ColorInt int);
+    method @Deprecated public androidx.browser.customtabs.CustomTabsIntent.Builder setToolbarColor(@ColorInt int);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setUrlBarHidingEnabled(boolean);
   }
 
@@ -180,6 +191,7 @@ package androidx.browser.customtabs {
     field public static final String CATEGORY_TRUSTED_WEB_ACTIVITY_IMMERSIVE_MODE = "androidx.browser.trusted.category.ImmersiveMode";
     field public static final String CATEGORY_WEB_SHARE_TARGET_V2 = "androidx.browser.trusted.category.WebShareTargetV2";
     field public static final int FILE_PURPOSE_TRUSTED_WEB_ACTIVITY_SPLASH_IMAGE = 1; // 0x1
+    field public static final String KEY_SUCCESS = "androidx.browser.customtabs.SUCCESS";
     field public static final String KEY_URL = "android.support.customtabs.otherurls.URL";
     field public static final int RELATION_HANDLE_ALL_URLS = 2; // 0x2
     field public static final int RELATION_USE_AS_ORIGIN = 1; // 0x1
@@ -249,6 +261,18 @@ package androidx.browser.customtabs {
 
 package androidx.browser.trusted {
 
+  public final class ScreenOrientation {
+    field public static final int ANY = 5; // 0x5
+    field public static final int DEFAULT = 0; // 0x0
+    field public static final int LANDSCAPE = 6; // 0x6
+    field public static final int LANDSCAPE_PRIMARY = 3; // 0x3
+    field public static final int LANDSCAPE_SECONDARY = 4; // 0x4
+    field public static final int NATURAL = 8; // 0x8
+    field public static final int PORTRAIT = 7; // 0x7
+    field public static final int PORTRAIT_PRIMARY = 1; // 0x1
+    field public static final int PORTRAIT_SECONDARY = 2; // 0x2
+  }
+
   public final class Token {
     method public static androidx.browser.trusted.Token? create(String, android.content.pm.PackageManager);
     method public static androidx.browser.trusted.Token deserialize(byte[]);
@@ -299,18 +323,22 @@ package androidx.browser.trusted {
     ctor public TrustedWebActivityIntentBuilder(android.net.Uri);
     method public androidx.browser.trusted.TrustedWebActivityIntent build(androidx.browser.customtabs.CustomTabsSession);
     method public androidx.browser.customtabs.CustomTabsIntent buildCustomTabsIntent();
-    method public androidx.browser.trusted.TrustedWebActivityDisplayMode? getDisplayMode();
+    method public androidx.browser.trusted.TrustedWebActivityDisplayMode getDisplayMode();
     method public android.net.Uri getUri();
     method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setAdditionalTrustedOrigins(java.util.List<java.lang.String!>);
     method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setColorScheme(int);
     method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setColorSchemeParams(int, androidx.browser.customtabs.CustomTabColorSchemeParams);
+    method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setDefaultColorSchemeParams(androidx.browser.customtabs.CustomTabColorSchemeParams);
     method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setDisplayMode(androidx.browser.trusted.TrustedWebActivityDisplayMode);
-    method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setNavigationBarColor(@ColorInt int);
+    method @Deprecated public androidx.browser.trusted.TrustedWebActivityIntentBuilder setNavigationBarColor(@ColorInt int);
+    method @Deprecated public androidx.browser.trusted.TrustedWebActivityIntentBuilder setNavigationBarDividerColor(@ColorInt int);
+    method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setScreenOrientation(int);
     method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setShareParams(androidx.browser.trusted.sharing.ShareTarget, androidx.browser.trusted.sharing.ShareData);
     method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setSplashScreenParams(android.os.Bundle);
-    method public androidx.browser.trusted.TrustedWebActivityIntentBuilder setToolbarColor(@ColorInt int);
+    method @Deprecated public androidx.browser.trusted.TrustedWebActivityIntentBuilder setToolbarColor(@ColorInt int);
     field public static final String EXTRA_ADDITIONAL_TRUSTED_ORIGINS = "android.support.customtabs.extra.ADDITIONAL_TRUSTED_ORIGINS";
     field public static final String EXTRA_DISPLAY_MODE = "androidx.browser.trusted.extra.DISPLAY_MODE";
+    field public static final String EXTRA_SCREEN_ORIENTATION = "androidx.browser.trusted.extra.SCREEN_ORIENTATION";
     field public static final String EXTRA_SHARE_DATA = "androidx.browser.trusted.extra.SHARE_DATA";
     field public static final String EXTRA_SHARE_TARGET = "androidx.browser.trusted.extra.SHARE_TARGET";
     field public static final String EXTRA_SPLASH_SCREEN_PARAMS = "androidx.browser.trusted.EXTRA_SPLASH_SCREEN_PARAMS";
@@ -329,6 +357,7 @@ package androidx.browser.trusted {
     method @MainThread public final boolean onUnbind(android.content.Intent?);
     field public static final String ACTION_TRUSTED_WEB_ACTIVITY_SERVICE = "android.support.customtabs.trusted.TRUSTED_WEB_ACTIVITY_SERVICE";
     field public static final String KEY_SMALL_ICON_BITMAP = "android.support.customtabs.trusted.SMALL_ICON_BITMAP";
+    field public static final String KEY_SUCCESS = "androidx.browser.trusted.SUCCESS";
     field public static final String META_DATA_NAME_SMALL_ICON = "android.support.customtabs.trusted.SMALL_ICON";
     field public static final int SMALL_ICON_NOT_SET = -1; // 0xffffffff
   }

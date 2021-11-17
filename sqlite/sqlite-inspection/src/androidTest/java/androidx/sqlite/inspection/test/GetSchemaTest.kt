@@ -17,6 +17,7 @@
 package androidx.sqlite.inspection.test
 
 import android.database.sqlite.SQLiteDatabase
+import androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_NO_OPEN_DATABASE_WITH_REQUESTED_ID_VALUE
 import androidx.sqlite.inspection.test.MessageFactory.createGetSchemaCommand
 import androidx.sqlite.inspection.test.MessageFactory.createTrackDatabasesCommand
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -151,7 +152,8 @@ class GetSchemaTest {
             Database("db1").createInstance(temporaryFolder).also {
                 it.execSQL("CREATE TABLE t1 (c2 INTEGER PRIMARY KEY AUTOINCREMENT)")
                 it.execSQL("INSERT INTO t1 VALUES(3)")
-            })
+            }
+        )
         testEnvironment.sendCommand(createGetSchemaCommand(databaseId)).let { response ->
             val tableNames = response.getSchema.tablesList.map { it.name }
             assertThat(tableNames).isEqualTo(listOf("t1"))
@@ -165,9 +167,13 @@ class GetSchemaTest {
             assertThat(response.hasErrorOccurred()).isEqualTo(true)
             val error = response.errorOccurred.content
             assertThat(error.message).contains(
-                "Unable to perform an operation on database (id=$databaseId).")
+                "Unable to perform an operation on database (id=$databaseId)."
+            )
             assertThat(error.message).contains("The database may have already been closed.")
             assertThat(error.recoverability.isRecoverable).isEqualTo(true)
+            assertThat(error.errorCodeValue).isEqualTo(
+                ERROR_NO_OPEN_DATABASE_WITH_REQUESTED_ID_VALUE
+            )
         }
     }
 
@@ -176,54 +182,56 @@ class GetSchemaTest {
         onDatabaseCreated: (SQLiteDatabase) -> Unit = {}
     ) =
         runBlocking {
-        assertThat(alreadyOpenDatabases).isNotEmpty() // sanity check
+            assertThat(alreadyOpenDatabases).isNotEmpty() // sanity check
 
-        testEnvironment.registerAlreadyOpenDatabases(alreadyOpenDatabases.map {
-            it.createInstance(temporaryFolder).also { db -> onDatabaseCreated(db) }
-        })
-        testEnvironment.sendCommand(createTrackDatabasesCommand())
-        val databaseConnections =
-            alreadyOpenDatabases.indices.map { testEnvironment.receiveEvent().databaseOpened }
-
-        val schemas =
-            databaseConnections
-                .sortedBy { it.path }
-                .map {
-                    testEnvironment.sendCommand(createGetSchemaCommand(it.databaseId)).getSchema
+            testEnvironment.registerAlreadyOpenDatabases(
+                alreadyOpenDatabases.map {
+                    it.createInstance(temporaryFolder).also { db -> onDatabaseCreated(db) }
                 }
+            )
+            testEnvironment.sendCommand(createTrackDatabasesCommand())
+            val databaseConnections =
+                alreadyOpenDatabases.indices.map { testEnvironment.receiveEvent().databaseOpened }
 
-        alreadyOpenDatabases
-            .sortedBy { it.name }
-            .zipSameSize(schemas)
-            .forEach { (expectedSchema, actualSchema) ->
-                val expectedTables = expectedSchema.tables.sortedBy { it.name }
-                val actualTables = actualSchema.tablesList.sortedBy { it.name }
-
-                expectedTables
-                    .zipSameSize(actualTables)
-                    .forEach { (expectedTable, actualTable) ->
-                        assertThat(actualTable.name).isEqualTo(expectedTable.name)
-                        assertThat(actualTable.isView).isEqualTo(expectedTable.isView)
-
-                        val expectedColumns = expectedTable.columns.sortedBy { it.name }
-                        val actualColumns = actualTable.columnsList.sortedBy { it.name }
-
-                        expectedColumns
-                            .adjustForSinglePrimaryKey()
-                            .zipSameSize(actualColumns)
-                            .forEach { (expectedColumn, actualColumnProto) ->
-                                val actualColumn = Column(
-                                    name = actualColumnProto.name,
-                                    type = actualColumnProto.type,
-                                    primaryKey = actualColumnProto.primaryKey,
-                                    isNotNull = actualColumnProto.isNotNull,
-                                    isUnique = actualColumnProto.isUnique
-                                )
-                                assertThat(actualColumn).isEqualTo(expectedColumn)
-                            }
+            val schemas =
+                databaseConnections
+                    .sortedBy { it.path }
+                    .map {
+                        testEnvironment.sendCommand(createGetSchemaCommand(it.databaseId)).getSchema
                     }
-            }
-    }
+
+            alreadyOpenDatabases
+                .sortedBy { it.name }
+                .zipSameSize(schemas)
+                .forEach { (expectedSchema, actualSchema) ->
+                    val expectedTables = expectedSchema.tables.sortedBy { it.name }
+                    val actualTables = actualSchema.tablesList.sortedBy { it.name }
+
+                    expectedTables
+                        .zipSameSize(actualTables)
+                        .forEach { (expectedTable, actualTable) ->
+                            assertThat(actualTable.name).isEqualTo(expectedTable.name)
+                            assertThat(actualTable.isView).isEqualTo(expectedTable.isView)
+
+                            val expectedColumns = expectedTable.columns.sortedBy { it.name }
+                            val actualColumns = actualTable.columnsList.sortedBy { it.name }
+
+                            expectedColumns
+                                .adjustForSinglePrimaryKey()
+                                .zipSameSize(actualColumns)
+                                .forEach { (expectedColumn, actualColumnProto) ->
+                                    val actualColumn = Column(
+                                        name = actualColumnProto.name,
+                                        type = actualColumnProto.type,
+                                        primaryKey = actualColumnProto.primaryKey,
+                                        isNotNull = actualColumnProto.isNotNull,
+                                        isUnique = actualColumnProto.isUnique
+                                    )
+                                    assertThat(actualColumn).isEqualTo(expectedColumn)
+                                }
+                        }
+                }
+        }
 
     // The sole primary key in a table is by definition unique
     private fun List<Column>.adjustForSinglePrimaryKey(): List<Column> =

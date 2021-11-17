@@ -16,12 +16,17 @@
 
 package androidx.camera.core.internal;
 
+import android.graphics.Matrix;
+
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageInfo;
 import androidx.camera.core.impl.CameraCaptureResult;
+import androidx.camera.core.impl.TagBundle;
+import androidx.camera.core.impl.utils.ExifData;
 
 /** An ImageInfo that is created by a {@link CameraCaptureResult}. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class CameraCaptureResultImageInfo implements ImageInfo {
     private final CameraCaptureResult mCameraCaptureResult;
 
@@ -31,9 +36,9 @@ public final class CameraCaptureResultImageInfo implements ImageInfo {
     }
 
     @Override
-    @Nullable
-    public Object getTag() {
-        return mCameraCaptureResult.getTag();
+    @NonNull
+    public TagBundle getTagBundle() {
+        return mCameraCaptureResult.getTagBundle();
     }
 
     @Override
@@ -44,6 +49,17 @@ public final class CameraCaptureResultImageInfo implements ImageInfo {
     @Override
     public int getRotationDegrees() {
         return 0;
+    }
+
+    @NonNull
+    @Override
+    public Matrix getSensorToBufferTransformMatrix() {
+        return new Matrix();
+    }
+
+    @Override
+    public void populateExifData(@NonNull ExifData.Builder exifBuilder) {
+        mCameraCaptureResult.populateExifData(exifBuilder);
     }
 
     @NonNull

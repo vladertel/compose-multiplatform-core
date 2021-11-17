@@ -16,16 +16,11 @@
 
 package androidx.camera.camera2.internal;
 
-import android.annotation.SuppressLint;
-import android.hardware.camera2.CaptureRequest;
-import android.os.Build;
-
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
-import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCapture.CaptureMode;
+import androidx.camera.camera2.internal.compat.workaround.ImageCapturePixelHDRPlus;
 import androidx.camera.core.impl.CaptureConfig;
-import androidx.camera.core.impl.DeviceProperties;
 import androidx.camera.core.impl.ImageCaptureConfig;
 import androidx.camera.core.impl.UseCaseConfig;
 
@@ -33,11 +28,18 @@ import androidx.camera.core.impl.UseCaseConfig;
  * A {@link Camera2CaptureOptionUnpacker} extender for unpacking ImageCapture options into
  * {@link CaptureConfig.Builder}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 final class ImageCaptureOptionUnpacker extends Camera2CaptureOptionUnpacker {
 
-    static final ImageCaptureOptionUnpacker INSTANCE = new ImageCaptureOptionUnpacker();
+    static final ImageCaptureOptionUnpacker INSTANCE = new ImageCaptureOptionUnpacker(
+            new ImageCapturePixelHDRPlus());
 
-    private DeviceProperties mDeviceProperties = DeviceProperties.create();
+    @NonNull
+    private final ImageCapturePixelHDRPlus mImageCapturePixelHDRPlus;
+
+    private ImageCaptureOptionUnpacker(@NonNull ImageCapturePixelHDRPlus imageCapturePixelHDRPlus) {
+        mImageCapturePixelHDRPlus = imageCapturePixelHDRPlus;
+    }
 
     @Override
     public void unpack(@NonNull UseCaseConfig<?> config,
@@ -52,39 +54,10 @@ final class ImageCaptureOptionUnpacker extends Camera2CaptureOptionUnpacker {
         Camera2ImplConfig.Builder camera2ConfigBuilder = new Camera2ImplConfig.Builder();
 
         if (imageCaptureConfig.hasCaptureMode()) {
-            applyPixelHdrPlusChangeForCaptureMode(imageCaptureConfig.getCaptureMode(),
+            mImageCapturePixelHDRPlus.toggleHDRPlus(imageCaptureConfig.getCaptureMode(),
                     camera2ConfigBuilder);
         }
 
         builder.addImplementationOptions(camera2ConfigBuilder.build());
-    }
-
-    void setDeviceProperty(DeviceProperties deviceProperties) {
-        mDeviceProperties = deviceProperties;
-    }
-
-    // TODO(b/123897971):  move the device specific code once we complete the device workaround
-    // module.
-    @SuppressLint("NewApi")
-    private void applyPixelHdrPlusChangeForCaptureMode(@CaptureMode int captureMode,
-            Camera2ImplConfig.Builder builder) {
-        if ("Google".equals(mDeviceProperties.manufacturer())
-                && ("Pixel 2".equals(mDeviceProperties.model())
-                || "Pixel 3".equals(mDeviceProperties.model()))) {
-            if (mDeviceProperties.sdkVersion() >= Build.VERSION_CODES.O) {
-                switch (captureMode) {
-                    case ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY:
-                        // enable ZSL to make sure HDR+ is enabled
-                        builder.setCaptureRequestOption(
-                                CaptureRequest.CONTROL_ENABLE_ZSL, true);
-                        break;
-                    case ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY:
-                        // disable ZSL to turn off HDR+
-                        builder.setCaptureRequestOption(
-                                CaptureRequest.CONTROL_ENABLE_ZSL, false);
-                        break;
-                }
-            }
-        }
     }
 }

@@ -19,6 +19,12 @@ package androidx.camera.core;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.annotation.RestrictTo;
+import androidx.camera.core.impl.Config;
+import androidx.camera.core.impl.UseCaseConfig;
+import androidx.camera.core.impl.UseCaseConfigFactory;
 import androidx.camera.testing.fakes.FakeUseCase;
 
 /**
@@ -27,9 +33,9 @@ import androidx.camera.testing.fakes.FakeUseCase;
  * <p>This is used to complement the {@link FakeUseCase} for testing instances where a use case of
  * different type is created.
  */
-
+@RequiresApi(21)
 public class FakeOtherUseCase extends UseCase {
-    private volatile boolean mIsCleared = false;
+    private volatile boolean mIsDetached = false;
 
     /** Creates a new instance of a {@link FakeOtherUseCase} with a given configuration. */
     public FakeOtherUseCase(FakeOtherUseCaseConfig config) {
@@ -42,9 +48,34 @@ public class FakeOtherUseCase extends UseCase {
     }
 
     @Override
-    public void clear() {
-        super.clear();
-        mIsCleared = true;
+    public void onDetached() {
+        super.onDetached();
+        mIsDetached = true;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @hide
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    @Nullable
+    @Override
+    public UseCaseConfig<?> getDefaultConfig(boolean applyDefaultConfig,
+            @NonNull UseCaseConfigFactory factory) {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @hide
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    @NonNull
+    @Override
+    public UseCaseConfig.Builder<?, ?, ?> getUseCaseConfigBuilder(@NonNull Config config) {
+        throw new RuntimeException("Not implemented");
     }
 
     @Override
@@ -53,8 +84,8 @@ public class FakeOtherUseCase extends UseCase {
         return suggestedResolution;
     }
 
-    /** Returns true if {@link #clear()} has been called previously. */
-    public boolean isCleared() {
-        return mIsCleared;
+    /** Returns true if {@link #onDetached()} has been called previously. */
+    public boolean isDetached() {
+        return mIsDetached;
     }
 }

@@ -16,66 +16,63 @@
 
 package androidx.camera.extensions;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.camera.core.impl.CameraFilter;
-import androidx.camera.core.impl.CameraInternal;
-import androidx.camera.extensions.impl.ImageCaptureExtenderImpl;
-import androidx.camera.extensions.impl.PreviewExtenderImpl;
+import android.hardware.camera2.CameraCharacteristics;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import androidx.annotation.NonNull;
+import androidx.annotation.OptIn;
+import androidx.annotation.RequiresApi;
+import androidx.camera.camera2.interop.Camera2CameraInfo;
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
+import androidx.camera.core.CameraFilter;
+import androidx.camera.core.CameraInfo;
+import androidx.camera.core.impl.CameraInfoInternal;
+import androidx.camera.core.impl.Identifier;
+import androidx.camera.extensions.internal.VendorExtender;
+import androidx.core.util.Preconditions;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A filter that filters camera based on extender implementation. If the implementation is
  * unavailable, the camera will be considered available.
  */
-public final class ExtensionCameraFilter implements CameraFilter {
-    private PreviewExtenderImpl mPreviewExtenderImpl;
-    private ImageCaptureExtenderImpl mImageCaptureExtenderImpl;
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+final class ExtensionCameraFilter implements CameraFilter {
+    private final Identifier mId;
+    private final VendorExtender mVendorExtender;
 
-    ExtensionCameraFilter(@Nullable PreviewExtenderImpl previewExtenderImpl) {
-        mPreviewExtenderImpl = previewExtenderImpl;
-        mImageCaptureExtenderImpl = null;
-    }
-
-    ExtensionCameraFilter(@Nullable ImageCaptureExtenderImpl imageCaptureExtenderImpl) {
-        mPreviewExtenderImpl = null;
-        mImageCaptureExtenderImpl = imageCaptureExtenderImpl;
-    }
-
-    ExtensionCameraFilter(@Nullable PreviewExtenderImpl previewExtenderImpl,
-            @Nullable ImageCaptureExtenderImpl imageCaptureExtenderImpl) {
-        mPreviewExtenderImpl = previewExtenderImpl;
-        mImageCaptureExtenderImpl = imageCaptureExtenderImpl;
+    ExtensionCameraFilter(@NonNull String filterId, @NonNull VendorExtender vendorExtender)  {
+        mId = Identifier.create(filterId);
+        mVendorExtender = vendorExtender;
     }
 
     @NonNull
     @Override
-    public Set<CameraInternal> filterCameras(@NonNull Set<CameraInternal> cameras) {
-        Set<CameraInternal> resultCameras = new LinkedHashSet<>();
-        for (CameraInternal camera : cameras) {
-            String cameraId = camera.getCameraInfoInternal().getCameraId();
+    public Identifier getIdentifier() {
+        return mId;
+    }
 
-            boolean available = true;
+    @OptIn(markerClass = ExperimentalCamera2Interop.class)
+    @NonNull
+    @Override
+    public List<CameraInfo> filter(@NonNull List<CameraInfo> cameraInfos) {
+        List<CameraInfo> result = new ArrayList<>();
+        for (CameraInfo cameraInfo : cameraInfos) {
+            Preconditions.checkArgument(cameraInfo instanceof CameraInfoInternal,
+                    "The camera info doesn't contain internal implementation.");
+            String cameraId = Camera2CameraInfo.from(cameraInfo).getCameraId();
 
-            // If preview extender impl isn't null, check if the camera id is supported.
-            if (mPreviewExtenderImpl != null) {
-                available =
-                        mPreviewExtenderImpl.isExtensionAvailable(cameraId,
-                                CameraUtil.getCameraCharacteristics(cameraId));
-            }
-            // If image capture extender impl isn't null, check if the camera id is supported.
-            if (mImageCaptureExtenderImpl != null) {
-                available = mImageCaptureExtenderImpl.isExtensionAvailable(cameraId,
-                        CameraUtil.getCameraCharacteristics(cameraId));
-            }
+            Map<String, CameraCharacteristics> cameraCharacteristicsMap =
+                    Camera2CameraInfo.from(cameraInfo).getCameraCharacteristicsMap();
 
-            if (available) {
-                resultCameras.add(camera);
+            if (mVendorExtender
+                    .isExtensionAvailable(cameraId, cameraCharacteristicsMap)) {
+                result.add(cameraInfo);
             }
         }
 
-        return resultCameras;
+        return result;
     }
 }

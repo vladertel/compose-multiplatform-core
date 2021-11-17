@@ -18,13 +18,13 @@ package androidx.camera.core.impl;
 
 import android.graphics.ImageFormat;
 import android.util.Pair;
-import android.util.Rational;
 import android.util.Size;
 import android.view.Surface;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.AspectRatio;
 
 import java.lang.annotation.Retention;
@@ -34,13 +34,8 @@ import java.util.List;
 /**
  * Configuration containing options for configuring the output image data of a pipeline.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface ImageOutputConfig extends ReadableConfig {
-    /**
-     * Default aspect ratio for portrait and landscape
-     */
-    Rational DEFAULT_ASPECT_RATIO_LANDSCAPE = new Rational(4, 3);
-    Rational DEFAULT_ASPECT_RATIO_PORTRAIT = new Rational(3, 4);
-
     /**
      * Invalid integer rotation.
      */
@@ -48,12 +43,6 @@ public interface ImageOutputConfig extends ReadableConfig {
 
     // Option Declarations:
     // *********************************************************************************************
-
-    /**
-     * Option: camerax.core.imageOutput.targetAspectRatioCustom
-     */
-    Option<Rational> OPTION_TARGET_ASPECT_RATIO_CUSTOM =
-            Option.create("camerax.core.imageOutput.targetAspectRatioCustom", Rational.class);
 
     /**
      * Option: camerax.core.imageOutput.targetAspectRatio
@@ -88,37 +77,6 @@ public interface ImageOutputConfig extends ReadableConfig {
             Option.create("camerax.core.imageOutput.supportedResolutions", List.class);
 
     // *********************************************************************************************
-
-    /**
-     * Retrieves the aspect ratio of the target intending to use images from this configuration.
-     *
-     * <p>This is the ratio of the target's width to the image's height, where the numerator of the
-     * provided {@link Rational} corresponds to the width, and the denominator corresponds to the
-     * height.
-     *
-     * @param valueIfMissing The value to return if this configuration option has not been set.
-     * @return The stored value or <code>valueIfMissing</code> if the value does not exist in this
-     * configuration.
-     */
-    @Nullable
-    default Rational getTargetAspectRatioCustom(@Nullable Rational valueIfMissing) {
-        return retrieveOption(OPTION_TARGET_ASPECT_RATIO_CUSTOM, valueIfMissing);
-    }
-
-    /**
-     * Retrieves the aspect ratio of the target intending to use images from this configuration.
-     *
-     * <p>This is the ratio of the target's width to the image's height, where the numerator of the
-     * provided {@link Rational} corresponds to the width, and the denominator corresponds to the
-     * height.
-     *
-     * @return The stored value, if it exists in this configuration.
-     * @throws IllegalArgumentException if the option does not exist in this configuration.
-     */
-    @NonNull
-    default Rational getTargetAspectRatioCustom() {
-        return retrieveOption(OPTION_TARGET_ASPECT_RATIO_CUSTOM);
-    }
 
     /**
      * Verifies whether the aspect ratio of the target intending to use images from this
@@ -285,25 +243,6 @@ public interface ImageOutputConfig extends ReadableConfig {
         /**
          * Sets the aspect ratio of the intended target for images from this configuration.
          *
-         * <p>This is the ratio of the target's width to the image's height, where the numerator of
-         * the provided {@link Rational} corresponds to the width, and the denominator corresponds
-         * to the height.
-         *
-         * <p>This method can be used to request an aspect ratio that is not from the standard set
-         * of aspect ratios defined in the {@link AspectRatio}.
-         *
-         * <p>This method will remove any value set by setTargetAspectRatio().
-         *
-         * @param aspectRatio A {@link Rational} representing the ratio of the target's width and
-         *                    height.
-         * @return The current Builder.
-         */
-        @NonNull
-        B setTargetAspectRatioCustom(@NonNull Rational aspectRatio);
-
-        /**
-         * Sets the aspect ratio of the intended target for images from this configuration.
-         *
          * <p>It is not allowed to set both target aspect ratio and target resolution on the same
          * use case.
          *
@@ -381,5 +320,13 @@ public interface ImageOutputConfig extends ReadableConfig {
     @IntDef({Surface.ROTATION_0, Surface.ROTATION_90, Surface.ROTATION_180, Surface.ROTATION_270})
     @Retention(RetentionPolicy.SOURCE)
     @interface RotationValue {
+    }
+
+    /**
+     * Valid integer rotation degrees values.
+     */
+    @IntDef({0, 90, 180, 270})
+    @Retention(RetentionPolicy.SOURCE)
+    @interface RotationDegreesValue {
     }
 }

@@ -1,5 +1,654 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="5" by="lint 3.6.0-beta05" client="gradle" variant="debug" version="3.6.0-beta05">
+<issues format="6" by="lint 7.2.0-dev" type="baseline" client="gradle" dependencies="false" name="AGP (7.2.0-dev)" variant="all" version="7.2.0-dev">
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] TRANSITION_TARGET = {"
+        errorLine2="                                           ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="30"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int TARGET_ID = 1;"
+        errorLine2="                        ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="43"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int EXCLUDE_ID = 2;"
+        errorLine2="                         ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="45"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int EXCLUDE_CLASS = 3;"
+        errorLine2="                            ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="47"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int TARGET_NAME = 4;"
+        errorLine2="                          ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="49"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int EXCLUDE_NAME = 5;"
+        errorLine2="                           ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="51"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] TRANSITION_MANAGER = {"
+        errorLine2="                                            ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="55"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int TO_SCENE = 1;"
+        errorLine2="                       ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="65"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int TRANSITION = 2;"
+        errorLine2="                         ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="67"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] TRANSITION = {"
+        errorLine2="                                    ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="71"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int DURATION = 1;"
+        errorLine2="                       ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="82"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int START_DELAY = 2;"
+        errorLine2="                          ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="84"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int MATCH_ORDER = 3;"
+        errorLine2="                          ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="86"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] CHANGE_BOUNDS = {"
+        errorLine2="                                       ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="90"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] VISIBILITY_TRANSITION = {"
+        errorLine2="                                               ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="100"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] FADE = {"
+        errorLine2="                              ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="110"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] CHANGE_TRANSFORM = {"
+        errorLine2="                                          ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="120"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int REPARENT_WITH_OVERLAY = 1;"
+        errorLine2="                                    ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="129"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] SLIDE = {"
+        errorLine2="                               ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="133"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] TRANSITION_SET = {"
+        errorLine2="                                        ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="143"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] ARC_MOTION = {"
+        errorLine2="                                    ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="153"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int MINIMUM_VERTICAL_ANGLE = 1;"
+        errorLine2="                                     ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="163"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="        int MAXIMUM_ANGLE = 2;"
+        errorLine2="                            ~">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="165"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="    static final int[] PATTERN_PATH_MOTION = {"
+        errorLine2="                                             ^">
+        <location
+            file="src/main/java/androidx/transition/Styleable.java"
+            line="169"
+          column="46"/>
+    </issue>
+
+    <issue
+        id="BanUncheckedReflection"
+        message="Calling `Method.invoke` without an SDK check"
+        errorLine1="                        (View) sAddGhostMethod.invoke(null, view, viewGroup, matrix));"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/GhostViewPlatform.java"
+            line="47"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="BanUncheckedReflection"
+        message="Calling `Method.invoke` without an SDK check"
+        errorLine1="                sRemoveGhostMethod.invoke(null, view);"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/GhostViewPlatform.java"
+            line="61"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="BanUncheckedReflection"
+        message="Calling `Method.invoke` without an SDK check"
+        errorLine1="                sCancelMethod.invoke(t);"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewGroupUtilsApi14.java"
+            line="125"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="BanUncheckedReflection"
+        message="Calling `Method.invoke` without an SDK check"
+        errorLine1="                    sInvalidateChildInParentFastMethod.invoke(mHostView, left, top, dirty);"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewOverlayApi14.java"
+            line="290"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="BanUncheckedReflection"
+        message="Calling `Method.invoke` without an SDK check"
+        errorLine1="                sSetFrameMethod.invoke(v, left, top, right, bottom);"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewUtilsBase.java"
+            line="145"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 19; however, the containing class androidx.transition.AnimatorUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            animator.addPauseListener(listener);"
+        errorLine2="                     ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/AnimatorUtils.java"
+            line="32"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 19; however, the containing class androidx.transition.AnimatorUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            animator.pause();"
+        errorLine2="                     ~~~~~">
+        <location
+            file="src/main/java/androidx/transition/AnimatorUtils.java"
+            line="38"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 19; however, the containing class androidx.transition.AnimatorUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            animator.resume();"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/AnimatorUtils.java"
+            line="54"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.CanvasUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                canvas.enableZ();"
+        errorLine2="                       ~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/CanvasUtils.java"
+            line="45"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.CanvasUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                canvas.disableZ();"
+        errorLine2="                       ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/CanvasUtils.java"
+            line="47"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 21; however, the containing class androidx.transition.GhostViewHolder is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            if (view.getZ() != comparedWith.getZ()) {"
+        errorLine2="                     ~~~~">
+        <location
+            file="src/main/java/androidx/transition/GhostViewHolder.java"
+            line="176"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 21; however, the containing class androidx.transition.GhostViewHolder is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            if (view.getZ() != comparedWith.getZ()) {"
+        errorLine2="                                            ~~~~">
+        <location
+            file="src/main/java/androidx/transition/GhostViewHolder.java"
+            line="176"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 21; however, the containing class androidx.transition.GhostViewHolder is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                return view.getZ() > comparedWith.getZ();"
+        errorLine2="                            ~~~~">
+        <location
+            file="src/main/java/androidx/transition/GhostViewHolder.java"
+            line="177"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 21; however, the containing class androidx.transition.GhostViewHolder is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                return view.getZ() > comparedWith.getZ();"
+        errorLine2="                                                  ~~~~">
+        <location
+            file="src/main/java/androidx/transition/GhostViewHolder.java"
+            line="177"
+            column="51"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ImageViewUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            view.animateTransform(matrix);"
+        errorLine2="                 ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ImageViewUtils.java"
+            line="46"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ImageViewUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                view.animateTransform(matrix);"
+        errorLine2="                     ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ImageViewUtils.java"
+            line="92"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 21; however, the containing class androidx.transition.ObjectAnimatorUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            return ObjectAnimator.ofObject(target, property, null, path);"
+        errorLine2="                                  ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ObjectAnimatorUtils.java"
+            line="29"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 21; however, the containing class androidx.transition.PropertyValuesHolderUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            return PropertyValuesHolder.ofObject(property, null, path);"
+        errorLine2="                                        ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/PropertyValuesHolderUtils.java"
+            line="39"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 19; however, the containing class androidx.transition.TransitionUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            addToOverlay = !view.isAttachedToWindow();"
+        errorLine2="                                 ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/TransitionUtils.java"
+            line="94"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 19; however, the containing class androidx.transition.TransitionUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            sceneRootIsAttached = sceneRoot == null ? false : sceneRoot.isAttachedToWindow();"
+        errorLine2="                                                                        ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/TransitionUtils.java"
+            line="95"
+            column="73"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 18; however, the containing class androidx.transition.TransitionUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            sceneRoot.getOverlay().add(view);"
+        errorLine2="                      ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/TransitionUtils.java"
+            line="108"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 18; however, the containing class androidx.transition.TransitionUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            sceneRoot.getOverlay().add(view);"
+        errorLine2="                                   ~~~">
+        <location
+            file="src/main/java/androidx/transition/TransitionUtils.java"
+            line="108"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 28; however, the containing class androidx.transition.TransitionUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                bitmap = Bitmap.createBitmap(picture);"
+        errorLine2="                                ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/TransitionUtils.java"
+            line="127"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 18; however, the containing class androidx.transition.TransitionUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            sceneRoot.getOverlay().remove(view);"
+        errorLine2="                      ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/TransitionUtils.java"
+            line="137"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 18; however, the containing class androidx.transition.TransitionUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            sceneRoot.getOverlay().remove(view);"
+        errorLine2="                                   ~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/TransitionUtils.java"
+            line="137"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewGroupUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            group.suppressLayout(suppress);"
+        errorLine2="                  ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewGroupUtils.java"
+            line="57"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewGroupUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                group.suppressLayout(suppress);"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewGroupUtils.java"
+            line="72"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewGroupUtils is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="            return viewGroup.getChildDrawingOrder(i);"
+        errorLine2="                             ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewGroupUtils.java"
+            line="84"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewUtilsApi19 is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                view.setTransitionAlpha(alpha);"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewUtilsApi19.java"
+            line="40"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewUtilsApi19 is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                return view.getTransitionAlpha();"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewUtilsApi19.java"
+            line="56"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewUtilsApi21 is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                view.transformMatrixToGlobal(matrix);"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewUtilsApi21.java"
+            line="50"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewUtilsApi21 is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                view.transformMatrixToLocal(matrix);"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewUtilsApi21.java"
+            line="64"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewUtilsApi21 is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                view.setAnimationMatrix(matrix);"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewUtilsApi21.java"
+            line="78"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewUtilsApi22 is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                v.setLeftTopRightBottom(left, top, right, bottom);"
+        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewUtilsApi22.java"
+            line="40"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.transition.ViewUtilsApi23 is reachable from earlier API levels and will fail run-time class verification."
+        errorLine1="                    view.setTransitionVisibility(visibility);"
+        errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/transition/ViewUtilsApi23.java"
+            line="45"
+            column="26"/>
+    </issue>
 
     <issue
         id="UnknownNullness"
@@ -884,66 +1533,11 @@
     <issue
         id="UnknownNullness"
         message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    protected void createAnimators(ViewGroup sceneRoot, TransitionValuesMaps startValues,"
-        errorLine2="                                   ~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/Transition.java"
-            line="701"
-            column="36"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    protected void createAnimators(ViewGroup sceneRoot, TransitionValuesMaps startValues,"
-        errorLine2="                                                        ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/Transition.java"
-            line="701"
-            column="57"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="            TransitionValuesMaps endValues, ArrayList&lt;TransitionValues> startValuesList,"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/Transition.java"
-            line="702"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="            TransitionValuesMaps endValues, ArrayList&lt;TransitionValues> startValuesList,"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/Transition.java"
-            line="702"
-            column="45"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="            ArrayList&lt;TransitionValues> endValuesList) {"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/Transition.java"
-            line="703"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
         errorLine1="    public void pause(View sceneRoot) {"
         errorLine2="                      ~~~~">
         <location
             file="src/main/java/androidx/transition/Transition.java"
-            line="1715"
+            line="1712"
             column="23"/>
     </issue>
 
@@ -954,7 +1548,7 @@
         errorLine2="                       ~~~~">
         <location
             file="src/main/java/androidx/transition/Transition.java"
-            line="1747"
+            line="1739"
             column="24"/>
     </issue>
 
@@ -965,7 +1559,7 @@
         errorLine2="                           ~~~~~~~~">
         <location
             file="src/main/java/androidx/transition/Transition.java"
-            line="1894"
+            line="1881"
             column="28"/>
     </issue>
 
@@ -976,7 +1570,7 @@
         errorLine2="           ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/transition/Transition.java"
-            line="2214"
+            line="2201"
             column="12"/>
     </issue>
 
@@ -987,7 +1581,7 @@
         errorLine2="                        ~~~~">
         <location
             file="src/main/java/androidx/transition/Transition.java"
-            line="2437"
+            line="2424"
             column="25"/>
     </issue>
 
@@ -1115,66 +1709,11 @@
     <issue
         id="UnknownNullness"
         message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    protected void createAnimators(ViewGroup sceneRoot, TransitionValuesMaps startValues,"
-        errorLine2="                                   ~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/TransitionSet.java"
-            line="463"
-            column="36"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    protected void createAnimators(ViewGroup sceneRoot, TransitionValuesMaps startValues,"
-        errorLine2="                                                        ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/TransitionSet.java"
-            line="463"
-            column="57"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="            TransitionValuesMaps endValues, ArrayList&lt;TransitionValues> startValuesList,"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/TransitionSet.java"
-            line="464"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="            TransitionValuesMaps endValues, ArrayList&lt;TransitionValues> startValuesList,"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/TransitionSet.java"
-            line="464"
-            column="45"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="            ArrayList&lt;TransitionValues> endValuesList) {"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/transition/TransitionSet.java"
-            line="465"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
         errorLine1="    public void pause(View sceneRoot) {"
         errorLine2="                      ~~~~">
         <location
             file="src/main/java/androidx/transition/TransitionSet.java"
-            line="558"
+            line="554"
             column="23"/>
     </issue>
 
@@ -1185,18 +1724,18 @@
         errorLine2="                       ~~~~">
         <location
             file="src/main/java/androidx/transition/TransitionSet.java"
-            line="569"
+            line="565"
             column="24"/>
     </issue>
 
     <issue
         id="UnknownNullness"
         message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void setPropagation(TransitionPropagation propagation) {"
+        errorLine1="    public void setPropagation(TransitionPropagation transitionPropagation) {"
         errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/transition/TransitionSet.java"
-            line="609"
+            line="605"
             column="32"/>
     </issue>
 
@@ -1207,7 +1746,7 @@
         errorLine2="                                     ~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/transition/TransitionSet.java"
-            line="619"
+            line="615"
             column="38"/>
     </issue>
 
@@ -1218,7 +1757,7 @@
         errorLine2="           ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/transition/TransitionSet.java"
-            line="638"
+            line="634"
             column="12"/>
     </issue>
 
@@ -1401,7 +1940,7 @@
     <issue
         id="UnknownNullness"
         message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void captureValues(TransitionValues values) {"
+        errorLine1="    public void captureValues(TransitionValues transitionValues) {"
         errorLine2="                              ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/transition/VisibilityPropagation.java"

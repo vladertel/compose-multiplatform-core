@@ -17,23 +17,42 @@
 package androidx.camera.integration.core;
 
 import android.app.Application;
+import android.util.Log;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
+import androidx.camera.camera2.Camera2Config;
+import androidx.camera.camera2.pipe.integration.CameraPipeConfig;
+import androidx.camera.lifecycle.ExperimentalCameraProviderConfiguration;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 
 /** View model providing access to the camera */
 public class CameraXViewModel extends AndroidViewModel {
+    private static final String TAG = "CameraXViewModel";
+
+    @Nullable
+    private static String sConfiguredCameraXCameraImplementation = null;
+    // Does not explicitly configure with an implementation and relies on default config provider
+    // or previously configured implementation.
+    public static final String IMPLICIT_IMPLEMENTATION_OPTION = "implicit";
+    // Camera2 implementation.
+    public static final String CAMERA2_IMPLEMENTATION_OPTION = "camera2";
+    // Camera-pipe implementation.
+    public static final String CAMERA_PIPE_IMPLEMENTATION_OPTION = "camera_pipe";
+    private static final String DEFAULT_CAMERA_IMPLEMENTATION = IMPLICIT_IMPLEMENTATION_OPTION;
+
 
     private MutableLiveData<CameraProviderResult> mProcessCameraProviderLiveData;
 
@@ -45,9 +64,11 @@ public class CameraXViewModel extends AndroidViewModel {
      * Returns a {@link LiveData} containing CameraX's {@link ProcessCameraProvider} once it has
      * been initialized.
      */
+    @MainThread
     LiveData<CameraProviderResult> getCameraProvider() {
         if (mProcessCameraProviderLiveData == null) {
             mProcessCameraProviderLiveData = new MutableLiveData<>();
+            tryConfigureCameraProvider();
             try {
                 ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
                         ProcessCameraProvider.getInstance(getApplication());
@@ -58,13 +79,13 @@ public class CameraXViewModel extends AndroidViewModel {
                         mProcessCameraProviderLiveData.setValue(
                                 CameraProviderResult.fromProvider(cameraProvider));
                     } catch (ExecutionException e) {
-                        Throwable cause = Preconditions.checkNotNull(e.getCause());
-                        if (!(cause instanceof CancellationException)) {
+                        if (!(e.getCause() instanceof CancellationException)) {
                             mProcessCameraProviderLiveData.setValue(
-                                    CameraProviderResult.fromError(e.getCause()));
+                                    CameraProviderResult.fromError(
+                                            Objects.requireNonNull(e.getCause())));
                         }
                     } catch (InterruptedException e) {
-                        throw new IllegalStateException("Unable to use CameraX", e);
+                        throw new AssertionError("Unexpected thread interrupt.", e);
                     }
                 }, ContextCompat.getMainExecutor(getApplication()));
             } catch (IllegalStateException e) {
@@ -73,6 +94,47 @@ public class CameraXViewModel extends AndroidViewModel {
             }
         }
         return mProcessCameraProviderLiveData;
+    }
+
+    @OptIn(markerClass = ExperimentalCameraProviderConfiguration.class)
+    @MainThread
+    private static void tryConfigureCameraProvider() {
+        if (sConfiguredCameraXCameraImplementation == null) {
+            configureCameraProvider(DEFAULT_CAMERA_IMPLEMENTATION);
+        }
+    }
+
+    @OptIn(markerClass = ExperimentalCameraProviderConfiguration.class)
+    @MainThread
+    static void configureCameraProvider(@NonNull String cameraImplementation) {
+        if (!cameraImplementation.equals(sConfiguredCameraXCameraImplementation)) {
+            // Attempt to configure. This will throw an ISE if singleton is already configured.
+            try {
+                // If IMPLICIT_IMPLEMENTATION_OPTION is specified, we won't use explicit
+                // configuration, but will depend on the default config provider or the
+                // previously configured implementation.
+                if (!cameraImplementation.equals(IMPLICIT_IMPLEMENTATION_OPTION)) {
+                    if (cameraImplementation.equals(CAMERA2_IMPLEMENTATION_OPTION)) {
+                        ProcessCameraProvider.configureInstance(Camera2Config.defaultConfig());
+                    } else if (cameraImplementation.equals(CAMERA_PIPE_IMPLEMENTATION_OPTION)) {
+                        ProcessCameraProvider.configureInstance(
+                                CameraPipeConfig.INSTANCE.defaultConfig());
+                    } else {
+                        throw new IllegalArgumentException("Failed to configure the CameraProvider "
+                                + "using unknown " + cameraImplementation
+                                + " implementation option.");
+                    }
+                }
+
+                Log.d(TAG, "ProcessCameraProvider initialized using " + cameraImplementation);
+                sConfiguredCameraXCameraImplementation = cameraImplementation;
+            } catch (IllegalStateException e) {
+                throw new IllegalStateException("WARNING: CameraX is currently configured to use "
+                        + sConfiguredCameraXCameraImplementation + " which is different "
+                        + "from the desired implementation: " + cameraImplementation + " this "
+                        + "would have resulted in unexpected behavior.", e);
+            }
+        }
     }
 
     /**

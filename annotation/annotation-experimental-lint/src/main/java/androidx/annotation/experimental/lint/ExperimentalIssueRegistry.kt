@@ -20,6 +20,7 @@ import com.android.tools.lint.client.api.IssueRegistry
 import com.android.tools.lint.detector.api.CURRENT_API
 
 class ExperimentalIssueRegistry : IssueRegistry() {
-    override val api = CURRENT_API
-    override val issues get() = ExperimentalDetector.ISSUES
+    override val minApi = CURRENT_API
+    override val api = 11
+    override val issues get() = ExperimentalDetector.ISSUES + AnnotationRetentionDetector.ISSUE
 }

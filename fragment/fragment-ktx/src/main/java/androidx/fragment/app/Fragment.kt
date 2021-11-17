@@ -27,13 +27,11 @@ import android.os.Bundle
  * requestKey.
  *
  * @param requestKey key used to identify the result
- * @param result the result to be passed to another fragment or `null` if you want to
- *               clear out any pending result.
+ * @param result the result to be passed to another fragment.
  */
-fun Fragment.setFragmentResult(
-    requestKey: String,
-    result: Bundle
-) = parentFragmentManager.setFragmentResult(requestKey, result)
+public fun Fragment.setFragmentResult(requestKey: String, result: Bundle) {
+    parentFragmentManager.setFragmentResult(requestKey, result)
+}
 
 /**
  * Clears the stored result for the given requestKey.
@@ -45,9 +43,9 @@ fun Fragment.setFragmentResult(
  *
  * @param requestKey key used to identify the result
  */
-fun Fragment.clearFragmentResult(
-    requestKey: String
-) = parentFragmentManager.clearFragmentResult(requestKey)
+public fun Fragment.clearFragmentResult(requestKey: String) {
+    parentFragmentManager.clearFragmentResult(requestKey)
+}
 
 /**
  * Sets the [FragmentResultListener] for a given [requestKey]. Once this Fragment is
@@ -55,15 +53,14 @@ fun Fragment.clearFragmentResult(
  * [setFragmentResult] using the same [requestKey] will be delivered to the
  * [FragmentResultListener.onFragmentResult] callback. The callback will remain active until this
  * Fragment reaches the [androidx.lifecycle.Lifecycle.State.DESTROYED] state or
- * [clearFragmentResultListener] is called with the same requestKey..
+ * [clearFragmentResultListener] is called with the same requestKey.
  *
  * @param requestKey requestKey used to store the result
- * @param listener listener for result changes or `null` to remove any previously
- *                 registered listener.
+ * @param listener listener for result changes.
  */
-inline fun Fragment.setFragmentResultListener(
+public fun Fragment.setFragmentResultListener(
     requestKey: String,
-    crossinline listener: ((resultKey: String, bundle: Bundle) -> Unit)
+    listener: ((requestKey: String, bundle: Bundle) -> Unit)
 ) {
     parentFragmentManager.setFragmentResultListener(requestKey, this, listener)
 }
@@ -79,6 +76,6 @@ inline fun Fragment.setFragmentResultListener(
  *
  * @param requestKey key used to identify the result
  */
-fun Fragment.clearFragmentResultListener(
-    requestKey: String
-) = parentFragmentManager.clearFragmentResultListener(requestKey)
+public fun Fragment.clearFragmentResultListener(requestKey: String) {
+    parentFragmentManager.clearFragmentResultListener(requestKey)
+}

@@ -18,24 +18,27 @@ package androidx.camera.core;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.robolectric.Shadows.shadowOf;
+
 import android.content.Context;
-import android.graphics.Rect;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.util.Rational;
+import android.util.Pair;
 import android.view.Surface;
 
 import androidx.camera.core.impl.CameraFactory;
+import androidx.camera.core.impl.CameraInternal;
+import androidx.camera.core.impl.TagBundle;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
+import androidx.camera.core.internal.CameraUseCaseAdapter;
+import androidx.camera.testing.CameraUtil;
+import androidx.camera.testing.CameraXUtil;
 import androidx.camera.testing.fakes.FakeAppConfig;
 import androidx.camera.testing.fakes.FakeCamera;
 import androidx.camera.testing.fakes.FakeCameraFactory;
 import androidx.camera.testing.fakes.FakeImageReaderProxy;
-import androidx.camera.testing.fakes.FakeLifecycleOwner;
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.filters.MediumTest;
-import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.google.common.collect.Iterables;
 
@@ -46,25 +49,25 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.internal.DoNotInstrument;
-import org.robolectric.shadow.api.Shadow;
-import org.robolectric.shadows.ShadowLooper;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Unit test for {@link ImageAnalysis}.
  */
-@MediumTest
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
-@Config(minSdk = Build.VERSION_CODES.LOLLIPOP, shadows = {ShadowCameraX.class})
+@Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 public class ImageAnalysisTest {
 
     private static final int QUEUE_DEPTH = 8;
-    private static final String IMAGE_TAG = "IMAGE_TAG";
+    private static final int IMAGE_TAG = 0;
     private static final long TIMESTAMP_1 = 1;
     private static final long TIMESTAMP_2 = 2;
     private static final long TIMESTAMP_3 = 3;
@@ -77,38 +80,46 @@ public class ImageAnalysisTest {
     private FakeImageReaderProxy mFakeImageReaderProxy;
     private HandlerThread mBackgroundThread;
     private HandlerThread mCallbackThread;
+    private TagBundle mTagBundle;
 
     @Before
     public void setUp() throws ExecutionException, InterruptedException {
         mCallbackThread = new HandlerThread("Callback");
         mCallbackThread.start();
+        // Explicitly pause callback thread since we will control execution manually in tests
+        shadowOf(mCallbackThread.getLooper()).pause();
         mCallbackHandler = new Handler(mCallbackThread.getLooper());
 
         mBackgroundThread = new HandlerThread("Background");
         mBackgroundThread.start();
+        // Explicitly pause background thread since we will control execution manually in tests
+        shadowOf(mBackgroundThread.getLooper()).pause();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
         mBackgroundExecutor = CameraXExecutors.newHandlerExecutor(mBackgroundHandler);
 
         mImageProxiesReceived = new ArrayList<>();
 
-        CameraFactory.Provider cameraFactoryProvider = (ignored1, ignored2) -> {
+        mTagBundle = TagBundle.create(new Pair<>("FakeCaptureStageId", IMAGE_TAG));
+
+        CameraInternal camera = new FakeCamera();
+
+        CameraFactory.Provider cameraFactoryProvider = (ignored1, ignored2, ignored3) -> {
             FakeCameraFactory cameraFactory = new FakeCameraFactory();
-            cameraFactory.insertDefaultBackCamera(ShadowCameraX.DEFAULT_CAMERA_ID,
-                    () -> new FakeCamera(ShadowCameraX.DEFAULT_CAMERA_ID));
+            cameraFactory.insertDefaultBackCamera(camera.getCameraInfoInternal().getCameraId(),
+                    () -> camera);
             return cameraFactory;
         };
         CameraXConfig cameraXConfig = CameraXConfig.Builder.fromConfig(
                 FakeAppConfig.create()).setCameraFactoryProvider(cameraFactoryProvider).build();
 
         Context context = ApplicationProvider.getApplicationContext();
-        CameraX.initialize(context, cameraXConfig).get();
+        CameraXUtil.initialize(context, cameraXConfig).get();
     }
 
     @After
-    public void tearDown() throws ExecutionException, InterruptedException {
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(CameraX::unbindAll);
+    public void tearDown() throws ExecutionException, InterruptedException, TimeoutException {
         mImageProxiesReceived.clear();
-        CameraX.shutdown().get();
+        CameraXUtil.shutdown().get(10000, TimeUnit.MILLISECONDS);
         if (mBackgroundThread != null) {
             mBackgroundThread.quitSafely();
         }
@@ -118,64 +129,13 @@ public class ImageAnalysisTest {
     }
 
     @Test
-    public void largerThanBufferViewPortRect_cropRectIsBufferSize() throws InterruptedException {
-        // Arrange.
-        Rect largerThanBufferRect = new Rect(-1, -1, 10000, 10000);
-        setUpImageAnalysisWithStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST,
-                new ViewPort.Builder(new Rational(1, 1), Surface.ROTATION_0)
-                        .build());
-        // Sets viewPortRect directly because Shadow#invert() doesn't work in unit test.
-        mImageAnalysis.setViewPortCropRect(largerThanBufferRect);
-
-        // Act.
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_1);
-        flushHandler(mBackgroundHandler);
-        flushHandler(mCallbackHandler);
-
-        // Assert.
-        ImageProxy imageProxyReceived = Iterables.getOnlyElement(mImageProxiesReceived);
-        assertThat(imageProxyReceived.getCropRect())
-                .isEqualTo(new Rect(0, 0, mFakeImageReaderProxy.getWidth(),
-                        mFakeImageReaderProxy.getHeight()));
-        assertThat(imageProxyReceived.getViewPortRect()).isEqualTo(largerThanBufferRect);
-    }
-
-    @Test
-    public void bindViewPortWithFillStyle_returnsSameViewPortRectAndCropRect()
-            throws InterruptedException {
-        // Arrange.
-        setUpImageAnalysisWithStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST,
-                new ViewPort.Builder(new Rational(1, 1), Surface.ROTATION_0)
-                        .build());
-
-        // Act.
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_1);
-        flushHandler(mBackgroundHandler);
-        flushHandler(mCallbackHandler);
-
-        // Assert: both
-        ImageProxy imageProxyReceived = Iterables.getOnlyElement(mImageProxiesReceived);
-        // The expected value is based on fitting the 1:1 view port into a rect with the size of
-        // the ImageReader.
-        int expectedPadding =
-                (mFakeImageReaderProxy.getWidth() - mFakeImageReaderProxy.getHeight()) / 2;
-        assertThat(imageProxyReceived.getCropRect())
-                .isEqualTo(new Rect(expectedPadding, 0,
-                        mFakeImageReaderProxy.getWidth() - expectedPadding,
-                        mFakeImageReaderProxy.getHeight()));
-        assertThat(imageProxyReceived.getViewPortRect())
-                .isEqualTo(new Rect(expectedPadding, 0,
-                        mFakeImageReaderProxy.getWidth() - expectedPadding,
-                        mFakeImageReaderProxy.getHeight()));
-    }
-
-    @Test
-    public void resultSize_isEqualToSurfaceSize() throws InterruptedException {
+    public void resultSize_isEqualToSurfaceSize() throws InterruptedException,
+            CameraUseCaseAdapter.CameraException {
         // Arrange.
         setUpImageAnalysisWithStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST);
 
         // Act.
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_1);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_1);
         flushHandler(mBackgroundHandler);
         flushHandler(mCallbackHandler);
 
@@ -187,15 +147,16 @@ public class ImageAnalysisTest {
     }
 
     @Test
-    public void nonBlockingAnalyzerClosed_imageNotAnalyzed() throws InterruptedException {
+    public void nonBlockingAnalyzerClosed_imageNotAnalyzed() throws InterruptedException,
+            CameraUseCaseAdapter.CameraException {
         // Arrange.
         setUpImageAnalysisWithStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST);
 
         // Act.
         // Receive images from camera feed.
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_1);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_1);
         flushHandler(mBackgroundHandler);
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_2);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_2);
         flushHandler(mBackgroundHandler);
 
         // Assert.
@@ -208,20 +169,21 @@ public class ImageAnalysisTest {
 
         // Clear ImageAnalysis and flush both handlers. No more image should be received because
         // it's closed.
-        mImageAnalysis.clear();
+        mImageAnalysis.onDetached();
         flushHandler(mBackgroundHandler);
         flushHandler(mCallbackHandler);
         assertThat(getImageTimestampsReceived()).containsExactly(TIMESTAMP_1);
     }
 
     @Test
-    public void blockingAnalyzerClosed_imageNotAnalyzed() throws InterruptedException {
+    public void blockingAnalyzerClosed_imageNotAnalyzed() throws InterruptedException,
+            CameraUseCaseAdapter.CameraException {
         // Arrange.
         setUpImageAnalysisWithStrategy(ImageAnalysis.STRATEGY_BLOCK_PRODUCER);
 
         // Act.
         // Receive images from camera feed.
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_1);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_1);
         flushHandler(mBackgroundHandler);
 
         // Assert.
@@ -229,23 +191,24 @@ public class ImageAnalysisTest {
         assertThat(mImageProxiesReceived).isEmpty();
 
         // Flush callback handler and it's still empty because it's close.
-        mImageAnalysis.clear();
+        mImageAnalysis.onDetached();
         flushHandler(mCallbackHandler);
         assertThat(mImageProxiesReceived).isEmpty();
     }
 
     @Test
-    public void keepOnlyLatestStrategy_doesNotBlock() throws InterruptedException {
+    public void keepOnlyLatestStrategy_doesNotBlock() throws InterruptedException,
+            CameraUseCaseAdapter.CameraException {
         // Arrange.
         setUpImageAnalysisWithStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST);
 
         // Act.
         // Receive images from camera feed.
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_1);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_1);
         flushHandler(mBackgroundHandler);
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_2);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_2);
         flushHandler(mBackgroundHandler);
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_3);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_3);
         flushHandler(mBackgroundHandler);
 
         // Assert.
@@ -269,17 +232,18 @@ public class ImageAnalysisTest {
     }
 
     @Test
-    public void blockProducerStrategy_doesNotDropFrames() throws InterruptedException {
+    public void blockProducerStrategy_doesNotDropFrames() throws InterruptedException,
+            CameraUseCaseAdapter.CameraException {
         // Arrange.
         setUpImageAnalysisWithStrategy(ImageAnalysis.STRATEGY_BLOCK_PRODUCER);
 
         // Act.
         // Receive images from camera feed.
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_1);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_1);
         flushHandler(mBackgroundHandler);
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_2);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_2);
         flushHandler(mBackgroundHandler);
-        mFakeImageReaderProxy.triggerImageAvailable(IMAGE_TAG, TIMESTAMP_3);
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, TIMESTAMP_3);
         flushHandler(mBackgroundHandler);
 
         // Assert.
@@ -293,12 +257,14 @@ public class ImageAnalysisTest {
     }
 
     private void setUpImageAnalysisWithStrategy(
-            @ImageAnalysis.BackpressureStrategy int backpressureStrategy) {
+            @ImageAnalysis.BackpressureStrategy int backpressureStrategy) throws
+            CameraUseCaseAdapter.CameraException {
         setUpImageAnalysisWithStrategy(backpressureStrategy, null);
     }
 
     private void setUpImageAnalysisWithStrategy(
-            @ImageAnalysis.BackpressureStrategy int backpressureStrategy, ViewPort viewPort) {
+            @ImageAnalysis.BackpressureStrategy int backpressureStrategy, ViewPort viewPort) throws
+            CameraUseCaseAdapter.CameraException {
         mImageAnalysis = new ImageAnalysis.Builder()
                 .setBackgroundExecutor(mBackgroundExecutor)
                 .setTargetRotation(Surface.ROTATION_0)
@@ -310,6 +276,8 @@ public class ImageAnalysisTest {
                                     height, format, queueDepth, usage);
                             return mFakeImageReaderProxy;
                         })
+                .setSessionOptionUnpacker((config, builder) -> { })
+                .setOnePixelShiftEnabled(false)
                 .build();
 
         mImageAnalysis.setAnalyzer(CameraXExecutors.newHandlerExecutor(mCallbackHandler),
@@ -319,15 +287,11 @@ public class ImageAnalysisTest {
                 }
         );
 
-        FakeLifecycleOwner lifecycleOwner = new FakeLifecycleOwner();
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
-            CameraX.bindToLifecycle(
-                    lifecycleOwner,
-                    CameraSelector.DEFAULT_BACK_CAMERA,
-                    viewPort,
-                    mImageAnalysis);
-            lifecycleOwner.startAndResume();
-        });
+        CameraUseCaseAdapter cameraUseCaseAdapter =
+                CameraUtil.createCameraUseCaseAdapter(ApplicationProvider.getApplicationContext(),
+                        CameraSelector.DEFAULT_BACK_CAMERA);
+        cameraUseCaseAdapter.setViewPort(viewPort);
+        cameraUseCaseAdapter.addUseCases(Collections.singleton(mImageAnalysis));
     }
 
     private List<Long> getImageTimestampsReceived() {
@@ -344,6 +308,6 @@ public class ImageAnalysisTest {
      * @param handler the {@link Handler} to flush.
      */
     private static void flushHandler(Handler handler) {
-        ((ShadowLooper) Shadow.extract(handler.getLooper())).idle();
+        shadowOf(handler.getLooper()).idle();
     }
 }

@@ -35,13 +35,12 @@ import java.util.Map;
  * finished.
  * <p>
  * In other words, this means that a ViewModel will not be destroyed if its owner is destroyed for a
- * configuration change (e.g. rotation). The new instance of the owner will just re-connected to the
- * existing ViewModel.
+ * configuration change (e.g. rotation). The new owner instance just re-connects to the existing model.
  * <p>
  * The purpose of the ViewModel is to acquire and keep the information that is necessary for an
  * Activity or a Fragment. The Activity or the Fragment should be able to observe changes in the
  * ViewModel. ViewModels usually expose this information via {@link LiveData} or Android Data
- * Binding. You can also use any observability construct from you favorite framework.
+ * Binding. You can also use any observability construct from your favorite framework.
  * <p>
  * ViewModel's only responsibility is to manage the data for the UI. It <b>should never</b> access
  * your view hierarchy or hold a reference back to the Activity or the Fragment.
@@ -144,7 +143,7 @@ public abstract class ViewModel {
      * If the given {@code newValue} is {@link Closeable},
      * it will be closed once {@link #clear()}.
      * <p>
-     * If a value was already set for the given key, this calls do nothing and
+     * If a value was already set for the given key, this call does nothing and
      * returns currently associated value, the given {@code newValue} would be ignored
      * <p>
      * If the ViewModel was already cleared then close() would be called on the returned object if
