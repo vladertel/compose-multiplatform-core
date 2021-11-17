@@ -16,10 +16,15 @@
 
 package androidx.media;
 
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Build;
 
+import androidx.annotation.DoNotInline;
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat.StreamType;
 
 /** Compatibility library for {@link AudioManager} with fallbacks for older platforms. */
 public final class AudioManagerCompat {
@@ -86,7 +91,7 @@ public final class AudioManagerCompat {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return audioManager.requestAudioFocus(focusRequest.getAudioFocusRequest());
+            return Api26Impl.requestAudioFocus(audioManager, focusRequest.getAudioFocusRequest());
         } else {
             return audioManager.requestAudioFocus(
                     focusRequest.getOnAudioFocusChangeListener(),
@@ -115,11 +120,97 @@ public final class AudioManagerCompat {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return audioManager.abandonAudioFocusRequest(focusRequest.getAudioFocusRequest());
+            return Api26Impl.abandonAudioFocusRequest(audioManager,
+                    focusRequest.getAudioFocusRequest());
         } else {
             return audioManager.abandonAudioFocus(focusRequest.getOnAudioFocusChangeListener());
         }
     }
 
+    /**
+     * Returns the maximum volume index for a particular stream.
+     *
+     * @param streamType The stream type whose maximum volume index is returned.
+     * @return The maximum valid volume index for the stream.
+     */
+    @IntRange(from = 0)
+    public static int getStreamMaxVolume(@NonNull AudioManager audioManager,
+            @StreamType int streamType) {
+        return audioManager.getStreamMaxVolume(streamType);
+    }
+
+    /**
+     * Returns the minimum volume index for a particular stream.
+     *
+     * @param streamType The stream type whose minimum volume index is returned.
+     * @return The minimum valid volume index for the stream.
+     */
+    @IntRange(from = 0)
+    public static int getStreamMinVolume(@NonNull AudioManager audioManager,
+            @StreamType int streamType) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            return Api28Impl.getStreamMinVolume(audioManager, streamType);
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * Indicates if the device implements a fixed volume policy.
+     *
+     * <p>Some devices may not have volume control and may operate at a fixed volume, and may not
+     * enable muting or changing the volume of audio streams. This method will return {@code true}
+     * on such devices.
+     *
+     * <p>Compatibility: It returns {@code false} on API level below 21 even if the device has
+     * fixed volume.
+     */
+    public static boolean isVolumeFixed(@NonNull AudioManager audioManager) {
+        if (Build.VERSION.SDK_INT >= 21) {
+            return Api21Impl.isVolumeFixed(audioManager);
+        } else {
+            return false;
+        }
+    }
+
     private AudioManagerCompat() {}
+
+    @RequiresApi(21)
+    private static class Api21Impl {
+
+        @DoNotInline
+        static boolean isVolumeFixed(AudioManager audioManager) {
+            return audioManager.isVolumeFixed();
+        }
+
+        private Api21Impl() {}
+    }
+
+    @RequiresApi(26)
+    private static class Api26Impl {
+
+        @DoNotInline
+        static int abandonAudioFocusRequest(AudioManager audioManager,
+                AudioFocusRequest focusRequest) {
+            return audioManager.abandonAudioFocusRequest(focusRequest);
+        }
+
+        @DoNotInline
+        static int requestAudioFocus(AudioManager audioManager, AudioFocusRequest focusRequest) {
+            return audioManager.requestAudioFocus(focusRequest);
+        }
+
+        private Api26Impl() {}
+    }
+
+    @RequiresApi(28)
+    private static class Api28Impl {
+
+        @DoNotInline
+        static int getStreamMinVolume(AudioManager audioManager, int streamType) {
+            return audioManager.getStreamMinVolume(streamType);
+        }
+
+        private Api28Impl() {}
+    }
 }

@@ -17,7 +17,6 @@
 package androidx.wear.widget;
 
 import static androidx.test.espresso.Espresso.onView;
-import static androidx.test.espresso.action.ViewActions.swipeRight;
 import static androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.wear.widget.util.AsyncViewActions.waitForMatchingView;
@@ -27,13 +26,14 @@ import static org.hamcrest.Matchers.allOf;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.RectF;
 import android.view.View;
 
 import androidx.annotation.IdRes;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.test.core.app.ActivityScenario;
+import androidx.test.core.app.ApplicationProvider;
 import androidx.test.espresso.ViewAction;
 import androidx.test.espresso.action.GeneralLocation;
 import androidx.test.espresso.action.GeneralSwipeAction;
@@ -44,7 +44,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.FlakyTest;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
-import androidx.test.rule.ActivityTestRule;
 import androidx.wear.test.R;
 import androidx.wear.widget.util.ArcSwipe;
 import androidx.wear.widget.util.FrameLocationAvoidingEdges;
@@ -59,26 +58,11 @@ import org.junit.runner.RunWith;
 public class SwipeDismissFrameLayoutTest {
 
     private static final long MAX_WAIT_TIME = 4000; //ms
-    /**
-     * Gap from the edge of the screen to allow for navigation gestures and room to start a swipe.
-     * This needs to be at larger than the offset that is being applied by
-     * {@link FrameLocationAvoidingEdges.Constants#OFFSET_FROM_EDGE}
-     */
-    private static final float SWIPE_MARGIN_PX =
-            FrameLocationAvoidingEdges.Constants.OFFSET_FROM_EDGE + 10.0f;
 
     private final SwipeDismissFrameLayout.Callback mDismissCallback = new DismissCallback();
 
     @Rule
     public final WakeLockRule wakeLock = new WakeLockRule();
-
-    @Rule
-    public final ActivityTestRule<SwipeDismissFrameLayoutTestActivity> activityRule =
-            new ActivityTestRule<>(
-                    SwipeDismissFrameLayoutTestActivity.class,
-                    true, /** initial touch mode */
-                    false /** launchActivity */
-            );
 
     private int mLayoutWidth;
     private int mLayoutHeight;
@@ -88,334 +72,266 @@ public class SwipeDismissFrameLayoutTest {
     @Test
     public void testCanScrollHorizontally() {
         // GIVEN a freshly setup SwipeDismissFrameLayout
-        setUpSimpleLayout();
-        Activity activity = activityRule.getActivity();
-        SwipeDismissFrameLayout testLayout =
-                (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
-        // WHEN we check that the layout is horizontally scrollable from left to right.
-        // THEN the layout is found to be horizontally swipeable from left to right.
-        assertTrue(testLayout.canScrollHorizontally(-20));
-        // AND the layout is found to NOT be horizontally swipeable from right to left.
-        assertFalse(testLayout.canScrollHorizontally(20));
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(createSimpleLayoutLaunchIntent())) {
+            scenario.onActivity(activity -> {
+                SwipeDismissFrameLayout testLayout =
+                        (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
+                testLayout.setSwipeable(true);
+                // WHEN we check that the layout is horizontally scrollable from left to right.
+                // THEN the layout is found to be horizontally swipeable from left to right.
+                assertTrue(testLayout.canScrollHorizontally(-20));
+                // AND the layout is found to NOT be horizontally swipeable from right to left.
+                assertFalse(testLayout.canScrollHorizontally(20));
 
-        // WHEN we switch off the swipe-to-dismiss functionality for the layout
-        testLayout.setSwipeable(false);
-        // THEN the layout is found NOT to be horizontally swipeable from left to right.
-        assertFalse(testLayout.canScrollHorizontally(-20));
-        // AND the layout is found to NOT be horizontally swipeable from right to left.
-        assertFalse(testLayout.canScrollHorizontally(20));
+                // WHEN we switch off the swipe-to-dismiss functionality for the layout
+                testLayout.setSwipeable(false);
+                // THEN the layout is found NOT to be horizontally swipeable from left to right.
+                assertFalse(testLayout.canScrollHorizontally(-20));
+                // AND the layout is found to NOT be horizontally swipeable from right to left.
+                assertFalse(testLayout.canScrollHorizontally(20));
+            });
+        }
     }
 
     @Test
     public void canScrollHorizontallyShouldBeFalseWhenInvisible() {
         // GIVEN a freshly setup SwipeDismissFrameLayout
-        setUpSimpleLayout();
-        Activity activity = activityRule.getActivity();
-        final SwipeDismissFrameLayout testLayout = activity.findViewById(R.id.swipe_dismiss_root);
-        // GIVEN the layout is invisible
-        // Note: We have to run this on the main thread, because of thread checks in View.java.
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                testLayout.setVisibility(View.INVISIBLE);
-            }
-        });
-        // WHEN we check that the layout is horizontally scrollable
-        // THEN the layout is found to be NOT horizontally swipeable from left to right.
-        assertFalse(testLayout.canScrollHorizontally(-20));
-        // AND the layout is found to NOT be horizontally swipeable from right to left.
-        assertFalse(testLayout.canScrollHorizontally(20));
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(createSimpleLayoutLaunchIntent())) {
+            final SwipeDismissFrameLayout[] testLayout = new SwipeDismissFrameLayout[1];
+            scenario.onActivity(activity -> {
+                testLayout[0] =
+                        (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
+            });
+            // GIVEN the layout is invisible
+            // Note: We have to run this on the main thread, because of thread checks in View.java.
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(new Runnable() {
+                @Override
+                public void run() {
+                    testLayout[0].setVisibility(View.INVISIBLE);
+                }
+            });
+            // WHEN we check that the layout is horizontally scrollable
+            // THEN the layout is found to be NOT horizontally swipeable from left to right.
+            assertFalse(testLayout[0].canScrollHorizontally(-20));
+            // AND the layout is found to NOT be horizontally swipeable from right to left.
+            assertFalse(testLayout[0].canScrollHorizontally(20));
+        }
     }
 
     @Test
     public void canScrollHorizontallyShouldBeFalseWhenGone() {
         // GIVEN a freshly setup SwipeDismissFrameLayout
-        setUpSimpleLayout();
-        Activity activity = activityRule.getActivity();
-        final SwipeDismissFrameLayout testLayout =
-                (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
-        // GIVEN the layout is gone
-        // Note: We have to run this on the main thread, because of thread checks in View.java.
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(new Runnable() {
-            @Override
-            public void run() {
-                testLayout.setVisibility(View.GONE);
-            }
-        });
-        // WHEN we check that the layout is horizontally scrollable
-        // THEN the layout is found to be NOT horizontally swipeable from left to right.
-        assertFalse(testLayout.canScrollHorizontally(-20));
-        // AND the layout is found to NOT be horizontally swipeable from right to left.
-        assertFalse(testLayout.canScrollHorizontally(20));
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(createSimpleLayoutLaunchIntent())) {
+            final SwipeDismissFrameLayout[] testLayout = new SwipeDismissFrameLayout[1];
+            scenario.onActivity(activity -> {
+                testLayout[0] =
+                        (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
+            });
+            // GIVEN the layout is gone
+            // Note: We have to run this on the main thread, because of thread checks in View.java.
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(new Runnable() {
+                @Override
+                public void run() {
+                    testLayout[0].setVisibility(View.GONE);
+                }
+            });
+            // WHEN we check that the layout is horizontally scrollable
+            // THEN the layout is found to be NOT horizontally swipeable from left to right.
+            assertFalse(testLayout[0].canScrollHorizontally(-20));
+            // AND the layout is found to NOT be horizontally swipeable from right to left.
+            assertFalse(testLayout[0].canScrollHorizontally(20));
+        }
     }
 
     @Test
-    public void testSwipeDismissEnabledByDefault() {
+    public void testSwipeDismissDisabledByDefault() {
         // GIVEN a freshly setup SwipeDismissFrameLayout
-        setUpSimpleLayout();
-        Activity activity = activityRule.getActivity();
-        SwipeDismissFrameLayout testLayout =
-                (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
-        // WHEN we check that the layout is dismissible
-        // THEN the layout is find to be dismissible
-        assertTrue(testLayout.isSwipeable());
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(createSimpleLayoutLaunchIntent())) {
+            scenario.onActivity(activity -> {
+                SwipeDismissFrameLayout testLayout =
+                        (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
+                // WHEN we check that the layout is dismissible
+                // THEN the layout is find to be dismissible
+                assertFalse(testLayout.isSwipeable());
+            });
+        }
     }
 
     @Test
     public void testSwipeDismissesViewIfEnabled() {
         // GIVEN a freshly setup SwipeDismissFrameLayout
-        setUpSimpleLayout();
-        // WHEN we perform a swipe to dismiss
-        onView(withId(R.id.swipe_dismiss_root)).perform(swipeRight());
-        // AND hidden
-        assertHidden(R.id.swipe_dismiss_root);
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(createSimpleLayoutLaunchIntent())) {
+            setUpSwipeableAndCallback(scenario, true);
+            // WHEN we perform a swipe to dismiss
+            onView(withId(R.id.swipe_dismiss_root)).perform(swipeRightFromLeftCenterAvoidingEdge());
+            // AND hidden
+            assertHidden(R.id.swipe_dismiss_root);
+        }
     }
 
     @Test
     public void testSwipeDoesNotDismissViewIfDisabled() {
         // GIVEN a freshly setup SwipeDismissFrameLayout with dismiss turned off.
-        setUpSimpleLayout();
-        Activity activity = activityRule.getActivity();
-        SwipeDismissFrameLayout testLayout =
-                (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
-        testLayout.setSwipeable(false);
-        // WHEN we perform a swipe to dismiss
-        onView(withId(R.id.swipe_dismiss_root)).perform(swipeRight());
-        // THEN the layout is not hidden
-        assertNotHidden(R.id.swipe_dismiss_root);
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(createSimpleLayoutLaunchIntent())) {
+            setUpSwipeableAndCallback(scenario, false);
+            // WHEN we perform a swipe to dismiss
+            onView(withId(R.id.swipe_dismiss_root)).perform(swipeRightFromLeftCenterAvoidingEdge());
+            // THEN the layout is not hidden
+            assertNotHidden(R.id.swipe_dismiss_root);
+        }
     }
 
     @Test
     public void testAddRemoveCallback() {
         // GIVEN a freshly setup SwipeDismissFrameLayout
-        setUpSimpleLayout();
-        Activity activity = activityRule.getActivity();
-        SwipeDismissFrameLayout testLayout = activity.findViewById(R.id.swipe_dismiss_root);
-        // WHEN we remove the swipe callback
-        testLayout.removeCallback(mDismissCallback);
-        onView(withId(R.id.swipe_dismiss_root)).perform(swipeRight());
-        // THEN the layout is not hidden
-        assertNotHidden(R.id.swipe_dismiss_root);
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(createSimpleLayoutLaunchIntent())) {
+            setUpSwipeableAndCallback(scenario, true);
+            // WHEN we remove the swipe callback
+            scenario.onActivity(activity -> {
+                SwipeDismissFrameLayout testLayout =
+                        (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
+                testLayout.removeCallback(mDismissCallback);
+            });
+            onView(withId(R.id.swipe_dismiss_root)).perform(swipeRightFromLeftCenterAvoidingEdge());
+            // THEN the layout is not hidden
+            assertNotHidden(R.id.swipe_dismiss_root);
+        }
     }
 
     @Test
     public void testSwipeDoesNotDismissViewIfScrollable() throws Throwable {
         // GIVEN a freshly setup SwipeDismissFrameLayout with dismiss turned off.
-        setUpSwipeDismissWithHorizontalRecyclerView();
-        activityRule.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Activity activity = activityRule.getActivity();
-                RecyclerView testLayout = activity.findViewById(R.id.recycler_container);
-                // Scroll to a position from which the child is scrollable.
-                testLayout.scrollToPosition(50);
-            }
-        });
-
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-        // WHEN we perform a swipe to dismiss from the center of the screen.
-        onView(withId(R.id.swipe_dismiss_root)).perform(swipeRightFromCenter());
-        // THEN the layout is not hidden
-        assertNotHidden(R.id.swipe_dismiss_root);
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(
+                             createSwipeDismissWithHorizontalRecyclerViewLaunchIntent()
+                     )) {
+            setUpSwipeableAndCallback(scenario, true);
+            scenario.onActivity(activity -> {
+                SwipeDismissFrameLayout testLayout =
+                        (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
+                RecyclerView testRecyclerView = activity.findViewById(R.id.recycler_container);
+                testRecyclerView.scrollToPosition(50);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            // WHEN we perform a swipe to dismiss from the center of the screen.
+            onView(withId(R.id.swipe_dismiss_root)).perform(swipeRightFromCenter());
+            // THEN the layout is not hidden
+            assertNotHidden(R.id.swipe_dismiss_root);
+        }
     }
 
 
     @Test
     public void testEdgeSwipeDoesDismissViewIfScrollable() {
         // GIVEN a freshly setup SwipeDismissFrameLayout with dismiss turned off.
-        setUpSwipeDismissWithHorizontalRecyclerView();
-        // WHEN we perform a swipe to dismiss from the left edge of the screen.
-        onView(withId(R.id.swipe_dismiss_root)).perform(swipeRightFromLeftCenterAvoidingEdge());
-        // THEN the layout is hidden
-        assertHidden(R.id.swipe_dismiss_root);
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(
+                             createSwipeDismissWithHorizontalRecyclerViewLaunchIntent()
+                     )) {
+            setUpSwipeableAndCallback(scenario, true);
+            // WHEN we perform a swipe to dismiss from the left edge of the screen.
+            onView(withId(R.id.swipe_dismiss_root)).perform(swipeRightFromLeftCenterAvoidingEdge());
+            // THEN the layout is hidden
+            assertHidden(R.id.swipe_dismiss_root);
+        }
     }
-
-    @Test
-    public void testSwipeDoesNotDismissViewIfStartsInWrongPosition() {
-        // GIVEN a freshly setup SwipeDismissFrameLayout with dismiss turned on, but only for an
-        // inner circle.
-        setUpSwipeableRegion();
-        // WHEN we perform a swipe to dismiss from the left edge of the screen.
-        onView(withId(R.id.swipe_dismiss_root)).perform(swipeRightFromLeftCenterAvoidingEdge());
-        // THEN the layout is not not hidden
-        assertNotHidden(R.id.swipe_dismiss_root);
-    }
-
-    @Test
-    public void testSwipeDoesDismissViewIfStartsInRightPosition() {
-        // GIVEN a freshly setup SwipeDismissFrameLayout with dismiss turned on, but only for an
-        // inner circle.
-        setUpSwipeableRegion();
-        // WHEN we perform a swipe to dismiss from the center of the screen.
-        onView(withId(R.id.swipe_dismiss_root)).perform(swipeRightFromCenter());
-        // THEN the layout is hidden
-        assertHidden(R.id.swipe_dismiss_root);
-    }
-
-    /**
-     @Test public void testSwipeInPreferenceFragmentAndNavDrawer() {
-     // GIVEN a freshly setup SwipeDismissFrameLayout with dismiss turned on, but only for an inner
-     // circle.
-     setUpPreferenceFragmentAndNavDrawer();
-     // WHEN we perform a swipe to dismiss from the center of the screen to the bottom.
-     onView(withId(R.id.drawer_layout)).perform(swipeBottomFromCenter());
-     // THEN the navigation drawer is shown.
-     assertPeeking(R.id.top_drawer);
-     }*/
 
     @Test
     @FlakyTest
-    public void testArcSwipeDoesNotTriggerDismiss() throws Throwable {
+    public void testArcSwipeDoesNotTriggerDismiss() {
         // GIVEN a freshly setup SwipeDismissFrameLayout with vertically scrollable content
-        setUpSwipeDismissWithVerticalRecyclerView();
-        int center = mLayoutHeight / 2;
-        int halfBound = mLayoutWidth / 2;
-        RectF bounds = new RectF(0, center - halfBound, mLayoutWidth, center + halfBound);
-        // WHEN the view is scrolled on an arc from top to bottom.
-        onView(withId(R.id.swipe_dismiss_root)).perform(
-                swipeTopFromBottomOnArcAvoidingEdge(bounds));
-        // THEN the layout is not dismissed and not hidden.
-        assertNotHidden(R.id.swipe_dismiss_root);
-        // AND the content view is scrolled.
-        assertScrolledY(R.id.recycler_container);
+        try (ActivityScenario<DismissibleFrameLayoutTestActivity> scenario =
+                     ActivityScenario.launch(
+                             createSwipeDismissWithVerticalRecyclerViewLaunchIntent()
+                     )) {
+            setUpSwipeableAndCallback(scenario, true);
+            int center = mLayoutHeight / 2;
+            int halfBound = mLayoutWidth / 2;
+            RectF bounds = new RectF(0, center - halfBound, mLayoutWidth, center + halfBound);
+            // WHEN the view is scrolled on an arc from top to bottom.
+            onView(withId(R.id.swipe_dismiss_root)).perform(
+                    swipeTopFromBottomOnArcAvoidingEdge(bounds));
+            // THEN the layout is not dismissed and not hidden.
+            assertNotHidden(R.id.swipe_dismiss_root);
+            // AND the content view is scrolled.
+            assertScrolledY(R.id.recycler_container);
+        }
     }
 
     /**
-     * Set ups the simplest possible layout for test cases - a {@link SwipeDismissFrameLayout} with
-     * a single static child.
+     * Creates intent for launching the simplest possible layout for test cases - a
+     * {@link SwipeDismissFrameLayout} with a single static child.
      */
-    private void setUpSimpleLayout() {
-        activityRule.launchActivity(
-                new Intent()
-                        .putExtra(
-                                LayoutTestActivity.EXTRA_LAYOUT_RESOURCE_ID,
-                                R.layout.swipe_dismiss_layout_testcase_1));
-        setDismissCallback();
+    private Intent createSimpleLayoutLaunchIntent() {
+        return new Intent()
+                .setClass(ApplicationProvider.getApplicationContext(),
+                        DismissibleFrameLayoutTestActivity.class)
+                .putExtra(
+                        LayoutTestActivity.EXTRA_LAYOUT_RESOURCE_ID,
+                        R.layout.swipe_dismiss_layout_testcase_1);
     }
 
 
     /**
-     * Sets up a slightly more involved layout for testing swipe-to-dismiss with scrollable
-     * containers. This layout contains a {@link SwipeDismissFrameLayout} with a horizontal {@link
-     * RecyclerView} as a child, ready to accept an adapter.
+     * Creates intent for launching a slightly more involved layout for testing swipe-to-dismiss
+     * with scrollable containers. This layout contains a {@link SwipeDismissFrameLayout} with a
+     * horizontal {@link RecyclerView} as a child, ready to accept an adapter.
      */
-    private void setUpSwipeDismissWithHorizontalRecyclerView() {
-        Intent launchIntent = new Intent();
-        launchIntent.putExtra(LayoutTestActivity.EXTRA_LAYOUT_RESOURCE_ID,
-                R.layout.swipe_dismiss_layout_testcase_2);
-        launchIntent.putExtra(SwipeDismissFrameLayoutTestActivity.EXTRA_LAYOUT_HORIZONTAL, true);
-        activityRule.launchActivity(launchIntent);
-        setDismissCallback();
+    private Intent createSwipeDismissWithHorizontalRecyclerViewLaunchIntent() {
+        return new Intent()
+                .setClass(ApplicationProvider.getApplicationContext(),
+                        DismissibleFrameLayoutTestActivity.class)
+                .putExtra(
+                        LayoutTestActivity.EXTRA_LAYOUT_RESOURCE_ID,
+                        R.layout.swipe_dismiss_layout_testcase_2)
+                .putExtra(DismissibleFrameLayoutTestActivity.EXTRA_LAYOUT_HORIZONTAL, true);
     }
 
     /**
-     * Sets up a slightly more involved layout for testing swipe-to-dismiss with scrollable
-     * containers. This layout contains a {@link SwipeDismissFrameLayout} with a vertical {@link
-     * WearableRecyclerView} as a child, ready to accept an adapter.
+     * Creates intent for launching slightly more involved layout for testing swipe-to-dismiss
+     * with scrollable containers. This layout contains a {@link SwipeDismissFrameLayout} with a
+     * vertical {@link WearableRecyclerView} as a child, ready to accept an adapter.
      */
-    private void setUpSwipeDismissWithVerticalRecyclerView() {
-        Intent launchIntent = new Intent();
-        launchIntent.putExtra(LayoutTestActivity.EXTRA_LAYOUT_RESOURCE_ID,
-                R.layout.swipe_dismiss_layout_testcase_2);
-        launchIntent.putExtra(SwipeDismissFrameLayoutTestActivity.EXTRA_LAYOUT_HORIZONTAL, false);
-        activityRule.launchActivity(launchIntent);
-        setDismissCallback();
+    private Intent createSwipeDismissWithVerticalRecyclerViewLaunchIntent() {
+        Intent launchIntent = new Intent()
+                .setClass(ApplicationProvider.getApplicationContext(),
+                        DismissibleFrameLayoutTestActivity.class)
+                .putExtra(
+                        LayoutTestActivity.EXTRA_LAYOUT_RESOURCE_ID,
+                        R.layout.swipe_dismiss_layout_testcase_2);
+        launchIntent.putExtra(DismissibleFrameLayoutTestActivity.EXTRA_LAYOUT_HORIZONTAL, false);
+
+        return launchIntent;
     }
 
-    /**
-     * Sets up a {@link SwipeDismissFrameLayout} in which only a certain region is allowed to react
-     * to swipe-dismiss gestures.
-     */
-    private void setUpSwipeableRegion() {
-        activityRule.launchActivity(
-                new Intent()
-                        .putExtra(
-                                LayoutTestActivity.EXTRA_LAYOUT_RESOURCE_ID,
-                                R.layout.swipe_dismiss_layout_testcase_1));
-        setCallback(
-                new DismissCallback() {
-                    @Override
-                    public boolean onPreSwipeStart(SwipeDismissFrameLayout layout, float x,
-                            float y) {
-                        float normalizedX = (x - mXPositionOnScreen) - (mLayoutWidth / 2);
-                        float normalizedY = (y - mYPositionOnScreen) - (mLayoutHeight / 2);
-                        float squareX = normalizedX * normalizedX;
-                        float squareY = normalizedY * normalizedY;
-
-                        // We want the circle to take up a decent chunk of the screen, but need to
-                        // keep it away from the screen edges in order to allow swipe gestures to be
-                        // started outside of the circle and inside of any grab handles that the
-                        // frame may have.
-                        return Math.sqrt(squareX + squareY) < ((mLayoutWidth / 2)
-                                - SWIPE_MARGIN_PX);
-                    }
-                });
-    }
-
-    /**
-     * Sets up a more involved test case where the layout consists of a
-     * {@code WearableNavigationDrawer} and a
-     * {@code androidx.wear.internal.view.SwipeDismissPreferenceFragment}
-     */
-  /*
-  private void setUpPreferenceFragmentAndNavDrawer() {
-    activityRule.launchActivity(
-      new Intent()
-          .putExtra(
-              LayoutTestActivity.EXTRA_LAYOUT_RESOURCE_ID,
-              R.layout.swipe_dismiss_layout_testcase_3));
-    Activity activity = activityRule.getActivity();
-    InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
-      WearableNavigationDrawer wearableNavigationDrawer =
-              (WearableNavigationDrawer) activity.findViewById(R.id.top_drawer);
-      wearableNavigationDrawer.setAdapter(
-              new WearableNavigationDrawer.WearableNavigationDrawerAdapter() {
-                @Override
-                public String getItemText(int pos) {
-                  return "test";
-                }
-
-                @Override
-                public Drawable getItemDrawable(int pos) {
-                  return null;
-                }
-
-                @Override
-                public void onItemSelected(int pos) {
-                  return;
-                }
-
-                @Override
-                public int getCount() {
-                  return 3;
-                }
-              });
-    });
-  }*/
-    private void setDismissCallback() {
-        setCallback(mDismissCallback);
-    }
-
-    private void setCallback(SwipeDismissFrameLayout.Callback callback) {
-        Activity activity = activityRule.getActivity();
-        SwipeDismissFrameLayout testLayout = activity.findViewById(R.id.swipe_dismiss_root);
+    private void setDismissCallback(SwipeDismissFrameLayout testLayout) {
         int[] locationOnScreen = new int[2];
         testLayout.getLocationOnScreen(locationOnScreen);
         mXPositionOnScreen = locationOnScreen[0];
         mYPositionOnScreen = locationOnScreen[1];
         mLayoutWidth = testLayout.getWidth();
         mLayoutHeight = testLayout.getHeight();
-        testLayout.addCallback(callback);
+        testLayout.addCallback(mDismissCallback);
     }
 
-    /**
-     * private static void assertPeeking(@IdRes int layoutId) {
-     * onView(withId(layoutId))
-     * .perform(
-     * waitForMatchingView(
-     * allOf(withId(layoutId), isOpened(true)), MAX_WAIT_TIME));
-     * }
-     */
+    private void setUpSwipeableAndCallback(
+            ActivityScenario<DismissibleFrameLayoutTestActivity> scenario,
+            boolean swipeable
+    ) {
+        scenario.onActivity(activity -> {
+            SwipeDismissFrameLayout testLayout =
+                    (SwipeDismissFrameLayout) activity.findViewById(R.id.swipe_dismiss_root);
+            setDismissCallback(testLayout);
+            testLayout.setSwipeable(swipeable);
+        });
+    }
 
     private static void assertHidden(@IdRes int layoutId) {
         onView(withId(layoutId))
@@ -448,17 +364,6 @@ public class SwipeDismissFrameLayoutTest {
                 Swipe.SLOW, GeneralLocation.CENTER, GeneralLocation.CENTER_RIGHT, Press.FINGER);
     }
 
-
-    /**
-     * Be careful if you are using this method. If the device you are testing on
-     * has "Gesture navigation" enabled then swiping from the edge of the screen may be
-     * interpreted as a navigation gesture.
-     */
-    private static ViewAction swipeRightFromLeftEdge() {
-        return new GeneralSwipeAction(
-                Swipe.SLOW, GeneralLocation.CENTER_LEFT, GeneralLocation.CENTER_RIGHT,
-                Press.FINGER);
-    }
 
     private static ViewAction swipeRightFromLeftCenterAvoidingEdge() {
         return new GeneralSwipeAction(

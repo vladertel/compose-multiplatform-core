@@ -11,8 +11,6 @@ ActionValue: android.support.v4.media.MediaDescriptionCompat#EXTRA_BT_FOLDER_TYP
     Inconsistent extra value; expected `android.support.v4.media.extra.BT_FOLDER_TYPE`, was `android.media.extra.BT_FOLDER_TYPE`
 ActionValue: android.support.v4.media.MediaDescriptionCompat#EXTRA_DOWNLOAD_STATUS:
     Inconsistent extra value; expected `android.support.v4.media.extra.DOWNLOAD_STATUS`, was `android.media.extra.DOWNLOAD_STATUS`
-ActionValue: android.support.v4.media.session.MediaControllerCompat.TransportControls#EXTRA_LEGACY_STREAM_TYPE:
-    Inconsistent extra value; expected `android.support.v4.media.session.extra.LEGACY_STREAM_TYPE`, was `android.media.session.extra.LEGACY_STREAM_TYPE`
 ActionValue: androidx.media.MediaBrowserServiceCompat.BrowserRoot#EXTRA_OFFLINE:
     Inconsistent extra value; expected `androidx.media.extra.OFFLINE`, was `android.service.media.extra.OFFLINE`
 ActionValue: androidx.media.MediaBrowserServiceCompat.BrowserRoot#EXTRA_RECENT:
@@ -33,8 +31,36 @@ BuilderSetStyle: android.support.v4.media.MediaMetadataCompat.Builder#putText(St
     Builder methods names should use setFoo() / addFoo() / clearFoo() style: method android.support.v4.media.MediaMetadataCompat.Builder.putText(String,CharSequence)
 
 
+CallbackMethodName: android.support.v4.media.session.MediaControllerCompat.Callback#binderDied():
+    Callback method names must follow the on<Something> style: binderDied
+
+
 ContextNameSuffix: androidx.media.MediaBrowserServiceCompat:
     Inconsistent class name; should be `<Foo>Service`, was `MediaBrowserServiceCompat`
+
+
+ExecutorRegistration: android.support.v4.media.MediaBrowserCompat#MediaBrowserCompat(android.content.Context, android.content.ComponentName, android.support.v4.media.MediaBrowserCompat.ConnectionCallback, android.os.Bundle):
+    Registration methods should have overload that accepts delivery Executor: `MediaBrowserCompat`
+ExecutorRegistration: android.support.v4.media.MediaBrowserCompat#getItem(String, android.support.v4.media.MediaBrowserCompat.ItemCallback):
+    Registration methods should have overload that accepts delivery Executor: `getItem`
+ExecutorRegistration: android.support.v4.media.MediaBrowserCompat#search(String, android.os.Bundle, android.support.v4.media.MediaBrowserCompat.SearchCallback):
+    Registration methods should have overload that accepts delivery Executor: `search`
+ExecutorRegistration: android.support.v4.media.MediaBrowserCompat#sendCustomAction(String, android.os.Bundle, android.support.v4.media.MediaBrowserCompat.CustomActionCallback):
+    Registration methods should have overload that accepts delivery Executor: `sendCustomAction`
+ExecutorRegistration: android.support.v4.media.MediaBrowserCompat#subscribe(String, android.os.Bundle, android.support.v4.media.MediaBrowserCompat.SubscriptionCallback):
+    Registration methods should have overload that accepts delivery Executor: `subscribe`
+ExecutorRegistration: android.support.v4.media.MediaBrowserCompat#unsubscribe(String, android.support.v4.media.MediaBrowserCompat.SubscriptionCallback):
+    Registration methods should have overload that accepts delivery Executor: `unsubscribe`
+ExecutorRegistration: android.support.v4.media.session.MediaControllerCompat#registerCallback(android.support.v4.media.session.MediaControllerCompat.Callback, android.os.Handler):
+    Registration methods should have overload that accepts delivery Executor: `registerCallback`
+ExecutorRegistration: android.support.v4.media.session.MediaSessionCompat#addOnActiveChangeListener(android.support.v4.media.session.MediaSessionCompat.OnActiveChangeListener):
+    Registration methods should have overload that accepts delivery Executor: `addOnActiveChangeListener`
+ExecutorRegistration: android.support.v4.media.session.MediaSessionCompat#setCallback(android.support.v4.media.session.MediaSessionCompat.Callback, android.os.Handler):
+    Registration methods should have overload that accepts delivery Executor: `setCallback`
+ExecutorRegistration: androidx.media.AudioFocusRequestCompat.Builder#setOnAudioFocusChangeListener(android.media.AudioManager.OnAudioFocusChangeListener, android.os.Handler):
+    Registration methods should have overload that accepts delivery Executor: `setOnAudioFocusChangeListener`
+ExecutorRegistration: androidx.media.VolumeProviderCompat#setCallback(androidx.media.VolumeProviderCompat.Callback):
+    Registration methods should have overload that accepts delivery Executor: `setCallback`
 
 
 IntentName: android.support.v4.media.MediaBrowserCompat#CUSTOM_ACTION_DOWNLOAD:
@@ -49,6 +75,12 @@ InterfaceConstant: androidx.media.MediaBrowserServiceCompat#SERVICE_INTERFACE:
 
 ListenerLast: android.support.v4.media.MediaBrowserCompat#MediaBrowserCompat(android.content.Context, android.content.ComponentName, android.support.v4.media.MediaBrowserCompat.ConnectionCallback, android.os.Bundle) parameter #3:
     Listeners should always be at end of argument list (method `MediaBrowserCompat`)
+
+
+MissingGetterMatchingBuilder: androidx.media.AudioFocusRequestCompat.Builder#setAudioAttributes(androidx.media.AudioAttributesCompat):
+    androidx.media.AudioFocusRequestCompat does not declare a `getAudioAttributes()` method matching method androidx.media.AudioFocusRequestCompat.Builder.setAudioAttributes(androidx.media.AudioAttributesCompat)
+MissingGetterMatchingBuilder: androidx.media.AudioFocusRequestCompat.Builder#setWillPauseWhenDucked(boolean):
+    androidx.media.AudioFocusRequestCompat does not declare a `isWillPauseWhenDucked()` method matching method androidx.media.AudioFocusRequestCompat.Builder.setWillPauseWhenDucked(boolean)
 
 
 MissingNullability: android.support.v4.media.MediaBrowserCompat#MediaBrowserCompat(android.content.Context, android.content.ComponentName, android.support.v4.media.MediaBrowserCompat.ConnectionCallback, android.os.Bundle) parameter #0:
@@ -469,8 +501,6 @@ MissingNullability: android.support.v4.media.session.PlaybackStateCompat.Builder
     Missing nullability on method `setActiveQueueItemId` return
 MissingNullability: android.support.v4.media.session.PlaybackStateCompat.Builder#setBufferedPosition(long):
     Missing nullability on method `setBufferedPosition` return
-MissingNullability: android.support.v4.media.session.PlaybackStateCompat.Builder#setErrorMessage(CharSequence) parameter #0:
-    Missing nullability on parameter `errorMessage` in method `setErrorMessage`
 MissingNullability: android.support.v4.media.session.PlaybackStateCompat.Builder#setErrorMessage(int, CharSequence):
     Missing nullability on method `setErrorMessage` return
 MissingNullability: android.support.v4.media.session.PlaybackStateCompat.Builder#setErrorMessage(int, CharSequence) parameter #1:
@@ -547,10 +577,6 @@ MissingNullability: androidx.media.MediaBrowserServiceCompat.BrowserRoot#getExtr
     Missing nullability on method `getExtras` return
 MissingNullability: androidx.media.MediaBrowserServiceCompat.BrowserRoot#getRootId():
     Missing nullability on method `getRootId` return
-MissingNullability: androidx.media.MediaBrowserServiceCompat.Result#sendError(android.os.Bundle) parameter #0:
-    Missing nullability on parameter `extras` in method `sendError`
-MissingNullability: androidx.media.MediaBrowserServiceCompat.Result#sendProgressUpdate(android.os.Bundle) parameter #0:
-    Missing nullability on parameter `extras` in method `sendProgressUpdate`
 MissingNullability: androidx.media.VolumeProviderCompat#getVolumeProvider():
     Missing nullability on method `getVolumeProvider` return
 MissingNullability: androidx.media.VolumeProviderCompat#setCallback(androidx.media.VolumeProviderCompat.Callback) parameter #0:
@@ -611,6 +637,14 @@ MutableBareField: android.support.v4.media.session.ParcelableVolumeInfo#volumeTy
     Bare field volumeType must be marked final, or moved behind accessors if mutable
 
 
+NullableCollection: android.support.v4.media.MediaBrowserCompat#getExtras():
+    Return type of method android.support.v4.media.MediaBrowserCompat.getExtras() is a nullable collection (`android.os.Bundle`); must be non-null
+NullableCollection: android.support.v4.media.MediaDescriptionCompat#getExtras():
+    Return type of method android.support.v4.media.MediaDescriptionCompat.getExtras() is a nullable collection (`android.os.Bundle`); must be non-null
+NullableCollection: android.support.v4.media.session.PlaybackStateCompat#getExtras():
+    Return type of method android.support.v4.media.session.PlaybackStateCompat.getExtras() is a nullable collection (`android.os.Bundle`); must be non-null
+
+
 ParcelConstructor: android.support.v4.media.session.ParcelableVolumeInfo#ParcelableVolumeInfo(android.os.Parcel):
     Parcelable inflation is exposed through CREATOR, not raw constructors, in android.support.v4.media.session.ParcelableVolumeInfo
 
@@ -619,3 +653,7 @@ ParcelNotFinal: android.support.v4.media.MediaBrowserCompat.MediaItem:
     Parcelable classes must be final: android.support.v4.media.MediaBrowserCompat.MediaItem is not final
 ParcelNotFinal: android.support.v4.media.session.ParcelableVolumeInfo:
     Parcelable classes must be final: android.support.v4.media.session.ParcelableVolumeInfo is not final
+
+
+StaticFinalBuilder: androidx.media.AudioAttributesCompat.Builder:
+    Builder must be final: androidx.media.AudioAttributesCompat.Builder

@@ -42,6 +42,8 @@ import androidx.appcompat.testutils.BaseTestActivity;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.widget.AutoSizeableTextView;
 import androidx.core.widget.TextViewCompat;
+import androidx.test.annotation.UiThreadTest;
+import androidx.test.filters.FlakyTest;
 import androidx.test.filters.LargeTest;
 import androidx.test.filters.MediumTest;
 import androidx.test.filters.SdkSuppress;
@@ -526,8 +528,9 @@ public abstract class AppCompatBaseAutoSizeTest<A extends BaseTestActivity,
         }
     }
 
-    @Test
+    @UiThreadTest
     @MediumTest
+    @FlakyTest(bugId = 157145343)
     public void testAutoSizeCallers_setTypeface() throws Throwable {
         final T autoSizeView = prepareAndRetrieveAutoSizeTestData(R.id.view_autosize_uniform,
                 false);

@@ -20,16 +20,19 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.core.CameraInfo;
+import androidx.annotation.RequiresApi;
+import androidx.annotation.RestrictTo;
 import androidx.camera.core.UseCase;
-import androidx.camera.core.impl.SessionConfig;
+import androidx.camera.core.impl.Config;
 import androidx.camera.core.impl.UseCaseConfig;
+import androidx.camera.core.impl.UseCaseConfigFactory;
 
 /**
  * A fake {@link UseCase}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class FakeUseCase extends UseCase {
-    private volatile boolean mIsCleared = false;
+    private volatile boolean mIsDetached = false;
 
     /**
      * Creates a new instance of a {@link FakeUseCase} with a given configuration.
@@ -45,22 +48,37 @@ public class FakeUseCase extends UseCase {
         this(new FakeUseCaseConfig.Builder().getUseCaseConfig());
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @hide
+     */
+    @NonNull
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
+    public UseCaseConfig.Builder<?, ?, ?> getUseCaseConfigBuilder(@NonNull Config config) {
+        return new FakeUseCaseConfig.Builder(config)
+                .setSessionOptionUnpacker((useCaseConfig, sessionConfigBuilder) -> { });
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @hide
+     */
     @Nullable
-    protected UseCaseConfig.Builder<?, ?, ?> getDefaultBuilder(@Nullable CameraInfo cameraInfo) {
-        return new FakeUseCaseConfig.Builder()
-                .setSessionOptionUnpacker(new SessionConfig.OptionUnpacker() {
-                    @Override
-                    public void unpack(@NonNull UseCaseConfig<?> useCaseConfig,
-                            @NonNull SessionConfig.Builder sessionConfigBuilder) {
-                    }
-                });
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    @Override
+    public UseCaseConfig<?> getDefaultConfig(boolean applyDefaultConfig,
+            @NonNull UseCaseConfigFactory factory) {
+        Config config = factory.getConfig(UseCaseConfigFactory.CaptureType.PREVIEW);
+        return config == null ? null : getUseCaseConfigBuilder(config).getUseCaseConfig();
     }
 
     @Override
-    public void clear() {
-        super.clear();
-        mIsCleared = true;
+    public void onDetached() {
+        super.onDetached();
+        mIsDetached = true;
     }
 
     @Override
@@ -70,9 +88,9 @@ public class FakeUseCase extends UseCase {
     }
 
     /**
-     * Returns true if {@link #clear()} has been called previously.
+     * Returns true if {@link #onDetached()} has been called previously.
      */
-    public boolean isCleared() {
-        return mIsCleared;
+    public boolean isDetached() {
+        return mIsDetached;
     }
 }

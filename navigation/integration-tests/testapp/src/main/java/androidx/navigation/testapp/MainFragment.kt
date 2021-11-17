@@ -50,15 +50,26 @@ class MainFragment : Fragment() {
         view.setBackgroundColor(
             if (myarg == "one") {
                 Color.GREEN
+            } else if (myarg == "two") {
+                Color.RED
+            } else if (myarg == "three") {
+                Color.YELLOW
+            } else if (myarg == "four") {
+                Color.GRAY
+            } else if (myarg == "five") {
+                Color.MAGENTA
             } else {
                 Color.RED
-            })
+            }
+        )
 
         val b = view.findViewById<Button>(R.id.next_button)
         ViewCompat.setTransitionName(b, "next")
         b.setOnClickListener {
-            findNavController().navigate(R.id.next, null, null,
-                    FragmentNavigatorExtras(b to "next"))
+            findNavController().navigate(
+                R.id.next, null, null,
+                FragmentNavigatorExtras(b to "next")
+            )
         }
         view.findViewById<Button>(R.id.learn_more).setOnClickListener {
             val args = Bundle().apply {

@@ -18,20 +18,25 @@ package androidx.camera.core;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
-import androidx.camera.core.impl.CameraFilter;
 import androidx.camera.core.impl.CameraInternal;
 import androidx.camera.core.impl.LensFacingCameraFilter;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.List;
 
 /**
- * A set of requirements and priorities used to select a camera.
+ * A set of requirements and priorities used to select a camera or return a filtered set of
+ * cameras.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class CameraSelector {
 
     /** A camera on the device facing the same direction as the device's screen. */
@@ -55,41 +60,97 @@ public final class CameraSelector {
     }
 
     /**
-     * Selects the first camera that filtered by the {@link CameraFilter} assigned to the
-     * selector.
+     * Selects the first camera that filtered by the {@link CameraFilter}s assigned to this
+     * {@link CameraSelector}.
      *
-     * <p>The camera ids filtered must be contained in the input set. Otherwise it will throw an
-     * exception.
+     * <p>When filtering with {@link CameraFilter}, the output set must be contained in the input
+     * set, otherwise an IllegalArgumentException will be thrown.
      *
      * @param cameras The camera set being filtered.
      * @return The first camera filtered.
-     * @throws IllegalArgumentException If there's no available camera after being filtered or
-     *                                  the filtered camera ids aren't contained in the input set.
+     * @throws IllegalArgumentException If there's no available camera after filtering or the
+     *                                  filtered cameras aren't contained in the input set.
      * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
-    public CameraInternal select(@NonNull Set<CameraInternal> cameras) {
-        Set<CameraInternal> camerasCopy = new LinkedHashSet<>(cameras);
-        Set<CameraInternal> resultCameraSet = camerasCopy;
-        for (CameraFilter filter : mCameraFilterSet) {
-            resultCameraSet = filter.filterCameras(camerasCopy);
-            // If the result is empty or has extra camera id that isn't contained in the
-            // input, throws an exception.
-            if (resultCameraSet.isEmpty()) {
-                throw new IllegalArgumentException("No available camera can be found.");
-            } else if (!camerasCopy.containsAll(resultCameraSet)) {
-                throw new IllegalArgumentException("The output isn't contained in the input.");
-            }
-            camerasCopy = resultCameraSet;
+    public CameraInternal select(@NonNull LinkedHashSet<CameraInternal> cameras) {
+        Iterator<CameraInternal> cameraInternalIterator = filter(cameras).iterator();
+        if (cameraInternalIterator.hasNext()) {
+            return cameraInternalIterator.next();
+        } else {
+            throw new IllegalArgumentException("No available camera can be found");
         }
-
-        return resultCameraSet.iterator().next();
     }
 
     /**
-     * Gets the set of {@link CameraFilter} assigned to this camera
+     * Filters the input {@link CameraInfo}s using the {@link CameraFilter}s assigned to the
      * selector.
+     *
+     * <p>If the {@link CameraFilter}s assigned to this selector produce a camera info that
+     * is not part of the input list, the output list will be empty.
+     *
+     * <p>An example use case for using this function is when you want to get all
+     * {@link CameraInfo}s for all available back facing cameras.
+     * <pre>
+     * eg.
+     * {@code
+     * CameraInfo defaultBackCameraInfo = null;
+     * CameraSelector selector = new CameraSelector.Builder()
+     *      .requireLensFacing(LENS_FACING_BACK).build();
+     * List<CameraInfo> cameraInfos = selector.filter(cameraProvider.getAvailableCameraInfos());
+     * }
+     * </pre>
+     *
+     * @param cameraInfos The camera infos list being filtered.
+     * @return The remaining list of camera infos.
+     * @throws UnsupportedOperationException If the {@link CameraFilter}s assigned to the selector
+     *                                       try to modify the input camera infos list.
+     */
+    @NonNull
+    public List<CameraInfo> filter(@NonNull List<CameraInfo> cameraInfos) {
+        List<CameraInfo> output = new ArrayList<>(cameraInfos);
+        for (CameraFilter filter : mCameraFilterSet) {
+            output = filter.filter(Collections.unmodifiableList(output));
+        }
+
+        output.retainAll(cameraInfos);
+        return output;
+    }
+
+    /**
+     * Filters the input cameras using the {@link CameraFilter} assigned to the selector.
+     *
+     * <p>The cameras filtered must be contained in the input set. Otherwise it will throw an
+     * exception.
+     *
+     * @param cameras The camera set being filtered.
+     * @return The remaining set of cameras.
+     *
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
+    public LinkedHashSet<CameraInternal> filter(@NonNull LinkedHashSet<CameraInternal> cameras) {
+        List<CameraInfo> input = new ArrayList<>();
+        for (CameraInternal camera : cameras) {
+            input.add(camera.getCameraInfo());
+        }
+
+        List<CameraInfo> result = filter(input);
+
+        LinkedHashSet<CameraInternal> output = new LinkedHashSet<>();
+        for (CameraInternal camera : cameras) {
+            if (result.contains(camera.getCameraInfo())) {
+                output.add(camera);
+            }
+        }
+
+        return output;
+    }
+
+    /**
+     * Gets the set of {@link CameraFilter} assigned to this camera selector.
      *
      * @hide
      */
@@ -160,13 +221,15 @@ public final class CameraSelector {
         }
 
         /**
-         * Appends a CameraIdFilter to the current set of filters.
+         * Adds a {@link CameraFilter} to the current set of filters. It can be used to select a
+         * specific camera based on customized criteria like Camera2 characteristics.
          *
-         * @hide
+         * <p>Multiple filters can be added. All filters will be applied by the order they were
+         * added when the {@link CameraSelector} is used, and the first camera output from the
+         * filters will be selected.
          */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
-        public Builder appendFilter(@NonNull CameraFilter cameraFilter) {
+        public Builder addCameraFilter(@NonNull CameraFilter cameraFilter) {
             mCameraFilterSet.add(cameraFilter);
             return this;
         }

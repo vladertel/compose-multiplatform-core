@@ -30,7 +30,11 @@ import android.os.Build;
 import android.os.CancellationSignal;
 import android.util.Pair;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.sqlite.db.SimpleSQLiteQuery;
+import androidx.sqlite.db.SupportSQLiteCompat;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 import androidx.sqlite.db.SupportSQLiteQuery;
 import androidx.sqlite.db.SupportSQLiteStatement;
@@ -116,6 +120,24 @@ class FrameworkSQLiteDatabase implements SupportSQLiteDatabase {
     }
 
     @Override
+    public boolean isExecPerConnectionSQLSupported() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R;
+    }
+
+    // Adding @RequiresApi(30) would prevent unbundled implementations from offering this
+    // functionality to lower API levels.
+    @SuppressWarnings("ClassVerificationFailure")
+    @Override
+    public void execPerConnectionSQL(@NonNull String sql, @Nullable Object[] bindArgs) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            mDelegate.execPerConnectionSQL(sql, bindArgs);
+        } else {
+            throw new UnsupportedOperationException("execPerConnectionSQL is not supported on a "
+                    + "SDK version lower than 30, current version is: " + Build.VERSION.SDK_INT);
+        }
+    }
+
+    @Override
     public int getVersion() {
         return mDelegate.getVersion();
     }
@@ -169,17 +191,18 @@ class FrameworkSQLiteDatabase implements SupportSQLiteDatabase {
     }
 
     @Override
-    @androidx.annotation.RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public Cursor query(final SupportSQLiteQuery supportQuery,
             CancellationSignal cancellationSignal) {
-        return mDelegate.rawQueryWithFactory(new SQLiteDatabase.CursorFactory() {
-            @Override
-            public Cursor newCursor(SQLiteDatabase db, SQLiteCursorDriver masterQuery,
-                    String editTable, SQLiteQuery query) {
-                supportQuery.bindTo(new FrameworkSQLiteProgram(query));
-                return new SQLiteCursor(masterQuery, editTable, query);
-            }
-        }, supportQuery.getSql(), EMPTY_STRING_ARRAY, null, cancellationSignal);
+        return SupportSQLiteCompat.Api16Impl.rawQueryWithFactory(mDelegate, supportQuery.getSql(),
+                EMPTY_STRING_ARRAY, null, cancellationSignal, new SQLiteDatabase.CursorFactory() {
+                    @Override
+                    public Cursor newCursor(SQLiteDatabase db, SQLiteCursorDriver masterQuery,
+                            String editTable, SQLiteQuery query) {
+                        supportQuery.bindTo(new FrameworkSQLiteProgram(query));
+                        return new SQLiteCursor(masterQuery, editTable, query);
+                    }
+                });
     }
 
     @Override
@@ -278,9 +301,9 @@ class FrameworkSQLiteDatabase implements SupportSQLiteDatabase {
     }
 
     @Override
-    @androidx.annotation.RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public void setForeignKeyConstraintsEnabled(boolean enable) {
-        mDelegate.setForeignKeyConstraintsEnabled(enable);
+        SupportSQLiteCompat.Api16Impl.setForeignKeyConstraintsEnabled(mDelegate, enable);
     }
 
     @Override
@@ -289,15 +312,15 @@ class FrameworkSQLiteDatabase implements SupportSQLiteDatabase {
     }
 
     @Override
-    @androidx.annotation.RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public void disableWriteAheadLogging() {
-        mDelegate.disableWriteAheadLogging();
+        SupportSQLiteCompat.Api16Impl.disableWriteAheadLogging(mDelegate);
     }
 
     @Override
-    @androidx.annotation.RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public boolean isWriteAheadLoggingEnabled() {
-        return mDelegate.isWriteAheadLoggingEnabled();
+        return SupportSQLiteCompat.Api16Impl.isWriteAheadLoggingEnabled(mDelegate);
     }
 
     @Override

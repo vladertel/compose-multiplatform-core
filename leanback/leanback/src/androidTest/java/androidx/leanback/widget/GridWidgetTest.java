@@ -180,22 +180,31 @@ public class GridWidgetTest {
             }
         });
     }
+
     /**
      * Scrolls using given key.
      */
     protected void scroll(int key, Runnable verify) throws Throwable {
+        // Keep pressing keys until the GridView will no longer scroll.
+        int retryCount = 0;
         do {
             if (verify != null) {
                 mActivityTestRule.runOnUiThread(verify);
             }
-            sendRepeatedKeys(100, key);
+            sendRepeatedKeys(10, key);
             try {
                 Thread.sleep(300);
             } catch (InterruptedException ex) {
                 break;
             }
-        } while (mGridView.getLayoutManager().isSmoothScrolling()
-                || mGridView.getScrollState() != BaseGridView.SCROLL_STATE_IDLE);
+            if (mGridView.getLayoutManager().isSmoothScrolling()
+                    || mGridView.getScrollState() != BaseGridView.SCROLL_STATE_IDLE) {
+                retryCount = 0;
+                continue;
+            }
+            // It's possible that scroll stops after pressing a key, retry resume scrolling
+            retryCount++;
+        } while (retryCount < 4);
     }
 
     protected void scrollToBegin(Runnable verify) throws Throwable {
@@ -706,9 +715,123 @@ public class GridWidgetTest {
 
     }
 
+    @Test(expected = ClassCastException.class)
+    public void testSetInvalidLayoutManager() throws Throwable {
+        Intent intent = new Intent();
+        intent.putExtra(GridActivity.EXTRA_LAYOUT_RESOURCE_ID, R.layout.vertical_grid);
+        initActivity(intent);
+
+        // BaseGridView only accepts Leanback's GridLayoutManager for its layout manager.
+        RecyclerView.LayoutManager baseLayoutManager =
+                Mockito.mock(RecyclerView.LayoutManager.class);
+
+        mActivityTestRule.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mActivity.mGridView.setLayoutManager(baseLayoutManager);
+            }
+        });
+    }
+
+    @Test
+    public void testSwitchLayoutManagerVertical() throws Throwable {
+        Intent intent = new Intent();
+        intent.putExtra(GridActivity.EXTRA_LAYOUT_RESOURCE_ID, R.layout.vertical_grid);
+        intent.putExtra(GridActivity.EXTRA_NUM_ITEMS, 50);
+        initActivity(intent);
+        mOrientation = BaseGridView.VERTICAL;
+        mNumRows = 3;
+
+        scrollToEnd(mVerifyLayout);
+
+        GridLayoutManager newGridLayoutManager = new GridLayoutManager();
+        newGridLayoutManager.setOrientation(RecyclerView.VERTICAL);
+        mActivityTestRule.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mGridView.setLayoutManager(newGridLayoutManager);
+            }
+        });
+        mNumRows = 1;
+        waitOneUiCycle();
+
+        // Resetting the layout manager should bring focus back to the first element.
+        verifyBeginAligned();
+        scrollToEnd(mVerifyLayout);
+        scrollToBegin(mVerifyLayout);
+        verifyBeginAligned();
+    }
+
+    @Test
+    public void testSwitchLayoutManagerHorizontal() throws Throwable {
+        Intent intent = new Intent();
+        intent.putExtra(GridActivity.EXTRA_LAYOUT_RESOURCE_ID, R.layout.horizontal_grid);
+        intent.putExtra(GridActivity.EXTRA_NUM_ITEMS, 50);
+        initActivity(intent);
+        mOrientation = BaseGridView.HORIZONTAL;
+        mNumRows = 3;
+
+        scrollToEnd(mVerifyLayout);
+
+        GridLayoutManager newGridLayoutManager = new GridLayoutManager();
+        newGridLayoutManager.setOrientation(RecyclerView.HORIZONTAL);
+        mActivityTestRule.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mGridView.setLayoutManager(newGridLayoutManager);
+                ((HorizontalGridView) mGridView).setNumRows(4);
+            }
+        });
+        mNumRows = 4;
+        waitOneUiCycle();
+
+        verifyBeginAligned();
+        scrollToEnd(mVerifyLayout);
+        scrollToBegin(mVerifyLayout);
+        verifyBeginAligned();
+    }
+
+    @Test
+    public void testRestoreLayoutManager() throws Throwable {
+        Intent intent = new Intent();
+        intent.putExtra(GridActivity.EXTRA_LAYOUT_RESOURCE_ID, R.layout.vertical_grid);
+        intent.putExtra(GridActivity.EXTRA_NUM_ITEMS, 200);
+        initActivity(intent);
+        mOrientation = BaseGridView.VERTICAL;
+        mNumRows = 3;
+
+        mActivityTestRule.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mGridView.scrollToPosition(29);
+            }
+        });
+
+        GridLayoutManager layout = (GridLayoutManager) mGridView.getLayoutManager();
+
+        mActivityTestRule.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mActivity.mGridView.setLayoutManager(null);
+            }
+        });
+
+        waitOneUiCycle();
+
+        mActivityTestRule.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mActivity.mGridView.setLayoutManager(layout);
+            }
+        });
+
+        waitOneUiCycle();
+
+        assertEquals(29, mGridView.getSelectedPosition());
+    }
+
     @Test
     public void testThreeColumnVerticalBasic() throws Throwable {
-
         Intent intent = new Intent();
         intent.putExtra(GridActivity.EXTRA_LAYOUT_RESOURCE_ID, R.layout.vertical_grid);
         intent.putExtra(GridActivity.EXTRA_NUM_ITEMS, 200);
@@ -1159,7 +1282,7 @@ public class GridWidgetTest {
             }
         });
         waitForScrollIdle();
-        final ArrayList<RecyclerView.ViewHolder> moveViewHolders = new ArrayList();
+        final ArrayList<RecyclerView.ViewHolder> moveViewHolders = new ArrayList<>();
         for (int i = 51;; i++) {
             RecyclerView.ViewHolder vh = mGridView.findViewHolderForAdapterPosition(i);
             if (vh == null) {
@@ -1224,7 +1347,7 @@ public class GridWidgetTest {
                 mActivity.moveItem(51, 1000, true);
             }
         });
-        final ArrayList<View> moveInViewHolders = new ArrayList();
+        final ArrayList<View> moveInViewHolders = new ArrayList<>();
         waitForItemAnimationStart();
         mActivityTestRule.runOnUiThread(new Runnable() {
             @Override
@@ -1288,7 +1411,7 @@ public class GridWidgetTest {
                 mActivity.moveItem(1499, 1, true);
             }
         });
-        final ArrayList<View> moveInViewHolders = new ArrayList();
+        final ArrayList<View> moveInViewHolders = new ArrayList<>();
         waitForItemAnimationStart();
         mActivityTestRule.runOnUiThread(new Runnable() {
             @Override
@@ -2701,6 +2824,7 @@ public class GridWidgetTest {
         testRemoveVisibleItemsInSmoothScrollingBackward(/*focusOnGridView=*/ false);
     }
 
+    @FlakyTest(bugId = 186848347)
     @Test
     public void testPendingSmoothScrollAndRemove() throws Throwable {
         Intent intent = new Intent();
@@ -4444,7 +4568,7 @@ public class GridWidgetTest {
         assertEquals(0, mGridView.getSelectedPosition());
     }
 
-    @FlakyTest
+    @FlakyTest(bugId = 187191618)
     @Test
     public void testExtraLayoutSpace() throws Throwable {
         Intent intent = new Intent();
@@ -4753,6 +4877,33 @@ public class GridWidgetTest {
     }
 
     @Test
+    public void testBug161359022() throws Throwable {
+        Intent intent = new Intent();
+        intent.putExtra(GridActivity.EXTRA_LAYOUT_RESOURCE_ID,
+                R.layout.vertical_linear_with_scrollview);
+        intent.putExtra(GridActivity.EXTRA_NUM_ITEMS, 3);
+        intent.putExtra(GridActivity.EXTRA_STAGGERED, false);
+        intent.putExtra(GridActivity.EXTRA_UPDATE_SIZE, false);
+        boolean[] focusable = new boolean[] {false, true, false};
+        intent.putExtra(GridActivity.EXTRA_ITEMS_FOCUSABLE, focusable);
+        initActivity(intent);
+        mOrientation = BaseGridView.VERTICAL;
+        mNumRows = 1;
+
+        // Notify second item with payload, causes clearFocus() of the itemView.  On P and above
+        // clearFocus() will trigger a top-down requestFocus(), and the ScrollView will call
+        // RecyclerView.addFocusables() where our RecyclerView is in a transitioning-state that
+        // hasFocusable() is true but findFocus() is null.
+        performAndWaitForAnimation(new Runnable() {
+            @Override
+            public void run() {
+                mActivity.mItemFocusables[1] = false;
+                mActivity.mGridView.getAdapter().notifyItemChanged(1, new Object());
+            }
+        });
+    }
+
+    @Test
     public void testUpdateHeightScrollHorizontal() throws Throwable {
         Intent intent = new Intent();
         intent.putExtra(GridActivity.EXTRA_LAYOUT_RESOURCE_ID,
@@ -4899,6 +5050,70 @@ public class GridWidgetTest {
         waitForScrollIdle(mVerifyLayout);
         int selectedPosition2 = mGridView.getSelectedPosition();
         assertTrue(selectedPosition2 < selectedPosition1);
+    }
+
+    @Test
+    public void testAccessibilityFocusOutFrontEnd_actionsAvailable() throws Throwable {
+        Intent intent = new Intent();
+        intent.putExtra(GridActivity.EXTRA_LAYOUT_RESOURCE_ID,
+                R.layout.horizontal_linear);
+        int[] items = new int[5];
+        for (int i = 0; i < items.length; i++) {
+            items[i] = 300;
+        }
+        intent.putExtra(GridActivity.EXTRA_ITEMS, items);
+        intent.putExtra(GridActivity.EXTRA_STAGGERED, false);
+        initActivity(intent);
+        mOrientation = BaseGridView.HORIZONTAL;
+        mNumRows = 1;
+        final RecyclerViewAccessibilityDelegate delegateCompat = mGridView
+                .getCompatAccessibilityDelegate();
+        final AccessibilityNodeInfoCompat info1 = AccessibilityNodeInfoCompat.obtain();
+        // Test not allowing going out both ends
+        mLayoutManager.setFocusOutAllowed(/* throughFront= */ false,
+                /* throughEnd= */ false);
+        mActivityTestRule.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                delegateCompat.onInitializeAccessibilityNodeInfo(mGridView, info1);
+            }
+        });
+        // When not allowing jumping out both end, handle action scroll backward/forward to block
+        // it.
+        if (Build.VERSION.SDK_INT >= 21) {
+            assertTrue(hasAction(info1,
+                    AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_SCROLL_RIGHT));
+            assertTrue(hasAction(info1,
+                    AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_SCROLL_LEFT));
+        } else {
+            assertTrue(hasAction(info1,
+                    AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD));
+            assertTrue(hasAction(info1,
+                    AccessibilityNodeInfoCompat.ACTION_SCROLL_BACKWARD));
+        }
+        final AccessibilityNodeInfoCompat info2 = AccessibilityNodeInfoCompat.obtain();
+        // Test allowing focus to jump out at front when reaching front.
+        mLayoutManager.setFocusOutAllowed(/* throughFront= */ true,
+                /* throughEnd= */ false);
+        mActivityTestRule.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                delegateCompat.onInitializeAccessibilityNodeInfo(mGridView, info2);
+            }
+        });
+        // When only allowing jumping out front, block action scroll backward when reaching front
+        // for Talkback to jump focus out.
+        if (Build.VERSION.SDK_INT >= 21) {
+            assertFalse(hasAction(info2,
+                    AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_SCROLL_LEFT));
+            assertTrue(hasAction(info2,
+                    AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_SCROLL_RIGHT));
+        } else {
+            assertFalse(hasAction(info2,
+                    AccessibilityNodeInfoCompat.ACTION_SCROLL_BACKWARD));
+            assertTrue(hasAction(info2,
+                    AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD));
+        }
     }
 
     @Test
@@ -6029,7 +6244,7 @@ public class GridWidgetTest {
 
         initActivity(intent);
 
-        final HashSet<View> moveAnimationViews = new HashSet();
+        final HashSet<View> moveAnimationViews = new HashSet<>();
         mActivity.mImportantForAccessibilityListener =
                 new GridActivity.ImportantForAccessibilityListener() {
             RecyclerView.LayoutManager mLM = mGridView.getLayoutManager();
@@ -6731,4 +6946,23 @@ public class GridWidgetTest {
         testPreferKeyLine(VerticalGridView.WINDOW_ALIGN_BOTH_EDGE, true, true,
                 ItemLocation.ITEM_AT_LOW, ItemLocation.ITEM_AT_HIGH);
     }
+
+    @Test
+    public void testConcat() throws Throwable {
+
+        Intent intent = new Intent();
+        intent.putExtra(GridActivity.EXTRA_LAYOUT_RESOURCE_ID, R.layout.vertical_grid);
+        intent.putExtra(GridActivity.EXTRA_NUM_ITEMS, 80);
+        intent.putExtra(GridActivity.EXTRA_CONCAT_ADAPTER, true);
+        initActivity(intent);
+        mOrientation = BaseGridView.VERTICAL;
+        mNumRows = 3;
+
+        scrollToEnd(mVerifyLayout);
+
+        scrollToBegin(mVerifyLayout);
+
+        verifyBeginAligned();
+    }
+
 }

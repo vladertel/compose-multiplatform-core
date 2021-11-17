@@ -26,7 +26,6 @@ import android.os.Build;
 
 import androidx.camera.core.Camera;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
-import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,7 +33,6 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.internal.DoNotInstrument;
 
-@SmallTest
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
@@ -227,6 +225,41 @@ public final class CameraStateRegistryTest {
         registry.markCameraState(camera1, CameraInternal.State.CLOSED);
 
         verify(mockListener).onOpenAvailable();
+    }
+
+    @Test
+    public void cameraInPendingOpenState_isNotImmediatelyNotifiedWhenCameraBecomesAvailable() {
+        // Only allow a single open camera at a time
+        CameraStateRegistry registry = new CameraStateRegistry(1);
+
+        // Set up first camera
+        Camera camera1 = mock(Camera.class);
+        CameraStateRegistry.OnOpenAvailableListener mockListener1 = mock(
+                CameraStateRegistry.OnOpenAvailableListener.class);
+        registry.registerCamera(camera1, CameraXExecutors.directExecutor(), mockListener1);
+
+        // Set up second camera
+        Camera camera2 = mock(Camera.class);
+        CameraStateRegistry.OnOpenAvailableListener mockListener2 =
+                mock(CameraStateRegistry.OnOpenAvailableListener.class);
+        registry.registerCamera(camera2, CameraXExecutors.directExecutor(), mockListener2);
+
+        // Update state of both cameras to PENDING_OPEN, but omit notifying second camera of
+        // available camera slot
+        registry.markCameraState(camera1, CameraInternal.State.PENDING_OPEN);
+        registry.markCameraState(camera2, CameraInternal.State.PENDING_OPEN, false);
+
+        // Verify only first camera is notified of available camera slot
+        verify(mockListener1).onOpenAvailable();
+        verify(mockListener2, never()).onOpenAvailable();
+
+        // Open then close first camera
+        registry.tryOpenCamera(camera1);
+        registry.markCameraState(camera1, CameraInternal.State.OPEN);
+        registry.markCameraState(camera1, CameraInternal.State.CLOSED);
+
+        // Verify second camera is notified of available camera slot for opening
+        verify(mockListener2).onOpenAvailable();
     }
 
     // Checks whether a camera in a pending open state is notified when one of 2 slots becomes

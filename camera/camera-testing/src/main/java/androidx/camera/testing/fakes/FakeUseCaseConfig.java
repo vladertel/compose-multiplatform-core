@@ -17,10 +17,10 @@
 package androidx.camera.testing.fakes;
 
 import android.util.Pair;
-import android.util.Rational;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.impl.CaptureConfig;
@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** A fake configuration for {@link FakeUseCase}. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutputConfig {
 
     private final Config mConfig;
@@ -53,10 +54,12 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
 
     @Override
     public int getInputFormat() {
-        return ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE;
+        return retrieveOption(OPTION_INPUT_FORMAT,
+                ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE);
     }
 
     /** Builder for an empty Config */
+    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
     public static final class Builder implements
             UseCaseConfig.Builder<FakeUseCase, FakeUseCaseConfig, FakeUseCaseConfig.Builder>,
             ImageOutputConfig.Builder<FakeUseCaseConfig.Builder> {
@@ -65,6 +68,11 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
 
         public Builder() {
             mOptionsBundle = MutableOptionsBundle.create();
+            setTargetClass(FakeUseCase.class);
+        }
+
+        public Builder(@NonNull Config config) {
+            mOptionsBundle = MutableOptionsBundle.from(config);
             setTargetClass(FakeUseCase.class);
         }
 
@@ -164,14 +172,6 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
 
         @NonNull
         @Override
-        public Builder setTargetAspectRatioCustom(@NonNull Rational aspectRatio) {
-            getMutableConfig().insertOption(OPTION_TARGET_ASPECT_RATIO_CUSTOM, aspectRatio);
-            getMutableConfig().removeOption(OPTION_TARGET_ASPECT_RATIO);
-            return this;
-        }
-
-        @NonNull
-        @Override
         public Builder setTargetAspectRatio(int aspectRatio) {
             getMutableConfig().insertOption(OPTION_TARGET_ASPECT_RATIO, aspectRatio);
             return this;
@@ -188,8 +188,6 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
         @Override
         public Builder setTargetResolution(@NonNull Size resolution) {
             getMutableConfig().insertOption(ImageOutputConfig.OPTION_TARGET_RESOLUTION, resolution);
-            getMutableConfig().insertOption(OPTION_TARGET_ASPECT_RATIO_CUSTOM,
-                    new Rational(resolution.getWidth(), resolution.getHeight()));
             return this;
         }
 
@@ -212,6 +210,15 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
         public Builder setSupportedResolutions(
                 @NonNull List<Pair<Integer, Size[]>> resolutionsList) {
             getMutableConfig().insertOption(OPTION_SUPPORTED_RESOLUTIONS, resolutionsList);
+            return this;
+        }
+
+        /**
+         * Sets specific image format to the fake use case.
+         */
+        @NonNull
+        public Builder setBufferFormat(int imageFormat) {
+            getMutableConfig().insertOption(OPTION_INPUT_FORMAT, imageFormat);
             return this;
         }
     }

@@ -14,13 +14,9 @@
  * limitations under the License.
  */
 
-
-import androidx.build.CompilationTarget
 import androidx.build.LibraryGroups
+import androidx.build.LibraryType
 import androidx.build.LibraryVersions
-import androidx.build.Publish
-
-import static androidx.build.dependencies.DependenciesKt.*
 
 plugins {
     id("AndroidXPlugin")
@@ -28,15 +24,13 @@ plugins {
 }
 
 dependencies {
-    implementation(JAVAPOET)
+    implementation(libs.javapoet)
 }
 
 androidx {
     name = "VersionedParcelable - Compiler"
-    publish = Publish.SNAPSHOT_ONLY
+    type = LibraryType.ANNOTATION_PROCESSOR
     mavenVersion = LibraryVersions.VERSIONED_PARCELABLE
-    toolingProject = true
-    compilationTarget = CompilationTarget.HOST
     mavenGroup = LibraryGroups.VERSIONEDPARCELABLE
     inceptionYear = "2018"
     description = "Annotation processor for VersionedParcelable"

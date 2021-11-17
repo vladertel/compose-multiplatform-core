@@ -27,7 +27,6 @@ import android.content.IntentSender;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -57,6 +56,8 @@ import androidx.lifecycle.LifecycleRegistry;
 import androidx.lifecycle.ViewModelStore;
 import androidx.lifecycle.ViewModelStoreOwner;
 import androidx.loader.app.LoaderManager;
+import androidx.savedstate.SavedStateRegistry;
+import androidx.savedstate.SavedStateRegistryOwner;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -77,7 +78,7 @@ public class FragmentActivity extends ComponentActivity implements
         ActivityCompat.OnRequestPermissionsResultCallback,
         ActivityCompat.RequestPermissionsRequestCodeValidator {
 
-    static final String FRAGMENTS_TAG = "android:support:fragments";
+    static final String LIFECYCLE_TAG = "android:support:lifecycle";
 
     final FragmentController mFragments = FragmentController.createController(new HostCallbacks());
     /**
@@ -99,6 +100,7 @@ public class FragmentActivity extends ComponentActivity implements
      */
     public FragmentActivity() {
         super();
+        init();
     }
 
     /**
@@ -114,6 +116,16 @@ public class FragmentActivity extends ComponentActivity implements
     @ContentView
     public FragmentActivity(@LayoutRes int contentLayoutId) {
         super(contentLayoutId);
+        init();
+    }
+
+    private void init() {
+        getSavedStateRegistry().registerSavedStateProvider(LIFECYCLE_TAG, () -> {
+            markFragmentsCreated();
+            mFragmentLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP);
+            return new Bundle();
+        });
+        addOnContextAvailableListener(context -> mFragments.attachHost(null /*parent*/));
     }
 
     // ------------------------------------------------------------------------
@@ -216,27 +228,24 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Dispatch configuration change to all fragments.
      */
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
         mFragments.noteStateNotSaved();
+        super.onConfigurationChanged(newConfig);
         mFragments.dispatchConfigurationChanged(newConfig);
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Perform initialization of all fragments.
      */
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
-        mFragments.attachHost(null /*parent*/);
-
-        if (savedInstanceState != null) {
-            Parcelable p = savedInstanceState.getParcelable(FRAGMENTS_TAG);
-            mFragments.restoreSaveState(p);
-        }
-
         super.onCreate(savedInstanceState);
 
         mFragmentLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
@@ -244,6 +253,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Dispatch to Fragment.onCreateOptionsMenu().
      */
     @Override
@@ -285,6 +296,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Destroy all fragments.
      */
     @Override
@@ -295,6 +308,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Dispatch onLowMemory() to all fragments.
      */
     @Override
@@ -304,6 +319,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Dispatch context and options menu to fragments.
      */
     @Override
@@ -325,6 +342,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Call onOptionsMenuClosed() on fragments.
      */
     @Override
@@ -336,6 +355,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Dispatch onPause() to fragments.
      */
     @Override
@@ -347,6 +368,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Handle onNewIntent() to inform the fragment manager that the
      * state is not saved.  If you are handling new intents and may be
      * making changes to the fragment state, you want to be sure to call
@@ -359,11 +382,13 @@ public class FragmentActivity extends ComponentActivity implements
     @Override
     @CallSuper
     protected void onNewIntent(@SuppressLint("UnknownNullness") Intent intent) {
-        super.onNewIntent(intent);
         mFragments.noteStateNotSaved();
+        super.onNewIntent(intent);
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Hook in to note that fragment state is no longer saved.
      */
     @SuppressWarnings("deprecation")
@@ -373,19 +398,23 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Dispatch onResume() to fragments.  Note that for better inter-operation
      * with older versions of the platform, at the point of this call the
      * fragments attached to the activity are <em>not</em> resumed.
      */
     @Override
     protected void onResume() {
+        mFragments.noteStateNotSaved();
         super.onResume();
         mResumed = true;
-        mFragments.noteStateNotSaved();
         mFragments.execPendingActions();
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Dispatch onResume() to fragments.
      */
     @Override
@@ -406,6 +435,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Dispatch onPrepareOptionsMenu() to fragments.
      */
     @SuppressWarnings("deprecation")
@@ -431,24 +462,13 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
-     * Save all appropriate fragment state.
-     */
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        markFragmentsCreated();
-        mFragmentLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP);
-        Parcelable p = mFragments.saveAllState();
-        if (p != null) {
-            outState.putParcelable(FRAGMENTS_TAG, p);
-        }
-    }
-
-    /**
+     * {@inheritDoc}
+     *
      * Dispatch onStart() to all fragments.
      */
     @Override
     protected void onStart() {
+        mFragments.noteStateNotSaved();
         super.onStart();
 
         mStopped = false;
@@ -458,7 +478,6 @@ public class FragmentActivity extends ComponentActivity implements
             mFragments.dispatchActivityCreated();
         }
 
-        mFragments.noteStateNotSaved();
         mFragments.execPendingActions();
 
         // NOTE: HC onStart goes here.
@@ -468,6 +487,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Dispatch onStop() to all fragments.
      */
     @Override
@@ -541,10 +562,12 @@ public class FragmentActivity extends ComponentActivity implements
      * the attached fragment's <code>onCreate</code> if the fragment has not yet had a previous
      * call to <code>onCreate</code>.</p>
      *
-     * @deprecated Call
+     * @deprecated The responsibility for listening for fragments being attached has been moved
+     * to FragmentManager. You can add a listener to
+     * {@link #getSupportFragmentManager() this Activity's FragmentManager} by calling
      * {@link FragmentManager#addFragmentOnAttachListener(FragmentOnAttachListener)}
-     * with this Fragment's {@link #getSupportFragmentManager()} in your constructor
-     * to get callbacks when a fragment is attached.
+     * in your constructor to get callbacks when a fragment is attached directly to
+     * the activity's FragmentManager.
      */
     @SuppressWarnings({"unused", "DeprecatedIsStillUsed"})
     @Deprecated
@@ -572,6 +595,8 @@ public class FragmentActivity extends ComponentActivity implements
     }
 
     /**
+     * {@inheritDoc}
+     *
      * @deprecated there are no longer any restrictions on permissions requestCodes.
      */
     @Override
@@ -671,6 +696,7 @@ public class FragmentActivity extends ComponentActivity implements
             ViewModelStoreOwner,
             OnBackPressedDispatcherOwner,
             ActivityResultRegistryOwner,
+            SavedStateRegistryOwner,
             FragmentOnAttachListener {
         public HostCallbacks() {
             super(FragmentActivity.this /*fragmentActivity*/);
@@ -766,9 +792,15 @@ public class FragmentActivity extends ComponentActivity implements
         public ActivityResultRegistry getActivityResultRegistry() {
             return FragmentActivity.this.getActivityResultRegistry();
         }
+
+        @NonNull
+        @Override
+        public SavedStateRegistry getSavedStateRegistry() {
+            return FragmentActivity.this.getSavedStateRegistry();
+        }
     }
 
-    private void markFragmentsCreated() {
+    void markFragmentsCreated() {
         boolean reiterate;
         do {
             reiterate = markState(getSupportFragmentManager(), Lifecycle.State.CREATED);

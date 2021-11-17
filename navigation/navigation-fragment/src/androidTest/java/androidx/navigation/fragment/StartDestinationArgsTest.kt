@@ -27,9 +27,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.navigation.fragment.test.R
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
-import androidx.test.rule.ActivityTestRule
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,14 +39,15 @@ private const val TEST_ARG_VALUE = "value"
 @RunWith(AndroidJUnit4::class)
 class StartDestinationArgsTest {
 
+    @Suppress("DEPRECATION")
     @get:Rule
-    var activityRule = ActivityTestRule(StartDestinationArgsActivity::class.java)
+    var activityRule = androidx.test.rule.ActivityTestRule(StartDestinationArgsActivity::class.java)
 
     @Test
     fun testNavigateInOnResume() {
         val startArgs = activityRule.activity.startArgs
-        assertNotNull(startArgs)
-        assertEquals(TEST_ARG_VALUE, startArgs?.getString(TEST_ARG))
+        assertThat(startArgs).isNotNull()
+        assertThat(startArgs?.getString(TEST_ARG)).isEqualTo(TEST_ARG_VALUE)
     }
 }
 
@@ -64,12 +63,14 @@ class StartDestinationArgsActivity : FragmentActivity() {
             val args = Bundle().apply {
                 putString(TEST_ARG, TEST_ARG_VALUE)
             }
-            val navHostFragment = NavHostFragment.create(R.navigation.nav_fragment_start_args,
-                    args)
+            val navHostFragment = NavHostFragment.create(
+                R.navigation.nav_fragment_start_args,
+                args
+            )
             supportFragmentManager.beginTransaction()
-                    .replace(R.id.nav_host, navHostFragment)
-                    .setPrimaryNavigationFragment(navHostFragment)
-                    .commit()
+                .replace(R.id.nav_host, navHostFragment)
+                .setPrimaryNavigationFragment(navHostFragment)
+                .commit()
         }
     }
 }
@@ -85,7 +86,7 @@ class StartDestinationArgsFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         return FrameLayout(requireContext())
     }
 }

@@ -17,6 +17,7 @@
 package androidx.core.graphics.drawable;
 
 import static androidx.annotation.RestrictTo.Scope.LIBRARY;
+import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP;
 import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
 
 import android.app.ActivityManager;
@@ -107,11 +108,11 @@ public class IconCompat extends CustomVersionedParcelable {
      * An icon that was created using {@link #createWithAdaptiveBitmap}.
      */
     public static final int TYPE_ADAPTIVE_BITMAP = Icon.TYPE_ADAPTIVE_BITMAP;
-    // TODO: (b/143878043) replace with android.graphics.drawable.TYPE_URI_ADAPTIVE_BITMAP
+
     /**
      * An icon that was created using {@link #createWithAdaptiveBitmapContentUri}.
      */
-    public static final int TYPE_URI_ADAPTIVE_BITMAP = 6;
+    public static final int TYPE_URI_ADAPTIVE_BITMAP = Icon.TYPE_URI_ADAPTIVE_BITMAP;
 
     /**
      * @hide
@@ -133,13 +134,20 @@ public class IconCompat extends CustomVersionedParcelable {
     private static final int KEY_SHADOW_ALPHA = 61;
     private static final int AMBIENT_SHADOW_ALPHA = 30;
 
-    private static final String EXTRA_TYPE = "type";
-    private static final String EXTRA_OBJ = "obj";
-    private static final String EXTRA_INT1 = "int1";
-    private static final String EXTRA_INT2 = "int2";
-    private static final String EXTRA_TINT_LIST = "tint_list";
-    private static final String EXTRA_TINT_MODE = "tint_mode";
-    private static final String EXTRA_STRING1 = "string1";
+    @VisibleForTesting
+    static final String EXTRA_TYPE = "type";
+    @VisibleForTesting
+    static final String EXTRA_OBJ = "obj";
+    @VisibleForTesting
+    static final String EXTRA_INT1 = "int1";
+    @VisibleForTesting
+    static final String EXTRA_INT2 = "int2";
+    @VisibleForTesting
+    static final String EXTRA_TINT_LIST = "tint_list";
+    @VisibleForTesting
+    static final String EXTRA_TINT_MODE = "tint_mode";
+    @VisibleForTesting
+    static final String EXTRA_STRING1 = "string1";
 
     /**
      * @hide
@@ -248,7 +256,7 @@ public class IconCompat extends CustomVersionedParcelable {
                 throw new IllegalArgumentException("Icon resource cannot be found");
             }
         } else {
-            rep.mObj1 = "";
+            rep.mObj1 = pkg;
         }
         rep.mString1 = pkg;
         return rep;
@@ -336,9 +344,8 @@ public class IconCompat extends CustomVersionedParcelable {
      * design guideline defined by {@link AdaptiveIconDrawable}.
      *
      * @param uri A uri referring to local content:// or file:// image data.
+     * @see android.graphics.drawable.Icon#createWithAdaptiveBitmapContentUri(String)
      */
-    // TODO: (b/143878043) update comment when corresponding api is available
-    // @see android.graphics.drawable.Icon#createWithAdaptiveBitmapContentUri(String)
     @NonNull
     public static IconCompat createWithAdaptiveBitmapContentUri(@NonNull String uri) {
         if (uri == null) {
@@ -354,9 +361,8 @@ public class IconCompat extends CustomVersionedParcelable {
      * design guideline defined by {@link AdaptiveIconDrawable}.
      *
      * @param uri A uri referring to local content:// or file:// image data.
+     * @see android.graphics.drawable.Icon#createWithAdaptiveBitmapContentUri(String)
      */
-    // TODO: (b/143878043) update comment when corresponding api is available
-    // @see android.graphics.drawable.Icon#createWithAdaptiveBitmapContentUri(String)
     @NonNull
     public static IconCompat createWithAdaptiveBitmapContentUri(@NonNull Uri uri) {
         if (uri == null) {
@@ -406,6 +412,12 @@ public class IconCompat extends CustomVersionedParcelable {
         }
         if (mType != TYPE_RESOURCE) {
             throw new IllegalStateException("called getResPackage() on " + this);
+        }
+        // Before aosp/1307777, we don't put the package name to mString1. Try to get the
+        // package name from the full resource name string. Note that this is not always the same
+        // as "the package used to create this icon" and this was what aosp/1307777 tried to fix.
+        if (TextUtils.isEmpty(mString1)) {
+            return ((String) mObj1).split(":", -1)[0];
         }
         // The name of the getResPackage() API is a bit confusing. It actually returns
         // the app package name rather than the package name in the resource table.
@@ -551,7 +563,10 @@ public class IconCompat extends CustomVersionedParcelable {
                 icon = Icon.createWithContentUri((String) mObj1);
                 break;
             case TYPE_URI_ADAPTIVE_BITMAP:
-                // TODO: (b/143878043) call Icon#createWithAdaptiveBitmapContentUri
+                if (Build.VERSION.SDK_INT >= 30) {
+                    icon = Icon.createWithAdaptiveBitmapContentUri(getUri());
+                    break;
+                }
                 if (context == null) {
                     throw new IllegalArgumentException(
                             "Context is required to resolve the file uri of the icon: " + getUri());
@@ -595,6 +610,12 @@ public class IconCompat extends CustomVersionedParcelable {
             String resType = resName.split("/", -1)[0];
             resName = resName.split("/", -1)[1];
             String resPackage = fullResName.split(":", -1)[0];
+            if ("0_resource_name_obfuscated".equals(resName)) {
+                // All obfuscated resources have the same name, so not going to look up the
+                // resource identifier from the resource name.
+                Log.i(TAG, "Found obfuscated resource, not trying to update resource id for it");
+                return;
+            }
             String appPackage = getResPackage();
             Resources res = getResources(context, appPackage);
             int id = res.getIdentifier(resName, resType, resPackage);
@@ -684,7 +705,14 @@ public class IconCompat extends CustomVersionedParcelable {
         return null;
     }
 
-    private InputStream getUriInputStream(Context context) {
+    /**
+     * Create an input stream for bitmap by resolving corresponding content uri.
+     *
+     * @hide
+     */
+    @Nullable
+    @RestrictTo(LIBRARY_GROUP)
+    public InputStream getUriInputStream(@NonNull Context context) {
         final Uri uri = getUri();
         final String scheme = uri.getScheme();
         if (ContentResolver.SCHEME_CONTENT.equals(scheme)

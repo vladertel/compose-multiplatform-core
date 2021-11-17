@@ -21,37 +21,46 @@ import static androidx.camera.testing.SurfaceTextureProvider.createSurfaceTextur
 
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
-import android.util.Log;
 import android.util.Size;
 import android.view.TextureView;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraX;
+import androidx.camera.core.Logger;
 import androidx.camera.core.Preview;
+import androidx.camera.core.impl.CameraInternal;
+import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.camera.testing.CameraUtil;
+import androidx.camera.testing.CameraXUtil;
 import androidx.camera.testing.R;
 import androidx.camera.testing.SurfaceTextureProvider;
 import androidx.test.espresso.idling.CountingIdlingResource;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.concurrent.ExecutionException;
+
 /** An activity which starts CameraX preview for testing. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class CameraXTestActivity extends AppCompatActivity {
 
     private static final String TAG = "CameraXTestActivity";
     private static final int FRAMES_UNTIL_VIEW_IS_READY = 5;
+
     @Nullable
     private Preview mPreview;
     @Nullable
-    public String mCameraId = null;
-    @CameraSelector.LensFacing
-    public int mLensFacing = CameraSelector.LENS_FACING_BACK;
-
-    @VisibleForTesting
-    public final CountingIdlingResource mPreviewReady = new CountingIdlingResource("PreviewReady");
+    private String mCameraId = null;
+    @Nullable
+    private CameraUseCaseAdapter mCameraUseCaseAdapter = null;
+    @NonNull
+    final CountingIdlingResource mPreviewReady = new CountingIdlingResource("PreviewReady");
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -64,86 +73,130 @@ public class CameraXTestActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         enablePreview();
-        Log.i(TAG, "Got UseCase: " + mPreview);
+        Logger.i(TAG, "Got UseCase: " + mPreview);
     }
 
-    void enablePreview() {
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mPreview != null && mCameraUseCaseAdapter != null) {
+            mCameraUseCaseAdapter.removeUseCases(Collections.singleton(mPreview));
+            mPreview = null;
+            mCameraUseCaseAdapter = null;
+        }
+    }
+
+    private void enablePreview() {
         for (int i = 0; i < FRAMES_UNTIL_VIEW_IS_READY; i++) {
             mPreviewReady.increment();
         }
 
-        if (CameraX.isBound(mPreview)) {
-            Log.d(TAG, "Preview already bound");
+        if (mCameraUseCaseAdapter != null) {
+            Logger.d(TAG, "Preview already enabled");
             return;
         }
 
-        if (!CameraUtil.hasCameraWithLensFacing(mLensFacing)) {
-            try {
-                mLensFacing = CameraX.getDefaultLensFacing();
-            } catch (IllegalStateException e) {
-                throw new IllegalArgumentException("Cannot find camera to use", e);
-            }
+        int lensFacing;
+        if (CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_BACK)) {
+            lensFacing = CameraSelector.LENS_FACING_BACK;
+        } else if (CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_FRONT)) {
+            lensFacing = CameraSelector.LENS_FACING_FRONT;
+        } else {
+            throw new IllegalArgumentException("Cannot find camera to use");
         }
+        final CameraSelector cameraSelector = new CameraSelector.Builder().requireLensFacing(
+                lensFacing).build();
 
         mPreview = new Preview.Builder()
                 .setTargetName("Preview")
                 .build();
-        TextureView textureView = findViewById(R.id.textureView);
-        mPreview.setSurfaceProvider(createSurfaceTextureProvider(
-                new SurfaceTextureProvider.SurfaceTextureCallback() {
-                    @Override
-                    public void onSurfaceTextureReady(@NonNull SurfaceTexture surfaceTexture,
-                            @NonNull Size resolution) {
-                        ViewGroup viewGroup = (ViewGroup) textureView.getParent();
-                        viewGroup.removeView(textureView);
-                        viewGroup.addView(textureView);
-                        textureView.setSurfaceTexture(surfaceTexture);
-                    }
 
-                    @Override
-                    public void onSafeToRelease(@NonNull SurfaceTexture surfaceTexture) {
-                        surfaceTexture.release();
-                    }
-                }));
-
-
-        CameraSelector cameraSelector =
-                new CameraSelector.Builder().requireLensFacing(mLensFacing).build();
-        try {
-            CameraX.bindToLifecycle(this, cameraSelector, mPreview);
-        } catch (IllegalArgumentException e) {
-            mPreview = null;
-            return;
-        }
-
-        mCameraId = CameraX.getCameraWithCameraSelector(
-                cameraSelector).getCameraInfoInternal().getCameraId();
-
+        final TextureView textureView = findViewById(R.id.textureView);
         textureView.setSurfaceTextureListener(
                 new TextureView.SurfaceTextureListener() {
                     @Override
-                    public void onSurfaceTextureAvailable(
-                            SurfaceTexture surfaceTexture, int i, int i1) {
+                    public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture,
+                            int width, int height) {
+                        Logger.d(TAG, "SurfaceTexture available");
                     }
 
                     @Override
-                    public void onSurfaceTextureSizeChanged(
-                            SurfaceTexture surfaceTexture, int i, int i1) {
+                    public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture,
+                            int width, int height) {
+                        Logger.d(TAG, "SurfaceTexture size changed " + width + "x" + height);
                     }
 
                     @Override
-                    public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
+                    public boolean onSurfaceTextureDestroyed(
+                            @NonNull SurfaceTexture surfaceTexture) {
+                        Logger.d(TAG, "SurfaceTexture destroyed");
                         return true;
                     }
 
                     @Override
-                    public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+                    public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
                         // Wait until surface texture receives enough updates.
                         if (!mPreviewReady.isIdleNow()) {
                             mPreviewReady.decrement();
                         }
                     }
                 });
+
+        mPreview.setSurfaceProvider(
+                createSurfaceTextureProvider(new SurfaceTextureCallbackImpl(textureView)));
+
+        try {
+            final CameraX cameraX = CameraXUtil.getOrCreateInstance(this, null).get();
+            final LinkedHashSet<CameraInternal> cameras =
+                    cameraSelector.filter(cameraX.getCameraRepository().getCameras());
+            mCameraUseCaseAdapter = new CameraUseCaseAdapter(cameras,
+                    cameraX.getCameraDeviceSurfaceManager(), cameraX.getDefaultConfigFactory());
+            mCameraUseCaseAdapter.addUseCases(Collections.singleton(mPreview));
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+            return;
+        } catch (CameraUseCaseAdapter.CameraException e) {
+            mCameraUseCaseAdapter = null;
+            mPreview = null;
+            return;
+        }
+
+        mCameraId = CameraUtil.getCameraIdWithLensFacing(cameraSelector.getLensFacing());
     }
 
+    @Nullable
+    public String getCameraId() {
+        return mCameraId;
+    }
+
+    @VisibleForTesting
+    @NonNull
+    public CountingIdlingResource getPreviewReady() {
+        return mPreviewReady;
+    }
+
+    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+    private static final class SurfaceTextureCallbackImpl implements
+            SurfaceTextureProvider.SurfaceTextureCallback {
+        private final TextureView mTextureView;
+
+        SurfaceTextureCallbackImpl(@NonNull TextureView textureView) {
+            mTextureView = textureView;
+        }
+
+        @Override
+        public void onSurfaceTextureReady(@NonNull SurfaceTexture surfaceTexture,
+                @NonNull Size resolution) {
+            ViewGroup viewGroup = (ViewGroup) mTextureView.getParent();
+            viewGroup.removeView(mTextureView);
+            viewGroup.addView(mTextureView, resolution.getWidth(),
+                    resolution.getHeight());
+            mTextureView.setSurfaceTexture(surfaceTexture);
+        }
+
+        @Override
+        public void onSafeToRelease(@NonNull SurfaceTexture surfaceTexture) {
+            surfaceTexture.release();
+        }
+    }
 }

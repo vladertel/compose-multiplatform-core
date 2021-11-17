@@ -16,6 +16,7 @@
 
 package androidx.lifecycle.testing
 
+import android.annotation.SuppressLint
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -35,20 +36,22 @@ import kotlinx.coroutines.runBlocking
  *
  * @param initialState The initial [Lifecycle.State].
  */
-class TestLifecycleOwner @JvmOverloads constructor(
+public class TestLifecycleOwner @JvmOverloads constructor(
     initialState: Lifecycle.State = Lifecycle.State.STARTED,
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.Main.immediate
 ) : LifecycleOwner {
-    private val lifecycleRegistry = LifecycleRegistry(this).apply {
+    // it is in test artifact
+    @SuppressLint("VisibleForTests")
+    private val lifecycleRegistry = LifecycleRegistry.createUnsafe(this).apply {
         currentState = initialState
     }
-    override fun getLifecycle() = lifecycleRegistry
+    override fun getLifecycle(): LifecycleRegistry = lifecycleRegistry
 
     /**
      * Update the [currentState] by moving it to the state directly after the given [event].
      * This is safe to call on any thread.
      */
-    fun handleLifecycleEvent(event: Lifecycle.Event) {
+    public fun handleLifecycleEvent(event: Lifecycle.Event) {
         runBlocking(coroutineDispatcher) {
             lifecycleRegistry.handleLifecycleEvent(event)
         }
@@ -56,7 +59,7 @@ class TestLifecycleOwner @JvmOverloads constructor(
     /**
      * The current [Lifecycle.State] of this owner. This is safe to mutate on any thread.
      */
-    var currentState: Lifecycle.State
+    public var currentState: Lifecycle.State
         get() = runBlocking(coroutineDispatcher) {
             lifecycleRegistry.currentState
         }
@@ -69,5 +72,5 @@ class TestLifecycleOwner @JvmOverloads constructor(
     /**
      * Get the number of observers.
      */
-    val observerCount get() = lifecycleRegistry.observerCount
+    public val observerCount: Int get() = lifecycleRegistry.observerCount
 }

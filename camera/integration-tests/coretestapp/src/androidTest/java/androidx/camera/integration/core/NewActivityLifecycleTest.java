@@ -16,19 +16,17 @@
 
 package androidx.camera.integration.core;
 
-import static androidx.camera.testing.CoreAppTestUtil.clearDeviceUI;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsNull.notNullValue;
 import static org.junit.Assume.assumeTrue;
 
 import android.content.Context;
 import android.content.Intent;
 
+import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.CoreAppTestUtil;
 import androidx.test.core.app.ApplicationProvider;
@@ -41,10 +39,16 @@ import androidx.test.rule.GrantPermissionRule;
 import androidx.test.uiautomator.UiDevice;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 // Test new activity lifecycle when using CameraX.
 @RunWith(AndroidJUnit4.class)
@@ -56,7 +60,6 @@ public final class NewActivityLifecycleTest {
 
     private final UiDevice mDevice =
             UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
-    private final String mLauncherPackageName = mDevice.getLauncherPackageName();
     private final Context mContext = ApplicationProvider.getApplicationContext();
     private final Intent mIntent = mContext.getPackageManager()
             .getLaunchIntentForPackage(BASIC_SAMPLE_PACKAGE);
@@ -70,8 +73,8 @@ public final class NewActivityLifecycleTest {
             new ActivityTestRule<>(CameraXActivity.class, true, false);
 
     @Rule
-    public GrantPermissionRule mCameraPermissionRule =
-            GrantPermissionRule.grant(android.Manifest.permission.CAMERA);
+    public TestRule mUseCamera = CameraUtil.grantCameraPermissionAndPreTest();
+
     @Rule
     public GrantPermissionRule mStoragePermissionRule =
             GrantPermissionRule.grant(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -80,13 +83,13 @@ public final class NewActivityLifecycleTest {
             GrantPermissionRule.grant(android.Manifest.permission.RECORD_AUDIO);
 
     @Before
-    public void setup() {
+    public void setup() throws CoreAppTestUtil.ForegroundOccupiedError {
         assumeTrue(CameraUtil.deviceHasCamera());
         CoreAppTestUtil.assumeCompatibleDevice();
-        assertThat(mLauncherPackageName, notNullValue());
 
-        // Clear the device UI before start each test.
-        clearDeviceUI(InstrumentationRegistry.getInstrumentation());
+        // Clear the device UI and check if there is no dialog or lock screen on the top of the
+        // window before start the test.
+        CoreAppTestUtil.prepareDeviceUI(InstrumentationRegistry.getInstrumentation());
 
         mActivityRule.launchActivity(mIntent);
     }
@@ -97,6 +100,14 @@ public final class NewActivityLifecycleTest {
 
         mActivityRule.finishActivity();
         pressHomeButton();
+    }
+
+    @AfterClass
+    public static void shutdownCameraX()
+            throws InterruptedException, ExecutionException, TimeoutException {
+        ProcessCameraProvider cameraProvider = ProcessCameraProvider.getInstance(
+                ApplicationProvider.getApplicationContext()).get(10, TimeUnit.SECONDS);
+        cameraProvider.shutdown().get(10, TimeUnit.SECONDS);
     }
 
     @Test

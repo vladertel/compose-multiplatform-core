@@ -16,6 +16,7 @@
 
 package androidx.webkit;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
@@ -55,6 +56,7 @@ public class WebViewFeature {
             SAFE_BROWSING_ENABLE,
             DISABLED_ACTION_MODE_MENU_ITEMS,
             START_SAFE_BROWSING,
+            SAFE_BROWSING_ALLOWLIST,
             SAFE_BROWSING_WHITELIST,
             SAFE_BROWSING_PRIVACY_POLICY_URL,
             SERVICE_WORKER_BASIC_USAGE,
@@ -92,6 +94,7 @@ public class WebViewFeature {
             FORCE_DARK_STRATEGY,
             WEB_MESSAGE_LISTENER,
             DOCUMENT_START_SCRIPT,
+            PROXY_OVERRIDE_REVERSE_BYPASS,
     })
     @Retention(RetentionPolicy.SOURCE)
     @Target({ElementType.PARAMETER, ElementType.METHOD})
@@ -129,6 +132,7 @@ public class WebViewFeature {
      * {@link androidx.webkit.WebSettingsCompat#getDisabledActionModeMenuItems(WebSettings)}, and
      * {@link androidx.webkit.WebSettingsCompat#setDisabledActionModeMenuItems(WebSettings, int)}.
      */
+    @SuppressLint("IntentName") // False positive: this constant is not to be used for Intents.
     public static final String DISABLED_ACTION_MODE_MENU_ITEMS =
             "DISABLED_ACTION_MODE_MENU_ITEMS";
 
@@ -142,8 +146,22 @@ public class WebViewFeature {
     /**
      * Feature for {@link #isFeatureSupported(String)}.
      * This feature covers
-     * {@link androidx.webkit.WebViewCompat#setSafeBrowsingWhitelist(List, ValueCallback)}.
+     * {@link androidx.webkit.WebViewCompat#setSafeBrowsingAllowlist(Set, ValueCallback)}.
      */
+    public static final String SAFE_BROWSING_ALLOWLIST = "SAFE_BROWSING_ALLOWLIST";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}.
+     * This feature covers
+     * {@link androidx.webkit.WebViewCompat#setSafeBrowsingWhitelist(List, ValueCallback)}.
+     *
+     * <p>This is functionally equivalent to {@link #SAFE_BROWSING_ALLOWLIST}: both constants
+     * represent the same range of compatibility across Android OS versions and WebView versions.
+     *
+     * @deprecated Please use {@link #SAFE_BROWSING_ALLOWLIST} and {@link
+     * androidx.webkit.WebViewCompat#setSafeBrowsingAllowlist(Set, ValueCallback)} instead.
+     */
+    @Deprecated
     public static final String SAFE_BROWSING_WHITELIST = "SAFE_BROWSING_WHITELIST";
 
     /**
@@ -429,14 +447,17 @@ public class WebViewFeature {
 
     /**
      * Feature for {@link #isFeatureSupported(String)}.
-     * This feature covers {@link WebViewCompat#addDocumentStartJavascript(android.webkit.WebView,
+     * This feature covers {@link WebViewCompat#addDocumentStartJavaScript(android.webkit.WebView,
      * String, Set)}.
-     *
-     * TODO(ctzsm): unhide when ready.
-     * @hide
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public static final String DOCUMENT_START_SCRIPT = "DOCUMENT_START_SCRIPT";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}.
+     * This feature covers
+     * {@link androidx.webkit.ProxyConfig.Builder#setReverseBypassEnabled(boolean)}
+     */
+    public static final String PROXY_OVERRIDE_REVERSE_BYPASS = "PROXY_OVERRIDE_REVERSE_BYPASS";
 
     /**
      * Return whether a feature is supported at run-time. On devices running Android version {@link
@@ -453,7 +474,6 @@ public class WebViewFeature {
      * @return whether the feature is supported given the current platform SDK and webview version
      */
     public static boolean isFeatureSupported(@NonNull @WebViewSupportFeature String feature) {
-        WebViewFeatureInternal webviewFeature = WebViewFeatureInternal.getFeature(feature);
-        return webviewFeature.isSupportedByFramework() || webviewFeature.isSupportedByWebView();
+        return WebViewFeatureInternal.isSupported(feature);
     }
 }

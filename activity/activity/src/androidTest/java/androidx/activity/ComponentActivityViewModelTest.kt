@@ -49,7 +49,8 @@ class ComponentActivityViewModelTest {
         with(ActivityScenario.launch(ViewModelActivity::class.java)) {
             val originalStore = withActivity { preOnCreateViewModelStore }
             assertWithMessage(
-                "Pre-onCreate() ViewModelStore should equal the post-onCreate() ViewModelStore")
+                "Pre-onCreate() ViewModelStore should equal the post-onCreate() ViewModelStore"
+            )
                 .that(originalStore)
                 .isSameInstanceAs(withActivity { postOnCreateViewModelStore })
 
@@ -95,6 +96,16 @@ class ComponentActivityViewModelTest {
         assertThat(defaultActivityModel.cleared).isTrue()
         assertThat(androidModel.cleared).isTrue()
         assertThat(savedStateModel.cleared).isTrue()
+    }
+
+    @Test
+    fun testViewModelsAfterOnResume() {
+        val scenario = ActivityScenario.launch(ResumeViewModelActivity::class.java)
+        with(scenario) {
+            val vm = withActivity { viewModel }
+            recreate()
+            assertThat(withActivity { viewModel }).isSameInstanceAs(vm)
+        }
     }
 }
 
@@ -146,5 +157,14 @@ class TestSavedStateViewModel(val savedStateHandle: SavedStateHandle) : ViewMode
 
     override fun onCleared() {
         cleared = true
+    }
+}
+
+class ResumeViewModelActivity : ComponentActivity() {
+    lateinit var viewModel: TestViewModel
+
+    override fun onResume() {
+        super.onResume()
+        viewModel = ViewModelProvider(this).get(TestViewModel::class.java)
     }
 }

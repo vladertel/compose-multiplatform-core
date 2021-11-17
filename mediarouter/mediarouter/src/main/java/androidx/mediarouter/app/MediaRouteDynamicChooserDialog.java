@@ -36,6 +36,7 @@ import android.widget.TextView;
 
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.appcompat.app.AppCompatDialog;
 import androidx.mediarouter.R;
@@ -81,9 +82,10 @@ public class MediaRouteDynamicChooserDialog extends AppCompatDialog {
     private RecyclerAdapter mAdapter;
     private RecyclerView mRecyclerView;
     private boolean mAttachedToWindow;
+    MediaRouter.RouteInfo mSelectingRoute;
     private long mUpdateRoutesDelayMs;
     private long mLastUpdateTime;
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "deprecation"})
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message message) {
@@ -95,11 +97,11 @@ public class MediaRouteDynamicChooserDialog extends AppCompatDialog {
         }
     };
 
-    public MediaRouteDynamicChooserDialog(Context context) {
+    public MediaRouteDynamicChooserDialog(@NonNull Context context) {
         this(context, 0);
     }
 
-    public MediaRouteDynamicChooserDialog(Context context, int theme) {
+    public MediaRouteDynamicChooserDialog(@NonNull Context context, int theme) {
         super(context = MediaRouterThemeHelper.createThemedDialogContext(context, theme, false),
                 MediaRouterThemeHelper.createThemedDialogStyle(context));
         context = getContext();
@@ -176,7 +178,7 @@ public class MediaRouteDynamicChooserDialog extends AppCompatDialog {
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.mr_picker_dialog);
@@ -232,6 +234,10 @@ public class MediaRouteDynamicChooserDialog extends AppCompatDialog {
      * Refreshes the list of routes that are shown in the device picker dialog.
      */
     public void refreshRoutes() {
+        if (mSelectingRoute != null) {
+            return;
+        }
+
         if (mAttachedToWindow) {
             ArrayList<MediaRouter.RouteInfo> routes = new ArrayList<>(mRouter.getRoutes());
             onFilterRoutes(routes);
@@ -476,6 +482,7 @@ public class MediaRouteDynamicChooserDialog extends AppCompatDialog {
                 mItemView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
+                        mSelectingRoute = route;
                         route.select();
                         mImageView.setVisibility(View.INVISIBLE);
                         mProgressBar.setVisibility(View.VISIBLE);

@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.util.AttributeSet
 import androidx.annotation.RestrictTo
 import androidx.core.content.withStyledAttributes
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavGraph
 import androidx.navigation.NavGraphNavigator
@@ -37,7 +38,7 @@ import androidx.navigation.NavigatorProvider
  * by setting the `app:progressDestinationId` attribute in your navigation XML file.
  */
 @Navigator.Name("navigation")
-class DynamicGraphNavigator(
+public class DynamicGraphNavigator(
     private val navigatorProvider: NavigatorProvider,
     private val installManager: DynamicInstallManager
 ) : NavGraphNavigator(navigatorProvider) {
@@ -58,20 +59,31 @@ class DynamicGraphNavigator(
      * module has successfully been installed.
      */
     override fun navigate(
-        destination: NavGraph,
-        args: Bundle?,
+        entries: List<NavBackStackEntry>,
         navOptions: NavOptions?,
         navigatorExtras: Extras?
-    ): NavDestination? {
+    ) {
+        for (entry in entries) {
+            navigate(entry, navOptions, navigatorExtras)
+        }
+    }
+
+    private fun navigate(
+        entry: NavBackStackEntry,
+        navOptions: NavOptions?,
+        navigatorExtras: Extras?
+    ) {
+        val destination = entry.destination
         val extras = if (navigatorExtras is DynamicExtras) navigatorExtras else null
         if (destination is DynamicNavGraph) {
             val moduleName = destination.moduleName
             if (moduleName != null && installManager.needsInstall(moduleName)) {
-                return installManager.performInstall(destination, args, extras, moduleName)
+                installManager.performInstall(entry, extras, moduleName)
+                return
             }
         }
-        return super.navigate(
-            destination, args, navOptions,
+        super.navigate(
+            listOf(entry), navOptions,
             if (extras != null) extras.destinationExtras else navigatorExtras
         )
     }
@@ -96,7 +108,7 @@ class DynamicGraphNavigator(
      *
      * @param progressDestinationSupplier The default progress destination supplier.
      */
-    fun installDefaultProgressDestination(
+    public fun installDefaultProgressDestination(
         progressDestinationSupplier: () -> NavDestination
     ) {
         this.defaultProgressDestinationSupplier = progressDestinationSupplier
@@ -110,35 +122,38 @@ class DynamicGraphNavigator(
     internal fun navigateToProgressDestination(
         dynamicNavGraph: DynamicNavGraph,
         progressArgs: Bundle?
-    ): NavDestination? {
+    ) {
         var progressDestinationId = dynamicNavGraph.progressDestination
         if (progressDestinationId == 0) {
             progressDestinationId = installDefaultProgressDestination(dynamicNavGraph)
         }
 
         val progressDestination = dynamicNavGraph.findNode(progressDestinationId)
-            ?: throw IllegalStateException("The progress destination id must be set and " +
-                    "accessible to the module of this navigator.")
+            ?: throw IllegalStateException(
+                "The progress destination id must be set and " +
+                    "accessible to the module of this navigator."
+            )
         val navigator = navigatorProvider.getNavigator<Navigator<NavDestination>>(
             progressDestination.navigatorName
         )
-        return navigator.navigate(progressDestination, progressArgs, null, null)
+        val entry = state.createBackStackEntry(progressDestination, progressArgs)
+        navigator.navigate(listOf(entry), null, null)
     }
 
     /**
      * Install the default progress destination
      *
-     * @return The [NavDestination.getId] of the newly added progress destination
+     * @return The [NavDestination#getId] of the newly added progress destination
      */
     private fun installDefaultProgressDestination(dynamicNavGraph: DynamicNavGraph): Int {
         val progressDestinationSupplier = defaultProgressDestinationSupplier
         checkNotNull(progressDestinationSupplier) {
             "You must set a default progress destination " +
-                    "using DynamicNavGraphNavigator.installDefaultProgressDestination or " +
-                    "pass in an DynamicInstallMonitor in the DynamicExtras.\n" +
-                    "Alternatively, when using NavHostFragment make sure to swap it with " +
-                    "DynamicNavHostFragment. This will take care of setting the default " +
-                    "progress destination for you."
+                "using DynamicNavGraphNavigator.installDefaultProgressDestination or " +
+                "pass in an DynamicInstallMonitor in the DynamicExtras.\n" +
+                "Alternatively, when using NavHostFragment make sure to swap it with " +
+                "DynamicNavHostFragment. This will take care of setting the default " +
+                "progress destination for you."
         }
         val progressDestination = progressDestinationSupplier.invoke()
         dynamicNavGraph.addDestination(progressDestination)
@@ -164,7 +179,7 @@ class DynamicGraphNavigator(
     /**
      * The [NavGraph] for dynamic features.
      */
-    class DynamicNavGraph(
+    public class DynamicNavGraph(
         /**
          * @hide
          */
@@ -187,10 +202,10 @@ class DynamicGraphNavigator(
                 return destination.parent as? DynamicNavGraph
                     ?: throw IllegalStateException(
                         "Dynamic destinations must be part of a DynamicNavGraph.\n" +
-                                "You can use DynamicNavHostFragment, which will take care of " +
-                                "setting up the NavController for Dynamic destinations.\n" +
-                                "If you're not using Fragments, you must set up the " +
-                                "NavigatorProvider manually."
+                            "You can use DynamicNavHostFragment, which will take care of " +
+                            "setting up the NavController for Dynamic destinations.\n" +
+                            "If you're not using Fragments, you must set up the " +
+                            "NavigatorProvider manually."
                     )
             }
         }
@@ -198,25 +213,40 @@ class DynamicGraphNavigator(
         /**
          * The dynamic feature's module name.
          */
-        var moduleName: String? = null
+        public var moduleName: String? = null
 
         /**
          * Resource id of progress destination. This will be preferred over any
          * default progress destination set by [installDefaultProgressDestination].
          */
-        var progressDestination: Int = 0
+        public var progressDestination: Int = 0
 
         override fun onInflate(context: Context, attrs: AttributeSet) {
             super.onInflate(context, attrs)
             context.withStyledAttributes(attrs, R.styleable.DynamicGraphNavigator) {
                 moduleName = getString(R.styleable.DynamicGraphNavigator_moduleName)
                 progressDestination = getResourceId(
-                    R.styleable.DynamicGraphNavigator_progressDestination, 0)
+                    R.styleable.DynamicGraphNavigator_progressDestination, 0
+                )
                 if (progressDestination == 0) {
                     navGraphNavigator.destinationsWithoutDefaultProgressDestination
                         .add(this@DynamicNavGraph)
                 }
             }
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (other == null || other !is DynamicNavGraph) return false
+            return super.equals(other) &&
+                moduleName == other.moduleName &&
+                progressDestination == other.progressDestination
+        }
+
+        override fun hashCode(): Int {
+            var result = super.hashCode()
+            result = 31 * result + moduleName.hashCode()
+            result = 31 * result + progressDestination.hashCode()
+            return result
         }
     }
 }

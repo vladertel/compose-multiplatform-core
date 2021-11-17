@@ -21,12 +21,16 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.impl.ImageReaderProxy;
+import androidx.camera.core.impl.TagBundle;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
@@ -37,11 +41,13 @@ import java.util.concurrent.TimeUnit;
  * A fake implementation of ImageReaderProxy where the values are settable and the
  * OnImageAvailableListener can be triggered.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class FakeImageReaderProxy implements ImageReaderProxy {
     private int mWidth = 100;
     private int mHeight = 100;
     private int mImageFormat = ImageFormat.JPEG;
     private final int mMaxImages;
+
     private Surface mSurface;
 
     @Nullable
@@ -55,6 +61,10 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
 
     // Queue of ImageProxys which have not yet been acquired.
     private BlockingQueue<ImageProxy> mImageProxyAcquisitionQueue;
+
+    // List of all ImageProxy which have been acquired. Close them all once the ImageReader is
+    // closed
+    private List<ImageProxy> mOutboundImageProxy = new ArrayList<>();
 
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
     @Nullable
@@ -88,18 +98,22 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
 
     @Override
     public ImageProxy acquireLatestImage() {
-        ImageProxy imageProxy;
+        ImageProxy imageProxy = null;
 
         try {
             // Remove and close all ImageProxy aside from last one
             do {
+                if (imageProxy != null) {
+                    imageProxy.close();
+                }
                 imageProxy = mImageProxyAcquisitionQueue.remove();
-                imageProxy.close();
             } while (mImageProxyAcquisitionQueue.size() > 1);
         } catch (NoSuchElementException e) {
             throw new IllegalStateException(
                     "Unable to acquire latest image from empty FakeImageReader");
         }
+
+        mOutboundImageProxy.add(imageProxy);
 
         return imageProxy;
     }
@@ -120,6 +134,9 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
 
     @Override
     public void close() {
+        for (ImageProxy imageProxy : mOutboundImageProxy) {
+            imageProxy.close();
+        }
         mIsClosed = true;
     }
 
@@ -143,7 +160,7 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
         return mMaxImages;
     }
 
-    @NonNull
+    @Nullable
     @Override
     public Surface getSurface() {
         return mSurface;
@@ -181,8 +198,9 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
      * ImageProxy have been triggered without a {@link #acquireLatestImage()} or {@link
      * #acquireNextImage()} being called.
      */
-    public void triggerImageAvailable(Object tag, long timestamp) throws InterruptedException {
-        FakeImageProxy fakeImageProxy = generateFakeImageProxy(tag, timestamp);
+    public void triggerImageAvailable(@NonNull TagBundle tagBundle,
+            long timestamp) throws InterruptedException {
+        FakeImageProxy fakeImageProxy = generateFakeImageProxy(tagBundle, timestamp);
 
         final ListenableFuture<Void> future = fakeImageProxy.getCloseFuture();
         mImageProxyBlockingQueue.put(future);
@@ -206,9 +224,9 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
      * @return true if able to trigger the OnImageAvailableListener. Otherwise will return false if
      * it fails to trigger the callback after the timeout period.
      */
-    public boolean triggerImageAvailable(@Nullable Object tag, long timestamp, long timeout,
+    public boolean triggerImageAvailable(@NonNull TagBundle tagBundle, long timestamp, long timeout,
             @NonNull TimeUnit timeUnit) throws InterruptedException {
-        FakeImageProxy fakeImageProxy = generateFakeImageProxy(tag, timestamp);
+        FakeImageProxy fakeImageProxy = generateFakeImageProxy(tagBundle, timestamp);
 
         final ListenableFuture<Void> future = fakeImageProxy.getCloseFuture();
         if (mImageProxyBlockingQueue.offer(future, timeout, timeUnit)) {
@@ -226,9 +244,9 @@ public class FakeImageReaderProxy implements ImageReaderProxy {
         return false;
     }
 
-    private FakeImageProxy generateFakeImageProxy(Object tag, long timestamp) {
+    private FakeImageProxy generateFakeImageProxy(TagBundle tagBundle, long timestamp) {
         FakeImageInfo fakeImageInfo = new FakeImageInfo();
-        fakeImageInfo.setTag(tag);
+        fakeImageInfo.setTag(tagBundle);
         fakeImageInfo.setTimestamp(timestamp);
 
         FakeImageProxy fakeImageProxy = new FakeImageProxy(fakeImageInfo);

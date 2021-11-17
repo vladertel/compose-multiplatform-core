@@ -18,63 +18,21 @@ package androidx.appsearch.app;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.junit.Assert.assertThrows;
+
 import org.junit.Test;
 
 public class AppSearchResultTest {
-
     @Test
-    public void testResultEquals_Identical() {
-        AppSearchResult<String> result1 = AppSearchResult.newSuccessfulResult("String");
-        AppSearchResult<String> result2 = AppSearchResult.newSuccessfulResult("String");
-
-        assertThat(result1).isEqualTo(result2);
-        assertThat(result1.hashCode()).isEqualTo(result2.hashCode());
-
-        AppSearchResult<String> result3 =
-                AppSearchResult.newFailedResult(AppSearchResult.RESULT_INTERNAL_ERROR,
-                        "errorMessage");
-        AppSearchResult<String> result4 =
-                AppSearchResult.newFailedResult(AppSearchResult.RESULT_INTERNAL_ERROR,
-                "errorMessage");
-
-        assertThat(result3).isEqualTo(result4);
-        assertThat(result3.hashCode()).isEqualTo(result4.hashCode());
-    }
-
-    @Test
-    public void testResultEquals_Failure() {
-        AppSearchResult<String> result1 = AppSearchResult.newSuccessfulResult("String");
-        AppSearchResult<String> result2 = AppSearchResult.newSuccessfulResult("Wrong");
-        AppSearchResult<String> resultNull = AppSearchResult.newSuccessfulResult(/*value=*/null);
-
-        assertThat(result1).isNotEqualTo(result2);
-        assertThat(result1.hashCode()).isNotEqualTo(result2.hashCode());
-        assertThat(result1).isNotEqualTo(resultNull);
-        assertThat(result1.hashCode()).isNotEqualTo(resultNull.hashCode());
-
-        AppSearchResult<String> result3 =
-                AppSearchResult.newFailedResult(AppSearchResult.RESULT_INTERNAL_ERROR,
-                        "errorMessage");
-        AppSearchResult<String> result4 =
-                AppSearchResult.newFailedResult(AppSearchResult.RESULT_IO_ERROR,
-                        "errorMessage");
-
-        assertThat(result3).isNotEqualTo(result4);
-        assertThat(result3.hashCode()).isNotEqualTo(result4.hashCode());
-
-
-        AppSearchResult<String> result5 =
-                AppSearchResult.newFailedResult(AppSearchResult.RESULT_INTERNAL_ERROR,
-                        "Wrong");
-
-        assertThat(result3).isNotEqualTo(result5);
-        assertThat(result3.hashCode()).isNotEqualTo(result5.hashCode());
-
-        AppSearchResult<String> result6 =
-                AppSearchResult.newFailedResult(AppSearchResult.RESULT_INTERNAL_ERROR,
-                        /*errorMessage=*/null);
-
-        assertThat(result3).isNotEqualTo(result6);
-        assertThat(result3.hashCode()).isNotEqualTo(result6.hashCode());
+    public void testMapNullPointerException() {
+        NullPointerException e = assertThrows(NullPointerException.class, () -> {
+            Object o = null;
+            o.toString();
+        });
+        AppSearchResult<?> result = AppSearchResult.throwableToFailedResult(e);
+        assertThat(result.getResultCode()).isEqualTo(AppSearchResult.RESULT_INTERNAL_ERROR);
+        // Makes sure the exception name is included in the string. Some exceptions have terse or
+        // missing strings so it's confusing to read the output without the exception name.
+        assertThat(result.getErrorMessage()).startsWith("NullPointerException");
     }
 }

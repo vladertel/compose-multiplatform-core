@@ -29,7 +29,6 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.os.Build;
 import android.os.Looper;
-import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -49,8 +48,8 @@ import org.junit.runner.RunWith;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @MediumTest
 @RunWith(AndroidJUnit4.class)
@@ -83,12 +82,7 @@ public class WebViewCompatTest {
         mWebViewOnUiThread.loadUrl("about:blank");
 
         final ResolvableFuture<Long> visualStateFuture = ResolvableFuture.create();
-        mWebViewOnUiThread.postVisualStateCallbackCompat(kRequest,
-                new WebViewCompat.VisualStateCallback() {
-                        public void onComplete(long requestId) {
-                            visualStateFuture.set(requestId);
-                        }
-                });
+        mWebViewOnUiThread.postVisualStateCallbackCompat(kRequest, visualStateFuture::set);
 
         assertEquals(kRequest, (long) WebkitUtils.waitForFuture(visualStateFuture));
     }
@@ -98,12 +92,8 @@ public class WebViewCompatTest {
         // Skip this test if VisualStateCallback is not supported.
         WebkitUtils.checkFeature(WebViewFeature.VISUAL_STATE_CALLBACK);
         try {
-            WebViewCompat.postVisualStateCallback(mWebViewOnUiThread.getWebViewOnCurrentThread(), 5,
-                    new WebViewCompat.VisualStateCallback() {
-                        @Override
-                        public void onComplete(long requestId) {
-                        }
-                    });
+            WebViewCompat.postVisualStateCallback(
+                    mWebViewOnUiThread.getWebViewOnCurrentThread(), 5, requestId -> {});
         } catch (RuntimeException e) {
             return;
         }
@@ -140,12 +130,8 @@ public class WebViewCompatTest {
                 new MockContext(
                         ApplicationProvider.getApplicationContext().getApplicationContext());
         final ResolvableFuture<Boolean> startSafeBrowsingFuture = ResolvableFuture.create();
-        WebViewCompat.startSafeBrowsing(ctx, new ValueCallback<Boolean>() {
-            @Override
-            public void onReceiveValue(Boolean value) {
-                startSafeBrowsingFuture.set(ctx.wasGetApplicationContextCalled());
-            }
-        });
+        WebViewCompat.startSafeBrowsing(ctx,
+                value -> startSafeBrowsingFuture.set(ctx.wasGetApplicationContextCalled()));
         assertTrue(WebkitUtils.waitForFuture(startSafeBrowsingFuture));
     }
 
@@ -174,59 +160,47 @@ public class WebViewCompatTest {
         final ResolvableFuture<Boolean> startSafeBrowsingFuture = ResolvableFuture.create();
         WebViewCompat.startSafeBrowsing(
                 ApplicationProvider.getApplicationContext().getApplicationContext(),
-                new ValueCallback<Boolean>() {
-                    @Override
-                    public void onReceiveValue(Boolean value) {
-                        startSafeBrowsingFuture.set(Looper.getMainLooper().isCurrentThread());
-                    }
-                });
+                value -> startSafeBrowsingFuture.set(Looper.getMainLooper().isCurrentThread()));
         assertTrue(WebkitUtils.waitForFuture(startSafeBrowsingFuture));
+    }
+
+    private static boolean setSafeBrowsingAllowlistSync(Set<String> allowlist) {
+        final ResolvableFuture<Boolean> safeBrowsingAllowlistFuture = ResolvableFuture.create();
+        WebViewCompat.setSafeBrowsingAllowlist(allowlist,
+                safeBrowsingAllowlistFuture::set);
+        return WebkitUtils.waitForFuture(safeBrowsingAllowlistFuture);
     }
 
     /**
      * This should remain functionally equivalent to
-     * android.webkit.cts.WebViewTest#testSetSafeBrowsingWhitelistWithMalformedList. Modifications
+     * android.webkit.cts.WebViewTest#testSetSafeBrowsingAllowlistWithMalformedList. Modifications
      * to this test should be reflected in that test as necessary. See
      * http://go/modifying-webview-cts.
      */
     @Test
-    public void testSetSafeBrowsingWhitelistWithMalformedList() throws Exception {
-        WebkitUtils.checkFeature(WebViewFeature.SAFE_BROWSING_WHITELIST);
+    public void testSetSafeBrowsingAllowlistWithMalformedList() throws Exception {
+        WebkitUtils.checkFeature(WebViewFeature.SAFE_BROWSING_ALLOWLIST);
 
-        List<String> whitelist = new ArrayList<>();
-        // Protocols are not supported in the whitelist
-        whitelist.add("http://google.com");
-        final ResolvableFuture<Boolean> safeBrowsingWhitelistFuture = ResolvableFuture.create();
-        WebViewCompat.setSafeBrowsingWhitelist(whitelist, new ValueCallback<Boolean>() {
-            @Override
-            public void onReceiveValue(Boolean success) {
-                safeBrowsingWhitelistFuture.set(success);
-            }
-        });
-        assertFalse(WebkitUtils.waitForFuture(safeBrowsingWhitelistFuture));
+        Set<String> allowlist = new HashSet<>();
+        // Protocols are not supported in the allowlist
+        allowlist.add("http://google.com");
+        assertFalse("Malformed list entry should fail", setSafeBrowsingAllowlistSync(allowlist));
     }
 
     /**
      * This should remain functionally equivalent to
-     * android.webkit.cts.WebViewTest#testSetSafeBrowsingWhitelistWithValidList. Modifications to
+     * android.webkit.cts.WebViewTest#testSetSafeBrowsingAllowlistWithValidList. Modifications to
      * this test should be reflected in that test as necessary. See http://go/modifying-webview-cts.
      */
     @Test
-    public void testSetSafeBrowsingWhitelistWithValidList() throws Exception {
-        WebkitUtils.checkFeature(WebViewFeature.SAFE_BROWSING_WHITELIST);
+    public void testSetSafeBrowsingAllowlistWithValidList() throws Exception {
+        WebkitUtils.checkFeature(WebViewFeature.SAFE_BROWSING_ALLOWLIST);
         // This test relies on the onSafeBrowsingHit callback to verify correctness.
         WebkitUtils.checkFeature(WebViewFeature.SAFE_BROWSING_HIT);
 
-        List<String> whitelist = new ArrayList<>();
-        whitelist.add("safe-browsing");
-        final ResolvableFuture<Boolean> safeBrowsingWhitelistFuture = ResolvableFuture.create();
-        WebViewCompat.setSafeBrowsingWhitelist(whitelist, new ValueCallback<Boolean>() {
-            @Override
-            public void onReceiveValue(Boolean success) {
-                safeBrowsingWhitelistFuture.set(success);
-            }
-        });
-        assertTrue(WebkitUtils.waitForFuture(safeBrowsingWhitelistFuture));
+        Set<String> allowlist = new HashSet<>();
+        allowlist.add("safe-browsing");
+        assertTrue("Valid allowlist should be successful", setSafeBrowsingAllowlistSync(allowlist));
 
         final ResolvableFuture<Void> pageFinishedFuture = ResolvableFuture.create();
         mWebViewOnUiThread.setWebViewClient(new WebViewClientCompat() {

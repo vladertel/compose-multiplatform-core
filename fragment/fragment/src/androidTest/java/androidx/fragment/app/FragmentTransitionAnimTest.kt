@@ -41,7 +41,9 @@ import java.util.concurrent.TimeUnit
 @LargeTest
 @RunWith(Parameterized::class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.LOLLIPOP)
-class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
+class FragmentTransitionAnimTest(
+    private val reorderingAllowed: ReorderingAllowed,
+) {
     private var onBackStackChangedTimes: Int = 0
 
     @Before
@@ -95,9 +97,17 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
                 .commit()
             executePendingTransactions()
 
-            assertThat(fragment.startAnimationLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
+            val startAnimationRan = fragment.startAnimationLatch.await(
+                TIMEOUT,
+                TimeUnit.MILLISECONDS
+            )
+            assertThat(startAnimationRan).isFalse()
             fragment.waitForTransition()
-            assertThat(fragment.exitAnimationLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
+            val exitAnimationRan = fragment.exitAnimationLatch.await(
+                TIMEOUT,
+                TimeUnit.MILLISECONDS
+            )
+            assertThat(exitAnimationRan).isFalse()
             assertThat(onBackStackChangedTimes).isEqualTo(2)
         }
     }
@@ -148,9 +158,17 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
                 .commit()
             executePendingTransactions()
 
-            assertThat(fragment.startAnimationLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
+            val startAnimationRan = fragment.startAnimationLatch.await(
+                TIMEOUT,
+                TimeUnit.MILLISECONDS
+            )
+            assertThat(startAnimationRan).isFalse()
             fragment.waitForTransition()
-            assertThat(fragment.exitAnimationLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
+            val exitAnimationRan = fragment.exitAnimationLatch.await(
+                TIMEOUT,
+                TimeUnit.MILLISECONDS
+            )
+            assertThat(exitAnimationRan).isFalse()
             assertThat(onBackStackChangedTimes).isEqualTo(2)
         }
     }
@@ -202,7 +220,11 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
             executePendingTransactions()
 
             fragment.waitForTransition()
-            assertThat(fragment.exitAnimatorLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
+            val exitAnimatorRan = fragment.exitAnimatorLatch.await(
+                TIMEOUT,
+                TimeUnit.MILLISECONDS
+            )
+            assertThat(exitAnimatorRan).isFalse()
             assertThat(onBackStackChangedTimes).isEqualTo(2)
         }
     }
@@ -254,7 +276,11 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
             executePendingTransactions()
 
             fragment.waitForTransition()
-            assertThat(fragment.exitAnimatorLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
+            val exitAnimatorRan = fragment.exitAnimatorLatch.await(
+                TIMEOUT,
+                TimeUnit.MILLISECONDS
+            )
+            assertThat(exitAnimatorRan).isFalse()
             assertThat(onBackStackChangedTimes).isEqualTo(2)
         }
     }
@@ -286,7 +312,7 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
     }
 
     class TransitionAnimatorFragment : TransitionFragment(R.layout.scene1) {
-        lateinit var exitAnimatorLatch: CountDownLatch
+        val exitAnimatorLatch = CountDownLatch(1)
 
         override fun onCreateAnimator(
             transit: Int,
@@ -303,15 +329,17 @@ class FragmentTransitionAnimTest(private val reorderingAllowed: Boolean) {
                     }
                 }
             })
-            exitAnimatorLatch = CountDownLatch(1)
         }
     }
 
     companion object {
         @JvmStatic
-        @Parameterized.Parameters
-        fun data(): Array<Boolean> {
-            return arrayOf(false, true)
+        @Parameterized.Parameters(name = "ordering={0}")
+        fun data() = mutableListOf<Array<Any>>().apply {
+            arrayOf(
+                Ordered,
+                Reordered
+            )
         }
 
         @AnimRes

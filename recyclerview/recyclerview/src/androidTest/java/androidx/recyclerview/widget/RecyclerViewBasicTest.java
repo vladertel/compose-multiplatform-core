@@ -58,6 +58,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@SuppressWarnings("unchecked")
 @SmallTest
 @RunWith(AndroidJUnit4.class)
 public class RecyclerViewBasicTest {
@@ -350,7 +351,7 @@ public class RecyclerViewBasicTest {
         measure();
         layout();
         View view = mRecyclerView.getChildAt(0);
-        assertNotNull("test sanity", view);
+        assertNotNull("Assumption check", view);
         LoggingView loggingView = (LoggingView) view;
         SparseArray<Parcelable> container = new SparseArray<Parcelable>();
         mRecyclerView.saveHierarchyState(container);

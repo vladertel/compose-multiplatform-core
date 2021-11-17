@@ -30,13 +30,24 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalPagingApi::class)
 internal class V3RemoteMediator(
     private val database: SampleDatabase,
-    private val networkSource: NetworkCustomerPagingSource
+    private val networkSourceFactory: () -> NetworkCustomerPagingSource
 ) : RemoteMediator<Int, Customer>() {
+
+    private var networkSource: NetworkCustomerPagingSource
+    private val callBack = { newNetworkSource() }
+
+    init {
+        networkSource = networkSourceFactory.invoke()
+        networkSource.registerInvalidatedCallback(callBack)
+    }
+
     override suspend fun load(
         loadType: LoadType,
         state: PagingState<Int, Customer>
     ): MediatorResult {
-        if (loadType == LoadType.PREPEND) return MediatorResult.Success(false)
+        if (loadType == LoadType.PREPEND) {
+            return MediatorResult.Success(endOfPaginationReached = true)
+        }
 
         // TODO: Move this to be a more fully featured sample which demonstrated key translation
         //  between two types of PagingSources where the keys do not map 1:1.
@@ -44,20 +55,17 @@ internal class V3RemoteMediator(
             LoadType.REFRESH -> PagingSource.LoadParams.Refresh(
                 key = 0,
                 loadSize = 10,
-                placeholdersEnabled = false,
-                pageSize = 10
+                placeholdersEnabled = false
             )
             LoadType.PREPEND -> throw IllegalStateException()
             LoadType.APPEND -> PagingSource.LoadParams.Append(
                 key = state.pages.lastOrNull()?.nextKey ?: 0,
                 loadSize = 10,
-                placeholdersEnabled = false,
-                pageSize = 10
+                placeholdersEnabled = false
             )
         }
-        val result = networkSource.load(loadParams)
 
-        return when (result) {
+        return when (val result = networkSource.load(loadParams)) {
             is PagingSource.LoadResult.Page -> {
                 withContext(Dispatchers.IO) {
                     database.withTransaction {
@@ -74,6 +82,18 @@ internal class V3RemoteMediator(
             is PagingSource.LoadResult.Error -> {
                 MediatorResult.Error(result.throwable)
             }
+            is PagingSource.LoadResult.Invalid -> {
+                networkSource.invalidate()
+                load(loadType, state)
+            }
         }
+    }
+
+    private fun newNetworkSource() {
+        val newNetworkSource = networkSourceFactory.invoke()
+        newNetworkSource.registerInvalidatedCallback { callBack }
+        networkSource.unregisterInvalidatedCallback { callBack }
+
+        networkSource = newNetworkSource
     }
 }

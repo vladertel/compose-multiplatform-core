@@ -23,40 +23,31 @@ import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_DATA_
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_DATA_UNSELECT_REASON;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_DATA_VOLUME;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_ADD_MEMBER_ROUTE;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .CLIENT_MSG_CREATE_DYNAMIC_GROUP_ROUTE_CONTROLLER;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .CLIENT_MSG_CREATE_ROUTE_CONTROLLER;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_CREATE_DYNAMIC_GROUP_ROUTE_CONTROLLER;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_CREATE_ROUTE_CONTROLLER;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_REGISTER;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .CLIENT_MSG_RELEASE_ROUTE_CONTROLLER;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_RELEASE_ROUTE_CONTROLLER;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_REMOVE_MEMBER_ROUTE;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .CLIENT_MSG_ROUTE_CONTROL_REQUEST;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_ROUTE_CONTROL_REQUEST;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_SELECT_ROUTE;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .CLIENT_MSG_SET_DISCOVERY_REQUEST;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_SET_DISCOVERY_REQUEST;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_SET_ROUTE_VOLUME;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_UNREGISTER;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_UNSELECT_ROUTE;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_UPDATE_MEMBER_ROUTES;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_MSG_UPDATE_ROUTE_VOLUME;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.CLIENT_VERSION_CURRENT;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .DATA_KEY_DYNAMIC_ROUTE_DESCRIPTORS;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.DATA_KEY_DYNAMIC_ROUTE_DESCRIPTORS;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.DATA_KEY_GROUPABLE_SECION_TITLE;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .DATA_KEY_TRANSFERABLE_SECTION_TITLE;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.DATA_KEY_GROUP_ROUTE_DESCRIPTOR;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.DATA_KEY_TRANSFERABLE_SECTION_TITLE;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_DATA_ERROR;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .SERVICE_MSG_CONTROL_REQUEST_FAILED;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .SERVICE_MSG_CONTROL_REQUEST_SUCCEEDED;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_MSG_CONTROLLER_RELEASED;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_MSG_CONTROL_REQUEST_FAILED;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_MSG_CONTROL_REQUEST_SUCCEEDED;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_MSG_DESCRIPTOR_CHANGED;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .SERVICE_MSG_DYNAMIC_ROUTE_CREATED;
-import static androidx.mediarouter.media.MediaRouteProviderProtocol
-        .SERVICE_MSG_DYNAMIC_ROUTE_DESCRIPTORS_CHANGED;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_MSG_DYNAMIC_ROUTE_CREATED;
+import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_MSG_DYNAMIC_ROUTE_DESCRIPTORS_CHANGED;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_MSG_GENERIC_FAILURE;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_MSG_GENERIC_SUCCESS;
 import static androidx.mediarouter.media.MediaRouteProviderProtocol.SERVICE_MSG_REGISTERED;
@@ -67,6 +58,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.DeadObjectException;
 import android.os.Handler;
@@ -80,8 +72,7 @@ import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.mediarouter.media.MediaRouteProvider.DynamicGroupRouteController
-        .DynamicRouteDescriptor;
+import androidx.mediarouter.media.MediaRouteProvider.DynamicGroupRouteController.DynamicRouteDescriptor;
 import androidx.mediarouter.media.MediaRouter.ControlRequestCallback;
 
 import java.lang.ref.WeakReference;
@@ -105,6 +96,7 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
     private boolean mBound;
     private Connection mActiveConnection;
     private boolean mConnectionReady;
+    private ControllerCallback mControllerCallback;
 
     public RegisteredMediaRouteProvider(Context context, ComponentName componentName) {
         super(context, new ProviderMetadata(componentName));
@@ -222,6 +214,10 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
         }
     }
 
+    public void setControllerCallback(@Nullable ControllerCallback controllerCallback) {
+        mControllerCallback = controllerCallback;
+    }
+
     private void updateBinding() {
         if (shouldBind()) {
             bind();
@@ -255,7 +251,11 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
             Intent service = new Intent(MediaRouteProviderProtocol.SERVICE_INTERFACE);
             service.setComponent(mComponentName);
             try {
-                mBound = getContext().bindService(service, this, Context.BIND_AUTO_CREATE);
+                int flags = Context.BIND_AUTO_CREATE;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    flags |= Context.BIND_INCLUDE_CAPABILITIES;
+                }
+                mBound = getContext().bindService(service, this, flags);
                 if (!mBound && DEBUG) {
                     Log.d(TAG, this + ": Bind failed");
                 }
@@ -369,6 +369,7 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
     }
 
     void onDynamicRouteDescriptorChanged(Connection connection, int controllerId,
+            MediaRouteDescriptor groupRouteDescriptor,
             List<DynamicRouteDescriptor> descriptors) {
         if (mActiveConnection == connection) {
             if (DEBUG) {
@@ -376,8 +377,19 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
             }
             ControllerConnection controller = findControllerById(controllerId);
             if (controller instanceof RegisteredDynamicController) {
-                ((RegisteredDynamicController) controller).onDynamicRoutesChanged(descriptors);
+                ((RegisteredDynamicController) controller)
+                        .onDynamicRoutesChanged(groupRouteDescriptor, descriptors);
             }
+        }
+    }
+
+    void onConnectionControllerReleasedByProvider(Connection connection, int controllerId) {
+        if (mActiveConnection == connection) {
+            ControllerConnection controller = findControllerById(controllerId);
+            if (mControllerCallback != null && controller instanceof RouteController) {
+                mControllerCallback.onControllerReleasedByProvider(((RouteController) controller));
+            }
+            onControllerReleased(controller);
         }
     }
 
@@ -509,7 +521,7 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
         }
 
         @Override
-        public void onUnselect(int reason) {
+        public void onUnselect(@MediaRouter.UnselectReason int reason) {
             mSelected = false;
             if (mConnection != null) {
                 mConnection.unselectRoute(mControllerId, reason);
@@ -580,8 +592,9 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
         ////////////////////////////////////
         // Other methods
         void onDynamicRoutesChanged(
+                MediaRouteDescriptor groupRouteDescriptor,
                 final List<DynamicRouteDescriptor> routes) {
-            notifyDynamicRoutesChanged(routes);
+            notifyDynamicRoutesChanged(groupRouteDescriptor, routes);
         }
     }
 
@@ -652,7 +665,7 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
         }
 
         @Override
-        public void onUnselect(int reason) {
+        public void onUnselect(@MediaRouter.UnselectReason int reason) {
             mSelected = false;
             if (mConnection != null) {
                 mConnection.unselectRoute(mControllerId, reason);
@@ -789,13 +802,19 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
                 int controllerId, Bundle descriptorsBundle) {
             if (mServiceVersion != 0) {
                 //descriptorsBundle.setClassLoader(ParcelImpl.class.getClassLoader());
+                MediaRouteDescriptor groupRoute = null;
+                Bundle groupBundle = descriptorsBundle.getParcelable(
+                        DATA_KEY_GROUP_ROUTE_DESCRIPTOR);
+                if (groupBundle != null) {
+                    groupRoute = MediaRouteDescriptor.fromBundle(groupBundle);
+                }
                 ArrayList<Bundle> bundles = descriptorsBundle.getParcelableArrayList(
                         DATA_KEY_DYNAMIC_ROUTE_DESCRIPTORS);
                 List<DynamicRouteDescriptor> descriptors = new ArrayList<DynamicRouteDescriptor>();
                 for (Bundle bundle: bundles) {
                     descriptors.add(DynamicRouteDescriptor.fromBundle(bundle));
                 }
-                onDynamicRouteDescriptorChanged(this, controllerId, descriptors);
+                onDynamicRouteDescriptorChanged(this, controllerId, groupRoute, descriptors);
                 return true;
             }
             return false;
@@ -830,6 +849,10 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
                 callback.onError("DynamicGroupRouteController is created without valid route id.",
                         data);
             }
+        }
+
+        public void onControllerReleasedByProvider(int controllerId) {
+            onConnectionControllerReleasedByProvider(this, controllerId);
         }
 
         @Override
@@ -874,7 +897,7 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
                     mNextRequestId++, controllerId, null, null);
         }
 
-        public void unselectRoute(int controllerId, int reason) {
+        public void unselectRoute(int controllerId, @MediaRouter.UnselectReason int reason) {
             Bundle extras = new Bundle();
             extras.putInt(CLIENT_DATA_UNSELECT_REASON, reason);
             sendRequest(CLIENT_MSG_UNSELECT_ROUTE,
@@ -907,7 +930,6 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
             }
             return false;
         }
-
 
         public void updateMemberRoutes(int controllerId, List<String> memberRouteIds) {
             Bundle data = new Bundle();
@@ -1053,8 +1075,16 @@ final class RegisteredMediaRouteProvider extends MediaRouteProvider
                         Log.w(TAG, "No further information on the dynamic group controller");
                     }
                     break;
+
+                case SERVICE_MSG_CONTROLLER_RELEASED:
+                    connection.onControllerReleasedByProvider(arg /* controllerId */);
+                    break;
             }
             return false;
         }
+    }
+
+    interface ControllerCallback {
+        void onControllerReleasedByProvider(RouteController controller);
     }
 }

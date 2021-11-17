@@ -16,10 +16,10 @@
 
 package androidx.camera.core.impl.utils.futures;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.camera.core.Logger;
 import androidx.core.util.Preconditions;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
  * <p>This implementation is based off of the Guava ImmediateSuccessfulFuture class.
  * @param <V> The type of the value stored in the future.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 abstract class ImmediateFuture<V> implements ListenableFuture<V> {
 
     private static final String TAG = "ImmediateFuture";
@@ -62,7 +63,7 @@ abstract class ImmediateFuture<V> implements ListenableFuture<V> {
         } catch (RuntimeException e) {
             // ListenableFuture does not throw runtime exceptions, so swallow the exception and
             // log it here.
-            Log.e(TAG, "Experienced RuntimeException while attempting to notify " + listener
+            Logger.e(TAG, "Experienced RuntimeException while attempting to notify " + listener
                     + " on Executor " + executor, e);
         }
 

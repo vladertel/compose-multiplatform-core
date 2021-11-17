@@ -19,6 +19,7 @@ import android.app.Activity
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.IntentSender
+import android.os.Bundle
 import androidx.fragment.app.test.FragmentResultActivity
 import androidx.fragment.app.test.FragmentTestActivity
 import androidx.fragment.test.R
@@ -26,7 +27,6 @@ import androidx.test.annotation.UiThreadTest
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.rule.ActivityTestRule
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Assert.fail
@@ -43,8 +43,9 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 @MediumTest
 class FragmentReceiveResultTest {
+    @Suppress("DEPRECATION")
     @get:Rule
-    val activityRule = ActivityTestRule(FragmentTestActivity::class.java)
+    val activityRule = androidx.test.rule.ActivityTestRule(FragmentTestActivity::class.java)
 
     private lateinit var activity: FragmentTestActivity
     private lateinit var fragment: TestFragment
@@ -59,7 +60,7 @@ class FragmentReceiveResultTest {
     @Test
     @UiThreadTest
     fun testNoFragmentOnActivityResult() {
-        activity.supportFragmentManager.saveAllState()
+        activity.supportFragmentManager.saveAllStateInternal()
 
         // 0xffff is the request code for the startActivityResult launcher in FragmentManager
         activity.onActivityResult(0xffff, Activity.RESULT_OK, Intent())
@@ -119,6 +120,16 @@ class FragmentReceiveResultTest {
     }
 
     @Test
+    fun testStartIntentSenderForResultWithOptionsOk() {
+        startIntentSenderForResult(30, Activity.RESULT_OK, "content 30", Bundle())
+
+        assertWithMessage("Fragment should receive result").that(fragment.hasResult[0]).isTrue()
+        assertThat(fragment.requestCode[0]).isEqualTo(30)
+        assertThat(fragment.resultCode[0]).isEqualTo(Activity.RESULT_OK)
+        assertThat(fragment.resultContent[0]).isEqualTo("content 30")
+    }
+
+    @Test
     fun testStartIntentSenderForResultCanceled() {
         startIntentSenderForResult(40, Activity.RESULT_CANCELED, "content 40")
 
@@ -154,8 +165,10 @@ class FragmentReceiveResultTest {
 
             fragment.startActivityForResult(intent, requestCode)
         }
-        assertThat(fragment.resultReceiveLatch[fragment.onActivityResultCount]
-            .await(1, TimeUnit.SECONDS)).isTrue()
+        assertThat(
+            fragment.resultReceiveLatch[fragment.onActivityResultCount]
+                .await(1, TimeUnit.SECONDS)
+        ).isTrue()
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
     }
 
@@ -163,19 +176,22 @@ class FragmentReceiveResultTest {
     private fun startIntentSenderForResult(
         requestCode: Int,
         resultCode: Int,
-        content: String
+        content: String,
+        options: Bundle? = null
     ) {
         activityRule.runOnUiThread {
             val intent = Intent(activity, FragmentResultActivity::class.java)
             intent.putExtra(FragmentResultActivity.EXTRA_RESULT_CODE, resultCode)
             intent.putExtra(FragmentResultActivity.EXTRA_RESULT_CONTENT, content)
 
-            val pendingIntent = PendingIntent.getActivity(activity, requestCode, intent, 0)
+            val pendingIntent = PendingIntent.getActivity(
+                activity, requestCode, intent, PendingIntent.FLAG_IMMUTABLE
+            )
 
             try {
                 fragment.startIntentSenderForResult(
                     pendingIntent.intentSender,
-                    requestCode, null, 0, 0, 0, null
+                    requestCode, null, 0, 0, 0, options
                 )
             } catch (e: IntentSender.SendIntentException) {
                 fail("IntentSender failed")

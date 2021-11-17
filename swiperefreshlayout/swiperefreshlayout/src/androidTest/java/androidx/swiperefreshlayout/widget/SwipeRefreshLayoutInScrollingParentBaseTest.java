@@ -31,7 +31,6 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.platform.app.InstrumentationRegistry;
-import androidx.test.rule.ActivityTestRule;
 import androidx.testutils.PollingCheck;
 import androidx.testutils.SwipeInjector;
 
@@ -41,9 +40,11 @@ import org.junit.Test;
 
 public abstract class SwipeRefreshLayoutInScrollingParentBaseTest {
 
+    @SuppressWarnings("deprecation")
     @Rule
-    public final ActivityTestRule<? extends SwipeRefreshLayoutInRecyclerViewBaseActivity>
-            mActivityTestRule = new ActivityTestRule<>(getActivityClass());
+    public final androidx.test.rule
+            .ActivityTestRule<? extends SwipeRefreshLayoutInRecyclerViewBaseActivity>
+            mActivityTestRule = new androidx.test.rule.ActivityTestRule<>(getActivityClass());
 
     private RecyclerView mRecyclerView;
     private LinearLayoutManager mLayoutManager;
@@ -137,7 +138,7 @@ public abstract class SwipeRefreshLayoutInScrollingParentBaseTest {
         if (indicator.getVisibility() == View.GONE) {
             return false;
         }
-        // If scaled to less then 1/100th pixel, consider it not visible
+        // If scaled to less than 1/100th pixel, consider it not visible
         return !(Math.abs(indicator.getScaleX() * indicator.getWidth()) < 0.01
                 || Math.abs(indicator.getScaleY() * indicator.getHeight()) < 0.01);
     }

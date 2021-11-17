@@ -16,20 +16,22 @@
 
 package androidx.lifecycle.lint
 
+import com.android.tools.lint.client.api.UElementHandler
 import com.android.tools.lint.detector.api.Category
 import com.android.tools.lint.detector.api.Detector
+import com.android.tools.lint.detector.api.Detector.UastScanner
 import com.android.tools.lint.detector.api.Implementation
 import com.android.tools.lint.detector.api.Issue
 import com.android.tools.lint.detector.api.JavaContext
 import com.android.tools.lint.detector.api.LintFix
 import com.android.tools.lint.detector.api.Scope
 import com.android.tools.lint.detector.api.Severity
-import com.android.tools.lint.detector.api.SourceCodeScanner
 import com.android.tools.lint.detector.api.UastLintUtils
 import com.android.tools.lint.detector.api.isKotlin
 import com.intellij.psi.PsiClassType
-import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
+import com.intellij.psi.impl.source.PsiImmediateClassType
+import org.jetbrains.kotlin.asJava.elements.KtLightTypeParameter
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtNullableType
 import org.jetbrains.kotlin.psi.KtTypeReference
@@ -40,6 +42,7 @@ import org.jetbrains.uast.UElement
 import org.jetbrains.uast.UReferenceExpression
 import org.jetbrains.uast.getUastParentOfType
 import org.jetbrains.uast.isNullLiteral
+import org.jetbrains.uast.kotlin.KotlinUField
 import org.jetbrains.uast.kotlin.KotlinUSimpleReferenceExpression
 import org.jetbrains.uast.resolveToUElement
 
@@ -47,7 +50,7 @@ import org.jetbrains.uast.resolveToUElement
  * Lint check for ensuring that [androidx.lifecycle.MutableLiveData] values are never null when
  * the type is defined as non-nullable in Kotlin.
  */
-class NonNullableMutableLiveDataDetector : Detector(), SourceCodeScanner {
+class NonNullableMutableLiveDataDetector : Detector(), UastScanner {
 
     companion object {
         val ISSUE = Issue.Companion.create(
@@ -71,49 +74,86 @@ class NonNullableMutableLiveDataDetector : Detector(), SourceCodeScanner {
         )
     }
 
-    override fun getApplicableMethodNames(): List<String>? = listOf("setValue", "postValue")
+    val typesMap = HashMap<String, KtTypeReference>()
 
-    override fun visitMethodCall(context: JavaContext, node: UCallExpression, method: PsiMethod) {
-        if (!isKotlin(node.sourcePsi) || !context.evaluator.isMemberInSubClassOf(method,
-                "androidx.lifecycle.LiveData", false)) return
+    val methods = listOf("setValue", "postValue")
 
-        val receiverType = node.receiverType as PsiClassType
-        val liveDataType = if (receiverType.hasParameters()) {
-            val receiver = (node.receiver as? KotlinUSimpleReferenceExpression)?.resolve() ?: return
-            val assignment = UastLintUtils.findLastAssignment(receiver as PsiVariable, node)
-                ?: return
-            val constructorExpression = assignment.sourcePsi as? KtCallExpression
-            constructorExpression?.typeArguments?.singleOrNull()?.typeReference
-        } else {
-            getTypeArg(receiverType)
-        } ?: return
+    override fun getApplicableUastTypes(): List<Class<out UElement>>? {
+        return listOf(UCallExpression::class.java, UClass::class.java)
+    }
 
-        if (liveDataType.typeElement !is KtNullableType) {
-            val fixes = mutableListOf<LintFix>()
-            if (context.getLocation(liveDataType).file == context.file) {
-                // Quick Fixes can only be applied to current file
-                fixes.add(fix()
-                    .name("Change `LiveData` type to nullable")
-                    .replace()
-                    .with("?")
-                    .range(context.getLocation(liveDataType))
-                    .end()
-                    .build())
+    override fun createUastHandler(context: JavaContext): UElementHandler? {
+        return object : UElementHandler() {
+            override fun visitClass(node: UClass) {
+                for (element in node.uastDeclarations) {
+                    if (element is KotlinUField) {
+                        getFieldTypeReference(element)?.let {
+                            // map the variable name to the type reference of its expression.
+                            typesMap.put(element.name, it)
+                        }
+                    }
+                }
             }
-            val argument = node.valueArguments[0]
-            if (argument.isNullLiteral()) {
-                // Don't report null!! quick fix.
-                report(context, argument, "Cannot set non-nullable LiveData value to `null`",
-                    fixes)
-            } else if (argument.isNullable()) {
-                fixes.add(fix()
-                    .name("Add non-null asserted (!!) call")
-                    .replace()
-                    .with("!!")
-                    .range(context.getLocation(argument))
-                    .end()
-                    .build())
-                report(context, argument, "Expected non-nullable value", fixes)
+
+            private fun getFieldTypeReference(element: KotlinUField): KtTypeReference? {
+                // If field has type reference, we need to use type reference
+                // Given the field `val liveDataField: MutableLiveData<Boolean> = MutableLiveData()`
+                // reference: `MutableLiveData<Boolean>`
+                // argument: `Boolean`
+                val typeReference = element.sourcePsi
+                    ?.children
+                    ?.firstOrNull { it is KtTypeReference } as? KtTypeReference
+                val typeArgument = typeReference?.typeElement?.typeArgumentsAsTypes?.singleOrNull()
+                if (typeArgument != null) {
+                    return typeArgument
+                }
+
+                // We need to extract type from the call expression
+                // Given the field `val liveDataField = MutableLiveData<Boolean>()`
+                // expression: `MutableLiveData<Boolean>()`
+                // argument: `Boolean`
+                val expression = element.sourcePsi
+                    ?.children
+                    ?.firstOrNull { it is KtCallExpression } as? KtCallExpression
+                return expression?.typeArguments?.singleOrNull()?.typeReference
+            }
+
+            override fun visitCallExpression(node: UCallExpression) {
+                if (!isKotlin(node.sourcePsi) || !methods.contains(node.methodName) ||
+                    !context.evaluator.isMemberInSubClassOf(
+                            node.resolve()!!, "androidx.lifecycle.LiveData", false
+                        )
+                ) return
+
+                val receiverType = node.receiverType as? PsiClassType
+                var liveDataType =
+                    if (receiverType != null && receiverType.hasParameters()) {
+                        val receiver =
+                            (node.receiver as? KotlinUSimpleReferenceExpression)?.resolve()
+                        val variable = (receiver as? PsiVariable)
+                        val assignment = variable?.let {
+                            UastLintUtils.findLastAssignment(it, node)
+                        }
+                        val constructorExpression = assignment?.sourcePsi as? KtCallExpression
+                        constructorExpression?.typeArguments?.singleOrNull()?.typeReference
+                    } else {
+                        getTypeArg(receiverType)
+                    }
+                if (liveDataType == null) {
+                    liveDataType = typesMap[getVariableName(node)] ?: return
+                }
+                checkNullability(liveDataType, context, node)
+            }
+
+            private fun getVariableName(node: UCallExpression): String? {
+                // We need to get the variable this expression is being assigned to
+                // Given the assignment `liveDataField.value = null`
+                // node.sourcePsi : `value`
+                // dot: `.`
+                // variable: `liveDataField`
+                val dot = node.sourcePsi?.prevSibling
+                val variable = dot?.prevSibling?.firstChild
+                return variable?.text
             }
         }
     }
@@ -124,7 +164,10 @@ class NonNullableMutableLiveDataDetector : Detector(), SourceCodeScanner {
      * @param classType The [PsiClassType] to search
      * @return The LiveData type argument.
      */
-    private fun getTypeArg(classType: PsiClassType): KtTypeReference {
+    fun getTypeArg(classType: PsiClassType?): KtTypeReference? {
+        if (classType == null) {
+            return null
+        }
         val cls = classType.resolve().getUastParentOfType<UClass>()
         val parentPsiType = cls?.superClassType as PsiClassType
         if (parentPsiType.hasParameters()) {
@@ -135,6 +178,48 @@ class NonNullableMutableLiveDataDetector : Detector(), SourceCodeScanner {
         return getTypeArg(parentPsiType)
     }
 
+    fun checkNullability(
+        liveDataType: KtTypeReference,
+        context: JavaContext,
+        node: UCallExpression
+    ) {
+        // ignore generic types
+        if (node.isGenericTypeDefinition()) return
+
+        if (liveDataType.typeElement !is KtNullableType) {
+            val fixes = mutableListOf<LintFix>()
+            if (context.getLocation(liveDataType).file == context.file) {
+                // Quick Fixes can only be applied to current file
+                fixes.add(
+                    fix().name("Change `LiveData` type to nullable")
+                        .replace().with("?").range(context.getLocation(liveDataType)).end().build()
+                )
+            }
+            val argument = node.valueArguments[0]
+            if (argument.isNullLiteral()) {
+                // Don't report null!! quick fix.
+                checkNullability(
+                    context,
+                    argument,
+                    "Cannot set non-nullable LiveData value to `null`",
+                    fixes
+                )
+            } else if (argument.isNullable()) {
+                fixes.add(
+                    fix().name("Add non-null asserted (!!) call")
+                        .replace().with("!!").range(context.getLocation(argument)).end().build()
+                )
+                checkNullability(context, argument, "Expected non-nullable value", fixes)
+            }
+        }
+    }
+
+    private fun UCallExpression.isGenericTypeDefinition(): Boolean {
+        val classType = typeArguments.singleOrNull() as? PsiImmediateClassType
+        val resolveGenerics = classType?.resolveGenerics()
+        return resolveGenerics?.element is KtLightTypeParameter
+    }
+
     /**
      * Reports a lint error at [element]'s location with message and quick fixes.
      *
@@ -143,7 +228,7 @@ class NonNullableMutableLiveDataDetector : Detector(), SourceCodeScanner {
      * @param message The error message to report.
      * @param fixes The Lint Fixes to report.
      */
-    private fun report(
+    private fun checkNullability(
         context: JavaContext,
         element: UElement,
         message: String,
@@ -152,8 +237,10 @@ class NonNullableMutableLiveDataDetector : Detector(), SourceCodeScanner {
         if (fixes.isEmpty()) {
             context.report(ISSUE, context.getLocation(element), message)
         } else {
-            context.report(ISSUE, context.getLocation(element), message,
-                fix().alternatives(*fixes.toTypedArray()))
+            context.report(
+                ISSUE, context.getLocation(element), message,
+                fix().alternatives(*fixes.toTypedArray())
+            )
         }
     }
 }
@@ -169,7 +256,7 @@ internal fun UElement.isNullable(): Boolean {
         val psiMethod = resolve() ?: return false
         return psiMethod.hasAnnotation(NULLABLE_ANNOTATION)
     } else if (this is UReferenceExpression) {
-        return (resolveToUElement() as UAnnotated).findAnnotation(NULLABLE_ANNOTATION) != null
+        return (resolveToUElement() as? UAnnotated)?.findAnnotation(NULLABLE_ANNOTATION) != null
     }
     return false
 }

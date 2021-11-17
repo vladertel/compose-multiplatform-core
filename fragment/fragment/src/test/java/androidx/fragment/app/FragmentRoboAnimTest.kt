@@ -24,7 +24,6 @@ import android.view.ViewGroup
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.widget.FrameLayout
-import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,7 +32,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.internal.DoNotInstrument
 
-@LargeTest
 @RunWith(RobolectricTestRunner::class)
 @DoNotInstrument
 @Config(sdk = [Build.VERSION_CODES.O_MR1], manifest = Config.NONE)
@@ -41,9 +39,10 @@ class FragmentRoboAnimTest {
 
     @Test
     fun fragmentAnim() {
-        var activity = Robolectric.buildActivity(FragmentActivity::class.java)
-            .create().resume().get()
-        var container = FrameLayout(activity).apply {
+        val activityController = Robolectric.buildActivity(FragmentActivity::class.java).setup()
+        val activity = activityController.get()
+
+        val container = FrameLayout(activity).apply {
             id = 1
         }
         activity.setContentView(container)
@@ -59,6 +58,8 @@ class FragmentRoboAnimTest {
             .commitNow()
 
         assertThat(container.childCount).isEqualTo(1)
+
+        activityController.destroy()
     }
 }
 

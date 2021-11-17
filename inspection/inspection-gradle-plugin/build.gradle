@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import androidx.build.CompilationTarget
 import androidx.build.LibraryGroups
-import androidx.build.LibraryVersions
+import androidx.build.LibraryType
 import androidx.build.Publish
 import androidx.build.SdkResourceGenerator
-
-import static androidx.build.dependencies.DependenciesKt.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("AndroidXPlugin")
@@ -32,18 +30,18 @@ SdkResourceGenerator.generateForHostTest(project)
 apply from: "../../buildSrc/kotlin-dsl-dependency.gradle"
 
 dependencies {
-    implementation findGradleKotlinDsl()
-    implementation gradleApi()
-    implementation(AGP_STABLE)
-    implementation(KOTLIN_STDLIB)
-    implementation("gradle.plugin.com.google.protobuf:protobuf-gradle-plugin:0.8.8")
-    implementation("org.anarres.jarjar:jarjar-gradle:1.0.1")
+    implementation(findGradleKotlinDsl())
+    implementation(gradleApi())
+    implementation(libs.androidGradlePluginz)
+    implementation(libs.kotlinStdlib)
+    implementation(libs.protobufGradlePluginz)
+    implementation(libs.shadow)
 
     testImplementation(project(":internal-testutils-gradle-plugin"))
-    testImplementation gradleTestKit()
-    testImplementation(ANDROIDX_TEST_RUNNER)
-    testImplementation(JUNIT)
-    testImplementation(KOTLIN_TEST)
+    testImplementation(gradleTestKit())
+    testImplementation(libs.testRunner)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinTest)
 }
 
 gradlePlugin {
@@ -55,12 +53,17 @@ gradlePlugin {
     }
 }
 
+tasks.withType(KotlinCompile).configureEach {
+    kotlinOptions {
+        freeCompilerArgs += [ "-Xopt-in=kotlin.Experimental" ]
+    }
+}
+
 androidx {
     name = "Android Inspection Gradle Plugin"
+    type = LibraryType.GRADLE_PLUGIN
     publish = Publish.NONE
-    toolingProject = true
     mavenGroup = LibraryGroups.INSPECTION
     inceptionYear = "2019"
     description = "Android Inspection Gradle Plugin"
-    compilationTarget = CompilationTarget.HOST
 }

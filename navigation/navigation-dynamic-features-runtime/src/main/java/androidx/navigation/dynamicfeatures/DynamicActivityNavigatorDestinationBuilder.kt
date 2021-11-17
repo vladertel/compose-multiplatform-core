@@ -30,10 +30,15 @@ import androidx.navigation.get
  * Construct a new [DynamicActivityNavigator.Destination]
  * @param id Destination id.
  */
-inline fun DynamicNavGraphBuilder.activity(
+@Suppress("Deprecation")
+@Deprecated(
+    "Use routes to build your DynamicActivityDestination instead",
+    ReplaceWith("activity(route = id.toString()) { builder.invoke() }")
+)
+public inline fun DynamicNavGraphBuilder.activity(
     @IdRes id: Int,
     builder: DynamicActivityNavigatorDestinationBuilder.() -> Unit
-) = destination(
+): Unit = destination(
     DynamicActivityNavigatorDestinationBuilder(
         provider[DynamicActivityNavigator::class],
         id
@@ -41,27 +46,61 @@ inline fun DynamicNavGraphBuilder.activity(
 )
 
 /**
+ * Construct a new [DynamicActivityNavigator.Destination]
+ * @param route Destination route.
+ */
+public inline fun DynamicNavGraphBuilder.activity(
+    route: String,
+    builder: DynamicActivityNavigatorDestinationBuilder.() -> Unit
+): Unit = destination(
+    DynamicActivityNavigatorDestinationBuilder(
+        provider[DynamicActivityNavigator::class],
+        route
+    ).apply(builder)
+)
+
+/**
  * DSL for constructing a new [DynamicActivityNavigator.Destination]
  */
 @NavDestinationDsl
-class DynamicActivityNavigatorDestinationBuilder(
-    private val activityNavigator: DynamicActivityNavigator,
-    @IdRes id: Int
-) : NavDestinationBuilder<ActivityNavigator.Destination>(activityNavigator, id) {
+public class DynamicActivityNavigatorDestinationBuilder :
+    NavDestinationBuilder<ActivityNavigator.Destination> {
+    private var activityNavigator: DynamicActivityNavigator
 
-    var moduleName: String? = null
+    @Suppress("Deprecation")
+    @Deprecated(
+        "Use routes to build your DynamicActivityDestination instead",
+        ReplaceWith(
+            "DynamicActivityNavigatorDestinationBuilder(activityNavigator, route = id.toString())"
+        )
+    )
+    public constructor(
+        activityNavigator: DynamicActivityNavigator,
+        @IdRes id: Int
+    ) : super(activityNavigator, id) {
+        this.activityNavigator = activityNavigator
+    }
 
-    var targetPackage: String? = null
+    public constructor(
+        activityNavigator: DynamicActivityNavigator,
+        route: String
+    ) : super(activityNavigator, route) {
+        this.activityNavigator = activityNavigator
+    }
 
-    var activityClassName: String? = null
+    public var moduleName: String? = null
 
-    var action: String? = null
+    public var targetPackage: String? = null
 
-    var data: Uri? = null
+    public var activityClassName: String? = null
 
-    var dataPattern: String? = null
+    public var action: String? = null
 
-    override fun build() =
+    public var data: Uri? = null
+
+    public var dataPattern: String? = null
+
+    override fun build(): DynamicActivityNavigator.Destination =
         (super.build() as DynamicActivityNavigator.Destination).also { destination ->
             activityClassName?.also {
                 destination.setComponentName(
@@ -70,14 +109,15 @@ class DynamicActivityNavigatorDestinationBuilder(
                             targetPackage!!
                         } else {
                             activityNavigator.packageName
-                        }, it
+                        },
+                        it
                     )
                 )
             }
-            destination.targetPackage = targetPackage
+            destination.setTargetPackage(targetPackage)
             destination.moduleName = moduleName
-            destination.action = action
-            destination.data = data
-            destination.dataPattern = dataPattern
+            destination.setAction(action)
+            destination.setData(data)
+            destination.setDataPattern(dataPattern)
         }
 }

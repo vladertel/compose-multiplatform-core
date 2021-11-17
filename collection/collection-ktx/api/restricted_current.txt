@@ -1,4 +1,4 @@
-// Signature format: 3.0
+// Signature format: 4.0
 package androidx.collection {
 
   public final class ArrayMapKt {
@@ -20,12 +20,13 @@ package androidx.collection {
     method public static inline <T> boolean isNotEmpty(androidx.collection.LongSparseArray<T>);
     method public static <T> kotlin.collections.LongIterator keyIterator(androidx.collection.LongSparseArray<T>);
     method public static operator <T> androidx.collection.LongSparseArray<T> plus(androidx.collection.LongSparseArray<T>, androidx.collection.LongSparseArray<T> other);
+    method @Deprecated public static <T> boolean remove(androidx.collection.LongSparseArray<T>, long key, T? value);
     method public static inline operator <T> void set(androidx.collection.LongSparseArray<T>, long key, T? value);
     method public static <T> java.util.Iterator<T> valueIterator(androidx.collection.LongSparseArray<T>);
   }
 
   public final class LruCacheKt {
-    method public static inline <K, V> androidx.collection.LruCache<K,V> lruCache(int maxSize, kotlin.jvm.functions.Function2<? super K,? super V,java.lang.Integer> sizeOf = { _, _ -> return 1 }, kotlin.jvm.functions.Function1<? super K,? extends V> create = { return null as V }, kotlin.jvm.functions.Function4<? super java.lang.Boolean,? super K,? super V,? super V,kotlin.Unit> onEntryRemoved = { _, _, _, _ ->  });
+    method public static inline <K, V> androidx.collection.LruCache<K,V> lruCache(int maxSize, optional kotlin.jvm.functions.Function2<? super K,? super V,java.lang.Integer> sizeOf, optional kotlin.jvm.functions.Function1<? super K,? extends V> create, optional kotlin.jvm.functions.Function4<? super java.lang.Boolean,? super K,? super V,? super V,kotlin.Unit> onEntryRemoved);
   }
 
   public final class SparseArrayKt {
@@ -37,6 +38,7 @@ package androidx.collection {
     method public static inline <T> boolean isNotEmpty(androidx.collection.SparseArrayCompat<T>);
     method public static <T> kotlin.collections.IntIterator keyIterator(androidx.collection.SparseArrayCompat<T>);
     method public static operator <T> androidx.collection.SparseArrayCompat<T> plus(androidx.collection.SparseArrayCompat<T>, androidx.collection.SparseArrayCompat<T> other);
+    method @Deprecated public static <T> boolean remove(androidx.collection.SparseArrayCompat<T>, int key, T? value);
     method public static inline operator <T> void set(androidx.collection.SparseArrayCompat<T>, int key, T? value);
     method public static <T> java.util.Iterator<T> valueIterator(androidx.collection.SparseArrayCompat<T>);
   }

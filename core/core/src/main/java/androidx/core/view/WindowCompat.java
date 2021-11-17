@@ -16,12 +16,18 @@
 
 package androidx.core.view;
 
+import android.app.Activity;
+import android.graphics.Rect;
 import android.os.Build;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsetsController;
 
+import androidx.annotation.DoNotInline;
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 /**
  * Helper for accessing features in {@link Window}.
@@ -48,9 +54,9 @@ public final class WindowCompat {
      * View.SYSTEM_UI_FLAG_FULLSCREEN}, which allows you to seamlessly hide the
      * action bar in conjunction with other screen decorations.
      *
-     * <p>As of {@link android.os.Build.VERSION_CODES#JELLY_BEAN}, when an
+     * <p>As of {@link Build.VERSION_CODES#JELLY_BEAN}, when an
      * ActionBar is in this mode it will adjust the insets provided to
-     * {@link View#fitSystemWindows(android.graphics.Rect) View.fitSystemWindows(Rect)}
+     * {@link View#fitSystemWindows(Rect) View.fitSystemWindows(Rect)}
      * to include the content covered by the action bar, so you can do layout within
      * that space.
      */
@@ -66,7 +72,7 @@ public final class WindowCompat {
 
     /**
      * Finds a view that was identified by the {@code android:id} XML attribute
-     * that was processed in {@link android.app.Activity#onCreate}, or throws an
+     * that was processed in {@link Activity#onCreate}, or throws an
      * IllegalArgumentException if the ID is invalid, or there is no matching view in the hierarchy.
      * <p>
      * <strong>Note:</strong> In most cases -- depending on compiler support --
@@ -83,7 +89,7 @@ public final class WindowCompat {
     @NonNull
     public static <T extends View> T requireViewById(@NonNull Window window, @IdRes int id) {
         if (Build.VERSION.SDK_INT >= 28) {
-            return window.requireViewById(id);
+            return Api28Impl.requireViewById(window, id);
         }
 
         T view = window.findViewById(id);
@@ -91,5 +97,105 @@ public final class WindowCompat {
             throw new IllegalArgumentException("ID does not reference a View inside this Window");
         }
         return view;
+    }
+
+    /**
+     * Sets whether the decor view should fit root-level content views for
+     * {@link WindowInsetsCompat}.
+     * <p>
+     * If set to {@code false}, the framework will not fit the content view to the insets and will
+     * just pass through the {@link WindowInsetsCompat} to the content view.
+     * </p>
+     * <p>
+     * Please note: using the {@link View#setSystemUiVisibility(int)} API in your app can
+     * conflict with this method. Please discontinue use of {@link View#setSystemUiVisibility(int)}.
+     * </p>
+     *
+     * @param window                 The current window.
+     * @param decorFitsSystemWindows Whether the decor view should fit root-level content views for
+     *                               insets.
+     */
+    public static void setDecorFitsSystemWindows(@NonNull Window window,
+            final boolean decorFitsSystemWindows) {
+        if (Build.VERSION.SDK_INT >= 30) {
+            Api30Impl.setDecorFitsSystemWindows(window, decorFitsSystemWindows);
+        } else if (Build.VERSION.SDK_INT >= 16) {
+            Api16Impl.setDecorFitsSystemWindows(window, decorFitsSystemWindows);
+        }
+    }
+
+
+    /**
+     * Retrieves the single {@link WindowInsetsController} of the window this view is attached to.
+     *
+     * @return The {@link WindowInsetsController} or {@code null} if the view is neither attached to
+     * a window nor a view tree with a decor.
+     * @see Window#getInsetsController()
+     */
+    @Nullable
+    public static WindowInsetsControllerCompat getInsetsController(@NonNull Window window,
+            @NonNull View view) {
+        if (Build.VERSION.SDK_INT >= 30) {
+            return Api30Impl.getInsetsController(window);
+        } else {
+            return new WindowInsetsControllerCompat(window, view);
+        }
+    }
+
+    @RequiresApi(16)
+    static class Api16Impl {
+        private Api16Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static void setDecorFitsSystemWindows(@NonNull Window window,
+                final boolean decorFitsSystemWindows) {
+            final int decorFitsFlags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+
+            final View decorView = window.getDecorView();
+            final int sysUiVis = decorView.getSystemUiVisibility();
+            decorView.setSystemUiVisibility(decorFitsSystemWindows
+                    ? sysUiVis & ~decorFitsFlags
+                    : sysUiVis | decorFitsFlags);
+        }
+    }
+
+    @RequiresApi(30)
+    static class Api30Impl {
+        private Api30Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static void setDecorFitsSystemWindows(@NonNull Window window,
+                final boolean decorFitsSystemWindows) {
+            window.setDecorFitsSystemWindows(decorFitsSystemWindows);
+        }
+
+        @DoNotInline
+        static WindowInsetsControllerCompat getInsetsController(@NonNull Window window) {
+            WindowInsetsController insetsController = window.getInsetsController();
+            if (insetsController != null) {
+                return WindowInsetsControllerCompat.toWindowInsetsControllerCompat(
+                        insetsController);
+            }
+            return null;
+        }
+    }
+
+    @RequiresApi(28)
+    static class Api28Impl {
+        private Api28Impl() {
+            // This class is not instantiable.
+        }
+
+        @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
+        @DoNotInline
+        static <T> T requireViewById(Window window, int id) {
+            return (T) window.requireViewById(id);
+        }
     }
 }

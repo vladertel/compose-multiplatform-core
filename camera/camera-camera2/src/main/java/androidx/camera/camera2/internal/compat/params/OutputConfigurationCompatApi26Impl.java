@@ -16,13 +16,14 @@
 
 package androidx.camera.camera2.internal.compat.params;
 
+import android.annotation.SuppressLint;
 import android.hardware.camera2.params.OutputConfiguration;
-import android.util.Log;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.camera.core.Logger;
 import androidx.core.util.Preconditions;
 
 import java.lang.reflect.Field;
@@ -59,6 +60,7 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
 
     private static int getMaxSharedSurfaceCountApi26()
             throws NoSuchFieldException, IllegalAccessException {
+        @SuppressLint("SoonBlockedPrivateApi") // Only used between API 26 and 28
         Field maxSurfacesCountField = OutputConfiguration.class.getDeclaredField(
                 MAX_SHARED_SURFACES_COUNT_FIELD);
         maxSurfacesCountField.setAccessible(true);
@@ -68,6 +70,7 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
     @SuppressWarnings("unchecked")
     private static List<Surface> getMutableSurfaceListApi26(OutputConfiguration outputConfiguration)
             throws NoSuchFieldException, IllegalAccessException {
+        @SuppressLint("SoonBlockedPrivateApi") // Only used between API 26 and 28
         Field surfacesField = OutputConfiguration.class.getDeclaredField(SURFACES_FIELD);
         surfacesField.setAccessible(true);
         return (List<Surface>) surfacesField.get(outputConfiguration);
@@ -128,7 +131,7 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
                         "Surface is not part of this output configuration");
             }
         } catch (IllegalAccessException | NoSuchFieldException e) {
-            Log.e(TAG, "Unable to remove surface from this output configuration.", e);
+            Logger.e(TAG, "Unable to remove surface from this output configuration.", e);
         }
 
     }
@@ -141,7 +144,7 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
         try {
             return getMaxSharedSurfaceCountApi26();
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            Log.e(TAG, "Unable to retrieve max shared surface count.", e);
+            Logger.e(TAG, "Unable to retrieve max shared surface count.", e);
             return super.getMaxSharedSurfaceCount();
         }
     }
@@ -161,6 +164,7 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
         return ((OutputConfigurationParamsApi26) mObject).mOutputConfiguration;
     }
 
+    @RequiresApi(21)
     private static final class OutputConfigurationParamsApi26 {
         final OutputConfiguration mOutputConfiguration;
         @Nullable

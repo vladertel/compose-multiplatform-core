@@ -17,6 +17,7 @@
 package androidx.camera.core.impl;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageInfo;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.impl.utils.futures.Futures;
@@ -29,34 +30,35 @@ import java.util.List;
 /**
  * An {@link ImageProxyBundle} that contains a single {@link ImageProxy}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class SingleImageProxyBundle implements ImageProxyBundle {
     private final int mCaptureId;
     private final ImageProxy mImageProxy;
 
     /**
-     * Create an {@link ImageProxyBundle} from a single {@link ImageProxy} using the tag from the
-     * ImageProxy as the captureId.
+     * Create an {@link ImageProxyBundle} from a single {@link ImageProxy} using a tag's value from
+     * the ImageProxy as the captureId.
+     *
+     * The tagBundleKey is used to query from a TagBundle. It needs to be one of the keys that are
+     * in the ImageInfo's TagBundle.
      *
      * @throws IllegalArgumentException if the ImageProxy doesn't contain a tag
      */
-    public SingleImageProxyBundle(@NonNull ImageProxy imageProxy) {
+    public SingleImageProxyBundle(@NonNull ImageProxy imageProxy,
+            @NonNull String tagBundleKey) {
         ImageInfo imageInfo = imageProxy.getImageInfo();
 
         if (imageInfo == null) {
             throw new IllegalArgumentException("ImageProxy has no associated ImageInfo");
         }
 
-        Object tag = imageInfo.getTag();
+        Integer tagValue = (Integer) imageInfo.getTagBundle().getTag(tagBundleKey);
 
-        if (tag == null) {
+        if (tagValue == null) {
             throw new IllegalArgumentException("ImageProxy has no associated tag");
         }
 
-        if (!(tag instanceof Integer)) {
-            throw new IllegalArgumentException("ImageProxy has tag that isn't an integer");
-        }
-
-        mCaptureId = (Integer) tag;
+        mCaptureId = tagValue;
         mImageProxy = imageProxy;
     }
 

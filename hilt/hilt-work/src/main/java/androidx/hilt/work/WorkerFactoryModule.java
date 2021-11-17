@@ -17,7 +17,6 @@
 package androidx.hilt.work;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RestrictTo;
 import androidx.work.ListenableWorker;
 
 import java.util.Map;
@@ -27,18 +26,15 @@ import javax.inject.Provider;
 import dagger.Module;
 import dagger.Provides;
 import dagger.hilt.InstallIn;
-import dagger.hilt.android.components.ApplicationComponent;
+import dagger.hilt.components.SingletonComponent;
 import dagger.multibindings.Multibinds;
 
 /**
  * Hilt Modules for providing the Worker factory.
- *
- * @hide
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 @Module
-@InstallIn(ApplicationComponent.class)
-public abstract class WorkerFactoryModule {
+@InstallIn(SingletonComponent.class)
+abstract class WorkerFactoryModule {
 
     @NonNull
     @Multibinds

@@ -28,6 +28,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ActionProvider;
 import androidx.mediarouter.media.MediaRouteSelector;
 import androidx.mediarouter.media.MediaRouter;
+import androidx.mediarouter.media.MediaRouterParams;
 
 import java.lang.ref.WeakReference;
 
@@ -101,12 +102,20 @@ import java.lang.ref.WeakReference;
  *         // do something with the route...
  *     }
  *
- *     // Remove the selector on stop to tell the media router that it no longer
+ *     // Remove the callback flag CALLBACK_FLAG_REQUEST_DISCOVERY on stop by calling
+ *     // addCallback() again in order to tell the media router that it no longer
  *     // needs to invest effort trying to discover routes of these kinds for now.
  *     public void onStop() {
- *         super.onStop();
+ *         mRouter.addCallback(mSelector, mCallback, &#47;* flags= *&#47; 0);
  *
- *         mediaRouter.removeCallback(mCallback);
+ *         super.onStop();
+ *     }
+ *
+ *     // Remove the callback when the activity is destroyed.
+ *     public void onDestroy() {
+ *         mRouter.removeCallback(mCallback);
+ *
+ *         super.onDestroy();
  *     }
  *
  *     public boolean onCreateOptionsMenu(Menu menu) {
@@ -138,7 +147,6 @@ public class MediaRouteActionProvider extends ActionProvider {
     private MediaRouteSelector mSelector = MediaRouteSelector.EMPTY;
     private MediaRouteDialogFactory mDialogFactory = MediaRouteDialogFactory.getDefault();
     private MediaRouteButton mButton;
-    private boolean mUseDynamicGroup;
     private boolean mAlwaysVisible;
 
     /**
@@ -146,7 +154,7 @@ public class MediaRouteActionProvider extends ActionProvider {
      *
      * @param context The context.
      */
-    public MediaRouteActionProvider(Context context) {
+    public MediaRouteActionProvider(@NonNull Context context) {
         super(context);
 
         mRouter = MediaRouter.getInstance(context);
@@ -207,12 +215,18 @@ public class MediaRouteActionProvider extends ActionProvider {
      *
      * @see MediaRouteButton#enableDynamicGroup()
      * @see androidx.mediarouter.media.MediaRouteProvider.DynamicGroupRouteController
+     *
+     * @deprecated Use {@link
+     * androidx.mediarouter.media.MediaRouterParams.Builder#setDialogType(int)} with
+     * {@link androidx.mediarouter.media.MediaRouterParams#DIALOG_TYPE_DYNAMIC_GROUP} instead.
      */
+    @Deprecated
     public void enableDynamicGroup() {
-        mUseDynamicGroup = true;
-        if (mButton != null) {
-            mButton.enableDynamicGroup();
-        }
+        MediaRouterParams oldParams = mRouter.getRouterParams();
+        MediaRouterParams.Builder newParamsBuilder = oldParams == null
+                ? new MediaRouterParams.Builder() : new MediaRouterParams.Builder(oldParams);
+        newParamsBuilder.setDialogType(MediaRouterParams.DIALOG_TYPE_DYNAMIC_GROUP);
+        mRouter.setRouterParams(newParamsBuilder.build());
     }
 
     /**
@@ -279,12 +293,14 @@ public class MediaRouteActionProvider extends ActionProvider {
      * Subclasses may override this method to customize the button.
      * </p>
      */
+    @NonNull
     public MediaRouteButton onCreateMediaRouteButton() {
         return new MediaRouteButton(getContext());
     }
 
     @Override
     @SuppressWarnings("deprecation")
+    @NonNull
     public View onCreateActionView() {
         if (mButton != null) {
             Log.e(TAG, "onCreateActionView: this ActionProvider is already associated " +
@@ -295,9 +311,6 @@ public class MediaRouteActionProvider extends ActionProvider {
         mButton = onCreateMediaRouteButton();
         mButton.setCheatSheetEnabled(true);
         mButton.setRouteSelector(mSelector);
-        if (mUseDynamicGroup) {
-            mButton.enableDynamicGroup();
-        }
         mButton.setAlwaysVisible(mAlwaysVisible);
         mButton.setDialogFactory(mDialogFactory);
         mButton.setLayoutParams(new ViewGroup.LayoutParams(

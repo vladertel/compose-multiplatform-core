@@ -22,13 +22,17 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
-import android.os.AsyncTask;
+import android.os.Build;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -37,8 +41,11 @@ import android.view.SoundEffectConstants;
 import android.view.View;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.content.res.AppCompatResources;
 import androidx.appcompat.widget.TooltipCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.core.os.BuildCompat;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -46,6 +53,7 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.mediarouter.R;
 import androidx.mediarouter.media.MediaRouteSelector;
 import androidx.mediarouter.media.MediaRouter;
+import androidx.mediarouter.media.MediaRouterParams;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,20 +66,17 @@ import java.util.List;
  * to select by specifying a {@link MediaRouteSelector selector} with the
  * {@link #setRouteSelector} method.
  * </p><p>
- * When the default route is selected or when the currently selected route does not
- * match the {@link #getRouteSelector() selector}, the button will appear in
- * an inactive state indicating that the application is not connected to a
- * route of the kind that it wants to use.  Clicking on the button opens
+ * When the default route is selected, the button will appear in an inactive state indicating
+ * that the application is not connected to a route. Clicking on the button opens
  * a {@link MediaRouteChooserDialog} to allow the user to select a route.
  * If no non-default routes match the selector and it is not possible for an active
  * scan to discover any matching routes, then the button is disabled and cannot
  * be clicked unless {@link #setAlwaysVisible} is called.
  * </p><p>
- * When a non-default route is selected that matches the selector, the button will
- * appear in an active state indicating that the application is connected
- * to a route of the kind that it wants to use.  The button may also appear
- * in an intermediary connecting state if the route is in the process of connecting
- * to the destination but has not yet completed doing so.  In either case, clicking
+ * When a non-default route is selected, the button will appear in an active state indicating
+ * that the application is connected to a route of the kind that it wants to use.
+ * The button may also appear in an intermediary connecting state if the route is in the process
+ * of connecting to the destination but has not yet completed doing so.  In either case, clicking
  * on the button opens a {@link MediaRouteControllerDialog} to allow the user
  * to control or disconnect from the current route.
  * </p>
@@ -106,6 +111,9 @@ public class MediaRouteButton extends View {
 
     private int mVisibility = VISIBLE;
 
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    boolean mIsFixedIcon;
+
     static final SparseArray<Drawable.ConstantState> sRemoteIndicatorCache =
             new SparseArray<>(2);
     RemoteIndicatorLoader mRemoteIndicatorLoader;
@@ -120,13 +128,13 @@ public class MediaRouteButton extends View {
     private static final int CONNECTION_STATE_CONNECTED =
             MediaRouter.RouteInfo.CONNECTION_STATE_CONNECTED;
 
+    private int mLastConnectionState;
     private int mConnectionState;
 
     private ColorStateList mButtonTint;
     private int mMinWidth;
     private int mMinHeight;
 
-    private boolean mUseDynamicGroup;
     private boolean mAlwaysVisible;
     private boolean mCheatSheetEnabled;
 
@@ -140,15 +148,16 @@ public class MediaRouteButton extends View {
         android.R.attr.state_checkable
     };
 
-    public MediaRouteButton(Context context) {
+    public MediaRouteButton(@NonNull Context context) {
         this(context, null);
     }
 
-    public MediaRouteButton(Context context, AttributeSet attrs) {
+    public MediaRouteButton(@NonNull Context context, @Nullable AttributeSet attrs) {
         this(context, attrs, R.attr.mediaRouteButtonStyle);
     }
 
-    public MediaRouteButton(Context context, AttributeSet attrs, int defStyleAttr) {
+    public MediaRouteButton(@NonNull Context context, @Nullable AttributeSet attrs,
+            int defStyleAttr) {
         super(MediaRouterThemeHelper.createThemedButtonContext(context), attrs, defStyleAttr);
         context = getContext();
         TypedArray a = context.obtainStyledAttributes(attrs,
@@ -160,11 +169,16 @@ public class MediaRouteButton extends View {
             mCallback = null;
             int remoteIndicatorStaticResId = a.getResourceId(
                     R.styleable.MediaRouteButton_externalRouteEnabledDrawableStatic, 0);
-            mRemoteIndicator = getResources().getDrawable(remoteIndicatorStaticResId);
+            mRemoteIndicator = AppCompatResources.getDrawable(context, remoteIndicatorStaticResId);
             return;
         }
         mRouter = MediaRouter.getInstance(context);
         mCallback = new MediaRouterCallback();
+
+        MediaRouter.RouteInfo selectedRoute = mRouter.getSelectedRoute();
+        boolean isRemote = !selectedRoute.isDefaultOrBluetooth();
+        mLastConnectionState = mConnectionState =
+                (isRemote ? selectedRoute.getConnectionState() : CONNECTION_STATE_DISCONNECTED);
 
         if (sConnectivityReceiver == null) {
             sConnectivityReceiver = new ConnectivityReceiver(context.getApplicationContext());
@@ -198,7 +212,7 @@ public class MediaRouteButton extends View {
                 } else {
                     mRemoteIndicatorLoader = new RemoteIndicatorLoader(remoteIndicatorStaticResId,
                             getContext());
-                    mRemoteIndicatorLoader.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
+                    mRemoteIndicatorLoader.executeOnExecutor(android.os.AsyncTask.SERIAL_EXECUTOR);
                 }
             } else {
                 loadRemoteIndicatorIfNeeded();
@@ -226,7 +240,7 @@ public class MediaRouteButton extends View {
      *
      * @param selector The selector, must not be null.
      */
-    public void setRouteSelector(MediaRouteSelector selector) {
+    public void setRouteSelector(@NonNull MediaRouteSelector selector) {
         if (selector == null) {
             throw new IllegalArgumentException("selector must not be null");
         }
@@ -278,41 +292,72 @@ public class MediaRouteButton extends View {
      * supports dynamic group, the users can use that feature with the dialogs.
      *
      * @see androidx.mediarouter.media.MediaRouteProvider.DynamicGroupRouteController
+     *
+     * @deprecated Use {@link
+     * androidx.mediarouter.media.MediaRouterParams.Builder#setDialogType(int)} with
+     * {@link androidx.mediarouter.media.MediaRouterParams#DIALOG_TYPE_DYNAMIC_GROUP} instead.
      */
+    @Deprecated
     public void enableDynamicGroup() {
-        mUseDynamicGroup = true;
+        MediaRouterParams oldParams = mRouter.getRouterParams();
+        MediaRouterParams.Builder newParamsBuilder = oldParams == null
+                ? new MediaRouterParams.Builder() : new MediaRouterParams.Builder(oldParams);
+        newParamsBuilder.setDialogType(MediaRouterParams.DIALOG_TYPE_DYNAMIC_GROUP);
+        mRouter.setRouterParams(newParamsBuilder.build());
     }
 
     /**
      * Show the route chooser or controller dialog.
      * <p>
-     * If the default route is selected or if the currently selected route does
-     * not match the {@link #getRouteSelector selector}, then shows the route chooser dialog.
+     * If the default route is selected, then shows the route chooser dialog.
      * Otherwise, shows the route controller dialog to offer the user
      * a choice to disconnect from the route or perform other control actions
      * such as setting the route's volume.
-     * </p><p>
+     * <p>
+     * Dialog types can be set by setting {@link MediaRouterParams} to the router.
+     * <p>
      * The application can customize the dialogs by calling {@link #setDialogFactory}
      * to provide a customized dialog factory.
-     * </p>
+     * <p>
      *
      * @return True if the dialog was actually shown.
      *
      * @throws IllegalStateException if the activity is not a subclass of
      * {@link FragmentActivity}.
+     *
+     * @see MediaRouterParams.Builder#setDialogType(int)
+     * @see MediaRouterParams.Builder#setOutputSwitcherEnabled(boolean)
      */
     public boolean showDialog() {
         if (!mAttachedToWindow) {
             return false;
         }
 
+        MediaRouterParams params = mRouter.getRouterParams();
+        if (params != null) {
+            if (params.isOutputSwitcherEnabled() && MediaRouter.isMediaTransferEnabled()) {
+                if (showOutputSwitcher()) {
+                    // Output switcher is successfully shown.
+                    return true;
+                }
+            }
+            int dialogType = params.getDialogType();
+            return showDialogForType(dialogType);
+        } else {
+            // Note: These apps didn't call enableDynamicGroup(), since calling the method
+            // automatically sets a MediaRouterParams with dynamic dialog type.
+            return showDialogForType(MediaRouterParams.DIALOG_TYPE_DEFAULT);
+        }
+    }
+
+    private boolean showDialogForType(@MediaRouterParams.DialogType int dialogType) {
         final FragmentManager fm = getFragmentManager();
         if (fm == null) {
             throw new IllegalStateException("The activity must be a subclass of FragmentActivity");
         }
+        MediaRouter.RouteInfo selectedRoute = mRouter.getSelectedRoute();
 
-        MediaRouter.RouteInfo route = mRouter.getSelectedRoute();
-        if (route.isDefaultOrBluetooth() || !route.matchesSelector(mSelector)) {
+        if (selectedRoute.isDefaultOrBluetooth()) {
             if (fm.findFragmentByTag(CHOOSER_FRAGMENT_TAG) != null) {
                 Log.w(TAG, "showDialog(): Route chooser dialog already showing!");
                 return false;
@@ -320,7 +365,10 @@ public class MediaRouteButton extends View {
             MediaRouteChooserDialogFragment f =
                     mDialogFactory.onCreateChooserDialogFragment();
             f.setRouteSelector(mSelector);
-            f.setUseDynamicGroup(mUseDynamicGroup);
+
+            if (dialogType == MediaRouterParams.DIALOG_TYPE_DYNAMIC_GROUP) {
+                f.setUseDynamicGroup(true);
+            }
 
             FragmentTransaction transaction = fm.beginTransaction();
             transaction.add(f, CHOOSER_FRAGMENT_TAG);
@@ -333,13 +381,88 @@ public class MediaRouteButton extends View {
             MediaRouteControllerDialogFragment f =
                     mDialogFactory.onCreateControllerDialogFragment();
             f.setRouteSelector(mSelector);
-            f.setUseDynamicGroup(mUseDynamicGroup);
+
+            if (dialogType == MediaRouterParams.DIALOG_TYPE_DYNAMIC_GROUP) {
+                f.setUseDynamicGroup(true);
+            }
 
             FragmentTransaction transaction = fm.beginTransaction();
             transaction.add(f, CONTROLLER_FRAGMENT_TAG);
             transaction.commitAllowingStateLoss();
         }
         return true;
+    }
+
+    /**
+     * Shows output switcher dialog. Returns {@code true} if it is successfully shown.
+     * Returns {@code false} if there was no output switcher.
+     */
+    private boolean showOutputSwitcher() {
+        boolean result = false;
+        if (BuildCompat.isAtLeastS()) {
+            result = showOutputSwitcherForAndroidSAndAbove();
+            if (!result) {
+                // The intent action and related string constants are changed in S,
+                // however they are not public API yet. Try opening the output switcher with the
+                // old constants for devices that have prior version of the constants.
+                result = showOutputSwitcherForAndroidR();
+            }
+        } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.R) {
+            result = showOutputSwitcherForAndroidR();
+        }
+        return result;
+    }
+
+    private boolean showOutputSwitcherForAndroidR() {
+        Context context = getContext();
+
+        Intent intent = new Intent()
+                .setAction("com.android.settings.panel.action.MEDIA_OUTPUT")
+                .putExtra("com.android.settings.panel.extra.PACKAGE_NAME", context.getPackageName())
+                .putExtra("key_media_session_token", mRouter.getMediaSessionToken());
+
+        PackageManager packageManager = context.getPackageManager();
+        List<ResolveInfo> resolveInfos = packageManager.queryIntentActivities(intent, 0);
+        for (ResolveInfo resolveInfo : resolveInfos) {
+            ActivityInfo activityInfo = resolveInfo.activityInfo;
+            if (activityInfo == null || activityInfo.applicationInfo == null) {
+                continue;
+            }
+            ApplicationInfo appInfo = activityInfo.applicationInfo;
+            if (((ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)
+                    & appInfo.flags) != 0) {
+                context.startActivity(intent);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean showOutputSwitcherForAndroidSAndAbove() {
+        Context context = getContext();
+
+        Intent intent = new Intent()
+                .setAction("com.android.systemui.action.LAUNCH_MEDIA_OUTPUT_DIALOG")
+                .setPackage("com.android.systemui")
+                .putExtra("package_name", context.getPackageName())
+                .putExtra("key_media_session_token", mRouter.getMediaSessionToken());
+
+        PackageManager packageManager = context.getPackageManager();
+        List<ResolveInfo> resolveInfos = packageManager.queryBroadcastReceivers(intent, 0);
+        for (ResolveInfo resolveInfo : resolveInfos) {
+            ActivityInfo activityInfo = resolveInfo.activityInfo;
+            if (activityInfo == null || activityInfo.applicationInfo == null) {
+                continue;
+            }
+            ApplicationInfo appInfo = activityInfo.applicationInfo;
+            if (((ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)
+                    & appInfo.flags) != 0) {
+                context.sendBroadcast(intent);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private FragmentManager getFragmentManager() {
@@ -385,6 +508,7 @@ public class MediaRouteButton extends View {
     }
 
     @Override
+    @NonNull
     protected int[] onCreateDrawableState(int extraSpace) {
         final int[] drawableState = super.onCreateDrawableState(extraSpace + 1);
 
@@ -392,6 +516,13 @@ public class MediaRouteButton extends View {
         // are implementation details here. Checkable is used to express the connecting
         // drawable state and it's mutually exclusive with check for the purposes
         // of state selection here.
+        if (mRouter == null) {
+            return drawableState;
+        }
+        if (mIsFixedIcon) {
+            return drawableState;
+        }
+
         switch (mConnectionState) {
             case CONNECTION_STATE_CONNECTING:
                 mergeDrawableStates(drawableState, CHECKABLE_STATE_SET);
@@ -410,14 +541,34 @@ public class MediaRouteButton extends View {
         if (mRemoteIndicator != null) {
             int[] myDrawableState = getDrawableState();
             mRemoteIndicator.setState(myDrawableState);
+
+            // When DrawableContainer#selectDrawable is called, the selected drawable is reset.
+            // We may need to start the animation or adjust the frame.
+            if (mRemoteIndicator.getCurrent() instanceof AnimationDrawable) {
+                AnimationDrawable curDrawable = (AnimationDrawable) mRemoteIndicator.getCurrent();
+                if (mConnectionState == CONNECTION_STATE_CONNECTING
+                        || mLastConnectionState != mConnectionState) {
+                    if (!curDrawable.isRunning()) {
+                        curDrawable.start();
+                    }
+                } else {
+                    // Assuming the last animation of the "connected" animation drawable
+                    // shows "connected" static drawable.
+                    if (mConnectionState == CONNECTION_STATE_CONNECTED
+                            && !curDrawable.isRunning()) {
+                        curDrawable.selectDrawable(curDrawable.getNumberOfFrames() - 1);
+                    }
+                }
+            }
             invalidate();
         }
+        mLastConnectionState = mConnectionState;
     }
 
     /**
      * Sets a drawable to use as the remote route indicator.
      */
-    public void setRemoteIndicatorDrawable(Drawable d) {
+    public void setRemoteIndicatorDrawable(@Nullable Drawable d) {
         // to prevent overwriting user-set drawables
         mRemoteIndicatorResIdToLoad = 0;
         setRemoteIndicatorDrawableInternal(d);
@@ -442,7 +593,7 @@ public class MediaRouteButton extends View {
     }
 
     @Override
-    protected boolean verifyDrawable(Drawable who) {
+    protected boolean verifyDrawable(@NonNull Drawable who) {
         return super.verifyDrawable(who) || who == mRemoteIndicator;
     }
 
@@ -537,7 +688,7 @@ public class MediaRouteButton extends View {
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
 
         if (mRemoteIndicator != null) {
@@ -565,7 +716,7 @@ public class MediaRouteButton extends View {
             mRemoteIndicatorLoader = new RemoteIndicatorLoader(mRemoteIndicatorResIdToLoad,
                     getContext());
             mRemoteIndicatorResIdToLoad = 0;
-            mRemoteIndicatorLoader.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
+            mRemoteIndicatorLoader.executeOnExecutor(android.os.AsyncTask.SERIAL_EXECUTOR);
         }
     }
 
@@ -590,20 +741,6 @@ public class MediaRouteButton extends View {
         mRemoteIndicator = d;
 
         refreshDrawableState();
-        if (mAttachedToWindow && mRemoteIndicator != null
-                && mRemoteIndicator.getCurrent() instanceof AnimationDrawable) {
-            AnimationDrawable curDrawable = (AnimationDrawable) mRemoteIndicator.getCurrent();
-            if (mConnectionState == CONNECTION_STATE_CONNECTING) {
-                if (!curDrawable.isRunning()) {
-                    curDrawable.start();
-                }
-            } else if (mConnectionState == CONNECTION_STATE_CONNECTED) {
-                if (curDrawable.isRunning()) {
-                    curDrawable.stop();
-                }
-                curDrawable.selectDrawable(curDrawable.getNumberOfFrames() - 1);
-            }
-        }
     }
 
     void refreshVisibility() {
@@ -617,45 +754,23 @@ public class MediaRouteButton extends View {
 
     void refreshRoute() {
         final MediaRouter.RouteInfo route = mRouter.getSelectedRoute();
-        final boolean isRemote = !route.isDefaultOrBluetooth() && route.matchesSelector(mSelector);
+        final boolean isRemote = !route.isDefaultOrBluetooth();
         final int connectionState = (isRemote ? route.getConnectionState()
                 : CONNECTION_STATE_DISCONNECTED);
 
-        boolean needsRefresh = false;
-
         if (mConnectionState != connectionState) {
             mConnectionState = connectionState;
-            needsRefresh = true;
-        }
-
-        if (needsRefresh) {
             updateContentDescription();
             refreshDrawableState();
         }
+
         if (connectionState == CONNECTION_STATE_CONNECTING) {
             loadRemoteIndicatorIfNeeded();
         }
 
         if (mAttachedToWindow) {
-            setEnabled(mAlwaysVisible || mRouter.isRouteAvailable(mSelector,
+            setEnabled(mAlwaysVisible || isRemote || mRouter.isRouteAvailable(mSelector,
                     MediaRouter.AVAILABILITY_FLAG_IGNORE_DEFAULT_ROUTE));
-        }
-        if (mRemoteIndicator != null
-                && mRemoteIndicator.getCurrent() instanceof AnimationDrawable) {
-            AnimationDrawable curDrawable = (AnimationDrawable) mRemoteIndicator.getCurrent();
-            if (mAttachedToWindow) {
-                if ((needsRefresh || connectionState == CONNECTION_STATE_CONNECTING)
-                        && !curDrawable.isRunning()) {
-                    curDrawable.start();
-                }
-            } else if (connectionState == CONNECTION_STATE_CONNECTED) {
-                // When the route is already connected before the view is attached, show the last
-                // frame of the connected animation immediately.
-                if (curDrawable.isRunning()) {
-                    curDrawable.stop();
-                }
-                curDrawable.selectDrawable(curDrawable.getNumberOfFrames() - 1);
-            }
         }
     }
 
@@ -723,9 +838,22 @@ public class MediaRouteButton extends View {
         public void onProviderChanged(MediaRouter router, MediaRouter.ProviderInfo provider) {
             refreshRoute();
         }
+
+        @Override
+        public void onRouterParamsChanged(MediaRouter router, MediaRouterParams params) {
+            boolean fixedIcon = false;
+            if (params != null) {
+                fixedIcon = params.getExtras()
+                        .getBoolean(MediaRouterParams.EXTRAS_KEY_FIXED_CAST_ICON);
+            }
+            if (MediaRouteButton.this.mIsFixedIcon != fixedIcon) {
+                MediaRouteButton.this.mIsFixedIcon = fixedIcon;
+                refreshDrawableState();
+            }
+        }
     }
 
-    private final class RemoteIndicatorLoader extends AsyncTask<Void, Void, Drawable> {
+    private final class RemoteIndicatorLoader extends android.os.AsyncTask<Void, Void, Drawable> {
         private final int mResId;
         private final Context mContext;
 
@@ -738,7 +866,7 @@ public class MediaRouteButton extends View {
         protected Drawable doInBackground(Void... params) {
             Drawable.ConstantState remoteIndicatorState = sRemoteIndicatorCache.get(mResId);
             if (remoteIndicatorState == null) {
-                return mContext.getResources().getDrawable(mResId);
+                return AppCompatResources.getDrawable(mContext, mResId);
             } else {
                 return null;
             }

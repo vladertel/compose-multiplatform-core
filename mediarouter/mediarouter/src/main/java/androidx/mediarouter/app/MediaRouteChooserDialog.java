@@ -37,10 +37,13 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDialog;
+import androidx.appcompat.content.res.AppCompatResources;
 import androidx.mediarouter.R;
 import androidx.mediarouter.media.MediaRouteSelector;
 import androidx.mediarouter.media.MediaRouter;
@@ -78,7 +81,7 @@ public class MediaRouteChooserDialog extends AppCompatDialog {
     private ListView mListView;
     private boolean mAttachedToWindow;
     private long mLastUpdateTime;
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "deprecation"})
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message message) {
@@ -90,11 +93,11 @@ public class MediaRouteChooserDialog extends AppCompatDialog {
         }
     };
 
-    public MediaRouteChooserDialog(Context context) {
+    public MediaRouteChooserDialog(@NonNull Context context) {
         this(context, 0);
     }
 
-    public MediaRouteChooserDialog(Context context, int theme) {
+    public MediaRouteChooserDialog(@NonNull Context context, int theme) {
         super(context = MediaRouterThemeHelper.createThemedDialogContext(context, theme, false),
                 MediaRouterThemeHelper.createThemedDialogStyle(context));
         context = getContext();
@@ -170,7 +173,7 @@ public class MediaRouteChooserDialog extends AppCompatDialog {
     }
 
     @Override
-    public void setTitle(CharSequence title) {
+    public void setTitle(@Nullable CharSequence title) {
         mTitleView.setText(title);
     }
 
@@ -180,7 +183,7 @@ public class MediaRouteChooserDialog extends AppCompatDialog {
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.mr_chooser_dialog);
@@ -247,7 +250,7 @@ public class MediaRouteChooserDialog extends AppCompatDialog {
         mAdapter.notifyDataSetChanged();
     }
 
-    private final class RouteAdapter extends ArrayAdapter<MediaRouter.RouteInfo>
+    private static final class RouteAdapter extends ArrayAdapter<MediaRouter.RouteInfo>
             implements ListView.OnItemClickListener {
         private final LayoutInflater mInflater;
         private final Drawable mDefaultIcon;
@@ -263,10 +266,15 @@ public class MediaRouteChooserDialog extends AppCompatDialog {
                     R.attr.mediaRouteTvIconDrawable,
                     R.attr.mediaRouteSpeakerIconDrawable,
                     R.attr.mediaRouteSpeakerGroupIconDrawable});
-            mDefaultIcon = styledAttributes.getDrawable(0);
-            mTvIcon = styledAttributes.getDrawable(1);
-            mSpeakerIcon = styledAttributes.getDrawable(2);
-            mSpeakerGroupIcon = styledAttributes.getDrawable(3);
+
+            mDefaultIcon = AppCompatResources.getDrawable(context,
+                    styledAttributes.getResourceId(0, 0));
+            mTvIcon = AppCompatResources.getDrawable(context,
+                    styledAttributes.getResourceId(1, 0));
+            mSpeakerIcon = AppCompatResources.getDrawable(context,
+                    styledAttributes.getResourceId(2, 0));
+            mSpeakerGroupIcon = AppCompatResources.getDrawable(context,
+                    styledAttributes.getResourceId(3, 0));
             styledAttributes.recycle();
         }
 
@@ -317,8 +325,14 @@ public class MediaRouteChooserDialog extends AppCompatDialog {
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
             MediaRouter.RouteInfo route = getItem(position);
             if (route.isEnabled()) {
+                ImageView iconView = view.findViewById(R.id.mr_chooser_route_icon);
+                ProgressBar progressBar = view.findViewById(R.id.mr_chooser_route_progress_bar);
+                // Show the progress bar
+                if (iconView != null && progressBar != null) {
+                    iconView.setVisibility(View.GONE);
+                    progressBar.setVisibility(View.VISIBLE);
+                }
                 route.select();
-                dismiss();
             }
         }
 

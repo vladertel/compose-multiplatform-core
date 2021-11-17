@@ -17,14 +17,13 @@
 package androidx.camera.testing.fakes;
 
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.Surface;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.core.CameraControl;
-import androidx.camera.core.CameraInfo;
+import androidx.annotation.RequiresApi;
+import androidx.camera.core.Logger;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.impl.CameraControlInternal;
 import androidx.camera.core.impl.CameraInfoInternal;
@@ -44,11 +43,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A fake camera which will not produce any data, but provides a valid Camera implementation.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class FakeCamera implements CameraInternal {
     private static final String TAG = "FakeCamera";
     private static final String DEFAULT_CAMERA_ID = "0";
@@ -58,14 +60,12 @@ public class FakeCamera implements CameraInternal {
     private final CameraInfoInternal mCameraInfoInternal;
     private String mCameraId;
     private UseCaseAttachState mUseCaseAttachState;
+    private Set<UseCase> mAttachedUseCases = new HashSet<>();
     private State mState = State.CLOSED;
     private int mAvailableCameraCount = 1;
 
     @Nullable
     private SessionConfig mSessionConfig;
-    @SuppressWarnings("WeakerAccess") /* synthetic accessor */
-    @Nullable
-    SessionConfig mCameraControlSessionConfig;
 
     private List<DeferrableSurface> mConfiguredDeferrableSurfaces = Collections.emptyList();
 
@@ -91,16 +91,14 @@ public class FakeCamera implements CameraInternal {
         mCameraControlInternal = cameraControl == null ? new FakeCameraControl(
                 new CameraControlInternal.ControlUpdateCallback() {
                     @Override
-                    public void onCameraControlUpdateSessionConfig(
-                            @NonNull SessionConfig sessionConfig) {
-                        mCameraControlSessionConfig = sessionConfig;
+                    public void onCameraControlUpdateSessionConfig() {
                         updateCaptureSessionConfig();
                     }
 
                     @Override
                     public void onCameraControlCaptureRequests(
                             @NonNull List<CaptureConfig> captureConfigs) {
-                        Log.d(TAG, "Capture requests submitted:\n    " + TextUtils.join("\n    ",
+                        Logger.d(TAG, "Capture requests submitted:\n    " + TextUtils.join("\n    ",
                                 captureConfigs));
                     }
                 })
@@ -190,35 +188,38 @@ public class FakeCamera implements CameraInternal {
 
     @Override
     public void onUseCaseActive(@NonNull UseCase useCase) {
-        Log.d(TAG, "Use case " + useCase + " ACTIVE for camera " + mCameraId);
+        Logger.d(TAG, "Use case " + useCase + " ACTIVE for camera " + mCameraId);
 
-        mUseCaseAttachState.setUseCaseActive(useCase);
+        mUseCaseAttachState.setUseCaseActive(useCase.getName() + useCase.hashCode(),
+                useCase.getSessionConfig());
         updateCaptureSessionConfig();
     }
 
     /** Removes the use case from a state of issuing capture requests. */
     @Override
     public void onUseCaseInactive(@NonNull UseCase useCase) {
-        Log.d(TAG, "Use case " + useCase + " INACTIVE for camera " + mCameraId);
+        Logger.d(TAG, "Use case " + useCase + " INACTIVE for camera " + mCameraId);
 
-        mUseCaseAttachState.setUseCaseInactive(useCase);
+        mUseCaseAttachState.setUseCaseInactive(useCase.getName() + useCase.hashCode());
         updateCaptureSessionConfig();
     }
 
     /** Updates the capture requests based on the latest settings. */
     @Override
     public void onUseCaseUpdated(@NonNull UseCase useCase) {
-        Log.d(TAG, "Use case " + useCase + " UPDATED for camera " + mCameraId);
+        Logger.d(TAG, "Use case " + useCase + " UPDATED for camera " + mCameraId);
 
-        mUseCaseAttachState.updateUseCase(useCase);
+        mUseCaseAttachState.updateUseCase(useCase.getName() + useCase.hashCode(),
+                useCase.getSessionConfig());
         updateCaptureSessionConfig();
     }
 
     @Override
     public void onUseCaseReset(@NonNull UseCase useCase) {
-        Log.d(TAG, "Use case " + useCase + " RESET for camera " + mCameraId);
+        Logger.d(TAG, "Use case " + useCase + " RESET for camera " + mCameraId);
 
-        mUseCaseAttachState.updateUseCase(useCase);
+        mUseCaseAttachState.updateUseCase(useCase.getName() + useCase.hashCode(),
+                useCase.getSessionConfig());
         updateCaptureSessionConfig();
         openCaptureSession();
     }
@@ -233,9 +234,12 @@ public class FakeCamera implements CameraInternal {
             return;
         }
 
-        Log.d(TAG, "Use cases " + useCases + " ATTACHED for camera " + mCameraId);
+        mAttachedUseCases.addAll(useCases);
+
+        Logger.d(TAG, "Use cases " + useCases + " ATTACHED for camera " + mCameraId);
         for (UseCase useCase : useCases) {
-            mUseCaseAttachState.setUseCaseAttached(useCase);
+            mUseCaseAttachState.setUseCaseAttached(useCase.getName() + useCase.hashCode(),
+                    useCase.getSessionConfig());
         }
 
         open();
@@ -253,18 +257,25 @@ public class FakeCamera implements CameraInternal {
             return;
         }
 
-        Log.d(TAG, "Use cases " + useCases + " DETACHED for camera " + mCameraId);
+        mAttachedUseCases.removeAll(useCases);
+
+        Logger.d(TAG, "Use cases " + useCases + " DETACHED for camera " + mCameraId);
         for (UseCase useCase : useCases) {
-            mUseCaseAttachState.setUseCaseDetached(useCase);
+            mUseCaseAttachState.setUseCaseDetached(useCase.getName() + useCase.hashCode());
         }
 
-        if (mUseCaseAttachState.getAttachedUseCases().isEmpty()) {
+        if (mUseCaseAttachState.getAttachedSessionConfigs().isEmpty()) {
             close();
             return;
         }
 
         openCaptureSession();
         updateCaptureSessionConfig();
+    }
+
+    @NonNull
+    public Set<UseCase> getAttachedUseCases() {
+        return mAttachedUseCases;
     }
 
     // Returns fixed CameraControlInternal instance in order to verify the instance is correctly
@@ -291,12 +302,12 @@ public class FakeCamera implements CameraInternal {
         SessionConfig.ValidatingBuilder validatingBuilder;
         validatingBuilder = mUseCaseAttachState.getAttachedBuilder();
         if (!validatingBuilder.isValid()) {
-            Log.d(TAG, "Unable to create capture session due to conflicting configurations");
+            Logger.d(TAG, "Unable to create capture session due to conflicting configurations");
             return;
         }
 
         if (mState != State.OPEN) {
-            Log.d(TAG, "CameraDevice is not opened");
+            Logger.d(TAG, "CameraDevice is not opened");
             return;
         }
 
@@ -312,9 +323,7 @@ public class FakeCamera implements CameraInternal {
         if (validatingBuilder.isValid()) {
             // Apply CameraControlInternal's SessionConfig to let CameraControlInternal be able
             // to control Repeating Request and process results.
-            if (mCameraControlSessionConfig != null) {
-                validatingBuilder.add(mCameraControlSessionConfig);
-            }
+            validatingBuilder.add(mCameraControlInternal.getSessionConfig());
 
             mSessionConfig = validatingBuilder.build();
         }
@@ -334,7 +343,7 @@ public class FakeCamera implements CameraInternal {
                     DeferrableSurfacesUtil.surfaceList(mConfiguredDeferrableSurfaces,
                             /*removeNullSurfaces=*/ false);
             if (configuredSurfaces.isEmpty()) {
-                Log.e(TAG, "Unable to open capture session with no surfaces. ");
+                Logger.e(TAG, "Unable to open capture session with no surfaces. ");
                 return;
             }
         }
@@ -362,17 +371,4 @@ public class FakeCamera implements CameraInternal {
         // notifySurfaceDetached calls.
         mConfiguredDeferrableSurfaces.clear();
     }
-
-    @NonNull
-    @Override
-    public CameraControl getCameraControl() {
-        return getCameraControlInternal();
-    }
-
-    @NonNull
-    @Override
-    public CameraInfo getCameraInfo() {
-        return getCameraInfoInternal();
-    }
-
 }

@@ -30,7 +30,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.v4.media.MediaDescriptionCompat;
@@ -66,6 +65,8 @@ import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.util.ObjectsCompat;
 import androidx.core.view.accessibility.AccessibilityEventCompat;
@@ -139,10 +140,13 @@ public class MediaRouteControllerDialog extends AlertDialog {
     private TextView mRouteNameTextView;
 
     private boolean mVolumeControlEnabled = true;
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    final boolean mEnableGroupVolumeUX;
     // Layout for media controllers including play/pause button and the main volume slider.
     private LinearLayout mMediaMainControlLayout;
     private RelativeLayout mPlaybackControlLayout;
-    private LinearLayout mVolumeControlLayout;
+    @SuppressWarnings("WeakerAccess") /* synthetic access */
+    LinearLayout mVolumeControlLayout;
     private View mDividerView;
 
     OverlayListView mVolumeGroupList;
@@ -196,17 +200,18 @@ public class MediaRouteControllerDialog extends AlertDialog {
         }
     };
 
-    public MediaRouteControllerDialog(Context context) {
+    public MediaRouteControllerDialog(@NonNull Context context) {
         this(context, 0);
     }
 
-    public MediaRouteControllerDialog(Context context, int theme) {
+    public MediaRouteControllerDialog(@NonNull Context context, int theme) {
         super(context = MediaRouterThemeHelper.createThemedDialogContext(context, theme, true),
                 MediaRouterThemeHelper.createThemedDialogStyle(context));
         mContext = getContext();
 
         mControllerCallback = new MediaControllerCallback();
         mRouter = MediaRouter.getInstance(mContext);
+        mEnableGroupVolumeUX = MediaRouter.isGroupVolumeUxEnabled();
         mCallback = new MediaRouterCallback();
         mRoute = mRouter.getSelectedRoute();
         setMediaSession(mRouter.getMediaSessionToken());
@@ -226,8 +231,13 @@ public class MediaRouteControllerDialog extends AlertDialog {
     /**
      * Gets the route that this dialog is controlling.
      */
+    @NonNull
     public MediaRouter.RouteInfo getRoute() {
         return mRoute;
+    }
+
+    private boolean isGroup() {
+        return mRoute.isGroup() && mRoute.getMemberRoutes().size() > 1;
     }
 
     /**
@@ -237,7 +247,8 @@ public class MediaRouteControllerDialog extends AlertDialog {
      * @param savedInstanceState The dialog's saved instance state.
      * @return The media control view, or null if none.
      */
-    public View onCreateMediaControlView(Bundle savedInstanceState) {
+    @Nullable
+    public View onCreateMediaControlView(@Nullable Bundle savedInstanceState) {
         return null;
     }
 
@@ -246,6 +257,7 @@ public class MediaRouteControllerDialog extends AlertDialog {
      *
      * @return The media control view, or null if none.
      */
+    @Nullable
     public View getMediaControlView() {
         return mCustomControlView;
     }
@@ -306,12 +318,13 @@ public class MediaRouteControllerDialog extends AlertDialog {
      *
      * @return The token for the session to use or null if none.
      */
+    @Nullable
     public MediaSessionCompat.Token getMediaSession() {
         return mMediaController == null ? null : mMediaController.getSessionToken();
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         getWindow().setBackgroundDrawableResource(android.R.color.transparent);
@@ -398,7 +411,7 @@ public class MediaRouteControllerDialog extends AlertDialog {
         mGroupMemberRoutesAnimatingWithBitmap = new HashSet<>();
 
         MediaRouterThemeHelper.setMediaControlsBackgroundColor(mContext,
-                mMediaMainControlLayout, mVolumeGroupList, mRoute.isGroup());
+                mMediaMainControlLayout, mVolumeGroupList, isGroup());
         MediaRouterThemeHelper.setVolumeSliderColor(mContext,
                 (MediaRouteVolumeSlider) mVolumeSlider, mMediaMainControlLayout);
         mVolumeSliderMap = new HashMap<>();
@@ -478,17 +491,19 @@ public class MediaRouteControllerDialog extends AlertDialog {
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
+    public boolean onKeyDown(int keyCode, @NonNull KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
                 || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            mRoute.requestUpdateVolume(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ? -1 : 1);
+            if (mEnableGroupVolumeUX || !mIsGroupExpanded) {
+                mRoute.requestUpdateVolume(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ? -1 : 1);
+            }
             return true;
         }
         return super.onKeyDown(keyCode, event);
     }
 
     @Override
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
+    public boolean onKeyUp(int keyCode, @NonNull KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
                 || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
             return true;
@@ -496,6 +511,7 @@ public class MediaRouteControllerDialog extends AlertDialog {
         return super.onKeyUp(keyCode, event);
     }
 
+    @SuppressWarnings("ObjectToString")
     void update(boolean animate) {
         // Defer dialog updates if a user is adjusting a volume in the list
         if (mRouteInVolumeSliderTouched != null) {
@@ -613,7 +629,7 @@ public class MediaRouteControllerDialog extends AlertDialog {
         int mainControllerHeight = getMainControllerHeight(canShowPlaybackControlLayout());
         int volumeGroupListCount = mGroupMemberRoutes.size();
         // Scale down volume group list items in landscape mode.
-        int expandedGroupListHeight = mRoute.isGroup()
+        int expandedGroupListHeight = isGroup()
                 ? mVolumeGroupListItemHeight * mRoute.getMemberRoutes().size() : 0;
         if (volumeGroupListCount > 0) {
             expandedGroupListHeight += mVolumeGroupListPaddingTop;
@@ -719,16 +735,23 @@ public class MediaRouteControllerDialog extends AlertDialog {
     }
 
     private void updateVolumeControlLayout() {
-        if (isVolumeControlAvailable(mRoute)) {
+        if (!mEnableGroupVolumeUX && isGroup()) {
+            mVolumeControlLayout.setVisibility(View.GONE);
+            mIsGroupExpanded = true;
+            mVolumeGroupList.setVisibility(View.VISIBLE);
+            loadInterpolator();
+            updateLayoutHeight(false);
+            return;
+        }
+        if ((mIsGroupExpanded && !mEnableGroupVolumeUX) || !isVolumeControlAvailable(mRoute)) {
+            mVolumeControlLayout.setVisibility(View.GONE);
+        } else {
             if (mVolumeControlLayout.getVisibility() == View.GONE) {
                 mVolumeControlLayout.setVisibility(View.VISIBLE);
                 mVolumeSlider.setMax(mRoute.getVolumeMax());
                 mVolumeSlider.setProgress(mRoute.getVolume());
-                mGroupExpandCollapseButton.setVisibility(mRoute.isGroup()
-                        ? View.VISIBLE : View.GONE);
+                mGroupExpandCollapseButton.setVisibility(isGroup() ? View.VISIBLE : View.GONE);
             }
-        } else {
-            mVolumeControlLayout.setVisibility(View.GONE);
         }
     }
 
@@ -1080,7 +1103,8 @@ public class MediaRouteControllerDialog extends AlertDialog {
     }
 
     void updateArtIconIfNeeded() {
-        if (mCustomControlView != null || !isIconChanged()) {
+        if (mCustomControlView != null || !isIconChanged()
+                || (isGroup() && !mEnableGroupVolumeUX)) {
             return;
         }
         if (mFetchArtTask != null) {
@@ -1336,7 +1360,7 @@ public class MediaRouteControllerDialog extends AlertDialog {
         }
     }
 
-    private class FetchArtTask extends AsyncTask<Void, Void, Bitmap> {
+    private class FetchArtTask extends android.os.AsyncTask<Void, Void, Bitmap> {
         // Show animation only when fetching takes a long time.
         private static final long SHOW_ANIM_TIME_THRESHOLD_MILLIS = 120L;
 
@@ -1370,6 +1394,7 @@ public class MediaRouteControllerDialog extends AlertDialog {
         }
 
         @Override
+        @SuppressWarnings("ObjectToString")
         protected Bitmap doInBackground(Void... arg) {
             Bitmap art = null;
             if (mIconBitmap != null) {

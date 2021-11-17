@@ -17,6 +17,7 @@
 package androidx.fragment.lint
 
 import androidx.fragment.testing.lint.FragmentTestingIssueRegistry
+import com.android.tools.lint.client.api.LintClient
 import com.android.tools.lint.detector.api.CURRENT_API
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -28,11 +29,13 @@ class ApiLintVersionsTest {
 
     @Test
     fun versionsCheck() {
+        LintClient.clientName = LintClient.CLIENT_UNIT_TESTS
+
         val registry = FragmentTestingIssueRegistry()
         // we hardcode version registry.api to the version that is used to run tests
         assertThat(registry.api).isEqualTo(CURRENT_API)
         // Intentionally fails in IDE, because we use different API version in
         // studio and command line
-        assertThat(registry.minApi).isEqualTo(3)
+        assertThat(registry.minApi).isEqualTo(8)
     }
 }

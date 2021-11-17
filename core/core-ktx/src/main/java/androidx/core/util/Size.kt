@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+@file:SuppressLint("ClassVerificationFailure") // Entire file is RequiresApi(21)
 @file:Suppress("NOTHING_TO_INLINE")
 
 package androidx.core.util
 
+import android.annotation.SuppressLint
 import android.util.Size
 import android.util.SizeF
 import androidx.annotation.RequiresApi
@@ -32,7 +34,7 @@ import androidx.annotation.RequiresApi
  * ```
  */
 @RequiresApi(21)
-inline operator fun Size.component1() = width
+public inline operator fun Size.component1(): Int = width
 
 /**
  * Returns "height", the second component of this [Size].
@@ -44,7 +46,7 @@ inline operator fun Size.component1() = width
  * ```
  */
 @RequiresApi(21)
-inline operator fun Size.component2() = height
+public inline operator fun Size.component2(): Int = height
 
 /**
  * Returns "width", the first component of this [SizeF].
@@ -56,7 +58,7 @@ inline operator fun Size.component2() = height
  * ```
  */
 @RequiresApi(21)
-inline operator fun SizeF.component1() = width
+public inline operator fun SizeF.component1(): Float = width
 
 /**
  * Returns "height", the second component of this [SizeF].
@@ -68,4 +70,4 @@ inline operator fun SizeF.component1() = width
  * ```
  */
 @RequiresApi(21)
-inline operator fun SizeF.component2() = height
+public inline operator fun SizeF.component2(): Float = height

@@ -16,16 +16,17 @@
 
 package androidx.navigation.dynamicfeatures
 
+import android.content.Context
 import android.os.Bundle
 import androidx.navigation.NavController
 import androidx.navigation.NoOpNavigator
 import androidx.navigation.dynamicfeatures.shared.AndroidTestDynamicInstallManager
 import androidx.navigation.dynamicfeatures.test.R
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
-import androidx.test.rule.ActivityTestRule
+import androidx.testutils.withActivity
 import com.google.common.truth.Truth.assertThat
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
@@ -35,20 +36,26 @@ import org.mockito.Mockito.`when`
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
-class DynamicIncludeGraphNavigatorTest {
+public class DynamicIncludeGraphNavigatorTest {
 
     private lateinit var navigator: DynamicIncludeGraphNavigator
+    private lateinit var context: Context
 
     @get:Rule
-    val rule = ActivityTestRule(NavigationActivity::class.java)
+    public val rule: ActivityScenarioRule<NavigationActivity> =
+        ActivityScenarioRule(NavigationActivity::class.java)
 
     @Before
-    fun setup() {
+    public fun setup() {
         setupInternal()
     }
 
     private fun setupInternal(navGraphId: Int = R.navigation.nav_graph) {
-        val context = rule.activity
+
+        rule.withActivity {
+            context = this
+        }
+
         val navController = NavController(context)
         val navigatorProvider = navController.navigatorProvider
         val installManager = AndroidTestDynamicInstallManager(context).also {
@@ -63,7 +70,8 @@ class DynamicIncludeGraphNavigatorTest {
         )
         with(navController) {
             navigatorProvider.addNavigator(
-                DynamicGraphNavigator(navigatorProvider, installManager))
+                DynamicGraphNavigator(navigatorProvider, installManager)
+            )
             navigatorProvider.addNavigator(navigator)
             navigatorProvider.addNavigator(NoOpNavigator())
             setGraph(navGraphId)
@@ -71,25 +79,30 @@ class DynamicIncludeGraphNavigatorTest {
     }
 
     @Test
-    fun createDestination() {
-        assertNotNull(navigator.createDestination())
+    public fun createDestination() {
+        assertThat(navigator.createDestination()).isNotNull()
     }
 
     @Test
-    fun testReplacePackagePlaceholder() {
-        val context = rule.activity
+    public fun testReplacePackagePlaceholder() {
         val packageName = context.packageName
         val dynamicNavGraph = navigator.createDestination().apply {
             moduleName = FEATURE_NAME
         }
         assertThat(
-            dynamicNavGraph.getPackageOrDefault(context, "\${applicationId}.something" +
-                    ".$FEATURE_NAME")
+            dynamicNavGraph.getPackageOrDefault(
+                context,
+                "\${applicationId}.something" +
+                    ".$FEATURE_NAME"
+            )
         ).isEqualTo("$packageName.something.$FEATURE_NAME")
 
         assertThat(
-            dynamicNavGraph.getPackageOrDefault(context, "something.\${applicationId}" +
-                    ".$FEATURE_NAME")
+            dynamicNavGraph.getPackageOrDefault(
+                context,
+                "something.\${applicationId}" +
+                    ".$FEATURE_NAME"
+            )
         ).isEqualTo("something.$packageName.$FEATURE_NAME")
 
         assertThat(
@@ -98,36 +111,38 @@ class DynamicIncludeGraphNavigatorTest {
     }
 
     @Test
-    fun invalidGraphId() {
+    public fun invalidGraphId() {
         try {
             setupInternal(R.navigation.nav_invalid_id)
             fail("Inflating nav_invalid_id should fail with an IllegalStateException")
         } catch (e: IllegalStateException) {
-            assertThat(e).hasMessageThat().containsMatch(".*" +
+            assertThat(e).hasMessageThat().containsMatch(
+                ".*" +
                     "androidx.navigation.dynamicfeatures.test:id/featureFragmentNested" +
                     ".*" +
-                    "androidx.navigation.dynamicfeatures.test:id/dynamic_graph")
+                    "androidx.navigation.dynamicfeatures.test:id/dynamic_graph"
+            )
         }
     }
 
     @Test
-    fun onSaveState() {
+    public fun onSaveState() {
         assertThat(navigator.onSaveState()).isEqualTo(Bundle.EMPTY)
     }
 
     @Test
-    fun onRestoreState() {
+    public fun onRestoreState() {
         navigator.onRestoreState(Bundle.EMPTY)
     }
 
     @Test
-    fun onRestoreState_nestedInclusion() {
+    public fun onRestoreState_nestedInclusion() {
         setupInternal(R.navigation.nav_graph_nested_include_dynamic)
         navigator.onRestoreState(Bundle.EMPTY)
     }
 
     @Test
-    fun popBackStack() {
+    public fun popBackStack() {
         assertThat(navigator.popBackStack()).isTrue()
     }
 }

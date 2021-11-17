@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("UnstableApiUsage")
+
 package androidx.appcompat.lint.res
 
 import androidx.appcompat.lint.Stubs
@@ -21,6 +23,7 @@ import androidx.appcompat.res.ColorStateListLoadingDetector
 import com.android.tools.lint.checks.infrastructure.LintDetectorTest.kotlin
 import com.android.tools.lint.checks.infrastructure.LintDetectorTest.manifest
 import com.android.tools.lint.checks.infrastructure.TestLintTask.lint
+import com.android.tools.lint.checks.infrastructure.TestMode
 import org.junit.Test
 
 class ColorStateListLoadingDetectorTest {
@@ -58,6 +61,7 @@ class ColorStateListLoadingDetectorTest {
             Stubs.COLOR_STATE_LIST,
             customActivity
         ).issues(ColorStateListLoadingDetector.NOT_USING_COMPAT_LOADING)
+            .addTestModes(TestMode.DEFAULT, TestMode.PARTIAL)
             .run()
             .expectClean()
     }
@@ -109,13 +113,16 @@ class ColorStateListLoadingDetectorTest {
             manifest,
             customActivity
         ).issues(ColorStateListLoadingDetector.NOT_USING_COMPAT_LOADING)
+            .addTestModes(TestMode.DEFAULT, TestMode.PARTIAL)
             .run()
-            .expect("""
+            .expect(
+                """
 src/com/example/CustomActivity.kt:8: Warning: Use ContextCompat.getColorStateList() [UseCompatLoadingForColorStateLists]
         getResources().getColorStateList(R.color.color_state_list)
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 0 errors, 1 warnings
-            """.trimIndent())
+                """.trimIndent()
+            )
         /* ktlint-enable max-line-length */
     }
 
@@ -166,13 +173,16 @@ src/com/example/CustomActivity.kt:8: Warning: Use ContextCompat.getColorStateLis
             manifest,
             customActivity
         ).issues(ColorStateListLoadingDetector.NOT_USING_COMPAT_LOADING)
+            .addTestModes(TestMode.DEFAULT, TestMode.PARTIAL)
             .run()
-            .expect("""
+            .expect(
+                """
 src/com/example/CustomActivity.kt:8: Warning: Use AppCompatResources.getColorStateList() [UseCompatLoadingForColorStateLists]
         getResources().getColorStateList(R.color.color_state_list)
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 0 errors, 1 warnings
-            """.trimIndent())
+                """.trimIndent()
+            )
         /* ktlint-enable max-line-length */
     }
 }

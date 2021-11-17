@@ -19,10 +19,10 @@ package androidx.transition
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.test.filters.FlakyTest
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.rule.ActivityTestRule
 import androidx.transition.ktx.test.R
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -35,7 +35,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 @SdkSuppress(minSdkVersion = 19)
 @MediumTest
 class TransitionTest {
-    @JvmField @Rule val rule = ActivityTestRule<TestActivity>(TestActivity::class.java)
+    @Suppress("DEPRECATION")
+    @JvmField @Rule
+    val rule = androidx.test.rule.ActivityTestRule<TestActivity>(TestActivity::class.java)
 
     private lateinit var transition: Transition
 
@@ -43,6 +45,7 @@ class TransitionTest {
         transition = Fade().setDuration(50)
     }
 
+    @FlakyTest(bugId = 190193705)
     @Test fun testDoOnStart() {
         val called = AtomicBoolean()
         transition.doOnStart {
@@ -53,6 +56,7 @@ class TransitionTest {
         assertTrue(called.get())
     }
 
+    @FlakyTest(bugId = 190193705)
     @Test fun testDoOnEnd() {
         val called = AtomicBoolean()
         transition.doOnEnd {

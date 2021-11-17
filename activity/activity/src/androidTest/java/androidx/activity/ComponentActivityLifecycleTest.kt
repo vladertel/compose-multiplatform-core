@@ -28,6 +28,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 internal enum class LifecycleSource {
+    CONTEXT_AWARE,
     ACTIVITY,
     ACTIVITY_CALLBACK
 }
@@ -48,6 +49,7 @@ class ComponentActivityLifecycleTest {
         // followed by the activity's lifecycle observers
         assertThat(events)
             .containsExactly(
+                LifecycleSource.CONTEXT_AWARE to Lifecycle.Event.ON_CREATE,
                 LifecycleSource.ACTIVITY_CALLBACK to Lifecycle.Event.ON_CREATE,
                 LifecycleSource.ACTIVITY to Lifecycle.Event.ON_CREATE,
                 LifecycleSource.ACTIVITY_CALLBACK to Lifecycle.Event.ON_START,
@@ -69,9 +71,14 @@ class LifecycleComponentActivity : ComponentActivity() {
     internal val events = mutableListOf<Pair<LifecycleSource, Lifecycle.Event>>()
 
     init {
-        lifecycle.addObserver(LifecycleEventObserver { _, event ->
-            events.add(LifecycleSource.ACTIVITY to event)
-        })
+        addOnContextAvailableListener {
+            events.add(LifecycleSource.CONTEXT_AWARE to Lifecycle.Event.ON_CREATE)
+        }
+        lifecycle.addObserver(
+            LifecycleEventObserver { _, event ->
+                events.add(LifecycleSource.ACTIVITY to event)
+            }
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

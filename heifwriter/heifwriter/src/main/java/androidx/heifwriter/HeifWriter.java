@@ -533,15 +533,24 @@ public final class HeifWriter implements AutoCloseable {
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     void closeInternal() {
         if (DEBUG) Log.d(TAG, "closeInternal");
-
-        if (mMuxer != null) {
-            mMuxer.stop();
-            mMuxer.release();
+        // We don't want to crash when closing, catch all exceptions.
+        try {
+            // Muxer could throw exceptions if stop is called without samples.
+            // Don't crash in that case.
+            if (mMuxer != null) {
+                mMuxer.stop();
+                mMuxer.release();
+            }
+        } catch (Exception e) {
+        } finally {
             mMuxer = null;
         }
-
-        if (mHeifEncoder != null) {
-            mHeifEncoder.close();
+        try {
+            if (mHeifEncoder != null) {
+                mHeifEncoder.close();
+            }
+        } catch (Exception e) {
+        } finally {
             synchronized (this) {
                 mHeifEncoder = null;
             }

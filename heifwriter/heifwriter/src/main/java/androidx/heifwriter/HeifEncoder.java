@@ -744,9 +744,13 @@ public final class HeifEncoder implements AutoCloseable,
         mStopping.set(true);
 
         // after start, mEncoder is only accessed on handler, so no need to sync.
-        if (mEncoder != null) {
-            mEncoder.stop();
-            mEncoder.release();
+        try {
+            if (mEncoder != null) {
+                mEncoder.stop();
+                mEncoder.release();
+            }
+        } catch (Exception e) {
+        } finally {
             mEncoder = null;
         }
 
@@ -764,21 +768,33 @@ public final class HeifEncoder implements AutoCloseable,
         // those outputs were not returned. Shutting down the encoder will make break
         // the tile copier out of that.
         synchronized(this) {
-            if (mRectBlt != null) {
-                mRectBlt.release(false);
+            try {
+                if (mRectBlt != null) {
+                    mRectBlt.release(false);
+                }
+            } catch (Exception e) {
+            } finally {
                 mRectBlt = null;
             }
 
-            if (mEncoderEglSurface != null) {
-                // Note that this frees mEncoderSurface too. If mEncoderEglSurface is not
-                // there, client is responsible to release the input surface it got from us,
-                // we don't release mEncoderSurface here.
-                mEncoderEglSurface.release();
+            try {
+                if (mEncoderEglSurface != null) {
+                    // Note that this frees mEncoderSurface too. If mEncoderEglSurface is not
+                    // there, client is responsible to release the input surface it got from us,
+                    // we don't release mEncoderSurface here.
+                    mEncoderEglSurface.release();
+                }
+            } catch (Exception e) {
+            } finally {
                 mEncoderEglSurface = null;
             }
 
-            if (mInputTexture != null) {
-                mInputTexture.release();
+            try {
+                if (mInputTexture != null) {
+                    mInputTexture.release();
+                }
+            } catch (Exception e) {
+            } finally {
                 mInputTexture = null;
             }
         }
@@ -991,7 +1007,11 @@ public final class HeifEncoder implements AutoCloseable,
         mHandler.postAtFrontOfQueue(new Runnable() {
             @Override
             public void run() {
-                stopInternal();
+                try {
+                    stopInternal();
+                } catch (Exception e) {
+                    // We don't want to crash when closing.
+                }
             }
         });
     }

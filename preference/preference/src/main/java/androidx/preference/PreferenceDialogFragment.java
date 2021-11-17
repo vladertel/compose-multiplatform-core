@@ -26,16 +26,21 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.widget.TextView;
 
+import androidx.annotation.DoNotInline;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 
 /**
@@ -85,7 +90,7 @@ public abstract class PreferenceDialogFragment extends android.app.DialogFragmen
     public PreferenceDialogFragment() {}
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         final android.app.Fragment rawFragment = getTargetFragment();
@@ -146,7 +151,7 @@ public abstract class PreferenceDialogFragment extends android.app.DialogFragmen
 
     @NonNull
     @Override
-    public Dialog onCreateDialog(Bundle savedInstanceState) {
+    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getActivity();
         mWhichButtonClicked = DialogInterface.BUTTON_NEGATIVE;
 
@@ -203,7 +208,7 @@ public abstract class PreferenceDialogFragment extends android.app.DialogFragmen
      * @deprecated Use {@link PreferenceDialogFragmentCompat} instead
      */
     @Deprecated
-    protected void onPrepareDialogBuilder(AlertDialog.Builder builder) {}
+    protected void onPrepareDialogBuilder(@NonNull AlertDialog.Builder builder) {}
 
     /**
      * Returns whether the preference needs to display a soft input method when the dialog is
@@ -223,10 +228,19 @@ public abstract class PreferenceDialogFragment extends android.app.DialogFragmen
 
     /**
      * Sets the required flags on the dialog window to enable input method window to show up.
+     * <p>
+     * Note that starting from Android R, the new WindowInsets API supports showing soft-input
+     * on-demand, so there is no longer a need to rely on the
+     * {@link WindowManager.LayoutParams#SOFT_INPUT_STATE_ALWAYS_VISIBLE} flag to show the
+     * soft-input when there is no focused editor.</p>
      */
-    private void requestInputMethod(Dialog dialog) {
+    private void requestInputMethod(@NonNull Dialog dialog) {
         Window window = dialog.getWindow();
-        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Api30Impl.showIme(window);
+        } else {
+            window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        }
     }
 
     /**
@@ -239,7 +253,8 @@ public abstract class PreferenceDialogFragment extends android.app.DialogFragmen
      * @deprecated Use {@link PreferenceDialogFragmentCompat} instead
      */
     @Deprecated
-    protected View onCreateDialogView(Context context) {
+    @Nullable
+    protected View onCreateDialogView(@NonNull Context context) {
         final int resId = mDialogLayoutRes;
         if (resId == 0) {
             return null;
@@ -259,7 +274,7 @@ public abstract class PreferenceDialogFragment extends android.app.DialogFragmen
      * @deprecated Use {@link PreferenceDialogFragmentCompat} instead
      */
     @Deprecated
-    protected void onBindDialogView(View view) {
+    protected void onBindDialogView(@NonNull View view) {
         View dialogMessageView = view.findViewById(android.R.id.message);
 
         if (dialogMessageView != null) {
@@ -285,12 +300,12 @@ public abstract class PreferenceDialogFragment extends android.app.DialogFragmen
      */
     @Deprecated
     @Override
-    public void onClick(DialogInterface dialog, int which) {
+    public void onClick(@NonNull DialogInterface dialog, int which) {
         mWhichButtonClicked = which;
     }
 
     @Override
-    public void onDismiss(DialogInterface dialog) {
+    public void onDismiss(@NonNull DialogInterface dialog) {
         super.onDismiss(dialog);
         onDialogClosed(mWhichButtonClicked == DialogInterface.BUTTON_POSITIVE);
     }
@@ -300,4 +315,21 @@ public abstract class PreferenceDialogFragment extends android.app.DialogFragmen
      */
     @Deprecated
     public abstract void onDialogClosed(boolean positiveResult);
+
+    /**
+     * Nested class to avoid verification errors for methods introduced in R.
+     */
+    @RequiresApi(Build.VERSION_CODES.R)
+    private static class Api30Impl {
+        // Prevent instantiation.
+        private Api30Impl() {}
+
+        /**
+         * Shows the IME on demand for the given {@link Window}.
+         */
+        @DoNotInline
+        static void showIme(@NonNull Window dialogWindow) {
+            dialogWindow.getDecorView().getWindowInsetsController().show(WindowInsets.Type.ime());
+        }
+    }
 }

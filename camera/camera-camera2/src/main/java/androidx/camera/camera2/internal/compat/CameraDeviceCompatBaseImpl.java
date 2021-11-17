@@ -20,7 +20,6 @@ import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
 import android.os.Handler;
-import android.util.Log;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
@@ -28,6 +27,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.internal.compat.params.OutputConfigurationCompat;
 import androidx.camera.camera2.internal.compat.params.SessionConfigurationCompat;
+import androidx.camera.core.Logger;
 import androidx.core.util.Preconditions;
 
 import java.util.ArrayList;
@@ -93,22 +93,27 @@ class CameraDeviceCompatBaseImpl implements CameraDeviceCompat.CameraDeviceCompa
         for (OutputConfigurationCompat outputConfigurationCompat : outputConfigs) {
             String outputConfigPhysicalId = outputConfigurationCompat.getPhysicalCameraId();
             if (outputConfigPhysicalId != null && !outputConfigPhysicalId.isEmpty()) {
-                Log.w("CameraDeviceCompat",
+                Logger.w("CameraDeviceCompat",
                         "Camera " + cameraId + ": Camera doesn't support physicalCameraId "
                                 + outputConfigPhysicalId + ". Ignoring.");
             }
         }
     }
 
+    @SuppressWarnings("deprecation") /* createCaptureSession */
     void createBaseCaptureSession(@NonNull CameraDevice device, @NonNull List<Surface> surfaces,
             @NonNull CameraCaptureSession.StateCallback cb, @NonNull Handler handler)
-            throws CameraAccessException {
-        device.createCaptureSession(surfaces, cb, handler);
+            throws CameraAccessExceptionCompat {
+        try {
+            device.createCaptureSession(surfaces, cb, handler);
+        } catch (CameraAccessException e) {
+            throw CameraAccessExceptionCompat.toCameraAccessExceptionCompat(e);
+        }
     }
 
     @Override
     public void createCaptureSession(@NonNull SessionConfigurationCompat config)
-            throws CameraAccessException {
+            throws CameraAccessExceptionCompat {
         checkPreconditions(mCameraDevice, config);
 
         if (config.getInputConfiguration() != null) {

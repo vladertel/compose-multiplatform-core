@@ -16,6 +16,7 @@
 
 package androidx.recyclerview.selection;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -24,6 +25,7 @@ import android.graphics.Rect;
 import android.view.MotionEvent;
 
 import androidx.annotation.NonNull;
+import androidx.core.util.Consumer;
 import androidx.recyclerview.selection.GridModel.GridHost;
 import androidx.recyclerview.selection.testing.TestAdapter;
 import androidx.recyclerview.selection.testing.TestAutoScroller;
@@ -39,6 +41,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -74,8 +77,14 @@ public class BandSelectionHelperTest {
                 SelectionPredicates.createSelectAnything(),
                 StorageStrategy.createStringStorage());
 
-        EventBridge.install(mAdapter, mTracker, mKeyProvider);
-        FocusDelegate<String> focusDelegate = FocusDelegate.dummy();
+        EventBridge.install(mAdapter, mTracker, mKeyProvider, new Consumer<Runnable>() {
+            @Override
+            public void accept(Runnable runnable) {
+                runnable.run();
+            }
+        });
+
+        FocusDelegate<String> focusDelegate = FocusDelegate.stub();
 
         mBandController = new BandSelectionHelper<String>(
                 mHostEnv,
@@ -111,6 +120,21 @@ public class BandSelectionHelperTest {
     @Test
     public void testStart() {
         assertTrue(startBandSelect());
+    }
+
+    @Test
+    public void testOnScroll() {
+        startBandSelect();
+        // Produces an NPE prior to fix for b/167821507.
+        mHostEnv.scrollTo(100, 100);
+        mHostEnv.assertBandShown(true);
+    }
+
+    @Test
+    public void testIgnoresScrollWhenNotStarted() {
+        // Produces an NPE prior to fix for b/167821507.
+        mHostEnv.scrollTo(100, 100);
+        mHostEnv.assertBandShown(false);
     }
 
     @Test
@@ -182,6 +206,8 @@ public class BandSelectionHelperTest {
     // GridHost extends BandHost. We satisfy both by implementing GridHost.
     private final class TestHostEnvironment extends GridHost<String> {
 
+        private final List<OnScrollListener> mScrollListeners = new ArrayList<>();
+        private boolean mBandShown;
         private boolean mBandHidden;
 
         @Override
@@ -193,8 +219,13 @@ public class BandSelectionHelperTest {
         }
 
         @Override
-        void showBand(Rect rect) {
-            throw new UnsupportedOperationException();
+        void showBand(@NonNull Rect rect) {
+            mBandShown = true;
+        }
+
+        // Asserts that a call was made to hide the band.
+        void assertBandShown(boolean expected) {
+            assertEquals(expected, mBandShown);
         }
 
         @Override
@@ -207,14 +238,20 @@ public class BandSelectionHelperTest {
             assertTrue(mBandHidden);
         }
 
+        void scrollTo(int x, int y) {
+            for (OnScrollListener l : mScrollListeners) {
+                l.onScrolled(null, x, y);
+            }
+        }
+
         @Override
-        void addOnScrollListener(OnScrollListener listener) {
-            // ignored for testing
+        void addOnScrollListener(@NonNull OnScrollListener listener) {
+            mScrollListeners.add(listener);
         }
 
         @Override
         void removeOnScrollListener(@NonNull OnScrollListener listener) {
-            // ignored for testing
+            mScrollListeners.remove(listener);
         }
 
         @Override

@@ -18,20 +18,21 @@ package androidx.savedstate
 
 import android.os.Bundle
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleRegistry
+import androidx.test.annotation.UiThreadTest
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
-import java.lang.ClassCastException
-import java.lang.IllegalStateException
 
 @SmallTest
-@RunWith(JUnit4::class)
+@RunWith(AndroidJUnit4::class)
 class SavedStateRegistryTest {
 
+    @UiThreadTest
     @Test
     fun saveRestoreFlow() {
         startFlow { registry ->
@@ -46,6 +47,7 @@ class SavedStateRegistryTest {
         }
     }
 
+    @UiThreadTest
     @Test
     fun registerWithSameKey() {
         startFlow { registry ->
@@ -59,6 +61,7 @@ class SavedStateRegistryTest {
         }
     }
 
+    @UiThreadTest
     @Test
     fun consumeSameTwice() {
         startFlow { registry ->
@@ -70,6 +73,7 @@ class SavedStateRegistryTest {
         }
     }
 
+    @UiThreadTest
     @Test
     fun unregister() {
         startFlow { registry ->
@@ -83,6 +87,7 @@ class SavedStateRegistryTest {
         }
     }
 
+    @UiThreadTest
     @Test
     fun unconsumedSavedState() {
         startFlow { registry ->
@@ -95,6 +100,7 @@ class SavedStateRegistryTest {
         }
     }
 
+    @UiThreadTest
     @Test
     fun unconsumedSavedStateClashWithCallback() {
         startFlow { registry ->
@@ -108,6 +114,7 @@ class SavedStateRegistryTest {
         }
     }
 
+    @UiThreadTest
     @Test
     fun autoRecreatedThrowOnMissingDefaultConstructor() {
         @Suppress("UNUSED_PARAMETER")
@@ -126,6 +133,7 @@ class SavedStateRegistryTest {
         }
     }
 
+    @UiThreadTest
     @Test
     fun sneakClass() {
         startFlow { registry ->
@@ -142,24 +150,44 @@ class SavedStateRegistryTest {
         }
     }
 
+    @UiThreadTest
     @Test
-    @Suppress("DEPRECATION")
     fun throwSavedStateRegistry() {
         val owner = FakeSavedStateRegistryOwner()
         // shouldn't throw, though we aren't even created
         owner.savedStateRegistry.runOnNextRecreation(ToBeRecreated::class.java)
         owner.savedStateRegistryController.performRestore(null)
-        owner.lifecycleRegistry.markState(Lifecycle.State.RESUMED)
-        owner.lifecycleRegistry.markState(Lifecycle.State.CREATED)
+        owner.lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+        owner.lifecycleRegistry.currentState = Lifecycle.State.CREATED
         try {
             owner.savedStateRegistry.runOnNextRecreation(ToBeRecreated::class.java)
             Assert.fail()
         } catch (e: IllegalStateException) {
             assertThat(e.message).contains("Can not perform this action after onSaveInstanceState")
         }
-        owner.lifecycleRegistry.markState(Lifecycle.State.STARTED)
+        owner.lifecycleRegistry.currentState = Lifecycle.State.STARTED
         // shouldn't fail
         owner.savedStateRegistry.runOnNextRecreation(ToBeRecreated::class.java)
+    }
+
+    @UiThreadTest
+    @Test
+    fun runOnNextRecreationFromEarlyRegisteredObserver() {
+        val owner = FakeSavedStateRegistryOwner()
+        owner.savedStateRegistryController.performAttach()
+        // shouldn't throw, though we aren't even created
+        owner.lifecycle.addObserver(
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_START)
+                    owner.savedStateRegistry.runOnNextRecreation(ToBeRecreated::class.java)
+            }
+        )
+        owner.savedStateRegistryController.performRestore(null)
+        owner.lifecycleRegistry.currentState = Lifecycle.State.STARTED
+        // now ON_STOP event will be sent
+        owner.lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        // now ON_START event will be sent again, previously registered observer shouldn't throw
+        owner.lifecycleRegistry.currentState = Lifecycle.State.STARTED
     }
 
     private class TestFlow(val lastState: Bundle?) {

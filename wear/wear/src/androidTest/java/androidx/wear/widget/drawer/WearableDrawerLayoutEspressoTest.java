@@ -19,6 +19,7 @@ package androidx.wear.widget.drawer;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.swipeDown;
+import static androidx.test.espresso.action.ViewActions.swipeLeft;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom;
 import static androidx.test.espresso.matcher.ViewMatchers.isCompletelyDisplayed;
@@ -31,7 +32,9 @@ import static androidx.wear.widget.util.AsyncViewActions.waitForMatchingView;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -46,6 +49,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.test.core.app.ActivityScenario;
 import androidx.test.espresso.PerformException;
 import androidx.test.espresso.UiController;
 import androidx.test.espresso.ViewAction;
@@ -256,13 +260,23 @@ public class WearableDrawerLayoutEspressoTest {
                 new DrawerTestActivity.Builder()
                         .setStyle(DrawerStyle.ONLY_ACTION_DRAWER_WITH_TITLE)
                         .build());
+
+        final RecyclerView actionList =
+                activityRule.getActivity().findViewById(R.id.action_list);
+
         // WHEN it is opened
         WearableDrawerView actionDrawer = activityRule.getActivity().findViewById(
                 R.id.action_drawer);
         openDrawer(actionDrawer);
 
-        // THEN the drawer content view should be displayed
-        onView(allOf(withId(R.id.action_list), isCompletelyDisplayed()));
+        // THEN the action drawer should be open and the items should all exist in the actionList
+        // adapter
+        onView(withId(R.id.action_drawer))
+                .perform(
+                        waitForMatchingView(
+                                allOf(withId(R.id.action_drawer), isOpened(true)),
+                                MAX_WAIT_MS));
+        assertEquals(7, actionList.getAdapter().getItemCount());
     }
 
     @Test
@@ -272,8 +286,14 @@ public class WearableDrawerLayoutEspressoTest {
                 new DrawerTestActivity.Builder()
                         .setStyle(DrawerStyle.ONLY_ACTION_DRAWER_WITH_TITLE)
                         .build());
-        // THEN the drawer content view should not exist
+
+        final RecyclerView actionList =
+                activityRule.getActivity().findViewById(R.id.action_list);
+
+        // THEN the drawer should not be visible and the draw action list should not have an
+        // adapter set
         onView(allOf(withId(R.id.action_list), not(isDisplayed())));
+        assertNull(actionList.getAdapter());
     }
 
     @Test
@@ -325,10 +345,11 @@ public class WearableDrawerLayoutEspressoTest {
         WearableActionDrawerView actionDrawer =
                 (WearableActionDrawerView) activityRule.getActivity()
                         .findViewById(R.id.action_drawer);
+        RecyclerView recyclerView = (RecyclerView) actionDrawer.getDrawerContent();
 
         // WHEN the action drawer is opened and scrolled to the last item (Item 6)
         openDrawer(actionDrawer);
-        scrollToPosition(actionDrawer, 5);
+        scrollToPosition(recyclerView, 5);
         onView(withId(R.id.action_drawer))
                 .perform(
                         waitForMatchingView(allOf(withId(R.id.action_drawer), isOpened(true)),
@@ -499,11 +520,27 @@ public class WearableDrawerLayoutEspressoTest {
                 .perform(waitForMatchingView(withText("New Item"), MAX_WAIT_MS));
     }
 
-    private void scrollToPosition(final WearableActionDrawerView actionDrawer, final int position) {
-        actionDrawer.post(new Runnable() {
+    @Test
+    public void flingInHorizontalScrollerDoesNotPeekDrawers() {
+        // Note that this test uses a different activity to implement the list...
+        ActivityScenario<DrawerRecyclerViewTestActivity> scenario =
+                ActivityScenario.launch(DrawerRecyclerViewTestActivity.class);
+
+        // Nothing should be peeking
+        onView(withId(R.id.recycler_navigation_drawer)).check(matches(isPeeking(false)));
+
+        onView(withId(R.id.recycler)).perform(swipeLeft());
+        onView(withId(R.id.recycler)).perform(waitForRecyclerToSettle(MAX_WAIT_MS));
+
+        // Drawers should not be peeking...
+        onView(withId(R.id.recycler_navigation_drawer)).check(matches(isPeeking(false)));
+    }
+
+    private void scrollToPosition(final RecyclerView recyclerView, final int position) {
+        recyclerView.post(new Runnable() {
             @Override
             public void run() {
-                ((RecyclerView) actionDrawer.getDrawerContent()).scrollToPosition(position);
+                recyclerView.scrollToPosition(position);
             }
         });
     }
@@ -565,11 +602,15 @@ public class WearableDrawerLayoutEspressoTest {
     }
 
     private TypeSafeMatcher<View> isPeeking() {
+        return isPeeking(true);
+    }
+
+    private TypeSafeMatcher<View> isPeeking(boolean peeking) {
         return new TypeSafeMatcher<View>() {
             @Override
             protected boolean matchesSafely(View view) {
                 WearableDrawerView drawer = (WearableDrawerView) view;
-                return drawer.isPeeking();
+                return drawer.isPeeking() == peeking;
             }
 
             @Override
@@ -678,10 +719,50 @@ public class WearableDrawerLayoutEspressoTest {
         };
     }
 
+    public ViewAction waitForRecyclerToSettle(final long millis) {
+        return new ViewAction() {
+            @Override
+            public Matcher<View> getConstraints() {
+                return isAssignableFrom(RecyclerView.class);
+            }
+
+            @Override
+            public String getDescription() {
+                return "Waiting for Recycler ScrollState to be SCROLL_STATE_IDLE";
+            }
+
+            @Override
+            public void perform(UiController uiController, View view) {
+                if (!(view instanceof RecyclerView)) {
+                    return;
+                }
+
+                RecyclerView recycler = (RecyclerView) view;
+                uiController.loopMainThreadUntilIdle();
+                final long startTime = System.currentTimeMillis();
+                final long endTime = startTime + millis;
+                do {
+                    if (recycler.getScrollState() == RecyclerView.SCROLL_STATE_IDLE) {
+                        return;
+                    }
+                    uiController.loopMainThreadForAtLeast(100); // at least 3 frames
+                } while (System.currentTimeMillis() < endTime);
+
+                // timeout happens
+                throw new PerformException.Builder()
+                        .withActionDescription(this.getDescription())
+                        .withViewDescription(HumanReadables.describe(view))
+                        .withCause(new TimeoutException())
+                        .build();
+            }
+        };
+    }
+
     /**
      * Returns the first child of {@code root} to be an instance of class {@code T}, or {@code null}
      * if none were found.
      */
+    @SuppressWarnings("unchecked")
     @Nullable
     private <T> T getChildByType(View root, Class<T> classOfChildToFind) {
         for (View child : TreeIterables.breadthFirstViewTraversal(root)) {

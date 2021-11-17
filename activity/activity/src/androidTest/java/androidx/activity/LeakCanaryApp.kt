@@ -16,18 +16,20 @@
 
 package androidx.activity
 
-import android.app.Application
+import androidx.multidex.MultiDexApplication
 import leakcanary.LeakCanary
 import shark.AndroidReferenceMatchers
 import shark.ReferenceMatcher
 
-class LeakCanaryApp : Application() {
+class LeakCanaryApp : MultiDexApplication() {
     override fun onCreate() {
         super.onCreate()
         @Suppress("UNCHECKED_CAST")
         LeakCanary.config = LeakCanary.config.copy(
-            referenceMatchers = (AndroidReferenceMatchers.appDefaults - AndroidReferenceMatchers
-                .INPUT_METHOD_MANAGER_IS_TERRIBLE) as List<ReferenceMatcher>
+            referenceMatchers = (
+                AndroidReferenceMatchers.appDefaults - AndroidReferenceMatchers
+                    .INPUT_METHOD_MANAGER_IS_TERRIBLE
+                ) as List<ReferenceMatcher>
         )
     }
 }

@@ -1,12 +1,13 @@
 #!/bin/bash
 set -e
 
+echo "Starting $0 at $(date)"
+
 cd "$(dirname $0)"
 
-impl/build.sh --no-daemon test jacocoTestReport zipEcFiles --offline \
-    -Pandroidx.enableAffectedModuleDetection \
+impl/build.sh test \
     -Pandroidx.ignoreTestFailures \
-    -Pandroidx.coverageEnabled=true \
-    -Pandroidx.allWarningsAsErrors "$@"
+    -Pandroidx.displayTestOutput=false \
+    "$@"
 
-python3 impl/merge_outputs.py mergeExecutionData
+echo "Completing $0 at $(date)"

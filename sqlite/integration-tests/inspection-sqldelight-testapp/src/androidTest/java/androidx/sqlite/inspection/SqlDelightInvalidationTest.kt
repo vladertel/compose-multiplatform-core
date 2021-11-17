@@ -17,10 +17,10 @@
 package androidx.sqlite.inspection
 
 import android.database.sqlite.SQLiteDatabase
-import androidx.inspection.Connection
-import androidx.inspection.InspectorEnvironment
-import androidx.inspection.InspectorFactory
+import androidx.inspection.ArtTooling
+import androidx.inspection.testing.DefaultTestInspectorEnvironment
 import androidx.inspection.testing.InspectorTester
+import androidx.inspection.testing.TestInspectorExecutors
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Command
 import androidx.sqlite.inspection.SqliteInspectorProtocol.QueryCommand
@@ -38,6 +38,7 @@ import com.squareup.sqldelight.runtime.coroutines.asFlow
 import com.squareup.sqldelight.runtime.coroutines.mapToList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.runBlocking
@@ -45,7 +46,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.Executors
 
 @ExperimentalCoroutinesApi
 @RunWith(AndroidJUnit4::class)
@@ -65,7 +65,8 @@ class SqlDelightInvalidationTest {
                     openedDb = db
                     super.onCreate(db)
                 }
-            })
+            }
+        )
     }
 
     @Test
@@ -75,7 +76,15 @@ class SqlDelightInvalidationTest {
             dao.insertOrReplace("one")
             val sqliteDb = openedDb.getSqliteDb()
             val query = dao.selectAll()
-            val tester = sqliteInspectorTester(TestInspectorEnvironment(sqliteDb, listOf(query)))
+            val job = this.coroutineContext[Job]!!
+            val tester = InspectorTester(
+                inspectorId = "androidx.sqlite.inspection",
+                environment =
+                    DefaultTestInspectorEnvironment(
+                        TestInspectorExecutors(job),
+                        TestArtTooling(sqliteDb, listOf(query))
+                    )
+            )
             val updates = query.asFlow().mapToList().take(2).produceIn(this)
 
             val firstExpected = TestEntity.Impl(1, "one")
@@ -128,33 +137,15 @@ private fun SupportSQLiteDatabase.getSqliteDb(): SQLiteDatabase {
     } as SQLiteDatabase
 }
 
-suspend fun sqliteInspectorTester(environment: InspectorEnvironment) = InspectorTester(
-    inspectorId = "test",
-    environment = environment,
-    factoryOverride = object : InspectorFactory<SqliteInspector>("test") {
-        override fun createInspector(
-            connection: Connection,
-            environment: InspectorEnvironment
-        ): SqliteInspector {
-            return SqliteInspector(
-                connection,
-                environment,
-                Executors.newSingleThreadExecutor(),
-                Executors.newSingleThreadScheduledExecutor()
-            )
-        }
-    }
-)
-
 @Suppress("UNCHECKED_CAST")
-class TestInspectorEnvironment(
+class TestArtTooling(
     private val sqliteDb: SQLiteDatabase,
     private val queries: List<Query<*>>
-) : InspectorEnvironment {
+) : ArtTooling {
     override fun registerEntryHook(
         originClass: Class<*>,
         originMethod: String,
-        entryHook: InspectorEnvironment.EntryHook
+        entryHook: ArtTooling.EntryHook
     ) {
         // no-op
     }
@@ -171,7 +162,7 @@ class TestInspectorEnvironment(
     override fun <T : Any?> registerExitHook(
         originClass: Class<*>,
         originMethod: String,
-        exitHook: InspectorEnvironment.ExitHook<T>
+        exitHook: ArtTooling.ExitHook<T>
     ) {
         // no-op
     }

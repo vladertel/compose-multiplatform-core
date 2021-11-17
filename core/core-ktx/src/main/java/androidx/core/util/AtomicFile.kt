@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+@file:SuppressLint("ClassVerificationFailure") // Entire file is RequiresApi(17)
 @file:Suppress("NOTHING_TO_INLINE") // Aliases to other public API.
 
 package androidx.core.util
 
+import android.annotation.SuppressLint
 import android.util.AtomicFile
 import androidx.annotation.RequiresApi
 import java.io.FileOutputStream
@@ -28,7 +30,7 @@ import java.nio.charset.Charset
  * write will be failed. Otherwise the write will be applied atomically to the file.
  */
 @RequiresApi(17)
-inline fun AtomicFile.tryWrite(block: (out: FileOutputStream) -> Unit) {
+public inline fun AtomicFile.tryWrite(block: (out: FileOutputStream) -> Unit) {
     val stream = startWrite()
     var success = false
     try {
@@ -47,7 +49,7 @@ inline fun AtomicFile.tryWrite(block: (out: FileOutputStream) -> Unit) {
  * Sets the content of this file as an [array] of bytes.
  */
 @RequiresApi(17)
-fun AtomicFile.writeBytes(array: ByteArray) {
+public fun AtomicFile.writeBytes(array: ByteArray) {
     tryWrite {
         it.write(array)
     }
@@ -58,7 +60,7 @@ fun AtomicFile.writeBytes(array: ByteArray) {
  * If this file exists, it becomes overwritten.
  */
 @RequiresApi(17)
-fun AtomicFile.writeText(text: String, charset: Charset = Charsets.UTF_8) {
+public fun AtomicFile.writeText(text: String, charset: Charset = Charsets.UTF_8) {
     writeBytes(text.toByteArray(charset))
 }
 
@@ -68,7 +70,7 @@ fun AtomicFile.writeText(text: String, charset: Charset = Charsets.UTF_8) {
  * This method is not recommended on huge files. It has an internal limitation of 2 GB file size.
  */
 @RequiresApi(17)
-inline fun AtomicFile.readBytes(): ByteArray = readFully()
+public inline fun AtomicFile.readBytes(): ByteArray = readFully()
 
 /**
  * Gets the entire content of this file as a String using UTF-8 or specified [charset].
@@ -76,6 +78,6 @@ inline fun AtomicFile.readBytes(): ByteArray = readFully()
  * This method is not recommended on huge files. It has an internal limitation of 2 GB file size.
  */
 @RequiresApi(17)
-fun AtomicFile.readText(charset: Charset = Charsets.UTF_8): String {
+public fun AtomicFile.readText(charset: Charset = Charsets.UTF_8): String {
     return readFully().toString(charset)
 }

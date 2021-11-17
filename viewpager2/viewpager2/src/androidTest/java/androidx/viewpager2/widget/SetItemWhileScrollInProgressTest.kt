@@ -195,7 +195,7 @@ class SetItemWhileScrollInProgressTest(private val config: TestConfig) : BaseTes
         val stateEvents get() = events.mapNotNull { it as? OnPageScrollStateChangedEvent }
         val lastEvent get() = events.last()
         val lastState get() = events.findLast { it is OnPageScrollStateChangedEvent }
-                as? OnPageScrollStateChangedEvent
+            as? OnPageScrollStateChangedEvent
         val lastScroll get() = events.findLast { it is OnPageScrolledEvent } as? OnPageScrolledEvent
         val lastSelect get() = events.findLast { it is OnPageSelectedEvent } as? OnPageSelectedEvent
         val draggingIx get() = events.indexOf(OnPageScrollStateChangedEvent(SCROLL_STATE_DRAGGING))
@@ -225,8 +225,8 @@ class SetItemWhileScrollInProgressTest(private val config: TestConfig) : BaseTes
 
     private val RecordingCallback.isTestFinished get() = synchronized(events) {
         lastState?.state == 0 &&
-                lastSelect?.position == lastScroll?.position &&
-                lastScroll?.positionOffsetPixels == 0
+            lastSelect?.position == lastScroll?.position &&
+            lastScroll?.positionOffsetPixels == 0
     }
 
     private fun RecordingCallback.assertPageSelectedEventFired(targetPage: Int) {
@@ -262,6 +262,9 @@ class SetItemWhileScrollInProgressTest(private val config: TestConfig) : BaseTes
                         currentPosition, isBetweenInInMinMax(prevPosition, target.toDouble())
                     )
                     prevPosition = currentPosition
+                }
+                is OnPageScrollStateChangedEvent -> {
+                    // Nothing
                 }
             }
         }
@@ -354,9 +357,9 @@ private fun createTestSet(orientation: Int): List<TestConfig> {
             instantScrolls = setOf(1)
         )
     )
-    .plus(
-        List(RANDOM_TESTS_PER_CONFIG) { createRandomTest(orientation) }
-    )
+        .plus(
+            List(RANDOM_TESTS_PER_CONFIG) { createRandomTest(orientation) }
+        )
     // To rerun a failed random test, lookup the seed and the orientation of the test in the test
     // output, give it a name and add the following code to createTestSet():
     //   .plus(listOf(

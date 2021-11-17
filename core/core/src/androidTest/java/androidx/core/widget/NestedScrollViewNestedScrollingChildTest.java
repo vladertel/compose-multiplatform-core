@@ -83,6 +83,7 @@ public class NestedScrollViewNestedScrollingChildTest {
         mNestedScrollView = new NestedScrollView(ApplicationProvider.getApplicationContext());
         mNestedScrollView.setMinimumWidth(1000);
         mNestedScrollView.setMinimumHeight(1000);
+        mNestedScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
         mParentSpy = Mockito.spy(
                 new NestedScrollingSpyView(ApplicationProvider.getApplicationContext()));
@@ -346,7 +347,7 @@ public class NestedScrollViewNestedScrollingChildTest {
         SimpleGestureGeneratorKt
                 .dispatchTouchEvents(mNestedScrollView, firstDownTime, motionEventData);
 
-        // Sanity check that onStopNestedScroll has not yet been called of type TYPE_NON_TOUCH.
+        // Check that onStopNestedScroll has not yet been called with the type TYPE_NON_TOUCH.
         verify(mParentSpy, never())
                 .onStopNestedScroll(mNestedScrollView, ViewCompat.TYPE_NON_TOUCH);
 

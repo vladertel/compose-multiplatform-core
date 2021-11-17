@@ -16,6 +16,7 @@
 
 package com.android.tools.build.jetifier.standalone
 
+import com.android.tools.build.jetifier.processor.TimestampsPolicy
 import com.android.tools.build.jetifier.processor.archive.Archive
 import com.android.tools.build.jetifier.processor.archive.ArchiveFile
 import com.android.tools.build.jetifier.processor.archive.ArchiveItemVisitor
@@ -43,7 +44,7 @@ class TopOfTreeBuilder {
 
         // Find archives
         val archivesFilter = FileFilter({
-                return@FileFilter it.fileName.endsWith(".aar") || it.fileName.endsWith("jar")
+            return@FileFilter it.fileName.endsWith(".aar") || it.fileName.endsWith("jar")
         })
         archive.accept(archivesFilter)
         val libFiles = archivesFilter.files
@@ -51,24 +52,27 @@ class TopOfTreeBuilder {
         // Process
         val newFiles = mutableSetOf<ArchiveFile>()
         pomFiles.forEach {
-            pomFile -> run {
+            pomFile ->
+            run {
                 val name = pomFile.relativePath.toFile().nameWithoutExtension
                 val nameAar = name + ".aar"
                 val nameJar = name + ".jar"
-                val artifactFile = libFiles.first {
+                val artifactFile = libFiles.firstOrNull {
                     it.fileName == nameAar || it.fileName == nameJar
                 }
                 val nameSources = name + "-sources.jar"
-                val sourcesFile = libFiles.first {
+                val sourcesFile = libFiles.firstOrNull {
                     it.fileName == nameSources
                 }
-                process(pomFile, artifactFile, sourcesFile, newFiles)
+                if (artifactFile != null && sourcesFile != null) {
+                    process(pomFile, artifactFile, sourcesFile, newFiles)
+                }
             }
         }
 
         // Write the result
         val finalArchive = Archive(outputZip.toPath(), newFiles.toList())
-        finalArchive.writeSelf()
+        finalArchive.writeSelf(TimestampsPolicy.KEEP_PREVIOUS)
     }
 
     private fun process(
@@ -109,8 +113,12 @@ class TopOfTreeBuilder {
     private fun getHashFileOf(file: ArchiveFile, hashType: String): ArchiveFile {
         val md = MessageDigest.getInstance(hashType)
         val result = md.digest(file.data)
-        return ArchiveFile(Paths.get(
-            file.relativePath.toString() + "." + hashType.toLowerCase()), result)
+        return ArchiveFile(
+            Paths.get(
+                file.relativePath.toString() + "." + hashType.lowercase()
+            ),
+            result
+        )
     }
 
     private class FileFilter(private val filter: (ArchiveFile) -> Boolean) : ArchiveItemVisitor {

@@ -16,32 +16,54 @@
 
 package androidx.camera.testing.fakes;
 
-import androidx.annotation.Nullable;
+import android.graphics.Matrix;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageInfo;
+import androidx.camera.core.impl.MutableTagBundle;
+import androidx.camera.core.impl.TagBundle;
+import androidx.camera.core.impl.utils.ExifData;
 
 /**
  * A fake implementation of {@link ImageInfo} where the values are settable.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class FakeImageInfo implements ImageInfo {
-    private Object mTag;
+    @NonNull private MutableTagBundle mTagBundle = MutableTagBundle.create();
+    @NonNull private Matrix mSensorToBufferTransformMatrix = new Matrix();
+
     private long mTimestamp;
     private int mRotationDegrees;
 
-    public void setTag(Object tag) {
-        mTag = tag;
+    /** set tag to a TagBundle */
+    public void setTag(@NonNull String key, @NonNull Integer tag) {
+        mTagBundle.putTag(key, tag);
     }
+
+    /** set tag to a TagBundle */
+    public void setTag(@NonNull TagBundle tagBundle) {
+        mTagBundle.addTagBundle(tagBundle);
+    }
+
     public void setTimestamp(long timestamp) {
         mTimestamp = timestamp;
     }
+
     public void setRotationDegrees(int rotationDegrees) {
         mRotationDegrees = rotationDegrees;
     }
 
-    @Override
-    @Nullable
-    public Object getTag() {
-        return mTag;
+    public void setSensorToBufferTransformMatrix(@NonNull Matrix sensorToBufferTransformMatrix) {
+        mSensorToBufferTransformMatrix = sensorToBufferTransformMatrix;
     }
+
+    @NonNull
+    @Override
+    public TagBundle getTagBundle() {
+        return mTagBundle;
+    }
+
     @Override
     public long getTimestamp() {
         return mTimestamp;
@@ -50,5 +72,16 @@ public final class FakeImageInfo implements ImageInfo {
     @Override
     public int getRotationDegrees() {
         return mRotationDegrees;
+    }
+
+    @NonNull
+    @Override
+    public Matrix getSensorToBufferTransformMatrix() {
+        return mSensorToBufferTransformMatrix;
+    }
+
+    @Override
+    public void populateExifData(@NonNull ExifData.Builder exifBuilder) {
+        exifBuilder.setOrientationDegrees(mRotationDegrees);
     }
 }

@@ -28,7 +28,7 @@ import androidx.core.app.ActivityOptionsCompat
  *
  * @see ActivityResultCaller.registerForActivityResult
  */
-fun <I, O> ActivityResultCaller.registerForActivityResult(
+public fun <I, O> ActivityResultCaller.registerForActivityResult(
     contract: ActivityResultContract<I, O>,
     input: I,
     registry: ActivityResultRegistry,
@@ -45,7 +45,7 @@ fun <I, O> ActivityResultCaller.registerForActivityResult(
  *
  * @see ActivityResultCaller.registerForActivityResult
  */
-fun <I, O> ActivityResultCaller.registerForActivityResult(
+public fun <I, O> ActivityResultCaller.registerForActivityResult(
     contract: ActivityResultContract<I, O>,
     input: I,
     callback: (O) -> Unit
@@ -57,12 +57,12 @@ fun <I, O> ActivityResultCaller.registerForActivityResult(
 internal class ActivityResultCallerLauncher<I, O>(
     val launcher: ActivityResultLauncher<I>,
     val callerContract: ActivityResultContract<I, O>,
-    val input: I
+    val callerInput: I
 ) : ActivityResultLauncher<Unit>() {
     val resultContract: ActivityResultContract<Unit, O> by lazy {
         object : ActivityResultContract<Unit, O>() {
-            override fun createIntent(context: Context, void: Unit?): Intent {
-                return callerContract.createIntent(context, input)
+            override fun createIntent(context: Context, input: Unit): Intent {
+                return callerContract.createIntent(context, callerInput)
             }
 
             override fun parseResult(resultCode: Int, intent: Intent?): O {
@@ -71,8 +71,8 @@ internal class ActivityResultCallerLauncher<I, O>(
         }
     }
 
-    override fun launch(void: Unit?, options: ActivityOptionsCompat?) {
-        launcher.launch(input, options)
+    override fun launch(input: Unit, options: ActivityOptionsCompat?) {
+        launcher.launch(callerInput, options)
     }
 
     override fun unregister() {

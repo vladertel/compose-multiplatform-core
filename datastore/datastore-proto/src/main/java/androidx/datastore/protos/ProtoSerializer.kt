@@ -16,8 +16,8 @@
 
 package androidx.datastore.protos
 
-import androidx.datastore.CorruptionException
-import androidx.datastore.Serializer
+import androidx.datastore.core.CorruptionException
+import androidx.datastore.core.Serializer
 import com.google.protobuf.ExtensionRegistryLite
 import com.google.protobuf.InvalidProtocolBufferException
 import com.google.protobuf.MessageLite
@@ -35,10 +35,8 @@ internal class ProtoSerializer<T : MessageLite>(
     private val extensionRegistryLite: ExtensionRegistryLite
 ) : Serializer<T> {
 
-    override val fileExtension = "pb"
-
     @Suppress("UNCHECKED_CAST")
-    override fun readFrom(input: InputStream): T {
+    override suspend fun readFrom(input: InputStream): T {
         try {
             return defaultValue.parserForType.parseFrom(input, extensionRegistryLite) as T
         } catch (invalidProtocolBufferException: InvalidProtocolBufferException) {
@@ -48,7 +46,7 @@ internal class ProtoSerializer<T : MessageLite>(
         }
     }
 
-    override fun writeTo(t: T, output: OutputStream) {
+    override suspend fun writeTo(t: T, output: OutputStream) {
         t.writeTo(output)
     }
 }

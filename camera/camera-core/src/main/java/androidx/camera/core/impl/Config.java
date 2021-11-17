@@ -18,6 +18,7 @@ package androidx.camera.core.impl;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import com.google.auto.value.AutoValue;
 
@@ -35,6 +36,7 @@ import java.util.Set;
  * {@link Config#retrieveOptionWithPriority} and {@link Config#getPriorities} can be used to
  * retrieve option value of specified priority.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface Config {
 
     /**
@@ -288,5 +290,44 @@ public interface Config {
         }
 
         return false;
+    }
+
+    /**
+     * Merges two configs
+     *
+     * @param extendedConfig the extended config. The options in the extendedConfig will be applied
+     *                       on top of the baseConfig based on the option priorities.
+     * @param baseConfig the base config
+     * @return a {@link MutableOptionsBundle} of the merged config
+     */
+    @NonNull
+    static Config mergeConfigs(@Nullable Config extendedConfig,
+            @Nullable Config baseConfig) {
+        if (extendedConfig == null && baseConfig == null) {
+            return OptionsBundle.emptyBundle();
+        }
+
+        MutableOptionsBundle mergedConfig;
+
+        if (baseConfig != null) {
+            mergedConfig = MutableOptionsBundle.from(baseConfig);
+        } else {
+            mergedConfig = MutableOptionsBundle.create();
+        }
+
+        if (extendedConfig != null) {
+            // If any options need special handling, this is the place to do it. For now we'll
+            // just copy over all options.
+            for (Config.Option<?> opt : extendedConfig.listOptions()) {
+                @SuppressWarnings("unchecked") // Options/values are being copied directly
+                        Config.Option<Object> objectOpt = (Config.Option<Object>) opt;
+
+                mergedConfig.insertOption(objectOpt,
+                        extendedConfig.getOptionPriority(opt),
+                        extendedConfig.retrieveOption(objectOpt));
+            }
+        }
+
+        return OptionsBundle.from(mergedConfig);
     }
 }

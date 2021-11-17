@@ -17,8 +17,10 @@
 package androidx.fragment.app
 
 import android.animation.Animator
+import android.animation.AnimatorInflater
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
+import android.content.res.Resources
 import android.os.Build
 import android.view.View
 import androidx.annotation.AnimatorRes
@@ -31,7 +33,6 @@ import androidx.lifecycle.ViewModelStore
 import androidx.test.annotation.UiThreadTest
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
-import androidx.test.rule.ActivityTestRule
 import androidx.testutils.waitForExecution
 import com.google.common.truth.Truth.assertThat
 import org.junit.Before
@@ -45,8 +46,9 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class FragmentAnimatorTest {
 
+    @Suppress("DEPRECATION")
     @get:Rule
-    var activityRule = ActivityTestRule(FragmentTestActivity::class.java)
+    var activityRule = androidx.test.rule.ActivityTestRule(FragmentTestActivity::class.java)
 
     @Before
     fun setupContainer() {
@@ -69,6 +71,44 @@ class FragmentAnimatorTest {
         activityRule.waitForExecution()
 
         assertEnterPopExit(fragment)
+    }
+
+    // Ensure Fragments using default transits make it to resumed
+    @Test
+    fun defaultTransitionAddReorderedTrue() {
+        val fm = activityRule.activity.supportFragmentManager
+
+        val fragment = AnimatorFragment()
+        fm.beginTransaction()
+            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+            .add(R.id.fragmentContainer, fragment)
+            .addToBackStack(null)
+            .setReorderingAllowed(true)
+            .commit()
+        activityRule.waitForExecution()
+
+        assertThat(fragment.resumeLatch.await(1000, TimeUnit.MILLISECONDS)).isTrue()
+        assertThat(fragment.mView.visibility).isEqualTo(View.VISIBLE)
+        assertThat(fragment.mView.alpha).isEqualTo(1f)
+    }
+
+    // Ensure Fragments using default transits make it to resumed
+    @Test
+    fun defaultTransitionAddReorderedFalse() {
+        val fm = activityRule.activity.supportFragmentManager
+
+        val fragment = AnimatorFragment()
+        fm.beginTransaction()
+            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+            .add(R.id.fragmentContainer, fragment)
+            .addToBackStack(null)
+            .setReorderingAllowed(false)
+            .commit()
+        activityRule.waitForExecution()
+
+        assertThat(fragment.resumeLatch.await(1000, TimeUnit.MILLISECONDS)).isTrue()
+        assertThat(fragment.mView.visibility).isEqualTo(View.VISIBLE)
+        assertThat(fragment.mView.alpha).isEqualTo(1f)
     }
 
     // Ensure that removing and popping a Fragment uses the exit and popEnter animators
@@ -480,8 +520,11 @@ class FragmentAnimatorTest {
         assertThat(fragment2.isAdded).isFalse()
         assertThat(fm1.findFragmentByTag("2"))
             .isEqualTo(null) // fragmentManager does not know about animating fragment
-        assertThat(fragment2.parentFragmentManager)
-            .isEqualTo(fm1) // but the animating fragment knows the fragmentManager
+        // Only do this check if the animator is still going.
+        if (fragment2.endLatch.count == 1L) {
+            assertThat(fragment2.parentFragmentManager)
+                .isEqualTo(fm1) // but the animating fragment knows the fragmentManager
+        }
 
         val fc2 = fc1.restart(activityRule, viewModelStore)
 
@@ -526,9 +569,9 @@ class FragmentAnimatorTest {
         // ensure the animation was started
         assertThat(fragment2.wasStarted).isTrue()
 
-        fc1.dispatchDestroy()
+        fc1.shutdown(viewModelStore)
 
-        assertThat(fragment2.endLatch.await(1000, TimeUnit.MILLISECONDS)).isFalse()
+        assertThat(fragment2.endLatch.await(1000, TimeUnit.MILLISECONDS)).isTrue()
     }
 
     // Ensures that when a Fragment that is animating away gets readded the state is properly
@@ -649,32 +692,50 @@ class FragmentAnimatorTest {
         var resourceId: Int = 0
         var wasStarted: Boolean = false
         lateinit var endLatch: CountDownLatch
+        var resumeLatch = CountDownLatch(1)
         var initialized: Boolean = false
 
         override fun onCreateAnimator(
             transit: Int,
             enter: Boolean,
             nextAnim: Int
-        ) = ValueAnimator.ofFloat(0f, 1f).setDuration(1)?.apply {
+        ): Animator? {
             if (nextAnim == 0) {
                 return null
             }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationStart(animation: Animator) {
-                    wasStarted = true
-                }
 
-                override fun onAnimationEnd(animation: Animator) {
-                    endLatch.countDown()
-                }
-            })
-            numAnimators++
-            wasStarted = false
-            endLatch = CountDownLatch(1)
-            resourceId = nextAnim
-            baseEnter = enter
-            baseAnimator = this
-            initialized = true
+            var animator: Animator? = null
+            try {
+                animator = AnimatorInflater.loadAnimator(context, nextAnim)
+            } catch (e: Resources.NotFoundException) { }
+
+            if (animator == null) {
+                animator = ValueAnimator.ofFloat(0f, 1f).setDuration(1)
+            }
+
+            return animator?.apply {
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationStart(animation: Animator) {
+                        wasStarted = true
+                    }
+
+                    override fun onAnimationEnd(animation: Animator) {
+                        endLatch.countDown()
+                    }
+                })
+                numAnimators++
+                wasStarted = false
+                endLatch = CountDownLatch(1)
+                resourceId = nextAnim
+                baseEnter = enter
+                baseAnimator = this
+                initialized = true
+            }
+        }
+
+        override fun onResume() {
+            super.onResume()
+            resumeLatch.countDown()
         }
     }
 

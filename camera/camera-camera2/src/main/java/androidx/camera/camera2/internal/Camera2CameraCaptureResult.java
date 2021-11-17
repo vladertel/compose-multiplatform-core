@@ -16,30 +16,41 @@
 
 package androidx.camera.camera2.internal;
 
+import android.graphics.Rect;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureResult;
-import android.util.Log;
+import android.os.Build;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.camera.core.Logger;
 import androidx.camera.core.impl.CameraCaptureMetaData.AeState;
 import androidx.camera.core.impl.CameraCaptureMetaData.AfMode;
 import androidx.camera.core.impl.CameraCaptureMetaData.AfState;
 import androidx.camera.core.impl.CameraCaptureMetaData.AwbState;
 import androidx.camera.core.impl.CameraCaptureMetaData.FlashState;
 import androidx.camera.core.impl.CameraCaptureResult;
+import androidx.camera.core.impl.TagBundle;
+import androidx.camera.core.impl.utils.ExifData;
 
 /** The camera2 implementation for the capture result of a single image capture. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class Camera2CameraCaptureResult implements CameraCaptureResult {
     private static final String TAG = "C2CameraCaptureResult";
 
-    private final Object mTag;
+    private final TagBundle mTagBundle;
 
     /** The actual camera2 {@link CaptureResult}. */
     private final CaptureResult mCaptureResult;
 
-    public Camera2CameraCaptureResult(@Nullable Object tag, @NonNull CaptureResult captureResult) {
-        mTag = tag;
+    public Camera2CameraCaptureResult(@NonNull TagBundle tagBundle,
+            @NonNull CaptureResult captureResult) {
+        mTagBundle = tagBundle;
         mCaptureResult = captureResult;
+    }
+
+    public Camera2CameraCaptureResult(@NonNull CaptureResult captureResult) {
+        this(TagBundle.emptyBundle(), captureResult);
     }
 
     /**
@@ -66,7 +77,7 @@ public class Camera2CameraCaptureResult implements CameraCaptureResult {
                 return AfMode.ON_CONTINUOUS_AUTO;
             default: // fall out
         }
-        Log.e(TAG, "Undefined af mode: " + mode);
+        Logger.e(TAG, "Undefined af mode: " + mode);
         return AfMode.UNKNOWN;
     }
 
@@ -87,17 +98,19 @@ public class Camera2CameraCaptureResult implements CameraCaptureResult {
                 return AfState.INACTIVE;
             case CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN:
             case CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN:
-            case CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED:
                 return AfState.SCANNING;
             case CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED:
                 return AfState.LOCKED_FOCUSED;
             case CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED:
                 return AfState.LOCKED_NOT_FOCUSED;
+            case CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED:
+                return AfState.PASSIVE_NOT_FOCUSED;
             case CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED:
-                return AfState.FOCUSED;
+                return AfState.PASSIVE_FOCUSED;
+
             default: // fall out
         }
-        Log.e(TAG, "Undefined af state: " + state);
+        Logger.e(TAG, "Undefined af state: " + state);
         return AfState.UNKNOWN;
     }
 
@@ -127,7 +140,7 @@ public class Camera2CameraCaptureResult implements CameraCaptureResult {
                 return AeState.LOCKED;
             default: // fall out
         }
-        Log.e(TAG, "Undefined ae state: " + state);
+        Logger.e(TAG, "Undefined ae state: " + state);
         return AeState.UNKNOWN;
     }
 
@@ -154,7 +167,7 @@ public class Camera2CameraCaptureResult implements CameraCaptureResult {
                 return AwbState.LOCKED;
             default: // fall out
         }
-        Log.e(TAG, "Undefined awb state: " + state);
+        Logger.e(TAG, "Undefined awb state: " + state);
         return AwbState.UNKNOWN;
     }
 
@@ -181,7 +194,7 @@ public class Camera2CameraCaptureResult implements CameraCaptureResult {
                 return FlashState.FIRED;
             default: // fall out
         }
-        Log.e(TAG, "Undefined flash state: " + state);
+        Logger.e(TAG, "Undefined flash state: " + state);
         return FlashState.UNKNOWN;
     }
 
@@ -196,10 +209,70 @@ public class Camera2CameraCaptureResult implements CameraCaptureResult {
         return timestamp;
     }
 
-    @Nullable
+    @NonNull
     @Override
-    public Object getTag() {
-        return mTag;
+    public TagBundle getTagBundle() {
+        return mTagBundle;
+    }
+
+    @Override
+    public void populateExifData(@NonNull ExifData.Builder exifData) {
+        // Call interface default to set flash mode
+        CameraCaptureResult.super.populateExifData(exifData);
+
+        // Set dimensions
+        Rect cropRegion = mCaptureResult.get(CaptureResult.SCALER_CROP_REGION);
+        if (cropRegion != null) {
+            exifData.setImageWidth(cropRegion.width())
+                    .setImageHeight(cropRegion.height());
+        }
+
+        // Set orientation
+        Integer jpegOrientation = mCaptureResult.get(CaptureResult.JPEG_ORIENTATION);
+        if (jpegOrientation != null) {
+            exifData.setOrientationDegrees(jpegOrientation);
+        }
+
+        // Set exposure time
+        Long exposureTimeNs = mCaptureResult.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+        if (exposureTimeNs != null) {
+            exifData.setExposureTimeNanos(exposureTimeNs);
+        }
+
+        // Set the aperture
+        Float aperture = mCaptureResult.get(CaptureResult.LENS_APERTURE);
+        if (aperture != null) {
+            exifData.setLensFNumber(aperture);
+        }
+
+        // Set the ISO
+        Integer iso = mCaptureResult.get(CaptureResult.SENSOR_SENSITIVITY);
+        if (iso != null) {
+            if (Build.VERSION.SDK_INT >= 24) {
+                Integer postRawSensitivityBoost =
+                        mCaptureResult.get(CaptureResult.CONTROL_POST_RAW_SENSITIVITY_BOOST);
+                if (postRawSensitivityBoost != null) {
+                    iso *= (int) (postRawSensitivityBoost / 100f);
+                }
+            }
+            exifData.setIso(iso);
+        }
+
+        // Set the focal length
+        Float focalLength = mCaptureResult.get(CaptureResult.LENS_FOCAL_LENGTH);
+        if (focalLength != null) {
+            exifData.setFocalLength(focalLength);
+        }
+
+        // Set white balance MANUAL/AUTO
+        Integer whiteBalanceMode = mCaptureResult.get(CaptureResult.CONTROL_AWB_MODE);
+        if (whiteBalanceMode != null) {
+            ExifData.WhiteBalanceMode wbMode = ExifData.WhiteBalanceMode.AUTO;
+            if (whiteBalanceMode == CameraMetadata.CONTROL_AWB_MODE_OFF) {
+                wbMode = ExifData.WhiteBalanceMode.MANUAL;
+            }
+            exifData.setWhiteBalanceMode(wbMode);
+        }
     }
 
     @NonNull

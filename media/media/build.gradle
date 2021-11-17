@@ -1,4 +1,19 @@
-import static androidx.build.dependencies.DependenciesKt.*
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import androidx.build.LibraryGroups
 import androidx.build.LibraryVersions
 import androidx.build.Publish
@@ -9,26 +24,30 @@ plugins {
 }
 
 dependencies {
-    api("androidx.core:core:1.1.0")
-    implementation("androidx.collection:collection:1.0.0")
+    api("androidx.core:core:1.6.0")
+    implementation("androidx.annotation:annotation:1.2.0")
+    implementation("androidx.collection:collection:1.1.0")
 
-    androidTestImplementation(ANDROIDX_TEST_EXT_JUNIT)
-    androidTestImplementation(ANDROIDX_TEST_CORE)
-    androidTestImplementation(ANDROIDX_TEST_RUNNER)
-    androidTestImplementation(ESPRESSO_CORE, libs.exclude_for_espresso)
-    androidTestImplementation project(':internal-testutils-runtime')
+    androidTestImplementation(libs.testExtJunit)
+    androidTestImplementation(libs.testCore)
+    androidTestImplementation(libs.testRunner)
+    androidTestImplementation(libs.espressoCore, excludes.espresso)
+    androidTestImplementation(project(":internal-testutils-runtime"))
     annotationProcessor(project(":versionedparcelable:versionedparcelable-compiler"))
 }
 
 android {
+    buildFeatures {
+        aidl = true
+    }
     sourceSets {
         main.java.srcDirs += [
         ]
-        main.res.srcDirs += 'src/main/res-public'
+        main.res.srcDirs += "src/main/res-public"
     }
 
     buildTypes.all {
-        consumerProguardFiles 'proguard-rules.pro'
+        consumerProguardFiles "proguard-rules.pro"
     }
 }
 

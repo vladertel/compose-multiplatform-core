@@ -16,13 +16,11 @@
 
 package androidx.camera.testing.fakes;
 
-import android.util.Rational;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.CameraDeviceSurfaceManager;
-import androidx.camera.core.impl.ImageOutputConfig;
 import androidx.camera.core.impl.SurfaceConfig;
 import androidx.camera.core.impl.UseCaseConfig;
 
@@ -31,10 +29,10 @@ import java.util.List;
 import java.util.Map;
 
 /** A CameraDeviceSurfaceManager which has no supported SurfaceConfigs. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class FakeCameraDeviceSurfaceManager implements CameraDeviceSurfaceManager {
 
     public static final Size MAX_OUTPUT_SIZE = new Size(4032, 3024); // 12.2 MP
-    private static final Size PREVIEW_SIZE = new Size(1920, 1080);
 
     private Map<String, Map<Class<? extends UseCaseConfig<?>>, Size>> mDefinedResolutions =
             new HashMap<>();
@@ -64,12 +62,6 @@ public final class FakeCameraDeviceSurfaceManager implements CameraDeviceSurface
         return null;
     }
 
-    @Nullable
-    @Override
-    public Size getMaxOutputSize(String cameraId, int imageFormat) {
-        return MAX_OUTPUT_SIZE;
-    }
-
     @Override
     @NonNull
     public Map<UseCaseConfig<?>, Size> getSuggestedResolutions(
@@ -92,22 +84,5 @@ public final class FakeCameraDeviceSurfaceManager implements CameraDeviceSurface
         }
 
         return suggestedSizes;
-    }
-
-    @Override
-    public Size getPreviewSize() {
-        return PREVIEW_SIZE;
-    }
-
-    @Override
-    public boolean requiresCorrectedAspectRatio(@NonNull String cameraId) {
-        return false;
-    }
-
-    @Nullable
-    @Override
-    public Rational getCorrectedAspectRatio(@NonNull String cameraId,
-            @ImageOutputConfig.RotationValue int rotation) {
-        return null;
     }
 }

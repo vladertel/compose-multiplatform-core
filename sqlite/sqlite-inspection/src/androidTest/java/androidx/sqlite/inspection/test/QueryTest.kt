@@ -19,6 +19,8 @@ package androidx.sqlite.inspection.test
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import androidx.sqlite.inspection.SqliteInspectorProtocol.CellValue
+import androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_ISSUE_WITH_PROCESSING_QUERY_VALUE
+import androidx.sqlite.inspection.SqliteInspectorProtocol.ErrorContent.ErrorCode.ERROR_NO_OPEN_DATABASE_WITH_REQUESTED_ID_VALUE
 import androidx.sqlite.inspection.SqliteInspectorProtocol.QueryResponse
 import androidx.sqlite.inspection.SqliteInspectorProtocol.Row
 import androidx.sqlite.inspection.test.MessageFactory.createGetSchemaCommand
@@ -122,10 +124,14 @@ class QueryTest {
                 assertThat(response.hasErrorOccurred()).isEqualTo(true)
                 val error = response.errorOccurred.content
                 assertThat(error.message).contains(
-                    "Unable to perform an operation on database (id=$databaseId).")
+                    "Unable to perform an operation on database (id=$databaseId)."
+                )
                 assertThat(error.message).contains("The database may have already been closed.")
                 assertThat(error.stackTrace).isEqualTo("")
                 assertThat(error.recoverability.isRecoverable).isEqualTo(true)
+                assertThat(error.errorCodeValue).isEqualTo(
+                    ERROR_NO_OPEN_DATABASE_WITH_REQUESTED_ID_VALUE
+                )
             }
     }
 
@@ -145,6 +151,7 @@ class QueryTest {
         assertThat(error.stackTrace).contains("SQLiteConnection.nativePrepareStatement")
         assertThat(error.stackTrace).contains("SQLiteDatabase.rawQueryWithFactory")
         assertThat(error.recoverability.isRecoverable).isEqualTo(true)
+        assertThat(error.errorCodeValue).isEqualTo(ERROR_ISSUE_WITH_PROCESSING_QUERY_VALUE)
     }
 
     @Test
@@ -163,6 +170,7 @@ class QueryTest {
         assertThat(error.stackTrace).contains("SQLiteDirectCursorDriver.query")
         assertThat(error.stackTrace).contains("SQLiteProgram.bind")
         assertThat(error.recoverability.isRecoverable).isEqualTo(true)
+        assertThat(error.errorCodeValue).isEqualTo(ERROR_ISSUE_WITH_PROCESSING_QUERY_VALUE)
     }
 
     @Test
@@ -251,8 +259,8 @@ class QueryTest {
                 table2 to arrayOf("3", "'C'")
             ),
             query = "select * from " +
-                    "(select * from ${table2.name} where id > $paramNameLeft) " +
-                    "where id < $paramNameRight",
+                "(select * from ${table2.name} where id > $paramNameLeft) " +
+                "where id < $paramNameRight",
             queryParams = listOf("1", "3"),
             expectedValues = listOf(listOf(2, "B")),
             expectedTypes = listOf(listOf("integer", "text")),
@@ -362,6 +370,60 @@ class QueryTest {
         )
     }
 
+    @Test
+    fun test_large_number_of_values_with_response_size_limit() = runBlocking {
+        // test config
+        val expectedRecordCount = 4096
+        val recordSize = 512
+        val idealBatchCount = 256
+        val responseSizeLimitHint = expectedRecordCount.toLong() * recordSize / idealBatchCount
+
+        // create a database
+        val db = Database(
+            "db_large_val",
+            Table("table1", Column("c1", "blob"))
+        ).createInstance(temporaryFolder, writeAheadLoggingEnabled = true)
+
+        // populate the database
+        val records = mutableListOf<ByteArray>()
+        val statement = db.compileStatement("insert into table1 values (?)")
+        repeat(expectedRecordCount) { ix ->
+            val value = ByteArray(recordSize) { ix.toByte() }
+            records.add(value)
+            statement.bindBlob(1, value)
+            statement.executeInsert()
+        }
+
+        // query the data through inspection
+        val dbId = inspectDatabase(db)
+        var recordCount = 0
+        var batchCount = 0
+        while (true) { // break close inside of the loop
+            val response = testEnvironment.sendCommand(
+                createQueryCommand(
+                    dbId,
+                    "select * from table1 LIMIT 999999 OFFSET $recordCount",
+                    responseSizeLimitHint = responseSizeLimitHint
+                )
+            )
+            assertThat(response.hasErrorOccurred()).isFalse()
+            val rows = response.query.rowsList
+            if (rows.isEmpty()) break // no more rows to process
+
+            batchCount++
+            rows.forEach { row ->
+                val actual = row.valuesList.single().blobValue.toByteArray()
+                val expected = records[recordCount++]
+                assertThat(actual).isEqualTo(expected)
+            }
+        }
+
+        // verify the response
+        assertThat(recordCount).isEqualTo(expectedRecordCount)
+        assertThat(batchCount.toDouble()).isGreaterThan(idealBatchCount * 0.7) // 30% tolerance
+        assertThat(batchCount.toDouble()).isLessThan(idealBatchCount * 1.3) // 30% tolerance
+    }
+
     /** Union of two queries (different column names) resulting in using first query columns. */
     @Test
     fun test_valid_query_two_table_union() {
@@ -455,10 +517,12 @@ class QueryTest {
     fun test_drop_table() = runBlocking {
         // given
         val database = Database("db1", table1, table2)
-        val databaseId = inspectDatabase(database.createInstance(temporaryFolder).also {
-            it.insertValues(table2, "1", "'1'")
-            it.insertValues(table2, "2", "'2'")
-        })
+        val databaseId = inspectDatabase(
+            database.createInstance(temporaryFolder).also {
+                it.insertValues(table2, "1", "'1'")
+                it.insertValues(table2, "2", "'2'")
+            }
+        )
         val initialTotalChanges = queryTotalChanges(databaseId)
         assertThat(querySchema(databaseId)).isNotEmpty()
 

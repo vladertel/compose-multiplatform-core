@@ -65,6 +65,7 @@ import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.ViewConfiguration;
 
+import androidx.annotation.DoNotInline;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
@@ -72,6 +73,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.core.app.BundleCompat;
+import androidx.core.os.BuildCompat;
 import androidx.media.MediaSessionManager;
 import androidx.media.MediaSessionManager.RemoteUserInfo;
 import androidx.media.VolumeProviderCompat;
@@ -82,9 +84,12 @@ import androidx.versionedparcelable.VersionedParcelable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Allows interaction with media controllers, volume keys, media buttons, and
@@ -553,17 +558,19 @@ public class MediaSessionCompat {
             // the associated intent will be handled by the component being registered
             mediaButtonIntent.setComponent(mbrComponent);
             mbrIntent = PendingIntent.getBroadcast(context,
-                    0/* requestCode, ignored */, mediaButtonIntent, 0/* flags */);
+                    0/* requestCode, ignored */, mediaButtonIntent,
+                    BuildCompat.isAtLeastS() ? PendingIntent.FLAG_MUTABLE : 0);
         }
 
         if (android.os.Build.VERSION.SDK_INT >= 21) {
-            MediaSession sessionFwk = createFwkMediaSession(context, tag, sessionInfo);
             if (android.os.Build.VERSION.SDK_INT >= 29) {
-                mImpl = new MediaSessionImplApi29(sessionFwk, session2Token, sessionInfo);
+                mImpl = new MediaSessionImplApi29(context, tag, session2Token, sessionInfo);
             } else if (android.os.Build.VERSION.SDK_INT >= 28) {
-                mImpl = new MediaSessionImplApi28(sessionFwk, session2Token, sessionInfo);
+                mImpl = new MediaSessionImplApi28(context, tag, session2Token, sessionInfo);
+            } else if (android.os.Build.VERSION.SDK_INT >= 22) {
+                mImpl = new MediaSessionImplApi22(context, tag, session2Token, sessionInfo);
             } else {
-                mImpl = new MediaSessionImplApi21(sessionFwk, session2Token, sessionInfo);
+                mImpl = new MediaSessionImplApi21(context, tag, session2Token, sessionInfo);
             }
             // Set default callback to respond to controllers' extra binder requests.
             Handler handler = new Handler(Looper.myLooper() != null
@@ -571,11 +578,14 @@ public class MediaSessionCompat {
             setCallback(new Callback() {}, handler);
             mImpl.setMediaButtonReceiver(mbrIntent);
         } else if (android.os.Build.VERSION.SDK_INT >= 19) {
-            mImpl = new MediaSessionImplApi19(context, tag, mbrComponent, mbrIntent, sessionInfo);
+            mImpl = new MediaSessionImplApi19(context, tag, mbrComponent, mbrIntent,
+                    session2Token, sessionInfo);
         } else if (android.os.Build.VERSION.SDK_INT >= 18) {
-            mImpl = new MediaSessionImplApi18(context, tag, mbrComponent, mbrIntent, sessionInfo);
+            mImpl = new MediaSessionImplApi18(context, tag, mbrComponent, mbrIntent,
+                    session2Token, sessionInfo);
         } else {
-            mImpl = new MediaSessionImplBase(context, tag, mbrComponent, mbrIntent, sessionInfo);
+            mImpl = new MediaSessionImplBase(context, tag, mbrComponent, mbrIntent, session2Token,
+                    sessionInfo);
         }
         mController = new MediaControllerCompat(context, this);
 
@@ -588,16 +598,6 @@ public class MediaSessionCompat {
     private MediaSessionCompat(Context context, MediaSessionImpl impl) {
         mImpl = impl;
         mController = new MediaControllerCompat(context, this);
-    }
-
-    @RequiresApi(21)
-    private MediaSession createFwkMediaSession(Context context, String tag,
-            Bundle sessionInfo) {
-        if (android.os.Build.VERSION.SDK_INT >= 29) {
-            return new MediaSession(context, tag, sessionInfo);
-        } else {
-            return new MediaSession(context, tag);
-        }
     }
 
     /**
@@ -625,12 +625,26 @@ public class MediaSessionCompat {
      * @param callback The callback to receive updates on.
      * @param handler The handler that events should be posted on.
      */
+    @SuppressWarnings("deprecation")
     public void setCallback(Callback callback, Handler handler) {
         if (callback == null) {
             mImpl.setCallback(null, null);
         } else {
             mImpl.setCallback(callback, handler != null ? handler : new Handler());
         }
+    }
+
+    /**
+     * Sets the {@link RegistrationCallback}.
+     *
+     * @param callback callback to listener callback registration. Can be null to stop.
+     * @param handler handler
+     * @hide
+     */
+    @RestrictTo(LIBRARY_GROUP_PREFIX) // accessed by media3-session
+    public void setRegistrationCallback(
+            @Nullable RegistrationCallback callback, @NonNull Handler handler) {
+        mImpl.setRegistrationCallback(callback, handler);
     }
 
     /**
@@ -812,7 +826,8 @@ public class MediaSessionCompat {
     /**
      * Updates the list of items in the play queue. It is an ordered list and
      * should contain the current item, and previous or upcoming items if they
-     * exist. Specify null if there is no current play queue.
+     * exist. The id of each item should be unique within the play queue.
+     * Specify null if there is no current play queue.
      * <p>
      * The queue should be of reasonable size. If the play queue is unbounded
      * within your app, it is better to send a reasonable amount in a sliding
@@ -821,6 +836,19 @@ public class MediaSessionCompat {
      * @param queue A list of items in the play queue.
      */
     public void setQueue(List<QueueItem> queue) {
+        if (queue != null) {
+            Set<Long> set = new HashSet<>();
+            for (QueueItem item : queue) {
+                if (item == null) {
+                    throw new IllegalArgumentException("queue shouldn't have null items");
+                }
+                if (set.contains(item.getQueueId())) {
+                    Log.e(TAG, "Found duplicate queue id: " + item.getQueueId(),
+                            new IllegalArgumentException("id of each queue item should be unique"));
+                }
+                set.add(item.getQueueId());
+            }
+        }
         mImpl.setQueue(queue);
     }
 
@@ -937,7 +965,7 @@ public class MediaSessionCompat {
      * <p>
      * Note: This is only valid while in a request callback, such as {@link Callback#onPlay}.
      * <p>
-     * Note: From API 21 to 23, this method returns a dummy {@link RemoteUserInfo} which has
+     * Note: From API 21 to 23, this method returns a fake {@link RemoteUserInfo} which has
      * following values:
      * <ul>
      *     <li>Package name is {@link MediaSessionManager.RemoteUserInfo#LEGACY_CONTROLLER}.</li>
@@ -1883,10 +1911,34 @@ public class MediaSessionCompat {
                 synchronized (mLock) {
                     sessionImpl = (MediaSessionImplApi21) mSessionImpl.get();
                 }
-                return MediaSessionCompat.Callback.this == sessionImpl.getCallback()
+                return sessionImpl != null
+                        && MediaSessionCompat.Callback.this == sessionImpl.getCallback()
                         ? sessionImpl : null;
             }
         }
+    }
+
+    /**
+     * Callback to be called when a controller has registered or unregistered controller callback.
+     * @hide
+     */
+    @RestrictTo(LIBRARY_GROUP_PREFIX) // accessed by media2-session
+    public interface RegistrationCallback {
+        /**
+         * Called when a {@link MediaControllerCompat} registered callback.
+         *
+         * @param callingPid PID from Binder#getCallingPid()
+         * @param callingUid UID from Binder#getCallingUid()
+         */
+        void onCallbackRegistered(int callingPid, int callingUid);
+
+        /**
+         * Called when a {@link MediaControllerCompat} unregistered callback.
+         *
+         * @param callingPid PID from Binder#getCallingPid()
+         * @param callingUid UID from Binder#getCallingUid()
+         */
+        void onCallbackUnregistered(int callingPid, int callingUid);
     }
 
     /**
@@ -2082,6 +2134,7 @@ public class MediaSessionCompat {
             if (tokenBundle == null) {
                 return null;
             }
+            tokenBundle.setClassLoader(Token.class.getClassLoader());
             IMediaSession extraSession = IMediaSession.Stub.asInterface(
                     BundleCompat.getBinder(tokenBundle, KEY_EXTRA_BINDER));
             VersionedParcelable session2Token = ParcelUtils.getVersionedParcelable(tokenBundle,
@@ -2196,7 +2249,7 @@ public class MediaSessionCompat {
             if (mItemFwk != null || android.os.Build.VERSION.SDK_INT < 21) {
                 return mItemFwk;
             }
-            mItemFwk = new MediaSession.QueueItem(
+            mItemFwk = Api21Impl.createQueueItem(
                     (MediaDescription) mDescription.getMediaDescription(),
                     mId);
             return mItemFwk;
@@ -2217,10 +2270,10 @@ public class MediaSessionCompat {
                 return null;
             }
             MediaSession.QueueItem queueItemObj = (MediaSession.QueueItem) queueItem;
-            Object descriptionObj = queueItemObj.getDescription();
+            Object descriptionObj = Api21Impl.getDescription(queueItemObj);
             MediaDescriptionCompat description = MediaDescriptionCompat.fromMediaDescription(
                     descriptionObj);
-            long id = queueItemObj.getQueueId();
+            long id = Api21Impl.getQueueId(queueItemObj);
             return new QueueItem(queueItemObj, description, id);
         }
 
@@ -2238,7 +2291,7 @@ public class MediaSessionCompat {
             if (itemList == null || Build.VERSION.SDK_INT < 21) {
                 return null;
             }
-            List<QueueItem> items = new ArrayList<>();
+            List<QueueItem> items = new ArrayList<>(itemList.size());
             for (Object itemObj : itemList) {
                 items.add(fromQueueItem(itemObj));
             }
@@ -2264,6 +2317,26 @@ public class MediaSessionCompat {
             return "MediaSession.QueueItem {" +
                     "Description=" + mDescription +
                     ", Id=" + mId + " }";
+        }
+
+        @RequiresApi(21)
+        private static class Api21Impl {
+            private Api21Impl() {}
+
+            @DoNotInline
+            static MediaSession.QueueItem createQueueItem(MediaDescription description, long id) {
+                return new MediaSession.QueueItem(description, id);
+            }
+
+            @DoNotInline
+            static MediaDescription getDescription(MediaSession.QueueItem queueItem) {
+                return queueItem.getDescription();
+            }
+
+            @DoNotInline
+            static long getQueueId(MediaSession.QueueItem queueItem) {
+                return queueItem.getQueueId();
+            }
         }
     }
 
@@ -2314,6 +2387,8 @@ public class MediaSessionCompat {
 
     interface MediaSessionImpl {
         void setCallback(Callback callback, Handler handler);
+        void setRegistrationCallback(
+                @Nullable RegistrationCallback callback, @NonNull Handler handler);
         void setFlags(@SessionFlags int flags);
         void setPlaybackToLocal(int stream);
         void setPlaybackToRemote(VolumeProviderCompat volumeProvider);
@@ -2374,6 +2449,8 @@ public class MediaSessionCompat {
         boolean mIsActive = false;
         volatile Callback mCallback;
         private RemoteUserInfo mRemoteUserInfo;
+        @SuppressWarnings("WeakerAccess") /* synthetic access */
+        RegistrationCallbackHandler mRegistrationCallbackHandler;
 
         // For backward compatibility, these flags are always set.
         @SessionFlags int mFlags = FLAG_HANDLES_MEDIA_BUTTONS | FLAG_HANDLES_TRANSPORT_CONTROLS;
@@ -2408,7 +2485,7 @@ public class MediaSessionCompat {
         };
 
         public MediaSessionImplBase(Context context, String tag, ComponentName mbrComponent,
-                PendingIntent mbrIntent, Bundle sessionInfo) {
+                PendingIntent mbrIntent, VersionedParcelable session2Token, Bundle sessionInfo) {
             if (mbrComponent == null) {
                 throw new IllegalArgumentException(
                         "MediaButtonReceiver component may not be null");
@@ -2421,7 +2498,7 @@ public class MediaSessionCompat {
             mMediaButtonReceiverComponentName = mbrComponent;
             mMediaButtonReceiverIntent = mbrIntent;
             mStub = new MediaSessionStub();
-            mToken = new Token(mStub);
+            mToken = new Token(mStub, /* extraBinder= */ null, session2Token);
 
             mRatingType = RatingCompat.RATING_NONE;
             mVolumeType = MediaControllerCompat.PlaybackInfo.PLAYBACK_TYPE_LOCAL;
@@ -2443,6 +2520,22 @@ public class MediaSessionCompat {
                 mCallback = callback;
                 if (mCallback != null) {
                     mCallback.setSessionImpl(this, handler);
+                }
+            }
+        }
+
+        @Override
+        public void setRegistrationCallback(
+                @Nullable RegistrationCallback callback, @NonNull Handler handler) {
+            synchronized (mLock) {
+                if (mRegistrationCallbackHandler != null) {
+                    mRegistrationCallbackHandler.removeCallbacksAndMessages(null);
+                }
+                if (callback != null) {
+                    mRegistrationCallbackHandler =
+                            new RegistrationCallbackHandler(handler.getLooper(), callback);
+                } else {
+                    mRegistrationCallbackHandler = null;
                 }
             }
         }
@@ -2891,136 +2984,158 @@ public class MediaSessionCompat {
         }
 
         void sendVolumeInfoChanged(ParcelableVolumeInfo info) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onVolumeInfoChanged(info);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onVolumeInfoChanged(info);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         private void sendSessionDestroyed() {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onSessionDestroyed();
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onSessionDestroyed();
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
+                mControllerCallbacks.kill();
             }
-            mControllerCallbacks.finishBroadcast();
-            mControllerCallbacks.kill();
         }
 
         private void sendEvent(String event, Bundle extras) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onEvent(event, extras);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onEvent(event, extras);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         private void sendState(PlaybackStateCompat state) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onPlaybackStateChanged(state);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onPlaybackStateChanged(state);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         private void sendMetadata(MediaMetadataCompat metadata) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onMetadataChanged(metadata);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onMetadataChanged(metadata);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         private void sendQueue(List<QueueItem> queue) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onQueueChanged(queue);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onQueueChanged(queue);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         private void sendQueueTitle(CharSequence queueTitle) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onQueueTitleChanged(queueTitle);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onQueueTitleChanged(queueTitle);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         private void sendCaptioningEnabled(boolean enabled) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onCaptioningEnabledChanged(enabled);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onCaptioningEnabledChanged(enabled);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         private void sendRepeatMode(int repeatMode) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onRepeatModeChanged(repeatMode);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onRepeatModeChanged(repeatMode);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         private void sendShuffleMode(int shuffleMode) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onShuffleModeChanged(shuffleMode);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onShuffleModeChanged(shuffleMode);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         private void sendExtras(Bundle extras) {
-            int size = mControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onExtrasChanged(extras);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onExtrasChanged(extras);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mControllerCallbacks.finishBroadcast();
             }
-            mControllerCallbacks.finishBroadcast();
         }
 
         class MediaSessionStub extends IMediaSession.Stub {
@@ -3048,15 +3163,32 @@ public class MediaSessionCompat {
                     }
                     return;
                 }
-                final int uid = getCallingUid();
+                int callingPid = Binder.getCallingPid();
+                int callingUid = Binder.getCallingUid();
                 RemoteUserInfo info = new RemoteUserInfo(
-                        getPackageNameForUid(uid), getCallingPid(), getCallingUid());
+                        getPackageNameForUid(callingUid), callingPid, callingUid);
                 mControllerCallbacks.register(cb, info);
+
+                synchronized (mLock) {
+                    if (mRegistrationCallbackHandler != null) {
+                        mRegistrationCallbackHandler.postCallbackRegistered(
+                                callingPid, callingUid);
+                    }
+                }
             }
 
             @Override
             public void unregisterCallbackListener(IMediaControllerCallback cb) {
                 mControllerCallbacks.unregister(cb);
+
+                int callingPid = Binder.getCallingPid();
+                int callingUid = Binder.getCallingUid();
+                synchronized (mLock) {
+                    if (mRegistrationCallbackHandler != null) {
+                        mRegistrationCallbackHandler.postCallbackUnregistered(
+                                callingPid, callingUid);
+                    }
+                }
             }
 
             @Override
@@ -3344,6 +3476,10 @@ public class MediaSessionCompat {
                 MediaSessionImplBase.this.postToHandler(what, arg1, 0, null, null);
             }
 
+            void postToHandler(int what, int arg1, int arg2) {
+                MediaSessionImplBase.this.postToHandler(what, arg1, arg2, null, null);
+            }
+
             void postToHandler(int what, Object obj) {
                 MediaSessionImplBase.this.postToHandler(what, 0, 0, obj, null);
             }
@@ -3599,8 +3735,8 @@ public class MediaSessionCompat {
         private static boolean sIsMbrPendingIntentSupported = true;
 
         MediaSessionImplApi18(Context context, String tag, ComponentName mbrComponent,
-                PendingIntent mbrIntent, Bundle sessionInfo) {
-            super(context, tag, mbrComponent, mbrIntent, sessionInfo);
+                PendingIntent mbrIntent, VersionedParcelable session2Token, Bundle sessionInfo) {
+            super(context, tag, mbrComponent, mbrIntent, session2Token, sessionInfo);
         }
 
         @Override
@@ -3683,8 +3819,8 @@ public class MediaSessionCompat {
     @RequiresApi(19)
     static class MediaSessionImplApi19 extends MediaSessionImplApi18 {
         MediaSessionImplApi19(Context context, String tag, ComponentName mbrComponent,
-                PendingIntent mbrIntent, Bundle sessionInfo) {
-            super(context, tag, mbrComponent, mbrIntent, sessionInfo);
+                PendingIntent mbrIntent, VersionedParcelable session2Token, Bundle sessionInfo) {
+            super(context, tag, mbrComponent, mbrIntent, session2Token, sessionInfo);
         }
 
         @Override
@@ -3768,11 +3904,13 @@ public class MediaSessionCompat {
         @GuardedBy("mLock")
         Callback mCallback;
         @GuardedBy("mLock")
+        RegistrationCallbackHandler mRegistrationCallbackHandler;
+        @GuardedBy("mLock")
         RemoteUserInfo mRemoteUserInfo;
 
-        MediaSessionImplApi21(MediaSession sessionFwk, VersionedParcelable session2Token,
+        MediaSessionImplApi21(Context context, String tag, VersionedParcelable session2Token,
                 Bundle sessionInfo) {
-            mSessionFwk = sessionFwk;
+            mSessionFwk = createFwkMediaSession(context, tag, sessionInfo);
             mToken = new Token(mSessionFwk.getSessionToken(), new ExtraSession(), session2Token);
             mSessionInfo = sessionInfo;
             // For backward compatibility, these flags are always set.
@@ -3791,6 +3929,10 @@ public class MediaSessionCompat {
             setFlags(FLAG_HANDLES_MEDIA_BUTTONS | FLAG_HANDLES_TRANSPORT_CONTROLS);
         }
 
+        public MediaSession createFwkMediaSession(Context context, String tag, Bundle sessionInfo) {
+            return new MediaSession(context, tag);
+        }
+
         @Override
         public void setCallback(Callback callback, Handler handler) {
             synchronized (mLock) {
@@ -3798,6 +3940,22 @@ public class MediaSessionCompat {
                 mSessionFwk.setCallback(callback == null ? null : callback.mCallbackFwk, handler);
                 if (callback != null) {
                     callback.setSessionImpl(this, handler);
+                }
+            }
+        }
+
+        @Override
+        public void setRegistrationCallback(
+                @Nullable RegistrationCallback callback, @NonNull Handler handler) {
+            synchronized (mLock) {
+                if (mRegistrationCallbackHandler != null) {
+                    mRegistrationCallbackHandler.removeCallbacksAndMessages(null);
+                }
+                if (callback != null) {
+                    mRegistrationCallbackHandler = new RegistrationCallbackHandler(
+                            handler.getLooper(), callback);
+                } else {
+                    mRegistrationCallbackHandler = null;
                 }
             }
         }
@@ -3836,15 +3994,17 @@ public class MediaSessionCompat {
         @Override
         public void sendSessionEvent(String event, Bundle extras) {
             if (android.os.Build.VERSION.SDK_INT < 23) {
-                int size = mExtraControllerCallbacks.beginBroadcast();
-                for (int i = size - 1; i >= 0; i--) {
-                    IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
-                    try {
-                        cb.onEvent(event, extras);
-                    } catch (RemoteException e) {
+                synchronized (mLock) {
+                    int size = mExtraControllerCallbacks.beginBroadcast();
+                    for (int i = size - 1; i >= 0; i--) {
+                        IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
+                        try {
+                            cb.onEvent(event, extras);
+                        } catch (RemoteException e) {
+                        }
                     }
+                    mExtraControllerCallbacks.finishBroadcast();
                 }
-                mExtraControllerCallbacks.finishBroadcast();
             }
             mSessionFwk.sendSessionEvent(event, extras);
         }
@@ -3853,6 +4013,20 @@ public class MediaSessionCompat {
         public void release() {
             mDestroyed = true;
             mExtraControllerCallbacks.kill();
+            if (Build.VERSION.SDK_INT == 27) {
+                // This is a workaround for framework MediaSession's bug in API 27.
+                try {
+                    Field callback = mSessionFwk.getClass().getDeclaredField("mCallback");
+                    callback.setAccessible(true);
+                    Handler handler = (Handler) callback.get(mSessionFwk);
+                    if (handler != null) {
+                        handler.removeCallbacksAndMessages(null);
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Exception happened while accessing MediaSession.mCallback.",
+                            e);
+                }
+            }
             // Prevent from receiving callbacks from released session.
             mSessionFwk.setCallback(null);
             mSessionFwk.release();
@@ -3866,15 +4040,17 @@ public class MediaSessionCompat {
         @Override
         public void setPlaybackState(PlaybackStateCompat state) {
             mPlaybackState = state;
-            int size = mExtraControllerCallbacks.beginBroadcast();
-            for (int i = size - 1; i >= 0; i--) {
-                IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
-                try {
-                    cb.onPlaybackStateChanged(state);
-                } catch (RemoteException e) {
+            synchronized (mLock) {
+                int size = mExtraControllerCallbacks.beginBroadcast();
+                for (int i = size - 1; i >= 0; i--) {
+                    IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
+                    try {
+                        cb.onPlaybackStateChanged(state);
+                    } catch (RemoteException e) {
+                    }
                 }
+                mExtraControllerCallbacks.finishBroadcast();
             }
-            mExtraControllerCallbacks.finishBroadcast();
             mSessionFwk.setPlaybackState(
                     state == null ? null : (PlaybackState) state.getPlaybackState());
         }
@@ -3908,7 +4084,7 @@ public class MediaSessionCompat {
                 mSessionFwk.setQueue(null);
                 return;
             }
-            ArrayList<MediaSession.QueueItem> queueItemFwks = new ArrayList<>();
+            ArrayList<MediaSession.QueueItem> queueItemFwks = new ArrayList<>(queue.size());
             for (QueueItem item : queue) {
                 queueItemFwks.add((MediaSession.QueueItem) item.getQueueItem());
             }
@@ -3922,26 +4098,24 @@ public class MediaSessionCompat {
 
         @Override
         public void setRatingType(@RatingCompat.Style int type) {
-            if (android.os.Build.VERSION.SDK_INT < 22) {
-                mRatingType = type;
-            } else {
-                mSessionFwk.setRatingType(type);
-            }
+            mRatingType = type;
         }
 
         @Override
         public void setCaptioningEnabled(boolean enabled) {
             if (mCaptioningEnabled != enabled) {
                 mCaptioningEnabled = enabled;
-                int size = mExtraControllerCallbacks.beginBroadcast();
-                for (int i = size - 1; i >= 0; i--) {
-                    IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
-                    try {
-                        cb.onCaptioningEnabledChanged(enabled);
-                    } catch (RemoteException e) {
+                synchronized (mLock) {
+                    int size = mExtraControllerCallbacks.beginBroadcast();
+                    for (int i = size - 1; i >= 0; i--) {
+                        IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
+                        try {
+                            cb.onCaptioningEnabledChanged(enabled);
+                        } catch (RemoteException e) {
+                        }
                     }
+                    mExtraControllerCallbacks.finishBroadcast();
                 }
-                mExtraControllerCallbacks.finishBroadcast();
             }
         }
 
@@ -3949,15 +4123,17 @@ public class MediaSessionCompat {
         public void setRepeatMode(@PlaybackStateCompat.RepeatMode int repeatMode) {
             if (mRepeatMode != repeatMode) {
                 mRepeatMode = repeatMode;
-                int size = mExtraControllerCallbacks.beginBroadcast();
-                for (int i = size - 1; i >= 0; i--) {
-                    IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
-                    try {
-                        cb.onRepeatModeChanged(repeatMode);
-                    } catch (RemoteException e) {
+                synchronized (mLock) {
+                    int size = mExtraControllerCallbacks.beginBroadcast();
+                    for (int i = size - 1; i >= 0; i--) {
+                        IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
+                        try {
+                            cb.onRepeatModeChanged(repeatMode);
+                        } catch (RemoteException e) {
+                        }
                     }
+                    mExtraControllerCallbacks.finishBroadcast();
                 }
-                mExtraControllerCallbacks.finishBroadcast();
             }
         }
 
@@ -3965,15 +4141,17 @@ public class MediaSessionCompat {
         public void setShuffleMode(@PlaybackStateCompat.ShuffleMode int shuffleMode) {
             if (mShuffleMode != shuffleMode) {
                 mShuffleMode = shuffleMode;
-                int size = mExtraControllerCallbacks.beginBroadcast();
-                for (int i = size - 1; i >= 0; i--) {
-                    IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
-                    try {
-                        cb.onShuffleModeChanged(shuffleMode);
-                    } catch (RemoteException e) {
+                synchronized (mLock) {
+                    int size = mExtraControllerCallbacks.beginBroadcast();
+                    for (int i = size - 1; i >= 0; i--) {
+                        IMediaControllerCallback cb = mExtraControllerCallbacks.getBroadcastItem(i);
+                        try {
+                            cb.onShuffleModeChanged(shuffleMode);
+                        } catch (RemoteException e) {
+                        }
                     }
+                    mExtraControllerCallbacks.finishBroadcast();
                 }
-                mExtraControllerCallbacks.finishBroadcast();
             }
         }
 
@@ -4046,16 +4224,33 @@ public class MediaSessionCompat {
 
             @Override
             public void registerCallbackListener(IMediaControllerCallback cb) {
-                if (!mDestroyed) {
-                    RemoteUserInfo info = new RemoteUserInfo(
-                            RemoteUserInfo.LEGACY_CONTROLLER, getCallingPid(), getCallingUid());
-                    mExtraControllerCallbacks.register(cb, info);
+                if (mDestroyed) {
+                    return;
+                }
+                int callingPid = Binder.getCallingPid();
+                int callingUid = Binder.getCallingUid();
+                RemoteUserInfo info = new RemoteUserInfo(
+                        RemoteUserInfo.LEGACY_CONTROLLER, callingPid, callingUid);
+                mExtraControllerCallbacks.register(cb, info);
+                synchronized (mLock) {
+                    if (mRegistrationCallbackHandler != null) {
+                        mRegistrationCallbackHandler.postCallbackRegistered(callingPid, callingUid);
+                    }
                 }
             }
 
             @Override
             public void unregisterCallbackListener(IMediaControllerCallback cb) {
                 mExtraControllerCallbacks.unregister(cb);
+
+                int callingPid = Binder.getCallingPid();
+                int callingUid = Binder.getCallingUid();
+                synchronized (mLock) {
+                    if (mRegistrationCallbackHandler != null) {
+                        mRegistrationCallbackHandler.postCallbackUnregistered(
+                                callingPid, callingUid);
+                    }
+                }
             }
 
             @Override
@@ -4338,11 +4533,28 @@ public class MediaSessionCompat {
         }
     }
 
-    @RequiresApi(28)
-    static class MediaSessionImplApi28 extends MediaSessionImplApi21 {
-        MediaSessionImplApi28(MediaSession sessionFwk, VersionedParcelable session2Token,
+    @RequiresApi(22)
+    static class MediaSessionImplApi22 extends MediaSessionImplApi21 {
+        MediaSessionImplApi22(Context context, String tag, VersionedParcelable session2Token,
                 Bundle sessionInfo) {
-            super(sessionFwk, session2Token, sessionInfo);
+            super(context, tag, session2Token, sessionInfo);
+        }
+
+        MediaSessionImplApi22(Object mediaSession) {
+            super(mediaSession);
+        }
+
+        @Override
+        public void setRatingType(@RatingCompat.Style int type) {
+            mSessionFwk.setRatingType(type);
+        }
+    }
+
+    @RequiresApi(28)
+    static class MediaSessionImplApi28 extends MediaSessionImplApi22 {
+        MediaSessionImplApi28(Context context, String tag, VersionedParcelable session2Token,
+                Bundle sessionInfo) {
+            super(context, tag, session2Token, sessionInfo);
         }
 
         MediaSessionImplApi28(Object mediaSession) {
@@ -4365,14 +4577,54 @@ public class MediaSessionCompat {
 
     @RequiresApi(29)
     static class MediaSessionImplApi29 extends MediaSessionImplApi28 {
-        MediaSessionImplApi29(MediaSession sessionFwk, VersionedParcelable session2Token,
+        MediaSessionImplApi29(Context context, String tag, VersionedParcelable session2Token,
                 Bundle sessionInfo) {
-            super(sessionFwk, session2Token, sessionInfo);
+            super(context, tag, session2Token, sessionInfo);
         }
 
         MediaSessionImplApi29(Object mediaSession) {
             super(mediaSession);
             mSessionInfo = ((MediaSession) mediaSession).getController().getSessionInfo();
+        }
+
+        @Override
+        public MediaSession createFwkMediaSession(Context context, String tag, Bundle sessionInfo) {
+            return new MediaSession(context, tag, sessionInfo);
+        }
+    }
+
+    static final class RegistrationCallbackHandler extends Handler {
+        private static final int MSG_CALLBACK_REGISTERED = 1001;
+        private static final int MSG_CALLBACK_UNREGISTERED = 1002;
+
+        private final RegistrationCallback mCallback;
+
+        RegistrationCallbackHandler(
+                @NonNull Looper looper,
+                @NonNull RegistrationCallback callback) {
+            super(looper);
+            mCallback = callback;
+        }
+
+        @Override
+        public void handleMessage(@NonNull Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case MSG_CALLBACK_REGISTERED:
+                    mCallback.onCallbackRegistered(msg.arg1, msg.arg2);
+                    break;
+                case MSG_CALLBACK_UNREGISTERED:
+                    mCallback.onCallbackUnregistered(msg.arg1, msg.arg2);
+                    break;
+            }
+        }
+
+        public void postCallbackRegistered(int callingPid, int callingUid) {
+            obtainMessage(MSG_CALLBACK_REGISTERED, callingPid, callingUid).sendToTarget();
+        }
+
+        public void postCallbackUnregistered(int callingPid, int callingUid) {
+            obtainMessage(MSG_CALLBACK_UNREGISTERED, callingPid, callingUid).sendToTarget();
         }
     }
 }

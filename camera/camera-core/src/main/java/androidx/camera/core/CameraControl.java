@@ -18,6 +18,7 @@ package androidx.camera.core;
 
 import androidx.annotation.FloatRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -40,6 +41,7 @@ import java.util.concurrent.Future;
  * {@link ListenableFuture} will fail immediately with
  * {@link CameraControl.OperationCanceledException}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraControl {
     /**
      * Enable the torch or disable the torch.
@@ -56,7 +58,8 @@ public interface CameraControl {
      *
      * @param torch true to turn on the torch, false to turn it off.
      * @return A {@link ListenableFuture} which is successful when the torch was changed to the
-     * value specified. It fails when it is unable to change the torch state.
+     * value specified. It fails when it is unable to change the torch state. Cancellation of
+     * this future is a no-op.
      */
     @NonNull
     ListenableFuture<Void> enableTorch(boolean torch);
@@ -66,7 +69,7 @@ public interface CameraControl {
      *
      * <p>It will trigger an auto focus action and enable AF/AE/AWB metering regions. The action
      * is configured by a {@link FocusMeteringAction} which contains the configuration of
-     * multiple AF/AE/AWB {@link MeteringPoint}s, auto-cancel duration. See
+     * multiple AF/AE/AWB {@link MeteringPoint}s and an auto-cancel duration. See
      * {@link FocusMeteringAction} for more details.
      *
      * <p>Only one {@link FocusMeteringAction} is allowed to run at a time. If multiple
@@ -74,11 +77,11 @@ public interface CameraControl {
      * other actions will be cancelled.
      *
      * <p>If the {@link FocusMeteringAction} specifies more AF/AE/AWB points than what is
-     * supported on current device, only the first point and then in order up to the number of
+     * supported on the current device, only the first point and then in order up to the number of
      * points supported by the device will be enabled.
      *
-     * <p>If none of the points with either AF/AE/AWB can be supported on the device,
-     * the returned {@link ListenableFuture} in
+     * <p>If none of the points with either AF/AE/AWB can be supported on the device or none of
+     * the points generates valid metering rectangles, the returned {@link ListenableFuture} in
      * {@link CameraControl#startFocusAndMetering(FocusMeteringAction)} will fail immediately.
      *
      * @see FocusMeteringAction
@@ -87,8 +90,7 @@ public interface CameraControl {
      * @return A {@link ListenableFuture} which completes with {@link FocusMeteringAction} when
      * auto focus is done and AF/AE/AWB regions are updated. In case AF points are not added,
      * auto focus will not be triggered and this {@link ListenableFuture} completes when
-     * AE/AWB regions are updated.
-     *
+     * AE/AWB regions are updated. Cancellation of this future is a no-op.
      */
     @NonNull
     ListenableFuture<FocusMeteringResult> startFocusAndMetering(
@@ -103,7 +105,7 @@ public interface CameraControl {
      * {@link OperationCanceledException}.
      *
      * @return A {@link ListenableFuture} which completes when the AF/AE/AWB regions is clear and AF
-     * mode is set to continuous focus (if supported).
+     * mode is set to continuous focus (if supported). Cancellation of this future is a no-op.
      */
     @NonNull
     ListenableFuture<Void> cancelFocusAndMetering();
@@ -121,7 +123,8 @@ public interface CameraControl {
      * @return a {@link ListenableFuture} which is finished when current repeating request
      * result contains the requested zoom ratio. It fails with
      * {@link OperationCanceledException} if there is newer value being set or camera is closed. If
-     * the ratio is out of range, it fails with {@link IllegalArgumentException}.
+     * the ratio is out of range, it fails with {@link IllegalArgumentException}. Cancellation of
+     * this future is a no-op.
      */
     @NonNull
     ListenableFuture<Void> setZoomRatio(float ratio);
@@ -143,10 +146,39 @@ public interface CameraControl {
      * result contains the requested linearZoom. It fails with
      * {@link OperationCanceledException} if there is newer value being set or camera is closed.
      * If linearZoom is not in range [0..1], it fails with {@link IllegalArgumentException}.
-     *
+     * Cancellation of this future is a no-op.
      */
     @NonNull
     ListenableFuture<Void> setLinearZoom(@FloatRange(from = 0f, to = 1f) float linearZoom);
+
+    /**
+     * Set the exposure compensation value for the camera.
+     *
+     * <p>Only one {@link #setExposureCompensationIndex} is allowed to run at the same time. If
+     * multiple {@link #setExposureCompensationIndex} are executed in a row, only the latest one
+     * setting will be kept in the camera. The other actions will be cancelled and the
+     * ListenableFuture will fail with the {@link OperationCanceledException}. After all the
+     * previous actions is cancelled, the camera device will adjust the brightness according to
+     * the latest setting.
+     *
+     * @param value the exposure compensation value to set on the camera which must be within
+     *              the range of ExposureState#getExposureCompensationRange(). If the exposure
+     *              compensation value is not in the range defined above, the returned
+     *              {@link ListenableFuture} will fail with {@link IllegalArgumentException} and
+     *              the value from ExposureState#getExposureCompensationIndex will not change.
+     * @return a {@link ListenableFuture} which is finished when the camera reaches the newly
+     * requested exposure target. Cancellation of this future is a no-op. The result of the
+     * ListenableFuture is the new target exposure value, or cancelled with the following
+     * exceptions,
+     * <ul>
+     * <li>{@link OperationCanceledException} when the camera is closed or a
+     * new {@link #setExposureCompensationIndex} is called.
+     * <li>{@link IllegalArgumentException} while the exposure compensation value to ranging
+     * within {@link ExposureState#getExposureCompensationRange}.
+     * </ul>
+     */
+    @NonNull
+    ListenableFuture<Integer> setExposureCompensationIndex(int value);
 
     /**
      * An exception representing a failure that the operation is canceled which might be caused by

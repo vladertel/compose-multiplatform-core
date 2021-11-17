@@ -21,7 +21,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
-import android.Manifest;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -30,7 +29,6 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Size;
@@ -39,17 +37,19 @@ import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.camera.camera2.internal.compat.params.OutputConfigurationCompat;
 import androidx.camera.camera2.internal.compat.params.SessionConfigurationCompat;
+import androidx.camera.testing.CameraUtil;
 import androidx.core.os.HandlerCompat;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.MediumTest;
-import androidx.test.rule.GrantPermissionRule;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 
 import java.util.Collections;
@@ -64,12 +64,12 @@ import java.util.concurrent.Semaphore;
  */
 @MediumTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = 21)
 public final class CameraDeviceCompatDeviceTest {
 
     private final Semaphore mOpenCloseSemaphore = new Semaphore(0);
     @Rule
-    public GrantPermissionRule mRuntimePermissionRule = GrantPermissionRule.grant(
-            Manifest.permission.CAMERA);
+    public TestRule mUseCamera = CameraUtil.grantCameraPermissionAndPreTest();
     private CameraDevice mCameraDevice;
     private final CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
         @Override
@@ -155,7 +155,8 @@ public final class CameraDeviceCompatDeviceTest {
     }
 
     @Test
-    public void canConfigureCaptureSession() throws CameraAccessException {
+    @SuppressWarnings("deprecation") /* AsyncTask */
+    public void canConfigureCaptureSession() throws CameraAccessExceptionCompat {
         OutputConfigurationCompat outputConfig = new OutputConfigurationCompat(mSurface);
 
         CameraCaptureSession.StateCallback stateCallback =
@@ -163,14 +164,14 @@ public final class CameraDeviceCompatDeviceTest {
 
         SessionConfigurationCompat sessionConfig = new SessionConfigurationCompat(
                 SessionConfigurationCompat.SESSION_REGULAR,
-                Collections.singletonList(outputConfig), AsyncTask.THREAD_POOL_EXECUTOR,
+                Collections.singletonList(outputConfig), android.os.AsyncTask.THREAD_POOL_EXECUTOR,
                 stateCallback);
 
         CameraDeviceCompat deviceCompat = CameraDeviceCompat.toCameraDeviceCompat(mCameraDevice,
                 mCompatHandler);
         try {
             deviceCompat.createCaptureSession(sessionConfig);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessExceptionCompat e) {
             // If the camera has been disconnected during the test (likely due to another process
             // stealing the camera), then we will skip the test.
             Assume.assumeTrue("Camera disconnected during test.",

@@ -16,15 +16,13 @@
 
 package androidx.camera.camera2.pipe
 
-import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
-@SmallTest
 @RunWith(JUnit4::class)
-class StreamFormatTest {
+internal class StreamFormatTest {
     @Test
     fun streamFormatsAreEqual() {
         assertThat(StreamFormat(0x23)).isEqualTo(StreamFormat.YUV_420_888)

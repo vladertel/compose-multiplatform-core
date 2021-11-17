@@ -17,10 +17,10 @@
 package androidx.sqlite.inspection
 
 import android.database.sqlite.SQLiteDatabase
-import androidx.inspection.Connection
-import androidx.inspection.InspectorEnvironment
-import androidx.inspection.InspectorFactory
+import androidx.inspection.ArtTooling
+import androidx.inspection.testing.DefaultTestInspectorEnvironment
 import androidx.inspection.testing.InspectorTester
+import androidx.inspection.testing.TestInspectorExecutors
 import androidx.room.Database
 import androidx.room.Entity
 import androidx.room.InvalidationTracker
@@ -31,6 +31,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -42,8 +43,10 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class RoomInvalidationHookTest {
     private lateinit var db: TestDatabase
-    private val inspectionExecutors =
-        Pair(Executors.newSingleThreadExecutor(), Executors.newSingleThreadScheduledExecutor())
+
+    private val testJob = Job()
+    private val ioExecutor = Executors.newSingleThreadExecutor()
+    private val testInspectorExecutors = TestInspectorExecutors(testJob, ioExecutor)
 
     @Before
     fun initDb() {
@@ -59,14 +62,14 @@ class RoomInvalidationHookTest {
 
     @After
     fun closeDb() {
-        listOf(inspectionExecutors.first, inspectionExecutors.second)
-            .forEach { inspectionExecutor ->
-                inspectionExecutor.shutdown()
-                assertWithMessage("inspector should not have any leaking tasks")
-                    .that(inspectionExecutor.awaitTermination(10, TimeUnit.SECONDS))
-                    .isTrue()
-                db.close()
-            }
+        testJob.complete()
+        ioExecutor.shutdown()
+        assertWithMessage("inspector should not have any leaking tasks")
+            .that(ioExecutor.awaitTermination(10, TimeUnit.SECONDS))
+            .isTrue()
+
+        testInspectorExecutors.handler().looper.thread.join(10_000)
+        db.close()
     }
 
     /**
@@ -74,27 +77,19 @@ class RoomInvalidationHookTest {
      * invalidation observer on the Room side is invoked.
      */
     @Test
-    fun invalidationHook() = runBlocking<Unit> {
-        val testEnv = TestInspectorEnvironment(
+    fun invalidationHook() = runBlocking<Unit>(testJob) {
+        val testArtTI = TestArtTooling(
             roomDatabase = db,
             sqliteDb = db.getSqliteDb()
         )
+
+        val testEnv = DefaultTestInspectorEnvironment(
+            artTooling = testArtTI,
+            testInspectorExecutors = testInspectorExecutors
+        )
         val tester = InspectorTester(
-            inspectorId = "test",
-            environment = testEnv,
-            factoryOverride = object : InspectorFactory<SqliteInspector>("test") {
-                override fun createInspector(
-                    connection: Connection,
-                    environment: InspectorEnvironment
-                ): SqliteInspector {
-                    return SqliteInspector(
-                        connection,
-                        environment,
-                        inspectionExecutors.first,
-                        inspectionExecutors.second
-                    )
-                }
-            }
+            inspectorId = "androidx.sqlite.inspection",
+            environment = testEnv
         )
         val invalidatedTables = CompletableDeferred<List<String>>()
         db.invalidationTracker.addObserver(object : InvalidationTracker.Observer("TestEntity") {
@@ -144,14 +139,14 @@ private fun RoomDatabase.getSqliteDb(): SQLiteDatabase {
 }
 
 @Suppress("UNCHECKED_CAST")
-class TestInspectorEnvironment(
+class TestArtTooling(
     private val roomDatabase: RoomDatabase,
     private val sqliteDb: SQLiteDatabase
-) : InspectorEnvironment {
+) : ArtTooling {
     override fun registerEntryHook(
         originClass: Class<*>,
         originMethod: String,
-        entryHook: InspectorEnvironment.EntryHook
+        entryHook: ArtTooling.EntryHook
     ) {
         // no-op
     }
@@ -168,7 +163,7 @@ class TestInspectorEnvironment(
     override fun <T : Any?> registerExitHook(
         originClass: Class<*>,
         originMethod: String,
-        exitHook: InspectorEnvironment.ExitHook<T>
+        exitHook: ArtTooling.ExitHook<T>
     ) {
         // no-op
     }

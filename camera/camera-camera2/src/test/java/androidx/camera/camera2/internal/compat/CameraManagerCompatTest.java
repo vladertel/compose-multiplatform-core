@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
@@ -34,7 +35,6 @@ import android.os.Handler;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.filters.SmallTest;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +52,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-@SmallTest
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP, shadows = {
@@ -63,6 +62,7 @@ public final class CameraManagerCompatTest {
 
     private Context mContext;
     private ShadowInteractionCameraManager.Callback mInteractionCallback;
+    private ShadowInteractionCameraManager mShadowCameraManager;
 
     @Before
     public void setUp() {
@@ -72,17 +72,49 @@ public final class CameraManagerCompatTest {
 
         // Install the mock camera manager
         mInteractionCallback = mock(ShadowInteractionCameraManager.Callback.class);
-        ShadowInteractionCameraManager shadowManager = Shadow.extract(
+        mShadowCameraManager = Shadow.extract(
                 mContext.getSystemService(Context.CAMERA_SERVICE));
-        shadowManager.addCallback(mInteractionCallback);
+        mShadowCameraManager.addCallback(mInteractionCallback);
     }
 
     @Test
-    public void getCameraCharacteristics_callUnderlyingMethod() throws CameraAccessExceptionCompat {
+    public void getCameraCharacteristicsCompat_callUnderlyingMethod()
+            throws CameraAccessExceptionCompat {
         CameraManagerCompat manager = CameraManagerCompat.from(mContext);
-        manager.getCameraCharacteristics(CAMERA_ID);
+        manager.getCameraCharacteristicsCompat(CAMERA_ID);
 
         verify(mInteractionCallback, times(1)).getCameraCharacteristics(any(String.class));
+    }
+
+
+    @Test
+    public void getCameraCharacteristicsCompat_getSameInstanceForSameId()
+            throws CameraAccessExceptionCompat {
+        CameraManagerCompat manager = CameraManagerCompat.from(mContext);
+        CameraCharacteristicsCompat cameraCharacteristicsCompat1 =
+                manager.getCameraCharacteristicsCompat(CAMERA_ID);
+
+        CameraCharacteristicsCompat cameraCharacteristicsCompat2 =
+                manager.getCameraCharacteristicsCompat(CAMERA_ID);
+
+        assertThat(cameraCharacteristicsCompat1).isSameInstanceAs(cameraCharacteristicsCompat2);
+    }
+
+    @Test
+    public void getCameraCharacteristicsCompat_canGetItems() throws CameraAccessExceptionCompat {
+        mShadowCameraManager
+                .putCameraCharacteristic(CameraCharacteristics.CONTROL_MAX_REGIONS_AWB, 2);
+        mShadowCameraManager
+                .putCameraCharacteristic(CameraCharacteristics.CONTROL_MAX_REGIONS_AF, 1);
+
+        CameraManagerCompat manager = CameraManagerCompat.from(mContext);
+        CameraCharacteristicsCompat cameraCharacteristicsCompat =
+                manager.getCameraCharacteristicsCompat(CAMERA_ID);
+
+        assertThat(cameraCharacteristicsCompat.get(
+                CameraCharacteristics.CONTROL_MAX_REGIONS_AWB)).isEqualTo(2);
+        assertThat(cameraCharacteristicsCompat.get(
+                CameraCharacteristics.CONTROL_MAX_REGIONS_AF)).isEqualTo(1);
     }
 
     @Test
@@ -181,6 +213,16 @@ public final class CameraManagerCompatTest {
         assertThat(unregisterCaptor.getValue()).isSameInstanceAs(originalCallback);
     }
 
+    @Test(expected = CameraAccessExceptionCompat.class)
+    public void throwCameraAccessExceptionCompat_whenCallingGetCharacteristicsThrowAssertionError()
+            throws CameraAccessExceptionCompat {
+        when(mInteractionCallback.getCameraCharacteristics(any(String.class))).thenThrow(
+                new AssertionError("CameraManager#getCameraCharacteristics AssertionError!"));
+
+        CameraManagerCompat manager = CameraManagerCompat.from(mContext);
+        manager.getCameraCharacteristicsCompat(CAMERA_ID);
+    }
+
     /**
      * A Shadow of {@link CameraManager} which forwards invocations to callbacks to record
      * interactions.
@@ -189,7 +231,7 @@ public final class CameraManagerCompatTest {
             value = CameraManager.class,
             minSdk = 21
     )
-    static final class ShadowInteractionCameraManager {
+    public static final class ShadowInteractionCameraManager {
 
         private static final String[] EMPTY_ID_LIST = new String[]{};
         private final List<Callback> mCallbacks = new ArrayList<>();
@@ -217,6 +259,10 @@ public final class CameraManagerCompatTest {
                 cb.getCameraCharacteristics(cameraId);
             }
             return mCameraCharacteristics;
+        }
+
+        public <T> void putCameraCharacteristic(CameraCharacteristics.Key<T> key, T value) {
+            when(mCameraCharacteristics.get(key)).thenReturn(value);
         }
 
         @Implementation

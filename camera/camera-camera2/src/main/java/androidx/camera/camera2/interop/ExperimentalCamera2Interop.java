@@ -18,9 +18,10 @@ package androidx.camera.camera2.interop;
 
 import static java.lang.annotation.RetentionPolicy.CLASS;
 
-import androidx.annotation.experimental.Experimental;
+import androidx.annotation.RequiresOptIn;
 
 import java.lang.annotation.Retention;
+
 /**
  * Denotes that the annotated method uses the experimental methods which allow direct access to
  * camera2 classes.
@@ -38,6 +39,6 @@ import java.lang.annotation.Retention;
  * <p>These will be changed in future release possibly, hence add @Experimental annotation.
  */
 @Retention(CLASS)
-@Experimental
+@RequiresOptIn
 public @interface ExperimentalCamera2Interop {
 }

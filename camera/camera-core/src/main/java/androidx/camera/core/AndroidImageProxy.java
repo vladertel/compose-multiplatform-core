@@ -16,16 +16,20 @@
 
 package androidx.camera.core;
 
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.media.Image;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.camera.core.impl.TagBundle;
 
 import java.nio.ByteBuffer;
 
 /** An {@link ImageProxy} which wraps around an {@link Image}. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 final class AndroidImageProxy implements ImageProxy {
     @GuardedBy("this")
     private final Image mImage;
@@ -34,9 +38,6 @@ final class AndroidImageProxy implements ImageProxy {
     private final PlaneProxy[] mPlanes;
 
     private final ImageInfo mImageInfo;
-
-    @Nullable
-    private Rect mViewPortRect;
 
     /**
      * Creates a new instance which wraps the given image.
@@ -57,7 +58,11 @@ final class AndroidImageProxy implements ImageProxy {
             mPlanes = new PlaneProxy[0];
         }
 
-        mImageInfo = ImmutableImageInfo.create(null, image.getTimestamp(), 0);
+        mImageInfo = ImmutableImageInfo.create(
+                TagBundle.emptyBundle(),
+                image.getTimestamp(),
+                0,
+                new Matrix());
     }
 
     @Override
@@ -74,17 +79,6 @@ final class AndroidImageProxy implements ImageProxy {
     @Override
     public synchronized void setCropRect(@Nullable Rect rect) {
         mImage.setCropRect(rect);
-    }
-
-    @NonNull
-    @Override
-    public Rect getViewPortRect() {
-        return mViewPortRect != null ? mViewPortRect : getCropRect();
-    }
-
-    @Override
-    public void setViewPortRect(@Nullable Rect viewPortRect) {
-        mViewPortRect = viewPortRect;
     }
 
     @Override

@@ -19,6 +19,7 @@ package androidx.camera.core;
 import android.util.Rational;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 
 /**
@@ -41,7 +42,7 @@ import androidx.annotation.RestrictTo;
  *
  * <p>Besides defining the center point of the metering rectangle, there is also the size of the
  * {@link MeteringPoint}. The size of the {@link MeteringPoint} ranges from 0 to 1.0.
- * The size are the percentage of sensor width and height (or crop region width/height if
+ * The size is the percentage of sensor width and height (or crop region width/height if
  * crop region is set). See formula below:
  * <p><pre>Metering rectangle width = size * sensorSizeOrCropRegion.width
  * Metering rectangle height = size * sensorSizeOrCropRegion.height
@@ -49,6 +50,7 @@ import androidx.annotation.RestrictTo;
  * The metering rectangle defined by the {@link MeteringPoint} has the same shape as the sensor
  * array.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class MeteringPoint {
     private float mNormalizedX;
     private float mNormalizedY;

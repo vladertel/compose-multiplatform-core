@@ -15,9 +15,10 @@
  */
 
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 import java.security.MessageDigest
@@ -37,7 +38,7 @@ buildscript {
     dependencies {
         classpath("org.apache.maven:maven-model:3.5.4")
         classpath("org.apache.maven:maven-model-builder:3.5.4")
-        classpath("com.squareup.okhttp3:okhttp:3.14.7")
+        classpath("com.squareup.okhttp3:okhttp:4.8.1")
         classpath("javax.inject:javax.inject:1")
     }
 }
@@ -48,7 +49,7 @@ val internalFolder = "internal"
 val externalFolder = "external"
 // Passed in as a project property
 val artifactName = project.findProperty("artifactName")
-val mediaType = MediaType.get("application/json; charset=utf-8")
+val mediaType = "application/json; charset=utf-8".toMediaType()
 val licenseEndpoint = "https://fetch-licenses.appspot.com/convert/licenses"
 
 val internalArtifacts = listOf(
@@ -69,40 +70,84 @@ plugins {
     java
 }
 
+val metalavaBuildId: String? = findProperty("metalavaBuildId") as String?
 repositories {
+    if (metalavaBuildId != null) {
+        maven(url="https://androidx.dev/metalava/builds/${metalavaBuildId}/artifacts/repo/m2repository")
+    }
     jcenter()
     mavenCentral()
     google()
     gradlePluginPortal()
-    val metalavaBuildId: String? = findProperty("metalavaBuildId") as String?
-    if (metalavaBuildId != null) {
-        maven(url="https://androidx.dev/metalava/builds/${metalavaBuildId}/artifacts/repo/m2repository")
+
+    val allowBintray: String? = findProperty("allowBintray") as String?
+    if (allowBintray != null) {
+        maven {
+            url = uri("https://maven.pkg.jetbrains.space/kotlin/p/dokka/dev/")
+            metadataSources {
+                artifact()
+            }
+        }
+        maven {
+            url = uri("https://dl.bintray.com/kotlin/kotlin-dev/")
+            metadataSources {
+                artifact()
+            }
+        }
+        maven {
+            url = uri("https://dl.bintray.com/kotlin/kotlin-eap/")
+            metadataSources {
+                artifact()
+            }
+        }
+        maven {
+            url = uri("https://dl.bintray.com/kotlin/kotlinx/")
+            metadataSources {
+                artifact()
+            }
+        }
     }
 
-    ivy {
-        setUrl("https://download.jetbrains.com/kotlin/native/builds/releases")
-        patternLayout {
-            artifact("[revision]/macos/[artifact]-[revision].[ext]")
+    val allowJetbrainsDev: String? = findProperty("allowJetbrainsDev") as String?
+    if (allowJetbrainsDev != null) {
+        maven {
+            url = uri("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev")
+            metadataSources {
+                artifact()
+            }
         }
-        metadataSources {
-            artifact()
-        }
-        content {
-            includeGroup("")
-        }
-    }
-    ivy {
-        setUrl("https://download.jetbrains.com/kotlin/native/builds/releases")
-        patternLayout {
-            artifact("[revision]/linux/[artifact]-[revision].[ext]")
-        }
-        metadataSources {
-            artifact()
-        }
-        content {
-            includeGroup("")
+        maven {
+            url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+            metadataSources {
+                artifact()
+            }
         }
     }
+
+
+    listOf("macos", "macos-x86_64", "linux", "linux-x86_64").forEach { platstring ->
+        ivy {
+            setUrl("https://download.jetbrains.com/kotlin/native/builds/releases")
+            patternLayout {
+                artifact("[revision]/$platstring/[artifact]-[revision].[ext]")
+            }
+            metadataSources {
+                artifact()
+            }
+            content {
+                includeGroup("")
+            }
+        }
+    }
+}
+
+val gradleModuleMetadata: Configuration by configurations.creating {
+    attributes {
+        // We define this attribute in DirectMetadataAccessVariantRule
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION) )
+        attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named("gradle-module-metadata"))
+    }
+    extendsFrom(configurations.runtimeClasspath.get())
 }
 
 val allFilesWithDependencies: Configuration by configurations.creating {
@@ -198,10 +243,10 @@ fun licenseFor(pomFile: File): File? {
                 val element = children.item(j)
                 if (element.nodeName.toLowerCase() == "url") {
                     val url = element.textContent
-                    val payload = RequestBody.create(mediaType, "{\"url\": \"$url\"}")
+                    val payload = "{\"url\": \"$url\"}".toRequestBody(mediaType)
                     val request = Request.Builder().url(licenseEndpoint).post(payload).build()
                     val response = client.newCall(request).execute()
-                    val contents = response.body()?.string()
+                    val contents = response.body?.string()
                     if (contents != null) {
                         val parent = System.getProperty("java.io.tmpdir")
                         val outputFile = File(parent, "${pomFile.name}.LICENSE")
@@ -221,8 +266,8 @@ fun licenseFor(pomFile: File): File? {
 /**
  * Transforms POM files so we automatically comment out nodes with <type>aar</type>.
  *
- * We are doing this for all internal libraries to account for -PuseMaxDepVersions which swaps out
- * the dependencies of all androidx libraries with their respective ToT versions.
+ * We are doing this for all internal libraries to account for -Pandroidx.useMaxDepVersions
+ * which swaps out the dependencies of all androidx libraries with their respective ToT versions.
  * For more information look at b/127495641.
  */
 fun transformInternalPomFile(file: File): File {
@@ -382,45 +427,47 @@ fun groupToPath(group: String): String {
  */
 @CacheableRule
 open class DirectMetadataAccessVariantRule : ComponentMetadataRule {
-
     @javax.inject.Inject
     open fun getObjects(): ObjectFactory = throw UnsupportedOperationException()
 
     override fun execute(ctx: ComponentMetadataContext) {
         val id = ctx.details.id
-        ctx.details.maybeAddVariant("allFilesWithDependenciesElements", "runtimeElements") {
+        ctx.details.addVariant("moduleMetadata") {
             attributes {
                 attribute(Usage.USAGE_ATTRIBUTE, getObjects().named(Usage.JAVA_RUNTIME))
                 attribute(Category.CATEGORY_ATTRIBUTE, getObjects().named(Category.DOCUMENTATION))
-                attribute(
-                    DocsType.DOCS_TYPE_ATTRIBUTE,
-                    getObjects().named("all-files-with-dependencies")
-                )
+                attribute(DocsType.DOCS_TYPE_ATTRIBUTE, getObjects().named("gradle-module-metadata"))
             }
             withFiles {
-                addFile("${id.name}-${id.version}.pom")
                 addFile("${id.name}-${id.version}.module")
-                addFile("${id.name}-${id.version}.jar")
-                addFile("${id.name}-${id.version}.aar")
-                addFile("${id.name}-${id.version}-sources.jar")
             }
         }
-        ctx.details.maybeAddVariant("allFilesWithDependencies", "runtime") {
-            attributes {
-                attribute(Usage.USAGE_ATTRIBUTE, getObjects().named(Usage.JAVA_RUNTIME))
-                attribute(Category.CATEGORY_ATTRIBUTE, getObjects().named(Category.DOCUMENTATION))
-                attribute(
-                    DocsType.DOCS_TYPE_ATTRIBUTE,
-                    getObjects().named("all-files-with-dependencies")
-                )
-            }
-            withFiles {
-                addFile("${id.name}-${id.version}.pom")
-                // No harm in leaving it in here.
-                addFile("${id.name}-${id.version}.module")
-                addFile("${id.name}-${id.version}.jar")
-                addFile("${id.name}-${id.version}.aar")
-                addFile("${id.name}-${id.version}-sources.jar")
+        val variantNames = listOf(
+            "runtimeElements",
+            "releaseRuntimePublication",
+            "metadata-api",
+            "metadataApiElements-published",
+            "runtime"
+        )
+        variantNames.forEach { name ->
+            ctx.details.maybeAddVariant("allFilesWithDependencies${name.capitalize()}", name) {
+                attributes {
+                    attribute(Usage.USAGE_ATTRIBUTE, getObjects().named(Usage.JAVA_RUNTIME))
+                    attribute(Category.CATEGORY_ATTRIBUTE, getObjects().named(Category.DOCUMENTATION))
+                    attribute(
+                        DocsType.DOCS_TYPE_ATTRIBUTE,
+                        getObjects().named("all-files-with-dependencies")
+                    )
+                }
+                withFiles {
+                    addFile("${id.name}-${id.version}.pom")
+                    addFile("${id.name}-${id.version}.module")
+                    addFile("${id.name}-${id.version}.jar")
+                    addFile("${id.name}-${id.version}.aar")
+                    addFile("${id.name}-${id.version}-sources.jar")
+                    addFile("${id.name}-${id.version}.klib")
+                    addFile("${id.name}-${id.version}-cinterop-interop.klib")
+                }
             }
         }
     }
@@ -429,14 +476,30 @@ open class DirectMetadataAccessVariantRule : ComponentMetadataRule {
 tasks {
     val fetchArtifacts by creating {
         doLast {
+            var numArtifactsFound = 0
             println("\r\nAll Files with Dependencies")
             allFilesWithDependencies.incoming.artifactView {
                 lenient(true)
             }.artifacts.forEach {
                 copyArtifact(it, internal = isInternalArtifact(it))
+                numArtifactsFound++
             }
-
-            println("\r\nResolved artifacts for $artifactName.")
+            gradleModuleMetadata.incoming.artifactView {
+                lenient(true)
+            }.artifacts.forEach {
+                copyArtifact(it, internal = isInternalArtifact(it))
+                numArtifactsFound++
+            }
+            if (numArtifactsFound < 1) {
+                var message = "Artifact $artifactName not found!"
+                if (metalavaBuildId != null) {
+                    message += "\nMake sure that ab/$metalavaBuildId contains the `metalava` "
+                    message += "target and that it has finished building, or see "
+                    message += "ab/metalava-master for available build ids"
+                }
+                throw GradleException(message)
+            }
+	    println("\r\nResolved $numArtifactsFound artifacts for $artifactName.")
         }
     }
 }

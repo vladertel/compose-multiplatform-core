@@ -26,9 +26,11 @@ import android.util.Size;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.ViewPort;
 import androidx.camera.core.internal.utils.ImageUtil;
+import androidx.core.util.Preconditions;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +38,7 @@ import java.util.Map;
 /**
  * Utility methods for calculating viewports.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class ViewPorts {
     private ViewPorts() {
 
@@ -44,9 +47,14 @@ public class ViewPorts {
     /**
      * Calculate a set of ViewPorts based on the combination of the camera, viewport, and use cases.
      *
+     * <p> This method calculates the crop rect for each use cases. It only thinks in abstract terms
+     * like the original dimension, output rotation and desired crop rect expressed via viewport.
+     * It does not care about the use case types or the device/display rotation.
+     *
      * @param fullSensorRect        The full size of the viewport.
      * @param viewPortAspectRatio   The aspect ratio of the viewport.
-     * @param outputRotationDegrees The output rotation of the viewport
+     * @param outputRotationDegrees Clockwise rotation to correct the surfaces to display
+     *                              rotation.
      * @param scaleType             The scale type to calculate
      * @param layoutDirection       The direction of layout.
      * @param useCaseSizes          The resolutions of the UseCases
@@ -55,18 +63,23 @@ public class ViewPorts {
     @NonNull
     public static Map<UseCase, Rect> calculateViewPortRects(
             @NonNull Rect fullSensorRect,
+            boolean isFrontCamera,
             @NonNull Rational viewPortAspectRatio,
             @IntRange(from = 0, to = 359) int outputRotationDegrees,
             @ViewPort.ScaleType int scaleType,
             @ViewPort.LayoutDirection int layoutDirection,
             @NonNull Map<UseCase, Size> useCaseSizes) {
-        // Transform aspect ratio to sensor orientation. The the rest of the method is in sensor
-        // orientation.
-        Rational rotatedViewPortAspectRatio = ImageUtil.getRotatedAspectRatio(
-                outputRotationDegrees, viewPortAspectRatio);
-        RectF fullSensorRectF = new RectF(fullSensorRect);
+        Preconditions.checkArgument(
+                fullSensorRect.width() > 0 && fullSensorRect.height() > 0,
+                "Cannot compute viewport crop rects zero sized sensor rect.");
 
-        // Calculate the transformation for each UseCase.
+        // The key to calculate the crop rect is that all the crop rect should match to the same
+        // region on camera sensor. This method first calculates the shared camera region, and then
+        // maps it use cases to find out their crop rects.
+
+        // Calculate the mapping between sensor buffer and UseCases, and the sensor rect shared
+        // by all use cases.
+        RectF fullSensorRectF = new RectF(fullSensorRect);
         Map<UseCase, Matrix> useCaseToSensorTransformations = new HashMap<>();
         RectF sensorIntersectionRect = new RectF(fullSensorRect);
         for (Map.Entry<UseCase, Size> entry : useCaseSizes.entrySet()) {
@@ -84,20 +97,21 @@ public class ViewPorts {
             sensorIntersectionRect.intersect(useCaseSensorRect);
         }
 
-        // Get the shared sensor rect by the given aspect ratio.
-        sensorIntersectionRect = getScaledRect(
-                sensorIntersectionRect, rotatedViewPortAspectRatio, scaleType);
+        // Crop the shared sensor rect based on viewport parameters.
+        Rational rotatedViewPortAspectRatio = ImageUtil.getRotatedAspectRatio(
+                outputRotationDegrees, viewPortAspectRatio);
+        RectF viewPortRect = getScaledRect(
+                sensorIntersectionRect, rotatedViewPortAspectRatio, scaleType, isFrontCamera,
+                layoutDirection, outputRotationDegrees);
 
-        // Map the max shared sensor rect to UseCase coordinates.
+        // Map the cropped shared sensor rect to UseCase coordinates.
         Map<UseCase, Rect> useCaseOutputRects = new HashMap<>();
         RectF useCaseOutputRect = new RectF();
         Matrix sensorToUseCaseTransformation = new Matrix();
         for (Map.Entry<UseCase, Matrix> entry : useCaseToSensorTransformations.entrySet()) {
             // Transform the sensor crop rect to UseCase coordinates.
             entry.getValue().invert(sensorToUseCaseTransformation);
-            sensorToUseCaseTransformation.mapRect(useCaseOutputRect, sensorIntersectionRect);
-            correctOutputRectForRtl(layoutDirection, useCaseSizes.get(entry.getKey()),
-                    useCaseOutputRect);
+            sensorToUseCaseTransformation.mapRect(useCaseOutputRect, viewPortRect);
             Rect outputCropRect = new Rect();
             useCaseOutputRect.round(outputCropRect);
             useCaseOutputRects.put(entry.getKey(), outputCropRect);
@@ -106,103 +120,183 @@ public class ViewPorts {
     }
 
     /**
-     * Flips and corrects the Rect for LTR layout direction.
+     * Returns the container rect that the given rect fills.
      *
-     * <p> The definition of "start" and "end" in {@link ViewPort.ScaleType} depends on
-     * {@link LayoutDirection}. For {@link LayoutDirection#LTR}, the start is (0,0) and the
-     * end is (width, height); for {@link LayoutDirection#RTL}, the start is (width, 0) and
-     * the end is (0, height). The output rect needs to be transformed to match View properties.
-     */
-    static void correctOutputRectForRtl(
-            @ViewPort.LayoutDirection int layoutDirection,
-            Size size,
-            RectF rect) {
-        if (layoutDirection == LayoutDirection.LTR) {
-            // No transformation needed for the default LTR.
-            return;
-        }
-
-        // Flip based on the middle line of the Surface.
-        Matrix rtlTransformation = new Matrix();
-        // Create a transformation that mirror the Surface.
-        rtlTransformation.setPolyToPoly(
-                new float[]{0, 0, size.getWidth(), 0, size.getWidth(), size.getHeight(), 0,
-                        size.getHeight()},
-                0,
-                new float[]{size.getWidth(), 0, 0, 0, 0, size.getHeight(), size.getWidth(),
-                        size.getHeight()},
-                0,
-                4);
-        rtlTransformation.mapRect(rect);
-
-        // The order of the vertices are mirrored too. Rearrange them based on value.
-        float newLeft = Math.min(rect.left, rect.right);
-        float newRight = Math.max(rect.left, rect.right);
-        float newTop = Math.min(rect.top, rect.bottom);
-        float newBottom = Math.max(rect.top, rect.bottom);
-        rect.set(newLeft, newTop, newRight, newBottom);
-    }
-
-    /**
-     * Returns the scaled surface rect that fits/fills the given view port aspect ratio.
+     * <p> For FILL types, returns the largest container rect that is smaller than the view port.
+     * The returned rectangle is also required to 1) have the view port's aspect ratio and 2) be
+     * in the surface coordinates.
      *
-     * <p> Scale type represents the transformation from surface to view port. For FIT types,
-     * this method returns the smallest rectangle that is larger the surface; For FILL types,
-     * returns the largest rectangle that is smaller than the view port. The returned rectangle
-     * is also required to 1) have the view port's aspect ratio and 2) be in the surface
-     * coordinates.
+     * <p> For FIT, returns the largest possible rect shared by all use cases.
      */
     @SuppressLint("SwitchIntDef")
     @NonNull
     public static RectF getScaledRect(
-            @NonNull RectF surfaceRect,
-            @NonNull Rational viewPortAspectRatio,
-            @ViewPort.ScaleType int scaleType) {
+            @NonNull RectF fittingRect,
+            @NonNull Rational containerAspectRatio,
+            @ViewPort.ScaleType int scaleType,
+            boolean isFrontCamera,
+            @ViewPort.LayoutDirection int layoutDirection,
+            @IntRange(from = 0, to = 359) int rotationDegrees) {
+        if (scaleType == ViewPort.FIT) {
+            // Return the fitting rect if the rect is fully covered by the container.
+            return fittingRect;
+        }
+        // Using Matrix' convenience methods fill the rect into the containing rect with given
+        // aspect ratio.
+        // NOTE: By using the Matrix#setRectToRect, we assume the "start" is always (0, 0) and
+        // the "end" is always (w, h), which is NOT always true depending on rotation, layout
+        // orientation and/or camera lens facing. We need to correct the rect based on rotation and
+        // layout direction.
         Matrix viewPortToSurfaceTransformation = new Matrix();
-        RectF viewPortRect = new RectF(0, 0, viewPortAspectRatio.getNumerator(),
-                viewPortAspectRatio.getDenominator());
-        if (scaleType == ViewPort.FIT_CENTER || scaleType == ViewPort.FIT_END
-                || scaleType == ViewPort.FIT_START) {
-            Matrix surfaceToViewPortTransformation = new Matrix();
-            switch (scaleType) {
-                // To workaround the limitation that Matrix doesn't not support FILL types
-                // natively, use inverted backward FIT mapping to achieve forward FILL mapping.
-                case ViewPort.FIT_CENTER:
-                    surfaceToViewPortTransformation.setRectToRect(
-                            surfaceRect, viewPortRect, Matrix.ScaleToFit.CENTER);
-                    break;
-                case ViewPort.FIT_START:
-                    surfaceToViewPortTransformation.setRectToRect(
-                            surfaceRect, viewPortRect, Matrix.ScaleToFit.START);
-                    break;
-                case ViewPort.FIT_END:
-                    surfaceToViewPortTransformation.setRectToRect(
-                            surfaceRect, viewPortRect, Matrix.ScaleToFit.END);
-                    break;
-            }
-            surfaceToViewPortTransformation.invert(viewPortToSurfaceTransformation);
-        } else if (scaleType == ViewPort.FILL_CENTER || scaleType == ViewPort.FILL_END
-                || scaleType == ViewPort.FILL_START) {
-            switch (scaleType) {
-                case ViewPort.FILL_CENTER:
-                    viewPortToSurfaceTransformation.setRectToRect(
-                            viewPortRect, surfaceRect, Matrix.ScaleToFit.CENTER);
-                    break;
-                case ViewPort.FILL_START:
-                    viewPortToSurfaceTransformation.setRectToRect(
-                            viewPortRect, surfaceRect, Matrix.ScaleToFit.START);
-                    break;
-                case ViewPort.FILL_END:
-                    viewPortToSurfaceTransformation.setRectToRect(
-                            viewPortRect, surfaceRect, Matrix.ScaleToFit.END);
-                    break;
-            }
-        } else {
-            throw new IllegalStateException("Unexpected scale type: " + scaleType);
+        RectF viewPortRect = new RectF(0, 0, containerAspectRatio.getNumerator(),
+                containerAspectRatio.getDenominator());
+        switch (scaleType) {
+            case ViewPort.FILL_CENTER:
+                viewPortToSurfaceTransformation.setRectToRect(
+                        viewPortRect, fittingRect, Matrix.ScaleToFit.CENTER);
+                break;
+            case ViewPort.FILL_START:
+                viewPortToSurfaceTransformation.setRectToRect(
+                        viewPortRect, fittingRect, Matrix.ScaleToFit.START);
+                break;
+            case ViewPort.FILL_END:
+                viewPortToSurfaceTransformation.setRectToRect(
+                        viewPortRect, fittingRect, Matrix.ScaleToFit.END);
+                break;
+            default:
+                throw new IllegalStateException("Unexpected scale type: " + scaleType);
         }
 
         RectF viewPortRectInSurfaceCoordinates = new RectF();
         viewPortToSurfaceTransformation.mapRect(viewPortRectInSurfaceCoordinates, viewPortRect);
-        return viewPortRectInSurfaceCoordinates;
+
+        // Correct the crop rect based on rotation and layout direction.
+        return correctStartOrEnd(
+                shouldMirrorStartAndEnd(isFrontCamera, layoutDirection),
+                rotationDegrees,
+                fittingRect,
+                viewPortRectInSurfaceCoordinates);
+    }
+
+    /**
+     * Correct viewport based on rotation and layout direction.
+     *
+     * <p> Both rotation and mirroring change the definition of the "start" and "end" in
+     * scale type. For rotation, since the value is clockwise rotation should be applied to the
+     * output buffer, the start/end point should be rotated counterclockwisely. If mirroring is
+     * needed, the start/end point should be mirrored based on the upright direction of the
+     * image.
+     */
+    private static RectF correctStartOrEnd(boolean isMirrored,
+            @IntRange(from = 0, to = 359) int rotationDegrees,
+            RectF containerRect,
+            RectF cropRect) {
+        // For each scenario there is an illustration of the output buffer without correction.
+        // The arrow represents the opposite direction of gravity. The start/end point should
+        // rotate counterclockwisely based on rotationDegrees, and mirror along the line of the
+        // arrow if mirroring is needed.
+
+        //
+        // Start +-----+
+        //       |  ^  |
+        //       +-----+  End
+        //
+        boolean ltrRotation0 = rotationDegrees == 0 && !isMirrored;
+        //
+        // Start +-----+     90°     +-----+ End  Mirrored  Start +-----+
+        //       |  ^  |    ===>     |  <  |        ==>           |  <  |
+        //       +-----+ End   Start +-----+                      +-----+ End
+        //
+        boolean rtlRotation90 = rotationDegrees == 90 && isMirrored;
+        if (ltrRotation0 || rtlRotation90) {
+            return cropRect;
+        }
+
+        //
+        // Start +-----+ Mirrored  +-----+ Start
+        //       |  ^  |   ===>    |  ^  |
+        //       +-----+ End   End +-----+
+        //
+        boolean rtlRotation0 = rotationDegrees == 0 && isMirrored;
+        //
+        // Start +-----+   270°   +-----+ Start
+        //       |  ^  |   ===>   |  >  |
+        //       +-----+ End  End +-----+
+        //
+        boolean ltrRotation270 = rotationDegrees == 270 && !isMirrored;
+        if (rtlRotation0 || ltrRotation270) {
+            return flipHorizontally(cropRect, containerRect.centerX());
+        }
+
+        //
+        // Start +-----+    90°     +-----+ End
+        //       |  ^  |   ===>     |  <  |
+        //       +-----+ End  Start +-----+
+        //
+        boolean ltrRotation90 = rotationDegrees == 90 && !isMirrored;
+        //
+        // Start +-----+   180°  End +-----+   Mirrored    +-----+ End
+        //       |  ^  |   ===>      |  v  |     ==>       |  v  |
+        //       +-----+ End         +-----+ Start   Start +-----+
+        //
+        boolean rtlRotation180 = rotationDegrees == 180 && isMirrored;
+        if (ltrRotation90 || rtlRotation180) {
+            return flipVertically(cropRect, containerRect.centerY());
+        }
+
+        //
+        // Start +-----+   180°  End +-----+
+        //       |  ^  |   ===>      |  v  |
+        //       +-----+ End         +-----+ Start
+        //
+        boolean ltrRotation180 = rotationDegrees == 180 && !isMirrored;
+        //
+        // Start +-----+   270°   +-----+ Start  Mirrored  End +-----+
+        //       |  ^  |   ===>   |  >  |           ==>        |  >  |
+        //       +-----+ End  End +-----+                      +-----+ Start
+        //
+        boolean rtlRotation270 = rotationDegrees == 270 && isMirrored;
+        if (ltrRotation180 || rtlRotation270) {
+            return flipHorizontally(flipVertically(cropRect, containerRect.centerY()),
+                    containerRect.centerX());
+        }
+
+        throw new IllegalArgumentException("Invalid argument: mirrored " + isMirrored + " "
+                + "rotation " + rotationDegrees);
+    }
+
+    /**
+     * Checks if the start/end direction in scale type should be mirrored.
+     *
+     * <p> They should be mirrored if one and only one of the following is true: the front camera is
+     * used or layout direction is RTL.
+     */
+    private static boolean shouldMirrorStartAndEnd(boolean isFrontCamera,
+            @ViewPort.LayoutDirection int layoutDirection) {
+        return isFrontCamera ^ layoutDirection == LayoutDirection.RTL;
+    }
+
+    private static RectF flipHorizontally(RectF original, float flipLineX) {
+        return new RectF(
+                flipX(original.right, flipLineX),
+                original.top,
+                flipX(original.left, flipLineX),
+                original.bottom);
+    }
+
+    private static RectF flipVertically(RectF original, float flipLineY) {
+        return new RectF(
+                original.left,
+                flipY(original.bottom, flipLineY),
+                original.right,
+                flipY(original.top, flipLineY));
+    }
+
+    private static float flipX(float x, float flipLineX) {
+        return flipLineX + flipLineX - x;
+    }
+
+    private static float flipY(float y, float flipLineY) {
+        return flipLineY + flipLineY - y;
     }
 }

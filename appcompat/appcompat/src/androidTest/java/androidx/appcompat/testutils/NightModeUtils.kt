@@ -27,9 +27,10 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.app.AppCompatDelegate.NightMode
 import androidx.lifecycle.Lifecycle
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.rule.ActivityTestRule
 import androidx.testutils.LifecycleOwnerUtils
+import androidx.testutils.PollingCheck
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 
 object NightModeUtils {
     private const val LOG_TAG = "NightModeUtils"
@@ -51,6 +52,19 @@ object NightModeUtils {
         context: Context
     ) {
         assertConfigurationNightModeEquals(
+            null,
+            expectedNightMode,
+            context
+        )
+    }
+
+    fun assertConfigurationNightModeEquals(
+        message: String?,
+        expectedNightMode: Int,
+        context: Context
+    ) {
+        assertConfigurationNightModeEquals(
+            message,
             expectedNightMode,
             context.resources.configuration
         )
@@ -60,14 +74,27 @@ object NightModeUtils {
         expectedNightMode: Int,
         configuration: Configuration
     ) {
+        assertConfigurationNightModeEquals(
+            null,
+            expectedNightMode,
+            configuration
+        )
+    }
+
+    fun assertConfigurationNightModeEquals(
+        message: String?,
+        expectedNightMode: Int,
+        configuration: Configuration
+    ) {
         assertEquals(
+            message,
             expectedNightMode.toLong(),
             (configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK).toLong()
         )
     }
 
     fun <T : AppCompatActivity> setNightModeAndWait(
-        activityRule: ActivityTestRule<T>,
+        @Suppress("DEPRECATION") activityRule: androidx.test.rule.ActivityTestRule<T>,
         @NightMode nightMode: Int,
         setMode: NightSetMode
     ) {
@@ -76,14 +103,15 @@ object NightModeUtils {
 
     fun <T : AppCompatActivity> setNightModeAndWait(
         activity: AppCompatActivity?,
-        activityRule: ActivityTestRule<T>,
+        @Suppress("DEPRECATION") activityRule: androidx.test.rule.ActivityTestRule<T>,
         @NightMode nightMode: Int,
         setMode: NightSetMode
     ) {
         Log.d(
-            LOG_TAG, "setNightModeAndWait on Activity: " + activity +
-                    " to mode: " + nightMode +
-                    " using set mode: " + setMode
+            LOG_TAG,
+            "setNightModeAndWait on Activity: " + activity +
+                " to mode: " + nightMode +
+                " using set mode: " + setMode
         )
 
         val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -92,7 +120,7 @@ object NightModeUtils {
     }
 
     fun <T : AppCompatActivity> setNightModeAndWaitForRecreate(
-        activityRule: ActivityTestRule<T>,
+        @Suppress("DEPRECATION") activityRule: androidx.test.rule.ActivityTestRule<T>,
         @NightMode nightMode: Int,
         setMode: NightSetMode
     ): T = setNightModeAndWaitForRecreate(activityRule.activity, nightMode, setMode)
@@ -103,13 +131,20 @@ object NightModeUtils {
         setMode: NightSetMode
     ): T {
         Log.d(
-            LOG_TAG, "setNightModeAndWaitForRecreate on Activity: " + activity +
-                    " to mode: " + nightMode +
-                    " using set mode: " + setMode
+            LOG_TAG,
+            "setNightModeAndWaitForRecreate on Activity: " + activity +
+                " to mode: " + nightMode +
+                " using set mode: " + setMode
         )
 
-        // Wait for the Activity to be resumed and visible
         LifecycleOwnerUtils.waitUntilState(activity, Lifecycle.State.RESUMED)
+
+        // Screen rotation kicks off a lot of background work, so we might need to wait a bit
+        // between the activity reaching RESUMED state and it actually being shown on screen.
+        PollingCheck.waitFor {
+            activity.hasWindowFocus()
+        }
+        assertNotEquals(nightMode, getNightMode(activity, setMode))
 
         // Now perform night mode change wait for the Activity to be recreated
         return LifecycleOwnerUtils.waitForRecreation(activity) {
@@ -125,7 +160,8 @@ object NightModeUtils {
         return LifecycleOwnerUtils.waitForRecreation(activity) {
             Log.e(LOG_TAG, "request rotate on ui thread")
             if (activity.resources.configuration.orientation ==
-                Configuration.ORIENTATION_LANDSCAPE) {
+                Configuration.ORIENTATION_LANDSCAPE
+            ) {
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             } else {
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -153,10 +189,20 @@ object NightModeUtils {
         setMode: NightSetMode
     ) = when (setMode) {
         NightSetMode.DEFAULT -> AppCompatDelegate.setDefaultNightMode(nightMode)
-        NightSetMode.LOCAL -> if (Build.VERSION.SDK_INT >= 17) {
+        NightSetMode.LOCAL ->
+            if (Build.VERSION.SDK_INT >= 17) {
                 activity!!.delegate.localNightMode = nightMode
             } else {
                 throw Exception("Local night mode is not supported on SDK_INT < 17")
             }
+    }
+
+    @NightMode
+    fun getNightMode(
+        activity: AppCompatActivity?,
+        setMode: NightSetMode
+    ): Int = when (setMode) {
+        NightSetMode.DEFAULT -> AppCompatDelegate.getDefaultNightMode()
+        NightSetMode.LOCAL -> activity!!.delegate.localNightMode
     }
 }

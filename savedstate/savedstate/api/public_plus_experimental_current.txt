@@ -1,4 +1,4 @@
-// Signature format: 3.0
+// Signature format: 4.0
 package androidx.savedstate {
 
   public final class SavedStateRegistry {
@@ -20,6 +20,7 @@ package androidx.savedstate {
   public final class SavedStateRegistryController {
     method public static androidx.savedstate.SavedStateRegistryController create(androidx.savedstate.SavedStateRegistryOwner);
     method public androidx.savedstate.SavedStateRegistry getSavedStateRegistry();
+    method @MainThread public void performAttach();
     method @MainThread public void performRestore(android.os.Bundle?);
     method @MainThread public void performSave(android.os.Bundle);
   }

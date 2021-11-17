@@ -16,7 +16,7 @@
 #
 
 from ReleaseNoteMarkdown import *
-from GitClient import CommitType, getTitleFromCommitType
+from GitClient import CommitType, getTitleFromCommitType, getChangeIdAOSPLink, getBuganizerLink
 
 class CommitMarkdownList:
 	"""Generates the markdown list of commits with sections defined by enum [CommitType], in the format:
@@ -40,15 +40,27 @@ class CommitMarkdownList:
 	def getListItemStr(self):
 		return "- "
 
+	def formatReleaseNoteString(self, commit):
+		if commit.releaseNote != "":
+			releaseNoteString = commit.releaseNote
+		else:
+			releaseNoteString = self.getListItemStr() + commit.summary
+		newLineCharCount = releaseNoteString.count("\n")
+		if releaseNoteString[-1] == "\n":
+			newLineCharCount = newLineCharCount - 1
+		releaseNoteString = releaseNoteString.replace("\n", "\n  ", newLineCharCount)
+		releaseNoteString += " (" + str(getChangeIdAOSPLink(commit.changeId))
+		for bug in commit.bugs:
+			releaseNoteString += ", " + str(getBuganizerLink(bug))
+		releaseNoteString += ")"
+		return self.getListItemStr() + releaseNoteString
+
 	def makeReleaseNotesSection(self, sectionCommitType):
 		sectionHeader = MarkdownBoldText(getTitleFromCommitType(sectionCommitType))
 		markdownStringSection = ""
 		for commit in self.commits:
 			if commit.changeType != sectionCommitType: continue
-			if commit.releaseNote != "":
-				commitString = self.getListItemStr() + commit.getReleaseNoteString()
-			else:
-				commitString = self.getListItemStr() + str(commit)
+			commitString = self.formatReleaseNoteString(commit)
 			if self.forceIncludeAllCommits or commit.releaseNote != "":
 				markdownStringSection = markdownStringSection + commitString
 				if markdownStringSection[-1] != '\n':
@@ -97,6 +109,19 @@ class LibraryHeader(MarkdownHeader):
 		self.markdownType = HeaderType.H3
 		self.text = "%s Version %s {:#%s%s}" % (groupId, version, artifactIdTag, version)
 
+class ChannelSummaryItem:
+	"""Generates the summary list item in the channel.md pages, which take the format:
+
+		* [<Title> Version <version>](/jetpack/androidx/releases/<groupid>#<version>)
+
+		where <header> is usually the GroupId.
+	"""
+	def __init__(self, formattedTitle, groupId, version, artifactIdTag=""):
+		self.text = "* [%s Version %s](/jetpack/androidx/releases/%s#%s%s)\n" % (formattedTitle, version, groupId.lower(), artifactIdTag, version)
+
+	def __str__(self):
+		return self.text
+
 class LibraryReleaseNotes:
 	""" Structured release notes class, that connects all parts of the release notes.  Creates release
 	notes in the format:
@@ -144,6 +169,7 @@ class LibraryReleaseNotes:
 		self.commitMarkdownList = CommitMarkdownList(commitList, forceIncludeAllCommits)
 		self.summary = ""
 		self.bugsFixed = []
+		self.channelSummary = None
 
 		if version == "" or groupId == "":
 			raise RuntimeError("Tried to create Library Release Notes Header without setting " +
@@ -152,6 +178,7 @@ class LibraryReleaseNotes:
 			formattedGroupId = groupId.replace("androidx.", "")
 			formattedGroupId = self.capitalizeTitle(formattedGroupId)
 			self.header = LibraryHeader(formattedGroupId, version)
+			self.channelSummary = ChannelSummaryItem(formattedGroupId, formattedGroupId, version)
 		else:
 			artifactIdTag = artifactIds[0] + "-" if len(artifactIds) == 1 else ""
 			formattedArtifactIds = (" ".join(artifactIds))
@@ -159,6 +186,8 @@ class LibraryReleaseNotes:
 				formattedArtifactIds = groupId.replace("androidx.", "")
 			formattedArtifactIds = self.capitalizeTitle(formattedArtifactIds)
 			self.header = LibraryHeader(formattedArtifactIds, version, artifactIdTag)
+			formattedGroupId = groupId.replace("androidx.", "")
+			self.channelSummary = ChannelSummaryItem(formattedArtifactIds, formattedGroupId, version, artifactIdTag)
 		self.diffLogLink = getGitilesDiffLogLink(version, fromSHA, untilSHA, projectDir)
 
 	def getFormattedReleaseSummary(self):

@@ -16,21 +16,33 @@
 
 package androidx.camera.testing.fakes;
 
+import android.util.Range;
+import android.util.Rational;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.CameraState;
+import androidx.camera.core.ExposureState;
+import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.TorchState;
 import androidx.camera.core.ZoomState;
+import androidx.camera.core.impl.CamcorderProfileProvider;
 import androidx.camera.core.impl.CameraCaptureCallback;
 import androidx.camera.core.impl.CameraInfoInternal;
 import androidx.camera.core.impl.ImageOutputConfig.RotationValue;
+import androidx.camera.core.impl.Quirk;
+import androidx.camera.core.impl.Quirks;
 import androidx.camera.core.impl.utils.CameraOrientationUtil;
 import androidx.camera.core.internal.ImmutableZoomState;
+import androidx.core.util.Preconditions;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
@@ -38,6 +50,7 @@ import java.util.concurrent.Executor;
  *
  * <p>This camera info can be constructed with fake values.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class FakeCameraInfoInternal implements CameraInfoInternal {
     private final String mCameraId;
     private final int mSensorRotation;
@@ -45,8 +58,17 @@ public final class FakeCameraInfoInternal implements CameraInfoInternal {
     private final int mLensFacing;
     private final boolean mHasFlashUnit = true;
     private MutableLiveData<Integer> mTorchState = new MutableLiveData<>(TorchState.OFF);
-
     private final MutableLiveData<ZoomState> mZoomLiveData;
+    private MutableLiveData<CameraState> mCameraStateLiveData;
+    private String mImplementationType = IMPLEMENTATION_TYPE_FAKE;
+
+    // Leave uninitialized to support camera-core:1.0.0 dependencies.
+    // Can be initialized during class init once there are no more pinned dependencies on
+    // camera-core:1.0.0
+    private CamcorderProfileProvider mCamcorderProfileProvider;
+
+    @NonNull
+    private final List<Quirk> mCameraQuirks = new ArrayList<>();
 
     public FakeCameraInfoInternal() {
         this(/*sensorRotation=*/ 0, /*lensFacing=*/ CameraSelector.LENS_FACING_BACK);
@@ -118,8 +140,31 @@ public final class FakeCameraInfoInternal implements CameraInfoInternal {
 
     @NonNull
     @Override
+    public ExposureState getExposureState() {
+        return new FakeExposureState();
+    }
+
+    @NonNull
+    @Override
+    public LiveData<CameraState> getCameraState() {
+        if (mCameraStateLiveData == null) {
+            mCameraStateLiveData = new MutableLiveData<>(
+                    CameraState.create(CameraState.Type.CLOSED));
+        }
+        return mCameraStateLiveData;
+    }
+
+    @NonNull
+    @Override
     public String getImplementationType() {
-        return IMPLEMENTATION_TYPE_FAKE;
+        return mImplementationType;
+    }
+
+    @NonNull
+    @Override
+    public CamcorderProfileProvider getCamcorderProfileProvider() {
+        return mCamcorderProfileProvider == null ? CamcorderProfileProvider.EMPTY :
+                mCamcorderProfileProvider;
     }
 
     @Override
@@ -131,5 +176,59 @@ public final class FakeCameraInfoInternal implements CameraInfoInternal {
     @Override
     public void removeSessionCaptureCallback(@NonNull CameraCaptureCallback callback) {
         throw new UnsupportedOperationException("Not Implemented");
+    }
+
+    @NonNull
+    @Override
+    public Quirks getCameraQuirks() {
+        return new Quirks(mCameraQuirks);
+    }
+
+    @Override
+    public boolean isFocusMeteringSupported(@NonNull FocusMeteringAction action) {
+        return false;
+    }
+
+    /** Adds a quirk to the list of this camera's quirks. */
+    public void addCameraQuirk(@NonNull final Quirk quirk) {
+        mCameraQuirks.add(quirk);
+    }
+
+    /**
+     * Set the implementation type for testing
+     */
+    public void setImplementationType(@NonNull @ImplementationType String implementationType) {
+        mImplementationType = implementationType;
+    }
+
+    /** Set the CamcorderProfileProvider for testing */
+    public void setCamcorderProfileProvider(
+            @NonNull CamcorderProfileProvider camcorderProfileProvider) {
+        mCamcorderProfileProvider = Preconditions.checkNotNull(camcorderProfileProvider);
+    }
+
+    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+    static final class FakeExposureState implements ExposureState {
+        @Override
+        public int getExposureCompensationIndex() {
+            return 0;
+        }
+
+        @NonNull
+        @Override
+        public Range<Integer> getExposureCompensationRange() {
+            return Range.create(0, 0);
+        }
+
+        @NonNull
+        @Override
+        public Rational getExposureCompensationStep() {
+            return Rational.ZERO;
+        }
+
+        @Override
+        public boolean isExposureCompensationSupported() {
+            return true;
+        }
     }
 }

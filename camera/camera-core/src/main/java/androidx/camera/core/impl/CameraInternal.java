@@ -17,16 +17,25 @@
 package androidx.camera.core.impl;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.Camera;
+import androidx.camera.core.CameraControl;
+import androidx.camera.core.CameraInfo;
 import androidx.camera.core.UseCase;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 
 /**
  * The camera interface. It is controlled by the change of state in use cases.
+ *
+ * <p> It is a Camera instance backed by a single physical camera.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraInternal extends Camera, UseCase.StateChangeCallback {
     /**
      * The state of a camera within the process.
@@ -144,4 +153,39 @@ public interface CameraInternal extends Camera, UseCase.StateChangeCallback {
     /** Returns an interface to retrieve characteristics of the camera. */
     @NonNull
     CameraInfoInternal getCameraInfoInternal();
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // Camera interface
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    @NonNull
+    @Override
+    default CameraControl getCameraControl() {
+        return getCameraControlInternal();
+    }
+
+    @NonNull
+    @Override
+    default CameraInfo getCameraInfo() {
+        return getCameraInfoInternal();
+    }
+
+    /**
+     * Always returns only itself since there is only ever one CameraInternal.
+     */
+    @NonNull
+    @Override
+    default LinkedHashSet<CameraInternal> getCameraInternals() {
+        return new LinkedHashSet<>(Collections.singleton(this));
+    }
+
+    @NonNull
+    @Override
+    default CameraConfig getExtendedConfig() {
+        return CameraConfigs.emptyConfig();
+    }
+
+    @Override
+    default void setExtendedConfig(@Nullable CameraConfig cameraConfig) {
+        // Ignore the config since CameraInternal won't use the config
+    }
 }

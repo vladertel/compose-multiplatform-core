@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import androidx.navigation.plusAssign
 import androidx.navigation.truth.test.R
 import androidx.navigation.truth.NavControllerSubject.Companion.assertThat
+import androidx.test.annotation.UiThreadTest
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.filters.SmallTest
 import androidx.testutils.TestNavigator
@@ -31,6 +32,7 @@ import org.junit.Test
 class NavControllerSubjectTest {
     private lateinit var navController: NavController
 
+    @UiThreadTest
     @Before
     fun setUp() {
         navController = NavController(ApplicationProvider.getApplicationContext()).apply {
@@ -46,9 +48,11 @@ class NavControllerSubjectTest {
 
     @Test
     fun testIsCurrentDestinationFailure() {
-        with(assertThrows {
-            assertThat(navController).isCurrentDestination(R.id.second_test)
-        }) {
+        with(
+            assertThrows {
+                assertThat(navController).isCurrentDestination(R.id.second_test)
+            }
+        ) {
             factValue("expected id")
                 .isEqualTo("0x${R.id.second_test.toString(16)}")
             factValue("but was")
@@ -65,9 +69,11 @@ class NavControllerSubjectTest {
 
     @Test
     fun testIsGraphFailure() {
-        with(assertThrows {
-            assertThat(navController).isGraph(R.id.second_test_graph)
-        }) {
+        with(
+            assertThrows {
+                assertThat(navController).isGraph(R.id.second_test_graph)
+            }
+        ) {
             factValue("expected id")
                 .isEqualTo("0x${R.id.second_test_graph.toString(16)}")
             factValue("but was")

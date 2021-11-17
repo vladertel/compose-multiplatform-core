@@ -1,5 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="5" by="lint 3.6.0-beta05" client="gradle" variant="debug" version="3.6.0-beta05">
+<issues format="6" by="lint 7.1.0-beta02" type="baseline" client="gradle" dependencies="false" name="AGP (7.1.0-beta02)" variant="all" version="7.1.0-beta02">
+
+    <issue
+        id="MissingLeanbackLauncher"
+        message="Expecting an activity to have `android.intent.category.LEANBACK_LAUNCHER` intent filter"
+        errorLine1="&lt;manifest package=&quot;androidx.leanback.preference&quot;/>"
+        errorLine2=" ~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="18"
+            column="2"/>
+    </issue>
+
+    <issue
+        id="ImpliedTouchscreenHardware"
+        message="Hardware feature `android.hardware.touchscreen` not explicitly marked as optional "
+        errorLine1="&lt;manifest package=&quot;androidx.leanback.preference&quot;/>"
+        errorLine2=" ~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="18"
+            column="2"/>
+    </issue>
+
+    <issue
+        id="MissingLeanbackSupport"
+        message="Expecting `&lt;uses-feature android:name=&quot;android.software.leanback&quot; android:required=&quot;false&quot; />` tag"
+        errorLine1="&lt;manifest package=&quot;androidx.leanback.preference&quot;/>"
+        errorLine2=" ~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="18"
+            column="2"/>
+    </issue>
 
     <issue
         id="UnknownNullness"
@@ -63,7 +96,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/BaseLeanbackPreferenceFragmentCompat.java"
-            line="70"
+            line="71"
             column="12"/>
     </issue>
 
@@ -74,7 +107,7 @@
         errorLine2="                                             ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/BaseLeanbackPreferenceFragmentCompat.java"
-            line="70"
+            line="71"
             column="46"/>
     </issue>
 
@@ -85,7 +118,7 @@
         errorLine2="                                                                      ~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/BaseLeanbackPreferenceFragmentCompat.java"
-            line="70"
+            line="71"
             column="71"/>
     </issue>
 
@@ -96,7 +129,7 @@
         errorLine2="            ~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/BaseLeanbackPreferenceFragmentCompat.java"
-            line="71"
+            line="72"
             column="13"/>
     </issue>
 
@@ -107,7 +140,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/BaseLeanbackPreferenceFragmentCompat.java"
-            line="86"
+            line="87"
             column="12"/>
     </issue>
 
@@ -283,7 +316,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="188"
+            line="189"
             column="12"/>
     </issue>
 
@@ -294,7 +327,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="210"
+            line="211"
             column="30"/>
     </issue>
 
@@ -305,7 +338,7 @@
         errorLine2="                                                     ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="210"
+            line="211"
             column="54"/>
     </issue>
 
@@ -316,7 +349,7 @@
         errorLine2="                ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="211"
+            line="212"
             column="17"/>
     </issue>
 
@@ -327,7 +360,7 @@
         errorLine2="               ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="218"
+            line="219"
             column="16"/>
     </issue>
 
@@ -338,7 +371,7 @@
         errorLine2="                                             ~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="218"
+            line="219"
             column="46"/>
     </issue>
 
@@ -349,7 +382,7 @@
         errorLine2="                                     ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="226"
+            line="227"
             column="38"/>
     </issue>
 
@@ -360,7 +393,7 @@
         errorLine2="                                ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="237"
+            line="239"
             column="33"/>
     </issue>
 
@@ -371,7 +404,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="270"
+            line="272"
             column="29"/>
     </issue>
 
@@ -382,7 +415,7 @@
         errorLine2="                                                    ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="270"
+            line="272"
             column="53"/>
     </issue>
 
@@ -393,7 +426,7 @@
         errorLine2="                ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="271"
+            line="273"
             column="17"/>
     </issue>
 
@@ -404,7 +437,7 @@
         errorLine2="               ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="278"
+            line="280"
             column="16"/>
     </issue>
 
@@ -415,7 +448,7 @@
         errorLine2="                                             ~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="278"
+            line="280"
             column="46"/>
     </issue>
 
@@ -426,7 +459,7 @@
         errorLine2="                                     ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="286"
+            line="288"
             column="38"/>
     </issue>
 
@@ -437,7 +470,7 @@
         errorLine2="                                ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="298"
+            line="300"
             column="33"/>
     </issue>
 
@@ -448,7 +481,7 @@
         errorLine2="                             ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="337"
+            line="339"
             column="30"/>
     </issue>
 
@@ -459,7 +492,7 @@
         errorLine2="               ~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="354"
+            line="356"
             column="16"/>
     </issue>
 
@@ -470,7 +503,7 @@
         errorLine2="               ~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="358"
+            line="360"
             column="16"/>
     </issue>
 
@@ -481,7 +514,7 @@
         errorLine2="               ~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="362"
+            line="364"
             column="16"/>
     </issue>
 
@@ -492,7 +525,7 @@
         errorLine2="                            ~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragment.java"
-            line="367"
+            line="369"
             column="29"/>
     </issue>
 
@@ -591,7 +624,7 @@
         errorLine2="               ~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragmentCompat.java"
-            line="349"
+            line="351"
             column="16"/>
     </issue>
 
@@ -602,7 +635,7 @@
         errorLine2="               ~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragmentCompat.java"
-            line="353"
+            line="355"
             column="16"/>
     </issue>
 
@@ -613,7 +646,7 @@
         errorLine2="               ~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragmentCompat.java"
-            line="357"
+            line="359"
             column="16"/>
     </issue>
 
@@ -624,7 +657,7 @@
         errorLine2="                            ~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackListPreferenceDialogFragmentCompat.java"
-            line="362"
+            line="364"
             column="29"/>
     </issue>
 
@@ -635,7 +668,7 @@
         errorLine2="                         ~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceDialogFragment.java"
-            line="42"
+            line="39"
             column="26"/>
     </issue>
 
@@ -646,7 +679,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceDialogFragment.java"
-            line="52"
+            line="49"
             column="12"/>
     </issue>
 
@@ -657,7 +690,7 @@
         errorLine2="                         ~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceDialogFragmentCompat.java"
-            line="42"
+            line="39"
             column="26"/>
     </issue>
 
@@ -668,7 +701,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceDialogFragmentCompat.java"
-            line="56"
+            line="53"
             column="12"/>
     </issue>
 
@@ -679,7 +712,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragment.java"
-            line="51"
+            line="48"
             column="12"/>
     </issue>
 
@@ -690,7 +723,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragment.java"
-            line="51"
+            line="48"
             column="30"/>
     </issue>
 
@@ -701,7 +734,7 @@
         errorLine2="                                                      ~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragment.java"
-            line="51"
+            line="48"
             column="55"/>
     </issue>
 
@@ -712,7 +745,7 @@
         errorLine2="            ~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragment.java"
-            line="52"
+            line="49"
             column="13"/>
     </issue>
 
@@ -723,7 +756,7 @@
         errorLine2="                              ~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragment.java"
-            line="66"
+            line="63"
             column="31"/>
     </issue>
 
@@ -734,7 +767,7 @@
         errorLine2="                                         ~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragment.java"
-            line="66"
+            line="63"
             column="42"/>
     </issue>
 
@@ -745,7 +778,7 @@
         errorLine2="                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragment.java"
-            line="75"
+            line="72"
             column="26"/>
     </issue>
 
@@ -756,7 +789,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragmentCompat.java"
-            line="52"
+            line="49"
             column="12"/>
     </issue>
 
@@ -767,7 +800,7 @@
         errorLine2="                                                               ~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragmentCompat.java"
-            line="52"
+            line="49"
             column="64"/>
     </issue>
 
@@ -778,7 +811,7 @@
         errorLine2="            ~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragmentCompat.java"
-            line="53"
+            line="50"
             column="13"/>
     </issue>
 
@@ -789,7 +822,7 @@
         errorLine2="                                                  ~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragmentCompat.java"
-            line="67"
+            line="64"
             column="51"/>
     </issue>
 
@@ -800,7 +833,7 @@
         errorLine2="                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/leanback/preference/LeanbackPreferenceFragmentCompat.java"
-            line="77"
+            line="74"
             column="26"/>
     </issue>
 

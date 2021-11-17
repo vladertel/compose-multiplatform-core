@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CaptureFailure;
@@ -30,7 +31,7 @@ import android.os.Build;
 import androidx.camera.core.impl.CameraCaptureCallback;
 import androidx.camera.core.impl.CameraCaptureFailure;
 import androidx.camera.core.impl.CameraCaptureResult;
-import androidx.test.filters.SmallTest;
+import androidx.camera.core.impl.TagBundle;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +40,6 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.internal.DoNotInstrument;
 
-@SmallTest
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
@@ -56,6 +56,7 @@ public final class CaptureCallbackAdapterTest {
         mCameraCaptureCallback = mock(CameraCaptureCallback.class);
         mCameraCaptureSession = mock(CameraCaptureSession.class);
         mCaptureRequest = mock(CaptureRequest.class);
+        when(mCaptureRequest.getTag()).thenReturn(TagBundle.emptyBundle());
         mCaptureResult = mock(TotalCaptureResult.class);
         mCaptureCallbackAdapter = new CaptureCallbackAdapter(mCameraCaptureCallback);
     }

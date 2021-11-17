@@ -15,25 +15,25 @@
  */
 package androidx.camera.camera2.pipe.integration
 
+import androidx.annotation.RequiresApi
+import androidx.camera.camera2.pipe.integration.adapter.CameraFactoryAdapter
+import androidx.camera.camera2.pipe.integration.adapter.CameraSurfaceAdapter
+import androidx.camera.camera2.pipe.integration.adapter.CameraUseCaseAdapter
 import androidx.camera.core.CameraXConfig
-import androidx.camera.core.impl.ExtendableUseCaseConfigFactory
-import androidx.camera.camera2.pipe.integration.impl.CameraPipeCameraFactory
-import androidx.camera.camera2.pipe.integration.impl.CameraPipeDeviceSurfaceManager
 
 /**
- * Convenience class for generating a pre-populated CameraPipe [CameraXConfig].
+ * Convenience class for generating a pre-populated CameraPipe based [CameraXConfig].
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 object CameraPipeConfig {
     /**
-     * Creates a [CameraXConfig] containing the default CameraPipe implementation for CameraX.
+     * Creates a [CameraXConfig] containing a default CameraPipe implementation for CameraX.
      */
     fun defaultConfig(): CameraXConfig {
         return CameraXConfig.Builder()
-            .setCameraFactoryProvider(::CameraPipeCameraFactory)
-            .setDeviceSurfaceManagerProvider(::CameraPipeDeviceSurfaceManager)
-            .setUseCaseConfigFactoryProvider { ExtendableUseCaseConfigFactory() }
+            .setCameraFactoryProvider(::CameraFactoryAdapter)
+            .setDeviceSurfaceManagerProvider(::CameraSurfaceAdapter)
+            .setUseCaseConfigFactoryProvider(::CameraUseCaseAdapter)
             .build()
     }
-
-    // TODO: Add CameraPipeConfig.Builder for passing options to CameraPipe
 }

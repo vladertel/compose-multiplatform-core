@@ -121,7 +121,7 @@ object BoolArrayType : NavType {
     override fun bundlePutMethod() = "putBooleanArray"
     override fun bundleGetMethod() = "getBooleanArray"
     override fun toString() = "boolean"
-    override fun allowsNullable() = false
+    override fun allowsNullable() = true
 }
 
 object ReferenceType : NavType {
@@ -140,10 +140,10 @@ object ReferenceArrayType : NavType {
 
 data class ObjectType(val canonicalName: String) : NavType {
     override fun bundlePutMethod() =
-            throw UnsupportedOperationException("Use addBundlePutStatement instead.")
+        throw UnsupportedOperationException("Use addBundlePutStatement instead.")
 
     override fun bundleGetMethod() =
-            throw UnsupportedOperationException("Use addBundleGetStatement instead.")
+        throw UnsupportedOperationException("Use addBundleGetStatement instead.")
 
     override fun toString() = "parcelable or serializable"
     override fun allowsNullable() = true
