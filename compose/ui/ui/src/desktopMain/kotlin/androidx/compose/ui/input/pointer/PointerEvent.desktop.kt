@@ -79,10 +79,20 @@ actual data class PointerEvent internal constructor(
 
     // TODO(demin): new API, which is not merged to AOSP
     /**
-     * Original raw native event from AWT
+     * The original raw native event which is sent by the platform.
      */
-    val mouseEvent: MouseEvent?
+    val nativeEvent: Any?
 ) {
+    /**
+     * The original raw native event from AWT
+     */
+    @Deprecated(
+        "Use androidx.compose.ui.awt.awtEvent",
+        replaceWith = ReplaceWith("awtEvent", "androidx.compose.ui.awt.awtEvent"
+        )
+    )
+    val mouseEvent: MouseEvent? get() = nativeEvent as MouseEvent?
+
     internal actual constructor(
         changes: List<PointerInputChange>,
         internalPointerEvent: InternalPointerEvent?
@@ -102,7 +112,7 @@ actual data class PointerEvent internal constructor(
         changes,
         buttons = PointerButtons(0),
         keyboardModifiers = PointerKeyboardModifiers(0),
-        mouseEvent = null
+        nativeEvent = null
     )
 
     actual var type: PointerEventType = PointerEventType.Unknown
