@@ -20,5 +20,5 @@ import androidx.compose.ui.Modifier
 
 internal actual fun Modifier.mouseScrollable(
     orientation: Orientation,
-    onScroll: (Float) -> Unit
+    onScroll: (Float) -> Boolean
 ): Modifier = this
