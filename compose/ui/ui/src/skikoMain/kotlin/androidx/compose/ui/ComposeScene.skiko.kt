@@ -35,9 +35,12 @@ import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 import androidx.compose.ui.input.mouse.MouseScrollEvent
 import androidx.compose.ui.input.mouse.MouseScrollOrientation
 import androidx.compose.ui.input.mouse.MouseScrollUnit
+import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.areAnyPressed
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.platform.AccessibilityController
 import androidx.compose.ui.platform.PlatformComponent
@@ -141,7 +144,7 @@ class ComposeScene internal constructor(
     val roots: Set<RootForTest> get() = list
 
     private var pointerId = 0L
-    private var isMousePressed = false
+    private val defaultPointerStateTracker = DefaultPointerStateTracker()
 
     private val job = Job()
     private val coroutineScope = CoroutineScope(coroutineContext + job)
@@ -372,6 +375,9 @@ class ComposeScene internal constructor(
      * is platform-dependent.
      * @param type The device type that produced the event, such as [mouse][PointerType.Mouse],
      * or [touch][PointerType.Touch].
+     * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons).
+     * @param keyboardModifiers Contains the state of modifier keys, such as Shift, Control, and Alt, as well as the state
+     * of the lock keys, such as Caps Lock and Num Lock.
      * @param nativeEvent The original native event.
      */
     @OptIn(ExperimentalComposeUiApi::class)
@@ -380,25 +386,33 @@ class ComposeScene internal constructor(
         position: Offset,
         timeMillis: Long = System.nanoTime() / 1_000_000L,
         type: PointerType = PointerType.Mouse,
+        buttons: PointerButtons? = null,
+        keyboardModifiers: PointerKeyboardModifiers? = null,
         nativeEvent: Any? = null,
-        // TODO(demin): support PointerButtons, PointerKeyboardModifiers
-//        buttons: PointerButtons? = null,
-//        keyboardModifiers: PointerKeyboardModifiers? = null,
     ) {
         check(!isClosed) { "ComposeScene is closed" }
-        when (eventType) {
-            PointerEventType.Press -> isMousePressed = true
-            PointerEventType.Release -> isMousePressed = false
-        }
+        defaultPointerStateTracker.onPointerEvent(eventType)
+
+        val actualButtons = buttons ?: defaultPointerStateTracker.buttons
+        val actualKeyboardModifiers = keyboardModifiers ?: defaultPointerStateTracker.keyboardModifiers
+
         val event = pointerInputEvent(
-            eventType, position, timeMillis, nativeEvent, type, isMousePressed, pointerId
+            eventType,
+            position,
+            timeMillis,
+            nativeEvent,
+            type,
+            pointerId,
+            actualButtons,
+            actualKeyboardModifiers
         )
+
         when (eventType) {
             PointerEventType.Press -> onMousePressed(event)
             PointerEventType.Release -> onMouseReleased(event)
             PointerEventType.Move -> {
                 pointLocation = position
-                if (isMousePressed) {
+                if (actualButtons.areAnyPressed) {
                     mousePressOwner?.processPointerInput(event)
                 } else {
                     hoveredOwner?.processPointerInput(event)
@@ -406,6 +420,10 @@ class ComposeScene internal constructor(
             }
             PointerEventType.Enter -> hoveredOwner?.processPointerInput(event)
             PointerEventType.Exit -> hoveredOwner?.processPointerInput(event)
+        }
+
+        if (!actualButtons.areAnyPressed) {
+            mousePressOwner = null
         }
     }
 
@@ -425,6 +443,9 @@ class ComposeScene internal constructor(
      * is platform-dependent.
      * @param type The device type that produced the event, such as [mouse][PointerType.Mouse],
      * or [touch][PointerType.Touch].
+     * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons).
+     * @param keyboardModifiers Contains the state of modifier keys, such as Shift, Control, and Alt, as well as the state
+     * of the lock keys, such as Caps Lock and Num Lock.
      * @param nativeEvent The original native event
      */
     @OptIn(ExperimentalComposeUiApi::class)
@@ -436,9 +457,9 @@ class ComposeScene internal constructor(
         orientation: MouseScrollOrientation = MouseScrollOrientation.Vertical,
         timeMillis: Long = System.nanoTime() / 1_000_000L,
         type: PointerType = PointerType.Mouse,
+        buttons: PointerButtons? = null,
+        keyboardModifiers: PointerKeyboardModifiers? = null,
         nativeEvent: Any? = null,
-//        buttons: PointerButtons? = null,
-//        keyboardModifiers: PointerKeyboardModifiers? = null,
     ) {
         check(!isClosed) { "ComposeScene is closed" }
         hoveredOwner?.onMouseScroll(position, MouseScrollEvent(delta, orientation))
@@ -462,7 +483,6 @@ class ComposeScene internal constructor(
     private fun onMouseReleased(event: PointerInputEvent) {
         val owner = (mousePressOwner ?: hoveredOwner) ?: focusedOwner
         owner?.processPointerInput(event)
-        mousePressOwner = null
         pointerId += 1
     }
 
@@ -479,6 +499,21 @@ class ComposeScene internal constructor(
     internal fun onInputMethodEvent(event: Any) = this.onPlatformInputMethodEvent(event)
 }
 
+private class DefaultPointerStateTracker {
+    fun onPointerEvent(eventType: PointerEventType) {
+        when (eventType) {
+            PointerEventType.Press -> buttons = PrimaryPressedPointerButtons
+            PointerEventType.Release -> buttons = DefaultPointerButtons
+        }
+    }
+
+    var buttons = DefaultPointerButtons
+        private set
+
+    var keyboardModifiers = DefaultPointerKeyboardModifiers
+        private set
+}
+
 internal expect fun ComposeScene.onPlatformInputMethodEvent(event: Any)
 
 internal expect fun pointerInputEvent(
@@ -487,11 +522,16 @@ internal expect fun pointerInputEvent(
     timeMillis: Long,
     nativeEvent: Any?,
     type: PointerType,
-    isMousePressed: Boolean,
-    pointerId: Long
+    pointerId: Long,
+    buttons: PointerButtons,
+    keyboardModifiers: PointerKeyboardModifiers,
 ): PointerInputEvent
 
 internal expect fun makeAccessibilityController(
     skiaBasedOwner: SkiaBasedOwner,
     component: PlatformComponent
 ): AccessibilityController
+
+internal expect val DefaultPointerButtons: PointerButtons
+internal expect val DefaultPointerKeyboardModifiers: PointerKeyboardModifiers
+internal expect val PrimaryPressedPointerButtons: PointerButtons
