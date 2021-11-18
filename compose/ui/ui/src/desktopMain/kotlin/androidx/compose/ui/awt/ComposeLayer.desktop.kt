@@ -23,9 +23,12 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.mouse.MouseScrollOrientation
 import androidx.compose.ui.input.mouse.MouseScrollUnit
+import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.platform.AccessibilityControllerImpl
+import androidx.compose.ui.platform.DesktopPlatform
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.unit.Constraints
@@ -41,8 +44,10 @@ import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Point
+import java.awt.Toolkit
 import java.awt.Window
 import java.awt.event.FocusEvent
+import java.awt.event.InputEvent
 import java.awt.event.InputMethodEvent
 import java.awt.event.InputMethodListener
 import java.awt.event.KeyAdapter
@@ -313,6 +318,8 @@ private fun ComposeScene.onMouseEvent(
         position = Offset(event.x.toFloat(), event.y.toFloat()) * density,
         timeMillis = event.`when`,
         type = PointerType.Mouse,
+        buttons = event.buttons,
+        keyboardModifiers = event.keyboardModifiers,
         nativeEvent = event
     )
 }
@@ -338,6 +345,8 @@ private fun ComposeScene.onMouseWheelEvent(
         },
         timeMillis = event.`when`,
         type = PointerType.Mouse,
+        buttons = event.buttons,
+        keyboardModifiers = event.keyboardModifiers,
         nativeEvent = event
     )
 }
@@ -346,3 +355,41 @@ private fun ComposeScene.onMouseWheelEvent(
 private fun ComposeScene.sendKeyEvent(event: KeyEvent) {
     sendKeyEvent(ComposeKeyEvent(event))
 }
+
+@OptIn(ExperimentalComposeUiApi::class)
+private val MouseEvent.buttons get() = PointerButtons(
+    isPrimaryPressed = (modifiersEx and MouseEvent.BUTTON1_DOWN_MASK) != 0 && !isMacOsCtrlClick,
+    isSecondaryPressed = (modifiersEx and MouseEvent.BUTTON3_DOWN_MASK) != 0 || isMacOsCtrlClick,
+    isTertiaryPressed = (modifiersEx and MouseEvent.BUTTON2_DOWN_MASK) != 0,
+    isBackPressed = (modifiersEx and MouseEvent.getMaskForButton(4)) != 0,
+    isForwardPressed = (modifiersEx and MouseEvent.getMaskForButton(5)) != 0,
+)
+
+@OptIn(ExperimentalComposeUiApi::class)
+private val MouseEvent.keyboardModifiers get() = PointerKeyboardModifiers(
+    isCtrlPressed = (modifiersEx and InputEvent.CTRL_DOWN_MASK) != 0,
+    isMetaPressed = (modifiersEx and InputEvent.META_DOWN_MASK) != 0,
+    isAltPressed = (modifiersEx and InputEvent.ALT_DOWN_MASK) != 0,
+    isShiftPressed = (modifiersEx and InputEvent.SHIFT_DOWN_MASK) != 0,
+    isAltGraphPressed = (modifiersEx and InputEvent.ALT_GRAPH_DOWN_MASK) != 0,
+    isSymPressed = false,
+    isFunctionPressed = false,
+    isCapsLockOn = getLockingKeyStateSafe(KeyEvent.VK_CAPS_LOCK),
+    isScrollLockOn = getLockingKeyStateSafe(KeyEvent.VK_SCROLL_LOCK),
+    isNumLockOn = getLockingKeyStateSafe(KeyEvent.VK_NUM_LOCK),
+)
+
+private fun getLockingKeyStateSafe(
+    mask: Int
+): Boolean = try {
+    Toolkit.getDefaultToolkit().getLockingKeyState(mask)
+} catch (_: Exception) {
+    false
+}
+
+private val MouseEvent.isMacOsCtrlClick
+    get() = (
+            DesktopPlatform.Current == DesktopPlatform.MacOS &&
+                    ((modifiersEx and InputEvent.BUTTON1_DOWN_MASK) != 0) &&
+                    ((modifiersEx and InputEvent.CTRL_DOWN_MASK) != 0)
+            )

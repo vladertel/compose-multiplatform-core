@@ -16,11 +16,16 @@
 package androidx.compose.ui
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventData
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.areAnyPressed
+import androidx.compose.ui.input.pointer.indexOfFirstPressed
+import androidx.compose.ui.input.pointer.indexOfLastPressed
 import androidx.compose.ui.platform.AccessibilityController
 import androidx.compose.ui.platform.AccessibilityControllerImpl
 import androidx.compose.ui.platform.PlatformComponent
@@ -50,8 +55,9 @@ internal actual fun pointerInputEvent(
     timeMillis: Long,
     nativeEvent: Any?,
     type: PointerType,
-    isMousePressed: Boolean,
-    pointerId: Long
+    pointerId: Long,
+    buttons: PointerButtons,
+    keyboardModifiers: PointerKeyboardModifiers,
 ): PointerInputEvent {
     return PointerInputEvent(
         eventType,
@@ -62,10 +68,12 @@ internal actual fun pointerInputEvent(
                 timeMillis,
                 position,
                 position,
-                isMousePressed,
+                buttons.areAnyPressed,
                 type
             )
         ),
+        buttons,
+        keyboardModifiers,
         nativeEvent as MouseEvent?
     )
 }
@@ -74,3 +82,12 @@ internal actual fun makeAccessibilityController(
     skiaBasedOwner: SkiaBasedOwner,
     component: PlatformComponent
 ): AccessibilityController = AccessibilityControllerImpl(skiaBasedOwner, component)
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal actual val DefaultPointerButtons: PointerButtons = PointerButtons()
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal actual val DefaultPointerKeyboardModifiers: PointerKeyboardModifiers = PointerKeyboardModifiers()
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal actual val PrimaryPressedPointerButtons: PointerButtons = PointerButtons(isPrimaryPressed = true)
