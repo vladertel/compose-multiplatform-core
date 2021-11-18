@@ -196,52 +196,15 @@ class ImageComposeScene(
     fun sendPointerEvent(
         eventType: PointerEventType,
         position: Offset,
+        scrollDelta: Offset = Offset(0f, 0f),
         timeMillis: Long = System.nanoTime() / 1_000_000L,
         type: PointerType = PointerType.Mouse,
         buttons: PointerButtons? = null,
         keyboardModifiers: PointerKeyboardModifiers? = null,
-        mouseEvent: MouseEvent? = null
+        nativeEvent: Any? = null
     ): Unit = scene.sendPointerEvent(
-        eventType, position, timeMillis, type, buttons, keyboardModifiers, mouseEvent
+        eventType, position, scrollDelta, timeMillis, type, buttons, keyboardModifiers, nativeEvent
     )
-
-    // TODO(demin): remove/change when we will have scroll event support in the common code
-    // TODO(demin): return Boolean (when it is consumed).
-    //  see ComposeLayer todo about AWTDebounceEventQueue
-    /**
-     * Send pointer scroll event to the content.
-     *
-     * @param position The [Offset] of the current pointer event, relative to the content
-     * @param delta Change of mouse scroll.
-     * Positive if scrolling down, negative if scrolling up.
-     * @param orientation Orientation in which scrolling event occurs.
-     * Up/down wheel scrolling causes events in vertical orientation.
-     * Left/right wheel scrolling causes events in horizontal orientation.
-     * @param timeMillis The time of the current pointer event, in milliseconds. The start (`0`) time
-     * is platform-dependent.
-     * @param type The device type that produced the event, such as [mouse][PointerType.Mouse],
-     * or [touch][PointerType.Touch].
-     * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons).
-     * @param keyboardModifiers Contains the state of modifier keys, such as Shift, Control, and Alt, as well as the state
-     * of the lock keys, such as Caps Lock and Num Lock.
-     * @param mouseEvent The original native event
-     */
-    @OptIn(ExperimentalComposeUiApi::class)
-    @Suppress("UNUSED_PARAMETER")
-    @ExperimentalComposeUiApi // it is more experimental than ComposeScene itself
-    fun sendPointerScrollEvent(
-        position: Offset,
-        delta: MouseScrollUnit,
-        orientation: MouseScrollOrientation = MouseScrollOrientation.Vertical,
-        timeMillis: Long = System.nanoTime() / 1_000_000L,
-        type: PointerType = PointerType.Mouse,
-        buttons: PointerButtons? = null,
-        keyboardModifiers: PointerKeyboardModifiers? = null,
-        mouseEvent: MouseEvent? = null,
-    ): Unit = scene.sendPointerScrollEvent(
-        position, delta, orientation, timeMillis, type, buttons, keyboardModifiers, mouseEvent
-    )
-
     /**
      * Send [KeyEvent] to the content.
      * @return true if the event was consumed by the content

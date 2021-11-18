@@ -21,7 +21,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awtWheelEvent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -55,10 +57,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        scene.sendPointerScrollEvent(
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
             position = Offset.Zero,
-            delta = MouseScrollUnit.Line(3f),
-            orientation = MouseScrollOrientation.Vertical
+            scrollDelta = Offset(0f, 3f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent?.delta).isEqualTo(MouseScrollUnit.Line(3f))
@@ -87,10 +90,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        scene.sendPointerScrollEvent(
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
             position = Offset(20f, 0f),
-            delta = MouseScrollUnit.Line(3f),
-            orientation = MouseScrollOrientation.Vertical
+            scrollDelta = Offset(0f, 3f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent).isEqualTo(null)
@@ -129,10 +133,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        scene.sendPointerScrollEvent(
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
             position = Offset.Zero,
-            delta = MouseScrollUnit.Line(3f),
-            orientation = MouseScrollOrientation.Horizontal
+            scrollDelta = Offset(3f, 0f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent1).isEqualTo(null)
@@ -170,10 +175,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        scene.sendPointerScrollEvent(
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
             position = Offset.Zero,
-            delta = MouseScrollUnit.Line(3f),
-            orientation = MouseScrollOrientation.Horizontal
+            scrollDelta = Offset(3f, 0f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent).isEqualTo(null)
@@ -205,10 +211,11 @@ class MouseScrollFilterTest {
             )
         }
 
-        scene.sendPointerScrollEvent(
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
             position = Offset.Zero,
-            delta = MouseScrollUnit.Line(3f),
-            orientation = MouseScrollOrientation.Horizontal
+            scrollDelta = Offset(3f, 0f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent?.delta).isEqualTo(MouseScrollUnit.Line(3f))
@@ -249,10 +256,11 @@ class MouseScrollFilterTest {
             }
         }
 
-        scene.sendPointerScrollEvent(
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
             position = Offset.Zero,
-            delta = MouseScrollUnit.Line(-1f),
-            orientation = MouseScrollOrientation.Horizontal
+            scrollDelta = Offset(-1f, 0f),
+            nativeEvent = awtWheelEvent(),
         )
 
         assertThat(actualEvent1).isEqualTo(null)
@@ -291,10 +299,11 @@ class MouseScrollFilterTest {
             }
         }
 
-        scene.sendPointerScrollEvent(
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
             position = Offset.Zero,
-            delta = MouseScrollUnit.Page(1f),
-            orientation = MouseScrollOrientation.Horizontal
+            scrollDelta = Offset(1f, 0f),
+            nativeEvent = awtWheelEvent(isScrollByPages = true),
         )
 
         assertThat(actualEvent?.delta).isEqualTo(MouseScrollUnit.Page(1f))
@@ -328,10 +337,11 @@ class MouseScrollFilterTest {
             }
         }
 
-        scene.sendPointerScrollEvent(
+        scene.sendPointerEvent(
+            eventType = PointerEventType.Scroll,
             position = Offset.Zero,
-            delta = MouseScrollUnit.Page(1f),
-            orientation = MouseScrollOrientation.Horizontal
+            scrollDelta = Offset(1f, 0f),
+            nativeEvent = awtWheelEvent(isScrollByPages = true),
         )
 
         assertThat(actualEvent?.delta).isEqualTo(MouseScrollUnit.Page(1f))

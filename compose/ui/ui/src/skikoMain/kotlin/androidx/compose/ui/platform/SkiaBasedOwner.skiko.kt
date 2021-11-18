@@ -374,6 +374,8 @@ internal class SkiaBasedOwner(
                         PointerEventType.Move,
                         lastPointerEvent.uptime,
                         lastPointerEvent.pointers,
+                        lastPointerEvent.buttons,
+                        lastPointerEvent.keyboardModifiers,
                         lastPointerEvent.mouseEvent
                     )
                 )
