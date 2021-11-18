@@ -220,7 +220,6 @@ class ComposeScene internal constructor(
         skiaBasedOwner.onNeedRender = ::invalidateIfNeeded
         skiaBasedOwner.onDispatchCommand = ::dispatchCommand
         skiaBasedOwner.constraints = constraints
-        skiaBasedOwner.containerCursor = component
         skiaBasedOwner.accessibilityController = makeAccessibilityController(
             skiaBasedOwner,
             component
@@ -290,6 +289,7 @@ class ComposeScene internal constructor(
         mainOwner?.dispose()
         val mainOwner = SkiaBasedOwner(
             platformInputService,
+            component,
             component.windowInfo,
             density,
             onPreviewKeyEvent = onPreviewKeyEvent,

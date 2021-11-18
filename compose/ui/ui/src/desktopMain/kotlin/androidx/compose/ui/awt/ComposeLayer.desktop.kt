@@ -185,6 +185,21 @@ internal class ComposeLayer {
         private fun refreshWindowFocus() {
             windowInfo.isWindowFocused = window?.isFocused ?: false
         }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <E : Any> createSyntheticMoveEvent(originalEvent: E): E {
+            originalEvent as MouseEvent
+            return MouseEvent(
+                component,
+                MouseEvent.MOUSE_MOVED,
+                originalEvent.`when`,
+                originalEvent.modifiersEx,
+                originalEvent.x,
+                originalEvent.y,
+                0,
+                false
+            ) as E
+        }
     }
 
     init {

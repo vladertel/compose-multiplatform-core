@@ -49,7 +49,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.PointerIconDefaults
 import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
@@ -84,6 +83,7 @@ private typealias Command = () -> Unit
 )
 internal class SkiaBasedOwner(
     private val platformInputService: PlatformInput,
+    private val component: PlatformComponent,
     override val windowInfo: WindowInfo,
     density: Density = Density(1f, 1f),
     val isPopup: Boolean = false,
@@ -235,7 +235,6 @@ internal class SkiaBasedOwner(
     val needRender get() = needLayout || needDraw || needSendSyntheticEvents
     var onNeedRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
-    var containerCursor: PlatformComponentWithCursor? = null
 
     fun render(canvas: org.jetbrains.skia.Canvas) {
         needLayout = false
@@ -374,7 +373,7 @@ internal class SkiaBasedOwner(
                         lastPointerEvent.pointers,
                         lastPointerEvent.buttons,
                         lastPointerEvent.keyboardModifiers,
-                        lastPointerEvent.mouseEvent
+                        lastPointerEvent.mouseEvent?.let(component::createSyntheticMoveEvent)
                     )
                 )
             }
@@ -397,7 +396,7 @@ internal class SkiaBasedOwner(
                     it.position.y in 0f..root.height.toFloat()
             }
         ).also {
-            commitPointerIcon(containerCursor)
+            commitPointerIcon(component)
         }
     }
 
@@ -414,8 +413,8 @@ internal class SkiaBasedOwner(
     override val pointerIconService: PointerIconService =
         object : PointerIconService {
             override var current: PointerIcon
-                get() = getPointerIcon(containerCursor)
-                set(value) { setPointerIcon(containerCursor, value) }
+                get() = getPointerIcon(component)
+                set(value) { setPointerIcon(component, value) }
         }
 }
 

@@ -17,6 +17,7 @@ package androidx.compose.ui.platform
 
 internal expect interface PlatformComponent : PlatformInputComponent, PlatformComponentWithCursor {
     val windowInfo: WindowInfo
+    fun <Event : Any> createSyntheticMoveEvent(originalEvent: Event): Event
 }
 
 internal expect interface PlatformComponentWithCursor
