@@ -135,7 +135,8 @@ internal fun Modifier.scrollable(
                 enabled
             )
             .mouseScrollable(orientation) {
-                state.dispatchRawDelta(it.reverseIfNeeded())
+                val consumedDelta = state.dispatchRawDelta(it.reverseIfNeeded())
+                consumedDelta != 0f
             }
     }
 )
@@ -163,7 +164,7 @@ object ScrollableDefaults {
 //  (to differentiate mouse and touch)
 internal expect fun Modifier.mouseScrollable(
     orientation: Orientation,
-    onScroll: (Float) -> Unit
+    onScroll: (Float) -> Boolean
 ): Modifier
 
 @Suppress("ComposableModifierFactory")
