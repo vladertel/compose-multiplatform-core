@@ -140,7 +140,6 @@ class ComposeScene internal constructor(
      */
     val roots: Set<RootForTest> get() = list
 
-    private var pointerId = 0L
     private var isMousePressed = false
 
     private val job = Job()
@@ -391,7 +390,7 @@ class ComposeScene internal constructor(
             PointerEventType.Release -> isMousePressed = false
         }
         val event = pointerInputEvent(
-            eventType, position, timeMillis, nativeEvent, type, isMousePressed, pointerId
+            eventType, position, timeMillis, nativeEvent, type, isMousePressed, pointerId = 0
         )
         when (eventType) {
             PointerEventType.Press -> onMousePressed(event)
@@ -463,7 +462,6 @@ class ComposeScene internal constructor(
         val owner = (mousePressOwner ?: hoveredOwner) ?: focusedOwner
         owner?.processPointerInput(event)
         mousePressOwner = null
-        pointerId += 1
     }
 
     private var pointLocation = Offset.Zero
