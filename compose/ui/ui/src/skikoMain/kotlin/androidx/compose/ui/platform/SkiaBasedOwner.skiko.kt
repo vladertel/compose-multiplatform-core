@@ -335,11 +335,8 @@ internal class SkiaBasedOwner(
         root.draw(canvas.asComposeCanvas())
     }
 
-    private var desiredPointerIcon: PointerIcon? = null
-
     internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
         measureAndLayout()
-        desiredPointerIcon = null
         return pointerInputEventProcessor.process(
             event,
             this,
@@ -348,7 +345,7 @@ internal class SkiaBasedOwner(
                     it.position.y in 0f..root.height.toFloat()
             }
         ).also {
-            setPointerIcon(containerCursor, desiredPointerIcon)
+            commitPointerIcon(containerCursor)
         }
     }
 
@@ -365,8 +362,8 @@ internal class SkiaBasedOwner(
     override val pointerIconService: PointerIconService =
         object : PointerIconService {
             override var current: PointerIcon
-                get() = desiredPointerIcon ?: PointerIconDefaults.Default
-                set(value) { desiredPointerIcon = value }
+                get() = getPointerIcon(containerCursor)
+                set(value) { setPointerIcon(containerCursor, value) }
         }
 }
 
@@ -376,7 +373,17 @@ internal expect fun sendKeyEvent(
     keyEvent: KeyEvent
 ): Boolean
 
+internal expect fun commitPointerIcon(
+    containerCursor: PlatformComponentWithCursor?
+)
+
+@OptIn(ExperimentalComposeUiApi::class)
 internal expect fun setPointerIcon(
     containerCursor: PlatformComponentWithCursor?,
     icon: PointerIcon?
 )
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal expect fun getPointerIcon(
+    containerCursor: PlatformComponentWithCursor?
+): PointerIcon

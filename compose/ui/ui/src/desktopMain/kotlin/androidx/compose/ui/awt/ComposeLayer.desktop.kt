@@ -62,7 +62,7 @@ internal class ComposeLayer {
     private val _component = ComponentImpl()
     val component: SkiaLayer get() = _component
 
-    private val scene = ComposeScene(
+    internal val scene = ComposeScene(
         Dispatchers.Swing,
         _component,
         Density(1f),
@@ -98,9 +98,15 @@ internal class ComposeLayer {
         }
 
         override fun getInputMethodRequests() = currentInputMethodRequests
-        override var componentCursor: Cursor
-            get() = super.getCursor()
-            set(value) { super.setCursor(value) }
+        private var _desiredCursor: Cursor? = null
+        override var desiredCursor: Cursor
+            get() = _desiredCursor ?: super.getCursor()
+            set(value) { _desiredCursor = value }
+
+        override fun commitCursor() {
+            super.setCursor(_desiredCursor ?: Cursor(Cursor.DEFAULT_CURSOR))
+            _desiredCursor = null
+        }
 
         override fun enableInput(inputMethodRequests: InputMethodRequests) {
             currentInputMethodRequests = inputMethodRequests
