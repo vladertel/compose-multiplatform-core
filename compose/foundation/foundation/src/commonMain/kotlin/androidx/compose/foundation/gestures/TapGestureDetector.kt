@@ -250,7 +250,7 @@ suspend fun AwaitPointerEventScope.awaitFirstDown(
 private val PointerEvent.isPrimaryButton: Boolean
     get() {
         val isMouse = changes.all { it.type == PointerType.Mouse }
-        return isMouse && buttons.isPrimaryPressed || !isMouse
+        return !isMouse || buttons.isPrimaryPressed
     }
 
 /**
