@@ -19,6 +19,7 @@ package androidx.compose.ui.input.pointer
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.fastMapNotNull
