@@ -15,11 +15,16 @@
  */
 package androidx.emoji2.text;
 
-import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
+import static androidx.annotation.RestrictTo.Scope.LIBRARY;
+import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP;
+import static androidx.annotation.RestrictTo.Scope.TESTS;
 
+import android.app.Application;
+import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
@@ -38,7 +43,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
-import androidx.annotation.VisibleForTesting;
 import androidx.collection.ArraySet;
 import androidx.core.util.Preconditions;
 
@@ -54,28 +58,54 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Main class to keep Android devices up to date with the newest emojis by adding {@link EmojiSpan}s
- * to a given {@link CharSequence}. It is a singleton class that can be configured using a {@link
- * EmojiCompat.Config} instance.
+ * to a given {@link CharSequence}.
  * <p/>
- * EmojiCompat has to be initialized using {@link #init(EmojiCompat.Config)} function before it can
- * process a {@link CharSequence}.
- * <pre><code>EmojiCompat.init(&#47;* a config instance *&#47;);</code></pre>
+ * By default, EmojiCompat is initialized by {@link EmojiCompatInitializer}, which performs
+ * deferred font loading to avoid potential app startup delays. The default behavior is to load
+ * the font shortly after the first Activity resumes. EmojiCompatInitializer will configure
+ * EmojiCompat to use the system emoji font provider via {@link DefaultEmojiCompatConfig} and
+ * always creates a new background thread for font loading.
  * <p/>
- * It is suggested to make the initialization as early as possible in your app. Please check {@link
- * EmojiCompat.Config} for more configuration parameters. Once {@link #init(EmojiCompat.Config)} is
- * called a singleton instance will be created. Any call after that will not create a new instance
- * and will return immediately.
+ * EmojiCompat will only allow one instance to be initialized and any calls to
+ * {@link #init(Config)} after the first one will have no effect. As a result, configuration options
+ * may not be provided when using {@link EmojiCompatInitializer}. To provide a custom configuration,
+ * disable {@link EmojiCompatInitializer} in the manifest with:
+ *
+ * <pre>
+ *     <provider
+ *         android:name="androidx.startup.InitializationProvider"
+ *         android:authorities="${applicationId}.androidx-startup"
+ *         android:exported="false"
+ *         tools:node="merge">
+ *         <meta-data android:name="androidx.emoji2.text.EmojiCompatInitializer"
+ *                   tools:node="remove" />
+ *     </provider>
+ * </pre>
+ *
+ * When not using EmojiCompatInitializer, EmojiCompat must to be initialized manually using
+ * {@link #init(EmojiCompat.Config)}. It is recommended to make the initialization as early as
+ * possible in your app, such as from {@link Application#onCreate()}.
  * <p/>
- * During initialization information about emojis is loaded on a background thread. Before the
- * EmojiCompat instance is initialized, calls to functions such as {@link
- * EmojiCompat#process(CharSequence)} will throw an exception. You can use the {@link InitCallback}
- * class to be informed about the state of initialization.
+ * {@link #init(Config)} is fast and may be called from the main thread on the path to
+ * displaying the first activity. However, loading the emoji font takes significant resources on a
+ * background thread, so it is suggested to use {@link #LOAD_STRATEGY_MANUAL} in all manual
+ * configurations to defer font loading until after the first screen displays. Font loading may
+ * be started by calling {@link #load()}}. See the implementation {@link EmojiCompatInitializer}
+ * for ideas when building a manual configuration.
  * <p/>
  * After initialization the {@link #get()} function can be used to get the configured instance and
  * the {@link #process(CharSequence)} function can be used to update a CharSequence with emoji
  * EmojiSpans.
  * <p/>
  * <pre><code>CharSequence processedSequence = EmojiCompat.get().process("some string")</pre>
+ * <p/>
+ * During loading information about emojis is not available. Before the
+ * EmojiCompat instance has finished loading, calls to functions such as {@link
+ * EmojiCompat#process(CharSequence)} will throw an exception. It is safe to call process when
+ * {@link #getLoadState()} returns {@link #LOAD_STATE_SUCCEEDED}. To register a callback when
+ * loading completes use {@link InitCallback}.
+ * <p/>
+
  */
 @AnyThread
 public class EmojiCompat {
@@ -110,6 +140,8 @@ public class EmojiCompat {
      *
      * @see #getLoadState()
      */
+    // note: this may be returned as the value of mLoadState before constructor finishes due to
+    // double-check lock
     public static final int LOAD_STATE_LOADING = 0;
 
     /**
@@ -130,10 +162,10 @@ public class EmojiCompat {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY)
     @IntDef({LOAD_STATE_DEFAULT, LOAD_STATE_LOADING, LOAD_STATE_SUCCEEDED, LOAD_STATE_FAILED})
     @Retention(RetentionPolicy.SOURCE)
-    public @interface LoadState {
+    private @interface LoadState {
     }
 
     /**
@@ -158,7 +190,7 @@ public class EmojiCompat {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY)
     @IntDef({REPLACE_STRATEGY_DEFAULT, REPLACE_STRATEGY_NON_EXISTENT, REPLACE_STRATEGY_ALL})
     @Retention(RetentionPolicy.SOURCE)
     public @interface ReplaceStrategy {
@@ -182,7 +214,7 @@ public class EmojiCompat {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY)
     @IntDef({LOAD_STRATEGY_DEFAULT, LOAD_STRATEGY_MANUAL})
     @Retention(RetentionPolicy.SOURCE)
     public @interface LoadStrategy {
@@ -191,38 +223,41 @@ public class EmojiCompat {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY)
     static final int EMOJI_COUNT_UNLIMITED = Integer.MAX_VALUE;
 
     private static final Object INSTANCE_LOCK = new Object();
+    private static final Object CONFIG_LOCK = new Object();
 
     @GuardedBy("INSTANCE_LOCK")
-    private static volatile EmojiCompat sInstance;
+    private static volatile @Nullable EmojiCompat sInstance;
+    @GuardedBy("CONFIG_LOCK")
+    private static volatile boolean sHasDoneDefaultConfigLookup;
 
-    private final ReadWriteLock mInitLock;
+    private final @NonNull ReadWriteLock mInitLock;
 
     @GuardedBy("mInitLock")
-    private final Set<InitCallback> mInitCallbacks;
+    private final @NonNull Set<InitCallback> mInitCallbacks;
 
     @GuardedBy("mInitLock")
     @LoadState
-    private int mLoadState;
+    private volatile int mLoadState;
 
     /**
      * Handler with main looper to run the callbacks on.
      */
-    private final Handler mMainHandler;
+    private final @NonNull Handler mMainHandler;
 
     /**
      * Helper class for pre 19 compatibility.
      */
-    private final CompatInternal mHelper;
+    private final @NonNull CompatInternal mHelper;
 
     /**
      * Metadata loader instance given in the Config instance.
      */
     @SuppressWarnings("WeakerAccess") /* synthetic access */
-    final MetadataRepoLoader mMetadataLoader;
+    final @NonNull MetadataRepoLoader mMetadataLoader;
 
     /**
      * @see Config#setReplaceAll(boolean)
@@ -240,7 +275,7 @@ public class EmojiCompat {
      * @see Config#setUseEmojiAsDefaultStyle(boolean, List)
      */
     @SuppressWarnings("WeakerAccess") /* synthetic access */
-    final int[] mEmojiAsDefaultStyleExceptions;
+    final @Nullable int[] mEmojiAsDefaultStyleExceptions;
 
     /**
      * @see Config#setEmojiSpanIndicatorEnabled(boolean)
@@ -262,6 +297,39 @@ public class EmojiCompat {
      */
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     private final GlyphChecker mGlyphChecker;
+
+    private static final String NOT_INITIALIZED_ERROR_TEXT = "EmojiCompat is not initialized.\n"
+            + "\n"
+            + "You must initialize EmojiCompat prior to referencing the EmojiCompat instance.\n"
+            + "\n"
+            + "The most likely cause of this error is disabling the EmojiCompatInitializer\n"
+            + "either explicitly in AndroidManifest.xml, or by including\n"
+            + "androidx.emoji2:emoji2-bundled.\n"
+            + "\n"
+            + "Automatic initialization is typically performed by EmojiCompatInitializer. If\n"
+            + "you are not expecting to initialize EmojiCompat manually in your application,\n"
+            + "please check to ensure it has not been removed from your APK's manifest. You can\n"
+            + "do this in Android Studio using Build > Analyze APK.\n"
+            + "\n"
+            + "In the APK Analyzer, ensure that the startup entry for\n"
+            + "EmojiCompatInitializer and InitializationProvider is present in\n"
+            + " AndroidManifest.xml. If it is missing or contains tools:node=\"remove\", and you\n"
+            + "intend to use automatic configuration, verify:\n"
+            + "\n"
+            + "  1. Your application does not include emoji2-bundled\n"
+            + "  2. All modules do not contain an exclusion manifest rule for\n"
+            + "     EmojiCompatInitializer or InitializationProvider. For more information\n"
+            + "     about manifest exclusions see the documentation for the androidx startup\n"
+            + "     library.\n"
+            + "\n"
+            + "If you intend to use emoji2-bundled, please call EmojiCompat.init. You can\n"
+            + "learn more in the documentation for BundledEmojiCompatConfig.\n"
+            + "\n"
+            + "If you intended to perform manual configuration, it is recommended that you call\n"
+            + "EmojiCompat.init immediately on application startup.\n"
+            + "\n"
+            + "If you still cannot resolve this issue, please open a bug with your specific\n"
+            + "configuration to help improve error message.";
 
     /**
      * Private constructor for singleton instance.
@@ -290,6 +358,62 @@ public class EmojiCompat {
     }
 
     /**
+     * Initialize the singleton instance with the default system-provided configuration.
+     *
+     * <p>This is the recommended configuration for most applications. For more details see
+     * {@link DefaultEmojiCompatConfig}.</p>
+     *
+     * <p>This call will use {@link DefaultEmojiCompatConfig} to lookup the default emoji font
+     * provider installed on the system and use that, if present. If there is no default font
+     * provider onthe system, this call will have no effect.</p>
+     *
+     * <p>Note: EmojiCompat may only be initialized once, and will return the same instance
+     * afterwords.</p>
+     *
+     * @return Default EmojiCompat for this device, or null if there is no provider on the system.
+     */
+    @Nullable
+    public static EmojiCompat init(@NonNull Context context) {
+        return init(context, null);
+    }
+
+    /**
+     * @hide
+     */
+    @RestrictTo(LIBRARY)
+    @Nullable
+    @SuppressWarnings("GuardedBy") /* double-check lock; volatile; threadsafe obj */
+    public static EmojiCompat init(@NonNull Context context,
+            @Nullable DefaultEmojiCompatConfig.DefaultEmojiCompatConfigFactory defaultFactory) {
+        EmojiCompat.Config config;
+        if (sHasDoneDefaultConfigLookup) {
+            // sInstance is safe to return outside the lock because
+            // 1) static fields are volatile
+            // 2) all fields on EmojiCompat are final, or guarded by a lock
+            // 3) we only write this after sInstance is settled by the call to `init`
+            return sInstance;
+        } else {
+            DefaultEmojiCompatConfig.DefaultEmojiCompatConfigFactory factory =
+                    defaultFactory != null ? defaultFactory :
+                            new DefaultEmojiCompatConfig.DefaultEmojiCompatConfigFactory(null);
+            config = factory.create(context);
+        }
+        synchronized (CONFIG_LOCK) {
+            if (!sHasDoneDefaultConfigLookup) {
+                // sDefaultConfigLookup allows us to early-exit above, as well as avoid repeated
+                // calls to create in the case where the font provider is not found
+                if (config != null) {
+                    init(config);
+                }
+                // write this after init to allow safe early-exit
+                sHasDoneDefaultConfigLookup = true;
+
+            }
+            return sInstance;
+        }
+    }
+
+    /**
      * Initialize the singleton instance with a configuration. When used on devices running API 18
      * or below, the singleton instance is immediately moved into {@link #LOAD_STATE_SUCCEEDED}
      * state without loading any metadata. When called for the first time, the library will create
@@ -298,17 +422,57 @@ public class EmojiCompat {
      *
      * @see EmojiCompat.Config
      */
-    @SuppressWarnings("GuardedBy")
+    @SuppressWarnings("GuardedBy") /* double-check lock; volatile sInstance; threadsafe obj */
+    @NonNull
     public static EmojiCompat init(@NonNull final Config config) {
-        if (sInstance == null) {
+        // copy to local for null-checker
+        EmojiCompat localInstance = sInstance;
+        if (localInstance == null) {
             synchronized (INSTANCE_LOCK) {
-                if (sInstance == null) {
-                    sInstance = new EmojiCompat(config);
+                localInstance = sInstance;
+                if (localInstance == null) {
+                    localInstance = new EmojiCompat(config);
+                    sInstance = localInstance;
                 }
             }
         }
-        return sInstance;
+        return localInstance;
     }
+
+    /**
+     * Return true if EmojiCompat has been configured by a successful call to
+     * {@link EmojiCompat#init}.
+     *
+     * You can use this to check if {@link EmojiCompat#get()} will return a valid EmojiCompat
+     * instance.
+     *
+     * This function does not check the {@link #getLoadState()} and will return true even if the
+     * font is still loading, or has failed to load.
+     *
+     * @return true if EmojiCompat has been successfully initialized.
+     */
+    @SuppressWarnings("GuardedBy") // same rationale as double-check lock
+    public static boolean isConfigured() {
+        // Note: this is true immediately after calling .init(Config).
+        //
+        // These are three situations this may return false
+        //   1) An app has disabled EmojiCompatInitializer and does not intend to call .init.
+        //   2) EmojiCompatInitializer did not find a configuration
+        //   3) EmojiCompatInitializer was disable or failed, and the app will call .init. In the
+        //   future it will return true.
+        //
+        // In case one and two, this method will always return false for the duration of the
+        // application lifecycle.
+        //
+        // In case three, this will return true at some future point. There is no callback
+        // mechanism to learn about the init call due to the high potential for leaked references
+        // in a static context if it's actually case 2 (when using manual callback registration).
+        //
+        // It is recommended that applications call init prior to creating any screens that
+        // may show emoji or user generated content.
+        return sInstance != null;
+    }
+
 
     /**
      * Used by the tests to reset EmojiCompat with a new configuration. Every time it is called a
@@ -316,14 +480,13 @@ public class EmojiCompat {
      *
      * @hide
      */
-    @SuppressWarnings("GuardedBy")
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
-    @VisibleForTesting
+    @NonNull
     public static EmojiCompat reset(@NonNull final Config config) {
         synchronized (INSTANCE_LOCK) {
-            sInstance = new EmojiCompat(config);
+            EmojiCompat localInstance = new EmojiCompat(config);
+            sInstance = localInstance;
+            return localInstance;
         }
-        return sInstance;
     }
 
     /**
@@ -331,14 +494,25 @@ public class EmojiCompat {
      *
      * @hide
      */
-    @SuppressWarnings("GuardedBy")
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
-    @VisibleForTesting
-    public static EmojiCompat reset(final EmojiCompat emojiCompat) {
+    @RestrictTo(TESTS)
+    @Nullable
+    public static EmojiCompat reset(@Nullable final EmojiCompat emojiCompat) {
         synchronized (INSTANCE_LOCK) {
             sInstance = emojiCompat;
+            return sInstance;
         }
-        return sInstance;
+    }
+
+    /**
+     * Reset default configuration lookup flag, for tests.
+     *
+     * @hide
+     */
+    @RestrictTo(TESTS)
+    public static void skipDefaultConfigurationLookup(boolean shouldSkip) {
+        synchronized (CONFIG_LOCK) {
+            sHasDoneDefaultConfigLookup = shouldSkip;
+        }
     }
 
     /**
@@ -349,11 +523,12 @@ public class EmojiCompat {
      *
      * @throws IllegalStateException if called before {@link #init(EmojiCompat.Config)}
      */
+    @NonNull
     public static EmojiCompat get() {
         synchronized (INSTANCE_LOCK) {
-            Preconditions.checkState(sInstance != null,
-                    "EmojiCompat is not initialized. Please call EmojiCompat.init() first");
-            return sInstance;
+            EmojiCompat localInstance = sInstance;
+            Preconditions.checkState(localInstance != null, NOT_INITIALIZED_ERROR_TEXT);
+            return localInstance;
         }
     }
 
@@ -446,6 +621,7 @@ public class EmojiCompat {
      *
      * @see #unregisterInitCallback(InitCallback)
      */
+    @SuppressWarnings("ExecutorRegistration")
     public void registerInitCallback(@NonNull InitCallback initCallback) {
         Preconditions.checkNotNull(initCallback, "initCallback cannot be null");
 
@@ -500,20 +676,20 @@ public class EmojiCompat {
     }
 
     /**
-     * @return whether a background should be drawn for the emoji.
+     * @return whether a background should be drawn for the emoji for debugging
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
-    boolean isEmojiSpanIndicatorEnabled() {
+    @RestrictTo(LIBRARY_GROUP)
+    public boolean isEmojiSpanIndicatorEnabled() {
         return mEmojiSpanIndicatorEnabled;
     }
 
     /**
-     * @return whether a background should be drawn for the emoji.
+     * @return color of background drawn if {@link EmojiCompat#isEmojiSpanIndicatorEnabled} is true
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
-    @ColorInt int getEmojiSpanIndicatorColor() {
+    @RestrictTo(LIBRARY_GROUP)
+    public @ColorInt int getEmojiSpanIndicatorColor() {
         return mEmojiSpanIndicatorColor;
     }
 
@@ -538,7 +714,7 @@ public class EmojiCompat {
      * @return {@code true} if an {@link EmojiSpan} is deleted
      */
     public static boolean handleOnKeyDown(@NonNull final Editable editable, final int keyCode,
-            final KeyEvent event) {
+            @NonNull final KeyEvent event) {
         if (Build.VERSION.SDK_INT >= 19) {
             return EmojiProcessor.handleOnKeyDown(editable, keyCode, event);
         } else {
@@ -621,12 +797,13 @@ public class EmojiCompat {
      * @throws IllegalStateException if not initialized yet
      * @see #process(CharSequence, int, int)
      */
+    @Nullable
     @CheckResult
-    public CharSequence process(@NonNull final CharSequence charSequence) {
+    public CharSequence process(@Nullable final CharSequence charSequence) {
         // since charSequence might be null here we have to check it. Passing through here to the
         // main function so that it can do all the checks including isInitialized. It will also
         // be the main point that decides what to return.
-        //noinspection ConstantConditions
+
         @IntRange(from = 0) final int length = charSequence == null ? 0 : charSequence.length();
         return process(charSequence, 0, length);
     }
@@ -658,8 +835,9 @@ public class EmojiCompat {
      *                                  {@code start > charSequence.length()},
      *                                  {@code end > charSequence.length()}
      */
+    @Nullable
     @CheckResult
-    public CharSequence process(@NonNull final CharSequence charSequence,
+    public CharSequence process(@Nullable final CharSequence charSequence,
             @IntRange(from = 0) final int start, @IntRange(from = 0) final int end) {
         return process(charSequence, start, end, EMOJI_COUNT_UNLIMITED);
     }
@@ -694,8 +872,9 @@ public class EmojiCompat {
      *                                  {@code end > charSequence.length()}
      *                                  {@code maxEmojiCount < 0}
      */
+    @Nullable
     @CheckResult
-    public CharSequence process(@NonNull final CharSequence charSequence,
+    public CharSequence process(@Nullable final CharSequence charSequence,
             @IntRange(from = 0) final int start, @IntRange(from = 0) final int end,
             @IntRange(from = 0) final int maxEmojiCount) {
         return process(charSequence, start, end, maxEmojiCount, REPLACE_STRATEGY_DEFAULT);
@@ -735,8 +914,9 @@ public class EmojiCompat {
      *                                  {@code end > charSequence.length()}
      *                                  {@code maxEmojiCount < 0}
      */
+    @Nullable
     @CheckResult
-    public CharSequence process(@NonNull final CharSequence charSequence,
+    public CharSequence process(@Nullable final CharSequence charSequence,
             @IntRange(from = 0) final int start, @IntRange(from = 0) final int end,
             @IntRange(from = 0) final int maxEmojiCount, @ReplaceStrategy int replaceStrategy) {
         Preconditions.checkState(isInitialized(), "Not initialized yet");
@@ -746,9 +926,8 @@ public class EmojiCompat {
         Preconditions.checkArgument(start <= end, "start should be <= than end");
 
         // early return since there is nothing to do
-        //noinspection ConstantConditions
         if (charSequence == null) {
-            return charSequence;
+            return null;
         }
 
         Preconditions.checkArgument(start <= charSequence.length(),
@@ -795,20 +974,30 @@ public class EmojiCompat {
      * Updates the EditorInfo attributes in order to communicate information to Keyboards. When
      * used on devices running API 18 or below, does not update EditorInfo attributes.
      *
+     * This is called from EditText integrations that use EmojiEditTextHelper. Custom
+     * widgets that allow IME not subclassing EditText should call this method when creating an
+     * input connection.
+     *
+     * When EmojiCompat is not in {@link #LOAD_STATE_SUCCEEDED}, this method has no effect.
+     *
+     * Calling this method on API levels below API 19 will have no effect, as EmojiCompat may
+     * never be configured. However, it is always safe to call, even on older API levels.
+     *
      * @param outAttrs EditorInfo instance passed to
      *                 {@link android.widget.TextView#onCreateInputConnection(EditorInfo)}
      *
      * @see #EDITOR_INFO_METAVERSION_KEY
      * @see #EDITOR_INFO_REPLACE_ALL_KEY
-     *
-     * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
-    public void updateEditorInfoAttrs(@NonNull final EditorInfo outAttrs) {
+    public void updateEditorInfo(@NonNull final EditorInfo outAttrs) {
         //noinspection ConstantConditions
-        if (isInitialized() && outAttrs != null && outAttrs.extras != null) {
-            mHelper.updateEditorInfoAttrs(outAttrs);
+        if (!isInitialized() || outAttrs == null) {
+            return;
         }
+        if (outAttrs.extras == null) {
+            outAttrs.extras = new Bundle();
+        }
+        mHelper.updateEditorInfoAttrs(outAttrs);
     }
 
     /**
@@ -816,7 +1005,7 @@ public class EmojiCompat {
      *
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(LIBRARY)
     @RequiresApi(19)
     static class SpanFactory {
         /**
@@ -846,7 +1035,7 @@ public class EmojiCompat {
          * Called when an unrecoverable error occurs during EmojiCompat initialization. When used on
          * devices running API 18 or below, this function is never called.
          */
-        public void onFailed(@Nullable Throwable throwable) {
+        public void onFailed(@SuppressWarnings("unused") @Nullable Throwable throwable) {
         }
     }
 
@@ -862,6 +1051,7 @@ public class EmojiCompat {
          *
          * @param loaderCallback callback to signal the loading state
          */
+        @SuppressWarnings("ExecutorRegistration")
         void load(@NonNull MetadataRepoLoaderCallback loaderCallback);
     }
 
@@ -944,14 +1134,17 @@ public class EmojiCompat {
      */
     public abstract static class Config {
         @SuppressWarnings("WeakerAccess") /* synthetic access */
+        @NonNull
         final MetadataRepoLoader mMetadataLoader;
         @SuppressWarnings("WeakerAccess") /* synthetic access */
         boolean mReplaceAll;
         @SuppressWarnings("WeakerAccess") /* synthetic access */
         boolean mUseEmojiAsDefaultStyle;
         @SuppressWarnings("WeakerAccess") /* synthetic access */
+        @Nullable
         int[] mEmojiAsDefaultStyleExceptions;
         @SuppressWarnings("WeakerAccess") /* synthetic access */
+        @Nullable
         Set<InitCallback> mInitCallbacks;
         @SuppressWarnings("WeakerAccess") /* synthetic access */
         boolean mEmojiSpanIndicatorEnabled;
@@ -960,6 +1153,7 @@ public class EmojiCompat {
         @SuppressWarnings("WeakerAccess") /* synthetic access */
         @LoadStrategy int mMetadataLoadStrategy = LOAD_STRATEGY_DEFAULT;
         @SuppressWarnings("WeakerAccess") /* synthetic access */
+        @NonNull
         GlyphChecker mGlyphChecker = new EmojiProcessor.DefaultGlyphChecker();
 
         /**
@@ -979,6 +1173,8 @@ public class EmojiCompat {
          *
          * @return EmojiCompat.Config instance
          */
+        @SuppressWarnings("ExecutorRegistration")
+        @NonNull
         public Config registerInitCallback(@NonNull InitCallback initCallback) {
             Preconditions.checkNotNull(initCallback, "initCallback cannot be null");
             if (mInitCallbacks == null) {
@@ -997,6 +1193,7 @@ public class EmojiCompat {
          *
          * @return EmojiCompat.Config instance
          */
+        @NonNull
         public Config unregisterInitCallback(@NonNull InitCallback initCallback) {
             Preconditions.checkNotNull(initCallback, "initCallback cannot be null");
             if (mInitCallbacks != null) {
@@ -1014,6 +1211,7 @@ public class EmojiCompat {
          *
          * @return EmojiCompat.Config instance
          */
+        @NonNull
         public Config setReplaceAll(final boolean replaceAll) {
             mReplaceAll = replaceAll;
             return this;
@@ -1034,6 +1232,7 @@ public class EmojiCompat {
          * @param useEmojiAsDefaultStyle whether to use the emoji style presentation for all emojis
          *                               that would be presented as text style by default
          */
+        @NonNull
         public Config setUseEmojiAsDefaultStyle(final boolean useEmojiAsDefaultStyle) {
             return setUseEmojiAsDefaultStyle(useEmojiAsDefaultStyle,
                     null);
@@ -1054,6 +1253,7 @@ public class EmojiCompat {
          *                                      {@link #setUseEmojiAsDefaultStyle(boolean)} should
          *                                      be used instead.
          */
+        @NonNull
         public Config setUseEmojiAsDefaultStyle(final boolean useEmojiAsDefaultStyle,
                 @Nullable final List<Integer> emojiAsDefaultStyleExceptions) {
             mUseEmojiAsDefaultStyle = useEmojiAsDefaultStyle;
@@ -1078,6 +1278,7 @@ public class EmojiCompat {
          * @param emojiSpanIndicatorEnabled when {@code true} a background is drawn for each emoji
          *                                  that is replaced
          */
+        @NonNull
         public Config setEmojiSpanIndicatorEnabled(boolean emojiSpanIndicatorEnabled) {
             mEmojiSpanIndicatorEnabled = emojiSpanIndicatorEnabled;
             return this;
@@ -1089,6 +1290,7 @@ public class EmojiCompat {
          *
          * @see #setEmojiSpanIndicatorEnabled(boolean)
          */
+        @NonNull
         public Config setEmojiSpanIndicatorColor(@ColorInt int color) {
             mEmojiSpanIndicatorColor = color;
             return this;
@@ -1130,6 +1332,7 @@ public class EmojiCompat {
          *                  {@link EmojiCompat#LOAD_STRATEGY_MANUAL}
          *
          */
+        @NonNull
         public Config setMetadataLoadStrategy(@LoadStrategy int strategy) {
             mMetadataLoadStrategy = strategy;
             return this;
@@ -1151,6 +1354,7 @@ public class EmojiCompat {
         /**
          * Returns the {@link MetadataRepoLoader}.
          */
+        @NonNull
         protected final MetadataRepoLoader getMetadataRepoLoader() {
             return mMetadataLoader;
         }

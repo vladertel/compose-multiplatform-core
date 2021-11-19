@@ -32,6 +32,7 @@ import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.Ref
@@ -1743,6 +1744,54 @@ class RowColumnTest : LayoutTest() {
         }
         assertTrue(latch.await(1, TimeUnit.SECONDS))
     }
+
+    @Test
+    fun testRow_doesNotExpand_whenWeightChildrenDoNotFill() = with(density) {
+        val size = 10
+        var rowWidth = 0
+        val latch = CountDownLatch(1)
+        show {
+            Row(
+                Modifier.onGloballyPositioned {
+                    rowWidth = it.size.width
+                    latch.countDown()
+                }
+            ) {
+                Box(Modifier.weight(1f, false).size(size.toDp()))
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+        assertEquals(size, rowWidth)
+    }
+
+    @Test
+    fun testRow_includesSpacing_withWeightChildren() = with(density) {
+        val rowWidth = 40
+        val space = 8
+        val latch = CountDownLatch(2)
+        show {
+            Row(
+                modifier = Modifier.widthIn(max = rowWidth.toDp()),
+                horizontalArrangement = Arrangement.spacedBy(space.toDp())
+            ) {
+                Box(
+                    Modifier.weight(1f).onGloballyPositioned {
+                        assertEquals((rowWidth - space) / 2, it.size.width)
+                        assertEquals(0, it.positionInRoot().x.toInt())
+                        latch.countDown()
+                    }
+                )
+                Box(
+                    Modifier.weight(1f).onGloballyPositioned {
+                        assertEquals((rowWidth - space) / 2, it.size.width)
+                        assertEquals((rowWidth - space) / 2 + space, it.positionInRoot().x.toInt())
+                        latch.countDown()
+                    }
+                )
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+    }
     // endregion
 
     // region Size tests in Column
@@ -2233,6 +2282,57 @@ class RowColumnTest : LayoutTest() {
         }
         assertTrue(latch.await(1, TimeUnit.SECONDS))
     }
+
+    @Test
+    fun testColumn_doesNotExpand_whenWeightChildrenDoNotFill() = with(density) {
+        val size = 10
+        var columnHeight = 0
+        val latch = CountDownLatch(1)
+        show {
+            Column(
+                Modifier.onGloballyPositioned {
+                    columnHeight = it.size.height
+                    latch.countDown()
+                }
+            ) {
+                Box(Modifier.weight(1f, false).size(size.toDp()))
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+        assertEquals(size, columnHeight)
+    }
+
+    @Test
+    fun testColumn_includesSpacing_withWeightChildren() = with(density) {
+        val columnHeight = 40
+        val space = 8
+        val latch = CountDownLatch(2)
+        show {
+            Column(
+                modifier = Modifier.height(columnHeight.toDp()),
+                verticalArrangement = Arrangement.spacedBy(space.toDp())
+            ) {
+                Box(
+                    Modifier.weight(1f).onGloballyPositioned {
+                        assertEquals((columnHeight - space) / 2, it.size.height)
+                        assertEquals(0, it.positionInRoot().y.toInt())
+                        latch.countDown()
+                    }
+                )
+                Box(
+                    Modifier.weight(1f).onGloballyPositioned {
+                        assertEquals((columnHeight - space) / 2, it.size.height)
+                        assertEquals(
+                            (columnHeight - space) / 2 + space,
+                            it.positionInRoot().y.toInt()
+                        )
+                        latch.countDown()
+                    }
+                )
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+    }
     // endregion
 
     // region Main axis alignment tests in Row
@@ -2690,6 +2790,41 @@ class RowColumnTest : LayoutTest() {
                             latch.countDown()
                         }
                     )
+                }
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun testRow_withSpacedByArrangement_rtl() = with(density) {
+        val spacePx = 10f
+        val space = spacePx.toDp()
+        val bufferPx = 15f
+        val buffer = bufferPx.toDp()
+        val sizePx = 20f
+        val size = sizePx.toDp()
+        val latch = CountDownLatch(2)
+        show {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Column {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(space),
+                        modifier = Modifier.requiredWidth(size * 2 + space + buffer)
+                    ) {
+                        Box(
+                            Modifier.requiredSize(size).onGloballyPositioned {
+                                assertEquals(sizePx + spacePx + bufferPx, it.positionInParent().x)
+                                latch.countDown()
+                            }
+                        )
+                        Box(
+                            Modifier.requiredSize(size).onGloballyPositioned {
+                                assertEquals(bufferPx, it.positionInParent().x)
+                                latch.countDown()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -3231,6 +3366,41 @@ class RowColumnTest : LayoutTest() {
 
         assertEquals(IntSize(childSize, childSize), containerSize.value)
     }
+
+    @Test
+    fun testColumn_withSpacedByArrangement_rtl() = with(density) {
+        val spacePx = 10f
+        val space = spacePx.toDp()
+        val sizePx = 20f
+        val size = sizePx.toDp()
+        val latch = CountDownLatch(2)
+        show {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                // Nothing should change compared to the same ltr test. (just the size of the
+                // Column as we are doing fillMaxHeight()).
+                Row {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(space),
+                        modifier = Modifier.fillMaxHeight()
+                    ) {
+                        Box(
+                            Modifier.requiredSize(size).onGloballyPositioned {
+                                assertEquals(0f, it.positionInParent().x)
+                                latch.countDown()
+                            }
+                        )
+                        Box(
+                            Modifier.requiredSize(size).onGloballyPositioned {
+                                assertEquals(sizePx + spacePx, it.positionInParent().y)
+                                latch.countDown()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+    }
     // endregion
 
     // region Intrinsic measurement tests
@@ -3588,6 +3758,46 @@ class RowColumnTest : LayoutTest() {
     }
 
     @Test
+    fun testRow_withArrangementSpacing() = with(density) {
+        val spacing = 5
+        val childSize = 10
+        testIntrinsics(
+            @Composable {
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.toDp())) {
+                    Box(Modifier.size(childSize.toDp()))
+                    Box(Modifier.size(childSize.toDp()))
+                    Box(Modifier.size(childSize.toDp()))
+                }
+            }
+        ) { minIntrinsicWidth, _, maxIntrinsicWidth, _ ->
+            assertEquals(childSize * 3 + 2 * spacing, minIntrinsicWidth(Constraints.Infinity))
+            assertEquals(childSize * 3 + 2 * spacing, maxIntrinsicWidth(Constraints.Infinity))
+        }
+    }
+
+    @Test
+    fun testRow_withArrangementSpacing_height() = with(density) {
+        val spacing = 5
+        val rowWidth = 15
+        val latch = CountDownLatch(1)
+        var rowHeight = 0
+        show {
+            Row(
+                modifier = Modifier.width(rowWidth.toDp()).height(IntrinsicSize.Min).onSizeChanged {
+                    rowHeight = it.height
+                    latch.countDown()
+                },
+                horizontalArrangement = Arrangement.spacedBy(spacing.toDp())
+            ) {
+                Box(Modifier) // Empty box
+                Box(Modifier.width(rowWidth.toDp()).aspectRatio(1f))
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+        assertEquals(rowWidth - spacing, rowHeight)
+    }
+
+    @Test
     fun testColumn_withNoWeightChildren_hasCorrectIntrinsicMeasurements() = with(density) {
         testIntrinsics(
             @Composable {
@@ -3917,6 +4127,47 @@ class RowColumnTest : LayoutTest() {
     }
 
     @Test
+    fun testColumn_withArrangementSpacing() = with(density) {
+        val spacing = 5
+        val childSize = 10
+        testIntrinsics(
+            @Composable {
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.toDp())) {
+                    Box(Modifier.size(childSize.toDp()))
+                    Box(Modifier.size(childSize.toDp()))
+                    Box(Modifier.size(childSize.toDp()))
+                }
+            }
+        ) { _, minIntrinsicHeight, _, maxIntrinsicHeight ->
+            assertEquals(childSize * 3 + 2 * spacing, minIntrinsicHeight(Constraints.Infinity))
+            assertEquals(childSize * 3 + 2 * spacing, maxIntrinsicHeight(Constraints.Infinity))
+        }
+    }
+
+    @Test
+    fun testColumn_withArrangementSpacing_width() = with(density) {
+        val spacing = 5
+        val columnHeight = 15
+        val latch = CountDownLatch(1)
+        var columnWidth = 0
+        show {
+            Column(
+                modifier = Modifier.height(columnHeight.toDp()).width(IntrinsicSize.Min)
+                    .onSizeChanged {
+                        columnWidth = it.width
+                        latch.countDown()
+                    },
+                verticalArrangement = Arrangement.spacedBy(spacing.toDp())
+            ) {
+                Box(Modifier) // Empty box
+                Box(Modifier.height(columnHeight.toDp()).aspectRatio(1f))
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+        assertEquals(columnHeight - spacing, columnWidth)
+    }
+
+    @Test
     fun testRow_withWIHOChild_hasCorrectIntrinsicMeasurements() = with(density) {
         val dividerWidth = 10.dp
         val rowWidth = 40.dp
@@ -4020,6 +4271,22 @@ class RowColumnTest : LayoutTest() {
         }
 
         assertTrue(positionedLatch.await(1, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun scenarioShouldNotCrash() {
+        val latch = CountDownLatch(1)
+
+        show {
+            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+                Row(Modifier.width(200.dp)) {
+                    Box(Modifier.weight(0.8f))
+                    Box(Modifier.weight(0.2f).onSizeChanged { latch.countDown() })
+                }
+            }
+        }
+
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
     }
 
     // endregion
@@ -5378,7 +5645,7 @@ class RowColumnTest : LayoutTest() {
     // region InspectableValue tests for Row and Column
     @Test
     fun testRow_AlignInspectableValue() {
-        val modifier = with(object : RowScope {}) { Modifier.align(Alignment.Bottom) }
+        val modifier = with(RowScopeInstance) { Modifier.align(Alignment.Bottom) }
             as InspectableValue
         Truth.assertThat(modifier.nameFallback).isEqualTo("align")
         Truth.assertThat(modifier.valueOverride).isEqualTo(Alignment.Bottom)
@@ -5387,7 +5654,7 @@ class RowColumnTest : LayoutTest() {
 
     @Test
     fun testRow_AlignByInspectableValue() {
-        val modifier = with(object : RowScope {}) { Modifier.alignBy(FirstBaseline) }
+        val modifier = with(RowScopeInstance) { Modifier.alignBy(FirstBaseline) }
             as InspectableValue
         Truth.assertThat(modifier.nameFallback).isEqualTo("alignBy")
         Truth.assertThat(modifier.valueOverride).isEqualTo(FirstBaseline)
@@ -5396,7 +5663,7 @@ class RowColumnTest : LayoutTest() {
 
     @Test
     fun testRow_WeightInspectableValue() {
-        val modifier = with(object : RowScope {}) { Modifier.weight(2.0f, false) }
+        val modifier = with(RowScopeInstance) { Modifier.weight(2.0f, false) }
             as InspectableValue
         Truth.assertThat(modifier.nameFallback).isEqualTo("weight")
         Truth.assertThat(modifier.valueOverride).isEqualTo(2.0f)
@@ -5407,7 +5674,7 @@ class RowColumnTest : LayoutTest() {
     }
     @Test
     fun testColumn_AlignInspectableValue() {
-        val modifier = with(object : ColumnScope {}) { Modifier.align(Alignment.Start) }
+        val modifier = with(ColumnScopeInstance) { Modifier.align(Alignment.Start) }
             as InspectableValue
         Truth.assertThat(modifier.nameFallback).isEqualTo("align")
         Truth.assertThat(modifier.valueOverride).isEqualTo(Alignment.Start)
@@ -5416,7 +5683,7 @@ class RowColumnTest : LayoutTest() {
 
     @Test
     fun testColumn_AlignByInspectableValue() {
-        val modifier = with(object : ColumnScope {}) { Modifier.alignBy(TestVerticalLine) }
+        val modifier = with(ColumnScopeInstance) { Modifier.alignBy(TestVerticalLine) }
             as InspectableValue
         Truth.assertThat(modifier.nameFallback).isEqualTo("alignBy")
         Truth.assertThat(modifier.valueOverride).isEqualTo(TestVerticalLine)
@@ -5425,7 +5692,7 @@ class RowColumnTest : LayoutTest() {
 
     @Test
     fun testColumn_WeightInspectableValue() {
-        val modifier = with(object : ColumnScope {}) { Modifier.weight(2.0f, false) }
+        val modifier = with(ColumnScopeInstance) { Modifier.weight(2.0f, false) }
             as InspectableValue
         Truth.assertThat(modifier.nameFallback).isEqualTo("weight")
         Truth.assertThat(modifier.valueOverride).isEqualTo(2.0f)

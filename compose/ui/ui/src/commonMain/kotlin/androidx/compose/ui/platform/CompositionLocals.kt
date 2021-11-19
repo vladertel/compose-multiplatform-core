@@ -22,8 +22,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
+import androidx.compose.ui.draw.DrawModifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.input.pointer.PointerIconService
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.node.Owner
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.input.TextInputService
@@ -39,6 +43,7 @@ val LocalAccessibilityManager = staticCompositionLocalOf<AccessibilityManager?> 
  * The CompositionLocal that can be used to trigger autofill actions.
  * Eg. [Autofill.requestAutofillForNode].
  */
+@Suppress("EXPERIMENTAL_ANNOTATION_ON_WRONG_TARGET")
 @get:ExperimentalComposeUiApi
 @ExperimentalComposeUiApi
 val LocalAutofill = staticCompositionLocalOf<Autofill?> { null }
@@ -49,6 +54,7 @@ val LocalAutofill = staticCompositionLocalOf<Autofill?> { null }
  * [AutofillTree] is a temporary data structure that will be replaced by Autofill Semantics
  * (b/138604305).
  */
+@Suppress("EXPERIMENTAL_ANNOTATION_ON_WRONG_TARGET")
 @get:ExperimentalComposeUiApi
 @ExperimentalComposeUiApi
 val LocalAutofillTree = staticCompositionLocalOf<AutofillTree> {
@@ -64,11 +70,11 @@ val LocalClipboardManager = staticCompositionLocalOf<ClipboardManager> {
 
 /**
  * Provides the [Density] to be used to transform between [density-independent pixel
- * units (DP)][androidx.compose.ui.unit.Dp] and [pixel units][androidx.compose.ui.unit.Px] or
+ * units (DP)][androidx.compose.ui.unit.Dp] and pixel units or
  * [scale-independent pixel units (SP)][androidx.compose.ui.unit.TextUnit] and
- * [pixel units][androidx.compose.ui.unit.Px]. This is typically used when a
- * [DP][androidx.compose.ui.unit.Dp] is provided and it must be converted in the body of [Layout]
- * or [DrawModifier].
+ * pixel units. This is typically used when a
+ * [DP][androidx.compose.ui.unit.Dp] is provided and it must be converted in the body of
+ * [Layout] or [DrawModifier].
  */
 val LocalDensity = staticCompositionLocalOf<Density> {
     noLocalProvidedFor("LocalDensity")
@@ -96,6 +102,14 @@ val LocalFontLoader = staticCompositionLocalOf<Font.ResourceLoader> {
  */
 val LocalHapticFeedback = staticCompositionLocalOf<HapticFeedback> {
     noLocalProvidedFor("LocalHapticFeedback")
+}
+
+/**
+ * The CompositionLocal to provide an instance of InputModeManager which controls the current
+ * input mode.
+ */
+val LocalInputModeManager = staticCompositionLocalOf<InputModeManager> {
+    noLocalProvidedFor("LocalInputManager")
 }
 
 /**
@@ -138,6 +152,10 @@ val LocalWindowInfo = staticCompositionLocalOf<WindowInfo> {
     noLocalProvidedFor("LocalWindowInfo")
 }
 
+internal val LocalPointerIconService = staticCompositionLocalOf<PointerIconService?> {
+    null
+}
+
 @ExperimentalComposeUiApi
 @Composable
 internal fun ProvideCommonCompositionLocals(
@@ -154,12 +172,14 @@ internal fun ProvideCommonCompositionLocals(
         LocalFocusManager provides owner.focusManager,
         LocalFontLoader provides owner.fontLoader,
         LocalHapticFeedback provides owner.hapticFeedBack,
+        LocalInputModeManager provides owner.inputModeManager,
         LocalLayoutDirection provides owner.layoutDirection,
         LocalTextInputService provides owner.textInputService,
         LocalTextToolbar provides owner.textToolbar,
         LocalUriHandler provides uriHandler,
         LocalViewConfiguration provides owner.viewConfiguration,
         LocalWindowInfo provides owner.windowInfo,
+        LocalPointerIconService provides owner.pointerIconService,
         content = content
     )
 }

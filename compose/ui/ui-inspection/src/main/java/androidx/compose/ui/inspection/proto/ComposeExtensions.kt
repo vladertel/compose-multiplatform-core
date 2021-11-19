@@ -17,22 +17,35 @@
 package androidx.compose.ui.inspection.proto
 
 import android.view.inspector.WindowInspector
+import androidx.annotation.VisibleForTesting
+import androidx.compose.ui.inspection.ComposeLayoutInspector.CacheTree
 import androidx.compose.ui.inspection.LambdaLocation
 import androidx.compose.ui.inspection.inspector.InspectorNode
 import androidx.compose.ui.inspection.inspector.NodeParameter
+import androidx.compose.ui.inspection.inspector.NodeParameterReference
+import androidx.compose.ui.inspection.inspector.ParameterKind
 import androidx.compose.ui.inspection.inspector.ParameterType
+import androidx.compose.ui.inspection.inspector.systemPackages
+import androidx.compose.ui.unit.IntOffset
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.Bounds
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.ComposableNode
+import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.ComposableRoot
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.LambdaValue
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.Parameter
+import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.ParameterReference
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.Quad
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.Rect
 
-fun InspectorNode.toComposableNode(stringTable: StringTable): ComposableNode {
-    return toComposableNodeImpl(stringTable).build()
+fun InspectorNode.toComposableNode(stringTable: StringTable, windowPos: IntOffset): ComposableNode {
+    return toComposableNodeImpl(stringTable, windowPos).resetSystemFlag().build()
 }
 
-private fun InspectorNode.toComposableNodeImpl(stringTable: StringTable): ComposableNode.Builder {
+private val SELECTOR_EXPR = Regex("(\\\$(lambda-)?[0-9]+)+$")
+
+private fun InspectorNode.toComposableNodeImpl(
+    stringTable: StringTable,
+    windowPos: IntOffset
+): ComposableNode.Builder {
     val inspectorNode = this
     return ComposableNode.newBuilder().apply {
         id = inspectorNode.id
@@ -46,8 +59,8 @@ private fun InspectorNode.toComposableNodeImpl(stringTable: StringTable): Compos
 
         bounds = Bounds.newBuilder().apply {
             layout = Rect.newBuilder().apply {
-                x = inspectorNode.left
-                y = inspectorNode.top
+                x = inspectorNode.left + windowPos.x
+                y = inspectorNode.top + windowPos.y
                 w = inspectorNode.width
                 h = inspectorNode.height
             }.build()
@@ -65,9 +78,31 @@ private fun InspectorNode.toComposableNodeImpl(stringTable: StringTable): Compos
             }
         }.build()
 
-        children.forEach { child -> addChildren(child.toComposableNodeImpl(stringTable)) }
+        flags = flags()
+        viewId = inspectorNode.viewId
+
+        children.forEach { child ->
+            addChildren(child.toComposableNodeImpl(stringTable, windowPos))
+        }
     }
 }
+
+private fun InspectorNode.flags(): Int {
+    var flags = 0
+    if (packageHash in systemPackages) {
+        flags = flags or ComposableNode.Flags.SYSTEM_CREATED_VALUE
+    }
+    if (mergedSemantics.isNotEmpty()) {
+        flags = flags or ComposableNode.Flags.HAS_MERGED_SEMANTICS_VALUE
+    }
+    if (unmergedSemantics.isNotEmpty()) {
+        flags = flags or ComposableNode.Flags.HAS_UNMERGED_SEMANTICS_VALUE
+    }
+    return flags
+}
+
+private fun ComposableNode.Builder.resetSystemFlag(): ComposableNode.Builder =
+    apply { flags = flags and ComposableNode.Flags.SYSTEM_CREATED_VALUE.inv() }
 
 fun ParameterType.convert(): Parameter.Type {
     return when (this) {
@@ -84,11 +119,30 @@ fun ParameterType.convert(): Parameter.Type {
         ParameterType.DimensionEm -> Parameter.Type.DIMENSION_EM
         ParameterType.Lambda -> Parameter.Type.LAMBDA
         ParameterType.FunctionReference -> Parameter.Type.FUNCTION_REFERENCE
+        ParameterType.Iterable -> Parameter.Type.ITERABLE
+    }
+}
+
+fun ParameterKind.convert(): ParameterReference.Kind {
+    return when (this) {
+        ParameterKind.Normal -> ParameterReference.Kind.NORMAL
+        ParameterKind.MergedSemantics -> ParameterReference.Kind.MERGED_SEMANTICS
+        ParameterKind.UnmergedSemantics -> ParameterReference.Kind.UNMERGED_SEMANTICS
+    }
+}
+
+fun ParameterReference.Kind.convert(): ParameterKind {
+    return when (this) {
+        ParameterReference.Kind.NORMAL -> ParameterKind.Normal
+        ParameterReference.Kind.MERGED_SEMANTICS -> ParameterKind.MergedSemantics
+        ParameterReference.Kind.UNMERGED_SEMANTICS -> ParameterKind.UnmergedSemantics
+        else -> ParameterKind.Normal
     }
 }
 
 private fun Parameter.Builder.setValue(stringTable: StringTable, value: Any?) {
     when (type) {
+        Parameter.Type.ITERABLE,
         Parameter.Type.STRING -> {
             int32Value = stringTable.put(value as String)
         }
@@ -139,12 +193,23 @@ private fun Parameter.Builder.setFunctionType(value: Any?, stringTable: StringTa
         packageName = stringTable.put(lambdaClassName.substringBeforeLast("."))
         functionName = if (value.size == 2 && value[1] != null && value[1] is String)
             stringTable.put(value[1] as String) else 0
-        lambdaName = stringTable.put(lambdaClassName.substringAfterLast("$"))
+        lambdaName = stringTable.put(findLambdaSelector(lambdaClassName))
         fileName = stringTable.put(location.fileName)
         startLineNumber = location.startLine
         endLineNumber = location.endLine
     }.build()
 }
+
+/**
+ * Return the lambda selector from the [lambdaClassName].
+ *
+ * Example:
+ * - className: com.example.composealertdialog.ComposableSingletons$MainActivityKt$lambda-10$1$2$2$1
+ * - selector:  lambda-10$1$2$2$1
+ */
+@VisibleForTesting
+fun findLambdaSelector(lambdaClassName: String): String =
+    SELECTOR_EXPR.find(lambdaClassName)?.value?.substring(1) ?: ""
 
 fun NodeParameter.convert(stringTable: StringTable): Parameter {
     val nodeParam = this
@@ -152,13 +217,32 @@ fun NodeParameter.convert(stringTable: StringTable): Parameter {
         name = stringTable.put(nodeParam.name)
         type = nodeParam.type.convert()
         setValue(stringTable, nodeParam.value)
-        addAllElements(nodeParam.elements.map { it.convert(stringTable) })
+        index = nodeParam.index
+        nodeParam.reference?.let { reference = it.convert() }
+        if (nodeParam.elements.isNotEmpty()) {
+            addAllElements(nodeParam.elements.map { it.convert(stringTable) })
+        }
     }.build()
 }
 
-fun Iterable<InspectorNode>.toComposableNodes(stringTable: StringTable): List<ComposableNode> {
-    return this.map { it.toComposableNode(stringTable) }
+fun NodeParameterReference.convert(): ParameterReference {
+    val reference = this
+    return ParameterReference.newBuilder().apply {
+        kind = reference.kind.convert()
+        composableId = reference.nodeId
+        parameterIndex = reference.parameterIndex
+        addAllCompositeIndex(reference.indices.asIterable())
+    }.build()
 }
+
+internal fun CacheTree.toComposableRoot(
+    stringTable: StringTable,
+    windowPos: IntOffset
+): ComposableRoot = ComposableRoot.newBuilder().also { root ->
+    root.viewId = viewParent.uniqueDrawingId
+    root.addAllNodes(nodes.map { it.toComposableNode(stringTable, windowPos) })
+    root.addAllViewsToSkip(viewsToSkip)
+}.build()
 
 fun Iterable<NodeParameter>.convertAll(stringTable: StringTable): List<Parameter> {
     return this.map { it.convert(stringTable) }

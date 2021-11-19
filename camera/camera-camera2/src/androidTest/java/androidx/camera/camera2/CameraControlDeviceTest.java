@@ -37,8 +37,10 @@ import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.camera.testing.CameraAvailabilityUtil;
 import androidx.camera.testing.CameraUtil;
+import androidx.camera.testing.CameraXUtil;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.filters.LargeTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -66,6 +68,7 @@ import java.util.concurrent.TimeoutException;
  */
 @LargeTest
 @RunWith(Parameterized.class)
+@SdkSuppress(minSdkVersion = 21)
 public class CameraControlDeviceTest {
     @Parameterized.Parameter(0)
     public CameraSelector mCameraSelector;
@@ -91,9 +94,9 @@ public class CameraControlDeviceTest {
             throws ExecutionException, InterruptedException {
         Context context = ApplicationProvider.getApplicationContext();
         CameraXConfig cameraXConfig = Camera2Config.defaultConfig();
-        CameraX.initialize(context, cameraXConfig).get();
+        CameraXUtil.initialize(context, cameraXConfig).get();
 
-        CameraX cameraX = CameraX.getOrCreateInstance(context).get();
+        CameraX cameraX = CameraXUtil.getOrCreateInstance(context, null).get();
 
         assumeTrue(CameraAvailabilityUtil.hasCamera(cameraX.getCameraRepository(),
                 mCameraSelector));
@@ -140,7 +143,7 @@ public class CameraControlDeviceTest {
                 mCamera.removeUseCases(mCamera.getUseCases())
         );
 
-        CameraX.shutdown().get(10000, TimeUnit.MILLISECONDS);
+        CameraXUtil.shutdown().get(10000, TimeUnit.MILLISECONDS);
     }
 
 
@@ -237,6 +240,15 @@ public class CameraControlDeviceTest {
 
         ListenableFuture<Void> result = mCamera.getCameraControl().enableTorch(true);
 
+        assertFutureCompletes(result);
+    }
+
+    @Test
+    public void setZoomRatio_futuresCompletes() {
+        assumeTrue(mCamera.getCameraInfo().getZoomState().getValue().getMaxZoomRatio() >= 2.0f);
+
+        // use ratio with fraction because it often causes unable-to-complete issue.
+        ListenableFuture<Void> result = mCamera.getCameraControl().setZoomRatio(1.3640054f);
         assertFutureCompletes(result);
     }
 

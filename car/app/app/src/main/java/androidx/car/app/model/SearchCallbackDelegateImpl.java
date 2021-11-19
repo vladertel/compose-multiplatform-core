@@ -30,6 +30,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.car.app.IOnDoneCallback;
 import androidx.car.app.OnDoneCallback;
+import androidx.car.app.annotations.CarProtocol;
 import androidx.car.app.utils.RemoteUtils;
 
 /**
@@ -38,6 +39,7 @@ import androidx.car.app.utils.RemoteUtils;
  * @hide
  */
 @RestrictTo(LIBRARY)
+@CarProtocol
 public class SearchCallbackDelegateImpl implements SearchCallbackDelegate {
 
     @Keep
@@ -92,15 +94,21 @@ public class SearchCallbackDelegateImpl implements SearchCallbackDelegate {
 
         @Override
         public void onSearchTextChanged(String text, IOnDoneCallback callback) {
-            RemoteUtils.dispatchHostCall(
-                    () -> mCallback.onSearchTextChanged(text), callback,
-                    "onSearchTextChanged");
+            RemoteUtils.dispatchCallFromHost(
+                    callback, "onSearchTextChanged", () -> {
+                        mCallback.onSearchTextChanged(text);
+                        return null;
+                    }
+            );
         }
 
         @Override
         public void onSearchSubmitted(String text, IOnDoneCallback callback) {
-            RemoteUtils.dispatchHostCall(
-                    () -> mCallback.onSearchSubmitted(text), callback, "onSearchSubmitted");
+            RemoteUtils.dispatchCallFromHost(
+                    callback, "onSearchSubmitted", () -> {
+                        mCallback.onSearchSubmitted(text);
+                        return null;
+                    });
         }
     }
 }

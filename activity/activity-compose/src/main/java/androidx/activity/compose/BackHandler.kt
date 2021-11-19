@@ -16,6 +16,7 @@
 
 package androidx.activity.compose
 
+import androidx.activity.findViewTreeOnBackPressedDispatcherOwner
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.OnBackPressedDispatcherOwner
@@ -28,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalView
 
 /**
  * Provides a [OnBackPressedDispatcher] that can be used by Composables hosted in a
@@ -37,11 +40,17 @@ public object LocalOnBackPressedDispatcherOwner {
     private val LocalOnBackPressedDispatcherOwner =
         compositionLocalOf<OnBackPressedDispatcherOwner?> { null }
 
-    public val current: OnBackPressedDispatcherOwner
+    /**
+     * Returns current composition local value for the owner or `null` if one has not
+     * been provided, one has not been set via
+     * [androidx.activity.setViewTreeOnBackPressedDispatcherOwner], nor is one available by
+     * looking at the [LocalContext].
+     */
+    public val current: OnBackPressedDispatcherOwner?
         @Composable
         get() = LocalOnBackPressedDispatcherOwner.current
+            ?: LocalView.current.findViewTreeOnBackPressedDispatcherOwner()
             ?: findOwner<OnBackPressedDispatcherOwner>(LocalContext.current)
-            ?: error("No Back Dispatcher provided")
 
     /**
      * Associates a [LocalOnBackPressedDispatcherOwner] key to a value in a call to
@@ -85,11 +94,13 @@ public fun BackHandler(enabled: Boolean = true, onBack: () -> Unit) {
     SideEffect {
         backCallback.isEnabled = enabled
     }
-    val backDispatcher = LocalOnBackPressedDispatcherOwner.current.onBackPressedDispatcher
-    // If `backDispatcher` changes, dispose and reset the effect
-    DisposableEffect(backDispatcher) {
+    val backDispatcher = checkNotNull(LocalOnBackPressedDispatcherOwner.current) {
+        "No OnBackPressedDispatcherOwner was provided via LocalOnBackPressedDispatcherOwner"
+    }.onBackPressedDispatcher
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, backDispatcher) {
         // Add callback to the backDispatcher
-        backDispatcher.addCallback(backCallback)
+        backDispatcher.addCallback(lifecycleOwner, backCallback)
         // When the effect leaves the Composition, remove the callback
         onDispose {
             backCallback.remove()

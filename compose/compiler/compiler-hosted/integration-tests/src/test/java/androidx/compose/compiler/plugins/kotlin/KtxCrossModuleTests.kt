@@ -26,11 +26,12 @@ import org.jetbrains.kotlin.config.JVMConfigurationKeys
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
 import java.net.URLClassLoader
 
-@RunWith(ComposeRobolectricTestRunner::class)
+@RunWith(RobolectricTestRunner::class)
 @Config(
     manifest = Config.NONE,
     minSdk = 23,
@@ -1055,7 +1056,3 @@ fun OutputFile.writeToDir(directory: File) =
     FileUtil.writeToFile(File(directory, relativePath), asByteArray())
 
 fun Collection<OutputFile>.writeToDir(directory: File) = forEach { it.writeToDir(directory) }
-
-fun tmpDir(name: String): File {
-    return FileUtil.createTempDirectory(name, "", false).canonicalFile
-}

@@ -15,8 +15,10 @@
  */
 package androidx.emoji2.text;
 
-import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
+import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP;
+import static androidx.annotation.RestrictTo.Scope.TESTS;
 
+import android.annotation.SuppressLint;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
@@ -27,8 +29,8 @@ import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
-import androidx.text.emoji.flatbuffer.MetadataItem;
-import androidx.text.emoji.flatbuffer.MetadataList;
+import androidx.emoji2.text.flatbuffer.MetadataItem;
+import androidx.emoji2.text.flatbuffer.MetadataList;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -38,7 +40,7 @@ import java.lang.annotation.RetentionPolicy;
  *
  * @hide
  */
-@RestrictTo(LIBRARY_GROUP_PREFIX)
+@RestrictTo(LIBRARY_GROUP)
 @AnyThread
 @RequiresApi(19)
 public class EmojiMetadata {
@@ -78,6 +80,7 @@ public class EmojiMetadata {
     /**
      * MetadataRepo that holds this instance.
      */
+    @NonNull
     private final MetadataRepo mMetadataRepo;
 
     /**
@@ -117,6 +120,7 @@ public class EmojiMetadata {
     /**
      * @return return typeface to be used to render this metadata
      */
+    @NonNull
     public Typeface getTypeface() {
         return mMetadataRepo.getTypeface();
     }
@@ -181,8 +185,22 @@ public class EmojiMetadata {
      * style selector 0xFE0F)
      */
     @HasGlyph
+    @SuppressLint("KotlinPropertyAccess")
     public int getHasGlyph() {
         return mHasGlyph;
+    }
+
+    /**
+     * Reset any cached values of hasGlyph on this metadata.
+     *
+     * This is only useful for testing EmojiMetadata, and will make the next display of this
+     * emoji slower.
+     *
+     * @hide
+     */
+    @RestrictTo(TESTS)
+    public void resetHasGlyphCache() {
+        mHasGlyph = HAS_GLYPH_UNKNOWN;
     }
 
     /**
@@ -190,6 +208,7 @@ public class EmojiMetadata {
      *
      * @param hasGlyph {@code true} if system can render the emoji
      */
+    @SuppressLint("KotlinPropertyAccess")
     public void setHasGlyph(boolean hasGlyph) {
         mHasGlyph = hasGlyph ? HAS_GLYPH_EXISTS : HAS_GLYPH_ABSENT;
     }

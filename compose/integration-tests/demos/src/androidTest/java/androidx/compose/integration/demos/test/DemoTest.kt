@@ -37,6 +37,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.FlakyTest
 import androidx.test.filters.LargeTest
 import androidx.test.filters.MediumTest
 import com.google.common.truth.Truth.assertThat
@@ -48,6 +49,7 @@ private val ignoredDemos = listOf<String>(
     // Not ignoring any of them \o/
 )
 
+@FlakyTest(bugId = 204322457)
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalTestApi::class)
@@ -69,12 +71,16 @@ class DemoTest {
             .filterIsInstance<ComposableDemo>()
             .sortedBy { it.title }
             .first()
-        // Click on the first demo
+
+        // Click on the first demo.
         val demoTitle = testDemo.title
         rule.onNodeWithText(demoTitle).performScrollTo().performClick()
-
         assertAppBarHasTitle(demoTitle)
+
+        // Navigate back to root screen.
+        Espresso.closeSoftKeyboard()
         Espresso.pressBack()
+        rule.waitForIdle()
         assertIsOnRootScreen()
     }
 
@@ -82,7 +88,7 @@ class DemoTest {
     @MediumTest
     fun testAllDemosAreBeingTested() {
         assertThat(
-            SplitDemoCategories.sumBy { it.allLaunchableDemos().size }
+            SplitDemoCategories.sumOf { it.allLaunchableDemos().size }
         ).isEqualTo(AllButIgnoredDemos.allLaunchableDemos().size)
     }
 
@@ -173,13 +179,17 @@ class DemoTest {
             fastForwardClock()
         }
 
+        rule.waitForIdle()
         while (rule.onAllNodes(isDialog()).isNotEmpty()) {
-            rule.waitForIdle()
             Espresso.pressBack()
+            rule.waitForIdle()
         }
 
+        clearFocusFromDemo()
         rule.waitForIdle()
+
         Espresso.pressBack()
+        rule.waitForIdle()
 
         if (fastForwardClock) {
             // Pump press back
@@ -207,6 +217,23 @@ class DemoTest {
 
     private fun SemanticsNodeInteractionCollection.isNotEmpty(): Boolean {
         return fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty()
+    }
+
+    private fun clearFocusFromDemo() {
+        with(rule.activity) {
+            if (hostView.hasFocus()) {
+                if (hostView.isFocused) {
+                    // One of the Compose components has focus.
+                    focusManager.clearFocus(force = true)
+                } else {
+                    // A child view has focus. (View interop scenario).
+                    // We could also use hostViewGroup.focusedChild?.clearFocus(), but the
+                    // interop views might end up being focused if one of them is marked as
+                    // focusedByDefault. So we clear focus by requesting focus on the owner.
+                    rule.runOnUiThread { hostView.requestFocus() }
+                }
+            }
+        }
     }
 }
 

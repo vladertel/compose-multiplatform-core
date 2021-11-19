@@ -21,8 +21,10 @@ import static android.os.Build.VERSION.SDK_INT;
 import static androidx.annotation.RestrictTo.Scope.LIBRARY;
 import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.Resources.NotFoundException;
 import android.content.res.Resources.Theme;
@@ -31,13 +33,16 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.SparseArray;
 import android.util.TypedValue;
 
 import androidx.annotation.AnyRes;
 import androidx.annotation.ColorInt;
 import androidx.annotation.ColorRes;
 import androidx.annotation.DimenRes;
+import androidx.annotation.DoNotInline;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.FontRes;
 import androidx.annotation.NonNull;
@@ -48,19 +53,26 @@ import androidx.core.content.res.FontResourcesParserCompat.FamilyResourceEntry;
 import androidx.core.graphics.TypefaceCompat;
 import androidx.core.provider.FontsContractCompat.FontRequestCallback;
 import androidx.core.provider.FontsContractCompat.FontRequestCallback.FontRequestFailReason;
+import androidx.core.util.ObjectsCompat;
 import androidx.core.util.Preconditions;
 
+import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.WeakHashMap;
 
 /**
- * Helper for accessing features in {@link android.content.res.Resources}.
+ * Helper for accessing features in {@link Resources}.
  */
 public final class ResourcesCompat {
     private static final String TAG = "ResourcesCompat";
+    private static final ThreadLocal<TypedValue> sTempTypedValue = new ThreadLocal<>();
+    private static final WeakHashMap<ColorStateListCacheKey, SparseArray<ColorStateListCacheEntry>>
+            sColorStateCaches = new WeakHashMap<>(0);
+    private static final Object sColorStateCacheLock = new Object();
 
     /**
      * The {@code null} resource ID. This denotes an invalid resource ID that is returned by the
@@ -92,7 +104,7 @@ public final class ResourcesCompat {
     public static Drawable getDrawable(@NonNull Resources res, @DrawableRes int id,
             @Nullable Theme theme) throws NotFoundException {
         if (SDK_INT >= 21) {
-            return res.getDrawable(id, theme);
+            return Api21Impl.getDrawable(res, id, theme);
         } else {
             return res.getDrawable(id);
         }
@@ -113,7 +125,7 @@ public final class ResourcesCompat {
      *           tool. This integer encodes the package, type, and resource
      *           entry. The value 0 is an invalid identifier.
      * @param density The desired screen density indicated by the resource as
-     *                found in {@link android.util.DisplayMetrics}.
+     *                found in {@link DisplayMetrics}.
      * @param theme The theme used to style the drawable attributes, may be
      *              {@code null}.
      * @return Drawable An object that can be used to draw this resource.
@@ -125,9 +137,9 @@ public final class ResourcesCompat {
     public static Drawable getDrawableForDensity(@NonNull Resources res, @DrawableRes int id,
             int density, @Nullable Theme theme) throws NotFoundException {
         if (SDK_INT >= 21) {
-            return res.getDrawableForDensity(id, density, theme);
+            return Api21Impl.getDrawableForDensity(res, id, density, theme);
         } else if (SDK_INT >= 15) {
-            return res.getDrawableForDensity(id, density);
+            return Api15Impl.getDrawableForDensity(res, id, density);
         } else {
             return res.getDrawable(id);
         }
@@ -155,7 +167,7 @@ public final class ResourcesCompat {
     public static int getColor(@NonNull Resources res, @ColorRes int id, @Nullable Theme theme)
             throws NotFoundException {
         if (SDK_INT >= 23) {
-            return res.getColor(id, theme);
+            return ResourcesCompat.Api23Impl.getColor(res, id, theme);
         } else {
             return res.getColor(id);
         }
@@ -165,9 +177,6 @@ public final class ResourcesCompat {
      * Returns a themed color state list associated with a particular resource
      * ID. The resource may contain either a single raw color value or a
      * complex {@link ColorStateList} holding multiple possible colors.
-     * <p>
-     * Prior to API level 23, the theme will not be applied and this method
-     * calls through to {@link Resources#getColorStateList(int)}.
      *
      * @param id The desired resource identifier of a {@link ColorStateList},
      *           as generated by the aapt tool. This integer encodes the
@@ -184,10 +193,132 @@ public final class ResourcesCompat {
     @SuppressWarnings("deprecation")
     public static ColorStateList getColorStateList(@NonNull Resources res, @ColorRes int id,
             @Nullable Theme theme) throws NotFoundException {
+        // We explicitly do not attempt to use the platform Resources impl on S+
+        // in case the CSL is using only app:lStar
+
+        // First, try and handle the inflation ourselves
+        ColorStateListCacheKey key = new ColorStateListCacheKey(res, theme);
+        ColorStateList csl = getCachedColorStateList(key, id);
+        if (csl != null) {
+            return csl;
+        }
+        // Cache miss, so try and inflate it ourselves
+        csl = inflateColorStateList(res, id, theme);
+        if (csl != null) {
+            // If we inflated it, add it to the cache and return
+            addColorStateListToCache(key, id, csl);
+            return csl;
+        }
+        // If we reach here then we couldn't inflate it, so let the framework handle it
         if (SDK_INT >= 23) {
-            return res.getColorStateList(id, theme);
+            return ResourcesCompat.Api23Impl.getColorStateList(res, id, theme);
         } else {
             return res.getColorStateList(id);
+        }
+    }
+
+    /**
+     * Inflates a {@link ColorStateList} from resources, honouring theme attributes.
+     */
+    @Nullable
+    private static ColorStateList inflateColorStateList(Resources resources, int resId,
+            @Nullable Theme theme) {
+        if (isColorInt(resources, resId)) {
+            // The resource is a color int, we can't handle it so return null
+            return null;
+        }
+        final XmlPullParser xml = resources.getXml(resId);
+        try {
+            return ColorStateListInflaterCompat.createFromXml(resources, xml, theme);
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to inflate ColorStateList, leaving it to the framework", e);
+        }
+        return null;
+    }
+
+    @Nullable
+    private static ColorStateList getCachedColorStateList(@NonNull ColorStateListCacheKey key,
+            @ColorRes int resId) {
+        synchronized (sColorStateCacheLock) {
+            final SparseArray<ColorStateListCacheEntry> entries = sColorStateCaches.get(key);
+            if (entries != null && entries.size() > 0) {
+                final ColorStateListCacheEntry entry = entries.get(resId);
+                if (entry != null) {
+                    if (entry.mConfiguration.equals(key.mResources.getConfiguration())) {
+                        // If the current configuration matches the entry's, we can use it
+                        return entry.mValue;
+                    } else {
+                        // Otherwise we'll remove the entry
+                        entries.remove(resId);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static void addColorStateListToCache(@NonNull ColorStateListCacheKey key,
+            @ColorRes int resId,
+            @NonNull ColorStateList value) {
+        synchronized (sColorStateCacheLock) {
+            SparseArray<ColorStateListCacheEntry> entries = sColorStateCaches.get(key);
+            if (entries == null) {
+                entries = new SparseArray<>();
+                sColorStateCaches.put(key, entries);
+            }
+            entries.append(resId, new ColorStateListCacheEntry(value,
+                    key.mResources.getConfiguration()));
+        }
+    }
+
+    private static boolean isColorInt(@NonNull Resources resources, @ColorRes int resId) {
+        final TypedValue value = getTypedValue();
+        resources.getValue(resId, value, true);
+        return value.type >= TypedValue.TYPE_FIRST_COLOR_INT
+                && value.type <= TypedValue.TYPE_LAST_COLOR_INT;
+    }
+
+    @NonNull
+    private static TypedValue getTypedValue() {
+        TypedValue tv = sTempTypedValue.get();
+        if (tv == null) {
+            tv = new TypedValue();
+            sTempTypedValue.set(tv);
+        }
+        return tv;
+    }
+
+    private static final class ColorStateListCacheKey {
+        final Resources mResources;
+        @Nullable final Theme mTheme;
+
+        ColorStateListCacheKey(@NonNull Resources resources, @Nullable Theme theme) {
+            mResources = resources;
+            mTheme = theme;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ColorStateListCacheKey that = (ColorStateListCacheKey) o;
+            return mResources.equals(that.mResources)
+                    && ObjectsCompat.equals(mTheme, that.mTheme);
+        }
+
+        @Override
+        public int hashCode() {
+            return ObjectsCompat.hash(mResources, mTheme);
+        }
+    }
+
+    private static class ColorStateListCacheEntry {
+        final ColorStateList mValue;
+        final Configuration mConfiguration;
+        ColorStateListCacheEntry(@NonNull ColorStateList value,
+                @NonNull Configuration configuration) {
+            mValue = value;
+            mConfiguration = configuration;
         }
     }
 
@@ -202,9 +333,11 @@ public final class ResourcesCompat {
      *         not exist or is not a floating-point value.
      */
     public static float getFloat(@NonNull Resources res, @DimenRes int id) {
-        // TODO call into platform on Q+
+        if (SDK_INT >= 29) {
+            return Api29Impl.getFloat(res, id);
+        }
 
-        TypedValue value = new TypedValue();
+        TypedValue value = getTypedValue();
         res.getValue(id, value, true);
         if (value.type == TypedValue.TYPE_FLOAT) {
             return value.getFloat();
@@ -304,13 +437,9 @@ public final class ResourcesCompat {
          * @hide
          */
         @RestrictTo(LIBRARY_GROUP_PREFIX)
-        public final void callbackSuccessAsync(final Typeface typeface, @Nullable Handler handler) {
-            getHandler(handler).post(new Runnable() {
-                @Override
-                public void run() {
-                    onFontRetrieved(typeface);
-                }
-            });
+        public final void callbackSuccessAsync(final @NonNull Typeface typeface,
+                @Nullable Handler handler) {
+            getHandler(handler).post(() -> onFontRetrieved(typeface));
         }
 
         /**
@@ -321,12 +450,7 @@ public final class ResourcesCompat {
         @RestrictTo(LIBRARY_GROUP_PREFIX)
         public final void callbackFailAsync(
                 @FontRequestFailReason final int reason, @Nullable Handler handler) {
-            getHandler(handler).post(new Runnable() {
-                @Override
-                public void run() {
-                    onFontRetrievalFailed(reason);
-                }
-            });
+            getHandler(handler).post(() -> onFontRetrievalFailed(reason));
         }
 
         /** @hide */
@@ -372,9 +496,11 @@ public final class ResourcesCompat {
      *
      * @hide
      */
+    @Nullable
     @RestrictTo(LIBRARY_GROUP_PREFIX)
-    public static Typeface getFont(@NonNull Context context, @FontRes int id, TypedValue value,
-            int style, @Nullable FontCallback fontCallback) throws NotFoundException {
+    public static Typeface getFont(@NonNull Context context, @FontRes int id,
+            @NonNull TypedValue value, int style, @Nullable FontCallback fontCallback)
+            throws NotFoundException {
         if (context.isRestricted()) {
             return null;
         }
@@ -393,9 +519,10 @@ public final class ResourcesCompat {
      * @param isRequestFromLayoutInflator Whether this request originated from XML. This is used to
      *                     determine if we use or ignore the fontProviderFetchStrategy attribute in
      *                     font provider XML fonts.
-     * @return
+     * @return The font as a Typeface
+     * @throws NotFoundException if the resource ID could not be retrieved
      */
-    private static Typeface loadFont(@NonNull Context context, int id, TypedValue value,
+    private static Typeface loadFont(@NonNull Context context, int id, @NonNull TypedValue value,
             int style, @Nullable FontCallback fontCallback, @Nullable Handler handler,
             boolean isRequestFromLayoutInflator, boolean isCachedOnly) {
         final Resources resources = context.getResources();
@@ -425,8 +552,8 @@ public final class ResourcesCompat {
      *                     font provider XML fonts.
      */
     private static Typeface loadFont(
-            @NonNull Context context, Resources wrapper, TypedValue value, int id, int style,
-            @Nullable FontCallback fontCallback, @Nullable Handler handler,
+            @NonNull Context context, Resources wrapper, @NonNull TypedValue value, int id,
+            int style, @Nullable FontCallback fontCallback, @Nullable Handler handler,
             boolean isRequestFromLayoutInflator, boolean isCachedOnly) {
         if (value.string == null) {
             throw new NotFoundException("Resource \"" + wrapper.getResourceName(id) + "\" ("
@@ -492,6 +619,68 @@ public final class ResourcesCompat {
         return null;
     }
 
+    @RequiresApi(29)
+    static class Api29Impl {
+        private Api29Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static float getFloat(@NonNull Resources res, @DimenRes int id) {
+            return res.getFloat(id);
+        }
+    }
+
+    @RequiresApi(23)
+    static class Api23Impl {
+        private Api23Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        @NonNull
+        static ColorStateList getColorStateList(@NonNull Resources res, @ColorRes int id,
+                @Nullable Theme theme) {
+            return res.getColorStateList(id, theme);
+        }
+
+        @DoNotInline
+        static int getColor(Resources resources, int id, Theme theme) {
+            return resources.getColor(id, theme);
+        }
+    }
+
+    @RequiresApi(21)
+    static class Api21Impl {
+        private Api21Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static Drawable getDrawable(Resources resources, int id, Theme theme) {
+            return resources.getDrawable(id, theme);
+        }
+
+        @DoNotInline
+        static Drawable getDrawableForDensity(Resources resources, int id, int density,
+                Theme theme) {
+            return resources.getDrawableForDensity(id, density, theme);
+        }
+    }
+
+    @RequiresApi(15)
+    static class Api15Impl {
+        private Api15Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static Drawable getDrawableForDensity(Resources resources, int id, int density) {
+            return resources.getDrawableForDensity(id, density);
+        }
+
+    }
+
     private ResourcesCompat() {}
 
     /**
@@ -515,28 +704,36 @@ public final class ResourcesCompat {
          */
         public static void rebase(@NonNull Theme theme) {
             if (SDK_INT >= 29) {
-                ImplApi29.rebase(theme);
+                Api29Impl.rebase(theme);
             } else if (SDK_INT >= 23) {
-                ImplApi23.rebase(theme);
+                Api23Impl.rebase(theme);
             }
         }
 
         @RequiresApi(29)
-        static class ImplApi29 {
-            private ImplApi29() { }
+        static class Api29Impl {
+            private Api29Impl() {
+                // This class is not instantiable.
+            }
+
+            @DoNotInline
             static void rebase(@NonNull Theme theme) {
                 theme.rebase();
             }
         }
 
         @RequiresApi(23)
-        static class ImplApi23 {
-            private ImplApi23() { }
+        static class Api23Impl {
+            private Api23Impl() {
+                // This class is not instantiable.
+            }
+
             private static final Object sRebaseMethodLock = new Object();
 
             private static Method sRebaseMethod;
             private static boolean sRebaseMethodFetched;
 
+            @SuppressLint("BanUncheckedReflection") // @RequiresApiRange(min=23, max=29)
             static void rebase(@NonNull Theme theme) {
                 synchronized (sRebaseMethodLock) {
                     if (!sRebaseMethodFetched) {

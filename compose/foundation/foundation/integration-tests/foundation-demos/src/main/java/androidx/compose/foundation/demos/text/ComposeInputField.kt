@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 
 @Composable
 fun InputFieldDemo() {
@@ -74,6 +75,13 @@ fun InputFieldDemo() {
     }
 }
 
+@Composable
+fun DialogInputFieldDemo(onNavigateUp: () -> Unit) {
+    Dialog(onDismissRequest = onNavigateUp) {
+        InputFieldDemo()
+    }
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun EditLine(
@@ -92,7 +100,7 @@ internal fun EditLine(
             keyboardType = keyboardType,
             imeAction = imeAction
         ),
-        keyboardActions = KeyboardActions { keyboardController?.hideSoftwareKeyboard() },
+        keyboardActions = KeyboardActions { keyboardController?.hide() },
         onValueChange = { state.value = it },
         textStyle = TextStyle(fontSize = fontSize8),
     )

@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.TransformableState
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.animatePanBy
@@ -29,7 +30,9 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.InspectableValue
@@ -37,24 +40,23 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.isDebugInspectorInfoEnabled
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.center
-import androidx.compose.ui.test.down
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performGesture
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
-import androidx.compose.ui.test.up
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -71,6 +73,8 @@ class TransformableTest {
     @get:Rule
     val rule = createComposeRule()
 
+    private lateinit var scope: CoroutineScope
+
     @Before
     fun before() {
         isDebugInspectorInfoEnabled = true
@@ -79,6 +83,14 @@ class TransformableTest {
     @After
     fun after() {
         isDebugInspectorInfoEnabled = false
+    }
+
+    private fun ComposeContentTestRule.setContentAndGetScope(content: @Composable () -> Unit) {
+        setContent {
+            val actualScope = rememberCoroutineScope()
+            SideEffect { scope = actualScope }
+            content()
+        }
     }
 
     @Test
@@ -93,7 +105,7 @@ class TransformableTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             val leftStartX = center.x - 10
             val leftEndX = visibleSize.toSize().width * EDGE_FUZZ_FACTOR
             val rightStartX = center.x + 10
@@ -130,7 +142,7 @@ class TransformableTest {
 
         val expected = Offset(50f + touchSlop, 0f)
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             down(1, center)
             down(2, center + Offset(10f, 10f))
             moveBy(1, expected)
@@ -158,7 +170,7 @@ class TransformableTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             down(1, center)
             down(2, center + Offset(0f, 50f))
             moveBy(2, Offset(50f, -50f))
@@ -191,7 +203,7 @@ class TransformableTest {
 
         val panShift = Offset(touchSlop, 0f)
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             down(1, center)
             down(2, center + Offset(0f, 50f))
             // first pan a bit
@@ -215,7 +227,7 @@ class TransformableTest {
         rotationLock.value = !rotationLock.value
         rule.waitForIdle()
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             down(1, center)
             down(2, center + Offset(0f, 50f))
             // first pan a bit
@@ -249,7 +261,7 @@ class TransformableTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             val leftStartX = visibleSize.toSize().width * EDGE_FUZZ_FACTOR
             val leftEndX = center.x - 10
             val rightStartX = visibleSize.toSize().width * (1 - EDGE_FUZZ_FACTOR)
@@ -287,7 +299,7 @@ class TransformableTest {
             assertThat(state.isTransformInProgress).isEqualTo(false)
         }
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             down(pointerId = 1, center)
             down(pointerId = 2, center + Offset(10f, 10f))
             moveBy(2, Offset(20f, 20f))
@@ -295,7 +307,7 @@ class TransformableTest {
 
         assertThat(state.isTransformInProgress).isEqualTo(true)
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             up(pointerId = 1)
             up(pointerId = 2)
         }
@@ -306,20 +318,20 @@ class TransformableTest {
     }
 
     @Test
-    @Ignore("can't came up with good enough test, b/179399198")
     fun transformable_disabledWontCallLambda() {
         val enabled = mutableStateOf(true)
         var cumulativeScale = 1.0f
 
         setTransformableContent {
             Modifier.transformable(
+                enabled = enabled.value,
                 state = rememberTransformableState { zoom, _, _ ->
                     cumulativeScale *= zoom
                 }
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             val leftStartX = center.x - 10
             val leftEndX = visibleSize.toSize().width * EDGE_FUZZ_FACTOR
             val rightStartX = center.x + 10
@@ -342,7 +354,7 @@ class TransformableTest {
         enabled.value = false
         rule.waitForIdle()
 
-        rule.onNodeWithTag(TEST_TAG).performGesture {
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
             val leftStartX = visibleSize.toSize().width * EDGE_FUZZ_FACTOR
             val leftEndX = center.x - 10
             val rightStartX = visibleSize.toSize().width * (1 - EDGE_FUZZ_FACTOR)
@@ -364,7 +376,7 @@ class TransformableTest {
     }
 
     @Test
-    fun transformable_animateTo_zoom() = runBlocking {
+    fun transformable_animateTo_zoom() = runBlocking(AutoTestFrameClock()) {
         rule.mainClock.autoAdvance = false
         var cumulativeScale = 1.0f
         var callbackCount = 0
@@ -400,7 +412,7 @@ class TransformableTest {
     }
 
     @Test
-    fun transformable_animateTo_rotate() = runBlocking {
+    fun transformable_animateTo_rotate() = runBlocking(AutoTestFrameClock()) {
         rule.mainClock.autoAdvance = false
         var totalRotation = 0f
         var callbackCount = 0
@@ -436,7 +448,7 @@ class TransformableTest {
     }
 
     @Test
-    fun transformable_animateTo_pan() = runBlocking {
+    fun transformable_animateTo_pan() = runBlocking(AutoTestFrameClock()) {
         rule.mainClock.autoAdvance = false
         var totalPan = Offset.Zero
         var callbackCount = 0
@@ -531,7 +543,7 @@ class TransformableTest {
     }
 
     @Test
-    fun transformable_stopTransformations() = runBlocking {
+    fun transformable_stopTransformations() = runBlocking(AutoTestFrameClock()) {
         rule.mainClock.autoAdvance = false
         var totalRotation = 0f
         var callbackCount = 0
@@ -569,6 +581,36 @@ class TransformableTest {
     }
 
     @Test
+    fun transformable_animateCancelledUpdatesIsTransformInProgress() {
+        rule.mainClock.autoAdvance = false
+        val state = TransformableState { _, _, _ -> }
+        setTransformableContent {
+            Modifier.transformable(state)
+        }
+
+        lateinit var animateJob: Job
+
+        rule.runOnIdle {
+            assertThat(state.isTransformInProgress).isFalse()
+            animateJob = scope.launch {
+                state.animateZoomBy(4f, tween(1000))
+            }
+        }
+
+        rule.mainClock.advanceTimeBy(500)
+
+        rule.runOnIdle {
+            assertThat(state.isTransformInProgress).isTrue()
+        }
+
+        animateJob.cancel()
+
+        rule.runOnIdle {
+            assertThat(state.isTransformInProgress).isFalse()
+        }
+    }
+
+    @Test
     fun testInspectorValue() {
         rule.setContent {
             val state = rememberTransformableState { _, _, _ -> }
@@ -584,7 +626,7 @@ class TransformableTest {
     }
 
     private fun setTransformableContent(getModifier: @Composable () -> Modifier) {
-        rule.setContent {
+        rule.setContentAndGetScope {
             Box(Modifier.size(600.dp).testTag(TEST_TAG).then(getModifier()))
         }
     }

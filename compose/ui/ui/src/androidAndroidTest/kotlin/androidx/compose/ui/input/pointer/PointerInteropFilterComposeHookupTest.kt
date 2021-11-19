@@ -24,6 +24,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
@@ -41,6 +42,7 @@ import org.junit.runner.RunWith
 // hooked up to PointerInteropFilter correctly.
 @MediumTest
 @RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalComposeUiApi::class)
 class PointerInteropFilterComposeHookupTest {
 
     private lateinit var root: View
@@ -268,7 +270,7 @@ class PointerInteropFilterComposeHookupTest {
     }
 
     @Test
-    fun ui_downMove_moveIsDispatchedDuringFinal() {
+    fun ui_downMove_moveIsDispatchedDuringMain() {
         val down =
             MotionEvent(
                 0,
@@ -298,9 +300,9 @@ class PointerInteropFilterComposeHookupTest {
 
         assertThat(eventStringLog).hasSize(4)
         assertThat(eventStringLog[0]).isEqualTo(PointerEventPass.Initial.toString())
-        assertThat(eventStringLog[1]).isEqualTo(PointerEventPass.Main.toString())
-        assertThat(eventStringLog[2]).isEqualTo(PointerEventPass.Final.toString())
-        assertThat(eventStringLog[3]).isEqualTo("motionEvent")
+        assertThat(eventStringLog[1]).isEqualTo("motionEvent")
+        assertThat(eventStringLog[2]).isEqualTo(PointerEventPass.Main.toString())
+        assertThat(eventStringLog[3]).isEqualTo(PointerEventPass.Final.toString())
     }
 
     @Test
@@ -341,7 +343,7 @@ class PointerInteropFilterComposeHookupTest {
     }
 
     @Test
-    fun ui_downDisallowInterceptMoveAllowInterceptMove_2ndMoveIsDispatchedDuringFinal() {
+    fun ui_downDisallowInterceptMoveAllowInterceptMove_2ndMoveIsDispatchedDuringMain() {
         val down =
             MotionEvent(
                 0,
@@ -369,7 +371,7 @@ class PointerInteropFilterComposeHookupTest {
                 1,
                 0,
                 arrayOf(PointerProperties(0)),
-                arrayOf(PointerCoords(100f, 50f)),
+                arrayOf(PointerCoords(100f, 51f)),
                 root
             )
 
@@ -384,13 +386,13 @@ class PointerInteropFilterComposeHookupTest {
 
         assertThat(eventStringLog).hasSize(4)
         assertThat(eventStringLog[0]).isEqualTo(PointerEventPass.Initial.toString())
-        assertThat(eventStringLog[1]).isEqualTo(PointerEventPass.Main.toString())
-        assertThat(eventStringLog[2]).isEqualTo(PointerEventPass.Final.toString())
-        assertThat(eventStringLog[3]).isEqualTo("motionEvent")
+        assertThat(eventStringLog[1]).isEqualTo("motionEvent")
+        assertThat(eventStringLog[2]).isEqualTo(PointerEventPass.Main.toString())
+        assertThat(eventStringLog[3]).isEqualTo(PointerEventPass.Final.toString())
     }
 
     @Test
-    fun ui_downDisallowInterceptUpDownMove_2ndMoveIsDispatchedDuringFinal() {
+    fun ui_downDisallowInterceptUpDownMove_2ndMoveIsDispatchedDuringMain() {
         val down =
             MotionEvent(
                 0,
@@ -443,8 +445,8 @@ class PointerInteropFilterComposeHookupTest {
 
         assertThat(eventStringLog).hasSize(4)
         assertThat(eventStringLog[0]).isEqualTo(PointerEventPass.Initial.toString())
-        assertThat(eventStringLog[1]).isEqualTo(PointerEventPass.Main.toString())
-        assertThat(eventStringLog[2]).isEqualTo(PointerEventPass.Final.toString())
-        assertThat(eventStringLog[3]).isEqualTo("motionEvent")
+        assertThat(eventStringLog[1]).isEqualTo("motionEvent")
+        assertThat(eventStringLog[2]).isEqualTo(PointerEventPass.Main.toString())
+        assertThat(eventStringLog[3]).isEqualTo(PointerEventPass.Final.toString())
     }
 }

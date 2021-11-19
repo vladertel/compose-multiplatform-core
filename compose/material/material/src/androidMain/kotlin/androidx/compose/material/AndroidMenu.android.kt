@@ -34,7 +34,12 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 
 /**
- * A Material Design [dropdown menu](https://material.io/components/menus#dropdown-menu).
+ * <a href="https://material.io/components/menus#dropdown-menu" class="external" target="_blank">Material Design dropdown menu</a>.
+ *
+ * A dropdown menu is a compact way of displaying multiple choices. It appears upon interaction with
+ * an element (such as an icon or button) or when users perform a specific action.
+ *
+ * ![Menus image](https://developer.android.com/images/reference/androidx/compose/material/menus.png)
  *
  * A [DropdownMenu] behaves similarly to a [Popup], and will use the position of the parent layout
  * to position itself on screen. Commonly a [DropdownMenu] will be placed in a [Box] with a sibling
@@ -43,7 +48,8 @@ import androidx.compose.ui.window.PopupProperties
  *
  * The [content] of a [DropdownMenu] will typically be [DropdownMenuItem]s, as well as custom
  * content. Using [DropdownMenuItem]s will result in a menu that matches the Material
- * specification for menus.
+ * specification for menus. Also note that the [content] is placed inside a scrollable [Column],
+ * so using a [LazyColumn] as the root layout inside [content] is unsupported.
  *
  * [onDismissRequest] will be called when the menu should close - for example when there is a
  * tap outside the menu, or when the back key is pressed.
@@ -103,7 +109,8 @@ fun DropdownMenu(
 }
 
 /**
- * A dropdown menu item, as defined by the Material Design spec.
+ * <a href="https://material.io/components/menus#dropdown-menu" class="external" target="_blank">Material Design dropdown menu</a> item.
+ *
  *
  * Example usage:
  * @sample androidx.compose.material.samples.MenuSample

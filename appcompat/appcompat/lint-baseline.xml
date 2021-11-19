@@ -1,5 +1,159 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="5" by="lint 4.2.0-beta02" client="gradle" variant="debug" version="4.2.0-beta02">
+<issues format="6" by="lint 7.2.0-dev" type="baseline" client="gradle" dependencies="false" name="AGP (7.2.0-dev)" variant="all" version="7.2.0-dev">
+
+    <issue
+        id="ResourceType"
+        message="Expected resource of type styleable"
+        errorLine1="                aa = context.obtainStyledAttributes(attrs, ATTRS_ANDROID_SPINNERMODE,"
+        errorLine2="                                                           ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
+            line="236"
+            column="60"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Class requires API level 21 (current min is 14): `android.graphics.drawable.AnimatedStateListDrawable`"
+        errorLine1="                || button instanceof AnimatedStateListDrawable);"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/widget/AppCompatCheckBoxTest.java"
+            line="71"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Class requires API level 21 (current min is 14): `android.graphics.drawable.AnimatedStateListDrawable`"
+        errorLine1="                || checkMark instanceof AnimatedStateListDrawable);"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/widget/AppCompatCheckedTextViewTest.java"
+            line="89"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 25 (current min is 14): `new android.view.inputmethod.InputContentInfo`"
+        errorLine1="        final InputContentInfo contentInfo = new InputContentInfo("
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/widget/AppCompatEditTextReceiveContentTest.java"
+            line="543"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 25 (current min is 14): `android.view.inputmethod.InputConnection#commitContent`"
+        errorLine1="        return ic.commitContent(contentInfo, flags, null);"
+        errorLine2="                  ~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/widget/AppCompatEditTextReceiveContentTest.java"
+            line="551"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Class requires API level 26 (current min is 14): `android.view.textclassifier.TextClassifier`"
+        errorLine1="    private static class NoOpTextClassifier implements TextClassifier {}"
+        errorLine2="                                                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/widget/AppCompatEditTextTest.java"
+            line="201"
+            column="56"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Class requires API level 21 (current min is 14): `android.graphics.drawable.AnimatedStateListDrawable`"
+        errorLine1="                || button instanceof AnimatedStateListDrawable);"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/widget/AppCompatRadioButtonTest.java"
+            line="72"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 17 (current min is 14): `android.view.ContextThemeWrapper#applyOverrideConfiguration`"
+        errorLine1="        wrappedBase.applyOverrideConfiguration(overrideConfig);"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/widget/AppCompatSpinnerRtlActivity.java"
+            line="33"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Class requires API level 26 (current min is 14): `android.view.textclassifier.TextClassifier`"
+        errorLine1="    private static class NoOpTextClassifier implements TextClassifier {}"
+        errorLine2="                                                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/widget/AppCompatTextViewTest.java"
+            line="928"
+            column="56"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 17 (current min is 14): `android.view.ContextThemeWrapper#applyOverrideConfiguration`"
+        errorLine1="            wrappedBase.applyOverrideConfiguration(overrideConfig);"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/testutils/BaseTestActivity.java"
+            line="97"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 20 (current min is 14): `android.view.WindowInsets#getSystemWindowInsetTop`"
+        errorLine1="        mSystemWindowInsetTop = insets.getSystemWindowInsetTop();"
+        errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/custom/CustomDrawerLayout.java"
+            line="41"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 17 (current min is 16): `android.content.res.Configuration#setLayoutDirection`"
+        errorLine1="        configuration.setLayoutDirection(locale)"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/app/NightModeRtlTestUtilsRegressionTestCase.kt"
+            line="73"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 17 (current min is 16): `android.content.res.Configuration#setLocale`"
+        errorLine1="        configuration.setLocale(locale)"
+        errorLine2="                      ~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/app/NightModeRtlTestUtilsRegressionTestCase.kt"
+            line="74"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 17 (current min is 16): `android.text.TextUtils#getLayoutDirectionFromLocale`"
+        errorLine1="        assertEquals(TextUtils.getLayoutDirectionFromLocale(CUSTOM_LOCALE), config.layoutDirection)"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/androidTest/java/androidx/appcompat/app/NightModeRtlTestUtilsRegressionTestCase.kt"
+            line="94"
+            column="32"/>
+    </issue>
 
     <issue
         id="BanSynchronizedMethods"
@@ -113,7 +267,7 @@
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                info.setHomeAsUpIndicator.invoke(actionBar, drawable);"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -124,7 +278,7 @@
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                info.setHomeActionContentDescription.invoke(actionBar, contentDescRes);"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -135,7 +289,7 @@
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                info.setHomeActionContentDescription.invoke(actionBar, contentDescRes);"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -146,40 +300,40 @@
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                        method.invoke(mTextView);"
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="675"
+            line="677"
             column="25"/>
     </issue>
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="            result = (T) method.invoke(object);"
         errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="847"
+            line="814"
             column="26"/>
     </issue>
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                mResolvedMethod.invoke(mResolvedContext, v);"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="409"
+            line="441"
             column="17"/>
     </issue>
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="            mSetExclusiveCheckableMethod.invoke(mWrappedObject, checkable);"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -190,40 +344,40 @@
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                    mDoBeforeTextChanged.invoke(view);"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="2073"
+            line="2084"
             column="21"/>
     </issue>
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                    mDoAfterTextChanged.invoke(view);"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="2083"
+            line="2094"
             column="21"/>
     </issue>
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                    mEnsureImeVisible.invoke(view, /* visible = */ true);"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="2093"
+            line="2104"
             column="21"/>
     </issue>
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                    return (Boolean) mMethod.invoke(mRealOwner, item);"
         errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -234,7 +388,7 @@
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                    mMethod.invoke(mRealOwner, item);"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -245,7 +399,7 @@
 
     <issue
         id="BanUncheckedReflection"
-        message="Calling Method.invoke without an SDK check"
+        message="Calling `Method.invoke` without an SDK check"
         errorLine1="                sComputeFitSystemWindowsMethod.invoke(view, inoutInsets, outLocalInsets);"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -255,624 +409,8 @@
     </issue>
 
     <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.ActionBarBackgroundDrawable is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="                mContainer.mSplitBackground.getOutline(outline);"
-        errorLine2="                                            ~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/ActionBarBackgroundDrawable.java"
-            line="70"
-            column="45"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.ActionBarBackgroundDrawable is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="                mContainer.mBackground.getOutline(outline);"
-        errorLine2="                                       ~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/ActionBarBackgroundDrawable.java"
-            line="75"
-            column="40"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.ActionBarContainer is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="            invalidateOutline();"
-        errorLine2="            ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="106"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.ActionBarContainer is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="            invalidateOutline();"
-        errorLine2="            ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="127"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.ActionBarContainer is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="            invalidateOutline();"
-        errorLine2="            ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="147"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 18, the call containing class androidx.appcompat.app.ActionBarDrawerToggle.FrameworkActionBarDelegate is not annotated with @RequiresApi(x) where x is at least 18. Either annotate the containing class with at least @RequiresApi(18) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(18)."
-        errorLine1="                    actionBar.setHomeAsUpIndicator(themeImage);"
-        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="557"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 18, the call containing class androidx.appcompat.app.ActionBarDrawerToggle.FrameworkActionBarDelegate is not annotated with @RequiresApi(x) where x is at least 18. Either annotate the containing class with at least @RequiresApi(18) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(18)."
-        errorLine1="                    actionBar.setHomeActionContentDescription(contentDescRes);"
-        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="558"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 18, the call containing class androidx.appcompat.app.ActionBarDrawerToggle.FrameworkActionBarDelegate is not annotated with @RequiresApi(x) where x is at least 18. Either annotate the containing class with at least @RequiresApi(18) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(18)."
-        errorLine1="                    actionBar.setHomeActionContentDescription(contentDescRes);"
-        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="573"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.app.AppCompatDelegateImpl is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                            .getSystemService(UiModeManager.class);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/app/AppCompatDelegateImpl.java"
-            line="2426"
-            column="30"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.app.AppCompatDelegateImpl.AutoBatteryNightModeManager is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="                return mPowerManager.isPowerSaveMode() ? MODE_NIGHT_YES : MODE_NIGHT_NO;"
-        errorLine2="                                     ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/app/AppCompatDelegateImpl.java"
-            line="3281"
-            column="38"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatSpinner is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="            mPopup.show(getTextDirection(), getTextAlignment());"
-        errorLine2="                        ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="608"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatSpinner is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="            mPopup.show(getTextDirection(), getTextAlignment());"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="608"
-            column="45"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 16, the call containing class null is not annotated with @RequiresApi(x) where x is at least 16. Either annotate the containing class with at least @RequiresApi(16) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(16)."
-        errorLine1="                                vto.removeOnGlobalLayoutListener(this);"
-        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="641"
-            column="37"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatSpinner.DropDownAdapter is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                    if (themedAdapter.getDropDownViewTheme() != dropDownTheme) {"
-        errorLine2="                                      ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="715"
-            column="39"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatSpinner.DropDownAdapter is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                        themedAdapter.setDropDownViewTheme(dropDownTheme);"
-        errorLine2="                                      ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="716"
-            column="39"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatSpinner.DialogPopup is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="                listView.setTextDirection(textDirection);"
-        errorLine2="                         ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="905"
-            column="26"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatSpinner.DialogPopup is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="                listView.setTextAlignment(textAlignment);"
-        errorLine2="                         ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="906"
-            column="26"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatSpinner.DropdownPopup is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="                listView.setTextDirection(textDirection);"
-        errorLine2="                         ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="1054"
-            column="26"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatSpinner.DropdownPopup is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="                listView.setTextAlignment(textAlignment);"
-        errorLine2="                         ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="1055"
-            column="26"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextClassifierHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                    mTextView.getContext().getSystemService(TextClassificationManager.class);"
-        errorLine2="                                           ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextClassifierHelper.java"
-            line="64"
-            column="44"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 26, the call containing class androidx.appcompat.widget.AppCompatTextClassifierHelper is not annotated with @RequiresApi(x) where x is at least 26. Either annotate the containing class with at least @RequiresApi(26) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(26)."
-        errorLine1="                return tcm.getTextClassifier();"
-        errorLine2="                           ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextClassifierHelper.java"
-            line="66"
-            column="28"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 26, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 26. Either annotate the containing class with at least @RequiresApi(26) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(26)."
-        errorLine1="            mView.setFontVariationSettings(fontVariation);"
-        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="235"
-            column="19"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 24, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 24. Either annotate the containing class with at least @RequiresApi(24) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(24)."
-        errorLine1="                mView.setTextLocales(LocaleList.forLanguageTags(localeListString));"
-        errorLine2="                      ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="239"
-            column="23"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 24, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 24. Either annotate the containing class with at least @RequiresApi(24) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(24)."
-        errorLine1="                mView.setTextLocales(LocaleList.forLanguageTags(localeListString));"
-        errorLine2="                                                ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="239"
-            column="49"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="                mView.setTextLocale(Locale.forLanguageTag(firstLanTag));"
-        errorLine2="                      ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="243"
-            column="23"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="                mView.setTextLocale(Locale.forLanguageTag(firstLanTag));"
-        errorLine2="                                           ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="243"
-            column="44"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 26, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 26. Either annotate the containing class with at least @RequiresApi(26) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(26)."
-        errorLine1="                    if (mView.getAutoSizeStepGranularity() != AppCompatTextViewAutoSizeHelper"
-        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="256"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 26, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 26. Either annotate the containing class with at least @RequiresApi(26) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(26)."
-        errorLine1="                        mView.setAutoSizeTextTypeUniformWithConfiguration("
-        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="259"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 26, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 26. Either annotate the containing class with at least @RequiresApi(26) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(26)."
-        errorLine1="                        mView.setAutoSizeTextTypeUniformWithPresetSizes("
-        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="265"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 28, the call containing class null is not annotated with @RequiresApi(x) where x is at least 28. Either annotate the containing class with at least @RequiresApi(28) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(28)."
-        errorLine1="                                typeface = Typeface.create(typeface, fontWeight,"
-        errorLine2="                                                    ~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="367"
-            column="53"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 28, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 28. Either annotate the containing class with at least @RequiresApi(28) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(28)."
-        errorLine1="                            mFontTypeface = Typeface.create("
-        errorLine2="                                                     ~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="385"
-            column="54"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 28, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 28. Either annotate the containing class with at least @RequiresApi(28) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(28)."
-        errorLine1="                        mFontTypeface = Typeface.create("
-        errorLine2="                                                 ~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="404"
-            column="50"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 26, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 26. Either annotate the containing class with at least @RequiresApi(26) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(26)."
-        errorLine1="                mView.setFontVariationSettings(fontVariation);"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="495"
-            column="23"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="                final Drawable[] compoundDrawables = mView.getCompoundDrawablesRelative();"
-        errorLine2="                                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="523"
-            column="60"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="            final Drawable[] existingRel = mView.getCompoundDrawablesRelative();"
-        errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="663"
-            column="50"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="            mView.setCompoundDrawablesRelativeWithIntrinsicBounds("
-        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="664"
-            column="19"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="                final Drawable[] existingRel = mView.getCompoundDrawablesRelative();"
-        errorLine2="                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="674"
-            column="54"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.AppCompatTextHelper is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="                    mView.setCompoundDrawablesRelativeWithIntrinsicBounds("
-        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextHelper.java"
-            line="676"
-            column="27"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 18, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 18. Either annotate the containing class with at least @RequiresApi(18) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(18)."
-        errorLine1="                isInLayout = mTextView.isInLayout();"
-        errorLine2="                                       ~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="664"
-            column="40"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 16, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 16. Either annotate the containing class with at least @RequiresApi(16) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(16)."
-        errorLine1="        final int maxLines = Build.VERSION.SDK_INT >= 16 ? mTextView.getMaxLines() : -1;"
-        errorLine2="                                                                     ~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="753"
-            column="70"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="        final StaticLayout.Builder layoutBuilder = StaticLayout.Builder.obtain("
-        errorLine2="                                                                        ~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="779"
-            column="73"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="        layoutBuilder.setAlignment(alignment)"
-        errorLine2="                      ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="782"
-            column="23"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                .setLineSpacing("
-        errorLine2="                 ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="783"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 16, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 16. Either annotate the containing class with at least @RequiresApi(16) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(16)."
-        errorLine1="                        mTextView.getLineSpacingExtra(),"
-        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="784"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 16, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 16. Either annotate the containing class with at least @RequiresApi(16) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(16)."
-        errorLine1="                        mTextView.getLineSpacingMultiplier())"
-        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="785"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 16, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 16. Either annotate the containing class with at least @RequiresApi(16) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(16)."
-        errorLine1="                .setIncludePad(mTextView.getIncludeFontPadding())"
-        errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="786"
-            column="42"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                .setIncludePad(mTextView.getIncludeFontPadding())"
-        errorLine2="                 ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="786"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                .setBreakStrategy(mTextView.getBreakStrategy())"
-        errorLine2="                 ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="787"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                .setBreakStrategy(mTextView.getBreakStrategy())"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="787"
-            column="45"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                .setHyphenationFrequency(mTextView.getHyphenationFrequency())"
-        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="788"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                .setHyphenationFrequency(mTextView.getHyphenationFrequency())"
-        errorLine2="                                                   ~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="788"
-            column="52"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="                .setMaxLines(maxLines == -1 ? Integer.MAX_VALUE : maxLines);"
-        errorLine2="                 ~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="789"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="        return layoutBuilder.build();"
-        errorLine2="                             ~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="799"
-            column="30"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 16, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 16. Either annotate the containing class with at least @RequiresApi(16) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(16)."
-        errorLine1="        final float lineSpacingMultiplier = mTextView.getLineSpacingMultiplier();"
-        errorLine2="                                                      ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="805"
-            column="55"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 16, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 16. Either annotate the containing class with at least @RequiresApi(16) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(16)."
-        errorLine1="        final float lineSpacingAdd = mTextView.getLineSpacingExtra();"
-        errorLine2="                                               ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="806"
-            column="48"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 16, the call containing class androidx.appcompat.widget.AppCompatTextViewAutoSizeHelper is not annotated with @RequiresApi(x) where x is at least 16. Either annotate the containing class with at least @RequiresApi(16) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(16)."
-        errorLine1="        final boolean includePad = mTextView.getIncludeFontPadding();"
-        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextViewAutoSizeHelper.java"
-            line="807"
-            column="46"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.view.ContextThemeWrapper is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 17; however, the containing class androidx.appcompat.view.ContextThemeWrapper is reachable from earlier API levels and will fail run-time class verification."
         errorLine1="                final Context resContext = createConfigurationContext(mOverrideConfiguration);"
         errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -882,234 +420,36 @@
     </issue>
 
     <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.DropDownListView is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 21; however, the containing class androidx.appcompat.widget.DropDownListView is reachable from earlier API levels and will fail run-time class verification."
         errorLine1="            drawableHotspotChanged(x, y);"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/DropDownListView.java"
-            line="648"
+            line="652"
             column="13"/>
     </issue>
 
     <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.DropDownListView is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="            child.drawableHotspotChanged(childX, childY);"
-        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/DropDownListView.java"
-            line="671"
-            column="19"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 29, the call containing class androidx.appcompat.widget.ListPopupWindow is not annotated with @RequiresApi(x) where x is at least 29. Either annotate the containing class with at least @RequiresApi(29) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(29)."
-        errorLine1="                mPopup.setEpicenterBounds(mEpicenterBounds);"
-        errorLine2="                       ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/ListPopupWindow.java"
-            line="752"
-            column="24"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 29, the call containing class androidx.appcompat.widget.ListPopupWindow is not annotated with @RequiresApi(x) where x is at least 29. Either annotate the containing class with at least @RequiresApi(29) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(29)."
-        errorLine1="            mPopup.setIsClippedToScreen(clip);"
-        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/ListPopupWindow.java"
-            line="1440"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 24, the call containing class androidx.appcompat.widget.ListPopupWindow is not annotated with @RequiresApi(x) where x is at least 24. Either annotate the containing class with at least @RequiresApi(24) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(24)."
-        errorLine1="            return mPopup.getMaxAvailableHeight(anchor, yOffset, ignoreBottomDecorations);"
-        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/ListPopupWindow.java"
-            line="1457"
-            column="27"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.view.menu.MenuPopupHelper is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="            display.getRealSize(displaySize);"
-        errorLine2="                    ~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/view/menu/MenuPopupHelper.java"
-            line="231"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.MenuPopupWindow is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="            mPopup.setEnterTransition((Transition) enterTransition);"
-        errorLine2="                   ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="87"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.widget.MenuPopupWindow is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="            mPopup.setExitTransition((Transition) exitTransition);"
-        errorLine2="                   ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="93"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 29, the call containing class androidx.appcompat.widget.MenuPopupWindow is not annotated with @RequiresApi(x) where x is at least 29. Either annotate the containing class with at least @RequiresApi(29) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(29)."
-        errorLine1="            mPopup.setTouchModal(touchModal);"
-        errorLine2="                   ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="115"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 17, the call containing class androidx.appcompat.widget.MenuPopupWindow.MenuDropDownListView is not annotated with @RequiresApi(x) where x is at least 17. Either annotate the containing class with at least @RequiresApi(17) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(17)."
-        errorLine1="                    &amp;&amp; ViewCompat.LAYOUT_DIRECTION_RTL == config.getLayoutDirection()) {"
-        errorLine2="                                                                 ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="152"
-            column="66"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 16, the call containing class androidx.appcompat.app.ResourcesFlusher is not annotated with @RequiresApi(x) where x is at least 16. Either annotate the containing class with at least @RequiresApi(16) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(16)."
-        errorLine1="            unthemedEntries.clear();"
-        errorLine2="                            ~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/app/ResourcesFlusher.java"
-            line="205"
-            column="29"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 29, the call containing class androidx.appcompat.widget.SearchView is not annotated with @RequiresApi(x) where x is at least 29. Either annotate the containing class with at least @RequiresApi(29) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(29)."
-        errorLine1="            mSearchSrcTextView.refreshAutoCompleteResults();"
-        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1698"
-            column="32"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 29, the call containing class androidx.appcompat.widget.SearchView.SearchAutoComplete is not annotated with @RequiresApi(x) where x is at least 29. Either annotate the containing class with at least @RequiresApi(29) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(29)."
+        id="ClassVerificationFailure"
+        message="This call references a method added in API level 29; however, the containing class androidx.appcompat.widget.SearchView.SearchAutoComplete is reachable from earlier API levels and will fail run-time class verification."
         errorLine1="                setInputMethodMode(INPUT_METHOD_NEEDED);"
         errorLine2="                ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="2026"
+            line="2037"
             column="17"/>
     </issue>
 
     <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 18, the call containing class androidx.appcompat.widget.SwitchCompat is not annotated with @RequiresApi(x) where x is at least 18. Either annotate the containing class with at least @RequiresApi(18) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(18)."
-        errorLine1="            mPositionAnimator.setAutoCancel(true);"
-        errorLine2="                              ~~~~~~~~~~~~~">
+        id="MissingTestSizeAnnotation"
+        message="Missing test size annotation"
+        errorLine1="    fun testTileifyLayerDrawable() {"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="1063"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.TintTypedArray is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="            return mWrapped.getType(index);"
-        errorLine2="                            ~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="229"
-            column="29"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 21, the call containing class androidx.appcompat.widget.TintTypedArray is not annotated with @RequiresApi(x) where x is at least 21. Either annotate the containing class with at least @RequiresApi(21) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(21)."
-        errorLine1="        return mWrapped.getChangingConfigurations();"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="257"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 26, the call containing class androidx.appcompat.widget.TooltipCompat is not annotated with @RequiresApi(x) where x is at least 26. Either annotate the containing class with at least @RequiresApi(26) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(26)."
-        errorLine1="            view.setTooltipText(tooltipText);"
-        errorLine2="                 ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/TooltipCompat.java"
-            line="42"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.view.WindowCallbackWrapper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="        return mWrapped.onSearchRequested(searchEvent);"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="145"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 23, the call containing class androidx.appcompat.view.WindowCallbackWrapper is not annotated with @RequiresApi(x) where x is at least 23. Either annotate the containing class with at least @RequiresApi(23) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(23)."
-        errorLine1="        return mWrapped.onWindowStartingActionMode(callback, type);"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="161"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 24, the call containing class androidx.appcompat.view.WindowCallbackWrapper is not annotated with @RequiresApi(x) where x is at least 24. Either annotate the containing class with at least @RequiresApi(24) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(24)."
-        errorLine1="        mWrapped.onProvideKeyboardShortcuts(data, menu, deviceId);"
-        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="178"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeNewApiCall"
-        message="This call is to a method from API 26, the call containing class androidx.appcompat.view.WindowCallbackWrapper is not annotated with @RequiresApi(x) where x is at least 26. Either annotate the containing class with at least @RequiresApi(26) or move the call to a static method in a wrapper class annotated with at least @RequiresApi(26)."
-        errorLine1="        mWrapped.onPointerCaptureChanged(hasCapture);"
-        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="184"
-            column="18"/>
+            file="src/androidTest/java/androidx/appcompat/widget/AppCompatProgressBarHelperTest.kt"
+            line="35"
+            column="9"/>
     </issue>
 
     <issue
@@ -1119,12 +459,13 @@
         errorLine2="                ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="242"
+            line="243"
             column="17"/>
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="228"
-            column="17"/>
+            line="229"
+            column="17"
+            message="Setter here"/>
     </issue>
 
     <issue
@@ -1150,7 +491,8 @@
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatActivity.java"
             line="182"
-            column="17"/>
+            column="17"
+            message="Setter here"/>
     </issue>
 
     <issue
@@ -1165,7 +507,8 @@
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatDelegate.java"
             line="296"
-            column="26"/>
+            column="26"
+            message="Setter here"/>
     </issue>
 
     <issue
@@ -1180,7 +523,8 @@
         <location
             file="src/main/java/androidx/appcompat/view/ContextThemeWrapper.java"
             line="130"
-            column="17"/>
+            column="17"
+            message="Setter here"/>
     </issue>
 
     <issue
@@ -1239,7 +583,8 @@
         <location
             file="src/main/java/androidx/appcompat/view/menu/MenuItemImpl.java"
             line="427"
-            column="17"/>
+            column="17"
+            message="Setter here"/>
     </issue>
 
     <issue
@@ -1282,7 +627,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="513"
+            line="516"
             column="13"/>
     </issue>
 
@@ -1942,7 +1287,7 @@
         errorLine2="                              ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="54"
+            line="55"
             column="31"/>
     </issue>
 
@@ -1953,7 +1298,7 @@
         errorLine2="                              ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="58"
+            line="59"
             column="31"/>
     </issue>
 
@@ -1964,7 +1309,7 @@
         errorLine2="                                               ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="58"
+            line="59"
             column="48"/>
     </issue>
 
@@ -1975,7 +1320,7 @@
         errorLine2="                                     ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="89"
+            line="90"
             column="38"/>
     </issue>
 
@@ -1986,7 +1331,7 @@
         errorLine2="                                     ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="110"
+            line="111"
             column="38"/>
     </issue>
 
@@ -1997,7 +1342,7 @@
         errorLine2="                                   ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="131"
+            line="132"
             column="36"/>
     </issue>
 
@@ -2008,7 +1353,7 @@
         errorLine2="                                     ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="161"
+            line="162"
             column="38"/>
     </issue>
 
@@ -2019,7 +1364,7 @@
         errorLine2="                                         ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="208"
+            line="209"
             column="42"/>
     </issue>
 
@@ -2030,7 +1375,7 @@
         errorLine2="                                ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="213"
+            line="214"
             column="33"/>
     </issue>
 
@@ -2041,7 +1386,7 @@
         errorLine2="                                ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="221"
+            line="222"
             column="33"/>
     </issue>
 
@@ -2052,7 +1397,7 @@
         errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="228"
+            line="229"
             column="33"/>
     </issue>
 
@@ -2063,7 +1408,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="242"
+            line="243"
             column="12"/>
     </issue>
 
@@ -2074,7 +1419,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="247"
+            line="248"
             column="12"/>
     </issue>
 
@@ -2085,7 +1430,7 @@
         errorLine2="                                                           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="247"
+            line="248"
             column="60"/>
     </issue>
 
@@ -2096,7 +1441,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="248"
+            line="249"
             column="13"/>
     </issue>
 
@@ -2107,7 +1452,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="254"
+            line="255"
             column="12"/>
     </issue>
 
@@ -2118,7 +1463,7 @@
         errorLine2="                                                           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="254"
+            line="255"
             column="60"/>
     </issue>
 
@@ -2129,7 +1474,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContainer.java"
-            line="255"
+            line="256"
             column="13"/>
     </issue>
 
@@ -2140,7 +1485,7 @@
         errorLine2="                              ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContextView.java"
-            line="102"
+            line="101"
             column="31"/>
     </issue>
 
@@ -2151,7 +1496,7 @@
         errorLine2="                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionBarContextView.java"
-            line="117"
+            line="116"
             column="26"/>
     </issue>
 
@@ -2235,22 +1580,11 @@
     <issue
         id="UnknownNullness"
         message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void onInitializeAccessibilityEvent(AccessibilityEvent event) {"
-        errorLine2="                                               ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/ActionBarContextView.java"
-            line="364"
-            column="48"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
         errorLine1="        void setActionBarUpIndicator(Drawable upDrawable, @StringRes int contentDescRes);"
         errorLine2="                                     ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="90"
+            line="92"
             column="38"/>
     </issue>
 
@@ -2261,7 +1595,7 @@
         errorLine2="        ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="102"
+            line="104"
             column="9"/>
     </issue>
 
@@ -2272,7 +1606,7 @@
         errorLine2="        ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="107"
+            line="109"
             column="9"/>
     </issue>
 
@@ -2283,7 +1617,7 @@
         errorLine2="                                 ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="150"
+            line="152"
             column="34"/>
     </issue>
 
@@ -2294,7 +1628,7 @@
         errorLine2="                                                    ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="150"
+            line="152"
             column="53"/>
     </issue>
 
@@ -2305,7 +1639,7 @@
         errorLine2="                                 ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="181"
+            line="183"
             column="34"/>
     </issue>
 
@@ -2316,7 +1650,7 @@
         errorLine2="                                                    ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="181"
+            line="183"
             column="53"/>
     </issue>
 
@@ -2327,7 +1661,7 @@
         errorLine2="            ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="182"
+            line="184"
             column="13"/>
     </issue>
 
@@ -2338,7 +1672,7 @@
         errorLine2="                                       ~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="256"
+            line="258"
             column="40"/>
     </issue>
 
@@ -2349,7 +1683,7 @@
         errorLine2="                                         ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="273"
+            line="275"
             column="42"/>
     </issue>
 
@@ -2360,7 +1694,7 @@
         errorLine2="                                     ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="302"
+            line="304"
             column="38"/>
     </issue>
 
@@ -2371,7 +1705,7 @@
         errorLine2="                              ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="412"
+            line="414"
             column="31"/>
     </issue>
 
@@ -2382,7 +1716,7 @@
         errorLine2="                               ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="428"
+            line="430"
             column="32"/>
     </issue>
 
@@ -2393,7 +1727,7 @@
         errorLine2="                               ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="443"
+            line="445"
             column="32"/>
     </issue>
 
@@ -2404,7 +1738,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="470"
+            line="472"
             column="12"/>
     </issue>
 
@@ -2415,7 +1749,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/ActionBarDrawerToggle.java"
-            line="484"
+            line="486"
             column="13"/>
     </issue>
 
@@ -3229,7 +2563,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="122"
+            line="124"
             column="30"/>
     </issue>
 
@@ -3240,7 +2574,7 @@
         errorLine2="                                       ~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="128"
+            line="130"
             column="40"/>
     </issue>
 
@@ -3251,7 +2585,7 @@
         errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="141"
+            line="143"
             column="44"/>
     </issue>
 
@@ -3262,7 +2596,7 @@
         errorLine2="              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="580"
+            line="582"
             column="15"/>
     </issue>
 
@@ -3273,7 +2607,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="588"
+            line="590"
             column="12"/>
     </issue>
 
@@ -3284,7 +2618,7 @@
         errorLine2="                                             ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="588"
+            line="590"
             column="46"/>
     </issue>
 
@@ -3295,7 +2629,7 @@
         errorLine2="              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="593"
+            line="595"
             column="15"/>
     </issue>
 
@@ -3306,7 +2640,7 @@
         errorLine2="                                                ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="593"
+            line="595"
             column="49"/>
     </issue>
 
@@ -3317,7 +2651,7 @@
         errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="607"
+            line="609"
             column="41"/>
     </issue>
 
@@ -3328,7 +2662,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="613"
+            line="615"
             column="12"/>
     </issue>
 
@@ -3339,7 +2673,7 @@
         errorLine2="                              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="622"
+            line="624"
             column="31"/>
     </issue>
 
@@ -3350,7 +2684,7 @@
         errorLine2="                           ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="636"
+            line="638"
             column="28"/>
     </issue>
 
@@ -3361,7 +2695,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="648"
+            line="650"
             column="12"/>
     </issue>
 
@@ -3372,7 +2706,7 @@
         errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="669"
+            line="671"
             column="34"/>
     </issue>
 
@@ -3383,7 +2717,7 @@
         errorLine2="                                                             ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="669"
+            line="671"
             column="62"/>
     </issue>
 
@@ -3394,7 +2728,7 @@
         errorLine2="           ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="679"
+            line="681"
             column="12"/>
     </issue>
 
@@ -3405,7 +2739,7 @@
         errorLine2="                                                      ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="747"
+            line="749"
             column="55"/>
     </issue>
 
@@ -3416,7 +2750,7 @@
         errorLine2="                                       ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="769"
+            line="771"
             column="40"/>
     </issue>
 
@@ -3427,7 +2761,7 @@
         errorLine2="                            ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="830"
+            line="832"
             column="29"/>
     </issue>
 
@@ -3438,7 +2772,7 @@
         errorLine2="                                       ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="830"
+            line="832"
             column="40"/>
     </issue>
 
@@ -3449,7 +2783,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="834"
+            line="836"
             column="29"/>
     </issue>
 
@@ -3460,7 +2794,7 @@
         errorLine2="                            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActionMenuView.java"
-            line="838"
+            line="840"
             column="29"/>
     </issue>
 
@@ -3768,7 +3102,7 @@
         errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActivityChooserView.java"
-            line="301"
+            line="304"
             column="41"/>
     </issue>
 
@@ -3779,7 +3113,7 @@
         errorLine2="                                                        ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActivityChooserView.java"
-            line="320"
+            line="323"
             column="57"/>
     </issue>
 
@@ -3790,7 +3124,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActivityChooserView.java"
-            line="344"
+            line="347"
             column="29"/>
     </issue>
 
@@ -3801,7 +3135,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActivityChooserView.java"
-            line="481"
+            line="488"
             column="12"/>
     </issue>
 
@@ -3812,7 +3146,7 @@
         errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActivityChooserView.java"
-            line="490"
+            line="497"
             column="38"/>
     </issue>
 
@@ -3823,7 +3157,7 @@
         errorLine2="                           ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActivityChooserView.java"
-            line="870"
+            line="877"
             column="28"/>
     </issue>
 
@@ -3834,7 +3168,7 @@
         errorLine2="                                            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ActivityChooserView.java"
-            line="870"
+            line="877"
             column="45"/>
     </issue>
 
@@ -5447,17 +4781,6 @@
     <issue
         id="UnknownNullness"
         message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public &lt;T extends View> T findViewById(@IdRes int id) {"
-        errorLine2="                            ~">
-        <location
-            file="src/main/java/androidx/appcompat/app/AppCompatActivity.java"
-            line="258"
-            column="29"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
         errorLine1="    protected void onTitleChanged(CharSequence title, int color) {"
         errorLine2="                                  ~~~~~~~~~~~~">
         <location
@@ -5517,7 +4840,7 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatAutoCompleteTextView.java"
-            line="184"
+            line="193"
             column="35"/>
     </issue>
 
@@ -5528,7 +4851,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatAutoCompleteTextView.java"
-            line="192"
+            line="201"
             column="12"/>
     </issue>
 
@@ -5539,19 +4862,8 @@
         errorLine2="                                                   ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatAutoCompleteTextView.java"
-            line="192"
+            line="201"
             column="52"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void setCustomSelectionActionModeCallback(ActionMode.Callback actionModeCallback) {"
-        errorLine2="                                                     ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatAutoCompleteTextView.java"
-            line="202"
-            column="54"/>
     </issue>
 
     <issue
@@ -5561,7 +4873,7 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatButton.java"
-            line="171"
+            line="179"
             column="35"/>
     </issue>
 
@@ -5572,7 +4884,7 @@
         errorLine2="                                               ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatButton.java"
-            line="179"
+            line="187"
             column="48"/>
     </issue>
 
@@ -5583,7 +4895,7 @@
         errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatButton.java"
-            line="185"
+            line="193"
             column="51"/>
     </issue>
 
@@ -5594,7 +4906,7 @@
         errorLine2="                                 ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatButton.java"
-            line="210"
+            line="218"
             column="34"/>
     </issue>
 
@@ -5605,19 +4917,8 @@
         errorLine2="           ~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatButton.java"
-            line="344"
+            line="352"
             column="12"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void setCustomSelectionActionModeCallback(ActionMode.Callback actionModeCallback) {"
-        errorLine2="                                                     ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatButton.java"
-            line="375"
-            column="54"/>
     </issue>
 
     <issue
@@ -5660,52 +4961,8 @@
         errorLine2="                                  ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatCheckBox.java"
-            line="86"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void setTextAppearance(Context context, int resId) {"
-        errorLine2="                                  ~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatCheckedTextView.java"
-            line="78"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public InputConnection onCreateInputConnection(EditorInfo outAttrs) {"
-        errorLine2="           ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatCheckedTextView.java"
-            line="94"
-            column="12"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public InputConnection onCreateInputConnection(EditorInfo outAttrs) {"
-        errorLine2="                                                   ~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatCheckedTextView.java"
-            line="94"
-            column="52"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void setCustomSelectionActionModeCallback(ActionMode.Callback actionModeCallback) {"
-        errorLine2="                                                     ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatCheckedTextView.java"
             line="104"
-            column="54"/>
+            column="35"/>
     </issue>
 
     <issue
@@ -6089,30 +5346,8 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatEditText.java"
-            line="218"
+            line="213"
             column="35"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public InputConnection onCreateInputConnection(EditorInfo outAttrs) {"
-        errorLine2="                                                   ~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatEditText.java"
-            line="233"
-            column="52"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void setCustomSelectionActionModeCallback(ActionMode.Callback actionModeCallback) {"
-        errorLine2="                                                     ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatEditText.java"
-            line="286"
-            column="54"/>
     </issue>
 
     <issue
@@ -6122,7 +5357,7 @@
         errorLine2="                                                                       ~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatEditText.java"
-            line="322"
+            line="295"
             column="72"/>
     </issue>
 
@@ -6133,7 +5368,7 @@
         errorLine2="                               ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatImageButton.java"
-            line="101"
+            line="112"
             column="32"/>
     </issue>
 
@@ -6144,7 +5379,7 @@
         errorLine2="                                   ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatImageHelper.java"
-            line="51"
+            line="52"
             column="36"/>
     </issue>
 
@@ -6155,7 +5390,7 @@
         errorLine2="                               ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatImageView.java"
-            line="111"
+            line="123"
             column="32"/>
     </issue>
 
@@ -6166,7 +5401,7 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatMultiAutoCompleteTextView.java"
-            line="182"
+            line="191"
             column="35"/>
     </issue>
 
@@ -6177,7 +5412,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatMultiAutoCompleteTextView.java"
-            line="190"
+            line="199"
             column="12"/>
     </issue>
 
@@ -6188,7 +5423,7 @@
         errorLine2="                                                   ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatMultiAutoCompleteTextView.java"
-            line="190"
+            line="199"
             column="52"/>
     </issue>
 
@@ -6199,7 +5434,7 @@
         errorLine2="                                ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatRadioButton.java"
-            line="60"
+            line="65"
             column="33"/>
     </issue>
 
@@ -6210,7 +5445,7 @@
         errorLine2="                                ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatRadioButton.java"
-            line="64"
+            line="69"
             column="33"/>
     </issue>
 
@@ -6221,7 +5456,7 @@
         errorLine2="                                ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatRadioButton.java"
-            line="68"
+            line="73"
             column="33"/>
     </issue>
 
@@ -6232,7 +5467,7 @@
         errorLine2="                                  ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatRadioButton.java"
-            line="84"
+            line="102"
             column="35"/>
     </issue>
 
@@ -6254,7 +5489,7 @@
         errorLine2="                                        ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="208"
+            line="212"
             column="41"/>
     </issue>
 
@@ -6265,7 +5500,7 @@
         errorLine2="           ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="308"
+            line="312"
             column="12"/>
     </issue>
 
@@ -6276,7 +5511,7 @@
         errorLine2="                                           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="313"
+            line="317"
             column="44"/>
     </issue>
 
@@ -6287,7 +5522,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="327"
+            line="331"
             column="12"/>
     </issue>
 
@@ -6298,7 +5533,7 @@
         errorLine2="                           ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="401"
+            line="405"
             column="28"/>
     </issue>
 
@@ -6309,7 +5544,7 @@
         errorLine2="                                ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="427"
+            line="431"
             column="33"/>
     </issue>
 
@@ -6320,7 +5555,7 @@
         errorLine2="                          ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="462"
+            line="466"
             column="27"/>
     </issue>
 
@@ -6331,7 +5566,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="471"
+            line="475"
             column="12"/>
     </issue>
 
@@ -6342,7 +5577,7 @@
         errorLine2="           ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="616"
+            line="620"
             column="12"/>
     </issue>
 
@@ -6353,7 +5588,7 @@
         errorLine2="                                       ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatSpinner.java"
-            line="624"
+            line="628"
             column="40"/>
     </issue>
 
@@ -6364,7 +5599,7 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatTextView.java"
-            line="189"
+            line="210"
             column="35"/>
     </issue>
 
@@ -6375,7 +5610,7 @@
         errorLine2="                                 ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatTextView.java"
-            line="227"
+            line="269"
             column="34"/>
     </issue>
 
@@ -6386,7 +5621,7 @@
         errorLine2="           ~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatTextView.java"
-            line="388"
+            line="430"
             column="12"/>
     </issue>
 
@@ -6397,7 +5632,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatTextView.java"
-            line="400"
+            line="442"
             column="12"/>
     </issue>
 
@@ -6408,19 +5643,8 @@
         errorLine2="                                                   ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatTextView.java"
-            line="400"
+            line="442"
             column="52"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void setCustomSelectionActionModeCallback(ActionMode.Callback actionModeCallback) {"
-        errorLine2="                                                     ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/AppCompatTextView.java"
-            line="446"
-            column="54"/>
     </issue>
 
     <issue
@@ -6430,7 +5654,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/AppCompatTextView.java"
-            line="500"
+            line="550"
             column="12"/>
     </issue>
 
@@ -6441,7 +5665,7 @@
         errorLine2="                                               ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="193"
+            line="200"
             column="48"/>
     </issue>
 
@@ -6452,7 +5676,7 @@
         errorLine2="                                                                ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="193"
+            line="200"
             column="65"/>
     </issue>
 
@@ -6463,7 +5687,7 @@
         errorLine2="                                                 ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="198"
+            line="205"
             column="50"/>
     </issue>
 
@@ -6474,7 +5698,7 @@
         errorLine2="                                                                  ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="198"
+            line="205"
             column="67"/>
     </issue>
 
@@ -6485,7 +5709,7 @@
         errorLine2="                                           ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="203"
+            line="210"
             column="44"/>
     </issue>
 
@@ -6496,7 +5720,7 @@
         errorLine2="                                                            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="203"
+            line="210"
             column="61"/>
     </issue>
 
@@ -6507,7 +5731,7 @@
         errorLine2="                                               ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="208"
+            line="215"
             column="48"/>
     </issue>
 
@@ -6518,7 +5742,7 @@
         errorLine2="                                                                ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="208"
+            line="215"
             column="65"/>
     </issue>
 
@@ -6529,7 +5753,7 @@
         errorLine2="                                             ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="213"
+            line="220"
             column="46"/>
     </issue>
 
@@ -6540,7 +5764,7 @@
         errorLine2="                                                              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="213"
+            line="220"
             column="63"/>
     </issue>
 
@@ -6551,7 +5775,7 @@
         errorLine2="                                                     ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="218"
+            line="225"
             column="54"/>
     </issue>
 
@@ -6562,7 +5786,7 @@
         errorLine2="                                                                      ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="218"
+            line="225"
             column="71"/>
     </issue>
 
@@ -6573,7 +5797,7 @@
         errorLine2="                                               ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="223"
+            line="230"
             column="48"/>
     </issue>
 
@@ -6584,7 +5808,7 @@
         errorLine2="                                                                ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="223"
+            line="230"
             column="65"/>
     </issue>
 
@@ -6595,7 +5819,7 @@
         errorLine2="                                                     ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="228"
+            line="235"
             column="54"/>
     </issue>
 
@@ -6606,7 +5830,7 @@
         errorLine2="                                                                      ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="228"
+            line="235"
             column="71"/>
     </issue>
 
@@ -6617,7 +5841,7 @@
         errorLine2="                                                             ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="233"
+            line="240"
             column="62"/>
     </issue>
 
@@ -6628,7 +5852,7 @@
         errorLine2="                                                                              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="233"
+            line="240"
             column="79"/>
     </issue>
 
@@ -6639,7 +5863,7 @@
         errorLine2="                                                                       ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="238"
+            line="245"
             column="72"/>
     </issue>
 
@@ -6650,7 +5874,7 @@
         errorLine2="            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="239"
+            line="246"
             column="13"/>
     </issue>
 
@@ -6661,7 +5885,7 @@
         errorLine2="                                                                                 ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="244"
+            line="251"
             column="82"/>
     </issue>
 
@@ -6672,7 +5896,7 @@
         errorLine2="            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="245"
+            line="252"
             column="13"/>
     </issue>
 
@@ -6683,7 +5907,7 @@
         errorLine2="                                                 ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="250"
+            line="257"
             column="50"/>
     </issue>
 
@@ -6694,7 +5918,7 @@
         errorLine2="                                                                  ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="250"
+            line="257"
             column="67"/>
     </issue>
 
@@ -6705,7 +5929,7 @@
         errorLine2="                                             ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="255"
+            line="262"
             column="46"/>
     </issue>
 
@@ -6716,7 +5940,7 @@
         errorLine2="                                                              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="255"
+            line="262"
             column="63"/>
     </issue>
 
@@ -6727,7 +5951,7 @@
         errorLine2="                                                       ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="260"
+            line="267"
             column="56"/>
     </issue>
 
@@ -6738,7 +5962,7 @@
         errorLine2="                                                                        ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="260"
+            line="267"
             column="73"/>
     </issue>
 
@@ -6749,7 +5973,7 @@
         errorLine2="                              ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="272"
+            line="279"
             column="31"/>
     </issue>
 
@@ -6760,7 +5984,7 @@
         errorLine2="                                               ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="272"
+            line="279"
             column="48"/>
     </issue>
 
@@ -6771,7 +5995,7 @@
         errorLine2="                                                            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/AppCompatViewInflater.java"
-            line="272"
+            line="279"
             column="61"/>
     </issue>
 
@@ -7970,7 +7194,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="230"
+            line="239"
             column="12"/>
     </issue>
 
@@ -7981,7 +7205,7 @@
         errorLine2="                                   ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="241"
+            line="250"
             column="36"/>
     </issue>
 
@@ -7992,7 +7216,7 @@
         errorLine2="                          ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="292"
+            line="302"
             column="27"/>
     </issue>
 
@@ -8003,7 +7227,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1730"
+            line="1750"
             column="12"/>
     </issue>
 
@@ -8014,7 +7238,7 @@
         errorLine2="                                             ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1730"
+            line="1750"
             column="46"/>
     </issue>
 
@@ -8025,7 +7249,7 @@
         errorLine2="              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1743"
+            line="1763"
             column="15"/>
     </issue>
 
@@ -8036,7 +7260,7 @@
         errorLine2="              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1753"
+            line="1773"
             column="15"/>
     </issue>
 
@@ -8047,7 +7271,7 @@
         errorLine2="                                                ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1753"
+            line="1773"
             column="49"/>
     </issue>
 
@@ -8058,7 +7282,7 @@
         errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1760"
+            line="1780"
             column="41"/>
     </issue>
 
@@ -8069,7 +7293,7 @@
         errorLine2="                                               ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1765"
+            line="1785"
             column="48"/>
     </issue>
 
@@ -8080,7 +7304,7 @@
         errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1771"
+            line="1791"
             column="51"/>
     </issue>
 
@@ -8091,7 +7315,7 @@
         errorLine2="                            ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1784"
+            line="1804"
             column="29"/>
     </issue>
 
@@ -8102,7 +7326,7 @@
         errorLine2="                                       ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1784"
+            line="1804"
             column="40"/>
     </issue>
 
@@ -8113,7 +7337,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1812"
+            line="1832"
             column="29"/>
     </issue>
 
@@ -8124,7 +7348,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/LinearLayoutCompat.java"
-            line="1819"
+            line="1839"
             column="29"/>
     </issue>
 
@@ -8443,7 +7667,7 @@
         errorLine2="                                ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ListPopupWindow.java"
-            line="415"
+            line="418"
             column="33"/>
     </issue>
 
@@ -8454,7 +7678,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ListPopupWindow.java"
-            line="1139"
+            line="1142"
             column="12"/>
     </issue>
 
@@ -8465,7 +7689,7 @@
         errorLine2="                                                    ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ListPopupWindow.java"
-            line="1139"
+            line="1142"
             column="53"/>
     </issue>
 
@@ -10357,7 +9581,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/menu/MenuPopupHelper.java"
-            line="345"
+            line="353"
             column="12"/>
     </issue>
 
@@ -10368,7 +9592,7 @@
         errorLine2="                                   ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="85"
+            line="87"
             column="36"/>
     </issue>
 
@@ -10379,7 +9603,7 @@
         errorLine2="                                  ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="91"
+            line="93"
             column="35"/>
     </issue>
 
@@ -10390,7 +9614,7 @@
         errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="97"
+            line="99"
             column="34"/>
     </issue>
 
@@ -10401,7 +9625,7 @@
         errorLine2="                                    ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="146"
+            line="148"
             column="37"/>
     </issue>
 
@@ -10412,7 +9636,7 @@
         errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="161"
+            line="163"
             column="38"/>
     </issue>
 
@@ -10423,7 +9647,7 @@
         errorLine2="                                              ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="170"
+            line="172"
             column="47"/>
     </issue>
 
@@ -10434,7 +9658,7 @@
         errorLine2="                                    ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/MenuPopupWindow.java"
-            line="191"
+            line="201"
             column="37"/>
     </issue>
 
@@ -10885,7 +10109,7 @@
         errorLine2="                                ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/PopupMenu.java"
-            line="282"
+            line="295"
             column="33"/>
     </issue>
 
@@ -10896,7 +10120,7 @@
         errorLine2="                       ~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/PopupMenu.java"
-            line="294"
+            line="307"
             column="24"/>
     </issue>
 
@@ -10984,7 +10208,7 @@
         errorLine2="                                  ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="216"
+            line="221"
             column="35"/>
     </issue>
 
@@ -10995,7 +10219,7 @@
         errorLine2="                                  ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="226"
+            line="231"
             column="35"/>
     </issue>
 
@@ -11006,7 +10230,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="405"
+            line="412"
             column="35"/>
     </issue>
 
@@ -11017,7 +10241,7 @@
         errorLine2="                                 ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="428"
+            line="435"
             column="34"/>
     </issue>
 
@@ -11028,7 +10252,7 @@
         errorLine2="                                               ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="478"
+            line="486"
             column="48"/>
     </issue>
 
@@ -11039,7 +10263,7 @@
         errorLine2="                                       ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="510"
+            line="518"
             column="40"/>
     </issue>
 
@@ -11050,7 +10274,7 @@
         errorLine2="                                   ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="519"
+            line="527"
             column="36"/>
     </issue>
 
@@ -11061,7 +10285,7 @@
         errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="528"
+            line="536"
             column="51"/>
     </issue>
 
@@ -11072,7 +10296,7 @@
         errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="537"
+            line="545"
             column="41"/>
     </issue>
 
@@ -11083,7 +10307,7 @@
         errorLine2="                                         ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="549"
+            line="557"
             column="42"/>
     </issue>
 
@@ -11094,7 +10318,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="558"
+            line="566"
             column="12"/>
     </issue>
 
@@ -11105,7 +10329,7 @@
         errorLine2="                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="570"
+            line="578"
             column="26"/>
     </issue>
 
@@ -11116,7 +10340,7 @@
         errorLine2="                                      ~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="744"
+            line="754"
             column="39"/>
     </issue>
 
@@ -11127,7 +10351,7 @@
         errorLine2="           ~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="754"
+            line="764"
             column="12"/>
     </issue>
 
@@ -11138,7 +10362,7 @@
         errorLine2="              ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1344"
+            line="1355"
             column="15"/>
     </issue>
 
@@ -11149,7 +10373,7 @@
         errorLine2="                                          ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1352"
+            line="1363"
             column="43"/>
     </issue>
 
@@ -11160,7 +10384,7 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1841"
+            line="1852"
             column="35"/>
     </issue>
 
@@ -11171,7 +10395,7 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1845"
+            line="1856"
             column="35"/>
     </issue>
 
@@ -11182,7 +10406,7 @@
         errorLine2="                                                   ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1845"
+            line="1856"
             column="52"/>
     </issue>
 
@@ -11193,7 +10417,7 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1849"
+            line="1860"
             column="35"/>
     </issue>
 
@@ -11204,7 +10428,7 @@
         errorLine2="                                                   ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1849"
+            line="1860"
             column="52"/>
     </issue>
 
@@ -11215,7 +10439,7 @@
         errorLine2="                                   ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1884"
+            line="1895"
             column="36"/>
     </issue>
 
@@ -11226,7 +10450,7 @@
         errorLine2="                                                                      ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1920"
+            line="1931"
             column="71"/>
     </issue>
 
@@ -11237,7 +10461,7 @@
         errorLine2="                                                ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1935"
+            line="1946"
             column="49"/>
     </issue>
 
@@ -11248,7 +10472,7 @@
         errorLine2="               ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1982"
+            line="1993"
             column="16"/>
     </issue>
 
@@ -11259,7 +10483,7 @@
         errorLine2="                                                       ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SearchView.java"
-            line="1982"
+            line="1993"
             column="56"/>
     </issue>
 
@@ -11369,7 +10593,7 @@
         errorLine2="                                ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="50"
+            line="49"
             column="33"/>
     </issue>
 
@@ -11380,7 +10604,7 @@
         errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="50"
+            line="49"
             column="50"/>
     </issue>
 
@@ -11391,7 +10615,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="51"
+            line="50"
             column="13"/>
     </issue>
 
@@ -11402,7 +10626,7 @@
         errorLine2="                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="63"
+            line="62"
             column="26"/>
     </issue>
 
@@ -11413,7 +10637,7 @@
         errorLine2="                            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="68"
+            line="67"
             column="29"/>
     </issue>
 
@@ -11424,7 +10648,7 @@
         errorLine2="                              ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="94"
+            line="93"
             column="31"/>
     </issue>
 
@@ -11435,7 +10659,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="116"
+            line="114"
             column="12"/>
     </issue>
 
@@ -11446,7 +10670,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="121"
+            line="119"
             column="12"/>
     </issue>
 
@@ -11457,7 +10681,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="126"
+            line="124"
             column="12"/>
     </issue>
 
@@ -11468,7 +10692,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="131"
+            line="129"
             column="12"/>
     </issue>
 
@@ -11479,7 +10703,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="136"
+            line="134"
             column="12"/>
     </issue>
 
@@ -11490,7 +10714,7 @@
         errorLine2="                            ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="145"
+            line="143"
             column="29"/>
     </issue>
 
@@ -11501,7 +10725,7 @@
         errorLine2="                                     ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="148"
+            line="146"
             column="38"/>
     </issue>
 
@@ -11512,7 +10736,7 @@
         errorLine2="                               ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/StandaloneActionMode.java"
-            line="157"
+            line="155"
             column="32"/>
     </issue>
 
@@ -12029,7 +11253,7 @@
         errorLine2="                                        ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="324"
+            line="343"
             column="41"/>
     </issue>
 
@@ -12040,7 +11264,7 @@
         errorLine2="                                  ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="388"
+            line="410"
             column="35"/>
     </issue>
 
@@ -12051,7 +11275,7 @@
         errorLine2="                                  ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="416"
+            line="438"
             column="35"/>
     </issue>
 
@@ -12062,7 +11286,7 @@
         errorLine2="                                 ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="504"
+            line="529"
             column="34"/>
     </issue>
 
@@ -12073,7 +11297,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="533"
+            line="559"
             column="12"/>
     </issue>
 
@@ -12084,7 +11308,7 @@
         errorLine2="                                 ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="623"
+            line="651"
             column="34"/>
     </issue>
 
@@ -12095,7 +11319,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="654"
+            line="683"
             column="12"/>
     </issue>
 
@@ -12106,7 +11330,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="766"
+            line="799"
             column="12"/>
     </issue>
 
@@ -12117,7 +11341,7 @@
         errorLine2="                          ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="775"
+            line="822"
             column="27"/>
     </issue>
 
@@ -12128,7 +11352,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="790"
+            line="838"
             column="12"/>
     </issue>
 
@@ -12139,7 +11363,7 @@
         errorLine2="                           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="799"
+            line="860"
             column="28"/>
     </issue>
 
@@ -12150,7 +11374,7 @@
         errorLine2="                                             ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="899"
+            line="973"
             column="46"/>
     </issue>
 
@@ -12161,7 +11385,7 @@
         errorLine2="                                ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="940"
+            line="1010"
             column="33"/>
     </issue>
 
@@ -12172,7 +11396,7 @@
         errorLine2="                     ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="1173"
+            line="1243"
             column="22"/>
     </issue>
 
@@ -12183,7 +11407,7 @@
         errorLine2="                          ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="1238"
+            line="1308"
             column="27"/>
     </issue>
 
@@ -12194,7 +11418,7 @@
         errorLine2="              ~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="1362"
+            line="1432"
             column="15"/>
     </issue>
 
@@ -12205,7 +11429,7 @@
         errorLine2="                                     ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="1408"
+            line="1478"
             column="38"/>
     </issue>
 
@@ -12216,7 +11440,7 @@
         errorLine2="                                               ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="1431"
+            line="1501"
             column="48"/>
     </issue>
 
@@ -12227,19 +11451,8 @@
         errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="1437"
+            line="1507"
             column="51"/>
-    </issue>
-
-    <issue
-        id="UnknownNullness"
-        message="Unknown nullability; explicitly declare as `@Nullable` or `@NonNull` to improve Kotlin interoperability; see https://android.github.io/kotlin-guides/interop.html#nullability-annotations"
-        errorLine1="    public void setCustomSelectionActionModeCallback(ActionMode.Callback actionModeCallback) {"
-        errorLine2="                                                     ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/appcompat/widget/SwitchCompat.java"
-            line="1460"
-            column="54"/>
     </issue>
 
     <issue
@@ -12249,7 +11462,7 @@
         errorLine2="                  ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="52"
+            line="53"
             column="19"/>
     </issue>
 
@@ -12260,7 +11473,7 @@
         errorLine2="                                                        ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="52"
+            line="53"
             column="57"/>
     </issue>
 
@@ -12271,7 +11484,7 @@
         errorLine2="                                                                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="52"
+            line="53"
             column="74"/>
     </issue>
 
@@ -12282,7 +11495,7 @@
         errorLine2="            ~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="53"
+            line="54"
             column="13"/>
     </issue>
 
@@ -12293,7 +11506,7 @@
         errorLine2="                  ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="57"
+            line="58"
             column="19"/>
     </issue>
 
@@ -12304,7 +11517,7 @@
         errorLine2="                                                        ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="57"
+            line="58"
             column="57"/>
     </issue>
 
@@ -12315,7 +11528,7 @@
         errorLine2="                                                                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="57"
+            line="58"
             column="74"/>
     </issue>
 
@@ -12326,7 +11539,7 @@
         errorLine2="            ~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="58"
+            line="59"
             column="13"/>
     </issue>
 
@@ -12337,7 +11550,7 @@
         errorLine2="                  ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="63"
+            line="64"
             column="19"/>
     </issue>
 
@@ -12348,7 +11561,7 @@
         errorLine2="                                                        ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="63"
+            line="64"
             column="57"/>
     </issue>
 
@@ -12359,7 +11572,7 @@
         errorLine2="                                                                                    ~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="63"
+            line="64"
             column="85"/>
     </issue>
 
@@ -12370,7 +11583,7 @@
         errorLine2="           ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="75"
+            line="76"
             column="12"/>
     </issue>
 
@@ -12381,7 +11594,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="79"
+            line="80"
             column="12"/>
     </issue>
 
@@ -12392,7 +11605,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="89"
+            line="90"
             column="12"/>
     </issue>
 
@@ -12403,7 +11616,7 @@
         errorLine2="           ~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="141"
+            line="142"
             column="12"/>
     </issue>
 
@@ -12414,7 +11627,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="145"
+            line="146"
             column="12"/>
     </issue>
 
@@ -12425,7 +11638,7 @@
         errorLine2="           ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="149"
+            line="150"
             column="12"/>
     </issue>
 
@@ -12436,7 +11649,7 @@
         errorLine2="           ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="153"
+            line="154"
             column="12"/>
     </issue>
 
@@ -12447,7 +11660,7 @@
         errorLine2="           ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="173"
+            line="174"
             column="12"/>
     </issue>
 
@@ -12458,7 +11671,7 @@
         errorLine2="                                             ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="203"
+            line="204"
             column="46"/>
     </issue>
 
@@ -12469,7 +11682,7 @@
         errorLine2="           ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="219"
+            line="220"
             column="12"/>
     </issue>
 
@@ -12480,7 +11693,7 @@
         errorLine2="                                       ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="223"
+            line="224"
             column="40"/>
     </issue>
 
@@ -12491,7 +11704,7 @@
         errorLine2="           ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="243"
+            line="244"
             column="12"/>
     </issue>
 
@@ -12502,7 +11715,7 @@
         errorLine2="           ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/TintTypedArray.java"
-            line="247"
+            line="248"
             column="12"/>
     </issue>
 
@@ -12513,7 +11726,7 @@
         errorLine2="                        ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="556"
+            line="576"
             column="25"/>
     </issue>
 
@@ -12524,7 +11737,7 @@
         errorLine2="                                          ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="556"
+            line="576"
             column="43"/>
     </issue>
 
@@ -12535,7 +11748,7 @@
         errorLine2="                        ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="630"
+            line="650"
             column="25"/>
     </issue>
 
@@ -12546,7 +11759,7 @@
         errorLine2="           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="652"
+            line="673"
             column="12"/>
     </issue>
 
@@ -12557,7 +11770,7 @@
         errorLine2="                                   ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="676"
+            line="697"
             column="36"/>
     </issue>
 
@@ -12568,7 +11781,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="690"
+            line="712"
             column="12"/>
     </issue>
 
@@ -12579,7 +11792,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="737"
+            line="760"
             column="12"/>
     </issue>
 
@@ -12590,7 +11803,7 @@
         errorLine2="                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="761"
+            line="784"
             column="26"/>
     </issue>
 
@@ -12601,7 +11814,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="793"
+            line="817"
             column="12"/>
     </issue>
 
@@ -12612,7 +11825,7 @@
         errorLine2="                            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="815"
+            line="839"
             column="29"/>
     </issue>
 
@@ -12623,7 +11836,7 @@
         errorLine2="                                       ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="846"
+            line="870"
             column="40"/>
     </issue>
 
@@ -12634,7 +11847,7 @@
         errorLine2="                                          ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="857"
+            line="881"
             column="43"/>
     </issue>
 
@@ -12645,7 +11858,7 @@
         errorLine2="                                             ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="1021"
+            line="1048"
             column="46"/>
     </issue>
 
@@ -12656,7 +11869,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="1127"
+            line="1157"
             column="12"/>
     </issue>
 
@@ -12667,7 +11880,7 @@
         errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="1204"
+            line="1234"
             column="44"/>
     </issue>
 
@@ -12678,7 +11891,7 @@
         errorLine2="              ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="1532"
+            line="1579"
             column="15"/>
     </issue>
 
@@ -12689,7 +11902,7 @@
         errorLine2="                                          ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="1544"
+            line="1591"
             column="43"/>
     </issue>
 
@@ -12700,7 +11913,7 @@
         errorLine2="                                ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="1578"
+            line="1625"
             column="33"/>
     </issue>
 
@@ -12711,7 +11924,7 @@
         errorLine2="                                ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="1604"
+            line="1651"
             column="33"/>
     </issue>
 
@@ -12722,7 +11935,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2199"
+            line="2246"
             column="12"/>
     </issue>
 
@@ -12733,7 +11946,7 @@
         errorLine2="                                             ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2199"
+            line="2246"
             column="46"/>
     </issue>
 
@@ -12744,7 +11957,7 @@
         errorLine2="              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2204"
+            line="2251"
             column="15"/>
     </issue>
 
@@ -12755,7 +11968,7 @@
         errorLine2="                                                ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2204"
+            line="2251"
             column="49"/>
     </issue>
 
@@ -12766,7 +11979,7 @@
         errorLine2="              ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2217"
+            line="2264"
             column="15"/>
     </issue>
 
@@ -12777,7 +11990,7 @@
         errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2222"
+            line="2269"
             column="41"/>
     </issue>
 
@@ -12788,7 +12001,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2228"
+            line="2275"
             column="12"/>
     </issue>
 
@@ -12799,7 +12012,7 @@
         errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2277"
+            line="2324"
             column="34"/>
     </issue>
 
@@ -12810,7 +12023,7 @@
         errorLine2="                                                             ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2277"
+            line="2324"
             column="62"/>
     </issue>
 
@@ -12821,7 +12034,7 @@
         errorLine2="                                       ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2332"
+            line="2441"
             column="40"/>
     </issue>
 
@@ -12832,7 +12045,7 @@
         errorLine2="                                                ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2351"
+            line="2460"
             column="49"/>
     </issue>
 
@@ -12843,7 +12056,7 @@
         errorLine2="                            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2369"
+            line="2478"
             column="29"/>
     </issue>
 
@@ -12854,7 +12067,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2375"
+            line="2484"
             column="29"/>
     </issue>
 
@@ -12865,7 +12078,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2379"
+            line="2488"
             column="29"/>
     </issue>
 
@@ -12876,7 +12089,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2386"
+            line="2495"
             column="29"/>
     </issue>
 
@@ -12887,7 +12100,7 @@
         errorLine2="                          ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2402"
+            line="2511"
             column="27"/>
     </issue>
 
@@ -12898,7 +12111,7 @@
         errorLine2="                          ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2406"
+            line="2515"
             column="27"/>
     </issue>
 
@@ -12909,7 +12122,7 @@
         errorLine2="                                         ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2406"
+            line="2515"
             column="42"/>
     </issue>
 
@@ -12920,7 +12133,7 @@
         errorLine2="                          ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2412"
+            line="2521"
             column="27"/>
     </issue>
 
@@ -12931,7 +12144,7 @@
         errorLine2="                                  ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/Toolbar.java"
-            line="2417"
+            line="2526"
             column="35"/>
     </issue>
 
@@ -13030,7 +12243,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="267"
+            line="270"
             column="12"/>
     </issue>
 
@@ -13041,7 +12254,7 @@
         errorLine2="                            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="272"
+            line="275"
             column="29"/>
     </issue>
 
@@ -13052,7 +12265,7 @@
         errorLine2="                        ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="305"
+            line="308"
             column="25"/>
     </issue>
 
@@ -13063,7 +12276,7 @@
         errorLine2="                        ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="316"
+            line="319"
             column="25"/>
     </issue>
 
@@ -13074,7 +12287,7 @@
         errorLine2="                        ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="364"
+            line="367"
             column="25"/>
     </issue>
 
@@ -13085,7 +12298,7 @@
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="364"
+            line="367"
             column="36"/>
     </issue>
 
@@ -13096,7 +12309,7 @@
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="421"
+            line="424"
             column="36"/>
     </issue>
 
@@ -13107,7 +12320,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="512"
+            line="515"
             column="35"/>
     </issue>
 
@@ -13118,7 +12331,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="513"
+            line="516"
             column="13"/>
     </issue>
 
@@ -13129,7 +12342,7 @@
         errorLine2="                              ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="539"
+            line="542"
             column="31"/>
     </issue>
 
@@ -13140,7 +12353,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="550"
+            line="553"
             column="12"/>
     </issue>
 
@@ -13151,7 +12364,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="564"
+            line="567"
             column="12"/>
     </issue>
 
@@ -13162,7 +12375,7 @@
         errorLine2="                                  ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="592"
+            line="595"
             column="35"/>
     </issue>
 
@@ -13173,7 +12386,7 @@
         errorLine2="                                         ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="603"
+            line="606"
             column="42"/>
     </issue>
 
@@ -13184,7 +12397,7 @@
         errorLine2="                                                ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="619"
+            line="622"
             column="49"/>
     </issue>
 
@@ -13195,7 +12408,7 @@
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="640"
+            line="643"
             column="36"/>
     </issue>
 
@@ -13206,7 +12419,7 @@
         errorLine2="                                      ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="645"
+            line="648"
             column="39"/>
     </issue>
 
@@ -13217,7 +12430,7 @@
         errorLine2="                                      ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="650"
+            line="653"
             column="39"/>
     </issue>
 
@@ -13228,7 +12441,7 @@
         errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="670"
+            line="673"
             column="34"/>
     </issue>
 
@@ -13239,7 +12452,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="671"
+            line="674"
             column="13"/>
     </issue>
 
@@ -13250,7 +12463,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/widget/ToolbarWidgetWrapper.java"
-            line="676"
+            line="679"
             column="12"/>
     </issue>
 
@@ -13514,7 +12727,7 @@
         errorLine2="                                 ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="50"
+            line="51"
             column="34"/>
     </issue>
 
@@ -13525,7 +12738,7 @@
         errorLine2="                                    ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="58"
+            line="59"
             column="37"/>
     </issue>
 
@@ -13536,7 +12749,7 @@
         errorLine2="                                            ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="63"
+            line="64"
             column="45"/>
     </issue>
 
@@ -13547,7 +12760,7 @@
         errorLine2="                                      ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="68"
+            line="69"
             column="39"/>
     </issue>
 
@@ -13558,7 +12771,7 @@
         errorLine2="                                          ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="73"
+            line="74"
             column="43"/>
     </issue>
 
@@ -13569,7 +12782,7 @@
         errorLine2="                                              ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="78"
+            line="79"
             column="47"/>
     </issue>
 
@@ -13580,7 +12793,7 @@
         errorLine2="                                                      ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="83"
+            line="84"
             column="55"/>
     </issue>
 
@@ -13591,7 +12804,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="88"
+            line="89"
             column="12"/>
     </issue>
 
@@ -13602,7 +12815,7 @@
         errorLine2="                                                    ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="93"
+            line="94"
             column="53"/>
     </issue>
 
@@ -13613,7 +12826,7 @@
         errorLine2="                                                 ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="98"
+            line="99"
             column="50"/>
     </issue>
 
@@ -13624,7 +12837,7 @@
         errorLine2="                                                            ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="98"
+            line="99"
             column="61"/>
     </issue>
 
@@ -13635,7 +12848,7 @@
         errorLine2="                                               ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="103"
+            line="104"
             column="48"/>
     </issue>
 
@@ -13646,7 +12859,7 @@
         errorLine2="                                                     ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="108"
+            line="109"
             column="54"/>
     </issue>
 
@@ -13657,7 +12870,7 @@
         errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="113"
+            line="114"
             column="43"/>
     </issue>
 
@@ -13668,7 +12881,7 @@
         errorLine2="                                             ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="138"
+            line="139"
             column="46"/>
     </issue>
 
@@ -13679,7 +12892,7 @@
         errorLine2="                                     ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="144"
+            line="145"
             column="38"/>
     </issue>
 
@@ -13690,7 +12903,7 @@
         errorLine2="           ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="154"
+            line="155"
             column="12"/>
     </issue>
 
@@ -13701,7 +12914,7 @@
         errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="154"
+            line="155"
             column="50"/>
     </issue>
 
@@ -13712,7 +12925,7 @@
         errorLine2="           ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="160"
+            line="161"
             column="12"/>
     </issue>
 
@@ -13723,7 +12936,7 @@
         errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="160"
+            line="161"
             column="50"/>
     </issue>
 
@@ -13734,7 +12947,7 @@
         errorLine2="                                    ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="165"
+            line="166"
             column="37"/>
     </issue>
 
@@ -13745,7 +12958,7 @@
         errorLine2="                                     ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="170"
+            line="171"
             column="38"/>
     </issue>
 
@@ -13756,7 +12969,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="177"
+            line="178"
             column="13"/>
     </issue>
 
@@ -13767,7 +12980,7 @@
         errorLine2="                                              ~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="177"
+            line="178"
             column="47"/>
     </issue>
 
@@ -13778,7 +12991,7 @@
         errorLine2="                 ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/view/WindowCallbackWrapper.java"
-            line="187"
+            line="188"
             column="18"/>
     </issue>
 
@@ -13789,7 +13002,7 @@
         errorLine2="                                ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="169"
+            line="168"
             column="33"/>
     </issue>
 
@@ -13800,7 +13013,7 @@
         errorLine2="                                ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="179"
+            line="178"
             column="33"/>
     </issue>
 
@@ -13811,7 +13024,7 @@
         errorLine2="                                ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="188"
+            line="187"
             column="33"/>
     </issue>
 
@@ -13822,7 +13035,7 @@
         errorLine2="                                       ~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="256"
+            line="255"
             column="40"/>
     </issue>
 
@@ -13833,7 +13046,7 @@
         errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="338"
+            line="337"
             column="45"/>
     </issue>
 
@@ -13844,7 +13057,7 @@
         errorLine2="                                               ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="343"
+            line="342"
             column="48"/>
     </issue>
 
@@ -13855,7 +13068,7 @@
         errorLine2="                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="438"
+            line="437"
             column="26"/>
     </issue>
 
@@ -13866,7 +13079,7 @@
         errorLine2="                               ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="443"
+            line="442"
             column="32"/>
     </issue>
 
@@ -13877,7 +13090,7 @@
         errorLine2="                            ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="458"
+            line="457"
             column="29"/>
     </issue>
 
@@ -13888,7 +13101,7 @@
         errorLine2="                                      ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="480"
+            line="479"
             column="39"/>
     </issue>
 
@@ -13899,7 +13112,7 @@
         errorLine2="                                             ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="485"
+            line="484"
             column="46"/>
     </issue>
 
@@ -13910,7 +13123,7 @@
         errorLine2="                                           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="490"
+            line="489"
             column="44"/>
     </issue>
 
@@ -13921,7 +13134,7 @@
         errorLine2="           ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="495"
+            line="494"
             column="12"/>
     </issue>
 
@@ -13932,7 +13145,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="500"
+            line="499"
             column="12"/>
     </issue>
 
@@ -13943,7 +13156,7 @@
         errorLine2="           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="505"
+            line="504"
             column="12"/>
     </issue>
 
@@ -13954,7 +13167,7 @@
         errorLine2="           ~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="520"
+            line="519"
             column="12"/>
     </issue>
 
@@ -13965,7 +13178,7 @@
         errorLine2="                                      ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="520"
+            line="519"
             column="39"/>
     </issue>
 
@@ -13976,7 +13189,7 @@
         errorLine2="                       ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="559"
+            line="557"
             column="24"/>
     </issue>
 
@@ -13987,7 +13200,7 @@
         errorLine2="                       ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="564"
+            line="562"
             column="24"/>
     </issue>
 
@@ -13998,7 +13211,7 @@
         errorLine2="                       ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="569"
+            line="567"
             column="24"/>
     </issue>
 
@@ -14009,7 +13222,7 @@
         errorLine2="                       ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="579"
+            line="577"
             column="24"/>
     </issue>
 
@@ -14020,7 +13233,7 @@
         errorLine2="           ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="589"
+            line="587"
             column="12"/>
     </issue>
 
@@ -14031,7 +13244,7 @@
         errorLine2="                          ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="594"
+            line="592"
             column="27"/>
     </issue>
 
@@ -14042,7 +13255,7 @@
         errorLine2="                          ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="624"
+            line="622"
             column="27"/>
     </issue>
 
@@ -14053,7 +13266,7 @@
         errorLine2="           ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="661"
+            line="659"
             column="12"/>
     </issue>
 
@@ -14064,7 +13277,7 @@
         errorLine2="           ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="918"
+            line="916"
             column="12"/>
     </issue>
 
@@ -14075,7 +13288,7 @@
         errorLine2="                                     ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="940"
+            line="938"
             column="38"/>
     </issue>
 
@@ -14086,7 +13299,7 @@
         errorLine2="                                                ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="950"
+            line="948"
             column="49"/>
     </issue>
 
@@ -14097,7 +13310,7 @@
         errorLine2="                              ~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="991"
+            line="989"
             column="31"/>
     </issue>
 
@@ -14108,7 +13321,7 @@
         errorLine2="                                               ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="991"
+            line="989"
             column="48"/>
     </issue>
 
@@ -14119,7 +13332,7 @@
         errorLine2="               ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1000"
+            line="998"
             column="16"/>
     </issue>
 
@@ -14130,7 +13343,7 @@
         errorLine2="               ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1005"
+            line="1003"
             column="16"/>
     </issue>
 
@@ -14141,7 +13354,7 @@
         errorLine2="                                  ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1067"
+            line="1063"
             column="35"/>
     </issue>
 
@@ -14152,7 +13365,7 @@
         errorLine2="                                ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1073"
+            line="1069"
             column="33"/>
     </issue>
 
@@ -14163,7 +13376,7 @@
         errorLine2="                             ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1078"
+            line="1074"
             column="30"/>
     </issue>
 
@@ -14174,7 +13387,7 @@
         errorLine2="               ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1093"
+            line="1089"
             column="16"/>
     </issue>
 
@@ -14185,7 +13398,7 @@
         errorLine2="               ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1098"
+            line="1094"
             column="16"/>
     </issue>
 
@@ -14196,7 +13409,7 @@
         errorLine2="               ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1114"
+            line="1110"
             column="16"/>
     </issue>
 
@@ -14207,7 +13420,7 @@
         errorLine2="                                ~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1127"
+            line="1123"
             column="33"/>
     </issue>
 
@@ -14218,7 +13431,7 @@
         errorLine2="                                         ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1130"
+            line="1126"
             column="42"/>
     </issue>
 
@@ -14229,7 +13442,7 @@
         errorLine2="                                   ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1143"
+            line="1139"
             column="36"/>
     </issue>
 
@@ -14240,7 +13453,7 @@
         errorLine2="               ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1170"
+            line="1166"
             column="16"/>
     </issue>
 
@@ -14251,7 +13464,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1175"
+            line="1171"
             column="16"/>
     </issue>
 
@@ -14262,7 +13475,7 @@
         errorLine2="                          ~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1175"
+            line="1171"
             column="27"/>
     </issue>
 
@@ -14273,7 +13486,7 @@
         errorLine2="               ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1180"
+            line="1176"
             column="16"/>
     </issue>
 
@@ -14284,7 +13497,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1185"
+            line="1181"
             column="16"/>
     </issue>
 
@@ -14295,7 +13508,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1185"
+            line="1181"
             column="35"/>
     </issue>
 
@@ -14306,7 +13519,7 @@
         errorLine2="               ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1191"
+            line="1187"
             column="16"/>
     </issue>
 
@@ -14317,7 +13530,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1196"
+            line="1192"
             column="16"/>
     </issue>
 
@@ -14328,7 +13541,7 @@
         errorLine2="                                 ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1196"
+            line="1192"
             column="34"/>
     </issue>
 
@@ -14339,7 +13552,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1205"
+            line="1201"
             column="16"/>
     </issue>
 
@@ -14350,7 +13563,7 @@
         errorLine2="               ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1211"
+            line="1207"
             column="16"/>
     </issue>
 
@@ -14361,7 +13574,7 @@
         errorLine2="               ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1225"
+            line="1221"
             column="16"/>
     </issue>
 
@@ -14372,7 +13585,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1230"
+            line="1226"
             column="16"/>
     </issue>
 
@@ -14383,7 +13596,7 @@
         errorLine2="                           ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1230"
+            line="1226"
             column="28"/>
     </issue>
 
@@ -14394,7 +13607,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1239"
+            line="1235"
             column="16"/>
     </issue>
 
@@ -14405,7 +13618,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1244"
+            line="1240"
             column="16"/>
     </issue>
 
@@ -14416,7 +13629,7 @@
         errorLine2="                           ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1244"
+            line="1240"
             column="28"/>
     </issue>
 
@@ -14427,7 +13640,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1253"
+            line="1249"
             column="16"/>
     </issue>
 
@@ -14438,7 +13651,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1263"
+            line="1259"
             column="16"/>
     </issue>
 
@@ -14449,7 +13662,7 @@
         errorLine2="               ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1268"
+            line="1264"
             column="16"/>
     </issue>
 
@@ -14460,7 +13673,7 @@
         errorLine2="                                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1268"
+            line="1264"
             column="42"/>
     </issue>
 
@@ -14471,7 +13684,7 @@
         errorLine2="               ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1277"
+            line="1273"
             column="16"/>
     </issue>
 
@@ -14482,7 +13695,7 @@
         errorLine2="                              ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1283"
+            line="1279"
             column="31"/>
     </issue>
 
@@ -14493,7 +13706,7 @@
         errorLine2="                              ~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1288"
+            line="1284"
             column="31"/>
     </issue>
 
@@ -14504,7 +13717,7 @@
         errorLine2="                                         ~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1288"
+            line="1284"
             column="42"/>
     </issue>
 
@@ -14515,7 +13728,7 @@
         errorLine2="                                           ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1294"
+            line="1290"
             column="44"/>
     </issue>
 
@@ -14526,7 +13739,7 @@
         errorLine2="                                                                   ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1294"
+            line="1290"
             column="68"/>
     </issue>
 
@@ -14537,7 +13750,7 @@
         errorLine2="           ~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1358"
+            line="1354"
             column="12"/>
     </issue>
 
@@ -14548,7 +13761,7 @@
         errorLine2="                        ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1369"
+            line="1365"
             column="25"/>
     </issue>
 
@@ -14559,7 +13772,7 @@
         errorLine2="                        ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1383"
+            line="1379"
             column="25"/>
     </issue>
 
@@ -14570,7 +13783,7 @@
         errorLine2="                                              ~~~~~~~~">
         <location
             file="src/main/java/androidx/appcompat/app/WindowDecorActionBar.java"
-            line="1399"
+            line="1395"
             column="47"/>
     </issue>
 

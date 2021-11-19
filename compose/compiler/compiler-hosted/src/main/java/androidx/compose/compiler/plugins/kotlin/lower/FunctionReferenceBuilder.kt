@@ -37,14 +37,13 @@ import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.copyAttributes
-import org.jetbrains.kotlin.ir.declarations.impl.IrClassImpl
-import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrInstanceInitializerCallImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.IrTypeSystemContext
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.ir.util.explicitParameters
@@ -60,7 +59,7 @@ class FunctionReferenceBuilder(
     private val currentDeclarationParent: IrDeclarationParent,
     private val generatorContext: IrGeneratorContext,
     private val currentScopeOwnerSymbol: IrSymbol,
-    private val irBuiltIns: IrBuiltIns
+    private val irTypeSystemContext: IrTypeSystemContext
 ) {
     private val callee = irFunctionExpression.function
     private val superMethod =
@@ -76,7 +75,7 @@ class FunctionReferenceBuilder(
         superTypes = listOfNotNull(superType)
         createImplicitParameterDeclarationWithWrappedDescriptor()
         copyAttributes(irFunctionExpression)
-        (this as IrClassImpl).metadata = irFunctionExpression.function.metadata
+        metadata = irFunctionExpression.function.metadata
     }
 
     fun build(): IrExpression = DeclarationIrBuilder(
@@ -86,7 +85,7 @@ class FunctionReferenceBuilder(
         irBlock(irFunctionExpression.startOffset, irFunctionExpression.endOffset) {
             val constructor = createConstructor()
             createInvokeMethod()
-            functionReferenceClass.addFakeOverrides(irBuiltIns)
+            functionReferenceClass.addFakeOverrides(irTypeSystemContext)
             +functionReferenceClass
             +irCall(constructor.symbol)
         }
@@ -98,7 +97,7 @@ class FunctionReferenceBuilder(
             returnType = functionReferenceClass.defaultType
             isPrimary = true
         }.apply {
-            val constructor = irBuiltIns.anyClass.owner.constructors.single()
+            val constructor = irTypeSystemContext.irBuiltIns.anyClass.owner.constructors.single()
             body = DeclarationIrBuilder(generatorContext, symbol).run {
                 irBlockBody(startOffset, endOffset) {
                     +irDelegatingConstructorCall(constructor)

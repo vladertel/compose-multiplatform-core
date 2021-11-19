@@ -15,12 +15,15 @@
  */
 package androidx.leanback.app;
 
+import static android.os.Build.VERSION.SDK_INT;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.animation.PropertyValuesHolder;
+import android.app.UiAutomation;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -58,6 +61,8 @@ import androidx.test.filters.LargeTest;
 import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -120,6 +125,29 @@ public class DetailsSupportFragmentTest extends SingleSupportFragmentTestBase {
 
         DetailsParallaxDrawable getParallaxDrawable() {
             return mParallaxDrawable;
+        }
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        if (SDK_INT >= 31) {
+            UiAutomation uiAutomation =
+                    InstrumentationRegistry.getInstrumentation().getUiAutomation();
+            uiAutomation.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
+            uiAutomation.executeShellCommand("settings put secure immersive_mode_confirmations "
+                    + "confirmed");
+            uiAutomation.dropShellPermissionIdentity();
+        }
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        if (SDK_INT >= 31) {
+            UiAutomation uiAutomation =
+                    InstrumentationRegistry.getInstrumentation().getUiAutomation();
+            uiAutomation.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
+            uiAutomation.executeShellCommand("settings delete secure immersive_mode_confirmations");
+            uiAutomation.dropShellPermissionIdentity();
         }
     }
 
@@ -1258,16 +1286,17 @@ public class DetailsSupportFragmentTest extends SingleSupportFragmentTestBase {
                         View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN),
                 1000);
 
-        View fragmentView = activity.getTestFragment().getView();
-        RowsSupportFragment rowsSupportFragment =
-                ((DetailsSupportFragmentEntranceTransition) activity.getTestFragment())
-                        .getRowsSupportFragment();
+        DetailsSupportFragmentEntranceTransition detailsFragment =
+                (DetailsSupportFragmentEntranceTransition) activity.getTestFragment();
+        View fragmentView = detailsFragment.getView();
+        RowsSupportFragment rowsSupportFragment = detailsFragment.getRowsSupportFragment();
         VerticalGridView gridView = rowsSupportFragment.getVerticalGridView();
         LeakDetector leakDetector = new LeakDetector();
         leakDetector.observeObject(fragmentView);
         // Note: RowsSupportFragment is referred by childFragmentManager of details fragment.
         leakDetector.observeObject(gridView);
         leakDetector.observeObject(gridView.getRecycledViewPool());
+        leakDetector.observeObject(detailsFragment.mDetailsBackgroundController.mCoverBitmap);
         for (int i = 0; i < gridView.getChildCount(); i++) {
             leakDetector.observeObject(gridView.getChildAt(i));
         }
@@ -1286,6 +1315,7 @@ public class DetailsSupportFragmentTest extends SingleSupportFragmentTestBase {
                 return emptyFragment.isResumed();
             }
         });
+        assertTrue(detailsFragment.mBackgroundDrawable != null);
         leakDetector.assertNoLeak();
     }
 }
