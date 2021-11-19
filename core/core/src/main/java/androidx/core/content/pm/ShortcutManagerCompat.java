@@ -25,6 +25,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ShortcutInfo;
@@ -32,6 +33,7 @@ import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
+import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 
@@ -54,6 +56,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Helper for accessing features in {@link android.content.pm.ShortcutManager}.
@@ -124,6 +127,21 @@ public class ShortcutManagerCompat {
      */
     private static volatile ShortcutInfoCompatSaver<?> sShortcutInfoCompatSaver = null;
 
+    /**
+     * Will be instantiated by reflection to load an implementation from another module if
+     * possible. Modules can declare the class to be instantiated using the meta-data in their
+     * Manifest.
+     *
+     * If fails to load an implementation via reflection, will use the default implementation which
+     * is no-op.
+     */
+    private static volatile List<ShortcutInfoChangeListener> sShortcutInfoChangeListeners = null;
+
+    private static final String SHORTCUT_LISTENER_INTENT_FILTER_ACTION = "androidx.core.content.pm"
+            + ".SHORTCUT_LISTENER";
+    private static final String SHORTCUT_LISTENER_META_DATA_KEY = "androidx.core.content.pm"
+            + ".shortcut_listener_impl";
+
     private ShortcutManagerCompat() {
         /* Hide constructor */
     }
@@ -170,6 +188,10 @@ public class ShortcutManagerCompat {
      */
     public static boolean requestPinShortcut(@NonNull final Context context,
             @NonNull ShortcutInfoCompat shortcut, @Nullable final IntentSender callback) {
+        if (Build.VERSION.SDK_INT <= 31 && shortcut.mIsHiddenFromLauncher) {
+            // A shortcut that is not frequently used cannot be pinned to WorkSpace.
+            return false;
+        }
         if (Build.VERSION.SDK_INT >= 26) {
             return context.getSystemService(ShortcutManager.class).requestPinShortcut(
                     shortcut.toShortcutInfo(), callback);
@@ -285,6 +307,9 @@ public class ShortcutManagerCompat {
     /**
      * Publish the list of dynamic shortcuts. If there are already dynamic or pinned shortcuts with
      * the same IDs, each mutable shortcut is updated.
+     * <p>On API <= 31 Any shortcuts that are marked as hidden from launcher will not be passed to
+     * the {@link ShortcutManager}, but they might still be available to assistant and other
+     * surfaces through alternative means.
      *
      * <p>This API will be rate-limited.
      *
@@ -296,12 +321,13 @@ public class ShortcutManagerCompat {
      */
     public static boolean addDynamicShortcuts(@NonNull Context context,
             @NonNull List<ShortcutInfoCompat> shortcutInfoList) {
+        final List<ShortcutInfoCompat> clone = excludesHiddenShortcuts(shortcutInfoList);
         if (Build.VERSION.SDK_INT <= 29) {
-            convertUriIconsToBitmapIcons(context, shortcutInfoList);
+            convertUriIconsToBitmapIcons(context, clone);
         }
         if (Build.VERSION.SDK_INT >= 25) {
             ArrayList<ShortcutInfo> shortcuts = new ArrayList<>();
-            for (ShortcutInfoCompat item : shortcutInfoList) {
+            for (ShortcutInfoCompat item : clone) {
                 shortcuts.add(item.toShortcutInfo());
             }
             if (!context.getSystemService(ShortcutManager.class).addDynamicShortcuts(shortcuts)) {
@@ -309,7 +335,10 @@ public class ShortcutManagerCompat {
             }
         }
 
-        getShortcutInfoSaverInstance(context).addShortcuts(shortcutInfoList);
+        getShortcutInfoSaverInstance(context).addShortcuts(clone);
+        for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+            listener.onShortcutAdded(shortcutInfoList);
+        }
         return true;
     }
 
@@ -397,12 +426,19 @@ public class ShortcutManagerCompat {
         if (Build.VERSION.SDK_INT >= 25) {
             context.getSystemService(ShortcutManager.class).reportShortcutUsed(shortcutId);
         }
+
+        for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+            listener.onShortcutUsageReported(Collections.singletonList(shortcutId));
+        }
     }
 
     /**
      * Publish the list of shortcuts.  All existing dynamic shortcuts from the caller app
      * will be replaced.  If there are already pinned shortcuts with the same IDs,
      * the mutable pinned shortcuts are updated.
+     * <p>On API <= 31 Any shortcuts that are marked as hidden from launcher will not be passed to
+     * the {@link ShortcutManager}, but they might still be available to assistant and other
+     * surfaces through alternative means.
      *
      * <p>This API will be rate-limited.
      *
@@ -424,9 +460,10 @@ public class ShortcutManagerCompat {
             @NonNull final List<ShortcutInfoCompat> shortcutInfoList) {
         Preconditions.checkNotNull(context);
         Preconditions.checkNotNull(shortcutInfoList);
+        final List<ShortcutInfoCompat> clone = excludesHiddenShortcuts(shortcutInfoList);
         if (Build.VERSION.SDK_INT >= 25) {
-            List<ShortcutInfo> shortcuts = new ArrayList<>(shortcutInfoList.size());
-            for (ShortcutInfoCompat compat : shortcutInfoList) {
+            List<ShortcutInfo> shortcuts = new ArrayList<>(clone.size());
+            for (ShortcutInfoCompat compat : clone) {
                 shortcuts.add(compat.toShortcutInfo());
             }
             if (!context.getSystemService(ShortcutManager.class).setDynamicShortcuts(shortcuts)) {
@@ -434,7 +471,12 @@ public class ShortcutManagerCompat {
             }
         }
         getShortcutInfoSaverInstance(context).removeAllShortcuts();
-        getShortcutInfoSaverInstance(context).addShortcuts(shortcutInfoList);
+        getShortcutInfoSaverInstance(context).addShortcuts(clone);
+
+        for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+            listener.onAllShortcutsRemoved();
+            listener.onShortcutAdded(shortcutInfoList);
+        }
         return true;
     }
 
@@ -469,6 +511,9 @@ public class ShortcutManagerCompat {
     /**
      * Update all existing shortcuts with the same IDs. Target shortcuts may be pinned and/or
      * dynamic, but they must not be immutable.
+     * <p>On API <= 31 Any shortcuts that are marked as hidden from launcher will not be passed to
+     * the {@link ShortcutManager}, but they might still be available to assistant and other
+     * surfaces through alternative means.
      *
      * <p>This API will be rate-limited.
      *
@@ -479,12 +524,13 @@ public class ShortcutManagerCompat {
      */
     public static boolean updateShortcuts(@NonNull Context context,
             @NonNull List<ShortcutInfoCompat> shortcutInfoList) {
+        final List<ShortcutInfoCompat> clone = excludesHiddenShortcuts(shortcutInfoList);
         if (Build.VERSION.SDK_INT <= 29) {
-            convertUriIconsToBitmapIcons(context, shortcutInfoList);
+            convertUriIconsToBitmapIcons(context, clone);
         }
         if (Build.VERSION.SDK_INT >= 25) {
             ArrayList<ShortcutInfo> shortcuts = new ArrayList<>();
-            for (ShortcutInfoCompat item : shortcutInfoList) {
+            for (ShortcutInfoCompat item : clone) {
                 shortcuts.add(item.toShortcutInfo());
             }
             if (!context.getSystemService(ShortcutManager.class).updateShortcuts(shortcuts)) {
@@ -492,7 +538,10 @@ public class ShortcutManagerCompat {
             }
         }
 
-        getShortcutInfoSaverInstance(context).addShortcuts(shortcutInfoList);
+        getShortcutInfoSaverInstance(context).addShortcuts(clone);
+        for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+            listener.onShortcutUpdated(shortcutInfoList);
+        }
         return true;
     }
 
@@ -556,11 +605,15 @@ public class ShortcutManagerCompat {
         }
 
         getShortcutInfoSaverInstance(context).removeShortcuts(shortcutIds);
+        for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+            listener.onShortcutRemoved(shortcutIds);
+        }
     }
 
     /**
      * Re-enable pinned shortcuts that were previously disabled.  If the target shortcuts
      * are already enabled, this method does nothing.
+     * <p>In API 31 and below any shortcuts that are marked as hidden from launcher will be ignored.
      *
      * Compatibility behavior:
      * <ul>
@@ -574,15 +627,19 @@ public class ShortcutManagerCompat {
      */
     public static void enableShortcuts(@NonNull final Context context,
             @NonNull final List<ShortcutInfoCompat> shortcutInfoList) {
+        final List<ShortcutInfoCompat> clone = excludesHiddenShortcuts(shortcutInfoList);
         if (Build.VERSION.SDK_INT >= 25) {
             final ArrayList<String> shortcutIds = new ArrayList<>(shortcutInfoList.size());
-            for (ShortcutInfoCompat shortcut : shortcutInfoList) {
+            for (ShortcutInfoCompat shortcut : clone) {
                 shortcutIds.add(shortcut.mId);
             }
             context.getSystemService(ShortcutManager.class).enableShortcuts(shortcutIds);
         }
 
-        getShortcutInfoSaverInstance(context).addShortcuts(shortcutInfoList);
+        getShortcutInfoSaverInstance(context).addShortcuts(clone);
+        for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+            listener.onShortcutAdded(shortcutInfoList);
+        }
     }
 
     /**
@@ -599,6 +656,9 @@ public class ShortcutManagerCompat {
         }
 
         getShortcutInfoSaverInstance(context).removeShortcuts(shortcutIds);
+        for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+            listener.onShortcutRemoved(shortcutIds);
+        }
     }
 
     /**
@@ -614,6 +674,9 @@ public class ShortcutManagerCompat {
         }
 
         getShortcutInfoSaverInstance(context).removeAllShortcuts();
+        for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+            listener.onAllShortcutsRemoved();
+        }
     }
 
     /**
@@ -636,6 +699,9 @@ public class ShortcutManagerCompat {
 
         context.getSystemService(ShortcutManager.class).removeLongLivedShortcuts(shortcutIds);
         getShortcutInfoSaverInstance(context).removeShortcuts(shortcutIds);
+        for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+            listener.onShortcutRemoved(shortcutIds);
+        }
     }
 
     /**
@@ -676,6 +742,12 @@ public class ShortcutManagerCompat {
         Preconditions.checkNotNull(context);
         Preconditions.checkNotNull(shortcut);
 
+        if (Build.VERSION.SDK_INT <= 31 && shortcut.mIsHiddenFromLauncher) {
+            for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+                listener.onShortcutAdded(Collections.singletonList(shortcut));
+            }
+            return true;
+        }
         int maxShortcutCount = getMaxShortcutCountPerActivity(context);
         if (maxShortcutCount == 0) {
             return false;
@@ -709,6 +781,11 @@ public class ShortcutManagerCompat {
             return true;
         } catch (Exception e) {
             // Ignore
+        } finally {
+            for (ShortcutInfoChangeListener listener : getShortcutInfoListeners(context)) {
+                listener.onShortcutAdded(Collections.singletonList(shortcut));
+            }
+            reportShortcutUsed(context, shortcut.getId());
         }
         return false;
     }
@@ -729,6 +806,16 @@ public class ShortcutManagerCompat {
     @VisibleForTesting
     static void setShortcutInfoCompatSaver(final ShortcutInfoCompatSaver<Void> saver) {
         sShortcutInfoCompatSaver = saver;
+    }
+
+    @VisibleForTesting
+    static void setShortcutInfoChangeListeners(final List<ShortcutInfoChangeListener> listeners) {
+        sShortcutInfoChangeListeners = listeners;
+    }
+
+    @VisibleForTesting
+    static List<ShortcutInfoChangeListener> getShortcutInfoChangeListeners() {
+        return sShortcutInfoChangeListeners;
     }
 
     private static int getIconDimensionInternal(@NonNull final Context context,
@@ -764,6 +851,63 @@ public class ShortcutManagerCompat {
             }
         }
         return sShortcutInfoCompatSaver;
+    }
+
+    private static List<ShortcutInfoChangeListener> getShortcutInfoListeners(Context context) {
+        if (sShortcutInfoChangeListeners == null) {
+            List<ShortcutInfoChangeListener> result = new ArrayList<>();
+            if (Build.VERSION.SDK_INT >= 21) {
+                PackageManager packageManager = context.getPackageManager();
+                Intent activityIntent = new Intent(SHORTCUT_LISTENER_INTENT_FILTER_ACTION);
+                activityIntent.setPackage(context.getPackageName());
+
+                List<ResolveInfo> resolveInfos = packageManager.queryIntentActivities(
+                        activityIntent, PackageManager.GET_META_DATA);
+
+                for (ResolveInfo resolveInfo : resolveInfos) {
+                    ActivityInfo activityInfo = resolveInfo.activityInfo;
+                    if (activityInfo == null) {
+                        continue;
+                    }
+                    Bundle metaData = activityInfo.metaData;
+                    if (metaData == null) {
+                        continue;
+                    }
+                    String shortcutListenerImplName =
+                            metaData.getString(SHORTCUT_LISTENER_META_DATA_KEY);
+                    if (shortcutListenerImplName == null) {
+                        continue;
+                    }
+                    try {
+                        ClassLoader loader = ShortcutManagerCompat.class.getClassLoader();
+                        Class<?> listener = Class.forName(shortcutListenerImplName, false, loader);
+                        Method getInstanceMethod = listener.getMethod("getInstance", Context.class);
+                        result.add((ShortcutInfoChangeListener)
+                                getInstanceMethod.invoke(null, context));
+                    } catch (Exception e) { /* Do nothing */ }
+                }
+            }
+
+            // Make sure the listeners are not already added while the loop is running.
+            if (sShortcutInfoChangeListeners == null) {
+                sShortcutInfoChangeListeners = result;
+            }
+        }
+        return sShortcutInfoChangeListeners;
+    }
+
+    @NonNull
+    private static List<ShortcutInfoCompat> excludesHiddenShortcuts(
+            @NonNull final List<ShortcutInfoCompat> shortcuts) {
+        Objects.requireNonNull(shortcuts);
+        if (Build.VERSION.SDK_INT > 31) return shortcuts;
+        final List<ShortcutInfoCompat> clone = new ArrayList<>(shortcuts);
+        for (ShortcutInfoCompat si: shortcuts) {
+            if (si.mIsHiddenFromLauncher) {
+                clone.remove(si);
+            }
+        }
+        return clone;
     }
 
     @RequiresApi(25)

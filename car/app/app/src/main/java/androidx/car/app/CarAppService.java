@@ -72,6 +72,9 @@ import java.security.InvalidParameterException;
  * </service>
  * }</pre>
  *
+ * <p>For a list of all the supported categories see
+ * <a href="https://developer.android.com/training/cars/apps#supported-app-categories">Supported App Categories</a>.
+ *
  * <h4>Accessing Location</h4>
  *
  * When the app is running in the car display, the system will not consider it as being in the
@@ -82,12 +85,18 @@ import java.security.InvalidParameterException;
  *
  * <p>To reliably get location for your car app, we recommended that you use a <a
  * href="https://developer.android.com/guide/components/services?#Types-of-services">foreground
- * service</a>. Also note that accessing location may become unreliable when the phone is in the
- * battery saver mode.
+ * service</a>. If you have a service other than your {@link CarAppService} that accesses
+ * location, run the service and your `CarAppService` in the same process. Also note that
+ * accessing location may become unreliable when the phone is in the battery saver mode.
  */
 public abstract class CarAppService extends Service {
     /**
-     * The {@link Intent} that must be declared as handled by the service.
+     * The full qualified name of the {@link CarAppService} class.
+     *
+     * <p>This is the same name that must be used to declare the action of the intent filter for
+     * the app's {@link CarAppService} in the app's manifest.
+     *
+     * @see CarAppService
      */
     public static final String SERVICE_INTERFACE = "androidx.car.app.CarAppService";
 
@@ -149,21 +158,17 @@ public abstract class CarAppService extends Service {
             Log.d(TAG, "onUnbind intent: " + intent);
         }
         runOnMain(() -> {
-            // Destroy the session
             if (mCurrentSession != null) {
-                CarContext carContext = mCurrentSession.getCarContext();
-
-                // Stop any active navigation
-                carContext.getCarService(NavigationManager.class).onStopNavigation();
-
-                // Destroy all screens in the stack
-                carContext.getCarService(ScreenManager.class).destroyAndClearScreenStack();
-
-                // Remove binders to the host
-                carContext.resetHosts();
-
-                ((LifecycleRegistry) mCurrentSession.getLifecycle()).handleLifecycleEvent(
-                        Event.ON_DESTROY);
+                // Destroy the session
+                // The session's lifecycle is observed by some of the manager and they will
+                // perform cleanup on destroy.  For example, the ScreenManager can destroy all
+                // Screens it holds.
+                LifecycleRegistry lifecycleRegistry = getLifecycleIfValid();
+                if (lifecycleRegistry == null) {
+                    Log.e(TAG, "Null Session when unbinding");
+                } else {
+                    lifecycleRegistry.handleLifecycleEvent(Event.ON_DESTROY);
+                }
             }
             mCurrentSession = null;
         });
@@ -187,8 +192,8 @@ public abstract class CarAppService extends Service {
      * don't hold the aforementioned permission (for example, Android Auto and Android
      * Automotive OS hosts below API level 31), by allow-listing the signatures of those hosts.
      *
-     * <p>Please refer to {@link androidx.car.app.R.array#hosts_allowlist_sample} to obtain a list
-     * of package names and signatures that should be allow-listed by default.
+     * <p>Refer to {@code androidx.car.app.R.array.hosts_allowlist_sample} to obtain a
+     * list of package names and signatures that should be allow-listed by default.
      *
      * <p>It is also advised to allow connections from unknown hosts in debug builds to facilitate
      * debugging and testing.
@@ -202,7 +207,7 @@ public abstract class CarAppService extends Service {
      *     if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
      *         return HostValidator.ALLOW_ALL_HOSTS_VALIDATOR;
      *     } else {
-     *         return new HostValidator.Builder()
+     *         return new HostValidator.Builder(context)
      *             .addAllowedHosts(androidx.car.app.R.array.hosts_allowlist_sample)
      *             .build();
      *     }
@@ -224,7 +229,7 @@ public abstract class CarAppService extends Service {
      *
      * <p>Called by the system, do not call this method directly.
      *
-     * @see CarContext#startCarApp
+     * @see CarContext#startCarApp(Intent)
      */
     @NonNull
     public abstract Session onCreateSession();
@@ -314,6 +319,7 @@ public abstract class CarAppService extends Service {
         if (!CarAppApiLevels.isValid(apiLevel)) {
             throw new IllegalArgumentException("Invalid Car App API level received: " + apiLevel);
         }
+
         mHandshakeInfo = handshakeInfo;
     }
 
@@ -321,6 +327,17 @@ public abstract class CarAppService extends Service {
     @Nullable
     HandshakeInfo getHandshakeInfo() {
         return mHandshakeInfo;
+    }
+
+    @Nullable
+    LifecycleRegistry getLifecycleIfValid() {
+        Session session = getCurrentSession();
+        return session == null ? null : (LifecycleRegistry) session.getLifecycleInternal();
+    }
+
+    @NonNull
+    LifecycleRegistry getLifecycle() {
+        return requireNonNull(getLifecycleIfValid());
     }
 
     private final ICarApp.Stub mBinder =
@@ -340,21 +357,24 @@ public abstract class CarAppService extends Service {
                     if (Log.isLoggable(TAG, Log.DEBUG)) {
                         Log.d(TAG, "onAppCreate intent: " + intent);
                     }
-                    RemoteUtils.dispatchHostCall(() -> {
+
+                    RemoteUtils.dispatchCallFromHost(callback, "onAppCreate", () -> {
                         Session session = getCurrentSession();
                         if (session == null
-                                || session.getLifecycle().getCurrentState() == State.DESTROYED) {
+                                || getLifecycle().getCurrentState() == State.DESTROYED) {
                             session = onCreateSession();
                             setCurrentSession(session);
                         }
 
-                        session.configure(CarAppService.this, requireNonNull(getHandshakeInfo()),
+                        session.configure(CarAppService.this,
+                                requireNonNull(getHandshakeInfo()),
+                                requireNonNull(getHostInfo()),
                                 carHost, configuration);
 
                         // Whenever the host unbinds, the screens in the stack are destroyed.  If
                         // there is another bind, before the OS has destroyed this Service, then
                         // the stack will be empty, and we need to treat it as a new instance.
-                        LifecycleRegistry registry = (LifecycleRegistry) session.getLifecycle();
+                        LifecycleRegistry registry = getLifecycle();
                         Lifecycle.State state = registry.getCurrentState();
                         int screenStackSize = session.getCarContext().getCarService(
                                 ScreenManager.class).getScreenStack().size();
@@ -374,7 +394,8 @@ public abstract class CarAppService extends Service {
                             }
                             onNewIntentInternal(session, intent);
                         }
-                    }, callback, "onAppCreate");
+                        return null;
+                    });
 
                     if (Log.isLoggable(TAG, Log.DEBUG)) {
                         Log.d(TAG, "onAppCreate completed");
@@ -383,99 +404,108 @@ public abstract class CarAppService extends Service {
 
                 @Override
                 public void onAppStart(IOnDoneCallback callback) {
-                    RemoteUtils.dispatchHostCall(
-                            () -> {
-                                ((LifecycleRegistry) throwIfInvalid(
-                                        getCurrentSession()).getLifecycle())
-                                        .handleLifecycleEvent(Event.ON_START);
-                            }, callback,
-                            "onAppStart");
+                    RemoteUtils.dispatchCallFromHost(
+                            getLifecycleIfValid(), callback,
+                            "onAppStart", () -> {
+                                getLifecycle().handleLifecycleEvent(Event.ON_START);
+                                return null;
+                            });
                 }
 
                 @Override
                 public void onAppResume(IOnDoneCallback callback) {
-                    RemoteUtils.dispatchHostCall(
-                            () -> {
-                                ((LifecycleRegistry) throwIfInvalid(
-                                        getCurrentSession()).getLifecycle())
+                    RemoteUtils.dispatchCallFromHost(
+                            getLifecycleIfValid(), callback,
+                            "onAppResume", () -> {
+                                getLifecycle()
                                         .handleLifecycleEvent(Event.ON_RESUME);
-                            }, callback,
-                            "onAppResume");
+                                return null;
+                            });
                 }
 
                 @Override
                 public void onAppPause(IOnDoneCallback callback) {
-                    RemoteUtils.dispatchHostCall(
+                    RemoteUtils.dispatchCallFromHost(
+                            getLifecycleIfValid(), callback, "onAppPause",
                             () -> {
-                                ((LifecycleRegistry) throwIfInvalid(
-                                        getCurrentSession()).getLifecycle())
-                                        .handleLifecycleEvent(Event.ON_PAUSE);
-                            }, callback, "onAppPause");
+                                getLifecycle().handleLifecycleEvent(Event.ON_PAUSE);
+                                return null;
+                            });
                 }
 
                 @Override
                 public void onAppStop(IOnDoneCallback callback) {
-                    RemoteUtils.dispatchHostCall(
+                    RemoteUtils.dispatchCallFromHost(
+                            getLifecycleIfValid(), callback, "onAppStop",
                             () -> {
-                                ((LifecycleRegistry) throwIfInvalid(
-                                        getCurrentSession()).getLifecycle())
-                                        .handleLifecycleEvent(Event.ON_STOP);
-                            }, callback, "onAppStop");
+                                getLifecycle().handleLifecycleEvent(Event.ON_STOP);
+                                return null;
+                            });
                 }
 
                 @Override
                 public void onNewIntent(Intent intent, IOnDoneCallback callback) {
-                    RemoteUtils.dispatchHostCall(
-                            () -> onNewIntentInternal(throwIfInvalid(getCurrentSession()), intent),
+                    RemoteUtils.dispatchCallFromHost(
+                            getLifecycleIfValid(),
                             callback,
-                            "onNewIntent");
+                            "onNewIntent",
+                            () -> {
+                                onNewIntentInternal(throwIfInvalid(getCurrentSession()), intent);
+                                return null;
+                            });
                 }
 
                 @Override
                 public void onConfigurationChanged(Configuration configuration,
                         IOnDoneCallback callback) {
-                    RemoteUtils.dispatchHostCall(
-                            () -> onConfigurationChangedInternal(
-                                    throwIfInvalid(getCurrentSession()), configuration),
+                    RemoteUtils.dispatchCallFromHost(
+                            getLifecycleIfValid(),
                             callback,
-                            "onConfigurationChanged");
+                            "onConfigurationChanged",
+                            () -> {
+                                onConfigurationChangedInternal(
+                                        throwIfInvalid(getCurrentSession()), configuration);
+                                return null;
+                            });
                 }
 
                 @Override
                 public void getManager(@CarServiceType @NonNull String type,
                         IOnDoneCallback callback) {
-                    Session session = throwIfInvalid(getCurrentSession());
-                    switch (type) {
-                        case CarContext.APP_SERVICE:
-                            RemoteUtils.sendSuccessResponse(
-                                    callback,
-                                    "getManager",
-                                    session.getCarContext().getCarService(
-                                            AppManager.class).getIInterface());
-                            return;
-                        case CarContext.NAVIGATION_SERVICE:
-                            RemoteUtils.sendSuccessResponse(
-                                    callback,
-                                    "getManager",
-                                    session.getCarContext().getCarService(
-                                            NavigationManager.class).getIInterface());
-                            return;
-                        default:
-                            Log.e(TAG, type + "%s is not a valid manager");
-                            RemoteUtils.sendFailureResponse(callback, "getManager",
-                                    new InvalidParameterException(
-                                            type + " is not a valid manager type"));
-                    }
+                    ThreadUtils.runOnMain(() -> {
+                        Session session = throwIfInvalid(getCurrentSession());
+                        switch (type) {
+                            case CarContext.APP_SERVICE:
+                                RemoteUtils.sendSuccessResponseToHost(
+                                        callback,
+                                        "getManager",
+                                        session.getCarContext().getCarService(
+                                                AppManager.class).getIInterface());
+                                return;
+                            case CarContext.NAVIGATION_SERVICE:
+                                RemoteUtils.sendSuccessResponseToHost(
+                                        callback,
+                                        "getManager",
+                                        session.getCarContext().getCarService(
+                                                NavigationManager.class).getIInterface());
+                                return;
+                            default:
+                                Log.e(TAG, type + "%s is not a valid manager");
+                                RemoteUtils.sendFailureResponseToHost(callback, "getManager",
+                                        new InvalidParameterException(
+                                                type + " is not a valid manager type"));
+                        }
+                    });
                 }
 
                 @Override
                 public void getAppInfo(IOnDoneCallback callback) {
                     try {
-                        RemoteUtils.sendSuccessResponse(
+                        RemoteUtils.sendSuccessResponseToHost(
                                 callback, "getAppInfo", CarAppService.this.getAppInfo());
                     } catch (IllegalArgumentException e) {
                         // getAppInfo() could fail with the specified API version is invalid.
-                        RemoteUtils.sendFailureResponse(callback, "getAppInfo", e);
+                        RemoteUtils.sendFailureResponseToHost(callback, "getAppInfo", e);
                     }
                 }
 
@@ -489,17 +519,31 @@ public abstract class CarAppService extends Service {
                         int uid = Binder.getCallingUid();
                         HostInfo hostInfo = new HostInfo(packageName, uid);
                         if (!getHostValidator().isValidHost(hostInfo)) {
-                            RemoteUtils.sendFailureResponse(callback, "onHandshakeCompleted",
+                            RemoteUtils.sendFailureResponseToHost(callback, "onHandshakeCompleted",
                                     new IllegalArgumentException("Unknown host '"
                                             + packageName + "', uid:" + uid));
                             return;
                         }
+
+                        int appMinApiLevel =
+                                CarAppService.this.getAppInfo().getMinCarAppApiLevel();
+                        int hostApiLevel = deserializedHandshakeInfo.getHostCarAppApiLevel();
+                        if (appMinApiLevel > hostApiLevel) {
+                            RemoteUtils.sendFailureResponseToHost(callback, "onHandshakeCompleted",
+                                    new IllegalArgumentException(
+                                            "Host API level (" + hostApiLevel + ") is "
+                                                    + "less than the app's min API level ("
+                                                    + appMinApiLevel + ")"));
+                            return;
+                        }
+
                         setHostInfo(hostInfo);
                         setHandshakeInfo(deserializedHandshakeInfo);
-                        RemoteUtils.sendSuccessResponse(callback, "onHandshakeCompleted", null);
+                        RemoteUtils.sendSuccessResponseToHost(callback, "onHandshakeCompleted",
+                                null);
                     } catch (BundlerException | IllegalArgumentException e) {
                         setHostInfo(null);
-                        RemoteUtils.sendFailureResponse(callback, "onHandshakeCompleted", e);
+                        RemoteUtils.sendFailureResponseToHost(callback, "onHandshakeCompleted", e);
                     }
                 }
 

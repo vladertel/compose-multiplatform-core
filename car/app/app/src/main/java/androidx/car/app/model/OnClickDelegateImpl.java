@@ -29,6 +29,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.car.app.IOnDoneCallback;
 import androidx.car.app.OnDoneCallback;
+import androidx.car.app.annotations.CarProtocol;
 import androidx.car.app.utils.RemoteUtils;
 
 /**
@@ -37,6 +38,7 @@ import androidx.car.app.utils.RemoteUtils;
  * @hide
  */
 @RestrictTo(LIBRARY)
+@CarProtocol
 public class OnClickDelegateImpl implements OnClickDelegate {
 
     @Keep
@@ -93,7 +95,10 @@ public class OnClickDelegateImpl implements OnClickDelegate {
 
         @Override
         public void onClick(IOnDoneCallback callback) {
-            RemoteUtils.dispatchHostCall(mOnClickListener::onClick, callback, "onClick");
+            RemoteUtils.dispatchCallFromHost(callback, "onClick", () -> {
+                mOnClickListener.onClick();
+                return null;
+            });
         }
     }
 }

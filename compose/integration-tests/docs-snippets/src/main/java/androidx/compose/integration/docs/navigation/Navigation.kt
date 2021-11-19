@@ -40,13 +40,11 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.KEY_ROUTE
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.navArgument
-import androidx.navigation.compose.navigate
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 
 /**
@@ -100,7 +98,6 @@ private fun NavigationSnippet5(navController: NavHostController) {
     }
 }
 
-@Composable
 private fun NavGraphBuilder.NavigationSnippet6(navController: NavHostController) {
     composable("profile/{userId}") { backStackEntry ->
         Profile(navController, backStackEntry.arguments?.getString("userId"))
@@ -112,7 +109,6 @@ private fun NavigationSnippet7(navController: NavHostController) {
     navController.navigate("profile/user1234")
 }
 
-@Composable
 private fun NavGraphBuilder.NavigationSnippet8(navController: NavHostController) {
     composable(
         "profile?userId={userId}",
@@ -124,7 +120,6 @@ private fun NavGraphBuilder.NavigationSnippet8(navController: NavHostController)
 
 /* Deep links */
 
-@Composable
 private fun NavGraphBuilder.NavigationSnippet9(navController: NavHostController) {
     val uri = "https://example.com"
 
@@ -160,7 +155,7 @@ private fun NavigationSnippet11(items: List<Screen>) {
         bottomBar = {
             BottomNavigation {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.arguments?.getString(KEY_ROUTE)
+                val currentRoute = navBackStackEntry?.destination?.route
                 items.forEach { screen ->
                     BottomNavigationItem(
                         icon = { Icon(Icons.Filled.Favorite, contentDescription = null) },
@@ -168,7 +163,9 @@ private fun NavigationSnippet11(items: List<Screen>) {
                         selected = currentRoute == screen.route,
                         onClick = {
                             // This is the equivalent to popUpTo the start destination
-                            navController.popBackStack(navController.graph.startDestination, false)
+                            navController.popBackStack(
+                                navController.graph.startDestinationId, false
+                            )
 
                             // This if check gives us a "singleTop" behavior where we do not create a
                             // second instance of the composable if we are already on that destination
@@ -189,7 +186,6 @@ private fun NavigationSnippet11(items: List<Screen>) {
     }
 }
 
-@Composable
 private fun NavGraphBuilder.NavigationSnippet12(navController: NavHostController) {
     composable(
         "profile?userId={userId}",

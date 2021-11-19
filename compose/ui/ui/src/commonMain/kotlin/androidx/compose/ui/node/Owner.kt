@@ -23,7 +23,9 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.TextToolbar
@@ -46,12 +48,23 @@ internal interface Owner {
      */
     val root: LayoutNode
 
+    /**
+     * Draw scope reused for drawing speed up.
+     */
+    val sharedDrawScope: LayoutNodeDrawScope
+
     val rootForTest: RootForTest
 
     /**
      * Provide haptic feedback to the user. Use the Android version of haptic feedback.
      */
     val hapticFeedBack: HapticFeedback
+
+    /**
+     * Provide information about the current input mode, and a way to programmatically change the
+     * input mode.
+     */
+    val inputModeManager: InputModeManager
 
     /**
      * Provide clipboard manager to the user. Use the Android version of clipboard manager.
@@ -74,6 +87,7 @@ internal interface Owner {
      *  TODO(ralu): Replace with SemanticsTree. This is a temporary hack until we have a semantics
      *  tree implemented.
      */
+    @Suppress("EXPERIMENTAL_ANNOTATION_ON_WRONG_TARGET")
     @get:ExperimentalComposeUiApi
     @ExperimentalComposeUiApi
     val autofillTree: AutofillTree
@@ -82,6 +96,7 @@ internal interface Owner {
      * The [Autofill] class can be used to perform autofill operations. It is used as a
      * CompositionLocal.
      */
+    @Suppress("EXPERIMENTAL_ANNOTATION_ON_WRONG_TARGET")
     @get:ExperimentalComposeUiApi
     @ExperimentalComposeUiApi
     val autofill: Autofill?
@@ -89,6 +104,8 @@ internal interface Owner {
     val density: Density
 
     val textInputService: TextInputService
+
+    val pointerIconService: PointerIconService
 
     /**
      * Provide a focus manager that controls focus within Compose.
@@ -158,9 +175,16 @@ internal interface Owner {
     fun requestFocus(): Boolean
 
     /**
-     * Iterates through all LayoutNodes that have requested layout and measures and lays them out
+     * Iterates through all LayoutNodes that have requested layout and measures and lays them out.
+     * If [sendPointerUpdate] is `true` then a simulated PointerEvent may be sent to update pointer
+     * input handlers.
      */
-    fun measureAndLayout()
+    fun measureAndLayout(sendPointerUpdate: Boolean = true)
+
+    /**
+     * Makes sure the passed [layoutNode] and its subtree is remeasured and has the final sizes.
+     */
+    fun forceMeasureTheSubtree(layoutNode: LayoutNode)
 
     /**
      * Creates an [OwnedLayer] which will be drawing the passed [drawBlock].

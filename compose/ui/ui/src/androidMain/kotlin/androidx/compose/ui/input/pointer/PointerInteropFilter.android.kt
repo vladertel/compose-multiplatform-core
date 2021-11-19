@@ -18,22 +18,32 @@ package androidx.compose.ui.input.pointer
 
 import android.os.SystemClock
 import android.view.MotionEvent
+import android.view.MotionEvent.ACTION_CANCEL
+import android.view.MotionEvent.ACTION_DOWN
+import android.view.MotionEvent.ACTION_MOVE
+import android.view.MotionEvent.ACTION_OUTSIDE
+import android.view.MotionEvent.ACTION_POINTER_DOWN
+import android.view.MotionEvent.ACTION_POINTER_UP
+import android.view.MotionEvent.ACTION_UP
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewParent
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.viewinterop.AndroidViewHolder
 
 /**
  * A special PointerInputModifier that provides access to the underlying [MotionEvent]s originally
- * dispatched to Compose.
+ * dispatched to Compose. Prefer [pointerInput] and use this only for interoperation with
+ * existing code that consumes [MotionEvent]s.
  *
  * While the main intent of this Modifier is to allow arbitrary code to access the original
  * [MotionEvent] dispatched to Compose, for completeness, analogs are provided to allow arbitrary
@@ -55,6 +65,7 @@ import androidx.compose.ui.viewinterop.AndroidViewHolder
  * @see [View.onTouchEvent]
  * @see [ViewParent.requestDisallowInterceptTouchEvent]
  */
+@ExperimentalComposeUiApi
 fun Modifier.pointerInteropFilter(
     requestDisallowInterceptTouchEvent: (RequestDisallowInterceptTouchEvent)? = null,
     onTouchEvent: (MotionEvent) -> Boolean
@@ -75,6 +86,7 @@ fun Modifier.pointerInteropFilter(
  * Function that can be passed to [pointerInteropFilter] and then later invoked which provides an
  * analog to [ViewParent.requestDisallowInterceptTouchEvent].
  */
+@ExperimentalComposeUiApi
 class RequestDisallowInterceptTouchEvent : (Boolean) -> Unit {
     internal var pointerInteropFilter: PointerInteropFilter? = null
 
@@ -87,10 +99,25 @@ class RequestDisallowInterceptTouchEvent : (Boolean) -> Unit {
  * Similar to the 2 argument overload of [pointerInteropFilter], but connects
  * directly to an [AndroidViewHolder] for more seamless interop with Android.
  */
+@ExperimentalComposeUiApi
 internal fun Modifier.pointerInteropFilter(view: AndroidViewHolder): Modifier {
     val filter = PointerInteropFilter()
     filter.onTouchEvent = { motionEvent ->
-        view.dispatchTouchEvent(motionEvent)
+        when (motionEvent.actionMasked) {
+            ACTION_DOWN,
+            ACTION_POINTER_DOWN,
+            ACTION_MOVE,
+            ACTION_UP,
+            ACTION_POINTER_UP,
+            ACTION_OUTSIDE,
+            ACTION_CANCEL -> view.dispatchTouchEvent(motionEvent)
+            // ACTION_HOVER_ENTER,
+            // ACTION_HOVER_MOVE,
+            // ACTION_HOVER_EXIT,
+            // ACTION_BUTTON_PRESS,
+            // ACTION_BUTTON_RELEASE,
+            else -> view.dispatchGenericMotionEvent(motionEvent)
+        }
     }
     val requestDisallowInterceptTouchEvent = RequestDisallowInterceptTouchEvent()
     filter.requestDisallowInterceptTouchEvent = requestDisallowInterceptTouchEvent
@@ -140,6 +167,7 @@ internal fun Modifier.pointerInteropFilter(view: AndroidViewHolder): Modifier {
  * intercept when new pointers go down. [requestDisallowInterceptTouchEvent] must be called again to
  * change that state.
  */
+@ExperimentalComposeUiApi
 internal class PointerInteropFilter : PointerInputModifier {
 
     lateinit var onTouchEvent: (MotionEvent) -> Boolean
@@ -177,35 +205,24 @@ internal class PointerInteropFilter : PointerInputModifier {
 
             private var state = DispatchToViewState.Unknown
 
+            override val shareWithSiblings
+                get() = true
+
             override fun onPointerEvent(
                 pointerEvent: PointerEvent,
                 pass: PointerEventPass,
                 bounds: IntSize
             ) {
-                val changes = pointerEvent.changes
-
-                // If we were told to disallow intercept, or if the event was a down or up event,
-                // we dispatch to Android as early as possible.  If the event is a move event and
-                // we can still intercept, we dispatch to Android after we have a chance to
-                // intercept due to movement.
-                val dispatchDuringInitialTunnel = disallowIntercept ||
-                    changes.fastAny {
-                        it.changedToDownIgnoreConsumed() || it.changedToUpIgnoreConsumed()
-                    }
-
-                if (state !== DispatchToViewState.NotDispatching) {
-                    if (pass == PointerEventPass.Initial && dispatchDuringInitialTunnel) {
+                when (pass) {
+                    PointerEventPass.Initial -> { } // Don't do anything
+                    PointerEventPass.Main -> if (state != DispatchToViewState.NotDispatching) {
                         dispatchToView(pointerEvent)
                     }
-                    if (pass == PointerEventPass.Final && !dispatchDuringInitialTunnel) {
-                        dispatchToView(pointerEvent)
-                    }
-                }
-                if (pass == PointerEventPass.Final) {
-                    // If all of the changes were up changes, then the "event stream" has ended
-                    // and we reset.
-                    if (changes.all { it.changedToUpIgnoreConsumed() }) {
-                        reset()
+                    PointerEventPass.Final -> {
+                        // If nothing is pressed, then the "event stream" has ended and we reset.
+                        if (pointerEvent.changes.fastAll { !it.pressed }) {
+                            reset()
+                        }
                     }
                 }
             }
@@ -264,7 +281,7 @@ internal class PointerInteropFilter : PointerInputModifier {
                         this.layoutCoordinates?.localToRoot(Offset.Zero)
                             ?: error("layoutCoordinates not set")
                     ) { motionEvent ->
-                        if (motionEvent.actionMasked == MotionEvent.ACTION_DOWN) {
+                        if (motionEvent.actionMasked == ACTION_DOWN) {
                             // If the action is ACTION_DOWN, we care about the return value of
                             // onTouchEvent and use it to set our initial dispatching state.
                             state = if (onTouchEvent(motionEvent)) {
@@ -283,8 +300,36 @@ internal class PointerInteropFilter : PointerInputModifier {
                         changes.fastForEach {
                             it.consumeAllChanges()
                         }
+                        pointerEvent.internalPointerEvent?.suppressMovementConsumption =
+                            !disallowIntercept
                     }
                 }
             }
         }
 }
+
+/**
+ * Calls [watcher] with each [MotionEvent] that the layout area or any child [pointerInput]
+ * receives. The [MotionEvent] may or may not have been transformed to the local coordinate system.
+ * The Compose View will be considered as handling the [MotionEvent] in the area that the
+ * [motionEventSpy] is active.
+ *
+ * This method can only be used to observe [MotionEvent]s and can not be used to capture an event
+ * stream. Use [pointerInteropFilter] to handle [MotionEvent]s and consume the events.
+ *
+ * [watcher] is called during the [PointerEventPass.Initial] pass.
+ *
+ * Developers should prefer to use [pointerInput] to handle pointer input processing within
+ * Compose. [motionEventSpy] is only useful as part of Android View interoperability.
+ */
+@ExperimentalComposeUiApi
+fun Modifier.motionEventSpy(watcher: (motionEvent: MotionEvent) -> Unit): Modifier =
+    this.pointerInput(watcher) {
+        interceptOutOfBoundsChildEvents = true
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                event.motionEvent?.let(watcher)
+            }
+        }
+    }

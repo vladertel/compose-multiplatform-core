@@ -15,8 +15,6 @@
  */
 package androidx.emoji2.text;
 
-import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
-
 import android.content.res.AssetManager;
 import android.graphics.Typeface;
 import android.util.SparseArray;
@@ -26,8 +24,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
+import androidx.core.os.TraceCompat;
 import androidx.core.util.Preconditions;
-import androidx.text.emoji.flatbuffer.MetadataList;
+import androidx.emoji2.text.flatbuffer.MetadataList;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,40 +42,28 @@ public final class MetadataRepo {
      * The default children size of the root node.
      */
     private static final int DEFAULT_ROOT_SIZE = 1024;
+    private static final String S_TRACE_CREATE_REPO = "EmojiCompat.MetadataRepo.create";
 
     /**
      * MetadataList that contains the emoji metadata.
      */
-    private final MetadataList mMetadataList;
+    private final @NonNull MetadataList mMetadataList;
 
     /**
      * char presentation of all EmojiMetadata's in a single array. All emojis we have are mapped to
      * Private Use Area A, in the range U+F0000..U+FFFFD. Therefore each emoji takes 2 chars.
      */
-    private final char[] mEmojiCharArray;
+    private final @NonNull char[] mEmojiCharArray;
 
     /**
      * Empty root node of the trie.
      */
-    private final Node mRootNode;
+    private final @NonNull Node mRootNode;
 
     /**
      * Typeface to be used to render emojis.
      */
-    private final Typeface mTypeface;
-
-    /**
-     * Constructor used for tests.
-     *
-     * @hide
-     */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
-    MetadataRepo() {
-        mTypeface = null;
-        mMetadataList = null;
-        mRootNode = new Node(DEFAULT_ROOT_SIZE);
-        mEmojiCharArray = new char[0];
-    }
+    private final @NonNull Typeface mTypeface;
 
     /**
      * Private constructor that is called by one of {@code create} methods.
@@ -94,15 +81,38 @@ public final class MetadataRepo {
     }
 
     /**
+     * Construct MetadataRepo with empty metadata.
+     *
+     * This should only be used from tests.
+     * @hide
+     */
+    @NonNull
+    @RestrictTo(RestrictTo.Scope.TESTS)
+    public static MetadataRepo create(@NonNull final Typeface typeface) {
+        try {
+            TraceCompat.beginSection(S_TRACE_CREATE_REPO);
+            return new MetadataRepo(typeface, new MetadataList());
+        } finally {
+            TraceCompat.endSection();
+        }
+    }
+
+    /**
      * Construct MetadataRepo from an input stream. The library does not close the given
      * InputStream, therefore it is caller's responsibility to properly close the stream.
      *
      * @param typeface Typeface to be used to render emojis
      * @param inputStream InputStream to read emoji metadata from
      */
+    @NonNull
     public static MetadataRepo create(@NonNull final Typeface typeface,
             @NonNull final InputStream inputStream) throws IOException {
-        return new MetadataRepo(typeface, MetadataListReader.read(inputStream));
+        try {
+            TraceCompat.beginSection(S_TRACE_CREATE_REPO);
+            return new MetadataRepo(typeface, MetadataListReader.read(inputStream));
+        } finally {
+            TraceCompat.endSection();
+        }
     }
 
     /**
@@ -112,9 +122,15 @@ public final class MetadataRepo {
      * @param typeface Typeface to be used to render emojis
      * @param byteBuffer ByteBuffer to read emoji metadata from
      */
+    @NonNull
     public static MetadataRepo create(@NonNull final Typeface typeface,
             @NonNull final ByteBuffer byteBuffer) throws IOException {
-        return new MetadataRepo(typeface, MetadataListReader.read(byteBuffer));
+        try {
+            TraceCompat.beginSection(S_TRACE_CREATE_REPO);
+            return new MetadataRepo(typeface, MetadataListReader.read(byteBuffer));
+        } finally {
+            TraceCompat.endSection();
+        }
     }
 
     /**
@@ -124,10 +140,17 @@ public final class MetadataRepo {
      * @param assetPath asset manager path of the file that the Typeface and metadata will be
      *                  created from
      */
+    @NonNull
     public static MetadataRepo create(@NonNull final AssetManager assetManager,
-            final String assetPath) throws IOException {
-        final Typeface typeface = Typeface.createFromAsset(assetManager, assetPath);
-        return new MetadataRepo(typeface, MetadataListReader.read(assetManager, assetPath));
+            @NonNull final String assetPath) throws IOException {
+        try {
+            TraceCompat.beginSection(S_TRACE_CREATE_REPO);
+            final Typeface typeface = Typeface.createFromAsset(assetManager, assetPath);
+            return new MetadataRepo(typeface,
+                    MetadataListReader.read(assetManager, assetPath));
+        } finally {
+            TraceCompat.endSection();
+        }
     }
 
     /**
@@ -148,7 +171,8 @@ public final class MetadataRepo {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @NonNull
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     Typeface getTypeface() {
         return mTypeface;
     }
@@ -156,7 +180,7 @@ public final class MetadataRepo {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     int getMetadataVersion() {
         return mMetadataList.version();
     }
@@ -164,7 +188,8 @@ public final class MetadataRepo {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @NonNull
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     Node getRootNode() {
         return mRootNode;
     }
@@ -172,7 +197,8 @@ public final class MetadataRepo {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @NonNull
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     public char[] getEmojiCharArray() {
         return mEmojiCharArray;
     }
@@ -180,7 +206,8 @@ public final class MetadataRepo {
     /**
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @NonNull
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     public MetadataList getMetadataList() {
         return mMetadataList;
     }
@@ -190,7 +217,7 @@ public final class MetadataRepo {
      *
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     @VisibleForTesting
     void put(@NonNull final EmojiMetadata data) {
         Preconditions.checkNotNull(data, "emoji metadata cannot be null");
@@ -206,7 +233,7 @@ public final class MetadataRepo {
      *
      * @hide
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     static class Node {
         private final SparseArray<Node> mChildren;
         private EmojiMetadata mData;

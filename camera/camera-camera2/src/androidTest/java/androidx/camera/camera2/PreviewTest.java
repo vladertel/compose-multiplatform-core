@@ -21,6 +21,7 @@ import static androidx.camera.testing.SurfaceTextureProvider.createSurfaceTextur
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -36,25 +37,29 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.camera.camera2.internal.compat.quirk.DeviceQuirks;
+import androidx.camera.camera2.internal.compat.quirk.SamsungPreviewTargetAspectRatioQuirk;
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraSelector;
-import androidx.camera.core.CameraX;
 import androidx.camera.core.CameraXConfig;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.Preview;
 import androidx.camera.core.SurfaceRequest;
+import androidx.camera.core.impl.Config;
 import androidx.camera.core.impl.ImageOutputConfig;
 import androidx.camera.core.impl.UseCaseConfig;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.camera.testing.CameraUtil;
+import androidx.camera.testing.CameraXUtil;
 import androidx.camera.testing.GLUtil;
 import androidx.camera.testing.SurfaceTextureProvider;
 import androidx.core.util.Consumer;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.After;
@@ -76,6 +81,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @LargeTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = 21)
 public final class PreviewTest {
 
     @Rule
@@ -97,7 +103,7 @@ public final class PreviewTest {
     public void setUp() throws ExecutionException, InterruptedException {
         mContext = ApplicationProvider.getApplicationContext();
         CameraXConfig cameraXConfig = Camera2Config.defaultConfig();
-        CameraX.initialize(mContext, cameraXConfig).get();
+        CameraXUtil.initialize(mContext, cameraXConfig).get();
 
         // init CameraX before creating Preview to get preview size with CameraX's context
         mDefaultBuilder = Preview.Builder.fromConfig(Preview.DEFAULT_CONFIG.getConfig());
@@ -116,15 +122,23 @@ public final class PreviewTest {
         }
 
         // Ensure all cameras are released for the next test
-        CameraX.shutdown().get(10000, TimeUnit.MILLISECONDS);
+        CameraXUtil.shutdown().get(10000, TimeUnit.MILLISECONDS);
     }
 
     @Test
     public void surfaceProvider_isUsedAfterSetting() {
         final Preview.SurfaceProvider surfaceProvider = mock(Preview.SurfaceProvider.class);
-        doAnswer(args -> ((SurfaceRequest) args.getArgument(0)).willNotProvideSurface()).when(
-                surfaceProvider).onSurfaceRequested(
-                any(SurfaceRequest.class));
+        doAnswer(args -> {
+            SurfaceTexture surfaceTexture = new SurfaceTexture(0);
+            surfaceTexture.setDefaultBufferSize(640, 480);
+            Surface surface = new Surface(surfaceTexture);
+            ((SurfaceRequest) args.getArgument(0)).provideSurface(surface,
+                    CameraXExecutors.directExecutor(), result -> {
+                        surfaceTexture.release();
+                        surface.release();
+                    });
+            return null;
+        }).when(surfaceProvider).onSurfaceRequested(any(SurfaceRequest.class));
 
         final Preview preview = mDefaultBuilder.build();
 
@@ -253,6 +267,9 @@ public final class PreviewTest {
                 GUARANTEED_RESOLUTION).setTargetRotation(
                 isRotateNeeded ? Surface.ROTATION_90 : Surface.ROTATION_0).build();
 
+        // Skips the test if the SamsungPreviewTargetAspectRatioQuirk is applied on the device.
+        assumeFalse(isSamsungPreviewTargetAspectRatioQuirkApplied(preview.getCurrentConfig()));
+
         // TODO(b/160261462) move off of main thread when setSurfaceProvider does not need to be
         //  done on the main thread
         mInstrumentation.runOnMainSync(() -> preview.setSurfaceProvider(getSurfaceProvider(null)));
@@ -286,6 +303,9 @@ public final class PreviewTest {
                 GUARANTEED_RESOLUTION).setTargetRotation(
                 isRotateNeeded ? Surface.ROTATION_90 : Surface.ROTATION_0).build();
 
+        // Skips the test if the SamsungPreviewTargetAspectRatioQuirk is applied on the device.
+        assumeFalse(isSamsungPreviewTargetAspectRatioQuirkApplied(preview.getCurrentConfig()));
+
         // TODO(b/160261462) move off of main thread when setSurfaceProvider does not need to be
         //  done on the main thread
         mInstrumentation.runOnMainSync(() -> preview.setSurfaceProvider(getSurfaceProvider(null)));
@@ -299,6 +319,13 @@ public final class PreviewTest {
         // whether the guaranteed resolution 640x480 is really supported for SurfaceTexture
         // format on the devices when running the test.
         assertEquals(GUARANTEED_RESOLUTION, mPreviewResolution);
+    }
+
+    private boolean isSamsungPreviewTargetAspectRatioQuirkApplied(@NonNull Config config) {
+        SamsungPreviewTargetAspectRatioQuirk samsungQuirk =
+                DeviceQuirks.get(SamsungPreviewTargetAspectRatioQuirk.class);
+
+        return samsungQuirk != null && samsungQuirk.require16_9(config);
     }
 
     @Test

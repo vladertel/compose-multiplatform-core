@@ -63,6 +63,7 @@ import androidx.media2.test.service.MockPlayer;
 import androidx.media2.test.service.MockRemotePlayer;
 import androidx.media2.test.service.RemoteMediaControllerCompat;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.FlakyTest;
 import androidx.test.filters.LargeTest;
 
 import org.junit.After;
@@ -78,6 +79,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Tests {@link SessionCallback} working with {@link MediaControllerCompat}.
  */
+@FlakyTest(bugId = 202942942)
 @RunWith(AndroidJUnit4.class)
 @LargeTest
 public class MediaSessionCallbackWithMediaControllerCompatTest extends MediaSessionTestBase {
@@ -100,7 +102,8 @@ public class MediaSessionCallbackWithMediaControllerCompatTest extends MediaSess
         super.setUp();
         final Intent sessionActivity = new Intent(mContext, MockActivity.class);
         // Create this test specific MediaSession to use our own Handler.
-        mIntent = PendingIntent.getActivity(mContext, 0, sessionActivity, 0);
+        mIntent = PendingIntent.getActivity(mContext, 0, sessionActivity,
+                Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0);
 
         mPlayer = new MockPlayer(1);
         if (mSession != null && !mSession.isClosed()) {
@@ -492,8 +495,12 @@ public class MediaSessionCallbackWithMediaControllerCompatTest extends MediaSess
         AudioAttributesCompat attrs = new AudioAttributesCompat.Builder()
                 .setLegacyStreamType(stream)
                 .build();
-        mPlayer.setAudioAttributes(attrs);
-        mSession.updatePlayer(mPlayer);
+        MockPlayer player = new MockPlayer(0);
+        player.setAudioAttributes(attrs);
+
+        // Replace with another player rather than setting the audio attribute of the existing
+        // player for making changes to take effect immediately.
+        mSession.updatePlayer(player);
 
         final int originalVolume = mAudioManager.getStreamVolume(stream);
         final int targetVolume = originalVolume == minVolume
@@ -534,8 +541,11 @@ public class MediaSessionCallbackWithMediaControllerCompatTest extends MediaSess
         AudioAttributesCompat attrs = new AudioAttributesCompat.Builder()
                 .setLegacyStreamType(stream)
                 .build();
-        mPlayer.setAudioAttributes(attrs);
-        mSession.updatePlayer(mPlayer);
+        MockPlayer player = new MockPlayer(0);
+        player.setAudioAttributes(attrs);
+        // Replace with another player rather than setting the audio attribute of the existing
+        // player for making changes to take effect immediately.
+        mSession.updatePlayer(player);
 
         final int originalVolume = mAudioManager.getStreamVolume(stream);
         final int direction = originalVolume == minVolume

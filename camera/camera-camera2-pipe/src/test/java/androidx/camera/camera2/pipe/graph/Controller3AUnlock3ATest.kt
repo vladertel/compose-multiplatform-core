@@ -16,6 +16,7 @@
 
 package androidx.camera.camera2.pipe.graph
 
+import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.os.Build
@@ -24,12 +25,14 @@ import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.RequestNumber
 import androidx.camera.camera2.pipe.Result3A
 import androidx.camera.camera2.pipe.StreamId
+import androidx.camera.camera2.pipe.testing.FakeCameraMetadata
 import androidx.camera.camera2.pipe.testing.FakeFrameMetadata
 import androidx.camera.camera2.pipe.testing.FakeGraphProcessor
 import androidx.camera.camera2.pipe.testing.FakeRequestMetadata
 import androidx.camera.camera2.pipe.testing.FakeRequestProcessor
 import androidx.camera.camera2.pipe.testing.RobolectricCameraPipeTestRunner
 import com.google.common.truth.Truth
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -46,8 +49,20 @@ internal class Controller3AUnlock3ATest {
     private val graphProcessor = FakeGraphProcessor(graphState3A = graphState3A)
     private val requestProcessor = FakeRequestProcessor()
     private val listener3A = Listener3A()
-    private val controller3A = Controller3A(graphProcessor, graphState3A, listener3A)
+    private val fakeMetadata = FakeCameraMetadata(
+        mapOf(
+            CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES to
+                intArrayOf(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+        ),
+    )
+    private val controller3A = Controller3A(
+        graphProcessor,
+        fakeMetadata,
+        graphState3A,
+        listener3A
+    )
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testUnlockAe(): Unit = runBlocking {
         initGraphProcessor()
@@ -107,10 +122,11 @@ internal class Controller3AUnlock3ATest {
         }
 
         val result3A = result.await()
-        Truth.assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        Truth.assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         Truth.assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testUnlockAf(): Unit = runBlocking {
         initGraphProcessor()
@@ -168,10 +184,11 @@ internal class Controller3AUnlock3ATest {
         }
 
         val result3A = result.await()
-        Truth.assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        Truth.assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         Truth.assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testUnlockAwb(): Unit = runBlocking {
         initGraphProcessor()
@@ -231,10 +248,11 @@ internal class Controller3AUnlock3ATest {
         }
 
         val result3A = result.await()
-        Truth.assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        Truth.assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         Truth.assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testUnlockAeAf(): Unit = runBlocking {
         initGraphProcessor()
@@ -298,8 +316,25 @@ internal class Controller3AUnlock3ATest {
         }
 
         val result3A = result.await()
-        Truth.assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        Truth.assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         Truth.assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    @Test
+    fun testUnlockAfWhenAfNotSupported(): Unit = runBlocking {
+        initGraphProcessor()
+
+        val fakeMetadata = FakeCameraMetadata(
+            mapOf(
+                CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES to
+                    intArrayOf(CaptureRequest.CONTROL_AF_MODE_OFF)
+            ),
+        )
+        val controller3A = Controller3A(graphProcessor, fakeMetadata, graphState3A, listener3A)
+        val result = controller3A.unlock3A(af = true).await()
+        Truth.assertThat(result.status).isEqualTo(Result3A.Status.OK)
+        Truth.assertThat(result.frameMetadata).isEqualTo(null)
     }
 
     private fun initGraphProcessor() {

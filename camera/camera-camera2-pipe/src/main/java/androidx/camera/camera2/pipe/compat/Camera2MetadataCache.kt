@@ -20,8 +20,10 @@ import android.content.Context
 import android.hardware.camera2.CameraManager
 import android.util.ArrayMap
 import androidx.annotation.GuardedBy
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraMetadata
+import androidx.camera.camera2.pipe.CameraPipe
 import androidx.camera.camera2.pipe.core.Debug
 import androidx.camera.camera2.pipe.core.Log
 import androidx.camera.camera2.pipe.core.Timestamps
@@ -34,21 +36,23 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Provides caching and querying of CameraMetadata.
+ * Provides caching and querying of [CameraMetadata] via Camera2.
  *
- * This class is designed to be thread safe and provides suspend functions for querying and
- * accessing CameraMetadata.
+ * This class is thread safe and provides suspending functions for querying and accessing
+ * [CameraMetadata].
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @Singleton
 internal class Camera2MetadataCache @Inject constructor(
     private val context: Context,
     private val threads: Threads,
-    private val permissions: Permissions
-) {
+    private val permissions: Permissions,
+    private val cameraMetadataConfig: CameraPipe.CameraMetadataConfig
+) : CameraMetadataProvider {
     @GuardedBy("cache")
     private val cache = ArrayMap<String, CameraMetadata>()
 
-    suspend fun get(cameraId: CameraId): CameraMetadata {
+    override suspend fun getMetadata(cameraId: CameraId): CameraMetadata {
         synchronized(cache) {
             val existing = cache[cameraId.value]
             if (existing != null) {
@@ -62,8 +66,8 @@ internal class Camera2MetadataCache @Inject constructor(
         }
     }
 
-    fun awaitMetadata(cameraId: CameraId): CameraMetadata {
-        return Debug.trace("awaitMetadata") {
+    override fun awaitMetadata(cameraId: CameraId): CameraMetadata {
+        return Debug.trace("Camera-${cameraId.value}#awaitMetadata") {
             synchronized(cache) {
                 val existing = cache[cameraId.value]
                 if (existing != null) {
@@ -81,14 +85,31 @@ internal class Camera2MetadataCache @Inject constructor(
     private fun createCameraMetadata(cameraId: CameraId, redacted: Boolean): Camera2CameraMetadata {
         val start = Timestamps.now()
 
-        return Debug.trace("CameraCharacteristics_$cameraId") {
+        return Debug.trace("Camera-${cameraId.value}#readCameraMetadata") {
             try {
                 val cameraManager =
                     context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
                 val characteristics =
                     cameraManager.getCameraCharacteristics(cameraId.value)
+
+                // Merge the camera specific and global cache blocklists together.
+                // this will prevent these values from being cached after first access.
+                val cameraBlocklist = cameraMetadataConfig.cameraCacheBlocklist[cameraId]
+                val cacheBlocklist = if (cameraBlocklist == null) {
+                    cameraMetadataConfig.cacheBlocklist
+                } else {
+                    cameraMetadataConfig.cacheBlocklist + cameraBlocklist
+                }
+
                 val cameraMetadata =
-                    Camera2CameraMetadata(cameraId, redacted, characteristics, emptyMap())
+                    Camera2CameraMetadata(
+                        cameraId,
+                        redacted,
+                        characteristics,
+                        this,
+                        emptyMap(),
+                        cacheBlocklist
+                    )
 
                 Log.info {
                     val duration = Timestamps.now() - start
@@ -101,7 +122,7 @@ internal class Camera2MetadataCache @Inject constructor(
 
                 return@trace cameraMetadata
             } catch (e: Throwable) {
-                throw IllegalStateException("Failed to load metadata for $cameraId", e)
+                throw IllegalStateException("Failed to load metadata for $cameraId!", e)
             }
         }
     }

@@ -16,6 +16,7 @@
 
 package androidx.webkit;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
@@ -131,6 +132,7 @@ public class WebViewFeature {
      * {@link androidx.webkit.WebSettingsCompat#getDisabledActionModeMenuItems(WebSettings)}, and
      * {@link androidx.webkit.WebSettingsCompat#setDisabledActionModeMenuItems(WebSettings, int)}.
      */
+    @SuppressLint("IntentName") // False positive: this constant is not to be used for Intents.
     public static final String DISABLED_ACTION_MODE_MENU_ITEMS =
             "DISABLED_ACTION_MODE_MENU_ITEMS";
 
@@ -447,21 +449,14 @@ public class WebViewFeature {
      * Feature for {@link #isFeatureSupported(String)}.
      * This feature covers {@link WebViewCompat#addDocumentStartJavaScript(android.webkit.WebView,
      * String, Set)}.
-     *
-     * TODO(ctzsm): unhide when ready.
-     * @hide
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public static final String DOCUMENT_START_SCRIPT = "DOCUMENT_START_SCRIPT";
 
     /**
      * Feature for {@link #isFeatureSupported(String)}.
-     * This feature covers {@link androidx.webkit.ProxyConfig.Builder.setReverseBypass(boolean)}
-     *
-     * TODO(laisminchillo): unhide when ready.
-     * @hide
+     * This feature covers
+     * {@link androidx.webkit.ProxyConfig.Builder#setReverseBypassEnabled(boolean)}
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public static final String PROXY_OVERRIDE_REVERSE_BYPASS = "PROXY_OVERRIDE_REVERSE_BYPASS";
 
     /**

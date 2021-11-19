@@ -28,6 +28,7 @@ import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.RequestNumber
 import androidx.camera.camera2.pipe.Result3A
 import androidx.camera.camera2.pipe.StreamId
+import androidx.camera.camera2.pipe.testing.FakeCameraMetadata
 import androidx.camera.camera2.pipe.testing.FakeFrameMetadata
 import androidx.camera.camera2.pipe.testing.FakeGraphProcessor
 import androidx.camera.camera2.pipe.testing.FakeRequestMetadata
@@ -35,6 +36,7 @@ import androidx.camera.camera2.pipe.testing.FakeRequestProcessor
 import androidx.camera.camera2.pipe.testing.RobolectricCameraPipeTestRunner
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -50,7 +52,12 @@ internal class Controller3AUpdate3ATest {
     private val graphProcessor = FakeGraphProcessor(graphState3A = graphState3A)
     private val requestProcessor = FakeRequestProcessor()
     private val listener3A = Listener3A()
-    private val controller3A = Controller3A(graphProcessor, graphState3A, listener3A)
+    private val controller3A = Controller3A(
+        graphProcessor,
+        FakeCameraMetadata(),
+        graphState3A,
+        listener3A
+    )
 
     @Test
     fun testUpdate3AUpdatesState3A() {
@@ -73,6 +80,7 @@ internal class Controller3AUpdate3ATest {
         assertThat(result.getCompletionExceptionOrNull() is CancellationException)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testAfModeUpdate(): Unit = runBlocking {
         initGraphProcessor()
@@ -96,10 +104,11 @@ internal class Controller3AUpdate3ATest {
             )
         }
         val result3A = result.await()
-        assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testAeModeUpdate(): Unit = runBlocking {
         initGraphProcessor()
@@ -124,10 +133,11 @@ internal class Controller3AUpdate3ATest {
             )
         }
         val result3A = result.await()
-        assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testAwbModeUpdate(): Unit = runBlocking {
         initGraphProcessor()
@@ -152,10 +162,11 @@ internal class Controller3AUpdate3ATest {
             )
         }
         val result3A = result.await()
-        assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testAfRegionsUpdate(): Unit = runBlocking {
         initGraphProcessor()
@@ -180,10 +191,11 @@ internal class Controller3AUpdate3ATest {
             )
         }
         val result3A = result.await()
-        assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testAeRegionsUpdate(): Unit = runBlocking {
         initGraphProcessor()
@@ -208,10 +220,11 @@ internal class Controller3AUpdate3ATest {
             )
         }
         val result3A = result.await()
-        assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testAwbRegionsUpdate(): Unit = runBlocking {
         initGraphProcessor()
@@ -240,7 +253,7 @@ internal class Controller3AUpdate3ATest {
             )
         }
         val result3A = result.await()
-        assertThat(result3A.frameNumber.value).isEqualTo(101L)
+        assertThat(result3A.frameMetadata!!.frameNumber.value).isEqualTo(101L)
         assertThat(result3A.status).isEqualTo(Result3A.Status.OK)
     }
 

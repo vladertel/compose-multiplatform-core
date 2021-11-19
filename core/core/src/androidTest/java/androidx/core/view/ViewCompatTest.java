@@ -54,6 +54,7 @@ import androidx.test.filters.LargeTest;
 import androidx.test.filters.SdkSuppress;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -282,12 +283,8 @@ public class ViewCompatTest extends BaseInstrumentationTestCase<ViewCompatActivi
         final View view = mActivityTestRule.getActivity().findViewById(R.id.container);
 
         // Set an OnApplyWindowInsetsListener which returns consumed insets
-        ViewCompat.setOnApplyWindowInsetsListener(view, new OnApplyWindowInsetsListener() {
-            @Override
-            public WindowInsetsCompat onApplyWindowInsets(View v, WindowInsetsCompat insets) {
-                return insets.consumeSystemWindowInsets();
-            }
-        });
+        ViewCompat.setOnApplyWindowInsetsListener(view,
+                (v, insets) -> insets.consumeSystemWindowInsets());
 
         // Now create an inset instance and dispatch it to the view
         final WindowInsetsCompat insets = new WindowInsetsCompat.Builder()
@@ -316,6 +313,7 @@ public class ViewCompatTest extends BaseInstrumentationTestCase<ViewCompatActivi
                 bundleCaptor.getValue().getInt(ACTION_ARGUMENT_PRESS_AND_HOLD_DURATION_MILLIS_INT));
     }
 
+    @Ignore
     @Test
     public void testGetWindowInsetsController_UnwrapsContextWrappers()
             throws Throwable {

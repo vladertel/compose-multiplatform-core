@@ -29,6 +29,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.car.app.IOnDoneCallback;
 import androidx.car.app.OnDoneCallback;
+import androidx.car.app.annotations.CarProtocol;
 import androidx.car.app.model.Toggle.OnCheckedChangeListener;
 import androidx.car.app.utils.RemoteUtils;
 
@@ -38,6 +39,7 @@ import androidx.car.app.utils.RemoteUtils;
  * @hide
  */
 @RestrictTo(LIBRARY)
+@CarProtocol
 public class OnCheckedChangeDelegateImpl implements OnCheckedChangeDelegate {
 
     @Keep
@@ -80,9 +82,11 @@ public class OnCheckedChangeDelegateImpl implements OnCheckedChangeDelegate {
 
         @Override
         public void onCheckedChange(boolean isChecked, IOnDoneCallback callback) {
-            RemoteUtils.dispatchHostCall(
-                    () -> mListener.onCheckedChange(isChecked), callback,
-                    "onCheckedChange");
+            RemoteUtils.dispatchCallFromHost(callback, "onCheckedChange", () -> {
+                        mListener.onCheckedChange(isChecked);
+                        return null;
+                    }
+            );
         }
     }
 }

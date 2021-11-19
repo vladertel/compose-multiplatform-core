@@ -21,6 +21,7 @@ import android.hardware.camera2.CameraMetadata;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.internal.compat.CameraAccessExceptionCompat;
 import androidx.camera.camera2.internal.compat.CameraManagerCompat;
 import androidx.camera.core.CameraInfo;
@@ -33,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class CameraSelectionOptimizer {
     private CameraSelectionOptimizer() {
     }
@@ -53,9 +55,16 @@ class CameraSelectionOptimizer {
             }
 
             // Skip camera ID by heuristic: 0 is back lens facing, 1 is front lens facing.
-            Integer lensFacingInteger = availableCamerasSelector.getLensFacing();
-            String skippedCameraId = decideSkippedCameraIdByHeuristic(
-                    cameraFactory.getCameraManager(), lensFacingInteger, cameraIdList);
+            String skippedCameraId;
+            try {
+                Integer lensFacingInteger = availableCamerasSelector.getLensFacing();
+                skippedCameraId = decideSkippedCameraIdByHeuristic(
+                        cameraFactory.getCameraManager(), lensFacingInteger, cameraIdList);
+            } catch (IllegalStateException e) {
+                // Don't skip camera if there is any conflict in camera lens facing.
+                skippedCameraId = null;
+            }
+
             List<CameraInfo> cameraInfos = new ArrayList<>();
 
             for (String id : cameraIdList) {
@@ -66,17 +75,12 @@ class CameraSelectionOptimizer {
                 cameraInfos.add(cameraInfo);
             }
 
-            try {
-                List<CameraInfo> filteredCameraInfos =
-                        availableCamerasSelector.filter(cameraInfos);
+            List<CameraInfo> filteredCameraInfos =
+                    availableCamerasSelector.filter(cameraInfos);
 
-                for (CameraInfo cameraInfo : filteredCameraInfos) {
-                    String cameraId = ((CameraInfoInternal) cameraInfo).getCameraId();
-                    availableCameraIds.add(cameraId);
-                }
-            } catch (IllegalArgumentException e) {
-                // Return empty available id list if no camera is found.
-                return availableCameraIds;
+            for (CameraInfo cameraInfo : filteredCameraInfos) {
+                String cameraId = ((CameraInfoInternal) cameraInfo).getCameraId();
+                availableCameraIds.add(cameraId);
             }
 
             return availableCameraIds;

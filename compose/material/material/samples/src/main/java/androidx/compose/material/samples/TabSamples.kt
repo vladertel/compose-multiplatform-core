@@ -43,6 +43,7 @@ import androidx.compose.material.Tab
 import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material.TabPosition
 import androidx.compose.material.TabRow
+import androidx.compose.material.LeadingIconTab
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -123,6 +124,33 @@ fun TextAndIconTabs() {
         Text(
             modifier = Modifier.align(Alignment.CenterHorizontally),
             text = "Text and icon tab ${state + 1} selected",
+            style = MaterialTheme.typography.body1
+        )
+    }
+}
+
+@Composable
+fun LeadingIconTabs() {
+    var state by remember { mutableStateOf(0) }
+    val titlesAndIcons = listOf(
+        "TAB" to Icons.Filled.Favorite,
+        "TAB & ICON" to Icons.Filled.Favorite,
+        "TAB 3 WITH LOTS OF TEXT" to Icons.Filled.Favorite
+    )
+    Column {
+        TabRow(selectedTabIndex = state) {
+            titlesAndIcons.forEachIndexed { index, (title, icon) ->
+                LeadingIconTab(
+                    text = { Text(title) },
+                    icon = { Icon(icon, contentDescription = null) },
+                    selected = state == index,
+                    onClick = { state = index }
+                )
+            }
+        }
+        Text(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            text = "Leading icon tab ${state + 1} selected",
             style = MaterialTheme.typography.body1
         )
     }

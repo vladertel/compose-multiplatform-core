@@ -87,6 +87,9 @@ internal class NestedScrollDelegatingWrapper(
             localLastModifier.connection !== modifier.connection ||
             localLastModifier.dispatcher !== modifier.dispatcher
         if (modifierChanged && isAttached) {
+            // Note: This optimization assumes that the NestedScrollWrappers are always in the same
+            // order. ie. Modifier.nestedScroll(connection1).nestedScroll(connection2) will never be
+            // Modifier.nestedScroll(connection2).nestedScroll(connection1) after recomposition.
             val parent = super.findPreviousNestedScrollWrapper()
             parentConnection = parent?.childScrollConnection
             coroutineScopeEvaluation = parent?.coroutineScopeEvaluation ?: coroutineScopeEvaluation
@@ -110,10 +113,21 @@ internal class NestedScrollDelegatingWrapper(
         } else {
             loopChildrenForNestedScroll(layoutNode._children)
         }
+        // we have done DFS collection, the 0 index is the outer child
+        val outerChild =
+            if (nestedScrollChildrenResult.isNotEmpty()) nestedScrollChildrenResult[0] else null
         nestedScrollChildrenResult.forEach {
             it.parentConnection = newParent
             it.coroutineScopeEvaluation =
-                { this.coroutineScopeEvaluation.invoke() }
+                if (newParent != null) {
+                    // if new parent exists - take its scope
+                    { this.coroutineScopeEvaluation.invoke() }
+                } else {
+                    {
+                        // if no parent above - take most outer child's origin scope
+                        outerChild?.modifier?.dispatcher?.originNestedScrollScope
+                    }
+                }
         }
     }
 

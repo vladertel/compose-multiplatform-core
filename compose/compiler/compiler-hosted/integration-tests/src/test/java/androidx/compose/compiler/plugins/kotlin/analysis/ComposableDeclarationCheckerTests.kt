@@ -120,7 +120,7 @@ class ComposableDeclarationCheckerTests : AbstractComposeDiagnosticsTest() {
                 val composableLambda = @Composable {}
                 acceptSuspend <!TYPE_MISMATCH!>@Composable {}<!>
                 acceptComposableSuspend @Composable {}
-                acceptComposableSuspend(<!UNSUPPORTED_FEATURE!>composableLambda<!>)
+                acceptComposableSuspend(composableLambda)
                 acceptSuspend(<!COMPOSABLE_SUSPEND_FUN, TYPE_MISMATCH!>@Composable suspend fun() { }<!>)
             }
         """
@@ -208,6 +208,50 @@ class ComposableDeclarationCheckerTests : AbstractComposeDiagnosticsTest() {
             import androidx.compose.runtime.Composable
             @Composable fun foo() { }
             val composable: @Composable ()->Unit = if(true) { { } } else { { foo() } }
+        """
+        )
+    }
+
+    fun testInterfaceComposablesWithDefaultParameters() {
+        doTest(
+            """
+            import androidx.compose.runtime.Composable
+            interface A {
+                @Composable fun foo(x: Int = <!ABSTRACT_COMPOSABLE_DEFAULT_PARAMETER_VALUE!>0<!>)
+            }
+        """
+        )
+    }
+
+    fun testAbstractComposablesWithDefaultParameters() {
+        doTest(
+            """
+            import androidx.compose.runtime.Composable
+            abstract class A {
+                @Composable abstract fun foo(x: Int = <!ABSTRACT_COMPOSABLE_DEFAULT_PARAMETER_VALUE!>0<!>)
+            }
+        """
+        )
+    }
+
+    fun testInterfaceComposablesWithoutDefaultParameters() {
+        doTest(
+            """
+            import androidx.compose.runtime.Composable
+            interface A {
+                @Composable fun foo(x: Int)
+            }
+        """
+        )
+    }
+
+    fun testAbstractComposablesWithoutDefaultParameters() {
+        doTest(
+            """
+            import androidx.compose.runtime.Composable
+            abstract class A {
+                @Composable abstract fun foo(x: Int)
+            }
         """
         )
     }

@@ -17,6 +17,7 @@
 package androidx.compose.compiler.plugins.kotlin
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtilRt
 import com.intellij.openapi.vfs.CharsetToolkit
 import com.intellij.psi.PsiFileFactory
@@ -80,13 +81,14 @@ abstract class AbstractCodegenTest : AbstractCompilerTest() {
             """
            @file:OptIn(
              InternalComposeApi::class,
-             ComposeCompilerApi::class
            )
            package test
 
            import androidx.compose.runtime.*
 
            $src
+
+            fun used(x: Any?) {}
         """,
             fileName, dumpClasses
         )
@@ -263,4 +265,8 @@ fun createFile(name: String, text: String, project: Project): KtFile {
     val factory = PsiFileFactory.getInstance(project) as PsiFileFactoryImpl
 
     return factory.trySetupPsiForFile(virtualFile, KotlinLanguage.INSTANCE, true, false) as KtFile
+}
+
+fun tmpDir(name: String): File {
+    return FileUtil.createTempDirectory(name, "", false).canonicalFile
 }

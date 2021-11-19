@@ -17,12 +17,15 @@ package androidx.camera.integration.core
 
 import android.Manifest
 import android.app.Instrumentation
+import android.content.Context
 import androidx.camera.core.CameraSelector
+import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.testing.CameraUtil
 import androidx.camera.testing.CoreAppTestUtil
 import androidx.lifecycle.Lifecycle.State.CREATED
 import androidx.lifecycle.Lifecycle.State.RESUMED
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.matcher.ViewMatchers
@@ -31,16 +34,18 @@ import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import androidx.test.uiautomator.UiDevice
+import androidx.testutils.RepeatRule
 import androidx.testutils.withActivity
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
 import org.junit.runner.RunWith
+import java.util.concurrent.TimeUnit
 
 private const val HOME_TIMEOUT_MS = 3000L
 private const val ROTATE_TIMEOUT_MS = 2000L
@@ -61,6 +66,16 @@ class ExistingActivityLifecycleTest {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.RECORD_AUDIO
         )
+
+    companion object {
+        @AfterClass
+        @JvmStatic
+        fun shutdownCameraX() {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val cameraProvider = ProcessCameraProvider.getInstance(context)[10, TimeUnit.SECONDS]
+            cameraProvider.shutdown()[10, TimeUnit.SECONDS]
+        }
+    }
 
     @Before
     fun setup() {
@@ -87,6 +102,7 @@ class ExistingActivityLifecycleTest {
 
     // Check if Preview screen is updated or not, after Destroy-Create lifecycle.
     @Test
+    @RepeatRule.Repeat(times = 5)
     fun checkPreviewUpdatedAfterDestroyRecreate() {
         with(ActivityScenario.launch(CameraXActivity::class.java)) { // Launch activity.
             use { // Ensure ActivityScenario is cleaned up properly
@@ -101,6 +117,7 @@ class ExistingActivityLifecycleTest {
 
     // Check if Preview screen is updated or not, after Stop-Resume lifecycle.
     @Test
+    @RepeatRule.Repeat(times = 5)
     fun checkPreviewUpdatedAfterStopResume() {
         with(ActivityScenario.launch(CameraXActivity::class.java)) { // Launch activity.
             use { // Ensure ActivityScenario is cleaned up properly
@@ -130,6 +147,7 @@ class ExistingActivityLifecycleTest {
     // Check if Preview screen is updated or not, after toggling camera,
     // then a Destroy-Create lifecycle.
     @Test
+    @RepeatRule.Repeat(times = 5)
     fun checkPreviewUpdatedAfterToggleCameraAndStopResume() = runBlocking {
         // check have front camera
         Assume.assumeTrue(
@@ -147,11 +165,6 @@ class ExistingActivityLifecycleTest {
                 Espresso.onView(ViewMatchers.withId(R.id.direction_toggle))
                     .perform(ViewActions.click())
 
-                // TODO(b/159257773): Currently have no reliable way of checking that camera has
-                //  switched. Delay to ensure previous camera has stopped streaming and the
-                //  idling resource actually is becoming idle due to frames from front camera.
-                delay(500)
-
                 // Check front camera is now idle
                 withActivity { resetViewIdlingResource() }
                 waitForViewfinderIdle()
@@ -167,6 +180,7 @@ class ExistingActivityLifecycleTest {
 
     // Check if Preview screen is updated or not, after rotate device, and Stop-Resume lifecycle.
     @Test
+    @RepeatRule.Repeat(times = 5)
     fun checkPreviewUpdatedAfterRotateDeviceAndStopResume() {
         with(ActivityScenario.launch(CameraXActivity::class.java)) { // Launch activity.
             use { // Ensure ActivityScenario is cleaned up properly

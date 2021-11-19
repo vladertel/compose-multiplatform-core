@@ -21,15 +21,28 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Build
+import android.view.MotionEvent
+import android.view.MotionEvent.ACTION_DOWN
+import android.view.MotionEvent.ACTION_HOVER_ENTER
+import android.view.MotionEvent.ACTION_HOVER_EXIT
+import android.view.MotionEvent.ACTION_HOVER_MOVE
+import android.view.MotionEvent.ACTION_MOVE
+import android.view.MotionEvent.ACTION_POINTER_DOWN
+import android.view.MotionEvent.ACTION_POINTER_UP
+import android.view.MotionEvent.ACTION_UP
 import android.view.View
 import android.view.View.MeasureSpec
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Applier
@@ -42,10 +55,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.testutils.assertPixels
 import androidx.compose.ui.Align
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.anyChangeConsumed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -54,16 +71,20 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.node.ComposeUiNode
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.Owner
 import androidx.compose.ui.node.Ref
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.TestActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -76,6 +97,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withClassName
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
+import com.google.common.truth.Truth.assertThat
 import junit.framework.TestCase.assertNotNull
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.allOf
@@ -88,6 +110,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 /**
@@ -98,6 +122,8 @@ import kotlin.math.roundToInt
 class AndroidViewCompatTest {
     @get:Rule
     val rule = createAndroidComposeRule<TestActivity>()
+
+    private val tag = "TestTag"
 
     @Test
     fun simpleLayoutTest() {
@@ -397,6 +423,72 @@ class AndroidViewCompatTest {
         }
     }
 
+    // Intrinsic measurements.
+
+    @Test
+    fun testIntrinsicMeasurement() {
+        var obtainedWidthMeasureSpec: Int = -1
+        var obtainedHeightMeasureSpec: Int = -1
+        class MeasureSpecsSaver(context: Context) : View(context) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                obtainedWidthMeasureSpec = widthMeasureSpec
+                obtainedHeightMeasureSpec = heightMeasureSpec
+                setMeasuredDimension(20, 40)
+            }
+        }
+        rule.setContent {
+            Layout(
+                content = {
+                    AndroidView(::MeasureSpecsSaver)
+                }
+            ) { measurables, _ ->
+                val view = measurables.first()
+                assertEquals(20, view.minIntrinsicWidth(70))
+                assertEquals(MeasureSpec.UNSPECIFIED, MeasureSpec.getMode(obtainedWidthMeasureSpec))
+                assertEquals(
+                    MeasureSpec.makeMeasureSpec(70, MeasureSpec.AT_MOST),
+                    obtainedHeightMeasureSpec
+                )
+                assertEquals(20, view.maxIntrinsicWidth(80))
+                assertEquals(MeasureSpec.UNSPECIFIED, MeasureSpec.getMode(obtainedWidthMeasureSpec))
+                assertEquals(
+                    MeasureSpec.makeMeasureSpec(80, MeasureSpec.AT_MOST),
+                    obtainedHeightMeasureSpec
+                )
+                assertEquals(40, view.minIntrinsicHeight(70))
+                assertEquals(
+                    MeasureSpec.makeMeasureSpec(70, MeasureSpec.AT_MOST),
+                    obtainedWidthMeasureSpec
+                )
+                assertEquals(
+                    MeasureSpec.UNSPECIFIED,
+                    MeasureSpec.getMode(obtainedHeightMeasureSpec)
+                )
+                assertEquals(40, view.minIntrinsicHeight(80))
+                assertEquals(
+                    MeasureSpec.makeMeasureSpec(80, MeasureSpec.AT_MOST),
+                    obtainedWidthMeasureSpec
+                )
+                assertEquals(
+                    MeasureSpec.UNSPECIFIED,
+                    MeasureSpec.getMode(obtainedHeightMeasureSpec)
+                )
+                view.measure(Constraints(maxWidth = 50, maxHeight = 50))
+                assertEquals(
+                    MeasureSpec.makeMeasureSpec(50, MeasureSpec.AT_MOST),
+                    obtainedWidthMeasureSpec
+                )
+                assertEquals(
+                    MeasureSpec.makeMeasureSpec(50, MeasureSpec.AT_MOST),
+                    obtainedHeightMeasureSpec
+                )
+                layout(0, 0) {}
+            }
+        }
+    }
+
+    // Other tests.
+
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun testRedrawing_onSubsequentRemeasuring() {
@@ -610,6 +702,240 @@ class AndroidViewCompatTest {
         }
     }
 
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    fun testMove_withoutRedraw() {
+        var offset by mutableStateOf(0)
+        rule.setContent {
+            Box(Modifier.testTag("box").fillMaxSize()) {
+                val offsetDp = with(rule.density) { offset.toDp() }
+                Box(Modifier.offset(offsetDp, offsetDp)) {
+                    AndroidView(::ColoredSquareView, Modifier.graphicsLayer())
+                }
+            }
+        }
+        val offsetColorProvider: (IntOffset) -> Color? = {
+            if (it.x >= offset && it.x < offset + 100 && it.y >= offset && it.y < offset + 100) {
+                Color.Blue
+            } else {
+                null
+            }
+        }
+        rule.onNodeWithTag("box").captureToImage()
+            .assertPixels(expectedColorProvider = offsetColorProvider)
+        rule.runOnUiThread {
+            offset = 100
+        }
+        rule.onNodeWithTag("box").captureToImage()
+            .assertPixels(expectedColorProvider = offsetColorProvider)
+    }
+
+    @Test
+    fun testInvalidationsDuringDraw_withLayerInBetween() {
+        var view: InvalidateDuringComputeScroll? = null
+        rule.setContent {
+            val context = LocalContext.current
+            view = remember { InvalidateDuringComputeScroll(context) }
+            // Note having a graphics layer here will cause the updateDisplayList to not happen
+            // in the initial redraw traversal.
+            AndroidView(factory = { view!! }, modifier = Modifier.graphicsLayer().graphicsLayer())
+        }
+
+        val invalidatesDuringScroll = 4
+        rule.runOnIdle {
+            view!!.apply {
+                draws = 0
+                this.invalidatesDuringScroll = invalidatesDuringScroll
+                invalidate()
+            }
+        }
+
+        rule.runOnIdle { assertEquals(invalidatesDuringScroll + 1, view!!.draws) }
+    }
+
+    @Test
+    fun testInvalidationsDuringDraw_sameLayerAsAndroidComposeView() {
+        var view: InvalidateDuringComputeScroll? = null
+        rule.setContent {
+            val context = LocalContext.current
+            view = remember { InvalidateDuringComputeScroll(context) }
+            AndroidView(factory = { view!! })
+        }
+
+        val invalidatesDuringScroll = 4
+        rule.runOnIdle {
+            view!!.apply {
+                draws = 0
+                this.invalidatesDuringScroll = invalidatesDuringScroll
+                invalidate()
+            }
+        }
+
+        rule.runOnIdle { assertEquals(invalidatesDuringScroll + 1, view!!.draws) }
+    }
+
+    @Test
+    fun viewGetsEventsBeforeParent() {
+        val parentEvents = mutableListOf<Pair<PointerEventType, Boolean>>()
+        val viewEvents = mutableListOf<Int>()
+        rule.setContent {
+            Box(Modifier.fillMaxSize().pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        parentEvents += event.type to event.changes.any { it.anyChangeConsumed() }
+                    }
+                }
+            }) {
+                AndroidView(
+                    factory = { context ->
+                        object : View(context) {
+                            override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+                                viewEvents += event.actionMasked
+                                return true
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize().testTag("Tag")
+                )
+            }
+        }
+
+        rule.onNodeWithTag("Tag").performTouchInput {
+            down(Offset.Zero)
+            moveTo(Offset(10f, 10f))
+            up()
+        }
+
+        rule.runOnIdle {
+            assertThat(viewEvents).containsExactly(
+                ACTION_DOWN,
+                ACTION_MOVE,
+                ACTION_UP
+            )
+            assertThat(parentEvents).containsExactly(
+                PointerEventType.Press to true,
+                PointerEventType.Move to true,
+                PointerEventType.Release to true
+            )
+        }
+    }
+
+    @Test
+    fun testWebViewIsRelaidOut_afterPageLoad() {
+        var boxY = 0
+        var pageFinished = false
+        val latch = CountDownLatch(2)
+        rule.setContent {
+            Column {
+                AndroidView(
+                    factory = {
+                        val webView = WebView(it)
+                        webView.webViewClient = object : WebViewClient() {
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                latch.countDown()
+                                pageFinished = true
+                            }
+                        }
+                        webView.loadData("This is a test text", "text/html", "UTF-8")
+                        webView
+                    },
+                    modifier = Modifier.drawBehind {
+                        // We would like to use onPageCommitVisible instead of onPageFinished,
+                        // such that this modifier would not be needed at all, but
+                        // onPageCommitVisible was only added in API 23.
+                        if (pageFinished) latch.countDown()
+                    }
+                )
+                Box(Modifier.onGloballyPositioned { boxY = it.positionInRoot().y.roundToInt() })
+            }
+        }
+        assertTrue(latch.await(3, TimeUnit.SECONDS))
+        rule.runOnIdle { assertTrue(boxY > 0) }
+    }
+
+    @Test
+    fun testView_isNotLayoutRequested_afterFirstLayout() {
+        var view: View? = null
+
+        rule.setContent {
+            AndroidView(
+                factory = { context ->
+                    View(context).also { view = it }
+                }
+            )
+        }
+
+        rule.runOnIdle {
+            assertFalse(view!!.isLayoutRequested)
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun hoverEventsAreDispatched() {
+        val view = createCaptureEventsView()
+
+        rule.onNodeWithTag(tag).performMouseInput {
+            enter(Offset(5f, 5f))
+            moveTo(Offset(10f, 10f))
+            exit(Offset(10f, 10f))
+        }
+
+        rule.runOnIdle {
+            assertThat(view.hoverEvents).containsExactly(
+                ACTION_HOVER_ENTER,
+                ACTION_HOVER_MOVE,
+                ACTION_HOVER_EXIT
+            )
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun touchEventsAreDispatched() {
+        val view = createCaptureEventsView()
+
+        rule.onNodeWithTag(tag).performTouchInput {
+            down(1, Offset.Zero)
+            moveTo(1, Offset(10f, 10f))
+            down(2, Offset(10f, 0f))
+            moveTo(2, Offset(0f, 10f))
+            up(1)
+            moveTo(2, Offset.Zero)
+            up(2)
+        }
+
+        rule.runOnIdle {
+            assertThat(view.touchEvents).containsExactly(
+                ACTION_DOWN,
+                ACTION_MOVE,
+                ACTION_POINTER_DOWN,
+                ACTION_MOVE,
+                ACTION_POINTER_UP,
+                ACTION_MOVE,
+                ACTION_UP
+            )
+        }
+    }
+
+    private fun createCaptureEventsView(): CaptureEventsView {
+        lateinit var view: CaptureEventsView
+        rule.setContent {
+            AndroidView(
+                factory = {
+                    view = CaptureEventsView(it)
+                    view
+                },
+                modifier = Modifier.fillMaxSize().testTag(tag)
+            )
+        }
+        return rule.runOnIdle {
+            view
+        }
+    }
+
     class ColoredSquareView(context: Context) : View(context) {
         var size: Int = 100
             set(value) {
@@ -667,6 +993,23 @@ class AndroidViewCompatTest {
         }
     }
 
+    class InvalidateDuringComputeScroll(context: Context) : View(context) {
+        var draws = 0
+        var invalidatesDuringScroll = 0
+
+        override fun computeScroll() {
+            if (invalidatesDuringScroll > 0) {
+                --invalidatesDuringScroll
+                invalidate()
+            }
+        }
+
+        override fun onDraw(canvas: Canvas?) {
+            super.onDraw(canvas)
+            ++draws
+        }
+    }
+
     fun Modifier.layoutConstraints(childConstraints: Constraints): Modifier =
         this.then(object : LayoutModifier {
             override fun MeasureScope.measure(
@@ -704,6 +1047,22 @@ class AndroidViewCompatTest {
                 override val alignmentLines: Map<AlignmentLine, Int> get() = mapOf()
                 override fun placeChildren() {}
             }
+        }
+    }
+
+    private class CaptureEventsView(context: Context) : View(context) {
+        val touchEvents = mutableListOf<Int>()
+        val hoverEvents = mutableListOf<Int>()
+
+        override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+            touchEvents += event.actionMasked
+            super.dispatchTouchEvent(event)
+            return true
+        }
+
+        override fun dispatchHoverEvent(event: MotionEvent): Boolean {
+            hoverEvents += event.actionMasked
+            return super.dispatchHoverEvent(event)
         }
     }
 }

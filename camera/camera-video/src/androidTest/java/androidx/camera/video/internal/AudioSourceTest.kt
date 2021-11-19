@@ -19,12 +19,15 @@ import android.Manifest
 import android.media.AudioFormat
 import android.media.MediaRecorder
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
+import androidx.camera.testing.AudioUtil
 import androidx.camera.video.internal.encoder.FakeInputBuffer
 import androidx.camera.video.internal.encoder.noInvocation
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
+import androidx.test.filters.SdkSuppress
 import androidx.test.rule.GrantPermissionRule
 import org.junit.After
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -36,11 +39,14 @@ import java.util.concurrent.Callable
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
+@SdkSuppress(minSdkVersion = 21)
 class AudioSourceTest {
 
     companion object {
-        private const val SAMPLE_RATE = 8000
-        private const val DEFAULT_MIN_BUFFER_SIZE = 1024
+        private const val SAMPLE_RATE = 44100
+        private const val AUDIO_SOURCE = MediaRecorder.AudioSource.CAMCORDER
+        private const val CHANNEL_COUNT = 1
+        private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
     }
 
     @get:Rule
@@ -53,21 +59,25 @@ class AudioSourceTest {
 
     @Before
     fun setUp() {
+        assumeTrue(AudioSource.isSettingsSupported(SAMPLE_RATE, CHANNEL_COUNT, AUDIO_FORMAT))
+        assumeTrue(AudioUtil.canStartAudioRecord(AUDIO_SOURCE))
+
         fakeBufferProvider = FakeBufferProvider {
             bufferFactoryInvocations.call()
             FakeInputBuffer()
         }
         fakeBufferProvider.setActive(true)
 
-        audioSource = AudioSource.Builder()
-            .setExecutor(CameraXExecutors.ioExecutor())
-            .setAudioSource(MediaRecorder.AudioSource.CAMCORDER)
-            .setSampleRate(SAMPLE_RATE)
-            .setChannelConfig(AudioFormat.CHANNEL_IN_MONO)
-            .setAudioFormat(AudioFormat.ENCODING_PCM_16BIT)
-            .setDefaultBufferSize(DEFAULT_MIN_BUFFER_SIZE)
-            .setBufferProvider(fakeBufferProvider)
-            .build()
+        audioSource = AudioSource(
+            AudioSource.Settings.builder()
+                .setAudioSource(AUDIO_SOURCE)
+                .setSampleRate(SAMPLE_RATE)
+                .setChannelCount(CHANNEL_COUNT)
+                .setAudioFormat(AUDIO_FORMAT)
+                .build(),
+            CameraXExecutors.ioExecutor()
+        )
+        audioSource.setBufferProvider(fakeBufferProvider)
     }
 
     @After
@@ -114,5 +124,45 @@ class AudioSourceTest {
             // Assert.
             verify(bufferFactoryInvocations, noInvocation(3000L, 6000L)).call()
         }
+    }
+
+    @Test
+    fun canResetBufferProvider_beforeStarting() {
+        // Arrange
+        val localBufferFactoryInvocations = mock(Callable::class.java)
+        val localFakeBufferProvider = FakeBufferProvider {
+            localBufferFactoryInvocations.call()
+            FakeInputBuffer()
+        }
+
+        // Act
+        audioSource.setBufferProvider(localFakeBufferProvider)
+        audioSource.start()
+        localFakeBufferProvider.setActive(true)
+
+        // Assert.
+        // It should continuously send audio data by invoking BufferProvider#acquireBuffer
+        verify(localBufferFactoryInvocations, timeout(10000L).atLeast(3)).call()
+    }
+
+    @Test
+    fun canResetBufferProvider_afterStarting() {
+        // Arrange
+        val localBufferFactoryInvocations = mock(Callable::class.java)
+        val localFakeBufferProvider = FakeBufferProvider {
+            localBufferFactoryInvocations.call()
+            FakeInputBuffer()
+        }
+        audioSource.start()
+        fakeBufferProvider.setActive(true)
+        verify(bufferFactoryInvocations, timeout(10000L).atLeast(3)).call()
+
+        // Act
+        audioSource.setBufferProvider(localFakeBufferProvider)
+        localFakeBufferProvider.setActive(true)
+
+        // Assert.
+        // It should continuously send audio data by invoking BufferProvider#acquireBuffer
+        verify(localBufferFactoryInvocations, timeout(10000L).atLeast(3)).call()
     }
 }

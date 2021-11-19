@@ -26,6 +26,7 @@ import static org.junit.Assume.assumeTrue;
 import android.content.Context;
 import android.content.Intent;
 
+import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.CoreAppTestUtil;
 import androidx.test.core.app.ApplicationProvider;
@@ -38,11 +39,16 @@ import androidx.test.rule.GrantPermissionRule;
 import androidx.test.uiautomator.UiDevice;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 // Test new activity lifecycle when using CameraX.
 @RunWith(AndroidJUnit4.class)
@@ -94,6 +100,14 @@ public final class NewActivityLifecycleTest {
 
         mActivityRule.finishActivity();
         pressHomeButton();
+    }
+
+    @AfterClass
+    public static void shutdownCameraX()
+            throws InterruptedException, ExecutionException, TimeoutException {
+        ProcessCameraProvider cameraProvider = ProcessCameraProvider.getInstance(
+                ApplicationProvider.getApplicationContext()).get(10, TimeUnit.SECONDS);
+        cameraProvider.shutdown().get(10, TimeUnit.SECONDS);
     }
 
     @Test

@@ -18,16 +18,14 @@ package androidx.compose.ui.test.junit4
 
 import android.annotation.SuppressLint
 import android.view.View
-import android.view.ViewGroup
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.annotation.VisibleForTesting
-import androidx.compose.animation.core.InfiniteAnimationPolicy
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.Recomposer
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.node.RootForTest
-import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.platform.WindowRecomposerPolicy
 import androidx.compose.ui.platform.textInputServiceFactory
@@ -42,12 +40,6 @@ import androidx.compose.ui.test.SemanticsNodeInteractionCollection
 import androidx.compose.ui.test.TestMonotonicFrameClock
 import androidx.compose.ui.test.TestOwner
 import androidx.compose.ui.test.createTestContext
-import androidx.compose.ui.test.junit4.android.ComposeIdlingResource
-import androidx.compose.ui.test.junit4.android.ComposeRootRegistry
-import androidx.compose.ui.test.junit4.android.EspressoLink
-import androidx.compose.ui.test.junit4.android.awaitComposeRoots
-import androidx.compose.ui.test.junit4.android.runEspressoOnIdle
-import androidx.compose.ui.test.junit4.android.waitForComposeRoots
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Density
@@ -55,14 +47,11 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.test.TestCoroutineExceptionHandler
-import kotlinx.coroutines.withContext
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.runner.Description
@@ -158,7 +147,7 @@ fun createEmptyComposeRule(): ComposeTestRule =
  * @param activityRule Test rule to use to launch the Activity.
  * @param activityProvider Function to retrieve the Activity from the given [activityRule].
  */
-@OptIn(InternalTestApi::class)
+@OptIn(InternalTestApi::class, ExperimentalCoroutinesApi::class)
 class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
     val activityRule: R,
     private val activityProvider: (R) -> A,
@@ -172,31 +161,24 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
     val activity: A get() = activityProvider(activityRule)
 
     private val idlingResourceRegistry = IdlingResourceRegistry()
-    private val espressoLink = EspressoLink(idlingResourceRegistry)
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal val composeRootRegistry = ComposeRootRegistry()
 
     private val mainClockImpl: MainTestClockImpl
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    internal val composeIdlingResource: IdlingResource
+    private val composeIdlingResource: ComposeIdlingResource
+    private val idlingStrategy: IdlingStrategy by lazy { idlingStrategyFactory.invoke() }
 
     private val recomposer: Recomposer
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val testCoroutineDispatcher: TestCoroutineDispatcher
+    private val testCoroutineDispatcher = TestCoroutineDispatcher()
+    private val frameCoroutineScope = CoroutineScope(testCoroutineDispatcher)
     private val recomposerApplyCoroutineScope: CoroutineScope
-    private val frameCoroutineScope: CoroutineScope
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val coroutineExceptionHandler: TestCoroutineExceptionHandler
+    private val coroutineExceptionHandler = UncaughtExceptionHandler()
 
     override val mainClock: MainTestClock
         get() = mainClockImpl
 
     init {
-        @OptIn(ExperimentalCoroutinesApi::class)
-        testCoroutineDispatcher = TestCoroutineDispatcher()
-        frameCoroutineScope = CoroutineScope(testCoroutineDispatcher)
-        @OptIn(ExperimentalCoroutinesApi::class)
         val frameClock = TestMonotonicFrameClock(frameCoroutineScope)
         mainClockImpl = MainTestClockImpl(testCoroutineDispatcher, frameClock)
         val infiniteAnimationPolicy = object : InfiniteAnimationPolicy {
@@ -207,19 +189,18 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
                 return block()
             }
         }
-        @OptIn(ExperimentalCoroutinesApi::class)
-        coroutineExceptionHandler = TestCoroutineExceptionHandler()
-        @OptIn(ExperimentalCoroutinesApi::class)
         recomposerApplyCoroutineScope = CoroutineScope(
             testCoroutineDispatcher + frameClock + infiniteAnimationPolicy +
                 coroutineExceptionHandler + Job()
         )
         recomposer = Recomposer(recomposerApplyCoroutineScope.coroutineContext)
-            .also { recomposerApplyCoroutineScope.launch { it.runRecomposeAndApplyChanges() } }
         composeIdlingResource = ComposeIdlingResource(
             composeRootRegistry, mainClockImpl, recomposer
         )
-        registerIdlingResource(composeIdlingResource)
+    }
+
+    private var idlingStrategyFactory: () -> IdlingStrategy = {
+        EspressoLink(idlingResourceRegistry)
     }
 
     internal var disposeContentHook: (() -> Unit)? = null
@@ -232,14 +213,37 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
     }
 
     override fun apply(base: Statement, description: Description): Statement {
+        if (RobolectricDetector.usesRobolectricTestRunner(description)) {
+            setIdlingStrategyFactory {
+                RobolectricIdlingStrategy(composeRootRegistry, composeIdlingResource)
+            }
+        }
         @Suppress("NAME_SHADOWING")
         return RuleChain
             .outerRule { base, _ -> composeRootRegistry.getStatementFor(base) }
             .around { base, _ -> idlingResourceRegistry.getStatementFor(base) }
-            .around { base, _ -> espressoLink.getStatementFor(base) }
+            .around { base, _ -> idlingStrategy.getStatementFor(base) }
+            .around { base, _ -> CleanupCoroutinesStatement(base) }
+            .around { base, _ -> RecomposerStatement(base) }
+            .around { base, _ -> ComposeIdlingResourceStatement(base) }
+            .around { base, _ -> TextInputServiceStatement(base) }
             .around { base, _ -> AndroidComposeStatement(base) }
             .around(activityRule)
             .apply(base, description)
+    }
+
+    /**
+     * Replaces the current [IdlingStrategy] factory with the given [factory]. The strategy is
+     * created lazy with the factory. Note that on Robolectric tests, the factory is usually
+     * overwritten during the [apply] method. If you need to set a custom factory on Robolectric,
+     * you'll need to do so after rules are applied, e.g. in an @Before method.
+     *
+     * The default factory creates a strategy built on Espresso, and is set to a Robolectric
+     * compatible factory on Robolectric tests.
+     */
+    @Suppress("MemberVisibilityCanBePrivate")
+    internal fun setIdlingStrategyFactory(factory: () -> IdlingStrategy) {
+        idlingStrategyFactory = factory
     }
 
     /**
@@ -263,32 +267,32 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
             }
         }
 
-        if (!isOnUiThread()) {
-            // Only wait for idleness if not on the UI thread. If we are on the UI thread, the
-            // caller clearly wants to keep tight control over execution order, so don't go
-            // executing future tasks on the main thread.
+        // Synchronizing from the UI thread when we can't leads to a dead lock
+        if (idlingStrategy.canSynchronizeOnUiThread || !isOnUiThread()) {
             waitForIdle()
         }
     }
 
     override fun waitForIdle() {
-        testOwner.waitForIdle(atLeastOneRootExpected = true)
+        waitForIdle(atLeastOneRootExpected = true)
+    }
+
+    private fun waitForIdle(atLeastOneRootExpected: Boolean) {
+        // First wait until we have a compose root (in case an Activity is being started)
+        composeRootRegistry.waitForComposeRoots(atLeastOneRootExpected)
+        // Then await composition(s)
+        idlingStrategy.runUntilIdle()
+        // Check if a coroutine threw an uncaught exception
+        coroutineExceptionHandler.throwUncaught()
     }
 
     override suspend fun awaitIdle() {
-        // TODO(b/169038516): when we can query compose roots for measure or layout, remove
-        //  runEspressoOnIdle() and replace it with a suspend fun that loops while the
-        //  snapshot or the recomposer has pending changes, clocks are busy or compose roots have
-        //  pending measures or layouts; and do the await on AndroidUiDispatcher.Main
-        // We use Espresso to wait for composition, measure, layout and draw,
-        // and Espresso needs to be called from a non-ui thread; so use Dispatchers.IO
-        withContext(Dispatchers.IO) {
-            // First wait until we have a compose root (in case an Activity is being started)
-            composeRootRegistry.awaitComposeRoots()
-            // Then await composition(s)
-            runEspressoOnIdle()
-        }
-        checkUncaughtCoroutineExceptions()
+        // First wait until we have a compose root (in case an Activity is being started)
+        composeRootRegistry.awaitComposeRoots()
+        // Then await composition(s)
+        idlingStrategy.awaitIdle()
+        // Check if a coroutine threw an uncaught exception
+        coroutineExceptionHandler.throwUncaught()
     }
 
     override fun <T> runOnUiThread(action: () -> T): T {
@@ -327,47 +331,11 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
         idlingResourceRegistry.unregisterIdlingResource(idlingResource)
     }
 
-    /**
-     * Checks if the [coroutineExceptionHandler] has caught uncaught exceptions. If so, will
-     * rethrow the first to fail the test. Rather than only calling this only at the end of the
-     * test, as recommended by [cleanupTestCoroutines][kotlinx.coroutines.test
-     * .UncaughtExceptionCaptor.cleanupTestCoroutines], try calling this at a few strategic
-     * points to fail the test asap after the exception was caught.
-     */
-    private fun checkUncaughtCoroutineExceptions() {
-        @OptIn(ExperimentalCoroutinesApi::class)
-        coroutineExceptionHandler.cleanupTestCoroutines()
-    }
-
-    inner class AndroidComposeStatement(
-        private val base: Statement
-    ) : Statement() {
-
-        @OptIn(InternalComposeUiApi::class)
+    inner class AndroidComposeStatement(private val base: Statement) : Statement() {
         override fun evaluate() {
-            WindowRecomposerPolicy.withFactory({ recomposer }) {
-                evaluateInner()
-            }
-        }
-
-        @OptIn(InternalComposeUiApi::class)
-        private fun evaluateInner() {
-            val oldTextInputFactory = textInputServiceFactory
             try {
-                textInputServiceFactory = {
-                    TextInputServiceForTests(it)
-                }
                 base.evaluate()
             } finally {
-                recomposer.cancel()
-                // FYI: Not canceling these scope below would end up cleanupTestCoroutines
-                // throwing errors on active coroutines
-                recomposerApplyCoroutineScope.cancel()
-                frameCoroutineScope.cancel()
-                checkUncaughtCoroutineExceptions()
-                @OptIn(ExperimentalCoroutinesApi::class)
-                testCoroutineDispatcher.cleanupTestCoroutines()
-                textInputServiceFactory = oldTextInputFactory
                 // Dispose the content
                 if (disposeContentHook != null) {
                     runOnUiThread {
@@ -385,6 +353,70 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
                         disposeContentHook = null
                     }
                 }
+            }
+        }
+    }
+
+    private inner class RecomposerStatement(private val base: Statement) : Statement() {
+        override fun evaluate() {
+            @OptIn(InternalComposeUiApi::class)
+            WindowRecomposerPolicy.withFactory({ recomposer }) {
+                evaluateWithWindowRecomposer()
+            }
+        }
+
+        private fun evaluateWithWindowRecomposer() {
+            try {
+                // Start the recomposer:
+                recomposerApplyCoroutineScope.launch {
+                    recomposer.runRecomposeAndApplyChanges()
+                }
+                base.evaluate()
+            } finally {
+                // Stop the recomposer:
+                recomposer.cancel()
+                // Cancel our scope to ensure there are no active coroutines when
+                // cleanupTestCoroutines is called in the CleanupCoroutinesStatement
+                recomposerApplyCoroutineScope.cancel()
+            }
+        }
+    }
+
+    private inner class CleanupCoroutinesStatement(private val base: Statement) : Statement() {
+        override fun evaluate() {
+            try {
+                base.evaluate()
+            } finally {
+                frameCoroutineScope.cancel()
+                coroutineExceptionHandler.throwUncaught()
+                @OptIn(ExperimentalCoroutinesApi::class)
+                testCoroutineDispatcher.cleanupTestCoroutines()
+            }
+        }
+    }
+
+    private inner class ComposeIdlingResourceStatement(private val base: Statement) : Statement() {
+        override fun evaluate() {
+            try {
+                registerIdlingResource(composeIdlingResource)
+                base.evaluate()
+            } finally {
+                unregisterIdlingResource(composeIdlingResource)
+            }
+        }
+    }
+
+    private class TextInputServiceStatement(private val base: Statement) : Statement() {
+        @OptIn(InternalComposeUiApi::class)
+        override fun evaluate() {
+            val oldTextInputFactory = textInputServiceFactory
+            try {
+                textInputServiceFactory = {
+                    TextInputServiceForTests(it)
+                }
+                base.evaluate()
+            } finally {
+                textInputServiceFactory = oldTextInputFactory
             }
         }
     }
@@ -438,28 +470,6 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
             return androidx.compose.ui.test.junit4.runOnUiThread(action)
         }
 
-        internal fun waitForIdle(atLeastOneRootExpected: Boolean) {
-            check(!isOnUiThread()) {
-                "Functions that involve synchronization (Assertions, Actions, Synchronization; " +
-                    "e.g. assertIsSelected(), doClick(), runOnIdle()) cannot be run " +
-                    "from the main thread. Did you nest such a function inside " +
-                    "runOnIdle {}, runOnUiThread {} or setContent {}?"
-            }
-
-            // First wait until we have a compose root (in case an Activity is being started)
-            composeRootRegistry.waitForComposeRoots(atLeastOneRootExpected)
-            // Then await composition(s)
-            runEspressoOnIdle()
-
-            // TODO(b/155774664): waitForComposeRoots() may be satisfied by a compose root from an
-            //  Activity that is about to be paused, in cases where a new Activity is being started.
-            //  That means that ComposeRootRegistry.getComposeRoots() may still return an empty list
-            //  between now and when the new Activity has created its compose root, even though
-            //  waitForComposeRoots() suggests that we are now guaranteed one.
-
-            checkUncaughtCoroutineExceptions()
-        }
-
         override fun getRoots(atLeastOneRootExpected: Boolean): Set<RootForTest> {
             // TODO(pavlis): Instead of returning a flatMap, let all consumers handle a tree
             //  structure. In case of multiple AndroidOwners, add a fake root
@@ -485,28 +495,3 @@ private fun <A : ComponentActivity> ActivityScenarioRule<A>.getActivity(): A {
     }
     return activity!!
 }
-
-internal fun ComponentActivity.setContent(
-    parent: CompositionContext? = null,
-    content: @Composable () -> Unit
-) {
-    val existingComposeView = window.decorView
-        .findViewById<ViewGroup>(android.R.id.content)
-        .getChildAt(0) as? ComposeView
-
-    if (existingComposeView != null) with(existingComposeView) {
-        setParentCompositionContext(parent)
-        setContent(content)
-    } else ComposeView(this).apply {
-        // Set content and parent **before** setContentView
-        // to have ComposeView create the composition on attach
-        setParentCompositionContext(parent)
-        setContent(content)
-        setContentView(this, DefaultActivityContentLayoutParams)
-    }
-}
-
-private val DefaultActivityContentLayoutParams = ViewGroup.LayoutParams(
-    ViewGroup.LayoutParams.WRAP_CONTENT,
-    ViewGroup.LayoutParams.WRAP_CONTENT
-)
