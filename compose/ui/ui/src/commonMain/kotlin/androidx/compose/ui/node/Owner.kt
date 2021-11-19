@@ -175,9 +175,16 @@ internal interface Owner {
     fun requestFocus(): Boolean
 
     /**
-     * Iterates through all LayoutNodes that have requested layout and measures and lays them out
+     * Iterates through all LayoutNodes that have requested layout and measures and lays them out.
+     * If [sendPointerUpdate] is `true` then a simulated PointerEvent may be sent to update pointer
+     * input handlers.
      */
-    fun measureAndLayout()
+    fun measureAndLayout(sendPointerUpdate: Boolean = true)
+
+    /**
+     * Makes sure the passed [layoutNode] and its subtree is remeasured and has the final sizes.
+     */
+    fun forceMeasureTheSubtree(layoutNode: LayoutNode)
 
     /**
      * Creates an [OwnedLayer] which will be drawing the passed [drawBlock].
