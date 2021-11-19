@@ -82,10 +82,6 @@ actual data class PointerEvent internal constructor(
     // TODO(demin): new API, which is not merged to AOSP
     /**
      * The original raw native event which is sent by the platform.
-     *
-     * Note, that its type can be different from [type], which is sent by Compose.
-     * For example, Compose can send synthetic Move event on relayout,
-     * but [nativeEvent] will tell that it is Up event
      */
     val nativeEvent: Any?
 ) {

@@ -49,7 +49,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.PointerIconDefaults
 import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
@@ -84,6 +83,7 @@ private typealias Command = () -> Unit
 )
 internal class SkiaBasedOwner(
     private val platformInputService: PlatformInput,
+    private val component: PlatformComponent,
     override val windowInfo: WindowInfo,
     density: Density = Density(1f, 1f),
     val isPopup: Boolean = false,
@@ -232,15 +232,13 @@ internal class SkiaBasedOwner(
     private var needLayout = true
     private var needDraw = true
 
-    val needRender get() = needLayout || needDraw || needSendSyntheticEvents
+    val needRender get() = needLayout || needDraw
     var onNeedRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
-    var containerCursor: PlatformComponentWithCursor? = null
 
     fun render(canvas: org.jetbrains.skia.Canvas) {
         needLayout = false
         measureAndLayout()
-        sendSyntheticEvents()
         needDraw = false
         draw(canvas)
         clearInvalidObservations()
@@ -345,50 +343,10 @@ internal class SkiaBasedOwner(
         root.draw(canvas.asComposeCanvas())
     }
 
-    private var needSendSyntheticEvents = false
-    private var lastPointerEvent: PointerInputEvent? = null
-
-    private val scheduleSyntheticEvents: () -> Unit = {
-        // we can't send event synchronously, as we can have call of `measureAndLayout`
-        // inside the event handler. So we can have a situation when we call event handler inside
-        // event handler. And that can lead to unpredictable behaviour.
-        // Nature of synthetic events doesn't require that they should be fired
-        // synchronously on layout change.
-        needSendSyntheticEvents = true
-        onNeedRender?.invoke()
-    }
-
-    // TODO(demin) should we repeat all events, or only which are make sense?
-    //  For example, touch Move after touch Release doesn't make sense,
-    //  and an application can handle it in a wrong way
-    //  Desktop doesn't support touch at the moment, but when it will, we should resolve this.
-    private fun sendSyntheticEvents() {
-        if (needSendSyntheticEvents) {
-            needSendSyntheticEvents = false
-            val lastPointerEvent = lastPointerEvent
-            if (lastPointerEvent != null) {
-                doProcessPointerInput(
-                    PointerInputEvent(
-                        PointerEventType.Move,
-                        lastPointerEvent.uptime,
-                        lastPointerEvent.pointers,
-                        lastPointerEvent.buttons,
-                        lastPointerEvent.keyboardModifiers,
-                        lastPointerEvent.mouseEvent
-                    )
-                )
-            }
-        }
-    }
+    private val scheduleSyntheticEvents = component::scheduleSyntheticMoveEvent
 
     internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
         measureAndLayout()
-        sendSyntheticEvents()
-        lastPointerEvent = event
-        return doProcessPointerInput(event)
-    }
-
-    private fun doProcessPointerInput(event: PointerInputEvent): ProcessResult {
         return pointerInputEventProcessor.process(
             event,
             this,
@@ -397,7 +355,7 @@ internal class SkiaBasedOwner(
                     it.position.y in 0f..root.height.toFloat()
             }
         ).also {
-            commitPointerIcon(containerCursor)
+            commitPointerIcon(component)
         }
     }
 
@@ -414,8 +372,8 @@ internal class SkiaBasedOwner(
     override val pointerIconService: PointerIconService =
         object : PointerIconService {
             override var current: PointerIcon
-                get() = getPointerIcon(containerCursor)
-                set(value) { setPointerIcon(containerCursor, value) }
+                get() = getPointerIcon(component)
+                set(value) { setPointerIcon(component, value) }
         }
 }
 

@@ -172,6 +172,7 @@ private fun PopupLayout(
     val (owner, composition) = remember {
         val owner = SkiaBasedOwner(
             platformInputService = scene.platformInputService,
+            component = scene.component,
             windowInfo = scene.component.windowInfo,
             density = density,
             isPopup = true,
