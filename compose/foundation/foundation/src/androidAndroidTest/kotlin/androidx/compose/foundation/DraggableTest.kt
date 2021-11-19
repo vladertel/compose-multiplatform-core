@@ -17,8 +17,12 @@
 package androidx.compose.foundation
 
 import androidx.compose.foundation.gestures.DraggableState
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.interaction.Interaction
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -30,14 +34,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.foundation.interaction.Interaction
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.platform.InspectableValue
 import androidx.compose.ui.platform.isDebugInspectorInfoEnabled
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.MouseButton
+import androidx.compose.ui.test.MouseInjectionScope
+import androidx.compose.ui.test.animateTo
+import androidx.compose.ui.test.dragAndDrop
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performMouseInput
@@ -153,6 +157,77 @@ class DraggableTest {
         rule.runOnIdle {
             assertThat(total).isLessThan(0.01f)
         }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun draggable_dragWithPrimaryMouseButton() {
+        var total = 0f
+        setDraggableContent {
+            Modifier.draggable(Orientation.Horizontal) { total += it }
+        }
+        rule.onNodeWithTag(draggableBoxTag).performMouseInput {
+            dragAndDrop(
+                start = this.center,
+                end = Offset(this.center.x + 100f, this.center.y),
+                durationMillis = 100
+            )
+        }
+        val lastTotal = rule.runOnIdle {
+            assertThat(total).isGreaterThan(0)
+            total
+        }
+        rule.onNodeWithTag(draggableBoxTag).performMouseInput {
+            dragAndDrop(
+                start = this.center,
+                end = Offset(this.center.x, this.center.y + 100f),
+                durationMillis = 100
+            )
+        }
+        rule.runOnIdle {
+            assertThat(total).isEqualTo(lastTotal)
+        }
+        rule.onNodeWithTag(draggableBoxTag).performMouseInput {
+            dragAndDrop(
+                start = this.center,
+                end = Offset(this.center.x - 100f, this.center.y),
+                durationMillis = 100
+            )
+        }
+        rule.runOnIdle {
+            assertThat(total).isLessThan(0.01f)
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun draggable_dragWithSecondaryMouseButton() {
+        var total = 0f
+        setDraggableContent {
+            Modifier.draggable(Orientation.Horizontal) { total += it }
+        }
+        rule.onNodeWithTag(draggableBoxTag).performMouseInput {
+            dragAndDropSecondary(
+                start = this.center,
+                end = Offset(this.center.x + 100f, this.center.y),
+                durationMillis = 100
+            )
+        }
+        rule.runOnIdle {
+            assertThat(total).isEqualTo(0)
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    private fun MouseInjectionScope.dragAndDropSecondary(
+        start: Offset,
+        end: Offset,
+        durationMillis: Long = 300L
+    ) {
+        updatePointerTo(start)
+        press(MouseButton.Secondary)
+        animateTo(end, durationMillis)
+        release(MouseButton.Secondary)
     }
 
     @Test
