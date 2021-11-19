@@ -185,6 +185,26 @@ internal class ComposeLayer {
         private fun refreshWindowFocus() {
             windowInfo.isWindowFocused = window?.isFocused ?: false
         }
+
+        override fun scheduleSyntheticMoveEvent() {
+            val lastMouseEvent = lastMouseEvent ?: return
+
+            SwingUtilities.invokeLater {
+                val source = lastMouseEvent.source as Component
+                source.dispatchEvent(
+                    MouseEvent(
+                        source,
+                        MouseEvent.MOUSE_MOVED,
+                        System.nanoTime(),
+                        lastMouseEvent.modifiersEx,
+                        lastMouseEvent.x,
+                        lastMouseEvent.y,
+                        0,
+                        false
+                    )
+                )
+            }
+        }
     }
 
     init {
@@ -214,51 +234,36 @@ internal class ComposeLayer {
 
         _component.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) = Unit
-
-            override fun mousePressed(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseReleased(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseEntered(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseExited(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
+            override fun mousePressed(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseReleased(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseEntered(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseExited(event: MouseEvent) = onMouseEvent(event)
         })
         _component.addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseDragged(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseMoved(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
+            override fun mouseDragged(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseMoved(event: MouseEvent) = onMouseEvent(event)
         })
         _component.addMouseWheelListener { event ->
-            events.post {
-                scene.onMouseWheelEvent(density, event)
-            }
+            onMouseWheelEvent(event)
         }
         _component.focusTraversalKeysEnabled = false
         _component.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(event: KeyEvent) {
-                scene.sendKeyEvent(event)
-            }
-
-            override fun keyReleased(event: KeyEvent) {
-                scene.sendKeyEvent(event)
-            }
-
-            override fun keyTyped(event: KeyEvent) {
-                scene.sendKeyEvent(event)
-            }
+            override fun keyPressed(event: KeyEvent) = scene.sendKeyEvent(event)
+            override fun keyReleased(event: KeyEvent) = scene.sendKeyEvent(event)
+            override fun keyTyped(event: KeyEvent) = scene.sendKeyEvent(event)
         })
+    }
+
+    private var lastMouseEvent: MouseEvent? = null
+
+    private fun onMouseEvent(event: MouseEvent) = events.post {
+        scene.onMouseEvent(density, event)
+        lastMouseEvent = event
+    }
+
+    private fun onMouseWheelEvent(event: MouseWheelEvent) = events.post {
+        scene.onMouseWheelEvent(density, event)
+        lastMouseEvent = event
     }
 
     fun dispose() {
