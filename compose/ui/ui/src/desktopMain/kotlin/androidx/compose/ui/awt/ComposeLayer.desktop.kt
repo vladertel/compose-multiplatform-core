@@ -33,7 +33,9 @@ import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.swing.Swing
 import org.jetbrains.skia.Canvas
@@ -62,6 +64,8 @@ import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
 import javax.accessibility.AccessibleContext
 import javax.swing.SwingUtilities
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
@@ -70,8 +74,27 @@ internal class ComposeLayer {
     private val _component = ComponentImpl()
     val component: SkiaLayer get() = _component
 
-    internal val scene = ComposeScene(
-        Dispatchers.Swing,
+    @OptIn(ExperimentalComposeUiApi::class)
+    private val coroutineExceptionHandler = object : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
+        override fun handleException(context: CoroutineContext, exception: Throwable) {
+            exceptionHandler?.onException(exception) ?: throw exception
+        }
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    var exceptionHandler: WindowExceptionHandler? = null
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    private fun catchExceptions(body: () -> Unit) {
+        try {
+            body()
+        } catch (e: Throwable) {
+            exceptionHandler?.onException(e) ?: throw e
+        }
+    }
+
+    private val scene = ComposeScene(
+        Dispatchers.Swing + coroutineExceptionHandler,
         _component,
         Density(1f),
         _component::needRedraw
@@ -187,7 +210,9 @@ internal class ComposeLayer {
             needSendSyntheticMove = true
             SwingUtilities.invokeLater {
                 if (isDisposed) return@invokeLater
-                flushSyntheticMoveEvent()
+                catchExceptions {
+                    flushSyntheticMoveEvent()
+                }
             }
         }
     }
@@ -195,13 +220,9 @@ internal class ComposeLayer {
     init {
         _component.skikoView = object : SkikoView {
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-                try {
+                catchExceptions {
                     flushSyntheticMoveEvent()
                     scene.render(canvas, nanoTime)
-                } catch (e: Throwable) {
-                    if (System.getProperty("compose.desktop.render.ignore.errors") == null) {
-                        throw e
-                    }
                 }
             }
         }
@@ -210,13 +231,17 @@ internal class ComposeLayer {
             override fun caretPositionChanged(event: InputMethodEvent?) {
                 if (isDisposed) return
                 if (event != null) {
-                    scene.onInputMethodEvent(event)
+                    catchExceptions {
+                        scene.onInputMethodEvent(event)
+                    }
                 }
             }
 
             override fun inputMethodTextChanged(event: InputMethodEvent) {
                 if (isDisposed) return
-                scene.onInputMethodEvent(event)
+                catchExceptions {
+                    scene.onInputMethodEvent(event)
+                }
             }
         })
 
@@ -242,15 +267,15 @@ internal class ComposeLayer {
         })
     }
 
-    private fun onMouseEvent(event: MouseEvent) {
+    private fun onMouseEvent(event: MouseEvent) = catchExceptions {
         // AWT can send events after the window is disposed
-        if (isDisposed) return
+        if (isDisposed) return@catchExceptions
         checkSyntheticEvents(event)
         scene.onMouseEvent(density, event)
     }
 
-    private fun onMouseWheelEvent(event: MouseWheelEvent) {
-        if (isDisposed) return
+    private fun onMouseWheelEvent(event: MouseWheelEvent) = catchExceptions {
+        if (isDisposed) return@catchExceptions
         checkSyntheticEvents(event)
         scene.onMouseWheelEvent(density, event)
     }
@@ -326,8 +351,10 @@ internal class ComposeLayer {
 
     private fun onKeyEvent(event: KeyEvent) {
         if (isDisposed) return
-        if (scene.sendKeyEvent(ComposeKeyEvent(event))) {
-            event.consume()
+        catchExceptions {
+            if (scene.sendKeyEvent(ComposeKeyEvent(event))) {
+                event.consume()
+            }
         }
     }
 
@@ -350,11 +377,13 @@ internal class ComposeLayer {
         // but the first composition will be useless, as we set density=1
         // (we don't know the real density if we have unattached component)
         _initContent = {
-            scene.setContent(
-                onPreviewKeyEvent = onPreviewKeyEvent,
-                onKeyEvent = onKeyEvent,
-                content = content
-            )
+            catchExceptions {
+                scene.setContent(
+                    onPreviewKeyEvent = onPreviewKeyEvent,
+                    onKeyEvent = onKeyEvent,
+                    content = content
+                )
+            }
         }
         initContent()
     }
