@@ -35,6 +35,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
@@ -70,7 +72,15 @@ class DefaultContextMenuRepresentation(
             Popup(
                 focusable = true,
                 onDismissRequest = { state.status = ContextMenuState.Status.Closed },
-                popupPositionProvider = rememberCursorPositionProvider()
+                popupPositionProvider = rememberCursorPositionProvider(),
+                onKeyEvent = {
+                    if (it.key == Key.Escape) {
+                        state.status = ContextMenuState.Status.Closed
+                        true
+                    } else {
+                        false
+                    }
+                },
             ) {
                 Column(
                     modifier = Modifier
