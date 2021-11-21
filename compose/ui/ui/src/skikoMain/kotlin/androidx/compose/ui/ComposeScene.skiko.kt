@@ -439,7 +439,7 @@ class ComposeScene internal constructor(
     }
 
     private fun onMouseReleased(event: PointerInputEvent) {
-        val owner = (mousePressOwner ?: hoveredOwner) ?: focusedOwner
+        val owner = mousePressOwner ?: hoveredOwner
         owner?.processPointerInput(event)
         pointerId += 1
     }
