@@ -241,17 +241,20 @@ fun Dialog(
     content: @Composable DialogWindowScope.() -> Unit
 ) {
     val compositionLocalContext by rememberUpdatedState(currentCompositionLocalContext)
+    val windowExceptionHandlerFactory by rememberUpdatedState(LocalWindowExceptionHandlerFactory.current)
     AwtWindow(
         visible = visible,
         create = {
             create().apply {
                 this.compositionLocalContext = compositionLocalContext
+                this.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(this)
                 setContent(onPreviewKeyEvent, onKeyEvent, content)
             }
         },
         dispose = dispose,
         update = {
             it.compositionLocalContext = compositionLocalContext
+            it.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(it)
             update(it)
         }
     )
