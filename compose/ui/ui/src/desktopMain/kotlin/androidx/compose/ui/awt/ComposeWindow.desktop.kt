@@ -17,11 +17,11 @@ package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalContext
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.UndecoratedWindowResizer
+import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.WindowPlacement
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.hostOs
@@ -56,6 +56,12 @@ class ComposeWindow : JFrame() {
      * `null` if no composition locals should be provided.
      */
     var compositionLocalContext: CompositionLocalContext? by delegate::compositionLocalContext
+
+    /**
+     * Handler to catch uncaught exceptions during rendering frames, handling events, or processing background Compose operations.
+     */
+    @ExperimentalComposeUiApi
+    var exceptionHandler: WindowExceptionHandler? by layer::exceptionHandler
 
     /**
      * Composes the given composable into the ComposeWindow.
