@@ -34,7 +34,8 @@ internal actual fun pointerInputEvent(
     nativeEvent: Any?,
     type: PointerType,
     isMousePressed: Boolean,
-    pointerId: Long
+    pointerId: Long,
+    scrollDelta: Offset
 ): PointerInputEvent {
     return PointerInputEvent(
         eventType,
@@ -46,7 +47,8 @@ internal actual fun pointerInputEvent(
                 position,
                 position,
                 isMousePressed,
-                type
+                type,
+                scrollDelta = scrollDelta
             )
         ),
         nativeEvent as SkikoPointerEvent?
