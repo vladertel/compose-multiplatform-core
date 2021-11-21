@@ -355,8 +355,9 @@ class ComposeScene internal constructor(
 
     private var focusedOwner: SkiaBasedOwner? = null
     private var mousePressOwner: SkiaBasedOwner? = null
-    private val hoveredOwner: SkiaBasedOwner?
-        get() = list.lastOrNull { it.isHovered(pointLocation) } ?: list.lastOrNull()
+    private var mouseEnterExitOwner: SkiaBasedOwner? = null
+    private fun hoveredOwner(event: PointerInputEvent): SkiaBasedOwner? =
+        list.lastOrNull { it.isHovered(event.pointers.first().position) } ?: list.lastOrNull()
 
     private fun SkiaBasedOwner?.isAbove(
         targetOwner: SkiaBasedOwner?
@@ -411,17 +412,10 @@ class ComposeScene internal constructor(
         when (eventType) {
             PointerEventType.Press -> onMousePressed(event)
             PointerEventType.Release -> onMouseReleased(event)
-            PointerEventType.Move -> {
-                pointLocation = position
-                if (actualButtons.areAnyPressed) {
-                    mousePressOwner?.processPointerInput(event)
-                } else {
-                    hoveredOwner?.processPointerInput(event)
-                }
-            }
-            PointerEventType.Enter -> hoveredOwner?.processPointerInput(event)
-            PointerEventType.Exit -> hoveredOwner?.processPointerInput(event)
-            PointerEventType.Scroll -> hoveredOwner?.processPointerInput(event)
+            PointerEventType.Move -> onMouseMove(event)
+            PointerEventType.Enter -> onMouseEnter(event)
+            PointerEventType.Exit -> onMouseExit(event)
+            PointerEventType.Scroll -> hoveredOwner(event)?.processPointerInput(event)
         }
 
         if (!actualButtons.areAnyPressed) {
@@ -430,7 +424,7 @@ class ComposeScene internal constructor(
     }
 
     private fun onMousePressed(event: PointerInputEvent) {
-        val currentOwner = hoveredOwner
+        val currentOwner = hoveredOwner(event)
         if (currentOwner != null) {
             if (focusedOwner.isAbove(currentOwner)) {
                 focusedOwner?.onDismissRequest?.invoke()
@@ -445,12 +439,32 @@ class ComposeScene internal constructor(
     }
 
     private fun onMouseReleased(event: PointerInputEvent) {
-        val owner = (mousePressOwner ?: hoveredOwner) ?: focusedOwner
+        val owner = (mousePressOwner ?: hoveredOwner(event)) ?: focusedOwner
         owner?.processPointerInput(event)
-        pointerId += 1
     }
 
-    private var pointLocation = Offset.Zero
+    private fun onMouseMove(event: PointerInputEvent) {
+        val owner = if (event.buttons.areAnyPressed) mousePressOwner else hoveredOwner(event)
+
+        if (owner != null && mouseEnterExitOwner != null && owner != mouseEnterExitOwner) {
+            mouseEnterExitOwner?.processPointerInput(event.copy(eventType = PointerEventType.Exit))
+            owner?.processPointerInput(event.copy(eventType = PointerEventType.Enter))
+            mouseEnterExitOwner = owner
+        }
+
+        owner?.processPointerInput(event)
+    }
+
+    private fun onMouseEnter(event: PointerInputEvent) {
+        val owner = hoveredOwner(event)
+        owner?.processPointerInput(event)
+        mouseEnterExitOwner = owner
+    }
+
+    private fun onMouseExit(event: PointerInputEvent) {
+        hoveredOwner(event)?.processPointerInput(event)
+        mouseEnterExitOwner = null
+    }
 
     /**
      * Send [KeyEvent] to the content.
