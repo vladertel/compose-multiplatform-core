@@ -74,6 +74,12 @@ class ComposeDialog(
     var compositionLocalContext: CompositionLocalContext? by delegate::compositionLocalContext
 
     /**
+     * Handler to catch uncaught exceptions during rendering frames, handling events, or processing background Compose operations.
+     */
+    @ExperimentalComposeUiApi
+    var uncaughtExceptionHandler: Thread.UncaughtExceptionHandler? by layer::uncaughtExceptionHandler
+
+    /**
      * Composes the given composable into the ComposeDialog.
      *
      * @param onPreviewKeyEvent This callback is invoked when the user interacts with the hardware

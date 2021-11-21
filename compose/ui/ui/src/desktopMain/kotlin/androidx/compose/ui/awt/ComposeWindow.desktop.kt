@@ -31,7 +31,10 @@ import java.awt.Component
 import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelListener
+import java.awt.event.WindowEvent
 import javax.swing.JFrame
+import javax.swing.JOptionPane
+import javax.swing.SwingUtilities
 
 /**
  * ComposeWindow is a window for building UI using Compose for Desktop.
@@ -56,6 +59,12 @@ class ComposeWindow : JFrame() {
      * `null` if no composition locals should be provided.
      */
     var compositionLocalContext: CompositionLocalContext? by delegate::compositionLocalContext
+
+    /**
+     * Handler to catch uncaught exceptions during rendering frames, handling events, or processing background Compose operations.
+     */
+    @ExperimentalComposeUiApi
+    var uncaughtExceptionHandler: Thread.UncaughtExceptionHandler? by layer::uncaughtExceptionHandler
 
     /**
      * Composes the given composable into the ComposeWindow.

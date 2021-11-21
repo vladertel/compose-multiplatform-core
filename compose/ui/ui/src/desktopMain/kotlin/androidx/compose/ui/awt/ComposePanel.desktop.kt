@@ -17,12 +17,15 @@ package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.ExperimentalComposeUiApi
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.JLayeredPane
+import javax.swing.JOptionPane
+import javax.swing.SwingUtilities
 import javax.swing.SwingUtilities.isEventDispatchThread
 
 /**
@@ -66,6 +69,13 @@ class ComposePanel : JLayeredPane() {
         initContent()
     }
 
+    @ExperimentalComposeUiApi
+    var uncaughtExceptionHandler: Thread.UncaughtExceptionHandler? = null
+        set(value) {
+            field = value
+            layer?.uncaughtExceptionHandler = value
+        }
+
     private fun initContent() {
         if (layer != null && content != null) {
             layer!!.setContent {
@@ -93,6 +103,7 @@ class ComposePanel : JLayeredPane() {
         super.remove(component)
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun addNotify() {
         super.addNotify()
 
@@ -100,6 +111,7 @@ class ComposePanel : JLayeredPane() {
         // content.
         layer = ComposeLayer().apply {
             component.setSize(width, height)
+            uncaughtExceptionHandler = this@ComposePanel.uncaughtExceptionHandler
         }
         initContent()
         super.add(layer!!.component, Integer.valueOf(1))

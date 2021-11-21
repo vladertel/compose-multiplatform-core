@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.window.density
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.swing.Swing
 import org.jetbrains.skia.Canvas
@@ -60,6 +61,8 @@ import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
 import javax.accessibility.AccessibleContext
 import javax.swing.SwingUtilities
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
@@ -73,8 +76,24 @@ internal class ComposeLayer {
     private val _component = ComponentImpl()
     val component: SkiaLayer get() = _component
 
+    private val coroutineExceptionHandler = object : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
+        override fun handleException(context: CoroutineContext, exception: Throwable) {
+            uncaughtExceptionHandler?.uncaughtException(Thread.currentThread(), exception) ?: throw exception
+        }
+    }
+
+    var uncaughtExceptionHandler: Thread.UncaughtExceptionHandler? = null
+
+    private fun catchExceptions(body: () -> Unit) {
+        try {
+            body()
+        } catch (e: Throwable) {
+            uncaughtExceptionHandler?.uncaughtException(Thread.currentThread(), e) ?: throw e
+        }
+    }
+
     internal val scene = ComposeScene(
-        Dispatchers.Swing,
+        Dispatchers.Swing + coroutineExceptionHandler,
         _component,
         Density(1f),
         _component::needRedraw
@@ -210,12 +229,8 @@ internal class ComposeLayer {
     init {
         _component.skikoView = object : SkikoView {
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-                try {
+                catchExceptions {
                     scene.render(canvas, nanoTime)
-                } catch (e: Throwable) {
-                    if (System.getProperty("compose.desktop.render.ignore.errors") == null) {
-                        throw e
-                    }
                 }
             }
         }
@@ -223,12 +238,16 @@ internal class ComposeLayer {
         _component.addInputMethodListener(object : InputMethodListener {
             override fun caretPositionChanged(event: InputMethodEvent?) {
                 if (event != null) {
-                    scene.onInputMethodEvent(event)
+                    catchExceptions {
+                        scene.onInputMethodEvent(event)
+                    }
                 }
             }
 
             override fun inputMethodTextChanged(event: InputMethodEvent) = events.post {
-                scene.onInputMethodEvent(event)
+                catchExceptions {
+                    scene.onInputMethodEvent(event)
+                }
             }
         })
 
@@ -248,22 +267,32 @@ internal class ComposeLayer {
         }
         _component.focusTraversalKeysEnabled = false
         _component.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(event: KeyEvent) = scene.sendKeyEvent(event)
-            override fun keyReleased(event: KeyEvent) = scene.sendKeyEvent(event)
-            override fun keyTyped(event: KeyEvent) = scene.sendKeyEvent(event)
+            override fun keyPressed(event: KeyEvent) = onKeyEvent(event)
+            override fun keyReleased(event: KeyEvent) = onKeyEvent(event)
+            override fun keyTyped(event: KeyEvent) = onKeyEvent(event)
         })
     }
 
     private var lastMouseEvent: MouseEvent? = null
 
     private fun onMouseEvent(event: MouseEvent) = events.post {
-        scene.onMouseEvent(density, event)
-        lastMouseEvent = event
+        catchExceptions {
+            scene.onMouseEvent(density, event)
+            lastMouseEvent = event
+        }
     }
 
     private fun onMouseWheelEvent(event: MouseWheelEvent) = events.post {
-        scene.onMouseWheelEvent(density, event)
-        lastMouseEvent = event
+        catchExceptions {
+            scene.onMouseWheelEvent(density, event)
+            lastMouseEvent = event
+        }
+    }
+
+    private fun onKeyEvent(event: KeyEvent) {
+        catchExceptions {
+            scene.sendKeyEvent(event)
+        }
     }
 
     fun dispose() {
@@ -286,11 +315,13 @@ internal class ComposeLayer {
         // but the first composition will be useless, as we set density=1
         // (we don't know the real density if we have unattached component)
         _initContent = {
-            scene.setContent(
-                onPreviewKeyEvent = onPreviewKeyEvent,
-                onKeyEvent = onKeyEvent,
-                content = content
-            )
+            catchExceptions {
+                scene.setContent(
+                    onPreviewKeyEvent = onPreviewKeyEvent,
+                    onKeyEvent = onKeyEvent,
+                    content = content
+                )
+            }
         }
         initContent()
     }
