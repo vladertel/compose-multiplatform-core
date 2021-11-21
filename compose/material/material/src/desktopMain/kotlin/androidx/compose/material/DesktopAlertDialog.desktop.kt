@@ -26,16 +26,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.rememberDialogState
@@ -180,6 +183,7 @@ interface AlertDialogProvider {
  */
 @ExperimentalMaterialApi
 object PopupAlertDialogProvider : AlertDialogProvider {
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     override fun AlertDialog(
         onDismissRequest: () -> Unit,
@@ -196,6 +200,14 @@ object PopupAlertDialogProvider : AlertDialogProvider {
             },
             focusable = true,
             onDismissRequest = onDismissRequest,
+            onKeyEvent = {
+                if (it.key == Key.Escape) {
+                    onDismissRequest()
+                    true
+                } else {
+                    false
+                }
+            },
         ) {
             Box(
                 modifier = Modifier
@@ -218,6 +230,7 @@ object PopupAlertDialogProvider : AlertDialogProvider {
  */
 @ExperimentalMaterialApi
 object UndecoratedWindowAlertDialogProvider : AlertDialogProvider {
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     override fun AlertDialog(
         onDismissRequest: () -> Unit,
@@ -227,7 +240,15 @@ object UndecoratedWindowAlertDialogProvider : AlertDialogProvider {
             onCloseRequest = onDismissRequest,
             state = rememberDialogState(width = Dp.Unspecified, height = Dp.Unspecified),
             undecorated = true,
-            resizable = false
+            resizable = false,
+            onKeyEvent = {
+                if (it.key == Key.Escape) {
+                    onDismissRequest()
+                    true
+                } else {
+                    false
+                }
+            },
         ) {
             WindowDraggableArea {
                 content()
