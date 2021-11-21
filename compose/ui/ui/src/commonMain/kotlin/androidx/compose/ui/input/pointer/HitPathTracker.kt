@@ -244,7 +244,7 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
     private var pointerEvent: PointerEvent? = null
     private var wasIn = false
     private var isIn = true
-    private var hasExited = true
+    private var hasEntered = false
 
     override fun dispatchMainEventPass(
         changes: Map<PointerId, PointerInputChange>,
@@ -388,22 +388,21 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
                 @Suppress("DEPRECATION")
                 isIn = !enterExitChange.isOutOfBounds(size)
             }
-            if (isIn != wasIn &&
-                (
-                    event.type == PointerEventType.Move ||
-                        event.type == PointerEventType.Enter ||
-                        event.type == PointerEventType.Exit
-                    )
+            if (event.type == PointerEventType.Move ||
+                event.type == PointerEventType.Enter ||
+                event.type == PointerEventType.Exit
             ) {
-                event.type = if (isIn) {
-                    PointerEventType.Enter
-                } else {
-                    PointerEventType.Exit
+                event.type = when {
+                    !hasEntered && !wasIn && isIn -> {
+                        hasEntered = true
+                        PointerEventType.Enter
+                    }
+                    hasEntered && (wasIn && !isIn || event.type == PointerEventType.Exit) -> {
+                        hasEntered = false
+                        PointerEventType.Exit
+                    }
+                    else -> PointerEventType.Move
                 }
-            } else if (event.type == PointerEventType.Enter && wasIn && !hasExited) {
-                event.type = PointerEventType.Move // We already knew that it was in.
-            } else if (event.type == PointerEventType.Exit && isIn && enterExitChange.pressed) {
-                event.type = PointerEventType.Move // We are still in.
             }
         }
         pointerEvent = event
@@ -474,7 +473,6 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
         }
 
         isIn = false
-        hasExited = event.type == PointerEventType.Exit
     }
 
     override fun toString(): String {
