@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toIntRect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -291,6 +292,7 @@ class ComposeScene internal constructor(
             component,
             component.windowInfo,
             density,
+            IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect(),
             onPreviewKeyEvent = onPreviewKeyEvent,
             onKeyEvent = onKeyEvent
         )
@@ -316,6 +318,7 @@ class ComposeScene internal constructor(
             forEachOwner {
                 it.constraints = constraints
             }
+            mainOwner?.bounds = IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect()
         }
 
     /**
@@ -354,7 +357,7 @@ class ComposeScene internal constructor(
 
     private var focusedOwner: SkiaBasedOwner? = null
     private var mousePressOwner: SkiaBasedOwner? = null
-    private var mouseEnterExitOwner: SkiaBasedOwner? = null
+    private var lastMouseMoveOwner: SkiaBasedOwner? = null
     private fun hoveredOwner(event: PointerInputEvent): SkiaBasedOwner? =
         list.lastOrNull { it.isHovered(event.pointers.first().position) } ?: list.lastOrNull()
 
@@ -412,8 +415,8 @@ class ComposeScene internal constructor(
             PointerEventType.Press -> onMousePressed(event)
             PointerEventType.Release -> onMouseReleased(event)
             PointerEventType.Move -> onMouseMove(event)
-            PointerEventType.Enter -> onMouseEnter(event)
-            PointerEventType.Exit -> onMouseExit(event)
+            PointerEventType.Enter -> onMouseMove(event)
+            PointerEventType.Exit -> onMouseMove(event)
             PointerEventType.Scroll -> onMouseScrolled(event)
         }
 
@@ -440,24 +443,13 @@ class ComposeScene internal constructor(
     private fun onMouseMove(event: PointerInputEvent) {
         val owner = if (event.buttons.areAnyPressed) mousePressOwner else hoveredOwner(event)
 
-        if (owner != null && mouseEnterExitOwner != null && owner != mouseEnterExitOwner) {
-            mouseEnterExitOwner?.processPointerInput(event.copy(eventType = PointerEventType.Exit))
+        if (owner != lastMouseMoveOwner) {
+            lastMouseMoveOwner?.processPointerInput(event.copy(eventType = PointerEventType.Exit))
             owner?.processPointerInput(event.copy(eventType = PointerEventType.Enter))
-            mouseEnterExitOwner = owner
         }
+        owner?.processPointerInput(event.copy(eventType = PointerEventType.Move))
 
-        owner?.processPointerInput(event)
-    }
-
-    private fun onMouseEnter(event: PointerInputEvent) {
-        val owner = hoveredOwner(event)
-        owner?.processPointerInput(event)
-        mouseEnterExitOwner = owner
-    }
-
-    private fun onMouseExit(event: PointerInputEvent) {
-        hoveredOwner(event)?.processPointerInput(event)
-        mouseEnterExitOwner = null
+        lastMouseMoveOwner = owner
     }
 
     private fun onMouseScrolled(event: PointerInputEvent) {
