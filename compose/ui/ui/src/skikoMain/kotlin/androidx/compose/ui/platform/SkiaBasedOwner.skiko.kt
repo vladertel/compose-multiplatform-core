@@ -338,12 +338,12 @@ internal class SkiaBasedOwner(
 
     private val scheduleSyntheticEvents = component::scheduleSyntheticMoveEvent
 
-    internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
+    internal fun processPointerInput(event: PointerInputEvent, isInBounds: Boolean = true): ProcessResult {
         measureAndLayout()
         return pointerInputEventProcessor.process(
             event,
             this,
-            isInBounds = event.pointers.all {
+            isInBounds = isInBounds && event.pointers.all {
                 bounds.contains(it.position.round())
             }
         ).also {
