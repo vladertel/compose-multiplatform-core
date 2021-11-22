@@ -242,7 +242,6 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
     private val relevantChanges: MutableMap<PointerId, PointerInputChange> = mutableMapOf()
     private var coordinates: LayoutCoordinates? = null
     private var pointerEvent: PointerEvent? = null
-    private var wasIn = false
     private var isIn = true
     private var hasEntered = false
 
@@ -393,9 +392,8 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
                 event.type == PointerEventType.Exit
             ) {
                 event.type = when {
-                    !hasEntered && !wasIn && isIn -> PointerEventType.Enter
-                    // event.type == PointerEventType.Exit is a special case, where we should force the exit, not matter we are in or not
-                    hasEntered && (wasIn && !isIn || event.type == PointerEventType.Exit) ->  PointerEventType.Exit
+                    !hasEntered && isIn -> PointerEventType.Enter
+                    hasEntered && !isIn -> PointerEventType.Exit
                     else -> PointerEventType.Move
                 }
             }
@@ -457,8 +455,6 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
         super.cleanUpHits(internalPointerEvent)
 
         val event = pointerEvent ?: return
-
-        wasIn = isIn
 
         event.changes.fastForEach { change ->
             // If the pointer is released and doesn't support hover OR
