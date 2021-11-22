@@ -359,7 +359,7 @@ class ComposeScene internal constructor(
 
     private fun SkiaBasedOwner?.isAbove(
         targetOwner: SkiaBasedOwner?
-    ) = list.indexOf(this) > list.indexOf(targetOwner)
+    ) = this != null && targetOwner != null && list.indexOf(this) > list.indexOf(targetOwner)
 
     // TODO(demin): return Boolean (when it is consumed).
     //  see ComposeLayer todo about AWTDebounceEventQueue
@@ -420,7 +420,7 @@ class ComposeScene internal constructor(
             }
             PointerEventType.Enter -> hoveredOwner?.processPointerInput(event)
             PointerEventType.Exit -> hoveredOwner?.processPointerInput(event)
-            PointerEventType.Scroll -> hoveredOwner?.processPointerInput(event)
+            PointerEventType.Scroll -> onMouseScrolled(event)
         }
 
         if (!actualButtons.areAnyPressed) {
@@ -429,23 +429,23 @@ class ComposeScene internal constructor(
     }
 
     private fun onMousePressed(event: PointerInputEvent) {
-        val currentOwner = hoveredOwner
-        if (currentOwner != null) {
-            if (focusedOwner.isAbove(currentOwner)) {
-                focusedOwner?.onDismissRequest?.invoke()
-            } else {
-                currentOwner.processPointerInput(event)
-                mousePressOwner = currentOwner
-            }
+        if (focusedOwner.isAbove(hoveredOwner)) {
+            focusedOwner?.onDismissRequest?.invoke()
         } else {
-            focusedOwner?.processPointerInput(event)
+            hoveredOwner?.processPointerInput(event)
             mousePressOwner = focusedOwner
         }
     }
 
     private fun onMouseReleased(event: PointerInputEvent) {
-        val owner = (mousePressOwner ?: hoveredOwner) ?: focusedOwner
+        val owner = mousePressOwner ?: hoveredOwner
         owner?.processPointerInput(event)
+    }
+
+    private fun onMouseScrolled(event: PointerInputEvent) {
+        if (!focusedOwner.isAbove(hoveredOwner)) {
+            hoveredOwner?.processPointerInput(event)
+        }
     }
 
     private var pointLocation = Offset.Zero
