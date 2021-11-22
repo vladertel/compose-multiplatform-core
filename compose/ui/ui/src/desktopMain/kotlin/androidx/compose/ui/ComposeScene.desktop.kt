@@ -28,6 +28,7 @@ import androidx.compose.ui.input.pointer.indexOfFirstPressed
 import androidx.compose.ui.input.pointer.indexOfLastPressed
 import androidx.compose.ui.platform.AccessibilityController
 import androidx.compose.ui.platform.AccessibilityControllerImpl
+import androidx.compose.ui.platform.DesktopPlatform
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.SkiaBasedOwner
 import java.awt.event.InputMethodEvent
@@ -83,7 +84,12 @@ internal actual fun pointerInputEvent(
 internal actual fun makeAccessibilityController(
     skiaBasedOwner: SkiaBasedOwner,
     component: PlatformComponent
-): AccessibilityController = AccessibilityControllerImpl(skiaBasedOwner, component)
+): AccessibilityController? =
+    if (DesktopPlatform.Current == DesktopPlatform.MacOS) {
+        AccessibilityControllerImpl(skiaBasedOwner, component)
+    } else {
+        null
+    }
 
 @OptIn(ExperimentalComposeUiApi::class)
 internal actual val DefaultPointerButtons: PointerButtons = PointerButtons()
