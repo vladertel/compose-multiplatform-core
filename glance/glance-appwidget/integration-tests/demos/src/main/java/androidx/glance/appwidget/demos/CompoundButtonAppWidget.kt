@@ -32,8 +32,8 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
-import androidx.glance.action.ActionCallback
-import androidx.glance.action.actionRunCallback
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.action.actionParametersOf
 import androidx.glance.appwidget.CheckBox
 import androidx.glance.appwidget.CheckBoxColors
@@ -43,7 +43,8 @@ import androidx.glance.appwidget.LocalUiKey
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.Switch
 import androidx.glance.appwidget.SwitchColors
-import androidx.glance.appwidget.layout.cornerRadius
+import androidx.glance.appwidget.appWidgetBackground
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.unit.ColorProvider
 import androidx.glance.background
 import androidx.glance.currentState
@@ -71,8 +72,9 @@ class CompoundButtonAppWidget : GlanceAppWidget() {
         val size = LocalSize.current
         val toggled = size.width >= 150.dp
         Column(
-            modifier = GlanceModifier.fillMaxSize().background(Color.LightGray).padding(8.dp)
-                .cornerRadius(16.dp),
+            modifier = GlanceModifier.fillMaxSize().background(Color.LightGray)
+                .padding(R.dimen.external_padding).cornerRadius(R.dimen.corner_radius)
+                .appWidgetBackground(),
             verticalAlignment = Alignment.Vertical.CenterVertically,
             horizontalAlignment = Alignment.Horizontal.CenterHorizontally
         ) {

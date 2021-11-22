@@ -26,7 +26,7 @@ import androidx.annotation.DoNotInline
 import androidx.annotation.LayoutRes
 import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
-import androidx.core.widget.setLinearLayoutGravity
+import androidx.core.widget.RemoteViewsCompat.setLinearLayoutGravity
 import androidx.glance.Emittable
 import androidx.glance.EmittableButton
 import androidx.glance.EmittableImage
@@ -45,6 +45,7 @@ import androidx.glance.layout.EmittableColumn
 import androidx.glance.layout.EmittableRow
 import androidx.glance.layout.EmittableSpacer
 import androidx.glance.text.EmittableText
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 internal fun translateComposition(
@@ -98,9 +99,10 @@ internal data class TranslationContext(
     val isRtl: Boolean,
     val layoutConfiguration: LayoutConfiguration,
     val itemPosition: Int,
-    val areLazyCollectionsAllowed: Boolean = true,
+    val isLazyCollectionDescendant: Boolean = false,
     val lastViewId: AtomicInteger = AtomicInteger(0),
     val parentContext: InsertedViewInfo = InsertedViewInfo(),
+    val isBackgroundSpecified: AtomicBoolean = AtomicBoolean(false),
 ) {
     fun nextViewId() = lastViewId.incrementAndGet()
 

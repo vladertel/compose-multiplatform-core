@@ -29,15 +29,17 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
-import androidx.glance.action.ActionCallback
+import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionLaunchActivity
 import androidx.glance.action.actionParametersOf
-import androidx.glance.action.actionRunCallback
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionLaunchActivity
+import androidx.glance.appwidget.appWidgetBackground
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.fillMaxSize
@@ -54,7 +56,8 @@ class ActionAppWidget : GlanceAppWidget() {
     @Composable
     override fun Content() {
         Column(
-            modifier = GlanceModifier.padding(8.dp).fillMaxSize(),
+            modifier = GlanceModifier.padding(R.dimen.external_padding).fillMaxSize()
+                .appWidgetBackground().cornerRadius(R.dimen.corner_radius),
             verticalAlignment = Alignment.Vertical.CenterVertically,
             horizontalAlignment = Alignment.Horizontal.CenterHorizontally
         ) {
