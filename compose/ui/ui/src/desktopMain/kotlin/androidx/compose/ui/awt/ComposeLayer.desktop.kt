@@ -247,9 +247,9 @@ internal class ComposeLayer {
         }
         _component.focusTraversalKeysEnabled = false
         _component.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(event: KeyEvent) = scene.sendKeyEvent(event)
-            override fun keyReleased(event: KeyEvent) = scene.sendKeyEvent(event)
-            override fun keyTyped(event: KeyEvent) = scene.sendKeyEvent(event)
+            override fun keyPressed(event: KeyEvent) = onKeyEvent(event)
+            override fun keyReleased(event: KeyEvent) = onKeyEvent(event)
+            override fun keyTyped(event: KeyEvent) = onKeyEvent(event)
         })
     }
 
@@ -266,6 +266,12 @@ internal class ComposeLayer {
         lastMouseEvent = event
         events.post {
             scene.onMouseWheelEvent(density, event)
+        }
+    }
+
+    private fun onKeyEvent(event: KeyEvent) {
+        if (scene.sendKeyEvent(ComposeKeyEvent(event))) {
+            event.consume()
         }
     }
 
@@ -354,11 +360,6 @@ private fun ComposeScene.onMouseWheelEvent(
         keyboardModifiers = event.keyboardModifiers,
         nativeEvent = event
     )
-}
-
-@OptIn(ExperimentalComposeUiApi::class)
-private fun ComposeScene.sendKeyEvent(event: KeyEvent) {
-    sendKeyEvent(ComposeKeyEvent(event))
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
