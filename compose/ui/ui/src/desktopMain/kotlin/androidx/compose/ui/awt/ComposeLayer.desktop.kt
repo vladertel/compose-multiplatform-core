@@ -298,13 +298,9 @@ internal class ComposeLayer {
 
     private fun onKeyEvent(event: KeyEvent) {
         catchExceptions {
-            scene.sendKeyEvent(event)
-        }
-    }
-
-    private fun onKeyEvent(event: KeyEvent) {
-        if (scene.sendKeyEvent(ComposeKeyEvent(event))) {
-            event.consume()
+            if (scene.sendKeyEvent(ComposeKeyEvent(event))) {
+                event.consume()
+            }
         }
     }
 
