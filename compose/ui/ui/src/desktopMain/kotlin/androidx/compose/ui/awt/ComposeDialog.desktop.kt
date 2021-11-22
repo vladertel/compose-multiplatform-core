@@ -21,6 +21,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.window.DialogWindowScope
 import androidx.compose.ui.window.UndecoratedWindowResizer
+import androidx.compose.ui.window.WindowExceptionHandler
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.hostOs
 import org.jetbrains.skiko.OS
@@ -77,7 +78,7 @@ class ComposeDialog(
      * Handler to catch uncaught exceptions during rendering frames, handling events, or processing background Compose operations.
      */
     @ExperimentalComposeUiApi
-    var uncaughtExceptionHandler: Thread.UncaughtExceptionHandler? by layer::uncaughtExceptionHandler
+    var exceptionHandler: WindowExceptionHandler? by layer::exceptionHandler
 
     /**
      * Composes the given composable into the ComposeDialog.

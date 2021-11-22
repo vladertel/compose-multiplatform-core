@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
@@ -76,19 +77,22 @@ internal class ComposeLayer {
     private val _component = ComponentImpl()
     val component: SkiaLayer get() = _component
 
+    @OptIn(ExperimentalComposeUiApi::class)
     private val coroutineExceptionHandler = object : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
         override fun handleException(context: CoroutineContext, exception: Throwable) {
-            uncaughtExceptionHandler?.uncaughtException(Thread.currentThread(), exception) ?: throw exception
+            exceptionHandler?.onException(exception) ?: throw exception
         }
     }
 
-    var uncaughtExceptionHandler: Thread.UncaughtExceptionHandler? = null
+    @OptIn(ExperimentalComposeUiApi::class)
+    var exceptionHandler: WindowExceptionHandler? = null
 
+    @OptIn(ExperimentalComposeUiApi::class)
     private fun catchExceptions(body: () -> Unit) {
         try {
             body()
         } catch (e: Throwable) {
-            uncaughtExceptionHandler?.uncaughtException(Thread.currentThread(), e) ?: throw e
+            exceptionHandler?.onException(e) ?: throw e
         }
     }
 

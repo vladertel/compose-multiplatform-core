@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.awt.ComposeDialog
-import androidx.compose.ui.awt.LocalWindowExceptionHandlerFactory
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.unit.DpSize
@@ -247,14 +246,14 @@ fun Dialog(
         create = {
             create().apply {
                 this.compositionLocalContext = compositionLocalContext
-                this.uncaughtExceptionHandler = windowExceptionHandlerFactory.exceptionHandler(this)
+                this.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(this)
                 setContent(onPreviewKeyEvent, onKeyEvent, content)
             }
         },
         dispose = dispose,
         update = {
             it.compositionLocalContext = compositionLocalContext
-            it.uncaughtExceptionHandler = windowExceptionHandlerFactory.exceptionHandler(it)
+            it.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(it)
             update(it)
         }
     )

@@ -1,10 +1,9 @@
-package androidx.compose.ui.awt
+package androidx.compose.ui.window
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import java.awt.Window
 import java.awt.event.WindowEvent
-import javax.swing.JFrame
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
@@ -12,8 +11,9 @@ import javax.swing.SwingUtilities
  * Default [WindowExceptionHandlerFactory], which will show standard error dialog, and close the window after that
  */
 @ExperimentalComposeUiApi
-object DefaultWindowExceptionHandleFactory : WindowExceptionHandlerFactory {
-    override fun exceptionHandler(window: Window) = Thread.UncaughtExceptionHandler { _, throwable ->
+object DefaultWindowExceptionHandlerFactory : WindowExceptionHandlerFactory {
+    override fun exceptionHandler(window: Window) = WindowExceptionHandler { throwable ->
+        // invokeLater here to dispatch a blocking operation (showMessageDialog) and throw the exception after immediately
         SwingUtilities.invokeLater {
             JOptionPane.showMessageDialog(window, "An error has occurred", "Error", JOptionPane.ERROR_MESSAGE)
             window.dispatchEvent(WindowEvent(window, WindowEvent.WINDOW_CLOSING))
@@ -27,11 +27,14 @@ object DefaultWindowExceptionHandleFactory : WindowExceptionHandlerFactory {
  */
 @ExperimentalComposeUiApi
 interface WindowExceptionHandlerFactory {
-    fun exceptionHandler(window: Window): Thread.UncaughtExceptionHandler
+    /**
+     * Create an exception handler for passed [window]. Handlers run in the UI thread.
+     */
+    fun exceptionHandler(window: Window): WindowExceptionHandler
 }
 
 /**
  * The CompositionLocal that provides [WindowExceptionHandlerFactory].
  */
 @ExperimentalComposeUiApi
-val LocalWindowExceptionHandlerFactory = staticCompositionLocalOf { DefaultWindowExceptionHandleFactory }
+val LocalWindowExceptionHandlerFactory = staticCompositionLocalOf { DefaultWindowExceptionHandlerFactory }

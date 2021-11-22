@@ -17,11 +17,11 @@ package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalContext
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.UndecoratedWindowResizer
+import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.WindowPlacement
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.hostOs
@@ -31,10 +31,7 @@ import java.awt.Component
 import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelListener
-import java.awt.event.WindowEvent
 import javax.swing.JFrame
-import javax.swing.JOptionPane
-import javax.swing.SwingUtilities
 
 /**
  * ComposeWindow is a window for building UI using Compose for Desktop.
@@ -64,7 +61,7 @@ class ComposeWindow : JFrame() {
      * Handler to catch uncaught exceptions during rendering frames, handling events, or processing background Compose operations.
      */
     @ExperimentalComposeUiApi
-    var uncaughtExceptionHandler: Thread.UncaughtExceptionHandler? by layer::uncaughtExceptionHandler
+    var exceptionHandler: WindowExceptionHandler? by layer::exceptionHandler
 
     /**
      * Composes the given composable into the ComposeWindow.
