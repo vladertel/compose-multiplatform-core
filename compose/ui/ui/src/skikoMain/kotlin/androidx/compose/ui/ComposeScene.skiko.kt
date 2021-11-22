@@ -141,7 +141,6 @@ class ComposeScene internal constructor(
      */
     val roots: Set<RootForTest> get() = list
 
-    private var pointerId = 0L
     private val defaultPointerStateTracker = DefaultPointerStateTracker()
 
     private val job = Job()
@@ -402,7 +401,7 @@ class ComposeScene internal constructor(
             timeMillis,
             nativeEvent,
             type,
-            pointerId,
+            pointerId = 0,
             scrollDelta,
             actualButtons,
             actualKeyboardModifiers
@@ -447,7 +446,6 @@ class ComposeScene internal constructor(
     private fun onMouseReleased(event: PointerInputEvent) {
         val owner = (mousePressOwner ?: hoveredOwner) ?: focusedOwner
         owner?.processPointerInput(event)
-        pointerId += 1
     }
 
     private var pointLocation = Offset.Zero
