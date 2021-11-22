@@ -277,7 +277,7 @@ internal class SkiaParagraph(
             // BiDi transition offset, we need to resolve ambiguity with usePrimaryDirection
             // for details see comment for MultiParagraph.getHorizontalPosition
             usePrimaryDirection -> prevBox.cursorHorizontalPosition()
-            else -> nextBox.cursorHorizontalPosition()
+            else -> nextBox.cursorHorizontalPosition(true)
         }
     }
 
