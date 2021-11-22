@@ -393,17 +393,15 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
                 event.type == PointerEventType.Exit
             ) {
                 event.type = when {
-                    !hasEntered && !wasIn && isIn -> {
-                        hasEntered = true
-                        PointerEventType.Enter
-                    }
-                    hasEntered && (wasIn && !isIn || event.type == PointerEventType.Exit) -> {
-                        hasEntered = false
-                        PointerEventType.Exit
-                    }
+                    !hasEntered && !wasIn && isIn -> PointerEventType.Enter
+                    // event.type == PointerEventType.Exit is a special case, where we should force the exit, not matter we are in or not
+                    hasEntered && (wasIn && !isIn || event.type == PointerEventType.Exit) ->  PointerEventType.Exit
                     else -> PointerEventType.Move
                 }
             }
+
+            if (event.type == PointerEventType.Enter) hasEntered = true
+            if (event.type == PointerEventType.Exit) hasEntered = false
         }
         pointerEvent = event
     }
