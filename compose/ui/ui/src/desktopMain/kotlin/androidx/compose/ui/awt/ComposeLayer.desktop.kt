@@ -187,9 +187,8 @@ internal class ComposeLayer {
         }
 
         override fun scheduleSyntheticMoveEvent() {
-            val lastMouseEvent = lastMouseEvent ?: return
-
             SwingUtilities.invokeLater {
+                val lastMouseEvent = lastMouseEvent ?: return@invokeLater
                 val source = lastMouseEvent.source as Component
                 source.dispatchEvent(
                     MouseEvent(
@@ -256,14 +255,18 @@ internal class ComposeLayer {
 
     private var lastMouseEvent: MouseEvent? = null
 
-    private fun onMouseEvent(event: MouseEvent) = events.post {
-        scene.onMouseEvent(density, event)
+    private fun onMouseEvent(event: MouseEvent) {
         lastMouseEvent = event
+        events.post {
+            scene.onMouseEvent(density, event)
+        }
     }
 
-    private fun onMouseWheelEvent(event: MouseWheelEvent) = events.post {
-        scene.onMouseWheelEvent(density, event)
+    private fun onMouseWheelEvent(event: MouseWheelEvent) {
         lastMouseEvent = event
+        events.post {
+            scene.onMouseWheelEvent(density, event)
+        }
     }
 
     fun dispose() {
