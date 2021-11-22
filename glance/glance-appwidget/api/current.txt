@@ -6,6 +6,10 @@ package androidx.glance.appwidget {
     method @androidx.compose.runtime.Composable public static void AndroidRemoteViews(android.widget.RemoteViews remoteViews, @IdRes int containerViewId, kotlin.jvm.functions.Function0<kotlin.Unit> content);
   }
 
+  public final class AppWidgetBackgroundKt {
+    method public static androidx.glance.GlanceModifier appWidgetBackground(androidx.glance.GlanceModifier);
+  }
+
   public final class ApplyModifiersKt {
   }
 
@@ -34,6 +38,11 @@ package androidx.glance.appwidget {
     method public static androidx.compose.runtime.ProvidableCompositionLocal<java.lang.String> getLocalUiKey();
     property public static final androidx.compose.runtime.ProvidableCompositionLocal<android.os.Bundle> LocalAppWidgetOptions;
     property public static final androidx.compose.runtime.ProvidableCompositionLocal<java.lang.String> LocalUiKey;
+  }
+
+  public final class CornerRadiusKt {
+    method public static androidx.glance.GlanceModifier cornerRadius(androidx.glance.GlanceModifier, float radius);
+    method public static androidx.glance.GlanceModifier cornerRadius(androidx.glance.GlanceModifier, @DimenRes int radius);
   }
 
   public final class CoroutineBroadcastReceiverKt {
@@ -77,7 +86,7 @@ package androidx.glance.appwidget {
     method public static androidx.glance.ImageProvider ImageProvider(android.net.Uri uri);
   }
 
-  public final class LayoutIdsKt {
+  public final class LayoutSelectionKt {
   }
 
   public final class NormalizeCompositionTreeKt {
@@ -128,17 +137,17 @@ package androidx.glance.appwidget {
 
 package androidx.glance.appwidget.action {
 
+  public interface ActionCallback {
+    method public suspend Object? onRun(android.content.Context context, androidx.glance.GlanceId glanceId, androidx.glance.action.ActionParameters parameters, kotlin.coroutines.Continuation<? super kotlin.Unit> p);
+  }
+
   public final class LaunchActivityIntentActionKt {
     method public static androidx.glance.action.Action actionLaunchActivity(android.content.Intent intent);
   }
 
-}
-
-package androidx.glance.appwidget.layout {
-
-  public final class CornerRadiusKt {
-    method public static androidx.glance.GlanceModifier cornerRadius(androidx.glance.GlanceModifier, float radius);
-    method public static androidx.glance.GlanceModifier cornerRadius(androidx.glance.GlanceModifier, @DimenRes int radius);
+  public final class RunCallbackActionKt {
+    method public static <T extends androidx.glance.appwidget.action.ActionCallback> androidx.glance.action.Action actionRunCallback(Class<T> callbackClass, optional androidx.glance.action.ActionParameters parameters);
+    method public static inline <reified T extends androidx.glance.appwidget.action.ActionCallback> androidx.glance.action.Action! actionRunCallback(optional androidx.glance.action.ActionParameters parameters);
   }
 
 }
