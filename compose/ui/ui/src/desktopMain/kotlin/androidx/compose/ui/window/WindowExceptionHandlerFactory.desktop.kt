@@ -15,7 +15,7 @@ object DefaultWindowExceptionHandlerFactory : WindowExceptionHandlerFactory {
     override fun exceptionHandler(window: Window) = WindowExceptionHandler { throwable ->
         // invokeLater here to dispatch a blocking operation (showMessageDialog) and throw the exception after immediately
         SwingUtilities.invokeLater {
-            JOptionPane.showMessageDialog(window, "An error has occurred", "Error", JOptionPane.ERROR_MESSAGE)
+            JOptionPane.showMessageDialog(window, throwable.message ?: "Unknown error", "Error", JOptionPane.ERROR_MESSAGE)
             window.dispatchEvent(WindowEvent(window, WindowEvent.WINDOW_CLOSING))
         }
         throw throwable
