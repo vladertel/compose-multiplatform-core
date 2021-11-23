@@ -386,7 +386,8 @@ private fun Project.publishAndroidxReference(target: KotlinTarget) {
                     conf.artifacts.clear()
                     conf.dependencies.clear()
                     conf.setExtendsFrom(emptyList())
-                    val newDependency = target.project.group.toString().replace("org.jetbrains.compose", "androidx.compose") + ":" + name + ":" + target.project.oelAndroidxVersion()!!
+                    var version = if (target.project.group.toString().contains("org.jetbrains.compose.material3")) "1.0.0-alpha01" else target.project.oelAndroidxVersion()!!
+                    val newDependency = target.project.group.toString().replace("org.jetbrains.compose", "androidx.compose") + ":" + name + ":" + version
                     conf.dependencies.add(target.project.dependencies.create(newDependency))
                 }
 
