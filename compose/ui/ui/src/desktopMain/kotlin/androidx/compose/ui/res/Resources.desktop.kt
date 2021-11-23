@@ -63,11 +63,9 @@ inline fun <T> useResource(
 @PublishedApi
 internal fun openResource(
     resourcePath: String,
-    loader: ResourceLoader = defaultResourceLoader()
+    loader: ResourceLoader
 ): InputStream {
-    return requireNotNull(loader.load(resourcePath)) {
-        "Resource $resourcePath not found"
-    }
+    return loader.load(resourcePath)
 }
 
 /**
@@ -81,46 +79,44 @@ internal fun openResource(
 internal fun openResource(
     resourcePath: String,
 ): InputStream {
-    return requireNotNull(defaultResourceLoader().load(resourcePath)) {
-        "Resource $resourcePath not found"
-    }
+    return defaultResourceLoader().load(resourcePath)
 }
 
 /**
- * Abstraction for loading resources.
+ * Abstraction for loading resources. This API is intended for use in synchronous cases,
+ * where resource is expected to be loaded quick during the first composition, and so potentially
+ * slow operations like network access is not recommended. For such scenarious use functions
+ * [loadSvgPainter] and [loadXmlImageVector] instead on IO dispatcher.
  */
 interface ResourceLoader {
-    fun load(resourcePath: String): InputStream?
+    fun load(resourcePath: String): InputStream
 }
 
 /**
  * Resource loader based on JVM current context class loader.
  */
 class ClassLoaderResourceLoader : ResourceLoader {
-    override fun load(resourcePath: String): InputStream? {
-        return try {
-            // TODO(https://github.com/JetBrains/compose-jb/issues/618): probably we shouldn't use
-            //  contextClassLoader here, as it is not defined in threads created by non-JVM
-            Thread.currentThread().contextClassLoader!!.getResourceAsStream(resourcePath)
-        } catch (e: Throwable) {
-            null
-        }
+    override fun load(resourcePath: String): InputStream {
+        // TODO(https://github.com/JetBrains/compose-jb/issues/618): probably we shouldn't use
+        //  contextClassLoader here, as it is not defined in threads created by non-JVM
+        return Thread.currentThread().contextClassLoader!!.getResourceAsStream(resourcePath)
     }
 }
 
 /**
- * Resource loader from the file system relative to certain root location.
+ * Resource loader from the file system relative to a certain root location.
  */
 class FileResourceLoader(val root: File) : ResourceLoader {
-    override fun load(resourcePath: String): InputStream? {
-        return try {
-            FileInputStream(File(root, resourcePath))
-        } catch (e: Throwable) {
-            // TODO: or actually throw it instead?
-            null
-        }
+    override fun load(resourcePath: String): InputStream {
+        return FileInputStream(File(root, resourcePath))
     }
 }
 
-internal fun defaultResourceLoader(): ResourceLoader = ClassLoaderResourceLoader()
+/**
+ * Resource loader which is capable to load resources from `resources` folder in an application's
+ * project. Ability to load from dependent modules resources is not guaranteed in the future.
+ * Use explicit `ClassLoaderResourceLoader` instance if such guarantee is needed.
+ */
+fun defaultResourceLoader(): ResourceLoader = _defaultResourceLoader
 
+private val _defaultResourceLoader = ClassLoaderResourceLoader()
