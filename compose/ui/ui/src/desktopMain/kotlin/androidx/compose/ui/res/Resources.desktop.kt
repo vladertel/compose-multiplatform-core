@@ -17,12 +17,32 @@
 package androidx.compose.ui.res
 
 import java.io.InputStream
+import java.io.File
+import java.io.FileInputStream
 
 /**
  * Open [InputStream] from a resource stored in resources for the application, calls the [block]
  * callback giving it a InputStream and closes stream once the processing is
  * complete.
  *
+ * @param resourcePath  path of resource in loader
+ * @param loader  resource loader
+ * @return object that was returned by [block]
+ *
+ * @throws IllegalArgumentException if there is no [resourcePath] in resources
+ */
+inline fun <T> useResource(
+    resourcePath: String,
+    loader: ResourceLoader,
+    block: (InputStream) -> T
+): T = openResource(resourcePath, loader).use(block)
+
+/**
+ * Open [InputStream] from a resource stored in resources for the application, calls the [block]
+ * callback giving it a InputStream and closes stream once the processing is
+ * complete.
+ *
+ * @param resourcePath  path of resource
  * @return object that was returned by [block]
  *
  * @throws IllegalArgumentException if there is no [resourcePath] in resources
@@ -35,15 +55,72 @@ inline fun <T> useResource(
 /**
  * Open [InputStream] from a resource stored in resources for the application.
  *
+ * @param resourcePath  path of resource in loader
+ * @param loader  resource loader
+ *
  * @throws IllegalArgumentException if there is no [resourcePath] in resources
  */
 @PublishedApi
-internal fun openResource(resourcePath: String): InputStream {
-    // TODO(https://github.com/JetBrains/compose-jb/issues/618): probably we shouldn't use
-    //  contextClassLoader here, as it is not defined in threads created by non-JVM
-    val classLoader = Thread.currentThread().contextClassLoader!!
-
-    return requireNotNull(classLoader.getResourceAsStream(resourcePath)) {
+internal fun openResource(
+    resourcePath: String,
+    loader: ResourceLoader = defaultResourceLoader()
+): InputStream {
+    return requireNotNull(loader.load(resourcePath)) {
         "Resource $resourcePath not found"
     }
 }
+
+/**
+ * Open [InputStream] from a resource stored in resources for the application.
+ *
+ * @param resourcePath  path of resource
+ *
+ * @throws IllegalArgumentException if there is no [resourcePath] in resources
+ */
+@PublishedApi
+internal fun openResource(
+    resourcePath: String,
+): InputStream {
+    return requireNotNull(defaultResourceLoader().load(resourcePath)) {
+        "Resource $resourcePath not found"
+    }
+}
+
+/**
+ * Abstraction for loading resources.
+ */
+interface ResourceLoader {
+    fun load(resourcePath: String): InputStream?
+}
+
+/**
+ * Resource loader based on JVM current context class loader.
+ */
+class ClassLoaderResourceLoader : ResourceLoader {
+    override fun load(resourcePath: String): InputStream? {
+        return try {
+            // TODO(https://github.com/JetBrains/compose-jb/issues/618): probably we shouldn't use
+            //  contextClassLoader here, as it is not defined in threads created by non-JVM
+            Thread.currentThread().contextClassLoader!!.getResourceAsStream(resourcePath)
+        } catch (e: Throwable) {
+            null
+        }
+    }
+}
+
+/**
+ * Resource loader from the file system relative to certain root location.
+ */
+class FileResourceLoader(val root: File) : ResourceLoader {
+    override fun load(resourcePath: String): InputStream? {
+        return try {
+            FileInputStream(File(root, resourcePath))
+        } catch (e: Throwable) {
+            // TODO: or actually throw it instead?
+            null
+        }
+    }
+}
+
+private fun defaultResourceLoader(): ResourceLoader = ClassLoaderResourceLoader()
+
