@@ -49,7 +49,7 @@ import org.xml.sax.InputSource
 @Composable
 fun painterResource(
     resourcePath: String,
-    loader: ResourceLoader = ClassLoaderResourceLoader()
+    loader: ResourceLoader = defaultResourceLoader()
 ): Painter = when (resourcePath.substringAfterLast(".")) {
     "svg" -> rememberSvgResource(resourcePath, loader)
     "xml" -> rememberVectorXmlResource(resourcePath, loader)
@@ -57,7 +57,7 @@ fun painterResource(
 }
 
 @Composable
-private fun rememberSvgResource(resourcePath: String, loader: ResourceLoader = ClassLoaderResourceLoader()): Painter {
+private fun rememberSvgResource(resourcePath: String, loader: ResourceLoader = defaultResourceLoader()): Painter {
     val density = LocalDensity.current
     return remember(resourcePath, density) {
         useResource(resourcePath, loader) {
@@ -67,7 +67,7 @@ private fun rememberSvgResource(resourcePath: String, loader: ResourceLoader = C
 }
 
 @Composable
-private fun rememberVectorXmlResource(resourcePath: String, loader: ResourceLoader = ClassLoaderResourceLoader()): Painter {
+private fun rememberVectorXmlResource(resourcePath: String, loader: ResourceLoader = defaultResourceLoader()): Painter {
     val density = LocalDensity.current
     val image = remember(resourcePath, density) {
         useResource(resourcePath, loader) {
@@ -78,7 +78,7 @@ private fun rememberVectorXmlResource(resourcePath: String, loader: ResourceLoad
 }
 
 @Composable
-private fun rememberBitmapResource(resourcePath: String, loader: ResourceLoader = ClassLoaderResourceLoader()): Painter {
+private fun rememberBitmapResource(resourcePath: String, loader: ResourceLoader = defaultResourceLoader()): Painter {
     val image = remember(resourcePath) {
         useResource(resourcePath, loader, ::loadImageBitmap)
     }

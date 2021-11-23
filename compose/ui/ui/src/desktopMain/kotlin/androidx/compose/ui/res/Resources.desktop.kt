@@ -122,5 +122,5 @@ class FileResourceLoader(val root: File) : ResourceLoader {
     }
 }
 
-private fun defaultResourceLoader(): ResourceLoader = ClassLoaderResourceLoader()
+internal fun defaultResourceLoader(): ResourceLoader = ClassLoaderResourceLoader()
 
