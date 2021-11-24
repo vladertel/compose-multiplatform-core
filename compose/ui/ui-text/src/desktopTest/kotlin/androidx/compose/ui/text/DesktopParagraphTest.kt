@@ -283,9 +283,9 @@ class DesktopParagraphTest {
                 append("text")
             }
         }
-
-        val paragraph = simpleParagraph(text = helper.text, spanStyles = helper.spanStyles)
-        val paragraphWithoutStyles = simpleParagraph(helper.text)
+        val textStyle = TextStyle(fontSize = 16.sp)
+        val paragraph = simpleParagraph(text = helper.text, spanStyles = helper.spanStyles, style = textStyle)
+        val paragraphWithoutStyles = simpleParagraph(helper.text, textStyle)
 
         val firstLineTop = paragraph.getLineTop(0)
         val firstLineBottom = paragraph.getLineBottom(0)
