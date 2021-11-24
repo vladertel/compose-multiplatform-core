@@ -38,8 +38,8 @@ val NoOpUpdate: Component.() -> Unit = {}
 
 /**
  * Composes an AWT/Swing component obtained from [factory]. The [factory]
- * block will be called to obtain the [Component] to be composed.
- * The Swing component is placed on top of the Compose layer (that means that Compose content can't overlap or clip it).
+ * block will be called to obtain the [Component] to be composed. The Swing component is placed on
+ * top of the Compose layer (that means that Compose content can't overlap or clip it).
  * The [update] block runs due to recomposition, this is the place to set [Component] properties
  * depending on state. When state changes, the block will be reexecuted to set the new properties.
  *
