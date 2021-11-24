@@ -85,11 +85,11 @@ class FixComposableLambdaCalls(
         module.transformChildrenVoid(this)
     }
 
-    private fun IrType.hasComposer(): Boolean {
+    private fun IrType.hasComposerDirectly(): Boolean {
         if (this == composerType) return true
 
         return when (this) {
-            is IrSimpleType -> arguments.any { (it as? IrType)?.hasComposer() == true }
+            is IrSimpleType -> arguments.any { (it as? IrType) == composerType }
             else -> false
         }
     }
@@ -136,7 +136,7 @@ class FixComposableLambdaCalls(
 
         val dispatchReceiver = original.dispatchReceiver ?: return original
 
-        if (!dispatchReceiver.type.isFunction() || !dispatchReceiver.type.hasComposer()) {
+        if (!dispatchReceiver.type.isFunction() || !dispatchReceiver.type.hasComposerDirectly()) {
             return original
         }
 
