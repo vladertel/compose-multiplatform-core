@@ -466,6 +466,12 @@ internal data class ComputedStyle(
         }
 
         res.fontSize = fontSize
+
+        baselineShift?.let {
+            val fontMetrics = res.fontMetrics
+            res.baselineShift = it.multiplier * fontMetrics.ascent
+        }
+
         return res
     }
 
