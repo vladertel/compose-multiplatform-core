@@ -511,6 +511,12 @@ internal data class ComputedStyle(
             ).value as FontLoadResult
             res.fontFamilies = resolved.aliases.toTypedArray()
         }
+
+        baselineShift?.let {
+            val fontMetrics = res.fontMetrics
+            res.baselineShift = it.multiplier * fontMetrics.ascent
+        }
+
         return res
     }
 
