@@ -53,10 +53,42 @@ internal fun runApplicationTest(
 
     runBlocking(Dispatchers.Swing) {
         withTimeout(30000) {
-            val testScope = WindowTestScope(this, useDelay)
-            if (testScope.isOpen) {
-                testScope.body()
+            val exceptionHandler = TestExceptionHandler()
+            withExceptionHandler(exceptionHandler) {
+                val testScope = WindowTestScope(this, useDelay, exceptionHandler)
+                if (testScope.isOpen) {
+                    testScope.body()
+                }
             }
+            exceptionHandler.throwIfCaught()
+        }
+    }
+}
+
+private inline fun withExceptionHandler(handler: Thread.UncaughtExceptionHandler, body: () -> Unit) {
+    val old = Thread.currentThread().uncaughtExceptionHandler
+    Thread.currentThread().uncaughtExceptionHandler = handler
+    try {
+        body()
+    } finally {
+        Thread.currentThread().uncaughtExceptionHandler = old
+    }
+}
+
+internal class TestExceptionHandler : Thread.UncaughtExceptionHandler {
+    private var exception: Throwable? = null
+
+    fun throwIfCaught() {
+        exception?.also {
+            throw it
+        }
+    }
+
+    override fun uncaughtException(thread: Thread, throwable: Throwable) {
+        if (exception != null) {
+            exception?.addSuppressed(throwable)
+        } else {
+            exception = throwable
         }
     }
 }
@@ -104,7 +136,8 @@ fun main()  {
 
 internal class WindowTestScope(
     private val scope: CoroutineScope,
-    private val useDelay: Boolean
+    private val useDelay: Boolean,
+    private val exceptionHandler: TestExceptionHandler
 ) : CoroutineScope by CoroutineScope(scope.coroutineContext + Job()) {
     var isOpen by mutableStateOf(true)
     private val initialRecomposers = Recomposer.runningRecomposers.value
@@ -132,5 +165,7 @@ internal class WindowTestScope(
         for (recomposerInfo in Recomposer.runningRecomposers.value - initialRecomposers) {
             recomposerInfo.state.takeWhile { it > Recomposer.State.Idle }.collect()
         }
+
+        exceptionHandler.throwIfCaught()
     }
 }
