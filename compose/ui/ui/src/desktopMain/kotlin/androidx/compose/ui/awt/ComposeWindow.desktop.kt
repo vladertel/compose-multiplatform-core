@@ -37,17 +37,19 @@ import javax.swing.JFrame
 /**
  * ComposeWindow is a window for building UI using Compose for Desktop.
  * ComposeWindow inherits javax.swing.JFrame.
+ *
+ * @param graphicsConfiguration the GraphicsConfiguration that is used to construct the new window
+ * if null, the system default GraphicsConfiguration is assumed.
  */
-class ComposeWindow : JFrame {
+class ComposeWindow(
+    graphicsConfiguration: GraphicsConfiguration? = null
+) : JFrame(graphicsConfiguration) {
     private val delegate = ComposeWindowDelegate(this)
     internal val layer get() = delegate.layer
 
     init {
         contentPane.add(delegate.pane)
     }
-
-    constructor() : super()
-    constructor(graphicsConfiguration: GraphicsConfiguration) : super(graphicsConfiguration)
 
     override fun add(component: Component) = delegate.add(component)
 
