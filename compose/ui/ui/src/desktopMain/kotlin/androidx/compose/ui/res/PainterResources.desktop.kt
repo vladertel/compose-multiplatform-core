@@ -19,6 +19,7 @@ package androidx.compose.ui.res
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -28,6 +29,10 @@ import org.xml.sax.InputSource
 /**
  * Load a [Painter] from an resource stored in resources for the application and decode
  * it based on the file extension.
+ * Resources for the application are in `src/main/resources` in JVM Gradle projects.
+ * Resource loading is not directly related to JVM classloader resources, so resources
+ * loading from dependencies JARs may stop working.
+ * See [ResourceLoader] for more information.
  *
  * Supported formats:
  * - SVG
@@ -41,33 +46,44 @@ import org.xml.sax.InputSource
  * [loadSvgPainter]
  * [loadXmlImageVector]
  *
- * @param resourcePath  path to the file in the resources folder
+ * @param resourcePath  path to the resource
+ * @param loader  resources loader
  * @return [Painter] used for drawing the loaded resource
  */
 @Composable
+@OptIn(ExperimentalComposeUiApi::class)
 fun painterResource(
-    resourcePath: String
+    resourcePath: String,
+    loader: ResourceLoader = ResourceLoader.Default
 ): Painter = when (resourcePath.substringAfterLast(".")) {
-    "svg" -> rememberSvgResource(resourcePath)
-    "xml" -> rememberVectorXmlResource(resourcePath)
-    else -> rememberBitmapResource(resourcePath)
+    "svg" -> rememberSvgResource(resourcePath, loader)
+    "xml" -> rememberVectorXmlResource(resourcePath, loader)
+    else -> rememberBitmapResource(resourcePath, loader)
 }
 
 @Composable
-private fun rememberSvgResource(resourcePath: String): Painter {
+@OptIn(ExperimentalComposeUiApi::class)
+private fun rememberSvgResource(
+    resourcePath: String,
+    loader: ResourceLoader = ResourceLoader.Default
+): Painter {
     val density = LocalDensity.current
     return remember(resourcePath, density) {
-        useResource(resourcePath) {
+        useResource(resourcePath, loader) {
             loadSvgPainter(it, density)
         }
     }
 }
 
 @Composable
-private fun rememberVectorXmlResource(resourcePath: String): Painter {
+@OptIn(ExperimentalComposeUiApi::class)
+private fun rememberVectorXmlResource(
+    resourcePath: String,
+    loader: ResourceLoader = ResourceLoader.Default
+): Painter {
     val density = LocalDensity.current
     val image = remember(resourcePath, density) {
-        useResource(resourcePath) {
+        useResource(resourcePath, loader) {
             loadXmlImageVector(InputSource(it), density)
         }
     }
@@ -75,9 +91,13 @@ private fun rememberVectorXmlResource(resourcePath: String): Painter {
 }
 
 @Composable
-private fun rememberBitmapResource(resourcePath: String): Painter {
+@OptIn(ExperimentalComposeUiApi::class)
+private fun rememberBitmapResource(
+    resourcePath: String,
+    loader: ResourceLoader = ResourceLoader.Default
+): Painter {
     val image = remember(resourcePath) {
-        useResource(resourcePath, ::loadImageBitmap)
+        useResource(resourcePath, loader, ::loadImageBitmap)
     }
     return BitmapPainter(image)
 }
