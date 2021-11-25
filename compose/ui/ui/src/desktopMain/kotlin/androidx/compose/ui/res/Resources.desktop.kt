@@ -92,7 +92,7 @@ internal fun openResource(
  * slow operations like network access is not recommended. For such scenarious use functions
  * [loadSvgPainter] and [loadXmlImageVector] instead on IO dispatcher.
  * Also the resource should be always available to load, and if you need to handle exceptions,
- * better these functions as well.
+ * it is better to use these functions as well.
  */
 @ExperimentalComposeUiApi
 interface ResourceLoader {
