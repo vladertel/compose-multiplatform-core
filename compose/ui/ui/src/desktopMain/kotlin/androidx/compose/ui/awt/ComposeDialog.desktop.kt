@@ -41,8 +41,7 @@ class ComposeDialog(
     owner: Window? = null,
     modalityType: ModalityType = ModalityType.MODELESS
 ) : JDialog(owner, modalityType) {
-    private val delegate = ComposeWindowDelegate(this)
-    internal val layer get() = delegate.layer
+    private val delegate = ComposeWindowDelegate(this, ::isUndecorated)
 
     init {
         contentPane.add(delegate.pane)
@@ -78,7 +77,7 @@ class ComposeDialog(
      * Handler to catch uncaught exceptions during rendering frames, handling events, or processing background Compose operations.
      */
     @ExperimentalComposeUiApi
-    var exceptionHandler: WindowExceptionHandler? by layer::exceptionHandler
+    var exceptionHandler: WindowExceptionHandler? by delegate::exceptionHandler
 
     /**
      * Composes the given composable into the ComposeDialog.
@@ -115,16 +114,14 @@ class ComposeDialog(
         super.dispose()
     }
 
-    private val undecoratedWindowResizer = UndecoratedWindowResizer(this, layer)
-
     override fun setUndecorated(value: Boolean) {
         super.setUndecorated(value)
-        undecoratedWindowResizer.enabled = isUndecorated && isResizable
+        delegate.undecoratedWindowResizer.enabled = isUndecorated && isResizable
     }
 
     override fun setResizable(value: Boolean) {
         super.setResizable(value)
-        undecoratedWindowResizer.enabled = isUndecorated && isResizable
+        delegate.undecoratedWindowResizer.enabled = isUndecorated && isResizable
     }
 
     /**
@@ -132,24 +129,7 @@ class ComposeDialog(
      * Transparency should be set only if window is not showing and `isUndecorated` is set to
      * `true`, otherwise AWT will throw an exception.
      */
-    var isTransparent: Boolean
-        get() = layer.component.transparency
-        set(value) {
-            if (value != layer.component.transparency) {
-                check(isUndecorated) { "Transparent window should be undecorated!" }
-                check(!isDisplayable) {
-                    "Cannot change transparency if window is already displayable."
-                }
-                layer.component.transparency = value
-                if (value) {
-                    if (hostOs != OS.Windows) {
-                        background = Color(0, 0, 0, 0)
-                    }
-                } else {
-                    background = null
-                }
-            }
-        }
+    var isTransparent: Boolean by delegate::isTransparent
 
     /**
      * Registers a task to run when the rendering API changes.
