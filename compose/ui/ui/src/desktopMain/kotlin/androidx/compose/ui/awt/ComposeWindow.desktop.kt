@@ -47,7 +47,7 @@ class ComposeWindow : JFrame {
     }
 
     constructor() : super()
-    constructor(gc: GraphicsConfiguration) : super(gc)
+    constructor(graphicsConfiguration: GraphicsConfiguration) : super(graphicsConfiguration)
 
     override fun add(component: Component) = delegate.add(component)
 
