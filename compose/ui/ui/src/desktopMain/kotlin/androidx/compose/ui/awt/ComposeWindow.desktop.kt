@@ -38,8 +38,8 @@ import javax.swing.JFrame
  * ComposeWindow is a window for building UI using Compose for Desktop.
  * ComposeWindow inherits javax.swing.JFrame.
  *
- * @param graphicsConfiguration the GraphicsConfiguration that is used to construct the new window
- * if null, the system default GraphicsConfiguration is assumed.
+ * @param graphicsConfiguration the GraphicsConfiguration that is used to construct the new window.
+ * If null, the system default GraphicsConfiguration is assumed.
  */
 class ComposeWindow(
     graphicsConfiguration: GraphicsConfiguration? = null
