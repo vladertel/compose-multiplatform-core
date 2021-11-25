@@ -69,11 +69,6 @@ import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 internal class ComposeLayer {
     private var isDisposed = false
 
-    // TODO(demin): probably we need to get rid of asynchronous events. it was added because of
-    //  slow lazy scroll. But events become unpredictable, and we can't consume them.
-    //  Alternative solution to a slow scroll - merge multiple scroll events into a single one.
-    private val events = AWTDebounceEventQueue()
-
     private val _component = ComponentImpl()
     val component: SkiaLayer get() = _component
 
@@ -247,7 +242,7 @@ internal class ComposeLayer {
                 }
             }
 
-            override fun inputMethodTextChanged(event: InputMethodEvent) = events.post {
+            override fun inputMethodTextChanged(event: InputMethodEvent) {
                 catchExceptions {
                     scene.onInputMethodEvent(event)
                 }
@@ -280,19 +275,15 @@ internal class ComposeLayer {
 
     private fun onMouseEvent(event: MouseEvent) {
         lastMouseEvent = event
-        events.post {
-            catchExceptions {
-                scene.onMouseEvent(density, event)
-            }
+        catchExceptions {
+            scene.onMouseEvent(density, event)
         }
     }
 
     private fun onMouseWheelEvent(event: MouseWheelEvent) {
         lastMouseEvent = event
-        events.post {
-            catchExceptions {
-                scene.onMouseWheelEvent(density, event)
-            }
+        catchExceptions {
+            scene.onMouseWheelEvent(density, event)
         }
     }
 
@@ -307,7 +298,6 @@ internal class ComposeLayer {
     fun dispose() {
         check(!isDisposed)
         scene.close()
-        events.cancel()
         _component.dispose()
         _initContent = null
         isDisposed = true
