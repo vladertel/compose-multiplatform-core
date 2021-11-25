@@ -275,16 +275,16 @@ internal class ComposeLayer {
 
     private fun onMouseEvent(event: MouseEvent) {
         lastMouseEvent = event
-            catchExceptions {
-                scene.onMouseEvent(density, event)
-            }
+        catchExceptions {
+            scene.onMouseEvent(density, event)
+        }
     }
 
     private fun onMouseWheelEvent(event: MouseWheelEvent) {
         lastMouseEvent = event
-            catchExceptions {
-                scene.onMouseWheelEvent(density, event)
-            }
+        catchExceptions {
+            scene.onMouseWheelEvent(density, event)
+        }
     }
 
     private fun onKeyEvent(event: KeyEvent) {
