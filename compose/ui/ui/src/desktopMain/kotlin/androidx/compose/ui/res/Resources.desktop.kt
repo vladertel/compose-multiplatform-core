@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.res
 
+import androidx.compose.ui.ExperimentalComposeUiApi
 import java.io.InputStream
 import java.io.File
 import java.io.FileInputStream
@@ -31,7 +32,8 @@ import java.io.FileInputStream
  *
  * @throws IllegalArgumentException if there is no [resourcePath] in resources
  */
-inline fun <T> useResource(
+@ExperimentalComposeUiApi
+internal inline fun <T> useResource(
     resourcePath: String,
     loader: ResourceLoader,
     block: (InputStream) -> T
@@ -61,6 +63,7 @@ inline fun <T> useResource(
  * @throws IllegalArgumentException if there is no [resourcePath] in resources
  */
 @PublishedApi
+@ExperimentalComposeUiApi
 internal fun openResource(
     resourcePath: String,
     loader: ResourceLoader
@@ -76,10 +79,11 @@ internal fun openResource(
  * @throws IllegalArgumentException if there is no [resourcePath] in resources
  */
 @PublishedApi
+@OptIn(ExperimentalComposeUiApi::class)
 internal fun openResource(
     resourcePath: String,
 ): InputStream {
-    return defaultResourceLoader().load(resourcePath)
+    return ResourceLoader.Default.load(resourcePath)
 }
 
 /**
@@ -87,14 +91,27 @@ internal fun openResource(
  * where resource is expected to be loaded quick during the first composition, and so potentially
  * slow operations like network access is not recommended. For such scenarious use functions
  * [loadSvgPainter] and [loadXmlImageVector] instead on IO dispatcher.
+ * Also the resource should be always available to load, and if you need to handle exceptions,
+ * better these functions as well.
  */
+@ExperimentalComposeUiApi
 interface ResourceLoader {
+    companion object {
+        /**
+         * Resource loader which is capable to load resources from `resources` folder in an application's
+         * project. Ability to load from dependent modules resources is not guaranteed in the future.
+         * Use explicit `ClassLoaderResourceLoader` instance if such guarantee is needed.
+         */
+        @ExperimentalComposeUiApi
+        val Default = ClassLoaderResourceLoader()
+    }
     fun load(resourcePath: String): InputStream
 }
 
 /**
  * Resource loader based on JVM current context class loader.
  */
+@ExperimentalComposeUiApi
 class ClassLoaderResourceLoader : ResourceLoader {
     override fun load(resourcePath: String): InputStream {
         // TODO(https://github.com/JetBrains/compose-jb/issues/618): probably we shouldn't use
@@ -106,17 +123,9 @@ class ClassLoaderResourceLoader : ResourceLoader {
 /**
  * Resource loader from the file system relative to a certain root location.
  */
+@ExperimentalComposeUiApi
 class FileResourceLoader(val root: File) : ResourceLoader {
     override fun load(resourcePath: String): InputStream {
         return FileInputStream(File(root, resourcePath))
     }
 }
-
-/**
- * Resource loader which is capable to load resources from `resources` folder in an application's
- * project. Ability to load from dependent modules resources is not guaranteed in the future.
- * Use explicit `ClassLoaderResourceLoader` instance if such guarantee is needed.
- */
-fun defaultResourceLoader(): ResourceLoader = _defaultResourceLoader
-
-private val _defaultResourceLoader = ClassLoaderResourceLoader()
