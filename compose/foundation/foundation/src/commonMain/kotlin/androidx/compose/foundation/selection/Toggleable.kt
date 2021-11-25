@@ -31,6 +31,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.platform.inspectable
@@ -242,7 +244,7 @@ private fun Modifier.toggleableImpl(
 ): Modifier = composed {
     val pressedInteraction = remember { mutableStateOf<PressInteraction.Press?>(null) }
     // TODO(pavlis): Handle multiple states for Semantics
-    val semantics = Modifier.semantics(mergeDescendants = true) {
+    fun Modifier.toggleSemantics() = this.semantics(mergeDescendants = true) {
         if (role != null) {
             this.role = role
         }
@@ -267,10 +269,25 @@ private fun Modifier.toggleableImpl(
             onTap = { if (enabled) onClickState.value.invoke() }
         )
     }
+    fun Modifier.detectToggleFromKey() = this.onKeyEvent {
+        if (enabled && it.isToggle) {
+            onClick()
+            true
+        } else {
+            false
+        }
+    }
     this
-        .then(semantics)
+        .toggleSemantics()
+        .detectToggleFromKey()
         .indication(interactionSource, indication)
         .hoverable(enabled = enabled, interactionSource = interactionSource)
         .focusableInNonTouchMode(enabled = enabled, interactionSource = interactionSource)
         .then(gestures)
 }
+
+/**
+ * Whether the specified [KeyEvent] represents a user intent to perform a toggle.
+ * (eg. When you press Space on a focused checkbox, it should perform a toggle).
+ */
+internal expect val KeyEvent.isToggle: Boolean
