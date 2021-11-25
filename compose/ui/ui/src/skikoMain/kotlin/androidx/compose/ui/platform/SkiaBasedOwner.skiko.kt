@@ -346,9 +346,7 @@ internal class SkiaBasedOwner(
             isInBounds = isInBounds && event.pointers.all {
                 bounds.contains(it.position.round())
             }
-        ).also {
-            commitPointerIcon(component)
-        }
+        )
     }
 
     override fun processPointerInput(timeMillis: Long, pointers: List<TestPointerInputEventData>) {
@@ -375,10 +373,6 @@ internal expect fun sendKeyEvent(
     keyInputModifier: KeyInputModifier,
     keyEvent: KeyEvent
 ): Boolean
-
-internal expect fun commitPointerIcon(
-    containerCursor: PlatformComponentWithCursor?
-)
 
 @OptIn(ExperimentalComposeUiApi::class)
 internal expect fun setPointerIcon(

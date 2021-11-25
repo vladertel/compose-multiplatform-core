@@ -154,7 +154,7 @@ internal class ComposeLayer {
             get() = _desiredCursor ?: super.getCursor()
             set(value) { _desiredCursor = value }
 
-        override fun commitCursor() {
+        fun commitCursor() {
             super.setCursor(_desiredCursor ?: Cursor(Cursor.DEFAULT_CURSOR))
             _desiredCursor = null
         }
@@ -229,7 +229,7 @@ internal class ComposeLayer {
         }
     }
 
-    init {
+    fun init() {
         _component.skikoView = object : SkikoView {
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
                 catchExceptions {
@@ -280,19 +280,29 @@ internal class ComposeLayer {
 
     private fun onMouseEvent(event: MouseEvent) {
         lastMouseEvent = event
-        events.post {
-            catchExceptions {
-                scene.onMouseEvent(density, event)
+        if (!event.isConsumed) {
+            events.post {
+                catchExceptions {
+                    scene.onMouseEvent(density, event)
+                }
+                _component.commitCursor()
             }
+        } else {
+            _component.commitCursor()
         }
     }
 
     private fun onMouseWheelEvent(event: MouseWheelEvent) {
         lastMouseEvent = event
-        events.post {
-            catchExceptions {
-                scene.onMouseWheelEvent(density, event)
+        if (!event.isConsumed) {
+            events.post {
+                catchExceptions {
+                    scene.onMouseWheelEvent(density, event)
+                }
+                _component.commitCursor()
             }
+        } else {
+            _component.commitCursor()
         }
     }
 

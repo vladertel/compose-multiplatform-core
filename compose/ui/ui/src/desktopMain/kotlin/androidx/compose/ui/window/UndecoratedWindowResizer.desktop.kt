@@ -17,14 +17,14 @@
 package androidx.compose.ui.window
 
 import androidx.compose.ui.awt.ComposeLayer
-import java.awt.Dimension
 import java.awt.Cursor
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
-import java.awt.event.MouseMotionAdapter
+import java.awt.Dimension
 import java.awt.MouseInfo
 import java.awt.Point
 import java.awt.Window
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
+import java.awt.event.MouseMotionListener
 
 internal const val DefaultBorderThickness = 8
 
@@ -37,42 +37,66 @@ internal class UndecoratedWindowResizer(
     private var initialPointPos = Point()
     private var initialWindowPos = Point()
     private var initialWindowSize = Dimension()
-    private var sides = 0
-    private var isResizing = false
 
-    private val motionListener = object : MouseMotionAdapter() {
-        override fun mouseDragged(event: MouseEvent) = resize()
-        override fun mouseMoved(event: MouseEvent) = changeCursor(event)
-    }
+    private enum class PressedTarget { Sides, Content }
 
-    private val mouseListener = object : MouseAdapter() {
-        override fun mousePressed(event: MouseEvent) {
-            if (sides != 0) {
-                isResizing = true
+    private val mouseListener = object : MouseAdapter(), MouseMotionListener {
+        private var sides = 0
+        private var pressedTarget: PressedTarget? = null
+
+        override fun mouseDragged(event: MouseEvent) {
+            refresh(event)
+
+            if (pressedTarget == PressedTarget.Sides) {
+                resize(sides)
             }
+        }
+
+        override fun mouseMoved(event: MouseEvent) = refresh(event)
+
+        override fun mousePressed(event: MouseEvent) {
             initialPointPos = MouseInfo.getPointerInfo().location
             initialWindowPos = Point(window.x, window.y)
             initialWindowSize = Dimension(window.width, window.height)
+
+            refresh(event)
+
+            if (event.button == MouseEvent.BUTTON1) {
+                pressedTarget = if (sides != 0) PressedTarget.Sides else PressedTarget.Content
+            }
         }
+
         override fun mouseReleased(event: MouseEvent) {
-            isResizing = false
+            if (event.button == MouseEvent.BUTTON1) {
+                pressedTarget = null
+            }
+            refresh(event)
+        }
+
+        override fun mouseEntered(event: MouseEvent) = refresh(event)
+        override fun mouseExited(event: MouseEvent) = refresh(event)
+
+        private fun refresh(event: MouseEvent) {
+            if (!enabled) return
+
+            if (pressedTarget == null) {
+                sides = getSides(event.point)
+            }
+
+            if (sides != 0) {
+                event.consume()
+            }
+
+            refreshCursor(sides)
         }
     }
 
-    init {
+    fun init() {
         layer.component.addMouseListener(mouseListener)
-        layer.component.addMouseMotionListener(motionListener)
+        layer.component.addMouseMotionListener(mouseListener)
     }
 
-    private fun changeCursor(event: MouseEvent) {
-        if (!enabled || isResizing) {
-            return
-        }
-        val point = event.getPoint()
-        sides = getSides(point)
-        fun setCursor(cursorType: Int) {
-            layer.scene.component.desiredCursor = Cursor(cursorType)
-        }
+    private fun refreshCursor(sides: Int) {
         when (sides) {
             Side.Left.value -> setCursor(Cursor.W_RESIZE_CURSOR)
             Side.Top.value -> setCursor(Cursor.N_RESIZE_CURSOR)
@@ -83,6 +107,10 @@ internal class UndecoratedWindowResizer(
             Corner.RightTop.value -> setCursor(Cursor.NE_RESIZE_CURSOR)
             Corner.RightBottom.value -> setCursor(Cursor.SE_RESIZE_CURSOR)
         }
+    }
+
+    private fun setCursor(cursorType: Int) {
+        layer.scene.component.desiredCursor = Cursor(cursorType)
     }
 
     private fun getSides(point: Point): Int {
@@ -103,11 +131,7 @@ internal class UndecoratedWindowResizer(
         return sides
     }
 
-    private fun resize() {
-        if (!enabled || sides == 0) {
-            return
-        }
-
+    private fun resize(sides: Int) {
         val pointPos = MouseInfo.getPointerInfo().location
         val diffX = pointPos.x - initialPointPos.x
         val diffY = pointPos.y - initialPointPos.y

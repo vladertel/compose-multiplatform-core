@@ -28,12 +28,10 @@ internal actual interface PlatformComponent : PlatformInputComponent, PlatformCo
 
 internal actual interface PlatformComponentWithCursor {
     var desiredCursor: Cursor
-    fun commitCursor()
 }
 
 internal actual object DummyPlatformComponent : PlatformComponent {
     override var desiredCursor: Cursor = Cursor(Cursor.CROSSHAIR_CURSOR)
-    override fun commitCursor() {}
     var enabledInput: InputMethodRequests? = null
     override fun enableInput(inputMethodRequests: InputMethodRequests) {
         enabledInput = inputMethodRequests

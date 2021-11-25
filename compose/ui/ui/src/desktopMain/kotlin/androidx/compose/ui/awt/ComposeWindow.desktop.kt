@@ -38,7 +38,7 @@ import javax.swing.JFrame
  * ComposeWindow inherits javax.swing.JFrame.
  */
 class ComposeWindow : JFrame() {
-    private val delegate = ComposeWindowDelegate(this)
+    private val delegate = ComposeWindowDelegate(this, ::isUndecorated)
     internal val layer get() = delegate.layer
 
     init {
@@ -112,16 +112,14 @@ class ComposeWindow : JFrame() {
         super.dispose()
     }
 
-    private val undecoratedWindowResizer = UndecoratedWindowResizer(this, layer)
-
     override fun setUndecorated(value: Boolean) {
         super.setUndecorated(value)
-        undecoratedWindowResizer.enabled = isUndecorated && isResizable
+        delegate.undecoratedWindowResizer.enabled = isUndecorated && isResizable
     }
 
     override fun setResizable(value: Boolean) {
         super.setResizable(value)
-        undecoratedWindowResizer.enabled = isUndecorated && isResizable
+        delegate.undecoratedWindowResizer.enabled = isUndecorated && isResizable
     }
 
     /**
@@ -129,24 +127,7 @@ class ComposeWindow : JFrame() {
      * Transparency should be set only if window is not showing and `isUndecorated` is set to
      * `true`, otherwise AWT will throw an exception.
      */
-    var isTransparent: Boolean
-        get() = layer.component.transparency
-        set(value) {
-            if (value != layer.component.transparency) {
-                check(isUndecorated) { "Transparent window should be undecorated!" }
-                check(!isDisplayable) {
-                    "Cannot change transparency if window is already displayable."
-                }
-                layer.component.transparency = value
-                if (value) {
-                    if (hostOs != OS.Windows) {
-                        background = Color(0, 0, 0, 0)
-                    }
-                } else {
-                    background = null
-                }
-            }
-        }
+    var isTransparent: Boolean by delegate::isTransparent
 
     var placement: WindowPlacement
         get() = when {
