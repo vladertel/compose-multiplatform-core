@@ -28,6 +28,7 @@ import org.jetbrains.skiko.hostOs
 import org.jetbrains.skiko.OS
 import java.awt.Color
 import java.awt.Component
+import java.awt.GraphicsConfiguration
 import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelListener
@@ -36,8 +37,13 @@ import javax.swing.JFrame
 /**
  * ComposeWindow is a window for building UI using Compose for Desktop.
  * ComposeWindow inherits javax.swing.JFrame.
+ *
+ * @param graphicsConfiguration the GraphicsConfiguration that is used to construct the new window.
+ * If null, the system default GraphicsConfiguration is assumed.
  */
-class ComposeWindow : JFrame() {
+class ComposeWindow(
+    graphicsConfiguration: GraphicsConfiguration? = null
+) : JFrame(graphicsConfiguration) {
     private val delegate = ComposeWindowDelegate(this)
     internal val layer get() = delegate.layer
 
