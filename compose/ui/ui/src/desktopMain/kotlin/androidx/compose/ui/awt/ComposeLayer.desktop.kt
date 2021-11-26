@@ -235,6 +235,7 @@ internal class ComposeLayer {
 
         _component.addInputMethodListener(object : InputMethodListener {
             override fun caretPositionChanged(event: InputMethodEvent?) {
+                if (isDisposed) return
                 if (event != null) {
                     catchExceptions {
                         scene.onInputMethodEvent(event)
@@ -243,6 +244,7 @@ internal class ComposeLayer {
             }
 
             override fun inputMethodTextChanged(event: InputMethodEvent) {
+                if (isDisposed) return
                 catchExceptions {
                     scene.onInputMethodEvent(event)
                 }
@@ -274,6 +276,8 @@ internal class ComposeLayer {
     private var lastMouseEvent: MouseEvent? = null
 
     private fun onMouseEvent(event: MouseEvent) {
+        // AWT can send events after the window is disposed
+        if (isDisposed) return
         lastMouseEvent = event
         catchExceptions {
             scene.onMouseEvent(density, event)
@@ -281,6 +285,7 @@ internal class ComposeLayer {
     }
 
     private fun onMouseWheelEvent(event: MouseWheelEvent) {
+        if (isDisposed) return
         lastMouseEvent = event
         catchExceptions {
             scene.onMouseWheelEvent(density, event)
@@ -288,6 +293,7 @@ internal class ComposeLayer {
     }
 
     private fun onKeyEvent(event: KeyEvent) {
+        if (isDisposed) return
         catchExceptions {
             if (scene.sendKeyEvent(ComposeKeyEvent(event))) {
                 event.consume()
