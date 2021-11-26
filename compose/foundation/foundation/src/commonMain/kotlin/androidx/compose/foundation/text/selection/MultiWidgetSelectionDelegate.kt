@@ -202,13 +202,12 @@ internal fun getOffsetForPosition(
     position: Offset
 ): Int {
     val length = textLayoutResult.layoutInput.text.length
-// TODO figure out, if this fix works for touch, and can be upstreamed
-  //  return if (bounds.contains(position)) {
-       return textLayoutResult.getOffsetForPosition(position).coerceIn(0, length)
-//    } else {
-//        val value = SelectionMode.Vertical.compare(position, bounds)
-//        if (value < 0) 0 else length
-//    }
+    return if (bounds.contains(position)) {
+        textLayoutResult.getOffsetForPosition(position).coerceIn(0, length)
+    } else {
+        val value = SelectionMode.Vertical.compare(position, bounds)
+        if (value < 0) 0 else length
+    }
 }
 
 /**
