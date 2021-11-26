@@ -153,8 +153,7 @@ internal fun getTextSelectionInfo(
         textLayoutResult.multiParagraph.width.toFloat(),
         textLayoutResult.multiParagraph.height.toFloat()
     )
-println(startHandlePosition)
-println(bounds)
+
     val isSelected =
         SelectionMode.Vertical.isSelected(bounds, startHandlePosition, endHandlePosition)
 
