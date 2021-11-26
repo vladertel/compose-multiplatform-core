@@ -167,6 +167,24 @@ interface PointerInputScope : Density {
      * More than one [awaitPointerEventScope] can run concurrently in the same [PointerInputScope] by
      * using [kotlinx.coroutines.launch]. [block]s are dispatched to in the order in which they
      * were installed.
+     *
+     * Note that after we exit [AwaitPointerEventScope], we can lose some input events. So if it
+     * is important to catch all incoming events, await them in a single [awaitPointerEventScope]
+     * call. Instead of:
+     * ```
+     * val down = awaitPointerEventScope { awaitFirstDown() }
+     * ...
+     * awaitPointerEventScope { waitForUpOrCancellation() }
+     * ```
+     *
+     * do:
+     * ```
+     * awaitPointerEventScope {
+     *     val down = awaitFirstDown()
+     *     ...
+     *     waitForUpOrCancellation()
+     * }
+     * ```
      */
     suspend fun <R> awaitPointerEventScope(
         block: suspend AwaitPointerEventScope.() -> R
