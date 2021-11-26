@@ -96,26 +96,27 @@ internal class UndecoratedWindowResizer(
 
     private fun Modifier.resizeOnDrag(sides: Int) = pointerInput(Unit) {
         var isResizing = false
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                val change = event.changes.first()
+                val changedToPressed = !change.previousPressed && change.pressed
 
-        while (true) {
-            val event = awaitPointerEventScope { awaitPointerEvent() }
-            val change = event.changes.first()
-            val changedToPressed = !change.previousPressed && change.pressed
+                if (event.buttons.isPrimaryPressed && changedToPressed) {
+                    initialPointPos = MouseInfo.getPointerInfo().location
+                    initialWindowPos = Point(window.x, window.y)
+                    initialWindowSize = Dimension(window.width, window.height)
+                    isResizing = true
+                }
 
-            if (event.buttons.isPrimaryPressed && changedToPressed) {
-                initialPointPos = MouseInfo.getPointerInfo().location
-                initialWindowPos = Point(window.x, window.y)
-                initialWindowSize = Dimension(window.width, window.height)
-                isResizing = true
-            }
+                if (!event.buttons.isPrimaryPressed) {
+                    isResizing = false
+                }
 
-            if (!event.buttons.isPrimaryPressed) {
-                isResizing = false
-            }
-
-            if (event.type == PointerEventType.Move) {
-                if (isResizing) {
-                    resize(sides)
+                if (event.type == PointerEventType.Move) {
+                    if (isResizing) {
+                        resize(sides)
+                    }
                 }
             }
         }

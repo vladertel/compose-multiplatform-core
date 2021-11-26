@@ -104,17 +104,20 @@ fun Modifier.mouseScrollFilter(
         bounds: IntSize
     ) -> Boolean
 ): Modifier = pointerInput(onMouseScroll) {
-    awaitPointerEventScope {
-        while (true) {
-            val event = awaitPointerEvent()
-            val mouseEvent = (event.mouseEvent as? MouseWheelEvent) ?: continue
-            val mouseChange = event.changes.find { it.type == PointerType.Mouse }
-            val isScroll = event.type == PointerEventType.Scroll
-            if (isScroll && mouseChange != null && !mouseChange.isConsumed) {
-                val legacyEvent = mouseEvent.toLegacyEvent(mouseChange.scrollDelta)
-                if (onMouseScroll(legacyEvent, size)) {
-                    mouseChange.consume()
-                }
+    while (true) {
+        // we don't wrap entire loop into awaitPointerEventScope, because we want to skip
+        // scroll events, which were send after the first scroll event in the current frame
+        // (so there will be no more than one scroll event per frame).
+        // TODO(https://github.com/JetBrains/compose-jb/issues/1345):
+        //  the more proper behaviour would be to batch multiple scroll events into the single one.
+        val event = awaitPointerEventScope { awaitPointerEvent() }
+        val mouseEvent = (event.mouseEvent as? MouseWheelEvent) ?: continue
+        val mouseChange = event.changes.find { it.type == PointerType.Mouse }
+        val isScroll = event.type == PointerEventType.Scroll
+        if (isScroll && mouseChange != null && !mouseChange.isConsumed) {
+            val legacyEvent = mouseEvent.toLegacyEvent(mouseChange.scrollDelta)
+            if (onMouseScroll(legacyEvent, size)) {
+                mouseChange.consume()
             }
         }
     }
