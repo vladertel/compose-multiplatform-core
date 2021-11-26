@@ -21,7 +21,9 @@ package androidx.compose.ui.input.mouse
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
@@ -104,23 +106,31 @@ fun Modifier.mouseScrollFilter(
         bounds: IntSize
     ) -> Boolean
 ): Modifier = pointerInput(onMouseScroll) {
+    // we don't wrap entire loop into awaitPointerEventScope, because we want to skip
+    // scroll events, which were send after the first scroll event in the current frame
+    // (so there will be no more than one scroll event per frame)
+
+    // TODO(https://github.com/JetBrains/compose-jb/issues/1345):
+    //  the more proper behaviour would be to batch multiple scroll events into the single one
     while (true) {
-        // we don't wrap entire loop into awaitPointerEventScope, because we want to skip
-        // scroll events, which were send after the first scroll event in the current frame
-        // (so there will be no more than one scroll event per frame).
-        // TODO(https://github.com/JetBrains/compose-jb/issues/1345):
-        //  the more proper behaviour would be to batch multiple scroll events into the single one.
-        val event = awaitPointerEventScope { awaitPointerEvent() }
+        val event = awaitScrollEvent()
         val mouseEvent = (event.mouseEvent as? MouseWheelEvent) ?: continue
         val mouseChange = event.changes.find { it.type == PointerType.Mouse }
-        val isScroll = event.type == PointerEventType.Scroll
-        if (isScroll && mouseChange != null && !mouseChange.isConsumed) {
+        if (mouseChange != null && !mouseChange.isConsumed) {
             val legacyEvent = mouseEvent.toLegacyEvent(mouseChange.scrollDelta)
             if (onMouseScroll(legacyEvent, size)) {
                 mouseChange.consume()
             }
         }
     }
+}
+
+private suspend fun PointerInputScope.awaitScrollEvent() = awaitPointerEventScope {
+    var event: PointerEvent
+    do {
+        event = awaitPointerEvent()
+    } while (event.type != PointerEventType.Scroll)
+    event
 }
 
 private fun MouseWheelEvent.toLegacyEvent(scrollDelta: Offset): MouseScrollEvent {
