@@ -114,7 +114,7 @@ fun Modifier.mouseScrollFilter(
     //  the more proper behaviour would be to batch multiple scroll events into the single one
     while (true) {
         val event = awaitScrollEvent()
-        val mouseEvent = (event.mouseEvent as? MouseWheelEvent) ?: continue
+        val mouseEvent = event.mouseEvent as? MouseWheelEvent
         val mouseChange = event.changes.find { it.type == PointerType.Mouse }
         if (mouseChange != null && !mouseChange.isConsumed) {
             val legacyEvent = mouseEvent.toLegacyEvent(mouseChange.scrollDelta)
@@ -133,17 +133,17 @@ private suspend fun PointerInputScope.awaitScrollEvent() = awaitPointerEventScop
     event
 }
 
-private fun MouseWheelEvent.toLegacyEvent(scrollDelta: Offset): MouseScrollEvent {
+private fun MouseWheelEvent?.toLegacyEvent(scrollDelta: Offset): MouseScrollEvent {
     val value = if (scrollDelta.x != 0f) scrollDelta.x else scrollDelta.y
+    val scrollType = this?.scrollType ?: MouseWheelEvent.WHEEL_UNIT_SCROLL
+    val scrollAmount = this?.scrollAmount ?: 1
     return MouseScrollEvent(
         delta = if (scrollType == MouseWheelEvent.WHEEL_BLOCK_SCROLL) {
             MouseScrollUnit.Page(value * scrollAmount)
         } else {
             MouseScrollUnit.Line(value * scrollAmount)
         },
-
-        // There are no other way to detect horizontal scrolling in AWT
-        orientation = if (isShiftDown || scrollDelta.x != 0f) {
+        orientation = if (scrollDelta.x != 0f) {
             MouseScrollOrientation.Horizontal
         } else {
             MouseScrollOrientation.Vertical

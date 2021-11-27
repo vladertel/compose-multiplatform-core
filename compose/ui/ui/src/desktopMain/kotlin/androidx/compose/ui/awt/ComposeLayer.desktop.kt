@@ -205,21 +205,12 @@ internal class ComposeLayer {
         }
 
         override fun scheduleSyntheticMoveEvent() {
+            needSendSyntheticMoveSent = true
             SwingUtilities.invokeLater {
-                val lastMouseEvent = lastMouseEvent ?: return@invokeLater
-                val source = lastMouseEvent.source as Component
-                source.dispatchEvent(
-                    MouseEvent(
-                        source,
-                        MouseEvent.MOUSE_MOVED,
-                        System.nanoTime(),
-                        lastMouseEvent.modifiersEx,
-                        lastMouseEvent.x,
-                        lastMouseEvent.y,
-                        0,
-                        false
-                    )
-                )
+                if (isDisposed) return@invokeLater
+                catchExceptions {
+                    flushSyntheticMoveEvent()
+                }
             }
         }
     }
@@ -228,6 +219,7 @@ internal class ComposeLayer {
         _component.skikoView = object : SkikoView {
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
                 catchExceptions {
+                    flushSyntheticMoveEvent()
                     scene.render(canvas, nanoTime)
                 }
             }
@@ -274,12 +266,33 @@ internal class ComposeLayer {
     }
 
     private var lastMouseEvent: MouseEvent? = null
+    private var needSendSyntheticMoveSent = false
+
+    private fun flushSyntheticMoveEvent() {
+        val lastMouseEvent = lastMouseEvent ?: return
+        if (needSendSyntheticMoveSent) {
+            needSendSyntheticMoveSent = false
+            val source = lastMouseEvent.source as Component
+            val event = MouseEvent(
+                source,
+                MouseEvent.MOUSE_MOVED,
+                System.nanoTime(),
+                lastMouseEvent.modifiersEx,
+                lastMouseEvent.x,
+                lastMouseEvent.y,
+                0,
+                false
+            )
+            scene.onMouseEvent(density, event)
+        }
+    }
 
     private fun onMouseEvent(event: MouseEvent) {
         // AWT can send events after the window is disposed
         if (isDisposed) return
         lastMouseEvent = event
         catchExceptions {
+            flushSyntheticMoveEvent()
             scene.onMouseEvent(density, event)
         }
     }
@@ -288,6 +301,7 @@ internal class ComposeLayer {
         if (isDisposed) return
         lastMouseEvent = event
         catchExceptions {
+            flushSyntheticMoveEvent()
             scene.onMouseWheelEvent(density, event)
         }
     }
