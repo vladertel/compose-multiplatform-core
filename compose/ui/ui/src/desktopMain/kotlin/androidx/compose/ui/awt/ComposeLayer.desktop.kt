@@ -205,7 +205,7 @@ internal class ComposeLayer {
         }
 
         override fun scheduleSyntheticMoveEvent() {
-            needSendSyntheticMoveSent = true
+            needSendSyntheticMove = true
             SwingUtilities.invokeLater {
                 if (isDisposed) return@invokeLater
                 catchExceptions {
@@ -266,12 +266,12 @@ internal class ComposeLayer {
     }
 
     private var lastMouseEvent: MouseEvent? = null
-    private var needSendSyntheticMoveSent = false
+    private var needSendSyntheticMove = false
 
     private fun flushSyntheticMoveEvent() {
         val lastMouseEvent = lastMouseEvent ?: return
-        if (needSendSyntheticMoveSent) {
-            needSendSyntheticMoveSent = false
+        if (needSendSyntheticMove) {
+            needSendSyntheticMove = false
             val source = lastMouseEvent.source as Component
             val event = MouseEvent(
                 source,
