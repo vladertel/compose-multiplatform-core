@@ -28,6 +28,7 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.platform.AccessibilityControllerImpl
 import androidx.compose.ui.platform.DesktopPlatform
 import androidx.compose.ui.platform.PlatformComponent
+import androidx.compose.ui.platform.SkiaBasedOwner
 import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
@@ -95,8 +96,43 @@ internal class ComposeLayer {
         Dispatchers.Swing + coroutineExceptionHandler,
         _component,
         Density(1f),
-        _component::needRedraw
+        ::invalidate
     )
+
+    private var isInvalidationDisabled = false
+    private var isInvalidationScheduled = false
+
+    private inline fun <T> postponeInvalidation(block: () -> T): T {
+        isInvalidationDisabled = true
+        val result = try {
+            block()
+        } finally {
+            isInvalidationDisabled = false
+        }
+        if (isInvalidationScheduled) {
+            _component.needRedraw()
+            isInvalidationScheduled = false
+        }
+        return result
+    }
+
+    private fun invalidate() {
+        if (!isInvalidationDisabled) {
+            _component.needRedraw()
+        } else {
+            isInvalidationScheduled = true
+        }
+    }
+
+    private fun performComposeOperation(body: () -> Unit) {
+        catchExceptions {
+            postponeInvalidation {
+                flushSyntheticMoveEvent()
+                body()
+                flushSyntheticMoveEvent()
+            }
+        }
+    }
 
     private val density get() = _component.density.density
 
@@ -205,10 +241,10 @@ internal class ComposeLayer {
         }
 
         override fun scheduleSyntheticMoveEvent() {
-            needSendSyntheticMove = true
+            needSendSyntheticMoveSent = true
             SwingUtilities.invokeLater {
                 if (isDisposed) return@invokeLater
-                catchExceptions {
+                performComposeOperation {
                     flushSyntheticMoveEvent()
                 }
             }
@@ -218,8 +254,7 @@ internal class ComposeLayer {
     init {
         _component.skikoView = object : SkikoView {
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-                catchExceptions {
-                    flushSyntheticMoveEvent()
+                performComposeOperation {
                     scene.render(canvas, nanoTime)
                 }
             }
@@ -266,12 +301,12 @@ internal class ComposeLayer {
     }
 
     private var lastMouseEvent: MouseEvent? = null
-    private var needSendSyntheticMove = false
+    private var needSendSyntheticMoveSent = false
 
     private fun flushSyntheticMoveEvent() {
         val lastMouseEvent = lastMouseEvent ?: return
-        if (needSendSyntheticMove) {
-            needSendSyntheticMove = false
+        if (needSendSyntheticMoveSent) {
+            needSendSyntheticMoveSent = false
             val source = lastMouseEvent.source as Component
             val event = MouseEvent(
                 source,
@@ -291,8 +326,7 @@ internal class ComposeLayer {
         // AWT can send events after the window is disposed
         if (isDisposed) return
         lastMouseEvent = event
-        catchExceptions {
-            flushSyntheticMoveEvent()
+        performComposeOperation {
             scene.onMouseEvent(density, event)
         }
     }
@@ -300,8 +334,7 @@ internal class ComposeLayer {
     private fun onMouseWheelEvent(event: MouseWheelEvent) {
         if (isDisposed) return
         lastMouseEvent = event
-        catchExceptions {
-            flushSyntheticMoveEvent()
+        performComposeOperation {
             scene.onMouseWheelEvent(density, event)
         }
     }

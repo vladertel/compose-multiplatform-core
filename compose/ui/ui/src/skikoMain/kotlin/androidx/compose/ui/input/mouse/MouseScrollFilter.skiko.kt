@@ -21,6 +21,7 @@ package androidx.compose.ui.input.mouse
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputScope
@@ -113,24 +114,26 @@ fun Modifier.mouseScrollFilter(
     // TODO(https://github.com/JetBrains/compose-jb/issues/1345):
     //  the more proper behaviour would be to batch multiple scroll events into the single one
     while (true) {
-        val event = awaitScrollEvent()
-        val mouseEvent = event.mouseEvent as? MouseWheelEvent
-        val mouseChange = event.changes.find { it.type == PointerType.Mouse }
-        if (mouseChange != null && !mouseChange.isConsumed) {
-            val legacyEvent = mouseEvent.toLegacyEvent(mouseChange.scrollDelta)
-            if (onMouseScroll(legacyEvent, size)) {
-                mouseChange.consume()
+        awaitPointerEventScope {
+            val event = awaitScrollEvent()
+            val mouseEvent = event.mouseEvent as? MouseWheelEvent
+            val mouseChange = event.changes.find { it.type == PointerType.Mouse }
+            if (mouseChange != null && !mouseChange.isConsumed) {
+                val legacyEvent = mouseEvent.toLegacyEvent(mouseChange.scrollDelta)
+                if (onMouseScroll(legacyEvent, size)) {
+                    mouseChange.consume()
+                }
             }
         }
     }
 }
 
-private suspend fun PointerInputScope.awaitScrollEvent() = awaitPointerEventScope {
+private suspend fun AwaitPointerEventScope.awaitScrollEvent(): PointerEvent {
     var event: PointerEvent
     do {
         event = awaitPointerEvent()
     } while (event.type != PointerEventType.Scroll)
-    event
+    return event
 }
 
 private fun MouseWheelEvent?.toLegacyEvent(scrollDelta: Offset): MouseScrollEvent {
