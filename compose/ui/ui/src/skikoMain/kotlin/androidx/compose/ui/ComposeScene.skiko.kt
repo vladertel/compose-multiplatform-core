@@ -437,7 +437,7 @@ class ComposeScene internal constructor(
             focusedOwner?.onDismissRequest?.invoke()
         } else {
             owner?.processPointerInput(event)
-            mousePressOwner = focusedOwner
+            mousePressOwner = owner
         }
     }
 
