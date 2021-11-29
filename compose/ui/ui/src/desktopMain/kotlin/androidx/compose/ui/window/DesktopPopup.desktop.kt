@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import java.awt.MouseInfo
 import javax.swing.SwingUtilities.convertPointFromScreen
-import kotlin.math.max
 
 /**
  * Opens a popup with the given content.
@@ -186,22 +185,11 @@ private fun PopupLayout(
                 measurePolicy = { measurables, constraints ->
                     val width = constraints.maxWidth
                     val height = constraints.maxHeight
-                    var position = popupPositionProvider.calculatePosition(
-                        anchorBounds = parentBounds,
-                        windowSize = IntSize(width, height),
-                        layoutDirection = layoutDirection,
-                        popupContentSize = IntSize.Zero
-                    )
-
-                    val layoutConstrants = constraints.copy(
-                        maxHeight = max(height - position.y, position.y),
-                        maxWidth = max(width - position.x, position.x),
-                    )
 
                     layout(constraints.maxWidth, constraints.maxHeight) {
                         measurables.forEach {
-                            val placeable = it.measure(layoutConstrants)
-                            position = popupPositionProvider.calculatePosition(
+                            val placeable = it.measure(constraints)
+                            val position = popupPositionProvider.calculatePosition(
                                 anchorBounds = parentBounds,
                                 windowSize = IntSize(width, height),
                                 layoutDirection = layoutDirection,

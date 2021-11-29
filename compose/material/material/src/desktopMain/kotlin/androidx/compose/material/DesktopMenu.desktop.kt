@@ -256,6 +256,10 @@ private data class DesktopDropdownMenuPositionProvider(
             y = anchorBounds.bottom + contentOffsetY
         }
 
+        if (y + popupContentSize.height > windowSize.height) {
+            y = windowSize.height - popupContentSize.height
+        }
+
         onPositionCalculated(
             anchorBounds,
             IntRect(x, y, x + popupContentSize.width, y + popupContentSize.height)
