@@ -265,6 +265,19 @@ internal class ComposeLayer {
         })
     }
 
+    private fun onMouseEvent(event: MouseEvent) = catchExceptions {
+        // AWT can send events after the window is disposed
+        if (isDisposed) return@catchExceptions
+        checkSyntheticEvents(event)
+        scene.onMouseEvent(density, event)
+    }
+
+    private fun onMouseWheelEvent(event: MouseWheelEvent) = catchExceptions {
+        if (isDisposed) return@catchExceptions
+        checkSyntheticEvents(event)
+        scene.onMouseWheelEvent(density, event)
+    }
+
     private var lastMouseEvent: MouseEvent? = null
     private var needSendSyntheticMove = false
 
@@ -287,24 +300,33 @@ internal class ComposeLayer {
         }
     }
 
-    private fun onMouseEvent(event: MouseEvent) {
-        // AWT can send events after the window is disposed
-        if (isDisposed) return
-        lastMouseEvent = event
-        catchExceptions {
-            flushSyntheticMoveEvent()
-            scene.onMouseEvent(density, event)
+    /**
+     * Compose can't work well if we miss Move event before, for example, Scroll event.
+     * See the comment about Move in [ComposeScene.sendPointerEvent].
+     *
+     * AWT can send Scroll event with a different position, without sending Move event before it.
+     */
+    private fun checkSyntheticEvents(event: MouseEvent) {
+        val lastMouseEvent = lastMouseEvent
+
+        val isMove = event.id == MouseEvent.MOUSE_MOVED
+            || event.id == MouseEvent.MOUSE_DRAGGED
+            || event.id == MouseEvent.MOUSE_ENTERED
+            || event.id == MouseEvent.MOUSE_EXITED
+
+        val isMoved = lastMouseEvent?.isSamePosition(event) == false
+
+        if (!isMove && isMoved) {
+            needSendSyntheticMove = true
         }
+
+        this.lastMouseEvent = event
+
+        flushSyntheticMoveEvent()
     }
 
-    private fun onMouseWheelEvent(event: MouseWheelEvent) {
-        if (isDisposed) return
-        lastMouseEvent = event
-        catchExceptions {
-            flushSyntheticMoveEvent()
-            scene.onMouseWheelEvent(density, event)
-        }
-    }
+    private fun MouseEvent.isSamePosition(other: MouseEvent) =
+        x == other.x && y == other.y
 
     private fun onKeyEvent(event: KeyEvent) {
         if (isDisposed) return
