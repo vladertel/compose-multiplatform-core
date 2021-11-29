@@ -33,7 +33,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.DpOffset
@@ -101,8 +105,8 @@ fun TooltipArea(
     ),
     content: @Composable () -> Unit
 ) {
-    val mousePosition = remember { mutableStateOf(IntOffset.Zero) }
-    var parentBounds by remember { mutableStateOf(IntRect.Zero) }
+    var parentBounds by remember { mutableStateOf(Rect.Zero) }
+    var popupPosition by remember { mutableStateOf(Offset.Zero) }
     var isVisible by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var job: Job? by remember { mutableStateOf(null) }
@@ -120,37 +124,21 @@ fun TooltipArea(
         isVisible = false
     }
 
+    fun hideIfNotHovered(globalPosition: Offset) {
+        if (!parentBounds.contains(globalPosition)) {
+            hide()
+        }
+    }
+
     Box(
         modifier = modifier
-            .onGloballyPositioned { coordinates ->
-                val size = coordinates.size
-                val position = IntOffset(
-                    coordinates.positionInWindow().x.toInt(),
-                    coordinates.positionInWindow().y.toInt()
-                )
-                parentBounds = IntRect(position, size)
+            .onGloballyPositioned { parentBounds = it.boundsInWindow() }
+            .onPointerEvent(PointerEventType.Enter) { startShowing() }
+            .onPointerEvent(PointerEventType.Move) {
+                hideIfNotHovered(parentBounds.topLeft + it.position)
             }
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val position = event.changes.first().position
-                        when (event.type) {
-                            PointerEventType.Move -> {
-                                mousePosition.value = IntOffset(
-                                    position.x.toInt() + parentBounds.left,
-                                    position.y.toInt() + parentBounds.top
-                                )
-                            }
-                            PointerEventType.Enter -> {
-                                startShowing()
-                            }
-                            PointerEventType.Exit -> {
-                                hide()
-                            }
-                        }
-                    }
-                }
+            .onPointerEvent(PointerEventType.Exit) {
+                hideIfNotHovered(parentBounds.topLeft + it.position)
             }
             .pointerInput(Unit) {
                 detectDown {
@@ -165,7 +153,35 @@ fun TooltipArea(
                 popupPositionProvider = tooltipPlacement.positionProvider(),
                 onDismissRequest = { isVisible = false }
             ) {
-                tooltip()
+                Box(
+                    Modifier
+                        .onGloballyPositioned { popupPosition = it.positionInWindow() }
+                        .onPointerEvent(PointerEventType.Move) {
+                            hideIfNotHovered(popupPosition + it.position)
+                        }
+                        .onPointerEvent(PointerEventType.Exit) {
+                            hideIfNotHovered(popupPosition + it.position)
+                        }
+                ) {
+                    tooltip()
+                }
+            }
+        }
+    }
+}
+
+private val PointerEvent.position get() = changes.first().position
+
+private fun Modifier.onPointerEvent(
+    eventType: PointerEventType,
+    pass: PointerEventPass = PointerEventPass.Main,
+    onEvent: AwaitPointerEventScope.(event: PointerEvent) -> Unit
+) = pointerInput(eventType, pass, onEvent) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(pass)
+            if (event.type == eventType) {
+                onEvent(event)
             }
         }
     }
