@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package androidx.compose.ui.text.platform
 
-package androidx.compose.ui.input.pointer
+import androidx.compose.ui.text.font.Font
 
-import androidx.compose.ui.geometry.Offset
-import org.jetbrains.skiko.SkikoPointerEvent
-
-internal actual class PointerInputEvent(
-    val eventType: PointerEventType,
-    actual val uptime: Long,
-    actual val pointers: List<PointerInputEventData>,
-    val mouseEvent: SkikoPointerEvent? = null
-)
+actual sealed class PlatformFont : Font {
+    abstract actual val identity: String
+    internal actual val cacheKey: String
+        get() {
+            println("TODO: implement proper js PlatformFont.cacheKey")
+            return identity
+        }
+}
 

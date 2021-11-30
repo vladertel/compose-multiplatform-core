@@ -35,10 +35,10 @@ import kotlinx.coroutines.launch
  * For desktop, these notifications are always sent on [Dispatchers.Swing]. Other platforms
  * may establish different policies for these notifications.
  */
-internal object GlobalSnapshotManager {
+internal actual object GlobalSnapshotManager {
     private val started = AtomicInt(0)
 
-    fun ensureStarted() {
+    actual fun ensureStarted() {
         if (started.compareAndSet(0, 1)) {
             val channel = Channel<Unit>(Channel.CONFLATED)
             CoroutineScope(Dispatchers.Main).launch {
@@ -47,7 +47,7 @@ internal object GlobalSnapshotManager {
                 }
             }
             Snapshot.registerGlobalWriteObserver {
-                channel.offer(Unit)
+                channel.trySend(Unit)
             }
         }
     }
