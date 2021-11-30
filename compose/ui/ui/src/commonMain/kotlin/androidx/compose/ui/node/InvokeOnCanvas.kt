@@ -19,5 +19,5 @@ package androidx.compose.ui.node
 import androidx.compose.ui.graphics.Canvas
 
 interface InvokeOnCanvas {
-    fun invoke(canvas: Canvas)
+    operator fun invoke(canvas: Canvas)
 }
