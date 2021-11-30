@@ -21,6 +21,7 @@ import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.HitPathTracker
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
@@ -302,9 +303,28 @@ internal class ComposeLayer {
 
     /**
      * Compose can't work well if we miss Move event before, for example, Scroll event.
-     * See the comment about Move in [ComposeScene.sendPointerEvent].
      *
-     * AWT can send Scroll event with a different position, without sending Move event before it.
+     * This is because of the implementation of [HitPathTracker].
+     *
+     * Imaging two boxes:
+     * ```
+     * Column {
+     *   Box(size=10)
+     *   Box(size=10)
+     * }
+     * ```
+     *
+     * - we send Move's in the right order:
+     * 1. Move(5,5) -> box1 receives Enter(5,5)
+     * 2. Move(5,15) -> box1 receives Exit(5,15), box2 receives Enter(5,15)
+     * 3. Scroll(5,15) -> box2 receives Scroll(5,15)
+     *
+     * - we skip some Move's (AWT can skip them):
+     * 1. Move(5,5) -> box1 receives Enter(5,5)
+     * 2. Scroll(5,15) -> box1 receives Scroll(5,15), box2 receives Scroll(5,15)
+     * 3. Move(5,16) -> box2 receives Enter(5,16)
+     *
+     * You can see that box1 loses the Exit event.
      */
     private fun checkSyntheticEvents(event: MouseEvent) {
         val lastMouseEvent = lastMouseEvent
