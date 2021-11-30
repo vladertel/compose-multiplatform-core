@@ -100,12 +100,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
 
-            jsMain {
-                dependsOn skiaMain
-                dependencies {
-                    implementation(libs.skikoJs)
-                }
-            }
+            jsMain.dependsOn(skikoMain)
 
             desktopMain {
                 dependsOn skikoMain

@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.input.pointer
+package androidx.compose.ui.platform
 
-import androidx.compose.ui.geometry.Offset
-import org.jetbrains.skiko.SkikoPointerEvent
+import androidx.compose.ui.text.AnnotatedString
 
-internal actual class PointerInputEvent(
-    val eventType: PointerEventType,
-    actual val uptime: Long,
-    actual val pointers: List<PointerInputEventData>,
-    val mouseEvent: SkikoPointerEvent? = null
-)
-
+internal actual class PlatformClipboardManager : ClipboardManager {
+    override fun setText(annotatedString: AnnotatedString): Unit =
+        TODO("implement js PlatformClipboardManager")
+    override fun getText(): AnnotatedString? =
+        TODO("implement js PlatformClipboardManager")
+}
