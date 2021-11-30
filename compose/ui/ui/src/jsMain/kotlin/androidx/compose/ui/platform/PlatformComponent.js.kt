@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.input.pointer
+package androidx.compose.ui.platform
 
-import androidx.compose.ui.geometry.Offset
-import org.jetbrains.skiko.SkikoPointerEvent
+import androidx.compose.ui.unit.Density
 
-internal actual class PointerInputEvent(
-    val eventType: PointerEventType,
-    actual val uptime: Long,
-    actual val pointers: List<PointerInputEventData>,
-    val mouseEvent: SkikoPointerEvent? = null
-)
+internal actual interface PlatformComponent : PlatformInputComponent, PlatformComponentWithCursor
 
+internal actual interface PlatformComponentWithCursor
+
+internal actual object DummyPlatformComponent : PlatformComponent {
+}

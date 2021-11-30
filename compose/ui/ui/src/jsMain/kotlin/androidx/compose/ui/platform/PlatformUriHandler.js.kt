@@ -14,15 +14,10 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.input.pointer
+package androidx.compose.ui.platform
 
-import androidx.compose.ui.geometry.Offset
-import org.jetbrains.skiko.SkikoPointerEvent
-
-internal actual class PointerInputEvent(
-    val eventType: PointerEventType,
-    actual val uptime: Long,
-    actual val pointers: List<PointerInputEventData>,
-    val mouseEvent: SkikoPointerEvent? = null
-)
-
+internal actual class PlatformUriHandler : UriHandler {
+    override fun openUri(uri: String) {
+        TODO("Implement js UriHandler")
+    }
+}
