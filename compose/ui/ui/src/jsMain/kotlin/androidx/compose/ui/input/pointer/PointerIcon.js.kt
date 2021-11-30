@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,11 @@
 
 package androidx.compose.ui.input.pointer
 
-import androidx.compose.ui.geometry.Offset
-import org.jetbrains.skiko.SkikoPointerEvent
+// uikit doesn't seem to have NSCursor.
+// TODO: consider having it for macos though.
+object DummyPointerIcon : PointerIcon
 
-internal actual class PointerInputEvent(
-    val eventType: PointerEventType,
-    actual val uptime: Long,
-    actual val pointers: List<PointerInputEventData>,
-    val mouseEvent: SkikoPointerEvent? = null
-)
-
+internal actual val pointerIconDefault: PointerIcon = DummyPointerIcon
+internal actual val pointerIconCrosshair: PointerIcon = DummyPointerIcon
+internal actual val pointerIconText: PointerIcon = DummyPointerIcon
+internal actual val pointerIconHand: PointerIcon = DummyPointerIcon
