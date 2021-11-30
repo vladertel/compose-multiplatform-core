@@ -146,19 +146,3 @@ internal actual fun <T> createSnapshotMutableState(
     value: T,
     policy: SnapshotMutationPolicy<T>
 ): SnapshotMutableState<T> = SnapshotMutableStateImpl(value, policy)
-
-actual class AtomicInt actual constructor(value: Int) {
-    private var delegate = value
-    actual fun get(): Int = delegate
-    actual fun set(value: Int) {
-        delegate = value
-    }
-    actual fun add(amount: Int): Int {
-        delegate += amount
-        return delegate
-    }
-}
-
-actual fun ensureMutable(it: Any) { /* NOTHING */ }
-
-actual annotation class CompositionContextLocal {}

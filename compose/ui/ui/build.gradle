@@ -174,9 +174,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
                 dependsOn(jvmMain)
             }
-            jsMain {
-                dependsOn(commonMain)
-            }
+
+            jsMain.dependsOn(skikoMain)
 
             nativeMain.dependsOn(skikoMain)
             darwinMain.dependsOn(nativeMain)

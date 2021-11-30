@@ -16,31 +16,6 @@
 
 package androidx.compose.ui.graphics
 
-import androidx.compose.ui.graphics.colorspace.ColorSpace
-import androidx.compose.ui.graphics.colorspace.ColorSpaces
-import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.ColorAlphaType
-import org.jetbrains.skia.ColorInfo
-import org.jetbrains.skia.ColorType
-import org.jetbrains.skia.Image
-import org.jetbrains.skia.ImageInfo
-import kotlin.math.abs
+internal actual fun ByteArray.putBytesInto(array: IntArray, offset: Int, length: Int): Unit =
+   TODO("implement js ByteArray.putBytesInto()")
 
-actual internal class SkiaImageBitmap actual constructor(val bitmap: Bitmap) : ImageBitmap {
-    override val colorSpace = bitmap.colorSpace.toComposeColorSpace()
-    override val config = bitmap.colorType.toComposeConfig()
-    override val hasAlpha = !bitmap.isOpaque
-    override val height get() = bitmap.height
-    override val width get() = bitmap.width
-    override fun prepareToDraw() = Unit
-
-    actual override fun readPixels(
-        buffer: IntArray,
-        startX: Int,
-        startY: Int,
-        width: Int,
-        height: Int,
-        bufferOffset: Int,
-        stride: Int
-    ): Unit = TODO()
-}
