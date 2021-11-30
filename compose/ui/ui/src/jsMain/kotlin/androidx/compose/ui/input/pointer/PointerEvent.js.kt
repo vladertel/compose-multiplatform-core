@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.input.pointer
 
+import org.jetbrains.skiko.SkikoPointerEvent
+
 internal actual typealias NativePointerButtons = Int
 internal actual typealias NativePointerKeyboardModifiers = Int
 
@@ -31,7 +33,7 @@ actual data class PointerEvent internal constructor(
     /**
      * Original raw native event from AWT
      */
-    val mouseEvent: NativeMouseEvent?
+    val mouseEvent: SkikoPointerEvent?
 ) {
     internal actual constructor(
         changes: List<PointerInputChange>,
@@ -43,12 +45,10 @@ actual data class PointerEvent internal constructor(
      */
     actual constructor(changes: List<PointerInputChange>) : this(changes, mouseEvent = null)
 
-    actual var type: PointerEventType
-        get() = TODO("implent native pointer event")
-        set(value) = TODO("implent native pointer event")
+    actual var type: PointerEventType = PointerEventType.Unknown
+        internal set
 
-    actual val buttons: PointerButtons
-        get() = TODO("implement native pointer event")
+    actual val buttons: PointerButtons = PointerButtons(mouseEvent?.buttonMask ?: 0)
 
     actual val keyboardModifiers: PointerKeyboardModifiers
         get() = TODO("implement native pointer event")
@@ -75,8 +75,9 @@ actual val PointerButtons.isForwardPressed: Boolean
 actual fun PointerButtons.isPressed(buttonIndex: Int): Boolean =
     TODO("implement native events")
 
+// TODO: all this file should go away when we move to Skiko events for skikoCommon.
 actual val PointerButtons.areAnyPressed: Boolean
-    get() = TODO("implement native events")
+    get() = packedValue != 0
 
 actual fun PointerButtons.indexOfFirstPressed(): Int = TODO("implement native events")
 
