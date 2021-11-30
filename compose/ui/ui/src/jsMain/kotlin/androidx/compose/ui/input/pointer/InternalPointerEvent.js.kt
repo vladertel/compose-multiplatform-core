@@ -16,18 +16,24 @@
 
 package androidx.compose.ui.input.pointer
 
-//import java.awt.event.MouseEvent
-
-// TODO: remove me
-class NativeMouseEvent
-
+import org.jetbrains.skiko.SkikoPointerEvent
 
 internal actual class InternalPointerEvent constructor(
+    val type: PointerEventType,
     actual val changes: Map<PointerId, PointerInputChange>,
-    val mouseEvent: NativeMouseEvent?
+    val mouseEvent: SkikoPointerEvent?
 ) {
     actual constructor(
         changes: Map<PointerId, PointerInputChange>,
         pointerInputEvent: PointerInputEvent
-    ) : this(changes, pointerInputEvent.mouseEvent)
+    ) : this(
+        pointerInputEvent.eventType,
+        changes,
+        pointerInputEvent.mouseEvent
+    )
+
+    actual var suppressMovementConsumption: Boolean = false
+
+    // Assume that all changes are from mouse events for now
+    actual fun issuesEnterExitEvent(pointerId: PointerId): Boolean = true
 }
