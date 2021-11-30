@@ -66,7 +66,7 @@ daggerCompiler = { module = "com.google.dagger:dagger-compiler", version.ref = "
 dexmakerMockito = { module = "com.linkedin.dexmaker:dexmaker-mockito", version.ref = "dexmaker" }
 dexmakerMockitoInline = { module = "com.linkedin.dexmaker:dexmaker-mockito-inline", version.ref = "dexmaker" }
 dexMemberList = { module = "com.jakewharton.dex:dex-member-list", version = "4.1.1" }
-dokkaGradlePluginz = { module = "org.jetbrains.dokka:dokka-android-gradle-plugin", version = "0.9.17-g014" }
+dokkaGradlePluginz = { module = "org.jetbrains.dokka:dokka-android-gradle-plugin", version = "0.9.18" }
 espressoContrib = { module = "androidx.test.espresso:espresso-contrib", version.ref = "espresso" }
 espressoCore = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
 espressoIdlingNet = { module = "androidx.test.espresso.idling:idling-net", version.ref = "espresso" }

@@ -37,6 +37,7 @@ object Dokka {
         return "dokka${formattedLangauage}Docs"
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun createDokkaTask(
         project: Project,
         hiddenPackages: List<String>,
@@ -76,8 +77,8 @@ object Dokka {
             task.description = "Generates $language documentation in the style of " +
                 "d.android.com.  Places docs in ${task.outputDirectory}"
             task.outputFormat = outputFormat
-            task.outlineRoot = "androidx/"
-            task.dacRoot = dacRoot
+//            task.outlineRoot = "androidx/"
+//            task.dacRoot = dacRoot
             task.moduleName = ""
             task.externalDocumentationLinks.add(guavaDocLink)
             task.externalDocumentationLinks.add(kotlinLangLink)
