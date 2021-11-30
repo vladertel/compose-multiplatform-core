@@ -21,6 +21,7 @@ import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.HitPathTracker
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
@@ -205,21 +206,12 @@ internal class ComposeLayer {
         }
 
         override fun scheduleSyntheticMoveEvent() {
+            needSendSyntheticMove = true
             SwingUtilities.invokeLater {
-                val lastMouseEvent = lastMouseEvent ?: return@invokeLater
-                val source = lastMouseEvent.source as Component
-                source.dispatchEvent(
-                    MouseEvent(
-                        source,
-                        MouseEvent.MOUSE_MOVED,
-                        System.nanoTime(),
-                        lastMouseEvent.modifiersEx,
-                        lastMouseEvent.x,
-                        lastMouseEvent.y,
-                        0,
-                        false
-                    )
-                )
+                if (isDisposed) return@invokeLater
+                catchExceptions {
+                    flushSyntheticMoveEvent()
+                }
             }
         }
     }
@@ -228,6 +220,7 @@ internal class ComposeLayer {
         _component.skikoView = object : SkikoView {
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
                 catchExceptions {
+                    flushSyntheticMoveEvent()
                     scene.render(canvas, nanoTime)
                 }
             }
@@ -273,24 +266,87 @@ internal class ComposeLayer {
         })
     }
 
-    private var lastMouseEvent: MouseEvent? = null
-
-    private fun onMouseEvent(event: MouseEvent) {
+    private fun onMouseEvent(event: MouseEvent) = catchExceptions {
         // AWT can send events after the window is disposed
-        if (isDisposed) return
-        lastMouseEvent = event
-        catchExceptions {
+        if (isDisposed) return@catchExceptions
+        checkSyntheticEvents(event)
+        scene.onMouseEvent(density, event)
+    }
+
+    private fun onMouseWheelEvent(event: MouseWheelEvent) = catchExceptions {
+        if (isDisposed) return@catchExceptions
+        checkSyntheticEvents(event)
+        scene.onMouseWheelEvent(density, event)
+    }
+
+    private var lastMouseEvent: MouseEvent? = null
+    private var needSendSyntheticMove = false
+
+    private fun flushSyntheticMoveEvent() {
+        val lastMouseEvent = lastMouseEvent ?: return
+        if (needSendSyntheticMove) {
+            needSendSyntheticMove = false
+            val source = lastMouseEvent.source as Component
+            val event = MouseEvent(
+                source,
+                MouseEvent.MOUSE_MOVED,
+                System.nanoTime(),
+                lastMouseEvent.modifiersEx,
+                lastMouseEvent.x,
+                lastMouseEvent.y,
+                0,
+                false
+            )
             scene.onMouseEvent(density, event)
         }
     }
 
-    private fun onMouseWheelEvent(event: MouseWheelEvent) {
-        if (isDisposed) return
-        lastMouseEvent = event
-        catchExceptions {
-            scene.onMouseWheelEvent(density, event)
+    /**
+     * Compose can't work well if we miss Move event before, for example, Scroll event.
+     *
+     * This is because of the implementation of [HitPathTracker].
+     *
+     * Imaging two boxes:
+     * ```
+     * Column {
+     *   Box(size=10)
+     *   Box(size=10)
+     * }
+     * ```
+     *
+     * - we send Move's in the right order:
+     * 1. Move(5,5) -> box1 receives Enter(5,5)
+     * 2. Move(5,15) -> box1 receives Exit(5,15), box2 receives Enter(5,15)
+     * 3. Scroll(5,15) -> box2 receives Scroll(5,15)
+     *
+     * - we skip some Move's (AWT can skip them):
+     * 1. Move(5,5) -> box1 receives Enter(5,5)
+     * 2. Scroll(5,15) -> box1 receives Scroll(5,15), box2 receives Scroll(5,15)
+     * 3. Move(5,16) -> box2 receives Enter(5,16)
+     *
+     * You can see that box1 loses the Exit event.
+     */
+    private fun checkSyntheticEvents(event: MouseEvent) {
+        val lastMouseEvent = lastMouseEvent
+
+        val isMove = event.id == MouseEvent.MOUSE_MOVED
+            || event.id == MouseEvent.MOUSE_DRAGGED
+            || event.id == MouseEvent.MOUSE_ENTERED
+            || event.id == MouseEvent.MOUSE_EXITED
+
+        val isMoved = lastMouseEvent?.isSamePosition(event) == false
+
+        if (!isMove && isMoved) {
+            needSendSyntheticMove = true
         }
+
+        this.lastMouseEvent = event
+
+        flushSyntheticMoveEvent()
     }
+
+    private fun MouseEvent.isSamePosition(other: MouseEvent) =
+        x == other.x && y == other.y
 
     private fun onKeyEvent(event: KeyEvent) {
         if (isDisposed) return

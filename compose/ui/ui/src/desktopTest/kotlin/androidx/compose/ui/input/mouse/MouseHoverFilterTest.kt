@@ -17,6 +17,7 @@
 package androidx.compose.ui.input.mouse
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
@@ -24,17 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.test.TestCoroutineScope
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -126,6 +122,51 @@ class MouseHoverFilterTest {
         assertThat(moveCount).isEqualTo(0)
     }
 
+    @Test
+    fun `move from one component to another`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(1f)
+    ).use { scene ->
+        var enterCount1 = 0
+        var exitCount1 = 0
+        var enterCount2 = 0
+        var exitCount2 = 0
+
+        scene.setContent {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .pointerMove(
+                            onEnter = { enterCount1++ },
+                            onExit = { exitCount1++ }
+                        )
+                        .size(10.dp, 10.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .pointerMove(
+                            onEnter = { enterCount2++ },
+                            onExit = { exitCount2++ }
+                        )
+                        .size(10.dp, 10.dp)
+                )
+            }
+        }
+
+        scene.sendPointerEvent(PointerEventType.Enter, Offset(5f, 5f))
+        assertThat(enterCount1).isEqualTo(1)
+        assertThat(exitCount1).isEqualTo(0)
+        assertThat(enterCount2).isEqualTo(0)
+        assertThat(exitCount2).isEqualTo(0)
+
+        scene.sendPointerEvent(PointerEventType.Move, Offset(5f, 15f))
+        assertThat(enterCount1).isEqualTo(1)
+        assertThat(exitCount1).isEqualTo(1)
+        assertThat(enterCount2).isEqualTo(1)
+        assertThat(exitCount2).isEqualTo(0)
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `send multiple move events with paused dispatcher`() {
@@ -184,9 +225,9 @@ class MouseHoverFilterTest {
 
 @OptIn(ExperimentalComposeUiApi::class)
 private fun Modifier.pointerMove(
-    onMove: () -> Unit,
-    onExit: () -> Unit,
-    onEnter: () -> Unit,
+    onMove: () -> Unit = {},
+    onExit: () -> Unit = {},
+    onEnter: () -> Unit = {},
 ): Modifier = this
     .onPointerEvent(PointerEventType.Move) { onMove() }
     .onPointerEvent(PointerEventType.Exit) { onExit() }

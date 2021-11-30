@@ -181,6 +181,12 @@ class ImageComposeScene(
     /**
      * Send pointer event to the content.
      *
+     * Don't send non-Move event with a different position without sending Move event first.
+     * Otherwise hover can lose Exit/Enter events.
+     *
+     * Do: Move(5,5) -> Move(15,5) -> Scroll(15,5) -> Press(15,5) -> Move(20,5) -> Release(20,5)
+     * Don't: Move(5,5) -> Scroll(15,5) -> Press(15,5) -> Release(20,5)
+     *
      * @param eventType Indicates the primary reason that the event was sent.
      * @param position The [Offset] of the current pointer event, relative to the content.
      * @param timeMillis The time of the current pointer event, in milliseconds. The start (`0`) time
@@ -190,7 +196,7 @@ class ImageComposeScene(
      * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons).
      * @param keyboardModifiers Contains the state of modifier keys, such as Shift, Control, and Alt, as well as the state
      * of the lock keys, such as Caps Lock and Num Lock.
-     * @param mouseEvent The original native event.
+     * @param nativeEvent The original native event.
      */
     @OptIn(ExperimentalComposeUiApi::class)
     fun sendPointerEvent(
