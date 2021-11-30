@@ -32,7 +32,7 @@ import androidx.compose.ui.util.unpackInt1
  * @param keyCode an integer code representing the key pressed. Note: This keycode can be used to
  * uniquely identify a hardware key. It is different from the native keycode.
  */
-actual inline class Key(val keyCode: Long) {
+actual value class Key(val keyCode: Long) {
     actual companion object {
         /** Unknown key. */
         actual val Unknown: Key = TODO("implement native Key") // Key(KeyEvent.VK_UNDEFINED)

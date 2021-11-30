@@ -178,9 +178,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.kotlinStdlibJdk8)
                 }
             }
-            jsMain {
-                dependsOn(commonMain)
-            }
+
+            jsMain.dependsOn(skikoMain)
 
             nativeMain {
                 dependsOn(skikoMain)
