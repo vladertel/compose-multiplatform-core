@@ -65,13 +65,12 @@ def addMavenRepositories(RepositoryHandler handler) {
     }
     if (System.getenv("ALLOW_PUBLIC_REPOS") != null || System.getProperty("ALLOW_PUBLIC_REPOS") != null) {
         handler.mavenCentral()
-        handler.jcenter()
         handler.google()
         handler.maven {
-            url("https://plugins.gradle.org/m2/")
+            url("https://maven.pkg.jetbrains.space/public/p/compose/dev")
         }
         handler.maven {
-               url("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+            url("https://plugins.gradle.org/m2/")
         }
         handler.mavenLocal()
     }
