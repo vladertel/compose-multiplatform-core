@@ -170,9 +170,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     api(libs.kotlinCoroutinesSwing)
                 }
             }
-            jsMain {
-                dependsOn(commonMain)
-            }
+
+            jsMain.dependsOn(skikoMain)
 
             nativeMain {
                 dependsOn(skikoMain)
