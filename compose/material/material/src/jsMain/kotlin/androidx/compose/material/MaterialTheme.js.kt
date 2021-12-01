@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation
+package androidx.compose.material
 
+import androidx.compose.foundation.LocalScrollbarStyle
+import androidx.compose.foundation.defaultScrollbarStyle
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.runtime.CompositionLocalProvider
 
 @Composable
-internal actual fun isComposeRootInScrollableContainer(): () -> Boolean = { false }
-
-// TODO: b/168524931 - should this depend on the input device?
-internal actual val TapIndicationDelay: Long = 0L
-
-/**
- * Whether the specified [KeyEvent] represents a user intent to perform a click.
- * (eg. When you press Enter on a focused button, it should perform a click).
- */
-internal actual val KeyEvent.isClick: Boolean
-    get() = TODO("implement js isClick")
+internal actual fun PlatformMaterialTheme(content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalScrollbarStyle provides defaultScrollbarStyle().copy(
+            shape = MaterialTheme.shapes.small,
+            unhoverColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+            hoverColor = MaterialTheme.colors.onSurface.copy(alpha = 0.50f)
+        ),
+        content = content
+    )
+}
