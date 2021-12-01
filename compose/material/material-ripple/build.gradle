@@ -58,6 +58,9 @@ dependencies {
 if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     kotlin {
         android()
+        js(IR) {
+            browser()
+        }
         jvm("desktop")
         macosX64()
         iosX64("uikitX64")
@@ -77,6 +80,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             desktopMain.dependsOn(jvmMain)
+
+            jsMain.dependsOn(commonMain)
 
             nativeMain.dependsOn(commonMain)
             darwinMain.dependsOn(nativeMain)
