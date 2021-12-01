@@ -13,21 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package androidx.compose.ui.native
 
-package androidx.compose.foundation
+import org.jetbrains.skiko.SkikoDispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.input.key.KeyEvent
+internal actual fun getMainDispatcher(): CoroutineDispatcher = SkikoDispatchers.Main
 
-@Composable
-internal actual fun isComposeRootInScrollableContainer(): () -> Boolean = { false }
-
-// TODO: b/168524931 - should this depend on the input device?
-internal actual val TapIndicationDelay: Long = 0L
-
-/**
- * Whether the specified [KeyEvent] represents a user intent to perform a click.
- * (eg. When you press Enter on a focused button, it should perform a click).
- */
-internal actual val KeyEvent.isClick: Boolean
-    get() = TODO("implement js isClick")
