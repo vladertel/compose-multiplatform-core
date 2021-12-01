@@ -34,6 +34,18 @@ dependencies {
     kotlinNativeCompilerPluginClasspath(project(":compose:compiler:compiler-hosted"))
 }
 
+val resourcesDir = "$buildDir/resources"
+val skikoWasm by configurations.creating
+
+dependencies {
+    skikoWasm("org.jetbrains.skiko:skiko-js-wasm-runtime:0.6.6")
+}
+
+val unzipTask = tasks.register("unzipWasm", Copy::class) {
+    destinationDir = file(resourcesDir)
+    from(skikoWasm.map { zipTree(it) })
+}
+
 repositories {
     mavenLocal()
 }
@@ -89,7 +101,11 @@ kotlin {
             }
         }
 
-        val jsMain by getting { dependsOn(skikoMain) }
+        val jsMain by getting {
+            dependsOn(skikoMain)
+            resources.setSrcDirs(resources.srcDirs)
+            resources.srcDirs(unzipTask.map { it.destinationDir })
+        }
 
         val nativeMain by creating { dependsOn(skikoMain) }
         val darwinMain by creating { dependsOn(nativeMain) }
