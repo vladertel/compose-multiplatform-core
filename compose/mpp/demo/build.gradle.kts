@@ -38,7 +38,7 @@ val resourcesDir = "$buildDir/resources"
 val skikoWasm by configurations.creating
 
 dependencies {
-    skikoWasm("org.jetbrains.skiko:skiko-js-wasm-runtime:0.6.6")
+    skikoWasm(libs.skikoWasm)
 }
 
 val unzipTask = tasks.register("unzipWasm", Copy::class) {
