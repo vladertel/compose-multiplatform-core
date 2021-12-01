@@ -50,11 +50,20 @@ import org.xml.sax.InputSource
  * @param loader  resources loader
  * @return [Painter] used for drawing the loaded resource
  */
-@Composable
 @OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun painterResource(
+    resourcePath: String
+): Painter = painterResource(
+    resourcePath,
+    ResourceLoader.Default
+)
+
+@ExperimentalComposeUiApi
+@Composable
 fun painterResource(
     resourcePath: String,
-    loader: ResourceLoader = ResourceLoader.Default
+    loader: ResourceLoader
 ): Painter = when (resourcePath.substringAfterLast(".")) {
     "svg" -> rememberSvgResource(resourcePath, loader)
     "xml" -> rememberVectorXmlResource(resourcePath, loader)
