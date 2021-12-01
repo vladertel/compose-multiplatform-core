@@ -14,20 +14,10 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation
+package androidx.compose.foundation.text
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.foundation.text.selection.TextFieldSelectionManager
+import androidx.compose.ui.Modifier
 
-@Composable
-internal actual fun isComposeRootInScrollableContainer(): () -> Boolean = { false }
-
-// TODO: b/168524931 - should this depend on the input device?
-internal actual val TapIndicationDelay: Long = 0L
-
-/**
- * Whether the specified [KeyEvent] represents a user intent to perform a click.
- * (eg. When you press Enter on a focused button, it should perform a click).
- */
-internal actual val KeyEvent.isClick: Boolean
-    get() = TODO("implement js isClick")
+internal actual fun Modifier.textFieldMagnifier(manager: TextFieldSelectionManager): Modifier =
+    Modifier
