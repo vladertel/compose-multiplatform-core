@@ -14,35 +14,17 @@
  * limitations under the License.
  */
 
-package androidx;
+package sample.annotation.provider;
 
-/**
- * Java usage of inline suppression.
- */
-@SuppressWarnings("unused")
-public class IdeaSuppressionJava {
+import static java.lang.annotation.RetentionPolicy.CLASS;
 
-    /**
-     * Call to a deprecated method with an inline suppression.
-     */
-    public void callDeprecatedMethod() {
-        //noinspection deprecation
-        deprecatedMethod();
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-        notDeprecatedMethod();
-    }
+import kotlin.RequiresOptIn;
 
-    /**
-     * This method is deprecated.
-     *
-     * @deprecated Replaced with {@link #notDeprecatedMethod()}
-     */
-    @Deprecated
-    public void deprecatedMethod() {}
-
-    /**
-     * This method is not deprecated.
-     */
-    public void notDeprecatedMethod() {}
-
-}
+@RequiresOptIn
+@Retention(CLASS)
+@Target({ElementType.TYPE, ElementType.METHOD})
+public @interface RequiresOptInSampleAnnotationJava {}

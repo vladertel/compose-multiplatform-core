@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 
-package sample.annotation.provider;
+package androidx
 
-import static java.lang.annotation.RetentionPolicy.CLASS;
+import androidx.annotation.Keep
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-
-@SuppressWarnings("deprecation")
-@kotlin.Experimental
-@Retention(CLASS)
-@Target({ElementType.TYPE, ElementType.METHOD})
-public @interface ExperimentalSampleAnnotationJava {}
+@Keep
+class KeepAnnotationUsageKotlin
