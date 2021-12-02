@@ -44,8 +44,6 @@ internal class ComposeLayer {
             val contentScale = layer.contentScale
             canvas.scale(contentScale, contentScale)
             scene.render(canvas/*, (width / contentScale).toInt(), (height / contentScale).toInt()*/, nanoTime)
-            // Request next frame immediately.
-            layer.needRedraw()
         }
 
         override fun onInputEvent(event: SkikoInputEvent) {
