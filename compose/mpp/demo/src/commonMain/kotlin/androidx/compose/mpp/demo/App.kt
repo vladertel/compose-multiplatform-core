@@ -85,17 +85,16 @@ fun myContent() {
                 .height(if (clutz) 4.dp else 12.dp)
                 .background(color = if (clutz) Color.DarkGray else Color.Magenta)
         )
-        // TODO: button fails in browser in runtime - needs investigation
-//        Button(
-//            modifier = Modifier
-//                .padding(16.dp),
-//            onClick = {
-//                println("Button clicked!")
-//                tick = !tick
-//            }
-//        ) {
-//            Text(if (switched) "🦑 press 🐙" else "Press me!")
-//        }
+        Button(
+            modifier = Modifier
+                .padding(16.dp),
+            onClick = {
+                println("Button clicked!")
+                tick = !tick
+            }
+        ) {
+            Text(if (switched) "🦑 press 🐙" else "Press me!")
+        }
         Row {
             RadioButton(
                 modifier = Modifier
