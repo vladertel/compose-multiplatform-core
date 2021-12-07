@@ -9,7 +9,7 @@ settings:
   CURRENT_PROJECT_VERSION: "4"
   SDKROOT: iphoneos
 targets:
-  SkikoSample:
+  ComposeDemo:
     type: application
     platform: iOS
     deploymentTarget: "12.0"
