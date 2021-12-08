@@ -17,13 +17,31 @@
 package androidx.compose.ui.window
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionContext
 import androidx.compose.ui.native.ComposeLayer
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.LoadedFontFamily
+import androidx.compose.ui.text.platform.Typeface
+import androidx.compose.ui.window.JsCanvasTypefaces.mapAliasToPath
+import org.jetbrains.skia.Typeface as SkTypeface
 import kotlinx.browser.document
+import org.jetbrains.skia.Data
 import org.w3c.dom.HTMLCanvasElement
 
 internal actual class ComposeWindow actual constructor(){
-    val layer = ComposeLayer()
+    val layer = ComposeLayer().also {
+        it.scene.registerTypefaces(
+            mapAliasToPath.map {  aliasToBytes ->
+                FontFamily(
+                    Typeface(
+                        typeface = SkTypeface.makeFromData(
+                            Data.makeFromBytes(aliasToBytes.value)
+                        ),
+                        alias = aliasToBytes.key
+                    )
+                ) as LoadedFontFamily
+            }
+        )
+    }
 
     val title: String
         get() = "TODO: get a title from SkiaWindow"
@@ -59,4 +77,9 @@ internal actual class ComposeWindow actual constructor(){
     actual fun dispose() {
         layer.dispose()
     }
+}
+
+
+object JsCanvasTypefaces {
+    var mapAliasToPath = emptyMap<String, ByteArray>()
 }

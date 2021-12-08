@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.FlushCoroutineDispatcher
 import androidx.compose.ui.platform.GlobalSnapshotManager
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.node.RootForTest
+import androidx.compose.ui.text.font.LoadedFontFamily
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -265,7 +266,9 @@ class ComposeScene internal constructor(
             density,
             onPreviewKeyEvent = onPreviewKeyEvent,
             onKeyEvent = onKeyEvent
-        )
+        ).also { owner ->
+            typefacesToRegister.forEach { owner.fontLoader.ensureRegistered(it) }
+        }
         attach(mainOwner)
         composition = mainOwner.setContent(parentComposition ?: recomposer) {
             CompositionLocalProvider(
@@ -277,6 +280,12 @@ class ComposeScene internal constructor(
 
         // to perform all pending work synchronously. to start LaunchedEffect for example
         dispatcher.flush()
+    }
+
+    private var typefacesToRegister = emptyList<LoadedFontFamily>()
+
+    fun registerTypefaces(list: List<LoadedFontFamily>) {
+        typefacesToRegister = list
     }
 
     /**

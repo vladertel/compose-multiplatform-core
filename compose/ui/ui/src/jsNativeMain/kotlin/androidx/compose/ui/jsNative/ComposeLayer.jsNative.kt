@@ -72,7 +72,7 @@ internal class ComposeLayer {
         layer.skikoView = view
     }
 
-    private val scene = ComposeScene(
+    internal val scene = ComposeScene(
         getMainDispatcher(),
         view,
         Density(1f),

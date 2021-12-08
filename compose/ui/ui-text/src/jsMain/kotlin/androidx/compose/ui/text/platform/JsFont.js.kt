@@ -27,40 +27,13 @@ import org.jetbrains.skia.Data
 import org.jetbrains.skia.Typeface as SkTypeface
 
 internal val GenericFontFamiliesMapping by lazy {
-    when (Platform.Current) {
-        Platform.Windows ->
-            mapOf(
-                FontFamily.SansSerif.name to listOf("Arial"),
-                FontFamily.Serif.name to listOf("Times New Roman"),
-                FontFamily.Monospace.name to listOf("Consolas"),
-                FontFamily.Cursive.name to listOf("Comic Sans MS")
-            )
-        Platform.MacOS ->
-            mapOf(
-                FontFamily.SansSerif.name to listOf(
-                    "Helvetica Neue",
-                    "Helvetica"
-                ),
-                FontFamily.Serif.name to listOf("Times"),
-                FontFamily.Monospace.name to listOf("Courier"),
-                FontFamily.Cursive.name to listOf("Apple Chancery")
-            )
-        Platform.Linux ->
-            mapOf(
-                FontFamily.SansSerif.name to listOf("Noto Sans", "DejaVu Sans"),
-                FontFamily.Serif.name to listOf("Noto Serif", "DejaVu Serif", "Times New Roman"),
-                FontFamily.Monospace.name to listOf("Noto Sans Mono", "DejaVu Sans Mono"),
-                // better alternative?
-                FontFamily.Cursive.name to listOf("Comic Sans MS")
-            )
-        Platform.Unknown ->
-            mapOf(
-                FontFamily.SansSerif.name to listOf("Arial"),
-                FontFamily.Serif.name to listOf("Times New Roman"),
-                FontFamily.Monospace.name to listOf("Consolas"),
-                FontFamily.Cursive.name to listOf("Comic Sans MS")
-            )
-    }
+    mapOf(
+        FontFamily.SansSerif.name to listOf("Noto Sans", "Noto Color Emoji"),
+        FontFamily.Serif.name to listOf("Noto Serif", "Noto Color Emoji"),
+        FontFamily.Monospace.name to listOf("Noto Mono", "Noto Color Emoji"),
+        // better alternative?
+        FontFamily.Cursive.name to listOf("Noto Mono", "Noto Color Emoji")
+    )
 }
 
 internal actual fun FontListFontFamily.makeAlias(): String {
@@ -81,27 +54,4 @@ internal actual val typefacesCache = object : Cache<String, SkTypeface> {
     // override fun get(key: String, loader: (String) -> SkTypeface): SkTypeface = loader(key)
     override fun get(key: String, loader: (String) -> SkTypeface): SkTypeface =
         TODO("implement js typefacesCache")
-}
-
-private enum class Platform {
-    Linux,
-    Windows,
-    MacOS,
-    Unknown;
-
-    companion object {
-        val Current by lazy {
-            println("TODO: selecting MacOS unconditionally")
-            MacOS
-            /*
-            val name = System.getProperty("os.name")
-            when {
-                name.startsWith("Linux") -> Linux
-                name.startsWith("Win") -> Windows
-                name == "Mac OS X" -> MacOS
-                else -> Unknown
-            }
-             */
-        }
-    }
 }

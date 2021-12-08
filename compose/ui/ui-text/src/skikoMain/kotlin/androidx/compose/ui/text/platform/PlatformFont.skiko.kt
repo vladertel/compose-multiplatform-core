@@ -131,7 +131,7 @@ class FontLoader : Font.ResourceLoader {
 
     private val registered = HashSet<String>()
 
-    internal fun ensureRegistered(fontFamily: FontFamily): List<String> =
+    fun ensureRegistered(fontFamily: FontFamily): List<String> =
         when (fontFamily) {
             is FontListFontFamily -> {
                 val alias = fontFamily.makeAlias()
