@@ -10,7 +10,8 @@ import org.w3c.dom.HTMLCanvasElement
 fun main() {
     onWasmReady {
         Window("Compose/JS sample") {
-            myContent()
+            BouncingBallsApp()
+//            myContent()
         }
     }
 }

@@ -31,7 +31,8 @@ expect class NativeKeyEvent
  * @sample androidx.compose.ui.samples.KeyEventSample
  */
 @Suppress("INLINE_CLASS_DEPRECATED", "EXPERIMENTAL_FEATURE_WARNING")
-inline class KeyEvent(val nativeKeyEvent: NativeKeyEvent)
+//TODO(karpovich): fix compilation error in k/js: this class is inline in upstream
+class KeyEvent(val nativeKeyEvent: NativeKeyEvent)
 
 /**
  * The key that was pressed.
