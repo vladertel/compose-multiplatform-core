@@ -143,6 +143,10 @@ internal abstract class LayoutNodeWrapper(
     override val providedAlignmentLines: Set<AlignmentLine>
         get() = _measureResult?.alignmentLines?.keys ?: emptySet()
 
+    // it's necessary to keep this instance for k/js
+    // to avoid lambda instance being recreated every time
+    private val invokeOnCanvasInstance: (Canvas) -> Unit = { canvas -> this(canvas) }
+
     /**
      * Called when the width or height of [measureResult] change. The object instance pointed to
      * by [measureResult] may or may not have changed.
@@ -313,7 +317,7 @@ internal abstract class LayoutNodeWrapper(
         if (isAttached && layerBlock != null) {
             if (layer == null) {
                 layer = layoutNode.requireOwner().createLayer(
-                    this,
+                    invokeOnCanvasInstance,
                     invalidateParentLayer
                 ).apply {
                     resize(measuredSize)
