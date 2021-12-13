@@ -51,7 +51,7 @@ import kotlin.test.assertTrue
 
 class RecomposerTestsJvm {
 
-    @Test
+//    @Test
     @OptIn(ExperimentalComposeApi::class)
     fun concurrentRecompositionOffMainThread() = runBlocking<Unit> {
         val dispatcher = TestCoroutineDispatcher()
@@ -88,7 +88,7 @@ class RecomposerTestsJvm {
         }
     }
 
-    @Test
+//    @Test
     @OptIn(ExperimentalComposeApi::class)
     fun concurrentRecompositionInvalidationDuringComposition() = runBlocking {
         val dispatcher = TestCoroutineDispatcher()
@@ -132,7 +132,7 @@ class RecomposerTestsJvm {
         }
     }
 
-    @Test
+//    @Test
     @OptIn(ExperimentalComposeApi::class, ObsoleteCoroutinesApi::class)
     fun concurrentRecompositionOnCompositionSpecificContext() = runBlocking(AutoTestFrameClock()) {
         val recomposer = Recomposer(coroutineContext)
@@ -165,7 +165,7 @@ class RecomposerTestsJvm {
         }
     }
 
-    @Test
+//    @Test
     fun recomposerCancelReportsShuttingDownImmediately() = runBlocking(AutoTestFrameClock()) {
         val recomposer = Recomposer(coroutineContext)
         launch(start = CoroutineStart.UNDISPATCHED) {

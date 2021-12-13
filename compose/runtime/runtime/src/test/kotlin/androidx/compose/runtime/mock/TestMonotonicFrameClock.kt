@@ -27,8 +27,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.test.DelayController
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlin.coroutines.ContinuationInterceptor
 
 private const val DefaultFrameDelay = 16_000_000L
@@ -47,15 +48,21 @@ private const val DefaultFrameDelay = 16_000_000L
 fun TestMonotonicFrameClock(
     coroutineScope: CoroutineScope,
     frameDelayNanos: Long = DefaultFrameDelay
-): TestMonotonicFrameClock = TestMonotonicFrameClock(
-    coroutineScope = coroutineScope,
-    delayController = coroutineScope.coroutineContext[ContinuationInterceptor].let { interceptor ->
-        requireNotNull(interceptor as? DelayController) {
-            "ContinuationInterceptor $interceptor of supplied scope must implement DelayController"
-        }
-    },
-    frameDelayNanos = frameDelayNanos
-)
+): TestMonotonicFrameClock {
+//    val coroutineScheduler = TestCoroutineScheduler()
+
+    return  TestMonotonicFrameClock(
+        coroutineScope = coroutineScope,// + coroutineScheduler,
+        delayController = coroutineScope.coroutineContext[TestCoroutineScheduler]!!,
+//        .coroutineContext[ContinuationInterceptor].let { interceptor ->
+//        requireNotNull(interceptor as? TestCoroutineScheduler) {
+//            "ContinuationInterceptor $interceptor of supplied scope must implement DelayController"
+//        }
+//    },
+        frameDelayNanos = frameDelayNanos
+    )
+}
+
 
 /**
  * A [MonotonicFrameClock] with a time source controlled by a `kotlinx-coroutines-test`
@@ -70,7 +77,7 @@ fun TestMonotonicFrameClock(
 @ExperimentalCoroutinesApi
 class TestMonotonicFrameClock(
     private val coroutineScope: CoroutineScope,
-    private val delayController: DelayController,
+     val delayController: TestCoroutineScheduler,
     @get:Suppress("MethodNameUnits") // Nanos for high-precision animation clocks
     val frameDelayNanos: Long = DefaultFrameDelay
 ) : MonotonicFrameClock {

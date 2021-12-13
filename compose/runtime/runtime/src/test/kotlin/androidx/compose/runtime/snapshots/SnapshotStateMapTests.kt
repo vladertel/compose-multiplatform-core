@@ -20,13 +20,13 @@ import androidx.compose.runtime.mutableStateMapOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.test.IgnoreJsTarget
-import kotlinx.test._runBlocking
 
 class SnapshotStateMapTests {
     @Test
@@ -494,15 +494,16 @@ class SnapshotStateMapTests {
 
     @Test
     @IgnoreJsTarget
-    fun concurrentModificationInGlobal_put_new() = _runBlocking {
+    fun concurrentModificationInGlobal_put_new() = runTest {
         repeat(100) {
             val map = mutableStateMapOf<Int, String>()
             coroutineScope {
                 repeat(100) {
-                    launch(Dispatchers.Default) {
+                    launch {
                         map[it] = it.toString()
                     }
                 }
+                testScheduler.runCurrent()
             }
 
             repeat(100) {
@@ -512,17 +513,18 @@ class SnapshotStateMapTests {
     }
 
     @Test
-    @IgnoreJsTarget
-    fun concurrentModificationInGlobal_put_replace() = _runBlocking {
+//    @IgnoreJsTarget
+    fun concurrentModificationInGlobal_put_replace() = runTest {
         repeat(100) {
             val map = mutableStateMapOf(*Array(100) { it to "default" })
             coroutineScope {
                 repeat(100) {
-                    launch(Dispatchers.Default) {
+                    launch {
                         map[it] = it.toString()
                     }
                 }
             }
+            //testScheduler.runCurrent()
 
             repeat(100) {
                 assertEquals(map[it], it.toString())

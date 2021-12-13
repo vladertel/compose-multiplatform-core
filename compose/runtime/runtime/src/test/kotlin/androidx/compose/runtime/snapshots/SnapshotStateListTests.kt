@@ -20,7 +20,7 @@ import androidx.compose.runtime.mutableStateListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.test._runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -548,15 +548,16 @@ class SnapshotStateListTests {
     }
 
     @Test
-    fun concurrentGlobalModification_add(): Unit = _runBlocking {
+    fun concurrentGlobalModification_add() = runTest {
         repeat(100) {
             val list = mutableStateListOf<Int>()
             coroutineScope {
                 repeat(100) { index ->
-                    launch(Dispatchers.Default) {
+                    launch {
                         list.add(index)
                     }
                 }
+//                testScheduler.runCurrent()
             }
 
             repeat(100) {
@@ -566,12 +567,12 @@ class SnapshotStateListTests {
     }
 
     @Test
-    fun concurrentGlobalModifications_addAll(): Unit = _runBlocking {
+    fun concurrentGlobalModifications_addAll() = runTest {
         repeat(100) {
             val list = mutableStateListOf<Int>()
             coroutineScope {
                 repeat(100) { index ->
-                    launch(Dispatchers.Default) {
+                    launch {
                         list.addAll(0, Array(10) { index * 100 + it }.toList())
                     }
                 }
@@ -582,6 +583,9 @@ class SnapshotStateListTests {
                     assertTrue(list.contains(index * 100 + it))
                 }
             }
+
+            println("here = $it, ")
+//            testScheduler.runCurrent()
         }
     }
 

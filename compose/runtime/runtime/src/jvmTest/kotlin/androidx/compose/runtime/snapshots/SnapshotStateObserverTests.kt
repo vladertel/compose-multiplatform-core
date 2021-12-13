@@ -31,7 +31,7 @@ import kotlin.test.assertNull
 class SnapshotStateObserverTests {
 
     @Test
-    fun stateChangeTriggersCallback() {
+    fun stateChangeTriggersCallback()  {
         val data = "Hello World"
         var changes = 0
 

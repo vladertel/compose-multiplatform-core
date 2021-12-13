@@ -18,6 +18,6 @@ package kotlinx.test
 
 import kotlinx.coroutines.CoroutineScope
 
-internal expect fun _runBlocking(
-    block: suspend CoroutineScope.() -> Unit
-): Unit
+//internal expect fun _runBlocking(
+//    block: suspend CoroutineScope.() -> Unit
+//): Unit

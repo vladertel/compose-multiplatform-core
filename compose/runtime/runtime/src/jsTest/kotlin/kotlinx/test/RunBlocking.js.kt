@@ -16,12 +16,12 @@
 
 package kotlinx.test
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
-import kotlin.js.Promise
-import kotlinx.coroutines.promise
+//import kotlinx.coroutines.CoroutineScope
+//import kotlinx.coroutines.MainScope
+//import kotlin.js.Promise
+//import kotlinx.coroutines.promise
 
-private val testScope = MainScope()
-actual internal fun _runBlocking(block: suspend CoroutineScope.() -> Unit): dynamic = testScope.promise {
-    block()
-}
+//private val testScope = MainScope()
+//actual internal fun _runBlocking(block: suspend CoroutineScope.() -> Unit): dynamic = testScope.promise {
+//    block()
+//}

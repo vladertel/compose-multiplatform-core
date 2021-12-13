@@ -24,7 +24,8 @@ import androidx.compose.runtime.mock.expectNoChanges
 import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlinx.test.IgnoreJsTarget
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.Test
@@ -36,13 +37,15 @@ import kotlin.test.assertTrue
 class RecomposerTests {
 
     @Test
-    fun recomposerRecomposesWhileOpen() = runBlockingTest {
+    fun recomposerRecomposesWhileOpen() = runTest {
         val testClock = TestMonotonicFrameClock(this)
         withContext(testClock) {
             val recomposer = Recomposer(coroutineContext)
             val runner = launch {
                 recomposer.runRecomposeAndApplyChanges()
             }
+            testScheduler.runCurrent()
+
             val composition = Composition(UnitApplier(), recomposer)
             var state by mutableStateOf(0)
             var lastRecomposedState = -1
@@ -77,13 +80,15 @@ class RecomposerTests {
     }
 
     @Test
-    fun recomposerRemainsOpenUntilEffectsJoin() = runBlockingTest {
+    fun recomposerRemainsOpenUntilEffectsJoin() = runTest {
         val testClock = TestMonotonicFrameClock(this)
         withContext(testClock) {
             val recomposer = Recomposer(coroutineContext)
             val runner = launch {
                 recomposer.runRecomposeAndApplyChanges()
             }
+            testScheduler.runCurrent()
+
             val composition = Composition(UnitApplier(), recomposer)
             val completer = Job()
             composition.setContent {

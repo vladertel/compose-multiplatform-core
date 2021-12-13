@@ -46,8 +46,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.test._runBlocking
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import kotlinx.test.IgnoreJsTarget
 import kotlin.random.Random
 import kotlin.test.Test
@@ -2015,7 +2015,7 @@ class CompositionTests {
     }
 
     @Test
-    fun testRememberedObserver_Controlled_Dispose() = _runBlocking {
+    fun testRememberedObserver_Controlled_Dispose() = runTest {
         val recomposer = Recomposer(coroutineContext)
         val root = View()
         val controlled = ControlledComposition(ViewApplier(root), recomposer)
@@ -2838,7 +2838,7 @@ class CompositionTests {
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testComposableLambdaSubcompositionInvalidation() = runBlockingTest {
+    fun testComposableLambdaSubcompositionInvalidation() = runTest {
         localRecomposerTest { recomposer ->
             val composition = Composition(EmptyApplier(), recomposer)
             try {
@@ -2865,7 +2865,7 @@ class CompositionTests {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testCompositionContextIsRemembered() = runBlockingTest {
+    fun testCompositionContextIsRemembered() = runTest {
         localRecomposerTest { recomposer ->
             val composition = Composition(EmptyApplier(), recomposer)
             try {
@@ -2889,7 +2889,7 @@ class CompositionTests {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testParentCompositionRecomposesFirst() = runBlockingTest {
+    fun testParentCompositionRecomposesFirst() = runTest {
         localRecomposerTest { recomposer ->
             val composition = Composition(EmptyApplier(), recomposer)
             val results = mutableListOf<String>()
@@ -2930,7 +2930,7 @@ class CompositionTests {
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testStateWriteInApplier() = runBlockingTest {
+    fun testStateWriteInApplier() = runTest {
 
         class MutateOnRemoveApplier(
             private val removeCounter: MutableState<Int>
@@ -2999,7 +2999,7 @@ class CompositionTests {
 
     @Test // Regression test for b/180124293
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun disposedCompositionShouldReportAsDisposed() = runBlockingTest {
+    fun disposedCompositionShouldReportAsDisposed() = runTest {
         localRecomposerTest { recomposer ->
             val composition = Composition(EmptyApplier(), recomposer)
             assertFalse(composition.isDisposed)
@@ -3093,7 +3093,7 @@ class CompositionTests {
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun composeNodeSetVsUpdate() = runBlockingTest {
+    fun composeNodeSetVsUpdate() = runTest {
         localRecomposerTest { recomposer ->
             class SetUpdateNode(property: String) {
                 var changeCount = 0

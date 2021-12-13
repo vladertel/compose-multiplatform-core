@@ -33,7 +33,7 @@ class JvmCompositionTests {
     // Regression test for b/202967533
     // Test taken from the bug report; reformatted to conform to lint rules.
     @OptIn(ExperimentalCoroutinesApi::class)
-    @Test
+//    @Test
     fun avoidsDeadlockInRecomposerComposerDispose() {
         val thread = thread {
             while (!Thread.interrupted()) {

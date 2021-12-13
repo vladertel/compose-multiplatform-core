@@ -16,9 +16,9 @@
 
 package kotlinx.test
 
-import kotlinx.coroutines.CoroutineScope
-import kotlin.coroutines.EmptyCoroutineContext
-
-actual internal fun _runBlocking(
-    block: suspend CoroutineScope.() -> Unit
-): Unit = kotlinx.coroutines.runBlocking(EmptyCoroutineContext, block)
+//import kotlinx.coroutines.CoroutineScope
+//import kotlin.coroutines.EmptyCoroutineContext
+//
+//actual internal fun _runBlocking(
+//    block: suspend CoroutineScope.() -> Unit
+//): Unit = kotlinx.coroutines.runBlocking(EmptyCoroutineContext, block)

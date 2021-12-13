@@ -20,7 +20,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runTest
+//import kotlinx.coroutines.test.runBlockingTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -28,10 +29,11 @@ import kotlin.test.assertTrue
 @ExperimentalCoroutinesApi
 class BroadcastFrameClockTest {
     @Test
-    fun sendAndReceiveFrames() = runBlockingTest {
+    fun sendAndReceiveFrames() = runTest {
         val clock = androidx.compose.runtime.BroadcastFrameClock()
 
         val frameAwaiter = async { clock.withFrameNanos { it } }
+        testScheduler.runCurrent()
 
         clock.sendFrame(1)
         assertEquals(1, frameAwaiter.await(), "awaiter frame time")
@@ -48,9 +50,10 @@ class BroadcastFrameClockTest {
     }
 
     @Test
-    fun cancelClock() = runBlockingTest {
+    fun cancelClock() = runTest {
         val clock = androidx.compose.runtime.BroadcastFrameClock()
         val frameAwaiter = async { clock.withFrameNanos { it } }
+        testScheduler.runCurrent()
 
         clock.cancel()
 
@@ -63,15 +66,17 @@ class BroadcastFrameClockTest {
     }
 
     @Test
-    fun failClockWhenNewAwaitersNotified() = runBlockingTest {
+    fun failClockWhenNewAwaitersNotified() = runTest {
         val clock = androidx.compose.runtime.BroadcastFrameClock {
             throw CancellationException("failed frame clock")
         }
 
         val failingAwaiter = async { clock.withFrameNanos { it } }
+        testScheduler.runCurrent()
         assertAwaiterCancelled("failingAwaiter", failingAwaiter)
 
         val lateAwaiter = async { clock.withFrameNanos { it } }
+        testScheduler.runCurrent()
         assertAwaiterCancelled("lateAwaiter", lateAwaiter)
     }
 }
