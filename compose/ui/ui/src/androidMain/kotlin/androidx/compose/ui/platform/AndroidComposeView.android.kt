@@ -112,6 +112,7 @@ import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.ProcessResult
 import androidx.compose.ui.layout.RootMeasurePolicy
 import androidx.compose.ui.node.InternalCoreApi
+import androidx.compose.ui.node.InvokeOnCanvas
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.LayoutNode.UsageByParent
 import androidx.compose.ui.node.LayoutNodeDrawScope
@@ -752,6 +753,11 @@ internal class AndroidComposeView(context: Context) :
     }
 
     override fun createLayer(
+        drawBlock: InvokeOnCanvas,
+        invalidateParentLayer: () -> Unit
+    ): OwnedLayer = createLayerImpl({ drawBlock(it) }, invalidateParentLayer)
+
+    private fun createLayerImpl(
         drawBlock: (Canvas) -> Unit,
         invalidateParentLayer: () -> Unit
     ): OwnedLayer {
