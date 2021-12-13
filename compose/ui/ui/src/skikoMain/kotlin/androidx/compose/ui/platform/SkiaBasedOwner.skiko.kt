@@ -293,7 +293,7 @@ internal class SkiaBasedOwner(
     }
 
     override fun createLayer(
-        drawBlock: InvokeOnCanvas,
+        drawBlock: (Canvas) -> Unit,
         invalidateParentLayer: () -> Unit
     ) = SkiaLayer(
         density,
