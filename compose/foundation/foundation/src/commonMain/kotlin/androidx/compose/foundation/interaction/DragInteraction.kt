@@ -22,6 +22,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 
 // An interface, not a sealed class, to allow adding new types here in a safe way (and not break
 // exhaustive when clauses)
@@ -81,14 +82,14 @@ fun InteractionSource.collectIsDraggedAsState(): State<Boolean> {
     val isDragged = remember { mutableStateOf(false) }
     LaunchedEffect(this) {
         val dragInteractions = mutableListOf<DragInteraction.Start>()
-        interactions.collect { interaction ->
+        interactions.onEach { interaction ->
             when (interaction) {
                 is DragInteraction.Start -> dragInteractions.add(interaction)
                 is DragInteraction.Stop -> dragInteractions.remove(interaction.start)
                 is DragInteraction.Cancel -> dragInteractions.remove(interaction.start)
             }
             isDragged.value = dragInteractions.isNotEmpty()
-        }
+        }.collect()
     }
     return isDragged
 }

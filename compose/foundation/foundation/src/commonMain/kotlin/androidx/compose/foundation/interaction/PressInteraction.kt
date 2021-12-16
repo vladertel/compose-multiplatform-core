@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 
 // An interface, not a sealed class, to allow adding new types here in a safe way (and not break
 // exhaustive when clauses)
@@ -82,14 +83,14 @@ fun InteractionSource.collectIsPressedAsState(): State<Boolean> {
     val isPressed = remember { mutableStateOf(false) }
     LaunchedEffect(this) {
         val pressInteractions = mutableListOf<PressInteraction.Press>()
-        interactions.collect { interaction ->
+        interactions.onEach { interaction ->
             when (interaction) {
                 is PressInteraction.Press -> pressInteractions.add(interaction)
                 is PressInteraction.Release -> pressInteractions.remove(interaction.press)
                 is PressInteraction.Cancel -> pressInteractions.remove(interaction.press)
             }
             isPressed.value = pressInteractions.isNotEmpty()
-        }
+        }.collect()
     }
     return isPressed
 }

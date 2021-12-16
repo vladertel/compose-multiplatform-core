@@ -56,6 +56,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -308,14 +309,14 @@ open class SwipeableState<T>(
      */
     @ExperimentalMaterialApi
     suspend fun snapTo(targetValue: T) {
-        latestNonEmptyAnchorsFlow.collect { anchors ->
+        latestNonEmptyAnchorsFlow.onEach { anchors ->
             val targetOffset = anchors.getOffset(targetValue)
             requireNotNull(targetOffset) {
                 "The target value must have an associated anchor."
             }
             snapInternalToOffset(targetOffset)
             currentValue = targetValue
-        }
+        }.collect()
     }
 
     /**
@@ -326,7 +327,7 @@ open class SwipeableState<T>(
      */
     @ExperimentalMaterialApi
     suspend fun animateTo(targetValue: T, anim: AnimationSpec<Float> = animationSpec) {
-        latestNonEmptyAnchorsFlow.collect { anchors ->
+        latestNonEmptyAnchorsFlow.onEach { anchors ->
             try {
                 val targetOffset = anchors.getOffset(targetValue)
                 requireNotNull(targetOffset) {
@@ -341,7 +342,7 @@ open class SwipeableState<T>(
                     .values.firstOrNull() ?: currentValue
                 currentValue = endValue
             }
-        }
+        }.collect()
     }
 
     /**
@@ -358,7 +359,7 @@ open class SwipeableState<T>(
      * @return the reason fling ended
      */
     suspend fun performFling(velocity: Float) {
-        latestNonEmptyAnchorsFlow.collect { anchors ->
+        latestNonEmptyAnchorsFlow.onEach { anchors ->
             val lastAnchor = anchors.getOffset(currentValue)!!
             val targetValue = computeTarget(
                 offset = offset.value,
@@ -372,7 +373,7 @@ open class SwipeableState<T>(
             if (targetState != null && confirmStateChange(targetState)) animateTo(targetState)
             // If the user vetoed the state change, rollback to the previous state.
             else animateInternalToOffset(lastAnchor, animationSpec)
-        }
+        }.collect()
     }
 
     /**

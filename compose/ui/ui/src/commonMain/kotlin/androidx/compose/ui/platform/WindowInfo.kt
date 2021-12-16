@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 
 /**
  * Provides information about the Window that is hosting this compose hierarchy.
@@ -44,7 +45,7 @@ internal fun WindowFocusObserver(onWindowFocusChanged: (isWindowFocused: Boolean
     val windowInfo = LocalWindowInfo.current
     val callback = rememberUpdatedState(onWindowFocusChanged)
     LaunchedEffect(windowInfo) {
-        snapshotFlow { windowInfo.isWindowFocused }.collect { callback.value(it) }
+        snapshotFlow { windowInfo.isWindowFocused }.onEach { callback.value(it) }.collect()
     }
 }
 

@@ -22,6 +22,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 
 // An interface, not a sealed class, to allow adding new types here in a safe way (and not break
 // exhaustive when clauses)
@@ -66,13 +67,13 @@ fun InteractionSource.collectIsFocusedAsState(): State<Boolean> {
     val isFocused = remember { mutableStateOf(false) }
     LaunchedEffect(this) {
         val focusInteractions = mutableListOf<FocusInteraction.Focus>()
-        interactions.collect { interaction ->
+        interactions.onEach { interaction ->
             when (interaction) {
                 is FocusInteraction.Focus -> focusInteractions.add(interaction)
                 is FocusInteraction.Unfocus -> focusInteractions.remove(interaction.focus)
             }
             isFocused.value = focusInteractions.isNotEmpty()
-        }
+        }.collect()
     }
     return isFocused
 }

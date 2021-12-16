@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 
 /**
  * <a href="https://material.io/components/buttons-floating-action-button" class="external" target="_blank">Material Design floating action button</a>.
@@ -274,7 +275,7 @@ private class DefaultFloatingActionButtonElevation(
     override fun elevation(interactionSource: InteractionSource): State<Dp> {
         val interactions = remember { mutableStateListOf<Interaction>() }
         LaunchedEffect(interactionSource) {
-            interactionSource.interactions.collect { interaction ->
+            interactionSource.interactions.onEach { interaction ->
                 when (interaction) {
                     is HoverInteraction.Enter -> {
                         interactions.add(interaction)
@@ -298,7 +299,7 @@ private class DefaultFloatingActionButtonElevation(
                         interactions.remove(interaction.press)
                     }
                 }
-            }
+            }.collect()
         }
 
         val interaction = interactions.lastOrNull()

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMaxBy
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 
 /**
  * [AnimatedVisibility] composable animates the appearance and disappearance of its content, as
@@ -743,9 +744,9 @@ private fun <T> AnimatedEnterExitImpl(
             snapshotFlow {
                 childTransition.currentState == EnterExitState.Visible ||
                     childTransition.targetState == EnterExitState.Visible
-            }.collect {
+            }.onEach {
                 isAnimationVisible.value = it
-            }
+            }.collect()
         }
 
         AnimatedEnterExitImpl(

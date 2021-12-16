@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 import kotlin.math.roundToInt
 
 /**
@@ -182,7 +183,7 @@ private fun BoxScope.SwitchImpl(
     val interactions = remember { mutableStateListOf<Interaction>() }
 
     LaunchedEffect(interactionSource) {
-        interactionSource.interactions.collect { interaction ->
+        interactionSource.interactions.onEach { interaction ->
             when (interaction) {
                 is PressInteraction.Press -> interactions.add(interaction)
                 is PressInteraction.Release -> interactions.remove(interaction.press)
@@ -191,7 +192,7 @@ private fun BoxScope.SwitchImpl(
                 is DragInteraction.Stop -> interactions.remove(interaction.start)
                 is DragInteraction.Cancel -> interactions.remove(interaction.start)
             }
-        }
+        }.collect()
     }
 
     val hasInteraction = interactions.isNotEmpty()

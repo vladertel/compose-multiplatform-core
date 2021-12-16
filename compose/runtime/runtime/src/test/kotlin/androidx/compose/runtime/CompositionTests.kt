@@ -1975,7 +1975,8 @@ class CompositionTests {
         assertArrayEquals(listOf(observed), abandonedObjects)
     }
 
-    @Test
+    @Test @IgnoreJsTarget //ignoring k/js for now: needs test adjustments, see
+    // https://github.com/Kotlin/kotlinx.coroutines/blob/1.6.0-RC/kotlinx-coroutines-test/MIGRATION.md#only-a-single-call-to-runtest-is-permitted-per-test
     fun testRememberObserver_Abandon_Recompose() {
         val abandonedObjects = mutableListOf<RememberObserver>()
         val observed = object : RememberObserver {

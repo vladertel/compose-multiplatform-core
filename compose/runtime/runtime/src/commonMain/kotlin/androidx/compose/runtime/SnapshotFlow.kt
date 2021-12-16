@@ -19,12 +19,12 @@
 package androidx.compose.runtime
 
 import androidx.compose.runtime.snapshots.Snapshot
-import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -57,16 +57,15 @@ fun <T> StateFlow<T>.collectAsState(
  *
  * @param context [CoroutineContext] to use for collecting.
  */
-@OptIn(InternalCoroutinesApi::class)
 @Composable
 fun <T : R, R> Flow<T>.collectAsState(
     initial: R,
     context: CoroutineContext = EmptyCoroutineContext
 ): State<R> = produceState(initial, this, context) {
     if (context == EmptyCoroutineContext) {
-        collect { value = it }
+        onEach { value = it }.collect()
     } else withContext(context) {
-        collect { value = it }
+        onEach { value = it }.collect()
     }
 }
 

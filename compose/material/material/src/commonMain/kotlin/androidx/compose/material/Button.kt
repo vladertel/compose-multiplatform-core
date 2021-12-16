@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 
 /**
  * <a href="https://material.io/components/buttons#contained-button" class="external" target="_blank">Material Design contained button</a>.
@@ -504,7 +505,7 @@ private class DefaultButtonElevation(
     override fun elevation(enabled: Boolean, interactionSource: InteractionSource): State<Dp> {
         val interactions = remember { mutableStateListOf<Interaction>() }
         LaunchedEffect(interactionSource) {
-            interactionSource.interactions.collect { interaction ->
+            interactionSource.interactions.onEach { interaction ->
                 when (interaction) {
                     is HoverInteraction.Enter -> {
                         interactions.add(interaction)
@@ -528,7 +529,7 @@ private class DefaultButtonElevation(
                         interactions.remove(interaction.press)
                     }
                 }
-            }
+            }.collect()
         }
 
         val interaction = interactions.lastOrNull()

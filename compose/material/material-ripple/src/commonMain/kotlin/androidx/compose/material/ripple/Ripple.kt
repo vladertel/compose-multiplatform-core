@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.isUnspecified
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 /**
@@ -133,14 +134,14 @@ internal abstract class Ripple(
         )
 
         LaunchedEffect(instance, interactionSource) {
-            interactionSource.interactions.collect { interaction ->
+            interactionSource.interactions.onEach { interaction ->
                 when (interaction) {
                     is PressInteraction.Press -> instance.addRipple(interaction, this)
                     is PressInteraction.Release -> instance.removeRipple(interaction.press)
                     is PressInteraction.Cancel -> instance.removeRipple(interaction.press)
                     else -> instance.updateStateLayer(interaction, this)
                 }
-            }
+            }.collect()
         }
 
         return instance

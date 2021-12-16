@@ -22,6 +22,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 
 // An interface, not a sealed class, to allow adding new types here in a safe way (and not break
 // exhaustive when clauses)
@@ -66,13 +67,13 @@ fun InteractionSource.collectIsHoveredAsState(): State<Boolean> {
     val isHovered = remember { mutableStateOf(false) }
     LaunchedEffect(this) {
         val hoverInteractions = mutableListOf<HoverInteraction.Enter>()
-        interactions.collect { interaction ->
+        interactions.onEach { interaction ->
             when (interaction) {
                 is HoverInteraction.Enter -> hoverInteractions.add(interaction)
                 is HoverInteraction.Exit -> hoverInteractions.remove(interaction.enter)
             }
             isHovered.value = hoverInteractions.isNotEmpty()
-        }
+        }.collect()
     }
     return isHovered
 }

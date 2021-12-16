@@ -583,9 +583,6 @@ class SnapshotStateListTests {
                     assertTrue(list.contains(index * 100 + it))
                 }
             }
-
-            println("here = $it, ")
-//            testScheduler.runCurrent()
         }
     }
 

@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.node.Ref
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 
 @Composable
 internal fun rememberStateOfItemsProvider(
@@ -43,7 +44,7 @@ internal fun rememberStateOfItemsProvider(
         snapshotFlow { calculateNearestItemsRange(state.firstVisibleItemIndex) }
             // MutableState's SnapshotMutationPolicy will make sure the provider is only
             // recreated when the state is updated with a new range.
-            .collect { nearestItemsRangeState.value = it }
+            .onEach { nearestItemsRangeState.value = it }.collect()
     }
     return remember(nearestItemsRangeState) {
         derivedStateOf<LazyListItemsProvider> {

@@ -92,6 +92,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -602,7 +603,7 @@ private fun SliderThumb(
     Box(modifier.padding(start = offset)) {
         val interactions = remember { mutableStateListOf<Interaction>() }
         LaunchedEffect(interactionSource) {
-            interactionSource.interactions.collect { interaction ->
+            interactionSource.interactions.onEach { interaction ->
                 when (interaction) {
                     is PressInteraction.Press -> interactions.add(interaction)
                     is PressInteraction.Release -> interactions.remove(interaction.press)
@@ -611,7 +612,7 @@ private fun SliderThumb(
                     is DragInteraction.Stop -> interactions.remove(interaction.start)
                     is DragInteraction.Cancel -> interactions.remove(interaction.start)
                 }
-            }
+            }.collect()
         }
 
         val elevation = if (interactions.isNotEmpty()) {
