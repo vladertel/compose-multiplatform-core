@@ -22,23 +22,24 @@ import androidx.compose.runtime.ControlledComposition
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.snapshots.Snapshot
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.TestCoroutineScope
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @OptIn(InternalComposeApi::class, ExperimentalCoroutinesApi::class)
-fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runBlockingTest {
+fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runTest {
     withContext(TestMonotonicFrameClock(this)) {
         // Start the recomposer
         val recomposer = Recomposer(coroutineContext)
         launch { recomposer.runRecomposeAndApplyChanges() }
+        testScheduler.runCurrent()
 
-        // Create a test scope for the test using the test scope passed in by runBlockingTest
-        val scope = object : CompositionTestScope, TestCoroutineScope by this@runBlockingTest {
+        // Create a test scope for the test using the test scope passed in by runTest
+        val scope = object : CompositionTestScope, CoroutineScope by this@runTest {
             var composed = false
             var composition: Composition? = null
 
@@ -57,7 +58,7 @@ fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runBlockin
                 val changeCount = recomposer.changeCount
                 Snapshot.sendApplyNotifications()
                 if (recomposer.hasPendingWork) {
-                    advanceTimeBy(5_000)
+                    testScheduler.advanceTimeBy(5_000)
                     check(ignorePendingWork || !recomposer.hasPendingWork) {
                         "Potentially infinite recomposition, still recomposing after advancing"
                     }
@@ -84,7 +85,7 @@ fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runBlockin
  * A test scope used in tests that allows controlling and testing composition.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-interface CompositionTestScope : TestCoroutineScope {
+interface CompositionTestScope : CoroutineScope {
     /**
      * Compose a block using the mock view composer.
      */

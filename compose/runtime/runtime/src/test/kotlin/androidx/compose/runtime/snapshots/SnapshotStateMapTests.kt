@@ -18,9 +18,10 @@ package androidx.compose.runtime.snapshots
 
 import androidx.compose.runtime.mutableStateMapOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -465,8 +466,8 @@ class SnapshotStateMapTests {
         }
     }
 
-    @Test
-    fun concurrentModificationInGlobal_put_new() = runBlocking {
+    @Test @OptIn(ExperimentalCoroutinesApi::class)
+    fun concurrentModificationInGlobal_put_new() = runTest {
         repeat(100) {
             val map = mutableStateMapOf<Int, String>()
             coroutineScope {
@@ -483,8 +484,8 @@ class SnapshotStateMapTests {
         }
     }
 
-    @Test
-    fun concurrentModificationInGlobal_put_replace() = runBlocking {
+    @Test @OptIn(ExperimentalCoroutinesApi::class)
+    fun concurrentModificationInGlobal_put_replace() = runTest {
         repeat(100) {
             val map = mutableStateMapOf(*Array(100) { it to "default" })
             coroutineScope {

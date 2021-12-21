@@ -18,9 +18,10 @@ package androidx.compose.runtime.snapshots
 
 import androidx.compose.runtime.mutableStateListOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -532,8 +533,8 @@ class SnapshotStateListTests {
         expected(mutableList, list)
     }
 
-    @Test
-    fun concurrentGlobalModification_add(): Unit = runBlocking {
+    @Test @ExperimentalCoroutinesApi
+    fun concurrentGlobalModification_add() = runTest {
         repeat(100) {
             val list = mutableStateListOf<Int>()
             coroutineScope {
@@ -550,8 +551,9 @@ class SnapshotStateListTests {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun concurrentGlobalModifications_addAll(): Unit = runBlocking {
+    fun concurrentGlobalModifications_addAll(): Unit = runTest {
         repeat(100) {
             val list = mutableStateListOf<Int>()
             coroutineScope {

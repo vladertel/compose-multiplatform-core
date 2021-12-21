@@ -56,17 +56,17 @@ public suspend fun Activity.trackPipAnimationHintView(view: View) {
         val layoutChangeListener = View.OnLayoutChangeListener { v, l, t, r, b, oldLeft, oldTop,
             oldRight, oldBottom ->
             if (l != oldLeft || r != oldRight || t != oldTop || b != oldBottom) {
-                offer(v.positionInWindow())
+                trySend(v.positionInWindow())
             }
         }
         val scrollChangeListener = ViewTreeObserver.OnScrollChangedListener {
-            offer(view.positionInWindow())
+            trySend(view.positionInWindow())
         }
         // When the view is attached, emit the current position and start listening for layout
         // changes to track movement.
         val attachStateChangeListener = object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
-                offer(view.positionInWindow())
+                trySend(view.positionInWindow())
                 view.viewTreeObserver.addOnScrollChangedListener(scrollChangeListener)
                 view.addOnLayoutChangeListener(layoutChangeListener)
             }
@@ -79,7 +79,7 @@ public suspend fun Activity.trackPipAnimationHintView(view: View) {
         // Check if the view is already attached to the window, if it is then emit the current
         // position and start listening for layout changes to track movement.
         if (Api19Impl.isAttachedToWindow(view)) {
-            offer(view.positionInWindow())
+            trySend(view.positionInWindow())
             view.viewTreeObserver.addOnScrollChangedListener(scrollChangeListener)
             view.addOnLayoutChangeListener(layoutChangeListener)
         }
