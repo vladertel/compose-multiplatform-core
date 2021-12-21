@@ -16,11 +16,8 @@
 
 package androidx.compose.ui.platform
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.Runnable
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.jvm.Volatile
 
@@ -28,9 +25,10 @@ import kotlin.jvm.Volatile
  * Dispatcher with the ability to immediately perform (flush) all pending tasks.
  * Without a flush all tasks are dispatched in the dispatcher provided by [scope]
  */
+@OptIn(InternalCoroutinesApi::class)
 internal class FlushCoroutineDispatcher(
     scope: CoroutineScope
-) : CoroutineDispatcher() {
+) : CoroutineDispatcher(), Delay  {
     // Dispatcher should always be alive, even if Job is cancelled. Otherwise coroutines which
     // use this dispatcher won't be properly cancelled.
     // TODO replace it by scope.coroutineContext[Dispatcher] when it will be no longer experimental
@@ -83,5 +81,16 @@ internal class FlushCoroutineDispatcher(
         } finally {
             isPerformingRun = false
         }
+    }
+
+    @Suppress("INVISIBLE_MEMBER")
+    private fun getDelayForScope() = scope.coroutineContext.get(ContinuationInterceptor) as? Delay ?: DefaultDelay
+
+    override fun scheduleResumeAfterDelay(timeMillis: Long, continuation: CancellableContinuation<Unit>) {
+        getDelayForScope().scheduleResumeAfterDelay(timeMillis, continuation)
+    }
+
+    override fun invokeOnTimeout(timeMillis: Long, block: Runnable, context: CoroutineContext): DisposableHandle {
+        return getDelayForScope().invokeOnTimeout(timeMillis, block, context)
     }
 }
