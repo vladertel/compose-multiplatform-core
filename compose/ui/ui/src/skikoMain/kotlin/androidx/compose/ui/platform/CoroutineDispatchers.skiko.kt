@@ -70,7 +70,7 @@ internal class FlushCoroutineDispatcher(
     }
 
     @Suppress("INVISIBLE_MEMBER")
-    private fun getDelayForScope() = scope.coroutineContext.get(ContinuationInterceptor) as Delay ?: DefaultDelay
+    private fun getDelayForScope() = scope.coroutineContext.get(ContinuationInterceptor) as? Delay ?: DefaultDelay
 
     override fun scheduleResumeAfterDelay(timeMillis: Long, continuation: CancellableContinuation<Unit>) {
         getDelayForScope().scheduleResumeAfterDelay(timeMillis, continuation)
