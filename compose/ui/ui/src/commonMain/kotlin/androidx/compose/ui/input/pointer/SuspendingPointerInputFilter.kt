@@ -27,7 +27,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.debugInspectorInfo
-import androidx.compose.ui.platform.synchronized
+import androidx.compose.util.createSynchronizedObject
+import androidx.compose.util.synchronized
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastAll
@@ -319,9 +320,11 @@ internal class SuspendingPointerInputFilter(
 
     /**
      * Actively registered input handlers from currently ongoing calls to [awaitPointerEventScope].
-     * Must use `synchronized(pointerHandlers)` to access.
+     * Must use `synchronized(pointerHandlersLock)` to access.
      */
     private val pointerHandlers = mutableVectorOf<PointerEventHandlerCoroutine<*>>()
+
+    private val pointerHandlersLock = createSynchronizedObject()
 
     /**
      * Scratch list for dispatching to handlers for a particular phase.
@@ -377,7 +380,7 @@ internal class SuspendingPointerInputFilter(
         block: (PointerEventHandlerCoroutine<*>) -> Unit
     ) {
         // Copy handlers to avoid mutating the collection during dispatch
-        synchronized(pointerHandlers) {
+        synchronized(pointerHandlersLock) {
             dispatchingPointerHandlers.addAll(pointerHandlers)
         }
         try {
@@ -455,7 +458,7 @@ internal class SuspendingPointerInputFilter(
         block: suspend AwaitPointerEventScope.() -> R
     ): R = suspendCancellableCoroutine { continuation ->
         val handlerCoroutine = PointerEventHandlerCoroutine(continuation)
-        synchronized(pointerHandlers) {
+        synchronized(pointerHandlersLock) {
             pointerHandlers += handlerCoroutine
 
             // NOTE: We resume the new continuation while holding this lock.
@@ -522,7 +525,7 @@ internal class SuspendingPointerInputFilter(
 
         // Implementation of Continuation; clean up and resume our wrapped continuation.
         override fun resumeWith(result: Result<R>) {
-            synchronized(pointerHandlers) {
+            synchronized(pointerHandlersLock) {
                 pointerHandlers -= this
             }
             completion.resumeWith(result)
