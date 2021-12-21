@@ -21,6 +21,8 @@ import androidx.compose.runtime.collection.IdentityArrayMap
 import androidx.compose.runtime.collection.IdentityArraySet
 import androidx.compose.runtime.collection.IdentityScopeMap
 import androidx.compose.runtime.collection.mutableVectorOf
+import androidx.compose.util.synchronized
+import androidx.compose.util.createSynchronizedObject
 
 /**
  * Helper class to efficiently observe snapshot state reads. See [observeReads] for more details.
@@ -50,7 +52,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      */
     private val readObserver: (Any) -> Unit = { state ->
         if (!isPaused) {
-            synchronized(observedScopeMaps) {
+            synchronized(observedScopeMapsLock) {
                 currentMap!!.recordRead(state)
             }
         }
@@ -69,10 +71,12 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      * synchronization.
      */
     private inline fun forEachScopeMap(block: (ObservedScopeMap) -> Unit) {
-        synchronized(observedScopeMaps) {
+        synchronized(observedScopeMapsLock) {
             observedScopeMaps.forEach(block)
         }
     }
+
+    private val observedScopeMapsLock = createSynchronizedObject()
 
     /**
      * Method to call when unsubscribing from the apply observer.
@@ -106,7 +110,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      * @param block to observe reads within.
      */
     fun <T : Any> observeReads(scope: T, onValueChangedForScope: (T) -> Unit, block: () -> Unit) {
-        val scopeMap = synchronized(observedScopeMaps) {
+        val scopeMap = synchronized(observedScopeMapsLock) {
             ensureMap(onValueChangedForScope).also {
                 it.clearScopeObservations(scope)
             }
