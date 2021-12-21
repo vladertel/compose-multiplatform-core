@@ -18,6 +18,8 @@ package androidx.compose.runtime
 
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
+import androidx.compose.util.createSynchronizedObject
+import androidx.compose.util.synchronized
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
@@ -31,7 +33,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  */
 internal class Latch {
 
-    private val lock = Any()
+    private val lock = createSynchronizedObject()
     private var awaiters = mutableListOf<Continuation<Unit>>()
     private var spareList = mutableListOf<Continuation<Unit>>()
 

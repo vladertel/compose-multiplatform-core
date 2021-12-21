@@ -23,9 +23,12 @@ import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.SnapshotThreadLocal
+import androidx.compose.runtime.synchronized
+import androidx.compose.runtime.createSynchronizedObject
+import androidx.compose.util.synchronized
+import androidx.compose.util.createSynchronizedObject
 import androidx.compose.runtime.collection.IdentityArraySet
 import androidx.compose.runtime.internal.JvmDefaultWithCompatibility
-import androidx.compose.runtime.synchronized
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -1716,7 +1719,7 @@ private val threadSnapshot = SnapshotThreadLocal<Snapshot>()
  * of the fields below.
  */
 @PublishedApi
-internal val lock = Any()
+internal val lock = createSynchronizedObject()
 
 @PublishedApi
 internal inline fun <T> sync(block: () -> T): T = synchronized(lock, block)
