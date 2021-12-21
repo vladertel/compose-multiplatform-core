@@ -19,14 +19,15 @@ package androidx.compose.runtime.snapshots
 import androidx.compose.runtime.TestOnly
 import androidx.compose.runtime.collection.IdentityScopeMap
 import androidx.compose.runtime.collection.mutableVectorOf
-import androidx.compose.runtime.synchronized
+import androidx.compose.util.synchronized
+import androidx.compose.util.createSynchronizedObject
 
 @Suppress("NotCloseable") // we can't implement AutoCloseable from commonMain
 class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit) -> Unit) {
     private val applyObserver: (Set<Any>, Snapshot) -> Unit = { applied, _ ->
         var hasValues = false
 
-        synchronized(applyMaps) {
+        synchronized(applyMapsLock) {
             applyMaps.forEach { applyMap ->
                 val invalidated = applyMap.invalidated
                 val map = applyMap.map
@@ -50,7 +51,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      */
     private val readObserver: (Any) -> Unit = { state ->
         if (!isPaused) {
-            synchronized(applyMaps) {
+            synchronized(applyMapsLock) {
                 currentMap!!.addValue(state)
             }
         }
@@ -61,6 +62,8 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      * associated with its `onChanged` callback in this list. The list only grows.
      */
     private val applyMaps = mutableVectorOf<ApplyMap<*>>()
+
+    private val applyMapsLock = createSynchronizedObject()
 
     /**
      * Method to call when unsubscribing from the apply observer.
@@ -96,7 +99,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
     fun <T : Any> observeReads(scope: T, onValueChangedForScope: (T) -> Unit, block: () -> Unit) {
         val oldMap = currentMap
         val oldPaused = isPaused
-        val applyMap = synchronized(applyMaps) {
+        val applyMap = synchronized(applyMapsLock) {
             ensureMap(onValueChangedForScope).also {
                 it.map.removeScope(scope)
             }
@@ -140,7 +143,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      * `onCommit` methods passed in [observeReads].
      */
     fun clear(scope: Any) {
-        synchronized(applyMaps) {
+        synchronized(applyMapsLock) {
             applyMaps.forEach { commitMap ->
                 commitMap.map.removeValueIf {
                     it === scope
@@ -154,7 +157,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      * used when a scope is no longer in the hierarchy and should not receive any callbacks.
      */
     fun clearIf(predicate: (scope: Any) -> Boolean) {
-        synchronized(applyMaps) {
+        synchronized(applyMapsLock) {
             applyMaps.forEach { applyMap ->
                 applyMap.map.removeValueIf(predicate)
             }
@@ -188,7 +191,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      * Remove all observations.
      */
     fun clear() {
-        synchronized(applyMaps) {
+        synchronized(applyMapsLock) {
             applyMaps.forEach { applyMap ->
                 applyMap.map.clear()
             }
