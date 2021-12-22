@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.pauseDispatcher
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -67,7 +68,7 @@ class PageFetcherTest {
         val pageFetcher = PageFetcher(pagingSourceFactory, 50, config)
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(1, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[0].isNotEmpty() }
@@ -79,13 +80,13 @@ class PageFetcherTest {
         val pageFetcher = PageFetcher(pagingSourceFactory, 50, config)
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(1, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[0].isNotEmpty() }
 
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(2, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[1].isNotEmpty() }
@@ -102,13 +103,13 @@ class PageFetcherTest {
         )
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(1, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[0].isNotEmpty() }
 
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(2, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[1].isNotEmpty() }
@@ -132,14 +133,14 @@ class PageFetcherTest {
         )
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(1, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[0].isNotEmpty() }
         assertEquals(1, remoteMediator.loadEvents.size)
 
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(2, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[1].isNotEmpty() }
@@ -156,14 +157,14 @@ class PageFetcherTest {
         val pageFetcher = PageFetcher(pagingSourceFactory, 50, config)
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(1, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[0].isNotEmpty() }
 
         val oldPagingSource = pagingSource
         oldPagingSource?.invalidate()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(2, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[1].isNotEmpty() }
@@ -184,13 +185,13 @@ class PageFetcherTest {
         var didCallInvalidate = false
         pagingSource?.registerInvalidatedCallback { didCallInvalidate = true }
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(1, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[0].isNotEmpty() }
 
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(2, fetcherState.pagingDataList.size)
         assertTrue { fetcherState.pageEventLists[1].isNotEmpty() }
@@ -216,7 +217,7 @@ class PageFetcherTest {
             )
 
             val fetcherState = collectFetcherState(pageFetcher)
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             // should have two PagingData returned, one for each paging source
             assertThat(fetcherState.pagingDataList.size).isEqualTo(2)
@@ -250,7 +251,7 @@ class PageFetcherTest {
                 config = config,
             )
             val fetcherState = collectFetcherState(pageFetcher)
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             assertThat(fetcherState.pageEventLists.size).isEqualTo(1)
             assertThat(fetcherState.newEvents()).containsExactly(
@@ -272,7 +273,7 @@ class PageFetcherTest {
             // now return LoadResult.Invalid
             pagingSources[0].nextLoadResult = LoadResult.Invalid()
 
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             // make sure the append load never completes
             assertThat(fetcherState.pageEventLists[0].last()).isEqualTo(
@@ -303,7 +304,7 @@ class PageFetcherTest {
                 config = config,
             )
             val fetcherState = collectFetcherState(pageFetcher)
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             assertThat(fetcherState.pageEventLists.size).isEqualTo(1)
             assertThat(fetcherState.newEvents()).containsExactly(
@@ -324,7 +325,7 @@ class PageFetcherTest {
             // now return LoadResult.Invalid
             pagingSources[0].nextLoadResult = LoadResult.Invalid()
 
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             // make sure the prepend load never completes
             assertThat(fetcherState.pageEventLists[0].last()).isEqualTo(
@@ -365,10 +366,10 @@ class PageFetcherTest {
             }
         }
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(2, pagingDataCount)
         assertTrue { didFinish }
@@ -400,11 +401,11 @@ class PageFetcherTest {
             }
         }
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         pageFetcher.refresh()
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(3, pagingDatas.size)
         pauseDispatcher {
@@ -441,7 +442,7 @@ class PageFetcherTest {
         val state = collectFetcherState(pageFetcher)
 
         // Wait for first generation to instantiate.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Providing an invalid PagingSource should automatically trigger invalidation
         // regardless of when the invalidation callback is registered.
@@ -454,7 +455,7 @@ class PageFetcherTest {
 
         // Trigger new generation, should unregister from older PagingSource.
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(pagingSources).hasSize(3)
         assertThat(pagingSources[1].invalidateCallbackCount).isEqualTo(0)
         assertThat(pagingSources[2].invalidateCallbackCount).isEqualTo(1)
@@ -467,10 +468,10 @@ class PageFetcherTest {
         val pageFetcher = PageFetcher(pagingSourceFactory, 50, config)
         val fetcherState = collectFetcherState(pageFetcher)
         val fetcherState2 = collectFetcherState(pageFetcher)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         fetcherState.job.cancel()
         fetcherState2.job.cancel()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(fetcherState.pagingDataList.size).isEqualTo(1)
         assertThat(fetcherState2.pagingDataList.size).isEqualTo(1)
         assertThat(fetcherState.pageEventLists.first()).isNotEmpty()
@@ -485,14 +486,14 @@ class PageFetcherTest {
         }
         val pageFetcher = PageFetcher(pagingSourceFactory, 50, config, remoteMediatorMock)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert onInitialize is not called until collection.
         assertTrue { remoteMediatorMock.initializeEvents.isEmpty() }
 
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(1, remoteMediatorMock.initializeEvents.size)
         assertEquals(0, remoteMediatorMock.loadEvents.size)
@@ -508,14 +509,14 @@ class PageFetcherTest {
         }
         val pageFetcher = PageFetcher(pagingSourceFactory, 50, config, remoteMediatorMock)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert onInitialize is not called until collection.
         assertTrue { remoteMediatorMock.initializeEvents.isEmpty() }
 
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(1, remoteMediatorMock.initializeEvents.size)
         assertEquals(1, remoteMediatorMock.loadEvents.size)
@@ -529,7 +530,7 @@ class PageFetcherTest {
         val pageFetcher = PageFetcher(pagingSourceFactory, 97, config, remoteMediatorMock)
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert onBoundary is not called for non-terminal page load.
         assertTrue { remoteMediatorMock.loadEvents.isEmpty() }
@@ -545,7 +546,7 @@ class PageFetcherTest {
             )
         )
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert onBoundary is called for terminal page load.
         assertEquals(1, remoteMediatorMock.loadEvents.size)
@@ -572,7 +573,7 @@ class PageFetcherTest {
             val pageFetcher = PageFetcher(pagingSourceFactory, 50, config)
             val fetcherState = collectFetcherState(pageFetcher)
 
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertThat(fetcherState.newEvents()).isEqualTo(
                 listOf<PageEvent<Int>>(
                     localLoadStateUpdate<Int>(refreshLocal = Loading),
@@ -592,7 +593,7 @@ class PageFetcherTest {
                     originalPageOffsetLast = 0
                 )
             )
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertTrue { pagingSources[0].invalid }
             // Assert no new events added to current generation
             assertEquals(2, fetcherState.pageEventLists[0].size)
@@ -615,7 +616,7 @@ class PageFetcherTest {
                     originalPageOffsetLast = 0
                 )
             )
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertTrue { pagingSources[1].invalid }
             // Assert no new events added to current generation
             assertEquals(2, fetcherState.pageEventLists[1].size)
@@ -650,10 +651,10 @@ class PageFetcherTest {
                 }
             }
 
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             pageFetcher.refresh()
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             assertTrue { job.isCompleted }
         }
@@ -671,7 +672,7 @@ class PageFetcherTest {
                     it.invalidate()
                 }
 
-                advanceUntilIdle()
+                testScheduler.advanceUntilIdle()
                 it.registerInvalidatedCallback { invalidatesFromAdapter++ }
                 pagingSource = it
             }
@@ -685,9 +686,9 @@ class PageFetcherTest {
             }
         }
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         pagingSource!!.invalidate()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // InvalidatedCallbacks added after a PagingSource is already invalid should be
         // immediately triggered, so both listeners we add should be triggered.
@@ -735,7 +736,7 @@ class PageFetcherTest {
         assertThat(pagingSources[0].invalid).isTrue()
         assertThat(loadedPages).hasSize(0)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // After draining tasks, we should immediately get a second generation which triggers
         // page load, skipping the initial load from first generation due to cancellation.
@@ -776,7 +777,7 @@ class PageFetcherTest {
         }
 
         // Allow initial load to finish, so PagingState has non-zero pages.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Verify remote refresh is called with initial empty case.
         assertThat(remoteMediator.newLoadEvents).containsExactly(
@@ -796,7 +797,7 @@ class PageFetcherTest {
 
         // Allow remote refresh to get triggered, but do not let paging source complete initial load
         // for second generation.
-        advanceTimeBy(500)
+        testScheduler.advanceTimeBy(500)
 
         // Verify remote refresh is called with PagingState from first generation.
         val pagingState = PagingState(
@@ -836,7 +837,7 @@ class PageFetcherTest {
         pageFetcher.refresh()
 
         // Wait for all non-canceled loads to complete.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Verify remote refresh is called with PagingState from first generation, since second
         // generation never loaded any pages.
@@ -878,7 +879,7 @@ class PageFetcherTest {
         }
 
         // Allow initial load to finish, so PagingState has non-zero pages.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Trigger a hint to populate anchorPosition, this should cause PageFetcher to cache this
         // PagingState and use it in next remoteRefresh
@@ -910,7 +911,7 @@ class PageFetcherTest {
         pageFetcher.refresh()
 
         // Allow remote refresh to get triggered, and let paging source load finish.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Verify remote refresh is called with PagingState from first generation.
         val pagingState = PagingState(
@@ -936,7 +937,7 @@ class PageFetcherTest {
         pageFetcher.refresh()
 
         // Wait for all non-canceled loads to complete.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Verify remote refresh is called with PagingState from first generation, since second
         // generation never loaded any pages.
@@ -975,7 +976,7 @@ class PageFetcherTest {
                 }
             }
 
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             // Trigger access to allow PagingState to get populated for next generation.
             pagingData.receiver.accessHint(
@@ -988,17 +989,17 @@ class PageFetcherTest {
                     originalPageOffsetLast = 0,
                 )
             )
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             // Invalidate first generation, instantiating second generation.
             pagingSources[0].invalidate()
 
             // Invalidate second generation before it has a chance to complete initial load.
-            advanceTimeBy(500)
+            testScheduler.advanceTimeBy(500)
             pagingSources[1].invalidate()
 
             // Wait for all non-canceled loads to complete.
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             // Verify 3 generations were instantiated.
             assertThat(pagingSources.size).isEqualTo(3)
@@ -1034,7 +1035,7 @@ class PageFetcherTest {
                 )
             )
 
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             // Trigger APPEND in third generation.
             pagingData.receiver.accessHint(
                 ViewportHint.Access(
@@ -1046,11 +1047,11 @@ class PageFetcherTest {
                     originalPageOffsetLast = 0,
                 )
             )
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             // Invalidate third generation, instantiating fourth generation with new PagingState.
             pagingSources[2].invalidate()
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             // Fourth generation should receive getRefreshKey call with state from third generation.
             assertThat(pagingSources[2].loadedPages.size).isEqualTo(2)
@@ -1079,7 +1080,7 @@ class PageFetcherTest {
         )
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(1, fetcherState.pagingDataList.size)
         assertThat(fetcherState.newEvents()).containsExactly(
@@ -1090,7 +1091,7 @@ class PageFetcherTest {
         )
 
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertEquals(2, fetcherState.pagingDataList.size)
         assertThat(fetcherState.newEvents()).containsExactly(
@@ -1121,7 +1122,7 @@ class PageFetcherTest {
         )
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertThat(fetcherState.newEvents()).containsExactly(
             remoteLoadStateUpdate<Int>(
@@ -1142,7 +1143,7 @@ class PageFetcherTest {
         )
 
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertThat(fetcherState.newEvents()).containsExactly(
             // Remote state carried over from previous generation.
@@ -1190,7 +1191,7 @@ class PageFetcherTest {
         )
         val fetcherState = collectFetcherState(pageFetcher)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertThat(fetcherState.newEvents()).containsExactly(
             remoteLoadStateUpdate<Int>(
@@ -1285,7 +1286,7 @@ class PageFetcherTest {
         )
 
         // Let initial source refresh complete and kick off remote prepend / append.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // First generation loads empty list and triggers remote loads.
         assertThat(fetcherState.newEvents()).containsExactly(
@@ -1333,7 +1334,7 @@ class PageFetcherTest {
         )
 
         // Let remote and source refresh finish.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Second generation loads some data and has more to load from source.
         assertThat(fetcherState.newEvents()).containsExactly(
@@ -1377,7 +1378,7 @@ class PageFetcherTest {
         )
 
         // Let remote and source refresh finish.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertThat(fetcherState.newEvents()).containsExactly(
             remoteLoadStateUpdate<Int>(
@@ -1424,14 +1425,14 @@ class PageFetcherTest {
             remoteMediator = remoteMediator
         )
         val fetcherState = collectFetcherState(pageFetcher)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Clear out all events.
         val firstGenerationEventCount = fetcherState.pageEventLists[0].size
 
         // Let new generation and some new remote events emit.
         pageFetcher.refresh()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertThat(firstGenerationEventCount).isEqualTo(fetcherState.pageEventLists[0].size)
 
@@ -1463,7 +1464,7 @@ class PageFetcherTest {
         )
 
         val fetcherState = collectFetcherState(pageFetcher)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertThat(remoteMediator.newLoadEvents).isNotEmpty()
         fetcherState.job.cancel()

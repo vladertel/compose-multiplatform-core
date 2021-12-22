@@ -26,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.pauseDispatcher
 import kotlinx.coroutines.test.runBlockingTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Test
@@ -81,10 +82,10 @@ class SingleRunnerTest {
             }
         }
 
-        advanceTimeBy(500)
+        testScheduler.advanceTimeBy(500)
         assertFalse { job.isCompleted }
 
-        advanceTimeBy(500)
+        testScheduler.advanceTimeBy(501)
         assertTrue { job.isCompleted }
     }
 
@@ -133,7 +134,7 @@ class SingleRunnerTest {
                 }
             }
             // don't let delays finish to ensure they are really cancelled
-            advanceTimeBy(1)
+            testScheduler.advanceTimeBy(1)
         }
         // Despite launching separately, with different delays, we should see these always
         // interleave in the same order, since the delays aren't allowed to run in parallel and
@@ -204,13 +205,13 @@ class SingleRunnerTest {
         ) {
             output.add("unexpected - 2")
         }
-        advanceTimeBy(20)
+        testScheduler.advanceTimeBy(20)
         runner.runInIsolation(
             priority = 3
         ) {
             output.add("c")
         }
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         // now lower priority can run since higher priority is complete
         runner.runInIsolation(
             priority = 1

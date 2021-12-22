@@ -159,7 +159,7 @@ class SimpleChannelFlowTest(
             val collection = launch {
                 channelFlow.toList()
             }
-            advanceTimeBy(250)
+            testScheduler.advanceTimeBy(250)
             collection.cancel(CancellationException("test message"))
             collection.join()
             assertThat(dispatched).containsExactly(0, 1, 2)

@@ -31,6 +31,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import kotlinx.coroutines.test.pauseDispatcher
 
 class ScopesRule : TestWatcher() {
     private val mainDispatcher = TestCoroutineDispatcher()
@@ -73,15 +74,15 @@ class ScopesRule : TestWatcher() {
     }
 
     fun advanceTimeBy(time: Long) {
-        mainScope.advanceTimeBy(time)
-        testScope.advanceTimeBy(time)
+        mainScope.testScheduler.advanceTimeBy(time)
+        testScope.testScheduler.advanceTimeBy(time)
         triggerAllActions()
     }
 
     fun triggerAllActions() {
         do {
-            mainScope.runCurrent()
-            testScope.runCurrent()
+            mainScope.testScheduler.runCurrent()
+            testScope.testScheduler.runCurrent()
             val allIdle = listOf(mainDispatcher, testDispatcher).all {
                 it.isIdle()
             }
@@ -93,7 +94,7 @@ class ScopesRule : TestWatcher() {
             val async = mainScope.async {
                 block()
             }
-            mainScope.runCurrent()
+            mainScope.testScheduler.runCurrent()
             async.await()
         }
     }

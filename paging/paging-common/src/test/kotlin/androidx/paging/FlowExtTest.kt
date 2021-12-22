@@ -159,15 +159,15 @@ class FlowExtTest {
         }
 
         flow1.send(1)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(result).isEmpty()
 
         flow1.send(2)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(result).isEmpty()
 
         flow2.send("A")
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(result).containsExactly("1A", "2A")
 
         // This should automatically propagate cancellation to the launched collector.
@@ -187,13 +187,13 @@ class FlowExtTest {
         val batchedCombine = flow1
             .combine(flow2, slowTransform)
             .toList()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(batchedCombine).containsExactly("1A", "3B", "3C")
 
         val unbatchedCombine = flow1
             .combineWithoutBatching(flow2) { num, letter, _ -> slowTransform(num, letter) }
             .toList()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(unbatchedCombine).containsExactly("1A", "2A", "2B", "3B", "3C")
     }
 
@@ -212,20 +212,20 @@ class FlowExtTest {
         }
 
         flow1.send(1)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(result).isEmpty()
 
         flow1.send(1)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(result).isEmpty()
 
         flow2.send(2)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(result).containsExactly(INITIAL, RECEIVER)
 
         flow1.send(1)
         flow2.send(2)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(result).containsExactly(INITIAL, RECEIVER, RECEIVER, OTHER)
 
         // This should automatically propagate cancellation to the launched collector.
@@ -247,7 +247,7 @@ class FlowExtTest {
             }
             .first()
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // We can't guarantee whether cancellation will propagate before or after the second item
         // is emitted, but we should never get the third.
@@ -319,14 +319,14 @@ class FlowExtTest {
 
             // Ensure subsequent calls to onNext from receiver suspends forever until onNext
             // is called for the other Flow.
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertThat(job.isCompleted).isFalse()
             // No events should be received until we receive an event from the other Flow.
             assertThat(result).isEmpty()
 
             combiner.onNext(index = 1, value = 0)
 
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertThat(job.isCompleted).isTrue()
             assertThat(result).containsExactly(
                 SendResult(0, 0, INITIAL),
@@ -358,14 +358,14 @@ class FlowExtTest {
 
             // Ensure subsequent calls to onNext from receiver suspends forever until onNext
             // is called for the other Flow.
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertThat(job.isCompleted).isFalse()
             // No events should be received until we receive an event from the other Flow.
             assertThat(result).isEmpty()
 
             combiner.onNext(index = 0, value = 0)
 
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertThat(job.isCompleted).isTrue()
             assertThat(result).containsExactly(
                 SendResult(0, 0, INITIAL),
@@ -402,7 +402,7 @@ class FlowExtTest {
                 }
             }
 
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertThat(result.first()).isEqualTo(
                 SendResult(0, 0, INITIAL),
             )

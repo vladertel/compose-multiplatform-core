@@ -28,9 +28,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
+import org.robolectric.RobolectricTestRunner
 
-@RunWith(JUnit4::class)
+@RunWith(RobolectricTestRunner::class)
 public class DynamicNavGraphTest {
 
     @get:Rule

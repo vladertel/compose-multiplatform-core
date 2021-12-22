@@ -27,6 +27,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ConflatedEventBusTest {
     val testScope = TestCoroutineScope()
+    val testScheduler = testScope.testScheduler
 
     @Test
     fun noInitialValue() {
@@ -34,12 +35,12 @@ class ConflatedEventBusTest {
         val collector = bus.createCollector().also {
             it.start()
         }
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(
             collector.values
         ).isEmpty()
         bus.send(Unit)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(
             collector.values
         ).containsExactly(Unit)
@@ -51,12 +52,12 @@ class ConflatedEventBusTest {
         val collector = bus.createCollector().also {
             it.start()
         }
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(
             collector.values
         ).containsExactly(1)
         bus.send(2)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(
             collector.values
         ).containsExactly(1, 2)
@@ -68,12 +69,12 @@ class ConflatedEventBusTest {
         val collector = bus.createCollector().also {
             it.start()
         }
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(
             collector.values
         ).containsExactly(1)
         bus.send(1)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(
             collector.values
         ).containsExactly(1, 1)
@@ -86,12 +87,12 @@ class ConflatedEventBusTest {
         val collector = bus.createCollector()
         bus.send(2)
         collector.start()
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(
             collector.values
         ).containsExactly(2)
         bus.send(3)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(
             collector.values
         ).containsExactly(2, 3)
@@ -103,21 +104,21 @@ class ConflatedEventBusTest {
         val c1 = bus.createCollector().also {
             it.start()
         }
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         bus.send(2)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         val c2 = bus.createCollector().also {
             it.start()
         }
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(c1.values).containsExactly(1, 2)
         assertThat(c2.values).containsExactly(2)
         bus.send(3)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(c1.values).containsExactly(1, 2, 3)
         assertThat(c2.values).containsExactly(2, 3)
         bus.send(3)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(c1.values).containsExactly(1, 2, 3, 3)
         assertThat(c2.values).containsExactly(2, 3, 3)
     }

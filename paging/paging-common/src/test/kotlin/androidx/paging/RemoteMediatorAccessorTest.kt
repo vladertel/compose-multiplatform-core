@@ -29,6 +29,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.pauseDispatcher
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,7 +65,7 @@ class RemoteMediatorAccessorTest {
         val pagingState = PagingState<Int, Int>(listOf(), null, PagingConfig(1), 0)
 
         remoteMediatorAccessor.requestRefreshIfAllowed(pagingState)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(remoteMediator.newLoadEvents).isEmpty()
     }
 
@@ -78,14 +79,14 @@ class RemoteMediatorAccessorTest {
 
         remoteMediatorAccessor.allowRefresh()
         remoteMediatorAccessor.requestRefreshIfAllowed(pagingState)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(loadType = REFRESH, state = pagingState)
         )
 
         // allowRefresh should only allow one successful request to go through.
         remoteMediatorAccessor.requestRefreshIfAllowed(pagingState)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(remoteMediator.newLoadEvents).isEmpty()
     }
 
@@ -103,7 +104,7 @@ class RemoteMediatorAccessorTest {
 
         remoteMediatorAccessor.allowRefresh()
         remoteMediatorAccessor.requestRefreshIfAllowed(pagingState)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(loadType = REFRESH, state = pagingState)
         )
@@ -113,7 +114,7 @@ class RemoteMediatorAccessorTest {
         }
 
         remoteMediatorAccessor.retryFailed(pagingState)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(loadType = REFRESH, state = pagingState)
         )
@@ -127,7 +128,7 @@ class RemoteMediatorAccessorTest {
         val secondState = createMockState()
 
         remoteMediatorAccessor.requestLoad(REFRESH, firstState)
-        advanceTimeBy(50) // Start remote refresh, but do not let it finish.
+        testScheduler.advanceTimeBy(50) // Start remote refresh, but do not let it finish.
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(REFRESH, firstState)
         )
@@ -164,7 +165,7 @@ class RemoteMediatorAccessorTest {
         )
 
         // Now wait until all queued requests finish running
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(PREPEND, secondState),
             LoadEvent(APPEND, secondState),
@@ -190,20 +191,20 @@ class RemoteMediatorAccessorTest {
         remoteMediatorAccessor.requestLoad(PREPEND, firstState)
         // Single runner should prevent append from triggering, but it should still be queued.
         remoteMediatorAccessor.requestLoad(APPEND, firstState)
-        advanceTimeBy(50)
+        testScheduler.advanceTimeBy(50)
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(PREPEND, firstState),
         )
 
         // Launch refresh, which should cancel running boundary calls
         remoteMediatorAccessor.requestLoad(REFRESH, firstState)
-        advanceTimeBy(50)
+        testScheduler.advanceTimeBy(50)
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(REFRESH, firstState)
         )
 
         // Let refresh finish, retrying cancelled boundary calls
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(PREPEND, firstState),
             LoadEvent(APPEND, firstState),
@@ -234,7 +235,7 @@ class RemoteMediatorAccessorTest {
 
         // Trigger refresh, letting it fail.
         remoteMediatorAccessor.requestLoad(REFRESH, firstState)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         // Boundary calls should be queued, but not started.
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(REFRESH, firstState),
@@ -251,7 +252,7 @@ class RemoteMediatorAccessorTest {
 
         // Let refresh finish, triggering queued boundary calls.
         remoteMediatorAccessor.retryFailed(secondState)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(remoteMediator.newLoadEvents).containsExactly(
             LoadEvent(REFRESH, secondState),
             LoadEvent(PREPEND, firstState),
@@ -284,7 +285,7 @@ class RemoteMediatorAccessorTest {
 
         // Trigger refresh and let it mark endOfPaginationReached
         remoteMediatorAccessor.requestLoad(REFRESH, firstState)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Ensure boundary calls are not triggered since they should be cleared by
         // endOfPaginationReached from refresh.
@@ -327,7 +328,7 @@ class RemoteMediatorAccessorTest {
         )
 
         // Wait for load to finish.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert state is set to NotLoading.Incomplete.
         assertEquals(
@@ -345,7 +346,7 @@ class RemoteMediatorAccessorTest {
         )
 
         // Wait for load to finish.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert state is set to NotLoading.Incomplete.
         assertEquals(
@@ -379,7 +380,7 @@ class RemoteMediatorAccessorTest {
         )
 
         // Wait for load to finish.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert state is set to NotLoading.Incomplete.
         assertEquals(
@@ -397,7 +398,7 @@ class RemoteMediatorAccessorTest {
         )
 
         // Wait for load to finish.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert state is set to NotLoading.Incomplete.
         assertEquals(
@@ -425,7 +426,7 @@ class RemoteMediatorAccessorTest {
         assertEquals(1, remoteMediator.newLoadEvents.size)
 
         // Fast-forward time until both load requests jobs complete.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert that the second load request was skipped since it was launched while the first
         // load request was still running.
@@ -451,7 +452,7 @@ class RemoteMediatorAccessorTest {
         assertEquals(1, remoteMediator.newLoadEvents.size)
 
         // Fast-forward time until both load requests jobs complete.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert that the second load request was skipped since it was launched while the first
         // load request was still running.
@@ -477,7 +478,7 @@ class RemoteMediatorAccessorTest {
         assertEquals(1, remoteMediator.newLoadEvents.size)
 
         // Fast-forward time until both load requests jobs complete.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert that the second load request was skipped since it was launched while the first
         // load request was still running.
@@ -515,7 +516,7 @@ class RemoteMediatorAccessorTest {
         )
 
         // Start prependJob and appendJob, but do not let them finish.
-        advanceTimeBy(500)
+        testScheduler.advanceTimeBy(500)
 
         // Assert that only the PREPEND RemoteMediator.load() call was made.
         assertEquals(
@@ -530,7 +531,7 @@ class RemoteMediatorAccessorTest {
         )
 
         // Give prependJob enough time to be cancelled and refresh started due to higher priority
-        advanceTimeBy(500)
+        testScheduler.advanceTimeBy(500)
 
         assertEquals(
             listOf(LoadEvent(REFRESH, emptyState)),
@@ -548,7 +549,7 @@ class RemoteMediatorAccessorTest {
         )
 
         // Wait for all outstanding / queued jobs to finish.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         // Assert all outstanding / queued jobs finished.
         assertEquals(
@@ -596,15 +597,15 @@ class RemoteMediatorAccessorTest {
         assertEquals(1, remoteMediator.newLoadEvents.size)
 
         // Advance some time, but not enough to finish first load.
-        advanceTimeBy(500)
+        testScheduler.advanceTimeBy(500)
         assertEquals(0, remoteMediator.newLoadEvents.size)
 
         // Assert that second job starts after first finishes.
-        advanceTimeBy(500)
+        testScheduler.advanceTimeBy(501)
         assertEquals(1, remoteMediator.newLoadEvents.size)
 
         // Allow second job to finish.
-        advanceTimeBy(1000)
+        testScheduler.advanceTimeBy(1000)
     }
 
     @Test
@@ -615,7 +616,7 @@ class RemoteMediatorAccessorTest {
         val accessor = testScope.createAccessor(remoteMediatorMock)
         accessor.requestLoad(APPEND, createMockState())
         accessor.requestLoad(PREPEND, createMockState())
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             remoteMediatorMock.loadEvents
         ).isEmpty()
@@ -632,7 +633,7 @@ class RemoteMediatorAccessorTest {
         val prependState = createMockState(2)
         accessor.requestLoad(APPEND, appendState)
         accessor.requestLoad(PREPEND, prependState)
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             remoteMediatorMock.loadEvents
         ).containsExactly(
@@ -655,16 +656,16 @@ class RemoteMediatorAccessorTest {
         assertThat(remoteMediatorMock.loadEvents).isEmpty()
 
         // advance enough to trigger the request, not enough to complete
-        testScope.advanceTimeBy(50)
+        testScope.testScheduler.advanceTimeBy(50)
         // these should be ignored
         accessor.requestLoad(REFRESH, createMockState())
 
-        testScope.advanceTimeBy(1)
+        testScope.testScheduler.advanceTimeBy(1)
         val appendState = createMockState()
         accessor.requestLoad(APPEND, appendState)
 
         val prependState = createMockState()
-        testScope.advanceTimeBy(1)
+        testScope.testScheduler.advanceTimeBy(1)
         accessor.requestLoad(PREPEND, prependState)
 
         assertThat(remoteMediatorMock.newLoadEvents).containsExactly(
@@ -672,7 +673,7 @@ class RemoteMediatorAccessorTest {
         )
 
         // now advance enough that we can accept append prepend
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         // queued append/prepend should be executed afterwards.
         assertThat(remoteMediatorMock.newLoadEvents).containsExactly(
             LoadEvent(APPEND, appendState),
@@ -684,29 +685,29 @@ class RemoteMediatorAccessorTest {
         accessor.requestLoad(PREPEND, otherPrependState)
         accessor.requestLoad(APPEND, otherAppendState)
 
-        testScope.advanceTimeBy(50)
+        testScope.testScheduler.advanceTimeBy(50)
         assertThat(remoteMediatorMock.newLoadEvents).containsExactly(
             LoadEvent(PREPEND, otherPrependState)
         )
         // while prepend running, any more requests should be ignored
         accessor.requestLoad(PREPEND, createMockState())
-        testScope.advanceTimeBy(10)
+        testScope.testScheduler.advanceTimeBy(10)
         assertThat(remoteMediatorMock.newLoadEvents).isEmpty()
 
-        testScope.advanceTimeBy(41)
+        testScope.testScheduler.advanceTimeBy(41)
         assertThat(remoteMediatorMock.newLoadEvents).containsExactly(
             LoadEvent(APPEND, otherAppendState)
         )
         accessor.requestLoad(APPEND, createMockState())
         // while append running, any more requests should be ignored
         accessor.requestLoad(APPEND, createMockState())
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(remoteMediatorMock.newLoadEvents).isEmpty()
 
         // now the work is done, we can add more
         val newAppendState = createMockState()
         accessor.requestLoad(APPEND, newAppendState)
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(remoteMediatorMock.newLoadEvents).containsExactly(
             LoadEvent(APPEND, newAppendState)
         )
@@ -721,7 +722,7 @@ class RemoteMediatorAccessorTest {
         testScope.pauseDispatcher()
         val initialAppend = createMockState()
         accessor.requestLoad(APPEND, initialAppend)
-        testScope.advanceTimeBy(50)
+        testScope.testScheduler.advanceTimeBy(50)
         assertThat(
             remoteMediatorMock.newLoadEvents
         ).containsExactly(
@@ -730,7 +731,7 @@ class RemoteMediatorAccessorTest {
         // now before that append finishes, trigger a refresh
         val newRefresh = createMockState()
         accessor.requestLoad(REFRESH, newRefresh)
-        testScope.advanceTimeBy(10)
+        testScope.testScheduler.advanceTimeBy(10)
         // check that we immediately get the new refresh because we'll cancel the append
         assertThat(
             remoteMediatorMock.newLoadEvents
@@ -758,7 +759,7 @@ class RemoteMediatorAccessorTest {
         // Append request should go through since it doesn't require refresh
         val firstAppendState = createMockState()
         accessor.requestLoad(APPEND, firstAppendState)
-        testScope.advanceTimeBy(40)
+        testScope.testScheduler.advanceTimeBy(40)
         assertThat(accessor.state.value).isEqualTo(
             LoadStates(
                 refresh = LoadState.NotLoading.Incomplete,
@@ -773,7 +774,7 @@ class RemoteMediatorAccessorTest {
         // Trigger refresh, cancelling remote append
         val firstRefreshState = createMockState()
         accessor.requestLoad(REFRESH, firstRefreshState)
-        testScope.advanceTimeBy(1)
+        testScope.testScheduler.advanceTimeBy(1)
         assertThat(accessor.state.value).isEqualTo(
             LoadStates(
                 refresh = LoadState.Loading,
@@ -782,7 +783,7 @@ class RemoteMediatorAccessorTest {
             )
         )
         // advance enough to complete refresh
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         // assert that we receive refresh, and append is retried since it was cancelled
         assertThat(remoteMediatorMock.newLoadEvents).containsExactly(
             LoadEvent(REFRESH, firstRefreshState),
@@ -800,7 +801,7 @@ class RemoteMediatorAccessorTest {
         accessor.requestLoad(APPEND, appendState)
         val prependState = createMockState()
         accessor.requestLoad(PREPEND, prependState)
-        testScope.advanceTimeBy(50)
+        testScope.testScheduler.advanceTimeBy(50)
         // both states should be set to loading even though prepend is not really running
         assertThat(accessor.state.value).isEqualTo(
             LoadStates(
@@ -813,7 +814,7 @@ class RemoteMediatorAccessorTest {
             LoadEvent(APPEND, appendState)
         )
         // advance enough to trigger prepend
-        testScope.advanceTimeBy(51)
+        testScope.testScheduler.advanceTimeBy(51)
         assertThat(accessor.state.value).isEqualTo(
             LoadStates(
                 refresh = LoadState.NotLoading.Incomplete,
@@ -824,7 +825,7 @@ class RemoteMediatorAccessorTest {
         assertThat(remoteMediatorMock.newLoadEvents).containsExactly(
             LoadEvent(PREPEND, prependState)
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         val exception = Throwable()
         remoteMediatorMock.loadCallback = { type, _ ->
             if (type == PREPEND) {
@@ -837,7 +838,7 @@ class RemoteMediatorAccessorTest {
         }
         accessor.requestLoad(APPEND, createMockState())
         accessor.requestLoad(PREPEND, createMockState())
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(accessor.state.value).isEqualTo(
             LoadStates(
                 refresh = LoadState.NotLoading.Incomplete,
@@ -856,7 +857,7 @@ class RemoteMediatorAccessorTest {
             }
         }
         accessor.requestLoad(APPEND, createMockState())
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(accessor.state.value).isEqualTo(
             LoadStates(
                 refresh = LoadState.NotLoading.Incomplete,
@@ -868,7 +869,7 @@ class RemoteMediatorAccessorTest {
         remoteMediatorMock.newLoadEvents
         // another append request should just be ignored
         accessor.requestLoad(APPEND, createMockState())
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             remoteMediatorMock.newLoadEvents
         ).isEmpty()
@@ -881,7 +882,7 @@ class RemoteMediatorAccessorTest {
         )
         val refreshState = createMockState()
         accessor.requestLoad(REFRESH, refreshState)
-        testScope.advanceTimeBy(50)
+        testScope.testScheduler.advanceTimeBy(50)
         // prepend error state is still present
         assertThat(accessor.state.value).isEqualTo(
             LoadStates(
@@ -890,7 +891,7 @@ class RemoteMediatorAccessorTest {
                 append = LoadState.NotLoading.Complete
             )
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         // if refresh succeeds, it will clear the error state for refresh
         assertThat(accessor.state.value).isEqualTo(
             LoadStates.IDLE
@@ -920,7 +921,7 @@ class RemoteMediatorAccessorTest {
         assertThat(
             remoteMediatorMock.newLoadEvents
         ).containsExactly(LoadEvent(REFRESH, firstRefreshState))
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value.refresh
         ).isEqualTo(
@@ -928,7 +929,7 @@ class RemoteMediatorAccessorTest {
         )
         val retryState = createMockState()
         accessor.retryFailed(retryState)
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             remoteMediatorMock.newLoadEvents
         ).containsExactly(LoadEvent(REFRESH, retryState))
@@ -956,7 +957,7 @@ class RemoteMediatorAccessorTest {
         ).isEqualTo(
             LoadStates.IDLE.modifyState(REFRESH, LoadState.Loading)
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         // make sure only refresh has happened
         assertThat(
             remoteMediatorMock.newLoadEvents
@@ -999,7 +1000,7 @@ class RemoteMediatorAccessorTest {
                 prepend = LoadState.Loading
             )
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         // make sure all requests did happen eventually
         assertThat(
             remoteMediatorMock.newLoadEvents
@@ -1035,7 +1036,7 @@ class RemoteMediatorAccessorTest {
         val prependState = createMockState()
         accessor.requestLoad(PREPEND, prependState)
         accessor.requestLoad(APPEND, appendState)
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             remoteMediatorMock.newLoadEvents
         ).containsExactly(
@@ -1055,7 +1056,7 @@ class RemoteMediatorAccessorTest {
                 prepend = LoadState.Loading
             )
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         // ensure they both got called
         assertThat(
             remoteMediatorMock.newLoadEvents
@@ -1103,7 +1104,7 @@ class RemoteMediatorAccessorTest {
             )
         )
         // let refresh start but don't let it finish
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         // get all errors
         assertThat(
             accessor.state.value
@@ -1161,7 +1162,7 @@ class RemoteMediatorAccessorTest {
             )
         )
         // let refresh start but don't let it finish
-        testScope.advanceTimeBy(50)
+        testScope.testScheduler.advanceTimeBy(50)
         // make sure refresh does not revert the append / prepend states
         assertThat(
             accessor.state.value
@@ -1173,7 +1174,7 @@ class RemoteMediatorAccessorTest {
             )
         )
         // let refresh fail, it should retry append prepend
-        testScope.advanceTimeBy(20)
+        testScope.testScheduler.advanceTimeBy(20)
         assertThat(
             accessor.state.value
         ).isEqualTo(
@@ -1184,7 +1185,7 @@ class RemoteMediatorAccessorTest {
             )
         )
         // let the prepend retry start
-        testScope.advanceTimeBy(100)
+        testScope.testScheduler.advanceTimeBy(100)
         assertThat(
             accessor.state.value
         ).isEqualTo(
@@ -1194,7 +1195,7 @@ class RemoteMediatorAccessorTest {
                 prepend = LoadState.Loading
             )
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value
         ).isEqualTo(
@@ -1224,7 +1225,7 @@ class RemoteMediatorAccessorTest {
             LoadState.Loading
         )
         // run to get the error
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value.refresh
         ).isEqualTo(
@@ -1239,7 +1240,7 @@ class RemoteMediatorAccessorTest {
         ).isEqualTo(
             LoadState.Loading
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value.refresh
         ).isEqualTo(
@@ -1262,7 +1263,7 @@ class RemoteMediatorAccessorTest {
         accessor.requestLoad(APPEND, state1)
         accessor.requestLoad(PREPEND, state1)
         // run to get the error
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value
         ).isEqualTo(
@@ -1285,7 +1286,7 @@ class RemoteMediatorAccessorTest {
                 append = LoadState.Error(exception),
             )
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value
         ).isEqualTo(
@@ -1312,7 +1313,7 @@ class RemoteMediatorAccessorTest {
         accessor.requestLoad(APPEND, state1)
         accessor.requestLoad(PREPEND, state1)
         // run to get the error
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value
         ).isEqualTo(
@@ -1339,7 +1340,7 @@ class RemoteMediatorAccessorTest {
                 append = LoadState.Error(exception1),
             )
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value
         ).isEqualTo(
@@ -1378,7 +1379,7 @@ class RemoteMediatorAccessorTest {
         ).isEqualTo(
             LoadState.Loading
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value.get(loadType)
         ).isEqualTo(
@@ -1396,7 +1397,7 @@ class RemoteMediatorAccessorTest {
         ).isEqualTo(
             LoadState.Error(exception)
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             accessor.state.value.get(loadType)
         ).isEqualTo(
@@ -1413,7 +1414,7 @@ class RemoteMediatorAccessorTest {
         ).isEqualTo(
             LoadState.Loading
         )
-        testScope.advanceUntilIdle()
+        testScope.testScheduler.advanceUntilIdle()
         assertThat(
             remoteMediator.newLoadEvents
         ).containsExactly(

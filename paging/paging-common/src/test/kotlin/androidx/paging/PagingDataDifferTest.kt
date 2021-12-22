@@ -39,8 +39,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.pauseDispatcher
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Rule
 import org.junit.Test
@@ -72,19 +74,19 @@ class PagingDataDifferTest {
             val job1 = launch {
                 differ.collectFrom(infinitelySuspendingPagingData(receiver))
             }
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             job1.cancel()
 
             val job2 = launch {
                 differ.collectFrom(PagingData.empty())
             }
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             job2.cancel()
 
             // Static replacement should also replace the UiReceiver from previous generation.
             differ.retry()
             differ.refresh()
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
 
             assertFalse { receiver.retryEvents.isNotEmpty() }
             assertFalse { receiver.refreshEvents.isNotEmpty() }
@@ -490,7 +492,7 @@ class PagingDataDifferTest {
         // Should wait for new generation to load and apply it first.
         assertThat(listenerEvents.size).isEqualTo(2)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(listenerEvents.size).isEqualTo(3)
 
         job.cancel()
@@ -514,19 +516,19 @@ class PagingDataDifferTest {
         // Should wait for new generation to load and apply it first.
         assertThat(listenerEvents.size).isEqualTo(0)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(listenerEvents.size).isEqualTo(1)
 
         // Trigger PREPEND.
         differ[50]
         assertThat(listenerEvents.size).isEqualTo(1)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(listenerEvents.size).isEqualTo(2)
 
         // Trigger APPEND + Drop
         differ[52]
         assertThat(listenerEvents.size).isEqualTo(2)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(listenerEvents.size).isEqualTo(4)
 
         job.cancel()
@@ -557,7 +559,7 @@ class PagingDataDifferTest {
         // Should wait for new generation to load and apply it first.
         assertThat(listenerEvents.size).isEqualTo(2)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(listenerEvents.size).isEqualTo(3)
 
         job1.cancel()
@@ -584,19 +586,19 @@ class PagingDataDifferTest {
         // Should wait for new generation to load and apply it first.
         assertThat(listenerEvents.size).isEqualTo(0)
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(listenerEvents.size).isEqualTo(1)
 
         // Trigger PREPEND.
         differ[50]
         assertThat(listenerEvents.size).isEqualTo(1)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(listenerEvents.size).isEqualTo(2)
 
         // Trigger APPEND + Drop
         differ[52]
         assertThat(listenerEvents.size).isEqualTo(2)
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(listenerEvents.size).isEqualTo(4)
 
         job1.cancel()
@@ -633,7 +635,7 @@ class PagingDataDifferTest {
         differ.collectFrom(PagingData.empty())
 
         // Await all; we should now receive the buffered event.
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(listenerEvents.size).isEqualTo(65)
 
         job.cancel()
@@ -665,21 +667,21 @@ class PagingDataDifferTest {
         }
 
         // Initial refresh
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertEquals(localLoadStatesOf(), combinedLoadStates)
         assertEquals(10, itemCount)
         assertEquals(10, differ.size)
 
         // Append
         differ[9]
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertEquals(localLoadStatesOf(), combinedLoadStates)
         assertEquals(20, itemCount)
         assertEquals(20, differ.size)
 
         // Prepend
         differ[0]
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertEquals(localLoadStatesOf(), combinedLoadStates)
         assertEquals(30, itemCount)
         assertEquals(30, differ.size)
@@ -912,21 +914,21 @@ class PagingDataDifferTest {
             }
 
             // Initial refresh
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertEquals(localLoadStatesOf(), combinedLoadStates)
             assertEquals(10, itemCount)
             assertEquals(10, differ.size)
 
             // Append
             differ[9]
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertEquals(localLoadStatesOf(), combinedLoadStates)
             assertEquals(20, itemCount)
             assertEquals(20, differ.size)
 
             // Prepend
             differ[0]
-            advanceUntilIdle()
+            testScheduler.advanceUntilIdle()
             assertEquals(localLoadStatesOf(), combinedLoadStates)
             assertEquals(30, itemCount)
             assertEquals(30, differ.size)
@@ -987,11 +989,12 @@ class PagingDataDifferTest {
         }
 
         val pagingData = pager.flow.first()
-        val deferred = testScope.async {
+        val parentJob = Job()
+        val deferred = (testScope + parentJob).async {
             differ.collectFrom(pagingData)
         }
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertFailsWith<IllegalStateException> { deferred.await() }
     }
 
@@ -1017,7 +1020,7 @@ class PagingDataDifferTest {
             differ.collectFrom(pagingData)
         }
 
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         // this will return only if differ.collectFrom returns
         deferred.await()
     }
@@ -1421,7 +1424,7 @@ class PagingDataDifferTest {
             }
         }
         // allow local refresh to complete but not remote refresh
-        advanceTimeBy(600)
+        testScheduler.advanceTimeBy(600)
 
         assertThat(differ.newCombinedLoadStates()).containsExactly(
             // local starts loading
@@ -1447,7 +1450,7 @@ class PagingDataDifferTest {
         differ.refresh()
 
         // allow local refresh to complete but not remote refresh
-        advanceTimeBy(600)
+        testScheduler.advanceTimeBy(600)
 
         assertThat(differ.newCombinedLoadStates()).containsExactly(
             // local starts second refresh while mediator continues remote refresh from before
@@ -1466,7 +1469,7 @@ class PagingDataDifferTest {
         )
 
         // allow remote refresh to complete
-        advanceTimeBy(600)
+        testScheduler.advanceTimeBy(600)
 
         assertThat(differ.newCombinedLoadStates()).containsExactly(
             // remote refresh returns empty and triggers remote append/prepend
@@ -1481,7 +1484,7 @@ class PagingDataDifferTest {
         )
 
         // allow remote append and prepend to complete
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
 
         assertThat(differ.newCombinedLoadStates()).containsExactly(
             // prepend completes first

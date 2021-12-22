@@ -63,7 +63,7 @@ class CachedPageEventFlowTest(
             ),
         )
         upstream.send(refreshEvent)
-        runCurrent()
+        testScheduler.runCurrent()
         // removal of canDispatchWithoutInsert check causes an additional NotLoading state update
         assertThat(fastCollector.items()).containsExactly(
             localLoadStateUpdate<String>(),
@@ -79,14 +79,14 @@ class CachedPageEventFlowTest(
             ),
         )
         upstream.send(appendEvent)
-        runCurrent()
+        testScheduler.runCurrent()
         assertThat(fastCollector.items()).containsExactly(
             localLoadStateUpdate<String>(),
             refreshEvent,
             appendEvent
         )
         assertThat(slowCollector.items()).isEmpty()
-        advanceTimeBy(3_000)
+        testScheduler.advanceTimeBy(3_001)
         assertThat(slowCollector.items()).containsExactly(
             localLoadStateUpdate<String>(),
             refreshEvent,
@@ -123,12 +123,12 @@ class CachedPageEventFlowTest(
             refreshEvent,
             appendEvent
         ) + manyNewAppendEvents + finalAppendEvent
-        runCurrent()
+        testScheduler.runCurrent()
         assertThat(fastCollector.items()).containsExactlyElementsIn(fullList).inOrder()
         assertThat(fastCollector.isActive()).isFalse()
         assertThat(slowCollector.isActive()).isTrue()
         assertThat(lateSlowCollector.isActive()).isTrue()
-        advanceUntilIdle()
+        testScheduler.advanceUntilIdle()
         assertThat(slowCollector.items()).containsExactlyElementsIn(fullList).inOrder()
         assertThat(slowCollector.isActive()).isFalse()
 
@@ -171,13 +171,13 @@ class CachedPageEventFlowTest(
         upstream.send(refreshEvent)
         upstream.send(appendEvent)
         collector1.collectIn(testScope)
-        runCurrent()
+        testScheduler.runCurrent()
         assertThat(collector1.items()).isEqualTo(
             listOf(localLoadStateUpdate<String>(), refreshEvent, appendEvent)
         )
         val collector2 = PageCollector(subject.downstreamFlow)
         collector2.collectIn(testScope)
-        runCurrent()
+        testScheduler.runCurrent()
         val firstSnapshotRefreshEvent = localRefresh(
             listOf(
                 TransformablePage(
@@ -234,14 +234,14 @@ class CachedPageEventFlowTest(
             TerminationType.CLOSE_UPSTREAM -> upstream.close()
             TerminationType.CLOSE_CACHED_EVENT_FLOW -> subject.close()
         }
-        runCurrent()
+        testScheduler.runCurrent()
         assertThat(collector1.isActive()).isFalse()
         assertThat(collector2.isActive()).isFalse()
         assertThat(collector3.isActive()).isFalse()
         val collector4 = PageCollector(subject.downstreamFlow).also {
             it.collectIn(testScope)
         }
-        runCurrent()
+        testScheduler.runCurrent()
         // since upstream is closed, this should just close
         assertThat(collector4.isActive()).isFalse()
         assertThat(collector4.items()).containsExactly(
@@ -265,7 +265,7 @@ class CachedPageEventFlowTest(
         val collector2 = PageCollector(subject.downstreamFlow)
         collector2.collectIn(testScope)
 
-        runCurrent()
+        testScheduler.runCurrent()
 
         // an empty input stream should cause collect to receive a single state update where
         // source = LoadStates.IDLE and mediator = null
@@ -288,7 +288,7 @@ class CachedPageEventFlowTest(
             ),
         )
         upstream.send(refreshEvent)
-        runCurrent()
+        testScheduler.runCurrent()
 
         assertThat(collector.items()).containsExactly(
             localLoadStateUpdate<String>(),
@@ -319,12 +319,12 @@ class CachedPageEventFlowTest(
             ),
         )
         upstream.send(refreshEvent)
-        runCurrent()
+        testScheduler.runCurrent()
 
         val collector = PageCollector(subject.downstreamFlow)
         collector.collectIn(testScope)
 
-        runCurrent()
+        testScheduler.runCurrent()
 
         // regardless of when the first collector started collecting (before or after first
         // INSERT), it would receive the initial IDLE state update

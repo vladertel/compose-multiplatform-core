@@ -29,7 +29,6 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -37,6 +36,7 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.runBlockingTest
@@ -86,6 +86,7 @@ class CachingTest {
 
     @Test
     fun cached() = testScope.runBlockingTest {
+        val testScope = this + Job()
         val pageFlow = buildPageFlow().cachedIn(testScope, tracker)
         val firstCollect = pageFlow.collectItemsUntilSize(6)
         val secondCollect = pageFlow.collectItemsUntilSize(9)
@@ -111,6 +112,7 @@ class CachingTest {
 
     @Test
     fun cached_afterMapping() = testScope.runBlockingTest {
+        val testScope = this + Job()
         var mappingCnt = 0
         val pageFlow = buildPageFlow().map { pagingData ->
             val mappingIndex = mappingCnt++
@@ -146,6 +148,7 @@ class CachingTest {
 
     @Test
     fun cached_beforeMapping() = testScope.runBlockingTest {
+        val testScope = this + Job()
         var mappingCnt = 0
         val pageFlow = buildPageFlow().cachedIn(testScope, tracker).map { pagingData ->
             val mappingIndex = mappingCnt++
@@ -181,6 +184,7 @@ class CachingTest {
 
     @Test
     fun cached_afterMapping_withMoreMappingAfterwards() = testScope.runBlockingTest {
+        val testScope = this + Job()
         var mappingCnt = 0
         val pageFlow = buildPageFlow().map { pagingData ->
             val mappingIndex = mappingCnt++
@@ -265,10 +269,11 @@ class CachingTest {
 
     @Test
     fun cachedWithPassiveCollector() = testScope.runBlockingTest {
+        val testScope = this + Job()
         val flow = buildPageFlow().cachedIn(testScope, tracker)
         val passive = ItemCollector(flow)
         passive.collectPassivelyIn(testScope)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         // collecting on the paged source will trigger initial page
         assertThat(passive.items()).isEqualTo(
             buildItems(
@@ -290,7 +295,7 @@ class CachingTest {
         assertThat(passive.items()).isEqualTo(firstList)
         val passive2 = ItemCollector(flow)
         passive2.collectPassivelyIn(testScope)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         // a new passive one should receive all existing items immediately
         assertThat(passive2.items()).isEqualTo(firstList)
 
@@ -314,13 +319,14 @@ class CachingTest {
      */
     @Test
     public fun unusedPagingDataIsNeverCollectedByNewDownstream(): Unit = testScope.runBlockingTest {
+        val testScope = this + Job()
         val factory = StringPagingSource.VersionedFactory()
         val flow = buildPageFlow(factory).cachedIn(testScope, tracker)
         val collector = ItemCollector(flow)
         val job = SupervisorJob()
         val subScope = CoroutineScope(coroutineContext + job)
         collector.collectPassivelyIn(subScope)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(collector.items()).isEqualTo(
             buildItems(
                 version = 0,
@@ -334,9 +340,9 @@ class CachingTest {
         assertThat(factory.nextVersion).isEqualTo(1)
         repeat(10) {
             factory.invalidateLatest()
-            testScope.runCurrent()
+            testScheduler.runCurrent()
         }
-        runCurrent()
+        testScheduler.runCurrent()
         // next version is 11, the last paged data we've created has version 10
         assertThat(factory.nextVersion).isEqualTo(11)
 
@@ -344,7 +350,7 @@ class CachingTest {
         // should be the latest because previous PagingData is invalidated
         val collector2 = ItemCollector(flow)
         collector2.collectPassivelyIn(testScope)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(collector2.items()).isEqualTo(
             buildItems(
                 version = 10,
@@ -354,7 +360,7 @@ class CachingTest {
             )
         )
         assertThat(collector2.receivedPagingDataCount).isEqualTo(1)
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         assertThat(factory.nextVersion).isEqualTo(11)
         val activeCollection = flow.collectItemsUntilSize(9)
         assertThat(activeCollection).isEqualTo(
@@ -365,7 +371,7 @@ class CachingTest {
                 size = 9
             )
         )
-        testScope.runCurrent()
+        testScheduler.runCurrent()
         // make sure passive collector received those items as well
         assertThat(collector2.items()).isEqualTo(
             buildItems(

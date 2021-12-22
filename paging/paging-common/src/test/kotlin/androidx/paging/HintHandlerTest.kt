@@ -209,27 +209,27 @@ class HintHandlerTest {
         val appendHints = collectAsync(
             hintHandler.hintFor(APPEND)
         )
-        runCurrent()
+        testScheduler.runCurrent()
         assertThat(prependHints.values).isEmpty()
         assertThat(appendHints.values).isEmpty()
         hintHandler.processHint(hint)
-        runCurrent()
+        testScheduler.runCurrent()
         assertThat(prependHints.values).containsExactly(hint)
         assertThat(appendHints.values).containsExactly(hint)
 
         // send same hint twice, it should not get dispatched
         hintHandler.processHint(hint.copy())
-        runCurrent()
+        testScheduler.runCurrent()
         assertThat(prependHints.values).containsExactly(hint)
         assertThat(appendHints.values).containsExactly(hint)
 
         // how send that hint as reset, now it should get dispatched
         hintHandler.forceSetHint(PREPEND, hint)
-        runCurrent()
+        testScheduler.runCurrent()
         assertThat(prependHints.values).containsExactly(hint, hint)
         assertThat(appendHints.values).containsExactly(hint)
         hintHandler.forceSetHint(APPEND, hint)
-        runCurrent()
+        testScheduler.runCurrent()
         assertThat(prependHints.values).containsExactly(hint, hint)
         assertThat(appendHints.values).containsExactly(hint, hint)
     }
@@ -254,7 +254,7 @@ class HintHandlerTest {
                     value = it
                 }
             }
-            runCurrent()
+            testScheduler.runCurrent()
             job.cancel()
         }
         return value
