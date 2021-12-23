@@ -63,6 +63,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         }
         jvm("desktop")
         macosX64()
+        macosArm64()
         iosX64("uikitX64")
 
         /*

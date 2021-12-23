@@ -82,6 +82,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         }
         iosX64("uikitX64")
         macosX64()
+        macosArm64()
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -117,6 +118,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             nativeMain.dependsOn(commonMain)
             uikitX64Main.dependsOn(nativeMain)
             macosX64Main.dependsOn(nativeMain)
+            macosArm64.dependsOn(nativeMain)
 
             androidAndroidTest.dependencies {
                 implementation(libs.testExtJunit)
@@ -153,6 +155,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 kotlin.srcDir("src/nativeTest/kotlin")
             }
             macosX64Test.dependsOn(nativeTest)
+            macosArm64Test.dependsOn(nativeTest)
             uikitX64Test.dependsOn(nativeTest)
         }
     }
@@ -192,4 +195,11 @@ tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
         incremental = false
     }
+}
+
+// Workaround for older Node JS not available for macOS M1 machines.
+afterEvaluate {
+    rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin) {
+        rootProject.extensions.getByType(org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension).nodeVersion = "16.0.0"
+   }
 }
