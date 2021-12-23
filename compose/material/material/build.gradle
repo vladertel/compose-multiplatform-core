@@ -119,20 +119,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.kotlinStdlib)
             }
 
-<<<<<<< HEAD
-=======
-            jsMain {
-                dependsOn(commonMain)
-            }
-
-            nativeMain.dependsOn(commonMain)
-            darwinMain.dependsOn(nativeMain)
-            macosX64Main.dependsOn(darwinMain)
-            macosArm64Main.dependsOn(darwinMain)
-            uikitX64Main.dependsOn(darwinMain)
-            uikitArm64Main.dependsOn(darwinMain)
-
->>>>>>> 2e8b6f93192 (add js sources (wip))
             androidTest.dependencies {
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
