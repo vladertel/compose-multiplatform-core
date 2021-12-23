@@ -68,6 +68,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         jvm("desktop")
         iosX64("uikitX64")
         macosX64()
+        macosArm64()
 
         js(IR) {
             browser()
