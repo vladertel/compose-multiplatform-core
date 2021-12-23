@@ -67,13 +67,10 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         desktop()
         darwin()
+        js()
     }
 
     kotlin {
-
-        js(IR) {
-            browser()
-        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
