@@ -98,7 +98,7 @@ class InspectionPlugin : Plugin<Project> {
                 val protobufConvention = project.convention.getPlugin<ProtobufConvention>()
                 protobufConvention.protobuf.apply {
                     protoc {
-                        this.artifact = "com.google.protobuf:protoc:3.10.0"
+                        this.artifact = "com.google.protobuf:protoc:3.18.0"
                     }
                     generateProtoTasks {
                         all().forEach { task: GenerateProtoTask ->
@@ -112,7 +112,7 @@ class InspectionPlugin : Plugin<Project> {
         }
 
         project.dependencies {
-            add("implementation", "com.google.protobuf:protobuf-javalite:3.10.0")
+            add("implementation", "com.google.protobuf:protobuf-javalite:3.18.0")
         }
 
         project.afterEvaluate {
