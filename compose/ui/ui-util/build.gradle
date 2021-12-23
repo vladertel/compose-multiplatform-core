@@ -50,6 +50,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             browser()
         }
         macosX64()
+        macosArm64()
         iosX64("uikitX64")
 
         /*
