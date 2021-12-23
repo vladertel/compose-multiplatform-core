@@ -46,6 +46,8 @@ import java.awt.FontMetrics
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.FocusListener
+import java.awt.font.FontRenderContext
+import java.awt.geom.AffineTransform
 import java.util.Locale
 import javax.accessibility.Accessible
 import javax.accessibility.AccessibleAction
@@ -902,19 +904,31 @@ internal class ComposeAccessible(
             TODO("Not yet implemented")
         }
 
-        override fun getFont(): Font {
-            println("Not implemented: getFont")
-            TODO("Not yet implemented")
-        }
+        // Create dummy FontMetrics and FontRenderContext to provide density for Accessibility
+        // TODO("Properly implement font-related features if necessary")
+        override fun getFont(): Font? = null
 
-        override fun setFont(f: Font?) {
-            println("Not implemented: setFont")
-            TODO("Not yet implemented")
+        override fun setFont(f: Font?) {}
+
+        val _fontMetricsForA11y = object : FontMetrics(null) {
+            private val _fontRenderContext = FontRenderContext(
+                AffineTransform().apply {
+                    scale(
+                        density.density.toDouble(),
+                        density.density.toDouble()
+                    )
+                },
+                true,
+                true
+            )
+
+            override fun getFontRenderContext(): FontRenderContext {
+                return _fontRenderContext
+            }
         }
 
         override fun getFontMetrics(f: Font?): FontMetrics {
-            println("Not implemented: getFontMetrics")
-            TODO("Not yet implemented")
+            return _fontMetricsForA11y
         }
 
         override fun setEnabled(b: Boolean) {

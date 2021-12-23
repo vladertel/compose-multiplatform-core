@@ -521,7 +521,7 @@ internal expect fun pointerInputEvent(
 internal expect fun makeAccessibilityController(
     skiaBasedOwner: SkiaBasedOwner,
     component: PlatformComponent
-): AccessibilityController?
+): AccessibilityController
 
 internal expect val DefaultPointerButtons: PointerButtons
 internal expect val DefaultPointerKeyboardModifiers: PointerKeyboardModifiers
