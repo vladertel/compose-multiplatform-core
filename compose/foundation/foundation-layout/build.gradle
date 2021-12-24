@@ -77,6 +77,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         macosX64()
         macosArm64()
         iosX64("uikitX64")
+        iosArm64("uikitArm64")
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
