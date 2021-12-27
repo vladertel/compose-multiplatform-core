@@ -47,7 +47,8 @@ fun TestMonotonicFrameClock(
     frameDelayNanos: Long = DefaultFrameDelay
 ): TestMonotonicFrameClock = TestMonotonicFrameClock(
     coroutineScope = coroutineScope,
-    testCoroutineScheduler = requireNotNull(coroutineScope.coroutineContext[TestCoroutineScheduler]) {
+    testCoroutineScheduler =
+    requireNotNull(coroutineScope.coroutineContext[TestCoroutineScheduler]) {
         "coroutuineScope should have TestCoroutineScheduler"
     },
     frameDelayNanos = frameDelayNanos

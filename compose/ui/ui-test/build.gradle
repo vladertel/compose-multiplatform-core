@@ -48,8 +48,8 @@ dependencies {
         api(project(":compose:ui:ui-graphics"))
         api(project(":compose:ui:ui-text"))
         api(project(":compose:ui:ui-unit"))
-        api(libs.kotlinCoroutinesCore)
-        api(libs.kotlinCoroutinesTest)
+        api(libs.kotlinCoroutinesCoreCompose)
+        api(libs.kotlinCoroutinesTestCompose)
         api(libs.kotlinStdlib)
         api(libs.kotlinStdlibCommon)
 
@@ -93,8 +93,8 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             jvmMain.dependencies {
                 api(project(":compose:runtime:runtime"))
-                api(libs.kotlinCoroutinesCore)
-                api(libs.kotlinCoroutinesTest)
+                api(libs.kotlinCoroutinesCoreCompose)
+                api(libs.kotlinCoroutinesTestCompose)
                 api(libs.kotlinStdlibCommon)
             }
 

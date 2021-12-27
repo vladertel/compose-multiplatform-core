@@ -51,7 +51,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.runner.Description
@@ -170,7 +170,7 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
     private val idlingStrategy: IdlingStrategy by lazy { idlingStrategyFactory.invoke() }
 
     private val recomposer: Recomposer
-    private val testCoroutineDispatcher = TestCoroutineDispatcher()
+    private val testCoroutineDispatcher = UnconfinedTestDispatcher()
     private val frameCoroutineScope = CoroutineScope(testCoroutineDispatcher)
     private val recomposerApplyCoroutineScope: CoroutineScope
     private val coroutineExceptionHandler = UncaughtExceptionHandler()
@@ -179,7 +179,10 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
         get() = mainClockImpl
 
     init {
-        val frameClock = TestMonotonicFrameClock(frameCoroutineScope)
+        val frameClock = TestMonotonicFrameClock(
+            coroutineScope = frameCoroutineScope,
+            delayController = testCoroutineDispatcher.scheduler
+        )
         mainClockImpl = MainTestClockImpl(testCoroutineDispatcher, frameClock)
         val infiniteAnimationPolicy = object : InfiniteAnimationPolicy {
             override suspend fun <R> onInfiniteOperation(block: suspend () -> R): R {
@@ -389,8 +392,6 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
             } finally {
                 frameCoroutineScope.cancel()
                 coroutineExceptionHandler.throwUncaught()
-                @OptIn(ExperimentalCoroutinesApi::class)
-                testCoroutineDispatcher.cleanupTestCoroutines()
             }
         }
     }

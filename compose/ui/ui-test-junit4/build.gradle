@@ -52,8 +52,8 @@ dependencies {
         implementation("androidx.test:monitor:1.4.0")
         implementation(libs.espressoCore)
         implementation(libs.espressoIdlingResource)
-        implementation(libs.kotlinCoroutinesCore)
-        implementation(libs.kotlinCoroutinesTest)
+        implementation(libs.kotlinCoroutinesCoreCompose)
+        implementation(libs.kotlinCoroutinesTestCompose)
 
         testImplementation(project(":compose:animation:animation-core"))
         testImplementation(project(":compose:material:material"))
@@ -82,8 +82,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             commonMain.dependencies {
                 api(project(":compose:ui:ui-test"))
                 implementation(libs.kotlinStdlib)
-                implementation(libs.kotlinCoroutinesCore)
-                implementation(libs.kotlinCoroutinesTest)
+                implementation(libs.kotlinCoroutinesCoreCompose)
+                implementation(libs.kotlinCoroutinesTestCompose)
             }
 
             jvmMain.dependencies {

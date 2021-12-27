@@ -49,7 +49,7 @@ dependencies {
     androidTestImplementation(libs.testRules)
     androidTestImplementation(libs.kotlinStdlib)
     androidTestImplementation(libs.kotlinReflect)
-    androidTestImplementation(libs.kotlinCoroutinesTest)
+    androidTestImplementation(libs.kotlinCoroutinesTestCompose)
     androidTestImplementation(projectOrArtifact(":benchmark:benchmark-junit4"))
     androidTestImplementation("androidx.activity:activity:1.2.0")
     androidTestImplementation(projectOrArtifact(":activity:activity-compose"))

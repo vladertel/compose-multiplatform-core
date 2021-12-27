@@ -51,14 +51,14 @@ kotlin {
         jvmMain.dependencies {
             implementation(libs.kotlinStdlib)
             implementation(libs.kotlinStdlibJdk8)
-            implementation(libs.kotlinCoroutinesCore)
+            implementation(libs.kotlinCoroutinesCoreCompose)
         }
 
         jvmTest {
             resources.srcDirs += new File(SupportConfigKt.getExternalProjectPath(project), "noto-fonts/other/")
             resources.srcDirs += "src/jvmTest/res"
             dependencies {
-                implementation(libs.kotlinCoroutinesTest)
+                implementation(libs.kotlinCoroutinesTestCompose)
                 implementation(libs.skikoCurrentOs)
                 implementation(project(":compose:ui:ui-test-junit4"))
                 implementation(libs.junit)

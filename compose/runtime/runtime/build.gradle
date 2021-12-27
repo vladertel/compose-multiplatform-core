@@ -37,7 +37,7 @@ dependencies {
          * corresponding block below
          */
 
-        api(libs.kotlinCoroutinesAndroid)
+        api(libs.kotlinCoroutinesAndroidCompose)
 
         implementation("androidx.annotation:annotation:1.1.0")
         implementation(libs.kotlinStdlib)
@@ -45,7 +45,7 @@ dependencies {
         testImplementation(libs.kotlinTestJunit)
         testImplementation(libs.junit)
         testImplementation(libs.robolectric)
-        testImplementation(libs.kotlinCoroutinesTest)
+        testImplementation(libs.kotlinCoroutinesTestCompose)
 
         androidTestImplementation(libs.kotlinTestJunit)
         androidTestImplementation(libs.testExtJunit)
@@ -73,15 +73,15 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         sourceSets {
             commonMain.dependencies {
                 implementation(libs.kotlinStdlibCommon)
-                implementation(libs.kotlinCoroutinesCore)
+                implementation(libs.kotlinCoroutinesCoreCompose)
             }
             jvmMain.dependencies {
                 implementation(libs.kotlinStdlib)
-                api(libs.kotlinCoroutinesCore)
+                api(libs.kotlinCoroutinesCoreCompose)
             }
             androidMain {
                 dependencies {
-                    api(libs.kotlinCoroutinesAndroid)
+                    api(libs.kotlinCoroutinesAndroidCompose)
                     api("androidx.annotation:annotation:1.1.0")
                 }
                 dependsOn(jvmMain)
@@ -92,7 +92,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             commonTest.dependencies {
                 implementation(kotlin("test-junit"))
-                implementation(libs.kotlinCoroutinesTest)
+                implementation(libs.kotlinCoroutinesTestCompose)
             }
             androidAndroidTest.dependencies {
                 implementation(libs.testExtJunit)

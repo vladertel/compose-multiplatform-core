@@ -51,7 +51,7 @@ dependencies {
         testImplementation(libs.testRunner)
         testImplementation(libs.junit)
         testImplementation(libs.truth)
-        testImplementation(libs.kotlinCoroutinesTest)
+        testImplementation(libs.kotlinCoroutinesTestCompose)
         testImplementation(libs.mockitoCore)
         testImplementation(libs.kotlinReflect)
         testImplementation(libs.mockitoKotlin)
@@ -116,7 +116,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             commonTest.dependencies {
-                implementation(libs.kotlinCoroutinesTest)
+                implementation(libs.kotlinCoroutinesTestCompose)
             }
 
             androidAndroidTest.dependencies {
