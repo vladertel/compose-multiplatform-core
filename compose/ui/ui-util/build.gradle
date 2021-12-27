@@ -43,17 +43,14 @@ if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 }
 
 if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
-    kotlin {
+    androidXComposeMultiplatform {
         android()
-        jvm("desktop")
-        js(IR) {
-            browser()
-        }
-        macosX64()
-        macosArm64()
-        iosX64("uikitX64")
-        iosArm64("uikitArm64")
+        desktop()
+        js()
+        darwin()
+    }
 
+    kotlin {
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
          * corresponding block above
@@ -71,21 +68,11 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.kotlinStdlib)
             }
 
-            desktopMain.dependsOn(jvmMain)
             jsMain {
-                dependsOn commonMain
                 dependencies {
                     implementation(kotlin("stdlib-js"))
                 }
             }
-
-
-            nativeMain.dependsOn(commonMain)
-            darwinMain.dependsOn(nativeMain)
-            macosX64Main.dependsOn(darwinMain)
-            macosArm64Main.dependsOn(darwinMain)
-            uikitX64Main.dependsOn(darwinMain)
-            uikitArm64Main.dependsOn(darwinMain)
 
             commonTest.dependencies {
                 implementation(kotlin("test-junit"))

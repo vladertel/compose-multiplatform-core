@@ -49,17 +49,14 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         kotlinNativeCompilerPluginClasspath(project(":compose:compiler:compiler-hosted"))
     }
 
-    kotlin {
+    androidXComposeMultiplatform {
         android()
-        js(IR) {
-            browser()
-        }
-        jvm("desktop")
-        macosX64()
-        macosArm64()
-        iosX64("uikitX64")
-        iosArm64("uikitArm64")
+        desktop()
+        js()
+        darwin()
+    }
 
+    kotlin {
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
          * corresponding block above
@@ -72,14 +69,6 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             androidMain.dependencies {
                 implementation(libs.kotlinStdlib)
-            }
-
-            jsMain.dependsOn(commonMain)
-
-            nativeMain.dependsOn(commonMain)
-
-            macosX64Main {
-                dependsOn(nativeMain)
             }
         }
     }

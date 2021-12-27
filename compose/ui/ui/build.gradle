@@ -111,17 +111,14 @@ dependencies {
 packageInspector(project, project(":compose:ui:ui-inspection"))
 
 if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
-    kotlin {
+    androidXComposeMultiplatform {
         android()
-        jvm("desktop")
-        iosX64("uikitX64")
-        iosArm64("uikitArm64")
-        macosX64()
-        macosArm64()
-        js(IR) {
-            browser()
-        }
+        desktop()
+        js()
+        darwin()
+    }
 
+    kotlin {
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
          * corresponding block above
@@ -158,8 +155,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             jvmMain.dependencies {
                 implementation(libs.kotlinStdlib)
             }
-
-            androidMain.dependsOn(jvmMain)
             skikoMain {
                 dependsOn(commonMain)
                 dependencies {
@@ -174,22 +169,12 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.kotlinStdlibJdk8)
                     api(libs.kotlinCoroutinesSwing)
                 }
-                dependsOn(jvmMain)
             }
 
             jsNativeMain.dependsOn(skikoMain)
 
             jsMain.dependsOn(jsNativeMain)
             nativeMain.dependsOn(jsNativeMain)
-
-            darwinMain.dependsOn(nativeMain)
-            macosMain.dependsOn(darwinMain)
-            macosX64Main.dependsOn(macosMain)
-            macosArm64Main.dependsOn(macosMain)
-            uikitMain.dependsOn(darwinMain)
-            uikitX64Main.dependsOn(uikitMain)
-            uikitArm64Main.dependsOn(uikitMain)
-
 
             androidTest.dependencies {
                 implementation(libs.testRules)

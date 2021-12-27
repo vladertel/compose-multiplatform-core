@@ -65,10 +65,15 @@ dependencies {
 }
 
 if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
-    kotlin {
+    androidXComposeMultiplatform {
         android()
-        jvm("desktop")
-        js(IR) {
+        desktop()
+        js()
+        darwin()
+    }
+
+    kotlin {
+        targets.js {
             nodejs {}
             browser() {
                 testTask {
@@ -80,10 +85,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
         }
-        iosX64("uikitX64")
-        iosArm64("uikitArm64")
-        macosX64()
-        macosArm64()
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -103,12 +104,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     api(libs.kotlinCoroutinesAndroid)
                     api("androidx.annotation:annotation:1.1.0")
                 }
-                dependsOn(jvmMain)
             }
-            desktopMain {
-                dependsOn(jvmMain)
-            }
-
             commonTest {
                 kotlin.srcDir("src/test/kotlin")
                 dependencies {
@@ -116,11 +112,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation("org.jetbrains.kotlinx:atomicfu:0.14.4")
                 }
             }
-            nativeMain.dependsOn(commonMain)
-            uikitX64Main.dependsOn(nativeMain)
-            uikitArm64Main.dependsOn(nativeMain)
-            macosX64Main.dependsOn(nativeMain)
-            macosArm64Main.dependsOn(nativeMain)
 
             androidAndroidTest.dependencies {
                 implementation(libs.testExtJunit)
@@ -141,24 +132,14 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 // kotlinCoroutinesTest is copy-pasted in source code to support multiplarform tests
                 // implementation(libs.kotlinCoroutinesTest)
             }
-            desktopTest {
-                dependsOn jvmTest
-            }
-            androidTest {
-                dependsOn jvmTest
-            }
             jsTest {
                 dependencies {
                     implementation kotlin("test-js")
                 }
             }
             nativeTest {
-                dependsOn(commonTest)
                 kotlin.srcDir("src/nativeTest/kotlin")
             }
-            macosX64Test.dependsOn(nativeTest)
-            macosArm64Test.dependsOn(nativeTest)
-            uikitX64Test.dependsOn(nativeTest)
         }
     }
     dependencies {

@@ -56,16 +56,14 @@ if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 }
 
 if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
-    kotlin {
+    androidXComposeMultiplatform {
         android()
-        jvm("desktop")
-        js(IR) {
-            browser()
-        }
-        macosX64()
-        macosArm64()
-        iosX64("uikitX64")
-        iosArm64("uikitArm64")
+        desktop()
+        js()
+        darwin()
+    }
+
+    kotlin {
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the

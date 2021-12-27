@@ -80,17 +80,14 @@ if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 }
 
 if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
-    kotlin {
+    androidXComposeMultiplatform {
         android()
-        jvm("desktop")
-        iosX64("uikitX64")
-        iosArm64("uikitArm64")
-        macosX64()
-        macosArm64()
-        js(IR) {
-            browser()
-        }
+        desktop()
+        js()
+        darwin()
+    }
 
+    kotlin {
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
          * corresponding block below
@@ -126,13 +123,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             jsMain.dependsOn(skikoMain)
 
             nativeMain.dependsOn(skikoMain)
-            darwinMain.dependsOn(nativeMain)
-            macosX64Main.dependsOn(darwinMain)
-            macosArm64Main.dependsOn(darwinMain)
-            uikitX64Main.dependsOn(darwinMain)
-            uikitArm64Main.dependsOn(darwinMain)
-
-            androidMain.dependsOn(jvmMain)
 
             androidMain.dependencies {
                 api("androidx.annotation:annotation:1.1.0")

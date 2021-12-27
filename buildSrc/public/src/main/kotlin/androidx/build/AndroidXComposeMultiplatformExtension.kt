@@ -14,22 +14,11 @@
  * limitations under the License.
  */
 
-import androidx.build.AndroidXComposePlugin
-import androidx.build.LibraryGroups
-import androidx.build.Publish
+package androidx.build
 
-plugins {
-    id("AndroidXPlugin")
-    id("AndroidXComposePlugin")
-    id("kotlin-multiplatform")
-}
-
-AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
-dependencies {
-    kotlinNativeCompilerPluginClasspath(project(":compose:compiler:compiler-hosted"))
-}
-
-androidXComposeMultiplatform {
-    js()
-    darwin()
+abstract class AndroidXComposeMultiplatformExtension {
+    abstract fun android(): Unit
+    abstract fun desktop(): Unit
+    abstract fun js(): Unit
+    abstract fun darwin(): Unit
 }
