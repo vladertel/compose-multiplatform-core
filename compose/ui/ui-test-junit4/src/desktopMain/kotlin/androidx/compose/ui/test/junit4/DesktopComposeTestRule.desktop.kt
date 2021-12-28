@@ -37,7 +37,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.jetbrains.skia.Surface
 import org.junit.runner.Description
@@ -53,7 +55,8 @@ class DesktopComposeTestRule : ComposeContentTestRule {
 
     override val density = Density(1f, 1f)
 
-    private val coroutineDispatcher = TestCoroutineDispatcher()
+    private val coroutineDispatcher = UnconfinedTestDispatcher()
+    private val testScope = TestScope(coroutineDispatcher)
     override val mainClock: MainTestClock =
         MainTestClockImpl(coroutineDispatcher, frameDelayMillis = 16L)
     private var uncaughtExceptionHandler = UncaughtExceptionHandler()
@@ -66,7 +69,7 @@ class DesktopComposeTestRule : ComposeContentTestRule {
         }
     }
     private val coroutineContext =
-        coroutineDispatcher + uncaughtExceptionHandler + infiniteAnimationPolicy
+        testScope.coroutineContext + uncaughtExceptionHandler + infiniteAnimationPolicy
     private val surface = Surface.makeRasterN32Premul(1024, 768)
 
     lateinit var scene: ComposeScene
@@ -80,12 +83,13 @@ class DesktopComposeTestRule : ComposeContentTestRule {
                 scene = runOnUiThread(::createUi)
 
                 try {
-                    base.evaluate()
+                    testScope.runTest {
+                        base.evaluate()
+                    }
                 } finally {
                     runOnUiThread(scene::dispose)
                 }
 
-                coroutineDispatcher.cleanupTestCoroutines()
                 uncaughtExceptionHandler.throwUncaught()
             }
         }

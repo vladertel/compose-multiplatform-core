@@ -21,8 +21,9 @@ import androidx.compose.desktop.AWTDebounceEventQueueTest.Event.Render
 import androidx.compose.ui.awt.AWTDebounceEventQueue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -41,18 +42,19 @@ internal class AWTDebounceEventQueueTest {
         time++
     }
 
-    fun TestCoroutineScope.scheduleRender() = launch {
+    fun CoroutineScope.scheduleRender() = launch {
         yield()
         events.add(Render)
     }
 
-    fun TestCoroutineScope.testQueue() = AWTDebounceEventQueue(
+    fun CoroutineScope.testQueue() = AWTDebounceEventQueue(
         maxNanosToBlockThread = 3,
         nanoTime = { time },
         coroutineContext
     )
 
     @Test
+    @Suppress("DEPRECATION") // for runBlockingTest
     fun `queue events`() = runBlockingTest {
         val queue = testQueue()
         queue.post { input() }
@@ -72,6 +74,7 @@ internal class AWTDebounceEventQueueTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // for runBlockingTest
     fun `queue events and render simultaneously`() = runBlockingTest {
         val queue = testQueue()
 
