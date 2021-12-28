@@ -28,8 +28,9 @@ import androidx.compose.ui.test.TestMonotonicFrameClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.TestCoroutineScope
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -47,7 +48,7 @@ abstract class ComposeBenchmarkBase {
     val activityRule = androidx.test.rule.ActivityTestRule(ComposeActivity::class.java)
 
     @ExperimentalCoroutinesApi
-    suspend fun TestCoroutineScope.measureCompose(block: @Composable () -> Unit) = coroutineScope {
+    suspend fun TestScope.measureCompose(block: @Composable () -> Unit) = coroutineScope {
         val activity = activityRule.activity
         val recomposer = Recomposer(coroutineContext)
         val emptyView = View(activity)
@@ -72,7 +73,7 @@ abstract class ComposeBenchmarkBase {
     }
 
     @ExperimentalCoroutinesApi
-    suspend fun TestCoroutineScope.measureRecomposeSuspending(
+    suspend fun TestScope.measureRecomposeSuspending(
         block: RecomposeReceiver.() -> Unit
     ) = coroutineScope {
         val receiver = RecomposeReceiver()
@@ -119,14 +120,13 @@ abstract class ComposeBenchmarkBase {
 @ExperimentalCoroutinesApi
 fun runBlockingTestWithFrameClock(
     context: CoroutineContext = EmptyCoroutineContext,
-    testBody: suspend TestCoroutineScope.() -> Unit
-) {
-    runBlockingTest(context) {
+    testBody: suspend TestScope.() -> Unit
+): Unit = runTest(UnconfinedTestDispatcher() + context) {
         withContext(TestMonotonicFrameClock(this)) {
             testBody()
         }
     }
-}
+
 
 inline fun BenchmarkRule.measureRepeatedSuspendable(block: BenchmarkRule.Scope.() -> Unit) {
     // Note: this is an extension function to discourage calling from Java.
