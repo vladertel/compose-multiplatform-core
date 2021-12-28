@@ -51,7 +51,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.runner.Description
@@ -171,7 +173,7 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
 
     private val recomposer: Recomposer
     private val testCoroutineDispatcher = UnconfinedTestDispatcher()
-    private val frameCoroutineScope = CoroutineScope(testCoroutineDispatcher)
+    private val frameCoroutineScope = TestScope(testCoroutineDispatcher)
     private val recomposerApplyCoroutineScope: CoroutineScope
     private val coroutineExceptionHandler = UncaughtExceptionHandler()
 
@@ -390,6 +392,9 @@ class AndroidComposeTestRule<R : TestRule, A : ComponentActivity>(
             try {
                 base.evaluate()
             } finally {
+                // runTest {} as the last step -
+                // it's a replacement for TestCoroutineScope.cleanupTestCoroutines
+                frameCoroutineScope.runTest {}
                 frameCoroutineScope.cancel()
                 coroutineExceptionHandler.throwUncaught()
             }

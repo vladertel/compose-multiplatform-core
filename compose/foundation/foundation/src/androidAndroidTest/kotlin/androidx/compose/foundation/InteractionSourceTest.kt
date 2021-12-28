@@ -54,6 +54,7 @@ class InteractionSourceTest {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
+    @Suppress("DEPRECATION") // for TestCoroutineScope
     fun emittingInteractionsInOrder() {
         val interactionSource = MutableInteractionSource()
 
