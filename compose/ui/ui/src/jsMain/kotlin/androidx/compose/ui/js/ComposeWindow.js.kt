@@ -22,6 +22,34 @@ import androidx.compose.ui.native.ComposeLayer
 import kotlinx.browser.document
 import org.w3c.dom.HTMLCanvasElement
 
+class ComposeCanvas(private val canvas: HTMLCanvasElement) {
+    private val layer = ComposeLayer()
+    init {
+        layer.layer.attachTo(canvas)
+        canvas.setAttribute("tabindex", "0")
+        layer.layer.needRedraw()
+    }
+
+    /**
+     * Sets Compose content of the ComposeWindow.
+     *
+     * @param content Composable content of the ComposeWindow.
+     */
+    fun setContent(
+        content: @Composable () -> Unit
+    ) {
+        println("ComposeWindow.setContent")
+        layer.setContent(
+            content = content
+        )
+    }
+
+    // TODO: need to call .dispose() on window close.
+    fun dispose() {
+        layer.dispose()
+    }
+}
+
 internal actual class ComposeWindow actual constructor(){
     val layer = ComposeLayer()
 
