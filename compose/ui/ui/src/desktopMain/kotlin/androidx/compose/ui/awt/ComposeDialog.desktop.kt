@@ -42,7 +42,6 @@ class ComposeDialog(
     modalityType: ModalityType = ModalityType.MODELESS
 ) : JDialog(owner, modalityType) {
     private val delegate = ComposeWindowDelegate(this, ::isUndecorated)
-    internal val layer get() = delegate.layer
 
     init {
         contentPane.add(delegate.pane)
@@ -78,7 +77,7 @@ class ComposeDialog(
      * Handler to catch uncaught exceptions during rendering frames, handling events, or processing background Compose operations.
      */
     @ExperimentalComposeUiApi
-    var exceptionHandler: WindowExceptionHandler? by layer::exceptionHandler
+    var exceptionHandler: WindowExceptionHandler? by delegate::exceptionHandler
 
     /**
      * Composes the given composable into the ComposeDialog.

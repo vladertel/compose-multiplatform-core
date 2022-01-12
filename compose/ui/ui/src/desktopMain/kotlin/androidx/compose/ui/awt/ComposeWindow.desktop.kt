@@ -45,7 +45,6 @@ class ComposeWindow(
     graphicsConfiguration: GraphicsConfiguration? = null
 ) : JFrame(graphicsConfiguration) {
     private val delegate = ComposeWindowDelegate(this, ::isUndecorated)
-    internal val layer get() = delegate.layer
 
     init {
         contentPane.add(delegate.pane)
@@ -67,7 +66,7 @@ class ComposeWindow(
      * Handler to catch uncaught exceptions during rendering frames, handling events, or processing background Compose operations.
      */
     @ExperimentalComposeUiApi
-    var exceptionHandler: WindowExceptionHandler? by layer::exceptionHandler
+    var exceptionHandler: WindowExceptionHandler? by delegate::exceptionHandler
 
     /**
      * Composes the given composable into the ComposeWindow.
@@ -159,11 +158,7 @@ class ComposeWindow(
     /**
      * `true` if the window is in fullscreen mode, `false` otherwise
      */
-    private var isFullscreen: Boolean
-        get() = layer.component.fullscreen
-        set(value) {
-            layer.component.fullscreen = value
-        }
+    private var isFullscreen: Boolean by delegate::fullscreen
 
     /**
      * `true` if the window is maximized to fill all available screen space, `false` otherwise
