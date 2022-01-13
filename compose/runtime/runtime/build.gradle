@@ -162,12 +162,6 @@ androidx {
     legacyDisableKotlinStrictApiMode = true
 }
 
-tasks.withType(KotlinCompile).configureEach {
-    kotlinOptions {
-        incremental = false
-    }
-}
-
 // Workaround for older Node JS not available for macOS M1 machines.
 afterEvaluate {
     rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin) {
