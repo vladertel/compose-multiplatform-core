@@ -124,17 +124,17 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             jsMain {
                 dependencies {
-                    implementation(kotlin("stdlib-js"))
+                    implementation(libs.kotlinStdlibJs)
                 }
             }
             jvmTest.dependencies {
-                implementation kotlin("test-junit")
+                implementation(libs.kotlinTestJunit)
                 // kotlinCoroutinesTest is copy-pasted in source code to support multiplarform tests
                 // implementation(libs.kotlinCoroutinesTest)
             }
             jsTest {
                 dependencies {
-                    implementation kotlin("test-js")
+                    implementation(libs.kotlinTestJs)
                 }
             }
             nativeTest {
