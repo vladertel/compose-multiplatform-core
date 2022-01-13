@@ -18,6 +18,7 @@ import androidx.build.AndroidXComposePlugin
 import androidx.build.LibraryGroups
 import androidx.build.Publish
 import androidx.build.LibraryType
+import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -186,4 +187,10 @@ if (System.getProperty("os.name") == "Mac OS X") {
             }
         }
     }
+}
+
+project.tasks.withType(KotlinJsCompile::class.java).configureEach {
+    kotlinOptions.freeCompilerArgs += listOf(
+        //"-Xir-dce-runtime-diagnostic=log"
+    )
 }
