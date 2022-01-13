@@ -37,4 +37,4 @@ interface WindowExceptionHandlerFactory {
  * The CompositionLocal that provides [WindowExceptionHandlerFactory].
  */
 @ExperimentalComposeUiApi
-val LocalWindowExceptionHandlerFactory = staticCompositionLocalOf { DefaultWindowExceptionHandlerFactory }
+val LocalWindowExceptionHandlerFactory = staticCompositionLocalOf<WindowExceptionHandlerFactory> { DefaultWindowExceptionHandlerFactory }
