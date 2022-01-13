@@ -143,8 +143,8 @@ object LibraryVersions {
     val WEAR_TILES = Version("1.1.0-alpha01")
     val WEAR_WATCHFACE = Version("1.1.0-alpha01")
     val WEBKIT = Version("1.5.0-alpha01")
-    val WINDOW = Version("1.0.0-rc01")
-    val WINDOW_EXTENSIONS = Version("1.0.0-rc01")
-    val WINDOW_SIDECAR = Version("1.0.0-rc01")
+    val WINDOW = Version("1.0.0")
+    val WINDOW_EXTENSIONS = Version("1.0.0")
+    val WINDOW_SIDECAR = Version("1.0.0")
     val WORK = Version("2.8.0-alpha01")
 }
