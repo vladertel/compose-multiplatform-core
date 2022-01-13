@@ -33,6 +33,10 @@ open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
         val androidMain = sourceSets.getByName("androidMain")
         val jvmMain = getOrCreateJvmMain()
         androidMain.dependsOn(jvmMain)
+
+        val androidTest = sourceSets.getByName("androidTest")
+        val jvmTest = getOrCreateJvmTest()
+        androidTest.dependsOn(jvmTest)
     }
 
     override fun desktop(): Unit = multiplatformExtension.run {
@@ -41,6 +45,10 @@ open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
         val desktopMain = sourceSets.getByName("desktopMain")
         val jvmMain = getOrCreateJvmMain()
         desktopMain.dependsOn(jvmMain)
+
+        val desktopTest = sourceSets.getByName("desktopTest")
+        val jvmTest = getOrCreateJvmTest()
+        desktopTest.dependsOn(jvmTest)
     }
 
     override fun js(): Unit = multiplatformExtension.run {
@@ -96,13 +104,19 @@ open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
         uikitArm64Test.dependsOn(uikitTest)
     }
 
-    private fun getOrCreateJvmMain(): KotlinSourceSet = multiplatformExtension.run {
-        val jvmMainName = "jvmMain"
-        return sourceSets.findByName(jvmMainName) ?: run {
-            sourceSets.create(jvmMainName).apply {
-                val commonMain = sourceSets.getByName("commonMain")
-                dependsOn(commonMain)
+    private fun getOrCreateJvmMain(): KotlinSourceSet =
+        getOrCreateSourceSet("jvmMain", "commonMain")
+
+    private fun getOrCreateJvmTest(): KotlinSourceSet =
+        getOrCreateSourceSet("jvmTest", "commonTest")
+
+    private fun getOrCreateSourceSet(
+        name: String,
+        dependsOnSourceSetName: String
+    ): KotlinSourceSet = multiplatformExtension.run {
+        sourceSets.findByName(name)
+            ?: sourceSets.create(name).apply {
+                    dependsOn(sourceSets.getByName(dependsOnSourceSetName))
             }
-        }
     }
 }
