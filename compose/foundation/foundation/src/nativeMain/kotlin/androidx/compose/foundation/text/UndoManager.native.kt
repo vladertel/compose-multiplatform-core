@@ -16,4 +16,4 @@
 
 package androidx.compose.foundation.text
 
-internal actual fun timeNowMillis(): Long = kotlin.system.getTimeNanos() / 1_000_000
+internal actual fun timeNowMillis(): Long = kotlin.system.getTimeMillis()
