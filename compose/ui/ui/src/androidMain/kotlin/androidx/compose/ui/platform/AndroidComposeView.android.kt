@@ -1528,6 +1528,7 @@ internal object AndroidComposeViewVerificationHelperMethodsO {
 
 @RequiresApi(Build.VERSION_CODES.N)
 internal object AndroidComposeViewVerificationHelperMethodsN {
+    @OptIn(ExperimentalComposeUiApi::class)
     @DoNotInline
     @RequiresApi(Build.VERSION_CODES.N)
     fun setPointerIcon(view: View, icon: PointerIcon?) {

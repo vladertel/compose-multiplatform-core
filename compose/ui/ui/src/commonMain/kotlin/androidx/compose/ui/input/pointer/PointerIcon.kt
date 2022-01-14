@@ -33,14 +33,23 @@ object PointerIconDefaults {
 /**
  * Represents a pointer icon to use in [Modifier.pointerHoverIcon]
  */
+@ExperimentalComposeUiApi
 interface PointerIcon
 
+@OptIn(ExperimentalComposeUiApi::class)
 internal expect val pointerIconDefault: PointerIcon
+
+@OptIn(ExperimentalComposeUiApi::class)
 internal expect val pointerIconCrosshair: PointerIcon
+
+@OptIn(ExperimentalComposeUiApi::class)
 internal expect val pointerIconText: PointerIcon
+
+@OptIn(ExperimentalComposeUiApi::class)
 internal expect val pointerIconHand: PointerIcon
 
 internal interface PointerIconService {
+    @OptIn(ExperimentalComposeUiApi::class)
     var current: PointerIcon
 }
 
@@ -54,6 +63,7 @@ internal interface PointerIconService {
  * @param overrideDescendants when false (by default) descendants are able to set their own pointer
  * icon. if true it overrides descendants' icon.
  */
+@ExperimentalComposeUiApi
 fun Modifier.pointerHoverIcon(icon: PointerIcon, overrideDescendants: Boolean = false) =
     composed(
         inspectorInfo = debugInspectorInfo {
