@@ -132,24 +132,14 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 // kotlinCoroutinesTest is copy-pasted in source code to support multiplarform tests
                 // implementation(libs.kotlinCoroutinesTest)
             }
-            desktopTest {
-                dependsOn jvmTest
-            }
-            androidTest {
-                dependsOn jvmTest
-            }
             jsTest {
                 dependencies {
                     implementation(libs.kotlinTestJs)
                 }
             }
             nativeTest {
-                dependsOn(commonTest)
                 kotlin.srcDir("src/nativeTest/kotlin")
             }
-            macosX64Test.dependsOn(nativeTest)
-            macosArm64Test.dependsOn(nativeTest)
-            uikitX64Test.dependsOn(nativeTest)
         }
     }
     dependencies {
