@@ -51,9 +51,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.PointerIconDefaults
-import androidx.compose.ui.input.pointer.PointerIconService
-import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
@@ -231,7 +228,6 @@ internal class SkiaBasedOwner(
     val needRender get() = needLayout || needDraw
     var onNeedRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
-    var containerCursor: PlatformComponentWithCursor? = null
 
     fun render(canvas: org.jetbrains.skia.Canvas) {
         needLayout = false
@@ -260,6 +256,9 @@ internal class SkiaBasedOwner(
         needDraw = true
         onNeedRender?.invoke()
     }
+
+    var contentSize = IntSize.Zero
+        private set
 
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
@@ -337,13 +336,10 @@ internal class SkiaBasedOwner(
         root.draw(canvas.asComposeCanvas())
     }
 
-    private var desiredPointerIcon: PointerIcon? = null
-
     private val scheduleSyntheticEvents = component::scheduleSyntheticMoveEvent
 
     internal fun processPointerInput(event: PointerInputEvent, isInBounds: Boolean = true): ProcessResult {
         measureAndLayout()
-        desiredPointerIcon = null
         return pointerInputEventProcessor.process(
             event,
             this,
@@ -380,7 +376,17 @@ internal expect fun sendKeyEvent(
     keyEvent: KeyEvent
 ): Boolean
 
+internal expect fun commitPointerIcon(
+    containerCursor: PlatformComponentWithCursor?
+)
+
+@OptIn(ExperimentalComposeUiApi::class)
 internal expect fun setPointerIcon(
     containerCursor: PlatformComponentWithCursor?,
     icon: PointerIcon?
 )
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal expect fun getPointerIcon(
+    containerCursor: PlatformComponentWithCursor?
+): PointerIcon

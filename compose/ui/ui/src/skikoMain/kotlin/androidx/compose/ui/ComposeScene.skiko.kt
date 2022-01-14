@@ -19,10 +19,14 @@ import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
 import androidx.compose.runtime.CompositionContext
+import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Recomposer
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
@@ -35,6 +39,7 @@ import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.areAnyPressed
 import androidx.compose.ui.node.LayoutNode
+import androidx.compose.ui.platform.AccessibilityController
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.SkiaBasedOwner
 import androidx.compose.ui.platform.PlatformInput
@@ -74,7 +79,7 @@ internal val LocalComposeScene = staticCompositionLocalOf<ComposeScene> {
  */
 class ComposeScene internal constructor(
     coroutineContext: CoroutineContext = Dispatchers.Unconfined,
-    val component: PlatformComponent,
+    internal val component: PlatformComponent,
     density: Density = Density(1f),
     private val invalidate: () -> Unit = {}
 ) {
@@ -215,7 +220,6 @@ class ComposeScene internal constructor(
         owner.onNeedRender = ::invalidateIfNeeded
         owner.onDispatchCommand = ::dispatchCommand
         owner.constraints = constraints
-        owner.containerCursor = component
         owner.accessibilityController = makeAccessibilityController(
             owner,
             component
