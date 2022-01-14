@@ -103,6 +103,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             commonTest.dependencies {
                 implementation kotlin("test")
                 implementation(libs.kotlinCoroutinesTest)
+                // TODO: do we need it, or is it a rebase artifact?
+                implementation("org.jetbrains.kotlinx:atomicfu:0.14.4")
             }
 
             androidAndroidTest {
