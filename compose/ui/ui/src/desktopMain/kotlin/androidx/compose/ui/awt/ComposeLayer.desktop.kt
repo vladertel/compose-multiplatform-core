@@ -41,7 +41,6 @@ import kotlinx.coroutines.swing.Swing
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkikoView
-import java.awt.Cursor
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
@@ -93,7 +92,7 @@ internal class ComposeLayer {
         }
     }
 
-    private val scene = ComposeScene(
+    internal val scene = ComposeScene(
         Dispatchers.Swing + coroutineExceptionHandler,
         _component,
         Density(1f),

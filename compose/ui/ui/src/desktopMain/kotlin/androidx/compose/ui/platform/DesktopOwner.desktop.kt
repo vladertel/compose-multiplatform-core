@@ -56,6 +56,7 @@ internal actual fun getPointerIcon(
         ?: PointerIconDefaults.Default
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 internal actual fun setPointerIcon(
     containerCursor: PlatformComponentWithCursor?,
     icon: PointerIcon?

@@ -257,6 +257,9 @@ internal class SkiaBasedOwner(
         onNeedRender?.invoke()
     }
 
+    var contentSize = IntSize.Zero
+        private set
+
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
         if (
