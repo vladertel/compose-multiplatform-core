@@ -389,6 +389,9 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
                             append("primary: ${buttons.isPrimaryPressed}\t")
                             append("secondary: ${buttons.isSecondaryPressed}\t")
                             append("tertiary: ${buttons.isTertiaryPressed}\t")
+                            append("primary: ${buttons.isPrimaryPressed}\t")
+                            append("back: ${buttons.isBackPressed}\t")
+                            append("forward: ${buttons.isForwardPressed}\t")
 
                             append("\n\nKeyboard modifiers pressed:\n")
 

@@ -19,11 +19,14 @@ package androidx.compose.ui.awt
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.HitPathTracker
+import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.platform.PlatformComponent
-import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.platform.AccessibilityControllerImpl
+import androidx.compose.ui.platform.DesktopPlatform
+import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.window.density
@@ -37,7 +40,10 @@ import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Point
+import java.awt.Toolkit
+import java.awt.Window
 import java.awt.event.FocusEvent
+import java.awt.event.InputEvent
 import java.awt.event.InputMethodEvent
 import java.awt.event.InputMethodListener
 import java.awt.event.KeyAdapter
@@ -53,11 +59,6 @@ import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
     private var isDisposed = false
-
-    // TODO(demin): probably we need to get rid of asynchronous events. it was added because of
-    //  slow lazy scroll. But events become unpredictable, and we can't consume them.
-    //  Alternative solution to a slow scroll - merge multiple scroll events into a single one.
-    private val events = AWTDebounceEventQueue()
 
     private val _component = ComponentImpl()
     val component: SkiaLayer get() = _component
@@ -139,12 +140,21 @@ internal class ComposeLayer {
             density = (this as SkiaLayer).density
             this@ComposeLayer.scene.density = density
         }
+
+        override fun scheduleSyntheticMoveEvent() {
+            needSendSyntheticMove = true
+            SwingUtilities.invokeLater {
+                if (isDisposed) return@invokeLater
+                flushSyntheticMoveEvent()
+            }
+        }
     }
 
     init {
         _component.skikoView = object : SkikoView {
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
                 try {
+                    flushSyntheticMoveEvent()
                     scene.render(canvas, nanoTime)
                 } catch (e: Throwable) {
                     if (System.getProperty("compose.desktop.render.ignore.errors") == null) {
@@ -156,69 +166,132 @@ internal class ComposeLayer {
 
         _component.addInputMethodListener(object : InputMethodListener {
             override fun caretPositionChanged(event: InputMethodEvent?) {
+                if (isDisposed) return
                 if (event != null) {
                     scene.onInputMethodEvent(event)
                 }
             }
 
-            override fun inputMethodTextChanged(event: InputMethodEvent) = events.post {
+            override fun inputMethodTextChanged(event: InputMethodEvent) {
+                if (isDisposed) return
                 scene.onInputMethodEvent(event)
             }
         })
 
         _component.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) = Unit
-
-            override fun mousePressed(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseReleased(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseEntered(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseExited(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
+            override fun mousePressed(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseReleased(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseEntered(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseExited(event: MouseEvent) = onMouseEvent(event)
         })
         _component.addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseDragged(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseMoved(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
+            override fun mouseDragged(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseMoved(event: MouseEvent) = onMouseEvent(event)
         })
         _component.addMouseWheelListener { event ->
-            events.post {
-                scene.onMouseWheelEvent(density, event)
-            }
+            onMouseWheelEvent(event)
         }
         _component.focusTraversalKeysEnabled = false
         _component.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(event: KeyEvent) {
-                scene.sendKeyEvent(event)
-            }
-
-            override fun keyReleased(event: KeyEvent) {
-                scene.sendKeyEvent(event)
-            }
-
-            override fun keyTyped(event: KeyEvent) {
-                scene.sendKeyEvent(event)
-            }
+            override fun keyPressed(event: KeyEvent) = onKeyEvent(event)
+            override fun keyReleased(event: KeyEvent) = onKeyEvent(event)
+            override fun keyTyped(event: KeyEvent) = onKeyEvent(event)
         })
+    }
+
+    private fun onMouseEvent(event: MouseEvent) {
+        // AWT can send events after the window is disposed
+        if (isDisposed) return
+        checkSyntheticEvents(event)
+        scene.onMouseEvent(density, event)
+    }
+
+    private fun onMouseWheelEvent(event: MouseWheelEvent) {
+        if (isDisposed) return
+        checkSyntheticEvents(event)
+        scene.onMouseWheelEvent(density, event)
+    }
+
+    private var lastMouseEvent: MouseEvent? = null
+    private var needSendSyntheticMove = false
+
+    private fun flushSyntheticMoveEvent() {
+        val lastMouseEvent = lastMouseEvent ?: return
+        if (needSendSyntheticMove) {
+            needSendSyntheticMove = false
+            val source = lastMouseEvent.source as Component
+            val event = MouseEvent(
+                source,
+                MouseEvent.MOUSE_MOVED,
+                System.nanoTime(),
+                lastMouseEvent.modifiersEx,
+                lastMouseEvent.x,
+                lastMouseEvent.y,
+                0,
+                false
+            )
+            scene.onMouseEvent(density, event)
+        }
+    }
+
+    /**
+     * Compose can't work well if we miss Move event before, for example, Scroll event.
+     *
+     * This is because of the implementation of [HitPathTracker].
+     *
+     * Imaging two boxes:
+     * ```
+     * Column {
+     *   Box(size=10)
+     *   Box(size=10)
+     * }
+     * ```
+     *
+     * - we send Move's in the right order:
+     * 1. Move(5,5) -> box1 receives Enter(5,5)
+     * 2. Move(5,15) -> box1 receives Exit(5,15), box2 receives Enter(5,15)
+     * 3. Scroll(5,15) -> box2 receives Scroll(5,15)
+     *
+     * - we skip some Move's (AWT can skip them):
+     * 1. Move(5,5) -> box1 receives Enter(5,5)
+     * 2. Scroll(5,15) -> box1 receives Scroll(5,15), box2 receives Scroll(5,15)
+     * 3. Move(5,16) -> box2 receives Enter(5,16)
+     *
+     * You can see that box1 loses the Exit event.
+     */
+    private fun checkSyntheticEvents(event: MouseEvent) {
+        val lastMouseEvent = lastMouseEvent
+
+        val isMove = event.id == MouseEvent.MOUSE_MOVED
+            || event.id == MouseEvent.MOUSE_DRAGGED
+            || event.id == MouseEvent.MOUSE_ENTERED
+            || event.id == MouseEvent.MOUSE_EXITED
+
+        val isMoved = lastMouseEvent?.isSamePosition(event) == false
+
+        if (!isMove && isMoved) {
+            needSendSyntheticMove = true
+        }
+
+        this.lastMouseEvent = event
+
+        flushSyntheticMoveEvent()
+    }
+
+    private fun MouseEvent.isSamePosition(other: MouseEvent) =
+        x == other.x && y == other.y
+
+    private fun onKeyEvent(event: KeyEvent) {
+        if (isDisposed) return
+        if (scene.sendKeyEvent(ComposeKeyEvent(event))) {
+            event.consume()
+        }
     }
 
     fun dispose() {
         check(!isDisposed)
-        scene.dispose()
-        events.cancel()
+        scene.close()
         _component.dispose()
         _initContent = null
         isDisposed = true
@@ -272,6 +345,8 @@ private fun ComposeScene.onMouseEvent(
         position = Offset(event.x.toFloat(), event.y.toFloat()) * density,
         timeMillis = event.`when`,
         type = PointerType.Mouse,
+        buttons = event.buttons,
+        keyboardModifiers = event.keyboardModifiers,
         nativeEvent = event
     )
 }
@@ -292,11 +367,46 @@ private fun ComposeScene.onMouseWheelEvent(
         },
         timeMillis = event.`when`,
         type = PointerType.Mouse,
+        buttons = event.buttons,
+        keyboardModifiers = event.keyboardModifiers,
         nativeEvent = event
     )
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
-private fun ComposeScene.sendKeyEvent(event: KeyEvent) {
-    sendKeyEvent(ComposeKeyEvent(event))
+private val MouseEvent.buttons get() = PointerButtons(
+    isPrimaryPressed = (modifiersEx and MouseEvent.BUTTON1_DOWN_MASK) != 0 && !isMacOsCtrlClick,
+    isSecondaryPressed = (modifiersEx and MouseEvent.BUTTON3_DOWN_MASK) != 0 || isMacOsCtrlClick,
+    isTertiaryPressed = (modifiersEx and MouseEvent.BUTTON2_DOWN_MASK) != 0,
+    isBackPressed = (modifiersEx and MouseEvent.getMaskForButton(4)) != 0,
+    isForwardPressed = (modifiersEx and MouseEvent.getMaskForButton(5)) != 0,
+)
+
+@OptIn(ExperimentalComposeUiApi::class)
+private val MouseEvent.keyboardModifiers get() = PointerKeyboardModifiers(
+    isCtrlPressed = (modifiersEx and InputEvent.CTRL_DOWN_MASK) != 0,
+    isMetaPressed = (modifiersEx and InputEvent.META_DOWN_MASK) != 0,
+    isAltPressed = (modifiersEx and InputEvent.ALT_DOWN_MASK) != 0,
+    isShiftPressed = (modifiersEx and InputEvent.SHIFT_DOWN_MASK) != 0,
+    isAltGraphPressed = (modifiersEx and InputEvent.ALT_GRAPH_DOWN_MASK) != 0,
+    isSymPressed = false,
+    isFunctionPressed = false,
+    isCapsLockOn = getLockingKeyStateSafe(KeyEvent.VK_CAPS_LOCK),
+    isScrollLockOn = getLockingKeyStateSafe(KeyEvent.VK_SCROLL_LOCK),
+    isNumLockOn = getLockingKeyStateSafe(KeyEvent.VK_NUM_LOCK),
+)
+
+private fun getLockingKeyStateSafe(
+    mask: Int
+): Boolean = try {
+    Toolkit.getDefaultToolkit().getLockingKeyState(mask)
+} catch (_: Exception) {
+    false
 }
+
+private val MouseEvent.isMacOsCtrlClick
+    get() = (
+            DesktopPlatform.Current == DesktopPlatform.MacOS &&
+                    ((modifiersEx and InputEvent.BUTTON1_DOWN_MASK) != 0) &&
+                    ((modifiersEx and InputEvent.CTRL_DOWN_MASK) != 0)
+            )

@@ -21,8 +21,10 @@ package androidx.compose.ui.platform
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.DefaultPointerButtons
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.ui.PrimaryPressedPointerButtons
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
 import androidx.compose.ui.focus.FocusDirection
@@ -51,6 +53,8 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerIconDefaults
 import androidx.compose.ui.input.pointer.PointerIconService
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
 import androidx.compose.ui.input.pointer.PositionCalculator
@@ -74,6 +78,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.round
 
 private typealias Command = () -> Unit
 
@@ -84,8 +89,9 @@ private typealias Command = () -> Unit
 )
 internal class SkiaBasedOwner(
     private val platformInputService: PlatformInput,
+    private val component: PlatformComponent,
     density: Density = Density(1f, 1f),
-    val isPopup: Boolean = false,
+    bounds: IntRect = IntRect.Zero,
     val isFocusable: Boolean = true,
     val onDismissRequest: (() -> Unit)? = null,
     private val onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
@@ -99,7 +105,7 @@ internal class SkiaBasedOwner(
 
     internal var accessibilityController: AccessibilityController? = null
 
-    internal var bounds by mutableStateOf(IntRect.Zero)
+    var bounds by mutableStateOf(bounds)
 
     override var density by mutableStateOf(density)
 
@@ -153,16 +159,6 @@ internal class SkiaBasedOwner(
     )
 
     var constraints: Constraints = Constraints()
-        set(value) {
-            field = value
-
-            if (!isPopup) {
-                this.bounds = IntRect(
-                    IntOffset(bounds.left, bounds.top),
-                    IntSize(constraints.maxWidth, constraints.maxHeight)
-                )
-            }
-        }
 
     override val root = LayoutNode().also {
         it.measurePolicy = RootMeasurePolicy
@@ -233,18 +229,18 @@ internal class SkiaBasedOwner(
 
     override val measureIteration: Long get() = measureAndLayoutDelegate.measureIteration
 
-    private var needsLayout = true
-    private var needsDraw = true
+    private var needLayout = true
+    private var needDraw = true
 
-    val needsRender get() = needsLayout || needsDraw
-    var onNeedsRender: (() -> Unit)? = null
+    val needRender get() = needLayout || needDraw
+    var onNeedRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
     var containerCursor: PlatformComponentWithCursor? = null
 
     fun render(canvas: org.jetbrains.skia.Canvas) {
-        needsLayout = false
+        needLayout = false
         measureAndLayout()
-        needsDraw = false
+        needDraw = false
         draw(canvas)
         clearInvalidObservations()
     }
@@ -259,19 +255,23 @@ internal class SkiaBasedOwner(
     }
 
     private fun requestLayout() {
-        needsLayout = true
-        needsDraw = true
-        onNeedsRender?.invoke()
+        needLayout = true
+        needDraw = true
+        onNeedRender?.invoke()
     }
 
     private fun requestDraw() {
-        needsDraw = true
-        onNeedsRender?.invoke()
+        needDraw = true
+        onNeedRender?.invoke()
     }
 
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
-        if (measureAndLayoutDelegate.measureAndLayout()) {
+        if (
+            measureAndLayoutDelegate.measureAndLayout(
+                scheduleSyntheticEvents.takeIf { sendPointerUpdate }
+            )
+        ) {
             requestDraw()
         }
         measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
@@ -337,18 +337,19 @@ internal class SkiaBasedOwner(
 
     private var desiredPointerIcon: PointerIcon? = null
 
-    internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
+    private val scheduleSyntheticEvents = component::scheduleSyntheticMoveEvent
+
+    internal fun processPointerInput(event: PointerInputEvent, isInBounds: Boolean = true): ProcessResult {
         measureAndLayout()
         desiredPointerIcon = null
         return pointerInputEventProcessor.process(
             event,
             this,
-            isInBounds = event.pointers.all {
-                it.position.x in 0f..root.width.toFloat() &&
-                    it.position.y in 0f..root.height.toFloat()
+            isInBounds = isInBounds && event.pointers.all {
+                bounds.contains(it.position.round())
             }
         ).also {
-            setPointerIcon(containerCursor, desiredPointerIcon)
+            commitPointerIcon(component)
         }
     }
 
@@ -357,7 +358,8 @@ internal class SkiaBasedOwner(
             PointerInputEvent(
                 PointerEventType.Unknown,
                 timeMillis,
-                pointers.map { it.toPointerInputEventData() }
+                pointers.map { it.toPointerInputEventData() },
+                if (pointers.any { it.down }) PrimaryPressedPointerButtons else DefaultPointerButtons
             )
         )
     }
@@ -365,8 +367,8 @@ internal class SkiaBasedOwner(
     override val pointerIconService: PointerIconService =
         object : PointerIconService {
             override var current: PointerIcon
-                get() = desiredPointerIcon ?: PointerIconDefaults.Default
-                set(value) { desiredPointerIcon = value }
+                get() = getPointerIcon(component)
+                set(value) { setPointerIcon(component, value) }
         }
 }
 
