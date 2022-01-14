@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package androidx.compose.foundation
 
 import androidx.compose.foundation.layout.Column
@@ -27,10 +29,12 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -49,26 +53,34 @@ import androidx.compose.ui.window.rememberCursorPositionProvider
 // https://material.io/design/interaction/states.html#hover
 // https://material.io/components/menus#specs
 
+@ExperimentalFoundationApi
 val LightDefaultContextMenuRepresentation = DefaultContextMenuRepresentation(
     backgroundColor = Color.White,
     textColor = Color.Black,
     itemHoverColor = Color.Black.copy(alpha = 0.04f)
 )
 
+@ExperimentalFoundationApi
 val DarkDefaultContextMenuRepresentation = DefaultContextMenuRepresentation(
     backgroundColor = Color(0xFF121212), // like surface in darkColors
     textColor = Color.White,
     itemHoverColor = Color.White.copy(alpha = 0.04f)
 )
 
-@OptIn(ExperimentalComposeUiApi::class)
+internal actual val LocalContextMenuRepresentation:
+    ProvidableCompositionLocal<ContextMenuRepresentation> = staticCompositionLocalOf {
+        LightDefaultContextMenuRepresentation
+    }
+
+@ExperimentalFoundationApi
 class DefaultContextMenuRepresentation(
     private val backgroundColor: Color,
     private val textColor: Color,
     private val itemHoverColor: Color
 ) : ContextMenuRepresentation {
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
-    override fun Representation(state: ContextMenuState, items: List<ContextMenuItem>) {
+    override fun Representation(state: ContextMenuState, data: ContextMenuData) {
         val isOpen = state.status is ContextMenuState.Status.Open
         if (isOpen) {
             Popup(
@@ -93,7 +105,7 @@ class DefaultContextMenuRepresentation(
                         .verticalScroll(rememberScrollState())
 
                 ) {
-                    items.distinctBy { it.label }.forEach { item ->
+                    data.itemsSeq.forEach { item ->
                         MenuItemContent(
                             itemHoverColor = itemHoverColor,
                             onClick = {
