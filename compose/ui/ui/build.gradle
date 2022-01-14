@@ -176,15 +176,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             jsMain.dependsOn(jsNativeMain)
             nativeMain.dependsOn(jsNativeMain)
 
-            darwinMain.dependsOn(nativeMain)
-            macosMain.dependsOn(darwinMain)
-            macosX64Main.dependsOn(macosMain)
-            macosArm64Main.dependsOn(macosMain)
-            uikitMain.dependsOn(darwinMain)
-            uikitX64Main.dependsOn(uikitMain)
-            uikitArm64Main.dependsOn(uikitMain)
-
-
             androidTest.dependencies {
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
