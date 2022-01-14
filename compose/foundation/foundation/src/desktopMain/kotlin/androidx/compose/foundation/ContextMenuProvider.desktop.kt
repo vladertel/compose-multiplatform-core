@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package androidx.compose.foundation
 
 import androidx.compose.foundation.gestures.forEachGesture
@@ -36,17 +38,8 @@ import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.util.fastAll
 
-/**
- * Defines a container where context menu is available. Menu is triggered by right mouse clicks.
- * Representation of menu is defined by [LocalContextMenuRepresentation]`
- *
- * @param items List of context menu items. Final context menu contains all items from descendant
- * [ContextMenuArea] and [ContextMenuDataProvider].
- * @param state [ContextMenuState] of menu controlled by this area.
- * @param enabled If false then gesture detector is disabled.
- * @param content The content of the [ContextMenuArea].
- */
 @Composable
+@ExperimentalFoundationApi
 fun ContextMenuArea(
     items: () -> List<ContextMenuItem>,
     state: ContextMenuState = remember { ContextMenuState() },
@@ -59,21 +52,12 @@ fun ContextMenuArea(
         Box(Modifier.contextMenuDetector(state, enabled), propagateMinConstraints = true) {
             content()
         }
-        LocalContextMenuRepresentation.current.Representation(state, data.allItems)
+        LocalContextMenuRepresentation.current.Representation(state, data)
     }
 }
 
-/**
- * Adds items to the hierarchy of context menu items. Can be used, for example, to customize
- * context menu of text fields.
- *
- * @param items List of context menu items. Final context menu contains all items from descendant
- * [ContextMenuArea] and [ContextMenuDataProvider].
- * @param content The content of the [ContextMenuDataProvider].
- *
- * @see [[ContextMenuArea]]
- */
 @Composable
+@ExperimentalFoundationApi
 fun ContextMenuDataProvider(
     items: () -> List<ContextMenuItem>,
     content: @Composable () -> Unit
@@ -134,12 +118,7 @@ private suspend fun AwaitPointerEventScope.awaitEventFirstDown(): PointerEvent {
     return event
 }
 
-/**
- * Individual element of context menu.
- *
- * @param label The text to be displayed as a context menu item.
- * @param onClick The action to be executed after click on the item.
- */
+@ExperimentalFoundationApi
 class ContextMenuItem(
     val label: String,
     val onClick: () -> Unit
@@ -167,24 +146,18 @@ class ContextMenuItem(
     }
 }
 
-/**
- * Data container contains all [ContextMenuItem]s were defined previously in the hierarchy.
- * [ContextMenuRepresentation] uses it to display context menu.
- */
+@ExperimentalFoundationApi
 class ContextMenuData(
     val items: () -> List<ContextMenuItem>,
     val next: ContextMenuData?
 ) {
 
-    internal val allItems: List<ContextMenuItem> by lazy {
-        allItemsSeq.toList()
-    }
-
-    internal val allItemsSeq: Sequence<ContextMenuItem>
-        get() = sequence {
-            yieldAll(items())
-            next?.let { yieldAll(it.allItemsSeq) }
-        }
+    internal val itemsSeq: Sequence<ContextMenuItem>
+        get() =
+            sequence {
+                yieldAll(items())
+                next?.let { yieldAll(it.itemsSeq) }
+            }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -205,11 +178,7 @@ class ContextMenuData(
     }
 }
 
-/**
- * Represents a state of context menu in [ContextMenuArea]. [status] is implemented
- * via [androidx.compose.runtime.MutableState] so it's possible to track it inside @Composable
- * functions.
- */
+@ExperimentalFoundationApi
 class ContextMenuState {
     sealed class Status {
         class Open(
@@ -241,22 +210,11 @@ class ContextMenuState {
     var status: Status by mutableStateOf(Status.Closed)
 }
 
-/**
- * Implementations of this interface are responsible for displaying context menus. There are two
- * implementations out of the box: [LightDefaultContextMenuRepresentation] and
- * [DarkDefaultContextMenuRepresentation].
- * To change currently used representation, different value for [LocalContextMenuRepresentation]
- * could be provided.
- */
+@ExperimentalFoundationApi
 interface ContextMenuRepresentation {
     @Composable
-    fun Representation(state: ContextMenuState, items: List<ContextMenuItem>)
+    fun Representation(state: ContextMenuState, data: ContextMenuData)
 }
 
-/**
- * Composition local that keeps [ContextMenuRepresentation] which is used by [ContextMenuArea]s.
- */
-val LocalContextMenuRepresentation:
-    ProvidableCompositionLocal<ContextMenuRepresentation> = staticCompositionLocalOf {
-    LightDefaultContextMenuRepresentation
-}
+internal expect val LocalContextMenuRepresentation:
+    ProvidableCompositionLocal<ContextMenuRepresentation>
