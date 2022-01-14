@@ -29,8 +29,10 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.debugInspectorInfo
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * Configure component to be hoverable via pointer enter/exit events.
@@ -88,19 +90,18 @@ fun Modifier.hoverable(
 
     if (enabled) {
         Modifier
-// TODO(b/202505231):
-//  because we only react to input events, and not on layout changes, we can have a situation when
-//  Composable is under the cursor, but not hovered. To fix that, we have two ways:
-//  a. Trigger Enter/Exit on any layout change, inside Owner
-//  b. Manually react on layout changes via Modifier.onGloballyPosition, and check something like
-//  LocalPointerPosition.current
             .pointerInput(interactionSource) {
-                val currentContext = currentCoroutineContext()
-                while (currentContext.isActive) {
-                    val event = awaitPointerEventScope { awaitPointerEvent() }
-                    when (event.type) {
-                        PointerEventType.Enter -> emitEnter()
-                        PointerEventType.Exit -> emitExit()
+                coroutineScope {
+                    val currentContext = currentCoroutineContext()
+                    val outerScope = this
+                    awaitPointerEventScope {
+                        while (currentContext.isActive) {
+                            val event = awaitPointerEvent()
+                            when (event.type) {
+                                PointerEventType.Enter -> outerScope.launch { emitEnter() }
+                                PointerEventType.Exit -> outerScope.launch { emitExit() }
+                            }
+                        }
                     }
                 }
             }
