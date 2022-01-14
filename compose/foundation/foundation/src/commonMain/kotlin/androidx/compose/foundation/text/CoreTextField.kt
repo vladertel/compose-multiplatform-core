@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package androidx.compose.foundation.text
 
 import androidx.compose.foundation.gestures.Orientation
@@ -33,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusManager
@@ -317,8 +320,8 @@ internal fun CoreTextField(
         Modifier.mouseDragGestureDetector(
             observer = manager.mouseSelectionObserver,
             enabled = enabled
-        ).pointerHoverIcon(textPointerIcon)
-    }
+        )
+    }.pointerHoverIcon(textPointerIcon)
 
     val drawModifier = Modifier.drawBehind {
         state.layoutResult?.let { layoutResult ->
