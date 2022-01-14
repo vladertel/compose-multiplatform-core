@@ -475,6 +475,7 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
         val text = remember {
             mutableStateOf("Hello \uD83E\uDDD1\uD83C\uDFFF\u200D\uD83E\uDDB0")
         }
+        @OptIn(ExperimentalFoundationApi::class)
         ContextMenuDataProvider(
             items = {
                 listOf(ContextMenuItem("Clear") { text.value = ""; focusItem1.requestFocus() })

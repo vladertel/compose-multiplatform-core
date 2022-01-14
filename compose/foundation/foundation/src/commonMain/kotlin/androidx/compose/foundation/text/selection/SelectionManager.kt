@@ -723,8 +723,8 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
 
     fun contextMenuOpenAdjustment(position: Offset) {
         val isEmptySelection = selection?.toTextRange()?.collapsed ?: true
-        // TODO(b/209483184) the logic should be more complex here, it should check that current
-        // selection doesn't include click position
+        // the logic should be more complex here, it should check that current selection doesn't
+        // include click position
         if (isEmptySelection) {
             startSelection(
                 position = position,
