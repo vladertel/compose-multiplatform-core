@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package androidx.compose.foundation.text
 
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ContextMenuState
 import androidx.compose.foundation.DesktopPlatform
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.selection.SelectionManager
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalLocalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -66,6 +70,7 @@ internal fun OpenMenuAdjuster(state: ContextMenuState, adjustAction: (Offset) ->
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun TextFieldSelectionManager.contextMenuItems(): () -> List<ContextMenuItem> {
     val platformLocalization = LocalLocalization.current
@@ -111,6 +116,7 @@ internal fun TextFieldSelectionManager.contextMenuItems(): () -> List<ContextMen
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun SelectionManager.contextMenuItems(): () -> List<ContextMenuItem> {
     val localization = LocalLocalization.current
