@@ -102,9 +102,12 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     api("androidx.annotation:annotation:1.1.0")
                 }
             }
-
-            commonTest.dependencies {
-                implementation(kotlin("test-junit"))
+            commonTest {
+                kotlin.srcDir("src/test/kotlin")
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore)
+                    implementation("org.jetbrains.kotlinx:atomicfu:0.14.4")
+                }
             }
 
             androidAndroidTest.dependencies {
