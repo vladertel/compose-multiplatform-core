@@ -349,9 +349,14 @@ class ComposeScene internal constructor(
     ) = list.indexOf(this) > list.indexOf(targetOwner)
 
     // TODO(demin): return Boolean (when it is consumed).
-    //  see ComposeLayer todo about AWTDebounceEventQueue
     /**
      * Send pointer event to the content.
+     *
+     * Don't send non-Move event with a different position without sending Move event first.
+     * Otherwise hover can lose Exit/Enter events.
+     *
+     * Do: Move(5,5) -> Move(15,5) -> Scroll(15,5) -> Press(15,5) -> Move(20,5) -> Release(20,5)
+     * Don't: Move(5,5) -> Scroll(15,5) -> Press(15,5) -> Release(20,5)
      *
      * @param eventType Indicates the primary reason that the event was sent.
      * @param position The [Offset] of the current pointer event, relative to the content.
