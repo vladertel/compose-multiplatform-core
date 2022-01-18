@@ -51,7 +51,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.PointerIconDefaults
 import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
@@ -86,6 +85,7 @@ private typealias Command = () -> Unit
 )
 internal class SkiaBasedOwner(
     private val platformInputService: PlatformInput,
+    private val component: PlatformComponent,
     density: Density = Density(1f, 1f),
     val isPopup: Boolean = false,
     val isFocusable: Boolean = true,
@@ -235,18 +235,17 @@ internal class SkiaBasedOwner(
 
     override val measureIteration: Long get() = measureAndLayoutDelegate.measureIteration
 
-    private var needsLayout = true
-    private var needsDraw = true
+    private var needLayout = true
+    private var needDraw = true
 
-    val needsRender get() = needsLayout || needsDraw
-    var onNeedsRender: (() -> Unit)? = null
+    val needRender get() = needLayout || needDraw
+    var onNeedRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
-    var containerCursor: PlatformComponentWithCursor? = null
 
     fun render(canvas: org.jetbrains.skia.Canvas) {
-        needsLayout = false
+        needLayout = false
         measureAndLayout()
-        needsDraw = false
+        needDraw = false
         draw(canvas)
         clearInvalidObservations()
     }
@@ -261,14 +260,14 @@ internal class SkiaBasedOwner(
     }
 
     private fun requestLayout() {
-        needsLayout = true
-        needsDraw = true
-        onNeedsRender?.invoke()
+        needLayout = true
+        needDraw = true
+        onNeedRender?.invoke()
     }
 
     private fun requestDraw() {
-        needsDraw = true
-        onNeedsRender?.invoke()
+        needDraw = true
+        onNeedRender?.invoke()
     }
 
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
@@ -347,7 +346,7 @@ internal class SkiaBasedOwner(
                     it.position.y in 0f..root.height.toFloat()
             }
         ).also {
-            commitPointerIcon(containerCursor)
+            commitPointerIcon(component)
         }
     }
 
@@ -365,8 +364,8 @@ internal class SkiaBasedOwner(
     override val pointerIconService: PointerIconService =
         object : PointerIconService {
             override var current: PointerIcon
-                get() = getPointerIcon(containerCursor)
-                set(value) { setPointerIcon(containerCursor, value) }
+                get() = getPointerIcon(component)
+                set(value) { setPointerIcon(component, value) }
         }
 }
 
