@@ -272,7 +272,11 @@ internal class SkiaBasedOwner(
 
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
-        if (measureAndLayoutDelegate.measureAndLayout()) {
+        if (
+            measureAndLayoutDelegate.measureAndLayout(
+                scheduleSyntheticEvents.takeIf { sendPointerUpdate }
+            )
+        ) {
             requestDraw()
         }
         measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
@@ -335,6 +339,8 @@ internal class SkiaBasedOwner(
     fun draw(canvas: org.jetbrains.skia.Canvas) {
         root.draw(canvas.asComposeCanvas())
     }
+
+    private val scheduleSyntheticEvents = component::scheduleSyntheticMoveEvent
 
     internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
         measureAndLayout()
