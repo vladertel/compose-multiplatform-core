@@ -49,6 +49,7 @@ import kotlin.time.ExperimentalTime
 
 @OptIn(
     ExperimentalTime::class,
+    ExperimentalComposeUiApi::class,
     ExperimentalCoroutinesApi::class,
     InternalTestApi::class
 )

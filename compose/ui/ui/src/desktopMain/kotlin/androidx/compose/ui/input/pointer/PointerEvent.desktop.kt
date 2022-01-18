@@ -22,6 +22,7 @@ import java.awt.event.MouseEvent
 internal actual typealias NativePointerButtons = Int
 internal actual typealias NativePointerKeyboardModifiers = Int
 
+@ExperimentalComposeUiApi
 fun PointerButtons(
     isPrimaryPressed: Boolean = false,
     isSecondaryPressed: Boolean = false,
@@ -38,6 +39,7 @@ fun PointerButtons(
     return PointerButtons(res)
 }
 
+@ExperimentalComposeUiApi
 fun PointerKeyboardModifiers(
     isCtrlPressed: Boolean = false,
     isMetaPressed: Boolean = false,

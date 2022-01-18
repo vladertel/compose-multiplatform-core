@@ -52,6 +52,7 @@ import kotlin.time.ExperimentalTime
  * @param density Density of the content which will be used to convert [dp] units.
  * @param content Composable content which needed to be rendered.
  */
+@ExperimentalComposeUiApi
 fun renderComposeScene(
     width: Int,
     height: Int,
@@ -71,6 +72,7 @@ fun renderComposeScene(
  * @param block a function to process this [ImageComposeScene].
  * @return the result of [block] function invoked on this [ImageComposeScene].
  */
+@ExperimentalComposeUiApi
 inline fun <R> ImageComposeScene.use(
     block: (ImageComposeScene) -> R
 ): R {
@@ -101,6 +103,7 @@ inline fun <R> ImageComposeScene.use(
  * [rememberCoroutineScope]) and run recompositions.
  * @param content Composable content which needed to be rendered.
  */
+@ExperimentalComposeUiApi
 class ImageComposeScene(
     width: Int,
     height: Int,
@@ -195,6 +198,7 @@ class ImageComposeScene(
      * of the lock keys, such as Caps Lock and Num Lock.
      * @param nativeEvent The original native event.
      */
+    @OptIn(ExperimentalComposeUiApi::class)
     fun sendPointerEvent(
         eventType: PointerEventType,
         position: Offset,
