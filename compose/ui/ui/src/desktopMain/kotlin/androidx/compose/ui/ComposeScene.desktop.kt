@@ -23,6 +23,7 @@ import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventData
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.areAnyPressed
 import androidx.compose.ui.platform.AccessibilityController
 import androidx.compose.ui.platform.AccessibilityControllerImpl
 import androidx.compose.ui.platform.PlatformComponent
@@ -52,7 +53,6 @@ internal actual fun pointerInputEvent(
     timeMillis: Long,
     nativeEvent: Any?,
     type: PointerType,
-    isMousePressed: Boolean,
     pointerId: Long,
     scrollDelta: Offset,
     buttons: PointerButtons,
@@ -67,7 +67,7 @@ internal actual fun pointerInputEvent(
                 timeMillis,
                 position,
                 position,
-                isMousePressed,
+                buttons.areAnyPressed,
                 type,
                 scrollDelta = scrollDelta
             )

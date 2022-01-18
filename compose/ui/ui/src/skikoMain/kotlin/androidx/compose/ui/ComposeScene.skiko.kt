@@ -140,9 +140,6 @@ class ComposeScene internal constructor(
 
     private val defaultPointerStateTracker = DefaultPointerStateTracker()
 
-    private var pointerId = 0L
-    private var isMousePressed = false
-
     private val job = Job()
     private val coroutineScope = CoroutineScope(coroutineContext + job)
     // We use FlushCoroutineDispatcher for effectDispatcher not because we need `flush` for
@@ -390,22 +387,18 @@ class ComposeScene internal constructor(
         val actualButtons = buttons ?: defaultPointerStateTracker.buttons
         val actualKeyboardModifiers = keyboardModifiers ?: defaultPointerStateTracker.keyboardModifiers
 
-        when (eventType) {
-            PointerEventType.Press -> isMousePressed = true
-            PointerEventType.Release -> isMousePressed = false
-        }
         val event = pointerInputEvent(
             eventType,
             position,
             timeMillis,
             nativeEvent,
             type,
-            isMousePressed,
-            pointerId,
+            pointerId = 0,
             scrollDelta,
             actualButtons,
             actualKeyboardModifiers
         )
+
         when (eventType) {
             PointerEventType.Press -> onMousePressed(event)
             PointerEventType.Release -> onMouseReleased(event)
@@ -435,7 +428,6 @@ class ComposeScene internal constructor(
     private fun onMouseReleased(event: PointerInputEvent) {
         val owner = hoveredOwner ?: focusedOwner
         owner?.processPointerInput(event)
-        pointerId += 1
     }
 
     private var pointLocation = Offset.Zero
@@ -474,7 +466,6 @@ internal expect fun pointerInputEvent(
     timeMillis: Long,
     nativeEvent: Any?,
     type: PointerType,
-    isMousePressed: Boolean,
     pointerId: Long,
     scrollDelta: Offset,
     buttons: PointerButtons,
