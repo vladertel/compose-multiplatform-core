@@ -277,6 +277,10 @@ class ComposeSceneTest {
         screenshotRule.snap(surface, "frame1_initial")
         assertFalse(hasRenders())
 
+        scene.sendPointerEvent(PointerEventType.Enter, Offset(2f, 2f))
+        scene.sendPointerEvent(PointerEventType.Move, Offset(2f, 2f))
+        awaitNextRender() // TODO(demin): why we need extra frame when we send hover + press? maybe a race between hoverable and clickable?
+
         scene.sendPointerEvent(PointerEventType.Press, Offset(2f, 2f))
         awaitNextRender()
         screenshotRule.snap(surface, "frame2_onMousePressed")
@@ -286,10 +290,17 @@ class ComposeSceneTest {
         assertFalse(hasRenders())
 
         scene.sendPointerEvent(PointerEventType.Release, Offset(1f, 1f))
+        awaitNextRender() // TODO(demin): why we need extra frame when we send hover + press? maybe a race between hoverable and clickable?
+
+        scene.sendPointerEvent(PointerEventType.Move, Offset(-1f, -1f))
+        scene.sendPointerEvent(PointerEventType.Exit, Offset(-1f, -1f))
         awaitNextRender()
         screenshotRule.snap(surface, "frame3_onMouseReleased")
 
+        scene.sendPointerEvent(PointerEventType.Enter, Offset(1f, 1f))
         scene.sendPointerEvent(PointerEventType.Move, Offset(1f, 1f))
+        awaitNextRender() // TODO(demin): why we need extra frame when we send hover + press? maybe a race between hoverable and clickable?
+
         scene.sendPointerEvent(PointerEventType.Press, Offset(3f, 3f))
         awaitNextRender()
         screenshotRule.snap(surface, "frame4_onMouseMoved_onMousePressed")
@@ -450,11 +461,11 @@ class ComposeSceneTest {
 
     private class TestException : RuntimeException()
 
-    // TODO(https://github.com/JetBrains/compose-jb/issues/1136): fix deadlock
+    // TODO(b/202967533): fix deadlock
     @ExperimentalComposeUiApi
     @Ignore(
         "This test never ends because of the deadlock" +
-            "(https://github.com/JetBrains/compose-jb/issues/1136)"
+            "(https://issuetracker.google.com/issues/202967533)"
     )
     @Test
     fun `focus management by keys`() {
