@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package androidx.compose.ui.platform
-
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
-
-@PublishedApi
-internal val EmptyDispatcher = object : CoroutineDispatcher() {
-    override fun dispatch(context: CoroutineContext, block: Runnable) = Unit
-}
+import kotlin.jvm.Volatile
 
 /**
  * Dispatcher with the ability to immediately perform (flush) all pending tasks.
@@ -39,35 +33,51 @@ internal class FlushCoroutineDispatcher(
     // use this dispatcher won't be properly cancelled.
     // TODO replace it by scope.coroutineContext[Dispatcher] when it will be no longer experimental
     private val scope = CoroutineScope(scope.coroutineContext.minusKey(Job))
-
     private val tasks = mutableSetOf<Runnable>()
     private val tasksCopy = mutableSetOf<Runnable>()
-
+    @Volatile
+    private var isPerformingRun = false
+    private val runLock = Any()
     override fun dispatch(context: CoroutineContext, block: Runnable) {
         synchronized(tasks) {
             tasks.add(block)
         }
         scope.launch {
-            val isTaskAlive = synchronized(tasks) {
-                tasks.remove(block)
-            }
-            if (isTaskAlive) {
-                block.run()
+            performRun {
+                val isTaskAlive = synchronized(tasks) {
+                    tasks.remove(block)
+                }
+                if (isTaskAlive) {
+                    block.run()
+                }
             }
         }
     }
-
+    /**
+     * Whether dispatcher has scheduled or currently running tasks
+     */
     fun hasTasks() = synchronized(tasks) {
         tasks.isNotEmpty()
-    }
-
-    fun flush() {
+    } && !isPerformingRun
+    /**
+     * Perform all scheduled tasks and wait for the tasks which are already
+     * performing in the [scope]
+     */
+    fun flush() = performRun {
         synchronized(tasks) {
             tasksCopy.addAll(tasks)
             tasks.clear()
         }
-
         tasksCopy.forEach(Runnable::run)
         tasksCopy.clear()
+    }
+    // the lock is needed to be certain that all tasks will be completed after `flush` method
+    private fun performRun(body: () -> Unit) = synchronized(runLock) {
+        try {
+            isPerformingRun = true
+            body()
+        } finally {
+            isPerformingRun = false
+        }
     }
 }
