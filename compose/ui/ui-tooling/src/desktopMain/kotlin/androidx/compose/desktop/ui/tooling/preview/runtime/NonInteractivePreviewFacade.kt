@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Density
 @Suppress("unused")
 internal class NonInteractivePreviewFacade {
     companion object {
+        @OptIn(ExperimentalComposeUiApi::class)
         @JvmStatic
         fun render(fqName: String, width: Int, height: Int, scale: Double?): ByteArray {
             val className = fqName.substringBeforeLast(".")

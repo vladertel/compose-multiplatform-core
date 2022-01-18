@@ -21,12 +21,11 @@ import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.platform.PlatformComponent
-import androidx.compose.ui.ComposeScene
+import androidx.compose.ui.input.pointer.HitPathTracker
 import androidx.compose.ui.input.pointer.PointerButtons
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.platform.AccessibilityControllerImpl
 import androidx.compose.ui.platform.DesktopPlatform
 import androidx.compose.ui.platform.PlatformComponent
@@ -47,6 +46,7 @@ import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Point
 import java.awt.Toolkit
+import java.awt.Window
 import java.awt.event.FocusEvent
 import java.awt.event.InputEvent
 import java.awt.event.InputMethodEvent

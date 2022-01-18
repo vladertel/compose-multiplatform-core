@@ -24,6 +24,8 @@ import androidx.compose.ui.input.pointer.PointerInputEventData
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.areAnyPressed
+import androidx.compose.ui.input.pointer.indexOfFirstPressed
+import androidx.compose.ui.input.pointer.indexOfLastPressed
 import androidx.compose.ui.platform.AccessibilityController
 import androidx.compose.ui.platform.AccessibilityControllerImpl
 import androidx.compose.ui.platform.DesktopPlatform

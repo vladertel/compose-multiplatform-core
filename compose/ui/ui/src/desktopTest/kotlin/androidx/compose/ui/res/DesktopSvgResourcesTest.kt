@@ -32,7 +32,7 @@ import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 
-@OptIn(InternalTestApi::class)
+@OptIn(ExperimentalComposeUiApi::class, InternalTestApi::class)
 class DesktopSvgResourcesTest {
     @get:Rule
     val screenshotRule = DesktopScreenshotTestRule("compose/ui/ui-desktop/res")
