@@ -433,7 +433,8 @@ class ScrollbarTest {
         (this as DesktopComposeTestRule).scene.sendPointerEvent(
             PointerEventType.Scroll,
             Offset(x.toFloat(), y.toFloat()),
-            scrollDelta = Offset(x = 0f, y = delta)
+            scrollDelta = Offset(x = 0f, y = delta),
+            nativeEvent = awtWheelEvent()
         )
     }
 
