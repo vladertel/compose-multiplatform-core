@@ -26,32 +26,39 @@ import androidx.compose.ui.sendMouseEvent
 import androidx.compose.ui.window.runApplicationTest
 import com.google.common.truth.Truth.assertThat
 import java.awt.Dimension
-import java.awt.event.MouseEvent
+import java.awt.event.MouseEvent.BUTTON1_DOWN_MASK
+import java.awt.event.MouseEvent.MOUSE_ENTERED
+import java.awt.event.MouseEvent.MOUSE_MOVED
+import java.awt.event.MouseEvent.MOUSE_PRESSED
+import java.awt.event.MouseEvent.MOUSE_RELEASED
 import org.junit.Test
 
 class ComposeWindowTest {
     // bug https://github.com/JetBrains/compose-jb/issues/1448
     @Test
-    fun `dispose window inside event handler`() = runApplicationTest {
-        var isClickHappened = false
-
+    fun `dispose window in event handler`() = runApplicationTest {
         val window = ComposeWindow()
-        window.isUndecorated = true
-        window.size = Dimension(200, 200)
-        window.setContent {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Blue).clickable {
-                isClickHappened = true
-                window.dispose()
-            })
+        try {
+            var isClickHappened = false
+            window.size = Dimension(300, 400)
+            window.setContent {
+                Box(modifier = Modifier.fillMaxSize().background(Color.Blue).clickable {
+                    isClickHappened = true
+                    window.dispose()
+                })
+            }
+            window.isVisible = true
+            window.sendMouseEvent(MOUSE_ENTERED, 100, 50)
+            awaitIdle()
+            window.sendMouseEvent(MOUSE_MOVED, 100, 50)
+            awaitIdle()
+            window.sendMouseEvent(MOUSE_PRESSED, 100, 50, modifiers = BUTTON1_DOWN_MASK)
+            awaitIdle()
+            window.sendMouseEvent(MOUSE_RELEASED, 100, 50)
+            awaitIdle()
+            assertThat(isClickHappened).isTrue()
+        } finally {
+            window.dispose()
         }
-
-        window.isVisible = true
-        awaitIdle()
-
-        window.sendMouseEvent(MouseEvent.MOUSE_PRESSED, x = 100, y = 50)
-        window.sendMouseEvent(MouseEvent.MOUSE_RELEASED, x = 100, y = 50)
-        awaitIdle()
-
-        assertThat(isClickHappened).isTrue()
     }
 }
