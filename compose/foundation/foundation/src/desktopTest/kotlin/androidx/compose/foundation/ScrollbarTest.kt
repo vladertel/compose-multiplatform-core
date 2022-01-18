@@ -431,7 +431,7 @@ class ScrollbarTest {
     @OptIn(InternalTestApi::class, ExperimentalComposeUiApi::class)
     private fun ComposeTestRule.performMouseScroll(x: Int, y: Int, delta: Float) {
         (this as DesktopComposeTestRule).scene.sendPointerEvent(
-            PointerEventType.Move,
+            PointerEventType.Scroll,
             Offset(x.toFloat(), y.toFloat()),
             scrollDelta = Offset(x = 0f, y = delta)
         )

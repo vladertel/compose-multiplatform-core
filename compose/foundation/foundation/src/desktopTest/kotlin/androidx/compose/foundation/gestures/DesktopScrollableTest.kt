@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -37,6 +38,7 @@ import kotlin.math.sqrt
 
 @OptIn(ExperimentalComposeUiApi::class)
 @RunWith(JUnit4::class)
+@Ignore // TODO(demin) remove after migration to ImageComposeScene (it will be upstreamed from Compose MPP 1.0.0)
 class DesktopScrollableTest {
     private val density = 2f
 
