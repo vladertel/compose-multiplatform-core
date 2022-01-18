@@ -216,7 +216,7 @@ internal class ComposeLayer {
 
     fun dispose() {
         check(!isDisposed)
-        scene.dispose()
+        scene.close()
         _component.dispose()
         _initContent = null
         isDisposed = true
