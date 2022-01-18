@@ -36,7 +36,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
-@OptIn(InternalTestApi::class)
+@OptIn(InternalTestApi::class, ExperimentalComposeUiApi::class)
 class GraphicsLayerTest {
     @get:Rule
     val screenshotRule = DesktopScreenshotTestRule("compose/ui/ui-desktop/platform")
