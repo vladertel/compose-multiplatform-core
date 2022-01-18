@@ -21,8 +21,10 @@ package androidx.compose.ui.platform
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.DefaultPointerButtons
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.ui.PrimaryPressedPointerButtons
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
 import androidx.compose.ui.focus.FocusDirection
@@ -354,7 +356,8 @@ internal class SkiaBasedOwner(
             PointerInputEvent(
                 PointerEventType.Unknown,
                 timeMillis,
-                pointers.map { it.toPointerInputEventData() }
+                pointers.map { it.toPointerInputEventData() },
+                if (pointers.any { it.down }) PrimaryPressedPointerButtons else DefaultPointerButtons
             )
         )
     }
