@@ -58,7 +58,7 @@ fun Window.sendKeyEvent(
     modifiers: Int = 0
 ): Boolean {
     val event = KeyEvent(
-        focusOwner,
+        mostRecentFocusOwner, // just `focusOwner` is null if the window is minimized
         KeyEvent.KEY_PRESSED,
         0,
         modifiers,
