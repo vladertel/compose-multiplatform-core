@@ -39,9 +39,9 @@ import org.jetbrains.skia.Color
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Surface
 import java.awt.event.MouseEvent
+import java.util.concurrent.TimeUnit.NANOSECONDS
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
-import kotlin.time.DurationUnit.NANOSECONDS
 import kotlin.time.ExperimentalTime
 
 /**
