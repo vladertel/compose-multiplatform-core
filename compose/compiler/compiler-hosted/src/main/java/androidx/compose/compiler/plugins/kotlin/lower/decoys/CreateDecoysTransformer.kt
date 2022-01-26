@@ -28,7 +28,6 @@ import org.jetbrains.kotlin.backend.common.ir.moveBodyTo
 import org.jetbrains.kotlin.backend.common.ir.remapTypeParameters
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
-import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.builders.declarations.IrFunctionBuilder
@@ -37,7 +36,6 @@ import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irReturn
-import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationContainer
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
@@ -94,16 +92,16 @@ class CreateDecoysTransformer(
     pluginContext: IrPluginContext,
     symbolRemapper: DeepCopySymbolRemapper,
     bindingTrace: BindingTrace,
-    signatureBuilder: IdSignatureSerializer,
+    override val signatureBuilder: IdSignatureSerializer,
     metrics: ModuleMetrics,
-) : AbstractDecoysLowering(
-    pluginContext = pluginContext,
+) : AbstractComposeLowering(
+    context = pluginContext,
     symbolRemapper = symbolRemapper,
     bindingTrace = bindingTrace,
-    metrics = metrics,
-    signatureBuilder = signatureBuilder
-), ModuleLoweringPass {
-
+    metrics = metrics
+),
+    ModuleLoweringPass,
+    DecoyTransformBase {
     private val originalFunctions: MutableMap<IrFunction, IrDeclarationParent> = mutableMapOf()
 
     private val decoyAnnotation by lazy {
@@ -311,11 +309,10 @@ class CreateDecoysTransformer(
             }
     }
 
-    private fun IrFunction.shouldBeRemapped(): Boolean {
-        return !isLocalFunction() &&
+    private fun IrFunction.shouldBeRemapped(): Boolean =
+        !isLocalFunction() &&
             !isEnumConstructor() &&
             (hasComposableAnnotation() || hasComposableParameter())
-    }
 
     private fun IrFunction.isLocalFunction(): Boolean =
         origin == IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA ||

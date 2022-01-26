@@ -50,16 +50,16 @@ class SubstituteDecoyCallsTransformer(
     pluginContext: IrPluginContext,
     symbolRemapper: DeepCopySymbolRemapper,
     bindingTrace: BindingTrace,
-    signatureBuilder: IdSignatureSerializer,
+    override val signatureBuilder: IdSignatureSerializer,
     metrics: ModuleMetrics,
-) : AbstractDecoysLowering(
-    pluginContext = pluginContext,
+) : AbstractComposeLowering(
+    context = pluginContext,
     symbolRemapper = symbolRemapper,
     bindingTrace = bindingTrace,
     metrics = metrics,
-    signatureBuilder = signatureBuilder
-), ModuleLoweringPass {
-
+),
+    ModuleLoweringPass,
+    DecoyTransformBase {
     override fun lower(module: IrModuleFragment) {
         module.transformChildrenVoid()
 

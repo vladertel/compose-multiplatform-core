@@ -46,13 +46,14 @@ class RecordDecoySignaturesTransformer(
     override val signatureBuilder: IdSignatureSerializer,
     metrics: ModuleMetrics,
     val mangler: KotlinMangler.IrMangler
-) : AbstractDecoysLowering(
-    pluginContext = pluginContext,
+) : AbstractComposeLowering(
+    context = pluginContext,
     symbolRemapper = symbolRemapper,
     bindingTrace = bindingTrace,
     metrics = metrics,
-    signatureBuilder = signatureBuilder
-), ModuleLoweringPass {
+),
+    ModuleLoweringPass,
+    DecoyTransformBase {
 
     override fun lower(module: IrModuleFragment) {
         module.transformChildrenVoid()
@@ -66,18 +67,19 @@ class RecordDecoySignaturesTransformer(
         val decoyAnnotation = declaration.getAnnotation(DecoyFqNames.Decoy)!!
         val decoyFunction =
             symbolRemapper.getReferencedFunction(declaration.getComposableForDecoy())
-        val sig: IdSignature = signatureBuilder.computeSignature(decoyFunction.owner)
-        val commonSignature: IdSignature.CommonSignature? = findNearestCommonSignature(sig)
+        val sig =
+            signatureBuilder.computeSignature(decoyFunction.owner)
+                as? IdSignature.CommonSignature
 
-        if (commonSignature != null) {
+        if (sig != null) {
             decoyAnnotation.putValueArgument(
                 1,
                 irVarargString(
                     listOf(
-                        commonSignature.packageFqName,
-                        commonSignature.declarationFqName,
-                        commonSignature.id.toString(),
-                        commonSignature.mask.toString()
+                        sig.packageFqName,
+                        sig.declarationFqName,
+                        sig.id.toString(),
+                        sig.mask.toString()
                     )
                 )
             )
@@ -86,16 +88,6 @@ class RecordDecoySignaturesTransformer(
         }
 
         return super.visitFunction(declaration)
-    }
-
-    private fun findNearestCommonSignature(
-        sig: IdSignature
-    ): IdSignature.CommonSignature? {
-        return when (sig) {
-            is IdSignature.CommonSignature -> sig
-            is IdSignature.CompositeSignature -> findNearestCommonSignature(sig.inner)
-            else -> null
-        }
     }
 
     private fun IrDeclaration.canBeLinkedAgainst(): Boolean =
