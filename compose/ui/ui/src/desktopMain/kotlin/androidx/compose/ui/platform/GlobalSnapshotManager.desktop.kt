@@ -37,10 +37,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * For desktop, these notifications are always sent on [Dispatchers.Swing]. Other platforms
  * may establish different policies for these notifications.
  */
-internal actual object GlobalSnapshotManager {
+internal object GlobalSnapshotManager {
     private val started = AtomicBoolean(false)
 
-    actual fun ensureStarted() {
+    fun ensureStarted() {
         if (started.compareAndSet(false, true)) {
             val channel = Channel<Unit>(Channel.CONFLATED)
             CoroutineScope(Dispatchers.Swing).launch {

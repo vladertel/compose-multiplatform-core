@@ -87,7 +87,14 @@ internal class SkiaParagraphIntrinsics(
         }
     }
 
-    private fun contentBasedTextDirection() = text.contentBasedTextDirection()
+    private fun contentBasedTextDirection(): ResolvedTextDirection? {
+        for (char in text) {
+            when (char.directionality) {
+                CharDirectionality.LEFT_TO_RIGHT -> return ResolvedTextDirection.Ltr
+                CharDirectionality.RIGHT_TO_LEFT -> return ResolvedTextDirection.Rtl
+                else -> continue
+            }
+        }
+        return null
+    }
 }
-
-internal expect fun String.contentBasedTextDirection(): ResolvedTextDirection?

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package androidx.compose.ui.platform
 
-internal expect interface PlatformComponent
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
 
-internal expect object DummyPlatformComponent : PlatformComponent
+class DesktopViewConfiguration(private val density: Density) : ViewConfiguration {
+    override val longPressTimeoutMillis: Long
+        get() = 500
+
+    override val doubleTapTimeoutMillis: Long
+        get() = 300
+
+    override val doubleTapMinTimeMillis: Long
+        get() = 40
+
+    override val touchSlop: Float
+        get() = with(density) { 18.dp.toPx() }
+}

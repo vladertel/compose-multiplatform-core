@@ -16,19 +16,11 @@
 
 package androidx.compose.ui.platform
 
-import androidx.compose.ui.unit.Density
-import java.awt.Point
-import java.awt.im.InputMethodRequests
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
-internal actual interface PlatformComponent : PlatformInputComponent
-
-internal actual object DummyPlatformComponent : PlatformComponent {
-    var enabledInput: InputMethodRequests? = null
-    override fun enableInput(inputMethodRequests: InputMethodRequests) {
-        enabledInput = inputMethodRequests
+// TODO(demin): implement HapticFeedback
+internal class DesktopHapticFeedback : HapticFeedback {
+    override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
     }
-    override fun disableInput() { enabledInput = null }
-    override val locationOnScreen = Point(0, 0)
-    override val density: Density
-        get() = Density(1f, 1f)
 }

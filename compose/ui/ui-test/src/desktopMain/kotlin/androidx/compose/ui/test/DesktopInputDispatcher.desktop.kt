@@ -23,18 +23,18 @@ import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.TestPointerInputEventData
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.node.RootForTest
-import androidx.compose.ui.platform.SkiaRootForTest
+import androidx.compose.ui.platform.DesktopRootForTest
 
 internal actual fun createInputDispatcher(
     testContext: TestContext,
     root: RootForTest
 ): InputDispatcher {
-    return DesktopInputDispatcher(testContext, root as SkiaRootForTest)
+    return DesktopInputDispatcher(testContext, root as DesktopRootForTest)
 }
 
 internal class DesktopInputDispatcher(
     testContext: TestContext,
-    val root: SkiaRootForTest
+    val root: DesktopRootForTest
 ) : InputDispatcher(testContext, root) {
     companion object {
         var gesturePointerId = 0L

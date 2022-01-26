@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package androidx.compose.ui.platform
 
-import androidx.compose.ui.text.input.PlatformTextInputService
+import java.awt.Desktop
+import java.net.URI
 
-internal expect interface PlatformInputComponent
-
-internal expect class PlatformInput(component: PlatformComponent) :
-    PlatformTextInputService
+internal class DesktopUriHandler : UriHandler {
+    override fun openUri(uri: String) {
+        Desktop.getDesktop().browse(URI(uri))
+    }
+}

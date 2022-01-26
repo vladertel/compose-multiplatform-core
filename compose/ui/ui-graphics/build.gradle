@@ -85,7 +85,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             skikoMain {
-                dependsOn(commonMain)
                 dependencies {
                     api(libs.skikoCommon)
                 }

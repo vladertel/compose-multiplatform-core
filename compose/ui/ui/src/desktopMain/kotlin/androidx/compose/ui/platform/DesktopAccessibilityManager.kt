@@ -16,7 +16,7 @@
 
 package androidx.compose.ui.platform
 
-internal class DefaultAccessibilityManager : AccessibilityManager {
+internal class DesktopAccessibilityManager : AccessibilityManager {
     override fun calculateRecommendedTimeoutMillis(
         originalTimeoutMillis: Long,
         containsIcons: Boolean,

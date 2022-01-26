@@ -19,7 +19,7 @@ package androidx.compose.ui.platform
 import androidx.compose.runtime.AbstractApplier
 import androidx.compose.ui.node.LayoutNode
 
-internal class DefaultUiApplier(
+internal class DesktopUiApplier(
     root: LayoutNode
 ) : AbstractApplier<LayoutNode>(root) {
     override fun insertTopDown(index: Int, instance: LayoutNode) {

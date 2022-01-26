@@ -39,7 +39,7 @@ import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 
-internal actual interface PlatformInputComponent {
+internal interface DesktopInputComponent {
     fun enableInput(inputMethodRequests: InputMethodRequests)
     fun disableInput()
     // Input service needs to know this information to implement Input Method support
@@ -47,7 +47,7 @@ internal actual interface PlatformInputComponent {
     val density: Density
 }
 
-internal actual class PlatformInput actual constructor (val component: PlatformComponent) :
+internal class DesktopPlatformInput(val component: DesktopComponent) :
     PlatformTextInputService {
     data class CurrentInput(
         var value: TextFieldValue,
