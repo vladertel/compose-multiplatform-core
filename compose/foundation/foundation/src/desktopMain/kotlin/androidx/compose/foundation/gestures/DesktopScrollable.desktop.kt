@@ -43,7 +43,7 @@ internal val LocalMouseScrollConfig = compositionLocalOf { MouseScrollableConfig
 // TODO(demin): do we need support real line scrolling (i.e. scroll by 3 text lines)?
 internal actual fun Modifier.mouseScrollable(
     orientation: Orientation,
-    onScroll: (Float) -> Unit
+    onScroll: (Float) -> Boolean
 ): Modifier = composed {
     val density = LocalDensity.current
     val config = LocalMouseScrollConfig.current
@@ -56,7 +56,6 @@ internal actual fun Modifier.mouseScrollable(
             }
             val scrollOffset = config.offsetOf(event.delta, scrollBounds, density)
             onScroll(-scrollOffset)
-            true
         } else {
             false
         }
