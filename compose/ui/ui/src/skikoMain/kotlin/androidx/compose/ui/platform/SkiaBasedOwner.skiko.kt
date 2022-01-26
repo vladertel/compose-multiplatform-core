@@ -270,6 +270,9 @@ internal class SkiaBasedOwner(
         onNeedRender?.invoke()
     }
 
+    var contentSize = IntSize.Zero
+        private set
+
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
         if (
@@ -280,6 +283,12 @@ internal class SkiaBasedOwner(
             requestDraw()
         }
         measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
+
+        // Don't use mainOwner.root.width here, as it strictly coerced by [constraints]
+        contentSize = IntSize(
+            root.children.maxOfOrNull { it.outerLayoutNodeWrapper.measuredWidth } ?: 0,
+            root.children.maxOfOrNull { it.outerLayoutNodeWrapper.measuredHeight } ?: 0,
+        )
     }
 
     override fun forceMeasureTheSubtree(layoutNode: LayoutNode) {

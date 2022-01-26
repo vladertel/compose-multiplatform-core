@@ -311,7 +311,7 @@ class ComposeScene internal constructor(
             check(!isClosed) { "ComposeScene is closed" }
             val mainOwner = mainOwner ?: return IntSize.Zero
             mainOwner.measureAndLayout()
-            return IntSize(mainOwner.root.width, mainOwner.root.height)
+            return mainOwner.contentSize
         }
 
     /**
@@ -330,6 +330,11 @@ class ComposeScene internal constructor(
                 it.render(canvas)
             }
         }
+    }
+
+    // for TestComposeWindow backward compatibility
+    internal fun flushEffects() {
+        effectDispatcher.flush()
     }
 
     private var focusedOwner: SkiaBasedOwner? = null

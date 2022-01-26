@@ -88,6 +88,7 @@ class TestComposeWindow(
 
     private fun onFrame() {
         canvas.clear(Color.Transparent.toArgb())
+        scene.flushEffects()
         scene.render(canvas, nanoTime())
     }
 
@@ -124,6 +125,7 @@ class TestComposeWindow(
     fun setContent(content: @Composable () -> Unit) {
         scene.constraints = Constraints(maxWidth = width, maxHeight = height)
         scene.setContent(content = content)
+        scene.flushEffects()
         scene.render(canvas, nanoTime = nanoTime())
     }
 
