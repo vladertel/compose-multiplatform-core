@@ -19,9 +19,11 @@ package androidx.compose.ui.awt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.window.LocalWindow
 import androidx.compose.ui.window.UndecoratedWindowResizer
+import androidx.compose.ui.window.WindowExceptionHandler
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.OS
@@ -41,10 +43,17 @@ internal class ComposeWindowDelegate(
 ) {
     private var isDisposed = false
 
-    val layer = ComposeLayer()
+    // AWT can leak JFrame in some cases
+    // (see https://github.com/JetBrains/compose-jb/issues/1688),
+    // so we nullify layer on dispose, to prevent keeping
+    // big objects in memory (like the whole LayoutNode tree of the window)
+    private var _layer: ComposeLayer? = ComposeLayer()
+    private val layer get() = requireNotNull(_layer) {
+        "ComposeLayer is disposed"
+    }
     val undecoratedWindowResizer = UndecoratedWindowResizer(window)
 
-    val pane = object : JLayeredPane() {
+    private val _pane = object : JLayeredPane() {
         override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
             layer.component.setSize(width, height)
             super.setBounds(x, y, width, height)
@@ -69,25 +78,51 @@ internal class ComposeWindowDelegate(
         }
 
         override fun getPreferredSize() = if (isPreferredSizeSet) super.getPreferredSize() else layer.component.preferredSize
+
+        init {
+            layout = null
+            super.add(layer.component, 1)
+        }
+
+        fun dispose() {
+            super.remove(layer.component)
+        }
     }
+
+    val pane get() = _pane
 
     private val clipMap = mutableMapOf<Component, ClipComponent>()
 
     init {
-        pane.layout = null
-        pane.add(layer.component, Integer.valueOf(1))
         setContent {}
     }
 
     fun add(component: Component): Component {
-        return pane.add(component)
+        return _pane.add(component)
     }
 
     fun remove(component: Component) {
-        pane.remove(component)
+        _pane.remove(component)
     }
 
-    var compositionLocalContext: CompositionLocalContext? by layer::compositionLocalContext
+    @OptIn(ExperimentalComposeUiApi::class)
+    var exceptionHandler: WindowExceptionHandler?
+        get() = layer.exceptionHandler
+        set(value) {
+            layer.exceptionHandler = value
+        }
+
+    var compositionLocalContext: CompositionLocalContext?
+        get() = layer.compositionLocalContext
+        set(value) {
+            layer.compositionLocalContext = value
+        }
+
+    var fullscreen: Boolean
+        get() = layer.component.fullscreen
+        set(value) {
+            layer.component.fullscreen = value
+        }
 
     fun setContent(
         onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
@@ -100,7 +135,7 @@ internal class ComposeWindowDelegate(
         ) {
             CompositionLocalProvider(
                 LocalWindow provides window,
-                LocalLayerContainer provides pane
+                LocalLayerContainer provides _pane
             ) {
                 content()
                 undecoratedWindowResizer.Content()
@@ -111,6 +146,8 @@ internal class ComposeWindowDelegate(
     fun dispose() {
         if (!isDisposed) {
             layer.dispose()
+            _pane.dispose()
+            _layer = null
             isDisposed = true
         }
     }
