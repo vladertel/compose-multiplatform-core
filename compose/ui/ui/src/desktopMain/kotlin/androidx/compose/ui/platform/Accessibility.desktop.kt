@@ -509,7 +509,7 @@ internal class ComposeAccessible(
         override fun requestFocus() {
             if (focused == false) {
                 semanticsNode.layoutNode.outerLayoutNodeWrapper.findLastFocusWrapper()
-                    ?.requestFocus(propagateFocus = false)
+                    ?.requestFocus()
             }
         }
 
