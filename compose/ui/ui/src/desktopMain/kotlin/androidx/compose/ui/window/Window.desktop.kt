@@ -19,6 +19,7 @@ package androidx.compose.ui.window
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -90,7 +91,9 @@ import javax.swing.JMenuBar
  * - native resources will not be released. They will be released only when [Window]
  * will leave the composition.
  * @param title Title in the titlebar of the window
- * @param icon Icon in the titlebar of the window (for platforms which support this)
+ * @param icon Icon in the titlebar of the window (for platforms which support this).
+ * On macOs individual windows can't have a separate icon. To change the icon in the Dock, set it via `iconFile` in build.gradle
+ * (https://github.com/JetBrains/compose-jb/tree/master/tutorials/Native_distributions_and_local_execution#platform-specific-options)
  * @param undecorated Disables or enables decorations for this window.
  * @param transparent Disables or enables window transparency. Transparency should be set
  * only if window is undecorated, otherwise an exception will be thrown.
@@ -230,6 +233,9 @@ fun Window(
  * }
  * ```
  *
+ * Set [exitProcessOnExit] to `false`, if you need to execute some code after [singleWindowApplication] block, otherwise the code after it
+ * won't be executed, as [singleWindowApplication] will exit the process.
+ *
  * @param state The state object to be used to control or observe the window's state
  * When size/position/status is changed by the user, state will be updated.
  * When size/position/status of the window is changed by the application (changing state),
@@ -245,7 +251,9 @@ fun Window(
  * - native resources will not be released. They will be released only when [Window]
  * will leave the composition.
  * @param title Title in the titlebar of the window
- * @param icon Icon in the titlebar of the window (for platforms which support this)
+ * @param icon Icon in the titlebar of the window (for platforms which support this).
+ * On macOs individual windows can't have a separate icon. To change the icon in the Dock, set it via `iconFile` in build.gradle
+ * (https://github.com/JetBrains/compose-jb/tree/master/tutorials/Native_distributions_and_local_execution#platform-specific-options)
  * @param undecorated Disables or enables decorations for this window.
  * @param transparent Disables or enables window transparency. Transparency should be set
  * only if window is undecorated, otherwise an exception will be thrown.
@@ -262,6 +270,10 @@ fun Window(
  * @param onKeyEvent This callback is invoked when the user interacts with the hardware
  * keyboard. While implementing this callback, return true to stop propagation of this event.
  * If you return false, the key event will be sent to this [onKeyEvent]'s parent.
+ * @param exitProcessOnExit should `exitProcess(0)` be called after the window is closed.
+ * exitProcess speedup process exit (instant instead of 1-4sec).
+ * If `false`, the execution of the function will be unblocked after application is exited
+ * (when the last window is closed, and all [LaunchedEffect] are complete).
  * @param content Content of the window
  */
 fun singleWindowApplication(
@@ -277,8 +289,9 @@ fun singleWindowApplication(
     alwaysOnTop: Boolean = false,
     onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
     onKeyEvent: (KeyEvent) -> Boolean = { false },
+    exitProcessOnExit: Boolean = true,
     content: @Composable FrameWindowScope.() -> Unit
-) = application {
+) = application(exitProcessOnExit = exitProcessOnExit) {
     Window(
         ::exitApplication,
         state,
@@ -345,20 +358,20 @@ fun Window(
     update: (ComposeWindow) -> Unit = {},
     content: @Composable FrameWindowScope.() -> Unit
 ) {
-    val currentLocals by rememberUpdatedState(currentCompositionLocalContext)
+    val compositionLocalContext by rememberUpdatedState(currentCompositionLocalContext)
     AwtWindow(
         visible = visible,
         create = {
             create().apply {
-                setContent(onPreviewKeyEvent, onKeyEvent) {
-                    CompositionLocalProvider(currentLocals) {
-                        content()
-                    }
-                }
+                this.compositionLocalContext = compositionLocalContext
+                setContent(onPreviewKeyEvent, onKeyEvent, content)
             }
         },
         dispose = dispose,
-        update = update
+        update = {
+            it.compositionLocalContext = compositionLocalContext
+            update(it)
+        }
     )
 }
 

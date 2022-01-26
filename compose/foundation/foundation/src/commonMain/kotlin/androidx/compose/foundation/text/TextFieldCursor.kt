@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.isUnspecified
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -44,7 +45,8 @@ internal fun Modifier.cursor(
 ) = if (enabled) composed {
     val cursorAlpha = remember { Animatable(1f) }
     val isBrushSpecified = !(cursorBrush is SolidColor && cursorBrush.value.isUnspecified)
-    if (state.hasFocus && value.selection.collapsed && isBrushSpecified) {
+    val isWindowFocused = LocalWindowInfo.current.isWindowFocused
+    if (state.hasFocus && value.selection.collapsed && isBrushSpecified && isWindowFocused) {
         LaunchedEffect(cursorBrush, value.annotatedString, value.selection) {
             cursorAlpha.animateTo(0f, cursorAnimationSpec)
         }

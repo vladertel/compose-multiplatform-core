@@ -229,13 +229,13 @@ class WindowInputEventTest {
         awaitIdle()
         assertThat(events.size).isEqualTo(0)
 
-        window.sendMouseEvent(MouseEvent.MOUSE_PRESSED, x = 100, y = 50)
+        window.sendMouseEvent(MouseEvent.MOUSE_PRESSED, x = 100, y = 50, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
         awaitIdle()
         assertThat(events.size).isEqualTo(1)
         assertThat(events.last().pressed).isEqualTo(true)
         assertThat(events.last().position).isEqualTo(Offset(100 * density, 50 * density))
 
-        window.sendMouseEvent(MouseEvent.MOUSE_DRAGGED, x = 90, y = 40)
+        window.sendMouseEvent(MouseEvent.MOUSE_DRAGGED, x = 90, y = 40, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
         awaitIdle()
         assertThat(events.size).isEqualTo(2)
         assertThat(events.last().pressed).isEqualTo(true)
@@ -294,8 +294,8 @@ class WindowInputEventTest {
         assertThat(onEnters).isEqualTo(1)
         assertThat(onExits).isEqualTo(0)
 
-        window.sendMouseEvent(MouseEvent.MOUSE_PRESSED, x = 90, y = 50)
-        window.sendMouseEvent(MouseEvent.MOUSE_DRAGGED, x = 80, y = 50)
+        window.sendMouseEvent(MouseEvent.MOUSE_PRESSED, x = 90, y = 50, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
+        window.sendMouseEvent(MouseEvent.MOUSE_DRAGGED, x = 80, y = 50, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
         window.sendMouseEvent(MouseEvent.MOUSE_RELEASED, x = 80, y = 50)
         awaitIdle()
         assertThat(onMoves.size).isEqualTo(2)

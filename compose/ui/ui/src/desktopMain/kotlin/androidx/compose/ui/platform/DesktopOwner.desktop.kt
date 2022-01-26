@@ -17,6 +17,7 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.awt.awtEvent
 import androidx.compose.ui.input.key.KeyInputModifier
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -31,7 +32,7 @@ internal actual fun sendKeyEvent(
     keyEvent: KeyEvent
 ): Boolean {
     when {
-        keyEvent.nativeKeyEvent.id == java.awt.event.KeyEvent.KEY_TYPED ->
+        keyEvent.awtEvent.id == java.awt.event.KeyEvent.KEY_TYPED ->
             platformInputService.charKeyPressed = true
         keyEvent.type == KeyEventType.KeyUp ->
             platformInputService.charKeyPressed = false

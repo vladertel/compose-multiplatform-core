@@ -21,7 +21,9 @@ import java.awt.Cursor
 import java.awt.Point
 import java.awt.im.InputMethodRequests
 
-internal actual interface PlatformComponent : PlatformInputComponent, PlatformComponentWithCursor
+internal actual interface PlatformComponent : PlatformInputComponent, PlatformComponentWithCursor {
+    actual val windowInfo: WindowInfo
+}
 
 internal actual interface PlatformComponentWithCursor {
     var componentCursor: Cursor
@@ -37,4 +39,5 @@ internal actual object DummyPlatformComponent : PlatformComponent {
     override val locationOnScreen = Point(0, 0)
     override val density: Density
         get() = Density(1f, 1f)
+    override val windowInfo = WindowInfoImpl()
 }

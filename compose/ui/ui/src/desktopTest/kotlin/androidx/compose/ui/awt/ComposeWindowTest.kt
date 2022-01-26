@@ -27,7 +27,6 @@ class ComposeWindowTest {
             try {
                 window.preferredSize = Dimension(234, 345)
                 window.isUndecorated = true
-                window.isVisible = true
                 assertThat(window.preferredSize).isEqualTo(Dimension(234, 345))
                 window.pack()
                 assertThat(window.size).isEqualTo(Dimension(234, 345))

@@ -17,13 +17,18 @@
 package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.platform.AccessibilityControllerImpl
+import androidx.compose.ui.platform.DesktopPlatform
 import androidx.compose.ui.platform.PlatformComponent
+import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.window.density
@@ -38,7 +43,10 @@ import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Point
+import java.awt.Toolkit
+import java.awt.Window
 import java.awt.event.FocusEvent
+import java.awt.event.InputEvent
 import java.awt.event.InputMethodEvent
 import java.awt.event.InputMethodListener
 import java.awt.event.KeyAdapter
@@ -47,9 +55,12 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import java.awt.event.MouseWheelEvent
+import java.awt.event.WindowEvent
+import java.awt.event.WindowFocusListener
 import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
 import javax.accessibility.AccessibleContext
+import javax.swing.SwingUtilities
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
@@ -87,11 +98,27 @@ internal class ComposeLayer {
         SkiaLayer(externalAccessibleFactory = ::makeAccessible), Accessible, PlatformComponent {
         var currentInputMethodRequests: InputMethodRequests? = null
 
+        private var window: Window? = null
+        private var windowListener = object : WindowFocusListener {
+            override fun windowGainedFocus(e: WindowEvent) = refreshWindowFocus()
+            override fun windowLostFocus(e: WindowEvent) = refreshWindowFocus()
+        }
+
         override fun addNotify() {
             super.addNotify()
             resetDensity()
             initContent()
             updateSceneSize()
+            window = SwingUtilities.getWindowAncestor(this)
+            window?.addWindowFocusListener(windowListener)
+            refreshWindowFocus()
+        }
+
+        override fun removeNotify() {
+            window?.removeWindowFocusListener(windowListener)
+            window = null
+            refreshWindowFocus()
+            super.removeNotify()
         }
 
         override fun paint(g: Graphics) {
@@ -148,6 +175,12 @@ internal class ComposeLayer {
                 this@ComposeLayer.scene.density = density
                 updateSceneSize()
             }
+        }
+
+        override val windowInfo = WindowInfoImpl()
+
+        private fun refreshWindowFocus() {
+            windowInfo.isWindowFocused = window?.isFocused ?: false
         }
     }
 
@@ -234,6 +267,8 @@ internal class ComposeLayer {
         isDisposed = true
     }
 
+    var compositionLocalContext: CompositionLocalContext? by scene::compositionLocalContext
+
     fun setContent(
         onPreviewKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
         onKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
@@ -282,6 +317,8 @@ private fun ComposeScene.onMouseEvent(
         position = Offset(event.x.toFloat(), event.y.toFloat()) * density,
         timeMillis = event.`when`,
         type = PointerType.Mouse,
+        buttons = event.buttons,
+        keyboardModifiers = event.keyboardModifiers,
         nativeEvent = event
     )
 }
@@ -302,6 +339,8 @@ private fun ComposeScene.onMouseWheelEvent(
         },
         timeMillis = event.`when`,
         type = PointerType.Mouse,
+        buttons = event.buttons,
+        keyboardModifiers = event.keyboardModifiers,
         nativeEvent = event
     )
 }
@@ -310,3 +349,41 @@ private fun ComposeScene.onMouseWheelEvent(
 private fun ComposeScene.sendKeyEvent(event: KeyEvent) {
     sendKeyEvent(ComposeKeyEvent(event))
 }
+
+@OptIn(ExperimentalComposeUiApi::class)
+private val MouseEvent.buttons get() = PointerButtons(
+    isPrimaryPressed = (modifiersEx and MouseEvent.BUTTON1_DOWN_MASK) != 0 && !isMacOsCtrlClick,
+    isSecondaryPressed = (modifiersEx and MouseEvent.BUTTON3_DOWN_MASK) != 0 || isMacOsCtrlClick,
+    isTertiaryPressed = (modifiersEx and MouseEvent.BUTTON2_DOWN_MASK) != 0,
+    isBackPressed = (modifiersEx and MouseEvent.getMaskForButton(4)) != 0,
+    isForwardPressed = (modifiersEx and MouseEvent.getMaskForButton(5)) != 0,
+)
+
+@OptIn(ExperimentalComposeUiApi::class)
+private val MouseEvent.keyboardModifiers get() = PointerKeyboardModifiers(
+    isCtrlPressed = (modifiersEx and InputEvent.CTRL_DOWN_MASK) != 0,
+    isMetaPressed = (modifiersEx and InputEvent.META_DOWN_MASK) != 0,
+    isAltPressed = (modifiersEx and InputEvent.ALT_DOWN_MASK) != 0,
+    isShiftPressed = (modifiersEx and InputEvent.SHIFT_DOWN_MASK) != 0,
+    isAltGraphPressed = (modifiersEx and InputEvent.ALT_GRAPH_DOWN_MASK) != 0,
+    isSymPressed = false,
+    isFunctionPressed = false,
+    isCapsLockOn = getLockingKeyStateSafe(KeyEvent.VK_CAPS_LOCK),
+    isScrollLockOn = getLockingKeyStateSafe(KeyEvent.VK_SCROLL_LOCK),
+    isNumLockOn = getLockingKeyStateSafe(KeyEvent.VK_NUM_LOCK),
+)
+
+private fun getLockingKeyStateSafe(
+    mask: Int
+): Boolean = try {
+    Toolkit.getDefaultToolkit().getLockingKeyState(mask)
+} catch (_: Exception) {
+    false
+}
+
+private val MouseEvent.isMacOsCtrlClick
+    get() = (
+            DesktopPlatform.Current == DesktopPlatform.MacOS &&
+                    ((modifiersEx and InputEvent.BUTTON1_DOWN_MASK) != 0) &&
+                    ((modifiersEx and InputEvent.CTRL_DOWN_MASK) != 0)
+            )

@@ -24,7 +24,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.mouse.MouseScrollOrientation
 import androidx.compose.ui.input.mouse.MouseScrollUnit
+import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.setContent
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.skia.Color
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Surface
 import java.awt.event.MouseEvent
@@ -162,6 +165,7 @@ class ImageComposeScene(
      * animations in the content (or any other code, which uses [withFrameNanos]
      */
     fun render(nanoTime: Long = 0): Image {
+        surface.canvas.clear(Color.TRANSPARENT)
         scene.render(surface.canvas, nanoTime)
         return surface.makeImageSnapshot()
     }
@@ -183,6 +187,9 @@ class ImageComposeScene(
      * is platform-dependent.
      * @param type The device type that produced the event, such as [mouse][PointerType.Mouse],
      * or [touch][PointerType.Touch].
+     * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons).
+     * @param keyboardModifiers Contains the state of modifier keys, such as Shift, Control, and Alt, as well as the state
+     * of the lock keys, such as Caps Lock and Num Lock.
      * @param mouseEvent The original native event.
      */
     @OptIn(ExperimentalComposeUiApi::class)
@@ -191,9 +198,11 @@ class ImageComposeScene(
         position: Offset,
         timeMillis: Long = System.nanoTime() / 1_000_000L,
         type: PointerType = PointerType.Mouse,
+        buttons: PointerButtons? = null,
+        keyboardModifiers: PointerKeyboardModifiers? = null,
         mouseEvent: MouseEvent? = null
     ): Unit = scene.sendPointerEvent(
-        eventType, position, timeMillis, type, mouseEvent
+        eventType, position, timeMillis, type, buttons, keyboardModifiers, mouseEvent
     )
 
     // TODO(demin): remove/change when we will have scroll event support in the common code
@@ -212,6 +221,9 @@ class ImageComposeScene(
      * is platform-dependent.
      * @param type The device type that produced the event, such as [mouse][PointerType.Mouse],
      * or [touch][PointerType.Touch].
+     * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons).
+     * @param keyboardModifiers Contains the state of modifier keys, such as Shift, Control, and Alt, as well as the state
+     * of the lock keys, such as Caps Lock and Num Lock.
      * @param mouseEvent The original native event
      */
     @OptIn(ExperimentalComposeUiApi::class)
@@ -223,11 +235,11 @@ class ImageComposeScene(
         orientation: MouseScrollOrientation = MouseScrollOrientation.Vertical,
         timeMillis: Long = System.nanoTime() / 1_000_000L,
         type: PointerType = PointerType.Mouse,
+        buttons: PointerButtons? = null,
+        keyboardModifiers: PointerKeyboardModifiers? = null,
         mouseEvent: MouseEvent? = null,
-//        buttons: PointerButtons? = null,
-//        keyboardModifiers: PointerKeyboardModifiers? = null,
     ): Unit = scene.sendPointerScrollEvent(
-        position, delta, orientation, timeMillis, type, mouseEvent
+        position, delta, orientation, timeMillis, type, buttons, keyboardModifiers, mouseEvent
     )
 
     /**
