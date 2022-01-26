@@ -18,10 +18,7 @@ package androidx.compose.ui.input.pointer
 
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.MotionEvent.ACTION_SCROLL
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.util.fastForEach
-import androidx.compose.ui.util.fastMap
 
 internal actual typealias NativePointerButtons = Int
 internal actual typealias NativePointerKeyboardModifiers = Int
@@ -29,20 +26,22 @@ internal actual typealias NativePointerKeyboardModifiers = Int
 /**
  * Describes a pointer input change event that has occurred at a particular point in time.
  */
-actual class PointerEvent internal actual constructor(
+actual data class PointerEvent internal constructor(
     /**
      * The changes.
      */
     actual val changes: List<PointerInputChange>,
-    internal val internalPointerEvent: InternalPointerEvent?
-) {
     internal val motionEvent: MotionEvent?
-        get() = internalPointerEvent?.motionEvent
+) {
+    internal actual constructor(
+        changes: List<PointerInputChange>,
+        internalPointerEvent: InternalPointerEvent?
+    ) : this(changes, internalPointerEvent?.motionEvent)
 
     /**
      * @param changes The changes.
      */
-    actual constructor(changes: List<PointerInputChange>) : this(changes, null)
+    actual constructor(changes: List<PointerInputChange>) : this(changes, motionEvent = null)
 
     actual val buttons = PointerButtons(motionEvent?.buttonState ?: 0)
 
@@ -51,9 +50,7 @@ actual class PointerEvent internal actual constructor(
     actual var type: PointerEventType = calculatePointerEventType()
         internal set
 
-    @OptIn(ExperimentalComposeUiApi::class)
     private fun calculatePointerEventType(): PointerEventType {
-        val motionEvent = motionEvent
         if (motionEvent != null) {
             return when (motionEvent.actionMasked) {
                 MotionEvent.ACTION_DOWN,
@@ -64,7 +61,6 @@ actual class PointerEvent internal actual constructor(
                 MotionEvent.ACTION_MOVE -> PointerEventType.Move
                 MotionEvent.ACTION_HOVER_ENTER -> PointerEventType.Enter
                 MotionEvent.ACTION_HOVER_EXIT -> PointerEventType.Exit
-                ACTION_SCROLL -> PointerEventType.Scroll
 
                 else -> PointerEventType.Unknown
             }
@@ -79,39 +75,6 @@ actual class PointerEvent internal actual constructor(
             }
         }
         return PointerEventType.Move
-    }
-
-    // only because PointerEvent was a data class
-    fun component1(): List<PointerInputChange> = changes
-
-    // only because PointerEvent was a data class
-    fun copy(
-        changes: List<PointerInputChange>,
-        motionEvent: MotionEvent?
-    ): PointerEvent = when (motionEvent) {
-        null -> PointerEvent(changes, null)
-        this.motionEvent -> PointerEvent(changes, internalPointerEvent)
-        else -> {
-            val map = mutableMapOf<PointerId, PointerInputChange>()
-            changes.fastForEach { change ->
-                map[change.id] = change
-            }
-            val pointerEventData = changes.fastMap {
-                PointerInputEventData(
-                    it.id,
-                    it.uptimeMillis,
-                    it.position,
-                    it.position,
-                    it.pressed,
-                    it.type,
-                    this.internalPointerEvent?.issuesEnterExitEvent(it.id) == true
-                )
-            }
-            val pointerInputEvent =
-                PointerInputEvent(motionEvent.eventTime, pointerEventData, motionEvent)
-            val event = InternalPointerEvent(map, pointerInputEvent)
-            PointerEvent(changes, event)
-        }
     }
 }
 

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Text
@@ -29,10 +30,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -51,10 +50,10 @@ private fun TextItem(text: String, color: Color) {
 }
 
 @Composable
-@OptIn(ExperimentalComposeUiApi::class)
-private fun DrawEvents(events: List<Pair<PointerEventType, Any>>) {
+private fun DrawEvents(events: List<PointerEventType>, counts: List<Int>) {
     for (i in events.lastIndex downTo 0) {
-        val (type, value) = events[i]
+        val type = events[i]
+        val count = counts[i]
 
         val color = when (type) {
             PointerEventType.Press -> Color.Red
@@ -62,10 +61,9 @@ private fun DrawEvents(events: List<Pair<PointerEventType, Any>>) {
             PointerEventType.Release -> Color.Yellow
             PointerEventType.Enter -> Color.Green
             PointerEventType.Exit -> Color.Blue
-            PointerEventType.Scroll -> Color(0xFF800080) // Purple
-            else -> Color.Black
+            else -> Color(0xFF800080) // Purple
         }
-        TextItem("$type $value", color)
+        TextItem("$type $count", color)
     }
 }
 
@@ -74,62 +72,59 @@ private fun DrawEvents(events: List<Pair<PointerEventType, Any>>) {
  */
 @Composable
 fun EventTypesDemo() {
-    val innerPointerEvents = remember { mutableStateListOf<Pair<PointerEventType, Any>>() }
-    val outerPointerEvents = remember { mutableStateListOf<Pair<PointerEventType, Any>>() }
+    val innerPointerEventTypes = remember { mutableStateListOf<PointerEventType>() }
+    val innerPointerEventCounts = remember { mutableStateListOf<Int>() }
+    val outerPointerEventTypes = remember { mutableStateListOf<PointerEventType>() }
+    val outerPointerEventCounts = remember { mutableStateListOf<Int>() }
     Box(
         Modifier.pointerInput(Unit) {
             awaitPointerEventScope {
                 while (true) {
                     val event = awaitPointerEvent()
                     event.changes.forEach { it.consumeAllChanges() }
-                    addEvent(event, outerPointerEvents)
+                    addEvent(event, outerPointerEventTypes, outerPointerEventCounts)
                 }
             }
         }
     ) {
         Column {
-            DrawEvents(outerPointerEvents)
+            DrawEvents(outerPointerEventTypes, outerPointerEventCounts)
         }
         Column(
-            Modifier.size(200.dp)
-                .border(2.dp, Color.Black)
+            Modifier
                 .align(Alignment.CenterEnd)
+                .requiredSize(200.dp)
+                .border(2.dp, Color.Black)
                 .clipToBounds()
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent()
-                            addEvent(event, innerPointerEvents)
+                            addEvent(event, innerPointerEventTypes, innerPointerEventCounts)
                         }
                     }
                 }
         ) {
-            DrawEvents(innerPointerEvents)
+            DrawEvents(innerPointerEventTypes, innerPointerEventCounts)
         }
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 private fun addEvent(
     event: PointerEvent,
-    events: MutableList<Pair<PointerEventType, Any>>,
+    events: MutableList<PointerEventType>,
+    counts: MutableList<Int>
 ) {
     event.changes.forEach { it.consumeAllChanges() }
-    val scrollTotal = event.changes.foldRight(Offset.Zero) { c, acc -> acc + c.scrollDelta }
-    if (events.lastOrNull()?.first == event.type) {
-        val (type, value) = events.last()
-        if (type == PointerEventType.Scroll) {
-            events[events.lastIndex] = type to ((value as Offset) + scrollTotal)
-        } else {
-            events[events.lastIndex] = type to ((value as Int) + 1)
-        }
-    } else if (event.type == PointerEventType.Scroll) {
-        events += event.type to scrollTotal
+    if (events.lastOrNull() == event.type) {
+        counts[counts.lastIndex]++
     } else {
-        events += event.type to 1
+        events += event.type
+        counts += 1
     }
 
     while (events.size > 100) {
         events.removeAt(0)
+        counts.removeAt(0)
     }
 }

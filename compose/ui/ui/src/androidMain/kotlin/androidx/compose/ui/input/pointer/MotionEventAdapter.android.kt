@@ -17,7 +17,6 @@
 package androidx.compose.ui.input.pointer
 
 import android.os.Build
-import android.util.SparseBooleanArray
 import android.util.SparseLongArray
 import android.view.MotionEvent
 import android.view.MotionEvent.ACTION_CANCEL
@@ -27,7 +26,6 @@ import android.view.MotionEvent.ACTION_HOVER_EXIT
 import android.view.MotionEvent.ACTION_HOVER_MOVE
 import android.view.MotionEvent.ACTION_POINTER_DOWN
 import android.view.MotionEvent.ACTION_POINTER_UP
-import android.view.MotionEvent.ACTION_SCROLL
 import android.view.MotionEvent.ACTION_UP
 import android.view.MotionEvent.TOOL_TYPE_ERASER
 import android.view.MotionEvent.TOOL_TYPE_FINGER
@@ -53,21 +51,8 @@ internal class MotionEventAdapter {
      */
     @VisibleForTesting
     internal val motionEventToComposePointerIdMap = SparseLongArray()
-    private val canHover = SparseBooleanArray()
 
-    private val pointers = mutableListOf<PointerInputEventData>()
-
-    /**
-     * The previous event's tool type. This is used in combination with [previousSource] to
-     * determine when a different device was used to send events.
-     */
-    private var previousToolType = -1
-
-    /**
-     * The previous event's source. This is used in combination with [previousToolType] to
-     * determine when a different device was used to send events.
-     */
-    private var previousSource = -1
+    private val pointers: MutableList<PointerInputEventData> = mutableListOf()
 
     /**
      * Converts a single [MotionEvent] from an Android event stream into a [PointerInputEvent], or
@@ -87,21 +72,12 @@ internal class MotionEventAdapter {
         val action = motionEvent.actionMasked
         if (action == ACTION_CANCEL) {
             motionEventToComposePointerIdMap.clear()
-            canHover.clear()
             return null
         }
-        clearOnDeviceChange(motionEvent)
-
         addFreshIds(motionEvent)
 
         val isHover = action == ACTION_HOVER_EXIT || action == ACTION_HOVER_MOVE ||
             action == ACTION_HOVER_ENTER
-        val isScroll = action == ACTION_SCROLL
-
-        if (isHover) {
-            val hoverId = motionEvent.getPointerId(motionEvent.actionIndex)
-            canHover.put(hoverId, true)
-        }
 
         val upIndex = when (action) {
             ACTION_UP -> 0
@@ -119,11 +95,7 @@ internal class MotionEventAdapter {
                     positionCalculator,
                     motionEvent,
                     i,
-                    // "pressed" means:
-                    // 1. we're not hovered
-                    // 2. we didn't get UP event for a pointer
-                    // 3. button on the mouse is pressed BUT it's not a "scroll" simulated button
-                    !isHover && i != upIndex && (!isScroll || motionEvent.buttonState != 0)
+                    !isHover && i != upIndex
                 )
             )
         }
@@ -152,14 +124,24 @@ internal class MotionEventAdapter {
             ACTION_POINTER_DOWN -> {
                 val actionIndex = motionEvent.actionIndex
                 val pointerId = motionEvent.getPointerId(actionIndex)
-                if (motionEventToComposePointerIdMap.indexOfKey(pointerId) < 0) {
+                if (motionEventToComposePointerIdMap.indexOfKey(pointerId) < 0 ||
+                    motionEvent.getToolType(actionIndex) != TOOL_TYPE_MOUSE
+                ) {
                     motionEventToComposePointerIdMap.put(pointerId, nextId++)
-                    if (motionEvent.getToolType(actionIndex) == TOOL_TYPE_MOUSE) {
-                        canHover.put(pointerId, true)
-                    }
                 }
             }
         }
+    }
+
+    /**
+     * Remove an existing pointer.
+     */
+    private fun removePointerId(motionEventPointerId: Int) {
+        val index = motionEventToComposePointerIdMap.indexOfKey(motionEventPointerId)
+        check(index >= 0) {
+            "Trying to remove pointer ID $motionEventPointerId that doesn't exist"
+        }
+        motionEventToComposePointerIdMap.removeAt(index)
     }
 
     /**
@@ -171,10 +153,8 @@ internal class MotionEventAdapter {
             ACTION_POINTER_UP,
             ACTION_UP -> {
                 val actionIndex = motionEvent.actionIndex
-                val pointerId = motionEvent.getPointerId(actionIndex)
-                if (!canHover.get(pointerId, false)) {
-                    motionEventToComposePointerIdMap.delete(motionEvent.getPointerId(actionIndex))
-                    canHover.delete(pointerId)
+                if (motionEvent.getToolType(actionIndex) != TOOL_TYPE_MOUSE) {
+                    removePointerId(motionEvent.getPointerId(actionIndex))
                 }
             }
         }
@@ -187,7 +167,6 @@ internal class MotionEventAdapter {
                 val pointerId = motionEventToComposePointerIdMap.keyAt(i)
                 if (!motionEvent.hasPointerId(pointerId)) {
                     motionEventToComposePointerIdMap.removeAt(i)
-                    canHover.delete(pointerId)
                 }
             }
         }
@@ -213,25 +192,6 @@ internal class MotionEventAdapter {
             newId
         }
         return PointerId(id)
-    }
-
-    /**
-     * When the device has changed (noted by source and tool type), we don't need to track
-     * any of the previous pointers.
-     */
-    private fun clearOnDeviceChange(motionEvent: MotionEvent) {
-        if (motionEvent.pointerCount != 1) {
-            return
-        }
-        val toolType = motionEvent.getToolType(0)
-        val source = motionEvent.source
-
-        if (toolType != previousToolType || source != previousSource) {
-            previousToolType = toolType
-            previousSource = source
-            canHover.clear()
-            motionEventToComposePointerIdMap.clear()
-        }
     }
 
     /**
@@ -279,19 +239,7 @@ internal class MotionEventAdapter {
                 historical.add(historicalChange)
             }
         }
-        val scrollDelta = if (motionEvent.actionMasked == ACTION_SCROLL) {
-            val x = motionEvent.getAxisValue(MotionEvent.AXIS_HSCROLL)
-            val y = motionEvent.getAxisValue(MotionEvent.AXIS_VSCROLL)
-            // NOTE: we revert the scroll offset because android is special compared to other
-            // platforms and send the reversed sign for up and down mouse wheel scroll. In order to
-            // support better x-platform mouse scroll, we revert to be in line with desktop
-            // platforms.
-            Offset(x, y) * -1f
-        } else {
-            Offset.Zero
-        }
 
-        val issuesEnterExit = canHover.get(motionEvent.getPointerId(index), false)
         return PointerInputEventData(
             pointerId,
             motionEvent.eventTime,
@@ -299,9 +247,7 @@ internal class MotionEventAdapter {
             position,
             pressed,
             toolType,
-            issuesEnterExit,
-            historical,
-            scrollDelta
+            historical
         )
     }
 }

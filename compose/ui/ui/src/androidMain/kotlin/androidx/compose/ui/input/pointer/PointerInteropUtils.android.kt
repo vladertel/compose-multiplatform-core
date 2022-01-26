@@ -65,7 +65,6 @@ private fun PointerEvent.toMotionEventScope(
     block: (MotionEvent) -> Unit,
     cancel: Boolean
 ) {
-    val motionEvent = motionEvent
     requireNotNull(motionEvent) {
         "The PointerEvent receiver cannot have a null MotionEvent."
     }

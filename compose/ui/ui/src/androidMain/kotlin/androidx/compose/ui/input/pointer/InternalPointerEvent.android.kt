@@ -17,19 +17,13 @@
 package androidx.compose.ui.input.pointer
 
 import android.view.MotionEvent
-import androidx.compose.ui.util.fastFirstOrNull
 
-internal actual class InternalPointerEvent actual constructor(
+internal actual class InternalPointerEvent constructor(
     actual val changes: Map<PointerId, PointerInputChange>,
-    val pointerInputEvent: PointerInputEvent
-) {
     val motionEvent: MotionEvent
-        get() = pointerInputEvent.motionEvent
-
-    actual fun issuesEnterExitEvent(pointerId: PointerId): Boolean =
-        pointerInputEvent.pointers.fastFirstOrNull {
-            it.id == pointerId
-        }?.issuesEnterExit ?: false
-
-    actual var suppressMovementConsumption: Boolean = false
+) {
+    actual constructor(
+        changes: Map<PointerId, PointerInputChange>,
+        pointerInputEvent: PointerInputEvent
+    ) : this(changes, pointerInputEvent.motionEvent)
 }

@@ -79,10 +79,14 @@ internal class PointerInputEventProcessor(val root: LayoutNode) {
         // Dispatch to PointerInputFilters
         val dispatchedToSomething = hitPathTracker.dispatchChanges(internalPointerEvent, isInBounds)
 
-        val anyMovementConsumed = if (internalPointerEvent.suppressMovementConsumption) {
-            false
-        } else {
-            internalPointerEvent.changes.values.any { it.consumed.positionChange }
+        var anyMovementConsumed = false
+
+        // Remove hit paths from the tracker due to up events, and calculate if we have consumed
+        // any movement
+        internalPointerEvent.changes.values.forEach { pointerInputChange ->
+            if (pointerInputChange.positionChangeConsumed()) {
+                anyMovementConsumed = true
+            }
         }
 
         return ProcessResult(dispatchedToSomething, anyMovementConsumed)
@@ -147,21 +151,18 @@ private class PointerInputChangeEventProducer {
                     previousDown,
                     ConsumedData(),
                     it.type,
-                    it.historical,
-                    it.scrollDelta
+                    it.historical
                 )
             if (it.down) {
                 previousPointerInputData[it.id] = PointerInputData(
                     it.uptime,
                     it.positionOnScreen,
-                    it.down,
-                    it.type
+                    it.down
                 )
             } else {
                 previousPointerInputData.remove(it.id)
             }
         }
-
         return InternalPointerEvent(changes, pointerInputEvent)
     }
 
@@ -175,8 +176,7 @@ private class PointerInputChangeEventProducer {
     private class PointerInputData(
         val uptime: Long,
         val positionOnScreen: Offset,
-        val down: Boolean,
-        val type: PointerType
+        val down: Boolean
     )
 }
 

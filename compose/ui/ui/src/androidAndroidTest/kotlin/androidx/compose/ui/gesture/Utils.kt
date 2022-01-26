@@ -17,8 +17,6 @@
 package androidx.compose.ui.gesture
 
 import android.view.MotionEvent
-import android.view.MotionEvent.AXIS_HSCROLL
-import android.view.MotionEvent.AXIS_VSCROLL
 import android.view.View
 
 // We only need this because IR compiler doesn't like converting lambdas to Runnables
@@ -89,10 +87,8 @@ internal fun PointerProperties(id: Int) =
     MotionEvent.PointerProperties().apply { this.id = id }
 
 @Suppress("RemoveRedundantQualifierName")
-internal fun PointerCoords(x: Float, y: Float, scrollX: Float = 0f, scrollY: Float = 0f) =
+internal fun PointerCoords(x: Float, y: Float) =
     MotionEvent.PointerCoords().apply {
         this.x = x
         this.y = y
-        setAxisValue(AXIS_HSCROLL, scrollX)
-        setAxisValue(AXIS_VSCROLL, scrollY)
     }

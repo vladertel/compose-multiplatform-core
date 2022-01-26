@@ -21,7 +21,6 @@ import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.InternalCoreApi
-import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEach
 
 /**
@@ -92,7 +91,7 @@ internal class HitPathTracker(private val rootCoordinates: LayoutCoordinates) {
             internalPointerEvent,
             isInBounds
         )
-        dispatchHit = root.dispatchFinalEventPass(internalPointerEvent) || dispatchHit
+        dispatchHit = root.dispatchFinalEventPass() || dispatchHit
 
         return dispatchHit
     }
@@ -165,12 +164,12 @@ internal open class NodeParent {
      * Properties cached in [dispatchMainEventPass] should be reset after this method, to ensure
      * clean state for a future pass where pointer IDs / positions might be different.
      */
-    open fun dispatchFinalEventPass(internalPointerEvent: InternalPointerEvent): Boolean {
+    open fun dispatchFinalEventPass(): Boolean {
         var dispatched = false
         children.forEach {
-            dispatched = it.dispatchFinalEventPass(internalPointerEvent) || dispatched
+            dispatched = it.dispatchFinalEventPass() || dispatched
         }
-        cleanUpHits(internalPointerEvent)
+        cleanUpHits()
         return dispatched
     }
 
@@ -205,7 +204,7 @@ internal open class NodeParent {
         }
     }
 
-    open fun cleanUpHits(internalPointerEvent: InternalPointerEvent) {
+    open fun cleanUpHits() {
         for (i in children.lastIndex downTo 0) {
             val child = children[i]
             if (child.pointerIds.isEmpty()) {
@@ -244,7 +243,6 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
     private var pointerEvent: PointerEvent? = null
     private var wasIn = false
     private var isIn = true
-    private var hasExited = true
 
     override fun dispatchMainEventPass(
         changes: Map<PointerId, PointerInputChange>,
@@ -288,7 +286,7 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
         }
     }
 
-    override fun dispatchFinalEventPass(internalPointerEvent: InternalPointerEvent): Boolean {
+    override fun dispatchFinalEventPass(): Boolean {
         // TODO(b/158243568): The below dispatching operations may cause the pointerInputFilter to
         //  become detached. Currently, they just no-op if it becomes detached and the detached
         //  pointerInputFilters are removed from being tracked with the next event. I currently
@@ -303,10 +301,10 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
 
             // Dispatch to children.
             if (pointerInputFilter.isAttached) {
-                children.forEach { it.dispatchFinalEventPass(internalPointerEvent) }
+                children.forEach { it.dispatchFinalEventPass() }
             }
         }
-        cleanUpHits(internalPointerEvent)
+        cleanUpHits()
         clearCache()
         return result
     }
@@ -376,17 +374,15 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
         }
 
         val event = PointerEvent(relevantChanges.values.toList(), internalPointerEvent)
-        val enterExitChange = event.changes.fastFirstOrNull {
-            internalPointerEvent.issuesEnterExitEvent(it.id)
-        }
-        if (enterExitChange != null) {
+        if (isCursorEvent(event)) {
+            val change = event.changes[0]
             if (!isInBounds) {
                 isIn = false
-            } else if (!isIn && (enterExitChange.pressed || enterExitChange.previousPressed)) {
+            } else if (!isIn && (change.pressed || change.previousPressed)) {
                 // We have to recalculate isIn because we didn't redo hit testing
                 val size = coordinates!!.size
                 @Suppress("DEPRECATION")
-                isIn = !enterExitChange.isOutOfBounds(size)
+                isIn = !change.isOutOfBounds(size)
             }
             if (isIn != wasIn &&
                 (
@@ -400,9 +396,9 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
                 } else {
                     PointerEventType.Exit
                 }
-            } else if (event.type == PointerEventType.Enter && wasIn && !hasExited) {
+            } else if (event.type == PointerEventType.Enter && wasIn) {
                 event.type = PointerEventType.Move // We already knew that it was in.
-            } else if (event.type == PointerEventType.Exit && isIn && enterExitChange.pressed) {
+            } else if (event.type == PointerEventType.Exit && isIn && event.buttons.areAnyPressed) {
                 event.type = PointerEventType.Move // We are still in.
             }
         }
@@ -456,25 +452,31 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
         isIn = true
     }
 
-    override fun cleanUpHits(internalPointerEvent: InternalPointerEvent) {
-        super.cleanUpHits(internalPointerEvent)
+    private fun isCursorEvent(event: PointerEvent): Boolean {
+        return event.changes.size == 1 && event.changes[0].type != PointerType.Touch
+    }
+
+    override fun cleanUpHits() {
+        super.cleanUpHits()
 
         val event = pointerEvent ?: return
 
         wasIn = isIn
-
-        event.changes.fastForEach { change ->
-            // If the pointer is released and doesn't support hover OR
-            // the pointer supports over and is released outside the area
-            val remove = !change.pressed &&
-                (!internalPointerEvent.issuesEnterExitEvent(change.id) || !isIn)
-            if (remove) {
-                pointerIds.remove(change.id)
+        if (!isCursorEvent(event)) {
+            if (event.type == PointerEventType.Release) {
+                event.changes.fastForEach {
+                    if (it.changedToUpIgnoreConsumed()) {
+                        pointerIds.remove(it.id)
+                    }
+                }
+            }
+        } else {
+            // Clear when hover exit
+            if (event.type == PointerEventType.Exit && !event.buttons.areAnyPressed) {
+                pointerIds.clear()
             }
         }
-
         isIn = false
-        hasExited = event.type == PointerEventType.Exit
     }
 
     override fun toString(): String {

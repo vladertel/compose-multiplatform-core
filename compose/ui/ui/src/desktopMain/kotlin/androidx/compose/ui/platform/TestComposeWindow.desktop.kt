@@ -24,8 +24,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.mouse.MouseScrollEvent
-import androidx.compose.ui.input.mouse.MouseScrollOrientation
-import androidx.compose.ui.input.mouse.MouseScrollUnit
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.unit.Constraints
@@ -37,11 +35,7 @@ import kotlinx.coroutines.cancel
 import org.jetbrains.skia.Surface
 import org.jetbrains.skiko.FrameDispatcher
 import java.awt.Component
-import java.awt.event.MouseWheelEvent
 import kotlin.coroutines.CoroutineContext
-import kotlin.math.abs
-import kotlin.math.roundToInt
-import kotlin.math.sign
 
 @PublishedApi
 internal val EmptyDispatcher = object : CoroutineDispatcher() {
@@ -127,45 +121,15 @@ class TestComposeWindow(
         scene.render(canvas, nanoTime = nanoTime())
     }
 
-    fun render() {
-        scene.render(canvas, nanoTime = nanoTime())
-    }
-
     /**
      * Process mouse scroll event
      */
     @OptIn(ExperimentalComposeUiApi::class)
     fun onMouseScroll(x: Int, y: Int, event: MouseScrollEvent) {
-        val delta = when (event.delta) {
-            is MouseScrollUnit.Line -> event.delta.value
-            is MouseScrollUnit.Page -> event.delta.value
-        }
-        val wheelRotation = sign(delta)
-        scene.sendPointerEvent(
-            eventType = PointerEventType.Scroll,
+        scene.sendPointerScrollEvent(
             position = Offset(x.toFloat(), y.toFloat()),
-            scrollDelta = if (event.orientation == MouseScrollOrientation.Vertical) {
-                Offset(0f, wheelRotation)
-            } else {
-                Offset(wheelRotation, 0f)
-            },
-            nativeEvent = MouseWheelEvent(
-                EventComponent,
-                MouseWheelEvent.MOUSE_WHEEL,
-                0,
-                0,
-                0,
-                0,
-                0,
-                false,
-                if (event.delta is MouseScrollUnit.Line) {
-                    MouseWheelEvent.WHEEL_UNIT_SCROLL
-                } else {
-                    MouseWheelEvent.WHEEL_BLOCK_SCROLL
-                },
-                abs(delta.roundToInt()),
-                wheelRotation.roundToInt()
-            )
+            delta = event.delta,
+            orientation = event.orientation
         )
     }
 

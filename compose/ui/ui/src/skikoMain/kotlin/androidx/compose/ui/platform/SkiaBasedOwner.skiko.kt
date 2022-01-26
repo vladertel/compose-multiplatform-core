@@ -47,16 +47,20 @@ import androidx.compose.ui.input.key.KeyInputModifier
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.mouse.MouseScrollEvent
+import androidx.compose.ui.input.mouse.MouseScrollEventFilter
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerIconDefaults
 import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
+import androidx.compose.ui.input.pointer.PointerInputFilter
 import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.ProcessResult
 import androidx.compose.ui.input.pointer.TestPointerInputEventData
 import androidx.compose.ui.layout.RootMeasurePolicy
+import androidx.compose.ui.node.HitTestResult
 import androidx.compose.ui.node.InternalCoreApi
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.LayoutNodeDrawScope
@@ -229,19 +233,18 @@ internal class SkiaBasedOwner(
 
     override val measureIteration: Long get() = measureAndLayoutDelegate.measureIteration
 
-    private var needLayout = true
-    private var needDraw = true
+    private var needsLayout = true
+    private var needsDraw = true
 
-    val needRender get() = needLayout || needDraw || needSendSyntheticEvents
-    var onNeedRender: (() -> Unit)? = null
+    val needsRender get() = needsLayout || needsDraw
+    var onNeedsRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
     var containerCursor: PlatformComponentWithCursor? = null
 
     fun render(canvas: org.jetbrains.skia.Canvas) {
-        needLayout = false
+        needsLayout = false
         measureAndLayout()
-        sendSyntheticEvents()
-        needDraw = false
+        needsDraw = false
         draw(canvas)
         clearInvalidObservations()
     }
@@ -256,26 +259,22 @@ internal class SkiaBasedOwner(
     }
 
     private fun requestLayout() {
-        needLayout = true
-        needDraw = true
-        onNeedRender?.invoke()
+        needsLayout = true
+        needsDraw = true
+        onNeedsRender?.invoke()
     }
 
     private fun requestDraw() {
-        needDraw = true
-        onNeedRender?.invoke()
+        needsDraw = true
+        onNeedsRender?.invoke()
     }
 
     var contentSize = IntSize.Zero
         private set
 
-    override fun measureAndLayout(sendPointerUpdate: Boolean) {
+    override fun measureAndLayout() {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
-        if (
-            measureAndLayoutDelegate.measureAndLayout(
-                scheduleSyntheticEvents.takeIf { sendPointerUpdate }
-            )
-        ) {
+        if (measureAndLayoutDelegate.measureAndLayout()) {
             requestDraw()
         }
         measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
@@ -285,10 +284,6 @@ internal class SkiaBasedOwner(
             root.children.maxOfOrNull { it.outerLayoutNodeWrapper.measuredWidth } ?: 0,
             root.children.maxOfOrNull { it.outerLayoutNodeWrapper.measuredHeight } ?: 0,
         )
-    }
-
-    override fun forceMeasureTheSubtree(layoutNode: LayoutNode) {
-        measureAndLayoutDelegate.forceMeasureTheSubtree(layoutNode)
     }
 
     override fun onRequestMeasure(layoutNode: LayoutNode) {
@@ -345,50 +340,8 @@ internal class SkiaBasedOwner(
         root.draw(canvas.asComposeCanvas())
     }
 
-    private var needSendSyntheticEvents = false
-    private var lastPointerEvent: PointerInputEvent? = null
-
-    private val scheduleSyntheticEvents: () -> Unit = {
-        // we can't send event synchronously, as we can have call of `measureAndLayout`
-        // inside the event handler. So we can have a situation when we call event handler inside
-        // event handler. And that can lead to unpredictable behaviour.
-        // Nature of synthetic events doesn't require that they should be fired
-        // synchronously on layout change.
-        needSendSyntheticEvents = true
-        onNeedRender?.invoke()
-    }
-
-    // TODO(demin) should we repeat all events, or only which are make sense?
-    //  For example, touch Move after touch Release doesn't make sense,
-    //  and an application can handle it in a wrong way
-    //  Desktop doesn't support touch at the moment, but when it will, we should resolve this.
-    private fun sendSyntheticEvents() {
-        if (needSendSyntheticEvents) {
-            needSendSyntheticEvents = false
-            val lastPointerEvent = lastPointerEvent
-            if (lastPointerEvent != null) {
-                doProcessPointerInput(
-                    PointerInputEvent(
-                        PointerEventType.Move,
-                        lastPointerEvent.uptime,
-                        lastPointerEvent.pointers,
-                        lastPointerEvent.buttons,
-                        lastPointerEvent.keyboardModifiers,
-                        lastPointerEvent.mouseEvent
-                    )
-                )
-            }
-        }
-    }
-
     internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
         measureAndLayout()
-        sendSyntheticEvents()
-        lastPointerEvent = event
-        return doProcessPointerInput(event)
-    }
-
-    private fun doProcessPointerInput(event: PointerInputEvent): ProcessResult {
         return pointerInputEventProcessor.process(
             event,
             this,
@@ -409,6 +362,25 @@ internal class SkiaBasedOwner(
                 pointers.map { it.toPointerInputEventData() }
             )
         )
+    }
+
+    // TODO(demin): This is likely temporary. After PointerInputEvent can handle mouse events
+    //  (scroll in particular), we can replace it with processPointerInput. see b/166105940
+    internal fun onMouseScroll(position: Offset, event: MouseScrollEvent) {
+        measureAndLayout()
+
+        val inputFilters = HitTestResult<PointerInputFilter>()
+        root.hitTest(position, inputFilters)
+
+        for (
+            filter in inputFilters
+                .asReversed()
+                .asSequence()
+                .filterIsInstance<MouseScrollEventFilter>()
+        ) {
+            val isConsumed = filter.onMouseScroll(event)
+            if (isConsumed) break
+        }
     }
 
     override val pointerIconService: PointerIconService =

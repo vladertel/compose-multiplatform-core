@@ -3249,12 +3249,8 @@ private class TestOwner : Owner {
     override fun calculateLocalPosition(positionInWindow: Offset): Offset =
         positionInWindow - position.toOffset()
 
-    override fun measureAndLayout(sendPointerUpdate: Boolean) {
+    override fun measureAndLayout() {
         delegate.measureAndLayout()
-    }
-
-    override fun forceMeasureTheSubtree(layoutNode: LayoutNode) {
-        delegate.forceMeasureTheSubtree(layoutNode)
     }
 
     override fun createLayer(

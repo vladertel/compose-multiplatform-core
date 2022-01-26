@@ -2313,10 +2313,7 @@ private class MockOwner(
 
     override fun requestFocus(): Boolean = false
 
-    override fun measureAndLayout(sendPointerUpdate: Boolean) {
-    }
-
-    override fun forceMeasureTheSubtree(layoutNode: LayoutNode) {
+    override fun measureAndLayout() {
     }
 
     override fun createLayer(

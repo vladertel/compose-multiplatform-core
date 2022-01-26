@@ -21,6 +21,8 @@ import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.mouse.MouseScrollOrientation
+import androidx.compose.ui.input.mouse.MouseScrollUnit
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
@@ -331,14 +333,19 @@ private fun ComposeScene.onMouseEvent(
 private fun ComposeScene.onMouseWheelEvent(
     density: Float,
     event: MouseWheelEvent
-) {
-    sendPointerEvent(
-        eventType = PointerEventType.Scroll,
+) = with(event) {
+    sendPointerScrollEvent(
         position = Offset(event.x.toFloat(), event.y.toFloat()) * density,
-        scrollDelta = if (event.isShiftDown) {
-            Offset(event.preciseWheelRotation.toFloat(), 0f)
+        delta = if (scrollType == MouseWheelEvent.WHEEL_BLOCK_SCROLL) {
+            MouseScrollUnit.Page((scrollAmount * preciseWheelRotation).toFloat())
         } else {
-            Offset(0f, event.preciseWheelRotation.toFloat())
+            MouseScrollUnit.Line((scrollAmount * preciseWheelRotation).toFloat())
+        },
+        // There are no other way to detect horizontal scrolling in AWT
+        orientation = if (isShiftDown) {
+            MouseScrollOrientation.Horizontal
+        } else {
+            MouseScrollOrientation.Vertical
         },
         timeMillis = event.`when`,
         type = PointerType.Mouse,

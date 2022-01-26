@@ -1252,11 +1252,12 @@ class TextFieldTest {
     }
 
     @Test
-    fun testTextField_withLabel_doesNotCrash_rowHeightWithMinIntrinsics() {
-        var size: IntSize? = null
+    fun testTextField_doesNotCrash_rowHeightWithMinIntrinsics() {
+        var textFieldSize: IntSize? = null
         var dividerSize: IntSize? = null
         rule.setMaterialContent {
-            Box(Modifier.onGloballyPositioned { size = it.size }) {
+            val text = remember { mutableStateOf("") }
+            Box {
                 Row(Modifier.height(IntrinsicSize.Min)) {
                     Divider(
                         modifier = Modifier
@@ -1265,9 +1266,10 @@ class TextFieldTest {
                             .onGloballyPositioned { dividerSize = it.size }
                     )
                     TextField(
-                        value = "",
+                        value = text.value,
                         label = { Text(text = "Label") },
-                        onValueChange = {}
+                        onValueChange = { text.value = it },
+                        modifier = Modifier.onGloballyPositioned { textFieldSize = it.size }
                     )
                 }
             }
@@ -1275,13 +1277,13 @@ class TextFieldTest {
 
         rule.runOnIdle {
             assertThat(dividerSize).isNotNull()
-            assertThat(size).isNotNull()
-            assertThat(dividerSize!!.height).isEqualTo(size!!.height)
+            assertThat(textFieldSize).isNotNull()
+            assertThat(dividerSize!!.height).isEqualTo(textFieldSize!!.height)
         }
     }
 
     @Test
-    fun testTextField_withLabel_doesNotCrash_columnWidthWithMinIntrinsics() {
+    fun testTextField_doesNotCrash_columnWidthWithMinIntrinsics() {
         var textFieldSize: IntSize? = null
         var dividerSize: IntSize? = null
         rule.setMaterialContent {
@@ -1506,80 +1508,6 @@ class TextFieldTest {
         rule.runOnIdle {
             assertThat(textStyle.color).isEqualTo(captionColor)
             assertThat(contentColor).isEqualTo(focusedLabelColor)
-        }
-    }
-
-    @Test
-    fun testTextField_intrinsicsMeasurement_correctHeight() {
-        var height = 0
-        rule.setMaterialContent {
-            val text = remember { mutableStateOf("") }
-            Box(Modifier.onGloballyPositioned {
-                height = it.size.height
-            }) {
-                Row(Modifier.height(IntrinsicSize.Min)) {
-                    TextField(
-                        value = text.value,
-                        onValueChange = { text.value = it },
-                        placeholder = { Text("placeholder") }
-                    )
-                    Divider(Modifier.fillMaxHeight())
-                }
-            }
-        }
-
-        with(rule.density) {
-            assertThat(height).isEqualTo((TextFieldDefaults.MinHeight).roundToPx())
-        }
-    }
-
-    @Test
-    fun testTextField_intrinsicsMeasurement_withLeadingIcon_correctHeight() {
-        var height = 0
-        rule.setMaterialContent {
-            val text = remember { mutableStateOf("") }
-            Box(Modifier.onGloballyPositioned {
-                height = it.size.height
-            }) {
-                Row(Modifier.height(IntrinsicSize.Min)) {
-                    TextField(
-                        value = text.value,
-                        onValueChange = { text.value = it },
-                        placeholder = { Text("placeholder") },
-                        leadingIcon = { Icon(Icons.Default.Favorite, null) }
-                    )
-                    Divider(Modifier.fillMaxHeight())
-                }
-            }
-        }
-
-        with(rule.density) {
-            assertThat(height).isEqualTo((TextFieldDefaults.MinHeight).roundToPx())
-        }
-    }
-
-    @Test
-    fun testTextField_intrinsicsMeasurement_withTrailingIcon_correctHeight() {
-        var height = 0
-        rule.setMaterialContent {
-            val text = remember { mutableStateOf("") }
-            Box(Modifier.onGloballyPositioned {
-                height = it.size.height
-            }) {
-                Row(Modifier.height(IntrinsicSize.Min)) {
-                    TextField(
-                        value = text.value,
-                        onValueChange = { text.value = it },
-                        placeholder = { Text("placeholder") },
-                        trailingIcon = { Icon(Icons.Default.Favorite, null) }
-                    )
-                    Divider(Modifier.fillMaxHeight())
-                }
-            }
-        }
-
-        with(rule.density) {
-            assertThat(height).isEqualTo((TextFieldDefaults.MinHeight).roundToPx())
         }
     }
 }

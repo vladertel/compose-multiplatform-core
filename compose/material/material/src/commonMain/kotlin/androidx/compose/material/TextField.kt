@@ -45,6 +45,7 @@ import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.LayoutIdParentData
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureResult
@@ -607,7 +608,7 @@ private class TextFieldMeasurePolicy(
     ): Int {
         val textFieldWidth =
             intrinsicMeasurer(measurables.first { it.layoutId == TextFieldId }, height)
-        val labelWidth = measurables.find { it.layoutId == LabelId }?.let {
+        val labelWidth = measurables.find { it.layoutId == TrailingId }?.let {
             intrinsicMeasurer(it, height)
         } ?: 0
         val trailingWidth = measurables.find { it.layoutId == TrailingId }?.let {
@@ -636,7 +637,7 @@ private class TextFieldMeasurePolicy(
     ): Int {
         val textFieldHeight =
             intrinsicMeasurer(measurables.first { it.layoutId == TextFieldId }, width)
-        val labelHeight = measurables.find { it.layoutId == LabelId }?.let {
+        val labelHeight = measurables.find { it.layoutId == TrailingId }?.let {
             intrinsicMeasurer(it, width)
         } ?: 0
         val trailingHeight = measurables.find { it.layoutId == TrailingId }?.let {
@@ -650,7 +651,7 @@ private class TextFieldMeasurePolicy(
         } ?: 0
         return calculateHeight(
             textFieldHeight = textFieldHeight,
-            hasLabel = labelHeight > 0,
+            hasLabel = labelHeight != 0,
             labelBaseline = labelHeight,
             leadingHeight = leadingHeight,
             trailingHeight = trailingHeight,
@@ -820,3 +821,8 @@ internal fun Modifier.drawIndicatorLine(lineWidth: Dp, color: Color): Modifier {
 private val FirstBaselineOffset = 20.dp
 private val LastBaselineOffset = 10.dp
 private val TextFieldTopPadding = 4.dp
+
+private val IntrinsicMeasurable.layoutId: Any?
+    get() = (parentData as? LayoutIdParentData)?.layoutId
+
+private val ZeroConstraints = Constraints(0, 0, 0, 0)

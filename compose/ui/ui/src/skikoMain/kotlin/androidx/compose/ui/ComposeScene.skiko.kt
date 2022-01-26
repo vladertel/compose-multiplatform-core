@@ -32,6 +32,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
+import androidx.compose.ui.input.mouse.MouseScrollEvent
+import androidx.compose.ui.input.mouse.MouseScrollOrientation
+import androidx.compose.ui.input.mouse.MouseScrollUnit
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
@@ -107,19 +110,18 @@ class ComposeScene internal constructor(
 
     @Volatile
     private var hasPendingDraws = true
-    private inline fun <T> postponeInvalidation(block: () -> T): T {
+    private inline fun postponeInvalidation(block: () -> Unit) {
         isInvalidationDisabled = true
-        val result = try {
+        try {
             block()
         } finally {
             isInvalidationDisabled = false
         }
         invalidateIfNeeded()
-        return result
     }
 
     private fun invalidateIfNeeded() {
-        hasPendingDraws = frameClock.hasAwaiters || list.any(SkiaBasedOwner::needRender)
+        hasPendingDraws = frameClock.hasAwaiters || list.any(SkiaBasedOwner::needsRender)
         if (hasPendingDraws && !isInvalidationDisabled) {
             invalidate()
         }
@@ -217,7 +219,7 @@ class ComposeScene internal constructor(
     internal fun attach(skiaBasedOwner: SkiaBasedOwner) {
         check(!isClosed) { "ComposeScene is closed" }
         list.add(skiaBasedOwner)
-        skiaBasedOwner.onNeedRender = ::invalidateIfNeeded
+        skiaBasedOwner.onNeedsRender = ::invalidateIfNeeded
         skiaBasedOwner.onDispatchCommand = ::dispatchCommand
         skiaBasedOwner.constraints = constraints
         skiaBasedOwner.containerCursor = component
@@ -235,7 +237,7 @@ class ComposeScene internal constructor(
         check(!isClosed) { "ComposeScene is closed" }
         list.remove(skiaBasedOwner)
         skiaBasedOwner.onDispatchCommand = null
-        skiaBasedOwner.onNeedRender = null
+        skiaBasedOwner.onNeedsRender = null
         invalidateIfNeeded()
         if (skiaBasedOwner == focusedOwner) {
             focusedOwner = list.lastOrNull { it.isFocusable }
@@ -369,7 +371,6 @@ class ComposeScene internal constructor(
      *
      * @param eventType Indicates the primary reason that the event was sent.
      * @param position The [Offset] of the current pointer event, relative to the content.
-     * @param scrollDelta scroll delta for the PointerEventType.Scroll event
      * @param timeMillis The time of the current pointer event, in milliseconds. The start (`0`) time
      * is platform-dependent.
      * @param type The device type that produced the event, such as [mouse][PointerType.Mouse],
@@ -383,13 +384,12 @@ class ComposeScene internal constructor(
     fun sendPointerEvent(
         eventType: PointerEventType,
         position: Offset,
-        scrollDelta: Offset = Offset(0f, 0f),
         timeMillis: Long = System.nanoTime() / 1_000_000L,
         type: PointerType = PointerType.Mouse,
         buttons: PointerButtons? = null,
         keyboardModifiers: PointerKeyboardModifiers? = null,
         nativeEvent: Any? = null,
-    ): Unit = postponeInvalidation {
+    ) {
         check(!isClosed) { "ComposeScene is closed" }
         defaultPointerStateTracker.onPointerEvent(eventType)
 
@@ -403,7 +403,6 @@ class ComposeScene internal constructor(
             nativeEvent,
             type,
             pointerId,
-            scrollDelta,
             actualButtons,
             actualKeyboardModifiers
         )
@@ -421,12 +420,49 @@ class ComposeScene internal constructor(
             }
             PointerEventType.Enter -> hoveredOwner?.processPointerInput(event)
             PointerEventType.Exit -> hoveredOwner?.processPointerInput(event)
-            PointerEventType.Scroll -> hoveredOwner?.processPointerInput(event)
         }
 
         if (!actualButtons.areAnyPressed) {
             mousePressOwner = null
         }
+    }
+
+    // TODO(demin): remove/change when we will have scroll event support in the common code
+    // TODO(demin): return Boolean (when it is consumed).
+    //  see ComposeLayer todo about AWTDebounceEventQueue
+    /**
+     * Send pointer scroll event to the content.
+     *
+     * @param position The [Offset] of the current pointer event, relative to the content
+     * @param delta Change of mouse scroll.
+     * Positive if scrolling down, negative if scrolling up.
+     * @param orientation Orientation in which scrolling event occurs.
+     * Up/down wheel scrolling causes events in vertical orientation.
+     * Left/right wheel scrolling causes events in horizontal orientation.
+     * @param timeMillis The time of the current pointer event, in milliseconds. The start (`0`) time
+     * is platform-dependent.
+     * @param type The device type that produced the event, such as [mouse][PointerType.Mouse],
+     * or [touch][PointerType.Touch].
+     * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons).
+     * @param keyboardModifiers Contains the state of modifier keys, such as Shift, Control, and Alt, as well as the state
+     * of the lock keys, such as Caps Lock and Num Lock.
+     * @param nativeEvent The original native event
+     */
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Suppress("UNUSED_PARAMETER")
+    @ExperimentalComposeUiApi // it is more experimental than ComposeScene itself
+    fun sendPointerScrollEvent(
+        position: Offset,
+        delta: MouseScrollUnit,
+        orientation: MouseScrollOrientation = MouseScrollOrientation.Vertical,
+        timeMillis: Long = System.nanoTime() / 1_000_000L,
+        type: PointerType = PointerType.Mouse,
+        buttons: PointerButtons? = null,
+        keyboardModifiers: PointerKeyboardModifiers? = null,
+        nativeEvent: Any? = null,
+    ) {
+        check(!isClosed) { "ComposeScene is closed" }
+        hoveredOwner?.onMouseScroll(position, MouseScrollEvent(delta, orientation))
     }
 
     private fun onMousePressed(event: PointerInputEvent) {
@@ -456,7 +492,7 @@ class ComposeScene internal constructor(
      * Send [KeyEvent] to the content.
      * @return true if the event was consumed by the content
      */
-    fun sendKeyEvent(event: ComposeKeyEvent): Boolean = postponeInvalidation {
+    fun sendKeyEvent(event: ComposeKeyEvent): Boolean {
         return focusedOwner?.sendKeyEvent(event) == true
     }
 
@@ -487,7 +523,6 @@ internal expect fun pointerInputEvent(
     nativeEvent: Any?,
     type: PointerType,
     pointerId: Long,
-    scrollDelta: Offset,
     buttons: PointerButtons,
     keyboardModifiers: PointerKeyboardModifiers,
 ): PointerInputEvent

@@ -26,9 +26,7 @@ import android.view.MotionEvent.ACTION_HOVER_EXIT
 import android.view.MotionEvent.ACTION_HOVER_MOVE
 import android.view.MotionEvent.ACTION_MOVE
 import android.view.MotionEvent.ACTION_POINTER_INDEX_SHIFT
-import android.view.MotionEvent.ACTION_SCROLL
 import android.view.MotionEvent.ACTION_UP
-import android.view.MotionEvent.TOOL_TYPE_FINGER
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
@@ -47,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.OpenComposeView
 import androidx.compose.ui.composed
@@ -68,7 +65,6 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -739,24 +735,10 @@ class AndroidPointerInputTest {
         assertThat(event.type).isEqualTo(expectedHoverType)
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
-    private fun assertScrollEvent(
-        event: PointerEvent,
-        scrollExpected: Offset
-    ) {
-        assertThat(event.changes).hasSize(1)
-        val change = event.changes[0]
-        assertThat(change.pressed).isFalse()
-        assertThat(event.type).isEqualTo(PointerEventType.Scroll)
-        // we agreed to reverse the delta in android to be in line with other platforms
-        assertThat(change.scrollDelta).isEqualTo(-scrollExpected)
-    }
-
     private fun dispatchMouseEvent(
-        action: Int,
+        action: Int = ACTION_HOVER_ENTER,
         layoutCoordinates: LayoutCoordinates,
-        offset: Offset = Offset.Zero,
-        scrollDelta: Offset = Offset.Zero
+        offset: Offset = Offset.Zero
     ) {
         rule.runOnUiThread {
             val root = layoutCoordinates.findRoot()
@@ -767,14 +749,13 @@ class AndroidPointerInputTest {
                 1,
                 0,
                 arrayOf(PointerProperties(0).also { it.toolType = MotionEvent.TOOL_TYPE_MOUSE }),
-                arrayOf(PointerCoords(pos.x, pos.y, scrollDelta.x, scrollDelta.y))
+                arrayOf(PointerCoords(pos.x, pos.y))
             )
 
             val androidComposeView = findAndroidComposeView(container) as AndroidComposeView
             when (action) {
                 ACTION_HOVER_ENTER, ACTION_HOVER_MOVE, ACTION_HOVER_EXIT ->
                     androidComposeView.dispatchHoverEvent(event)
-                ACTION_SCROLL -> androidComposeView.dispatchGenericMotionEvent(event)
                 else -> androidComposeView.dispatchTouchEvent(event)
             }
         }
@@ -942,149 +923,6 @@ class AndroidPointerInputTest {
     }
 
     @Test
-    fun dispatchScroll() {
-        var layoutCoordinates: LayoutCoordinates? = null
-        val latch = CountDownLatch(1)
-        val events = mutableListOf<PointerEvent>()
-        val scrollDelta = Offset(0.35f, 0.65f)
-        rule.runOnUiThread {
-            container.setContent {
-                Box(
-                    Modifier.fillMaxSize().onGloballyPositioned {
-                        layoutCoordinates = it
-                        latch.countDown()
-                    }.pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                event.changes[0].consumeAllChanges()
-                                events += event
-                            }
-                        }
-                    }
-                )
-            }
-        }
-        assertTrue(latch.await(1, TimeUnit.SECONDS))
-        dispatchMouseEvent(ACTION_SCROLL, layoutCoordinates!!, scrollDelta = scrollDelta)
-        rule.runOnUiThread {
-            assertThat(events).hasSize(2) // synthetic enter and scroll
-            assertHoverEvent(events[0], isEnter = true)
-            assertScrollEvent(events[1], scrollExpected = scrollDelta)
-        }
-    }
-
-    @Test
-    fun dispatchScroll_whenButtonPressed() {
-        var layoutCoordinates: LayoutCoordinates? = null
-        val latch = CountDownLatch(1)
-        val events = mutableListOf<PointerEvent>()
-        val scrollDelta = Offset(0.35f, 0.65f)
-        rule.runOnUiThread {
-            container.setContent {
-                Box(
-                    Modifier.fillMaxSize().onGloballyPositioned {
-                        layoutCoordinates = it
-                        latch.countDown()
-                    }.pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                event.changes[0].consumeAllChanges()
-                                events += event
-                            }
-                        }
-                    }
-                )
-            }
-        }
-        assertTrue(latch.await(1, TimeUnit.SECONDS))
-        // press the button first before scroll
-        dispatchMouseEvent(ACTION_DOWN, layoutCoordinates!!)
-        dispatchMouseEvent(ACTION_SCROLL, layoutCoordinates!!, scrollDelta = scrollDelta)
-        rule.runOnUiThread {
-            assertThat(events).hasSize(3) // synthetic enter, button down, scroll
-            assertHoverEvent(events[0], isEnter = true)
-            assert(events[1].changes.fastAll { it.changedToDownIgnoreConsumed() })
-            assertScrollEvent(events[2], scrollExpected = scrollDelta)
-        }
-    }
-
-    @Test
-    fun dispatchScroll_batch() {
-        var layoutCoordinates: LayoutCoordinates? = null
-        val latch = CountDownLatch(1)
-        val events = mutableListOf<PointerEvent>()
-        val scrollDelta1 = Offset(0.32f, -0.75f)
-        val scrollDelta2 = Offset(0.14f, 0.35f)
-        val scrollDelta3 = Offset(-0.30f, -0.12f)
-        val scrollDelta4 = Offset(-0.05f, 0.68f)
-        rule.runOnUiThread {
-            container.setContent {
-                Box(
-                    Modifier.fillMaxSize().onGloballyPositioned {
-                        layoutCoordinates = it
-                        latch.countDown()
-                    }.pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                event.changes[0].consumeAllChanges()
-                                events += event
-                            }
-                        }
-                    }
-                )
-            }
-        }
-        assertTrue(latch.await(1, TimeUnit.SECONDS))
-        listOf(scrollDelta1, scrollDelta2, scrollDelta3, scrollDelta4).fastForEach {
-            dispatchMouseEvent(ACTION_SCROLL, layoutCoordinates!!, scrollDelta = it)
-        }
-        rule.runOnUiThread {
-            assertThat(events).hasSize(5) // 4 + synthetic enter
-            assertHoverEvent(events[0], isEnter = true)
-            assertScrollEvent(events[1], scrollExpected = scrollDelta1)
-            assertScrollEvent(events[2], scrollExpected = scrollDelta2)
-            assertScrollEvent(events[3], scrollExpected = scrollDelta3)
-            assertScrollEvent(events[4], scrollExpected = scrollDelta4)
-        }
-    }
-
-    @Test
-    fun mouseScroll_ignoredAsDownEvent() {
-        var layoutCoordinates: LayoutCoordinates? = null
-        val latch = CountDownLatch(1)
-        val events = mutableListOf<PointerEvent>()
-        val scrollDelta = Offset(0.35f, 0.65f)
-        rule.runOnUiThread {
-            container.setContent {
-                Box(
-                    Modifier.fillMaxSize().onGloballyPositioned {
-                        layoutCoordinates = it
-                        latch.countDown()
-                    }.pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                event.changes[0].consumeAllChanges()
-                                events += event
-                            }
-                        }
-                    }
-                )
-            }
-        }
-        assertTrue(latch.await(1, TimeUnit.SECONDS))
-        dispatchMouseEvent(ACTION_SCROLL, layoutCoordinates!!, scrollDelta = scrollDelta)
-        rule.runOnUiThread {
-            assertThat(events).hasSize(2) // hover enter + scroll
-            assertThat(events[1].changes).isNotEmpty()
-            assertThat(events[1].changes[0].changedToDown()).isFalse()
-        }
-    }
-
-    @Test
     fun hoverEnterPressExitEnterExitRelease() {
         var outerCoordinates: LayoutCoordinates? = null
         var innerCoordinates: LayoutCoordinates? = null
@@ -1184,7 +1022,7 @@ class AndroidPointerInputTest {
                         Modifier
                             .align(Alignment.BottomCenter)
                             .size(50.dp)
-                            .graphicsLayer { translationY = 25.dp.roundToPx().toFloat() }
+                            .graphicsLayer { translationY = 25.dp.toPx() }
                             .pointerInput(Unit) {
                                 awaitPointerEventScope {
                                     while (true) {
@@ -1205,7 +1043,7 @@ class AndroidPointerInputTest {
         val coords = innerCoordinates!!
         dispatchMouseEvent(ACTION_HOVER_ENTER, coords)
         dispatchMouseEvent(ACTION_DOWN, coords)
-        dispatchMouseEvent(ACTION_MOVE, coords, Offset(0f, coords.size.height / 2 - 1f))
+        dispatchMouseEvent(ACTION_MOVE, coords, Offset(0f, coords.size.height / 2f - 1f))
         dispatchMouseEvent(ACTION_MOVE, coords, Offset(0f, coords.size.height - 1f))
         dispatchMouseEvent(ACTION_UP, coords, Offset(0f, coords.size.height - 1f))
         rule.runOnUiThread {
@@ -1230,7 +1068,7 @@ class AndroidPointerInputTest {
                         Box(
                             Modifier
                                 .requiredSize(50.dp)
-                                .graphicsLayer { translationY = 25.dp.roundToPx().toFloat() }
+                                .graphicsLayer { translationY = 25.dp.toPx() }
                                 .pointerInput(Unit) {
                                     awaitPointerEventScope {
                                         while (true) {
@@ -1262,57 +1100,6 @@ class AndroidPointerInputTest {
             assertThat(eventLog[2].type).isEqualTo(PointerEventType.Move)
             assertThat(eventLog[3].type).isEqualTo(PointerEventType.Release)
             assertThat(eventLog[4].type).isEqualTo(PointerEventType.Exit)
-        }
-    }
-
-    @Test
-    fun cancelOnDeviceChange() {
-        // When a pointer has had a surprise removal, a "cancel" event should be sent if it was
-        // pressed.
-        var innerCoordinates: LayoutCoordinates? = null
-        val latch = CountDownLatch(1)
-        val eventLog = mutableListOf<PointerEvent>()
-        rule.runOnUiThread {
-            container.setContent {
-                Box(Modifier.fillMaxSize()
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                event.changes[0].consumeAllChanges()
-                                eventLog += event
-                            }
-                        }
-                    }.onGloballyPositioned {
-                        innerCoordinates = it
-                        latch.countDown()
-                    }
-                )
-            }
-        }
-        assertTrue(latch.await(1, TimeUnit.SECONDS))
-        val coords = innerCoordinates!!
-        dispatchMouseEvent(ACTION_HOVER_ENTER, coords)
-        dispatchMouseEvent(ACTION_DOWN, coords)
-        dispatchMouseEvent(ACTION_MOVE, coords, Offset(0f, 1f))
-
-        val motionEvent = MotionEvent(
-            5,
-            ACTION_DOWN,
-            1,
-            0,
-            arrayOf(PointerProperties(10).also { it.toolType = TOOL_TYPE_FINGER }),
-            arrayOf(PointerCoords(1f, 1f))
-        )
-
-        container.dispatchTouchEvent(motionEvent)
-        rule.runOnUiThread {
-            assertThat(eventLog).hasSize(5)
-            assertThat(eventLog[0].type).isEqualTo(PointerEventType.Enter)
-            assertThat(eventLog[1].type).isEqualTo(PointerEventType.Press)
-            assertThat(eventLog[2].type).isEqualTo(PointerEventType.Move)
-            assertThat(eventLog[3].type).isEqualTo(PointerEventType.Release)
-            assertThat(eventLog[4].type).isEqualTo(PointerEventType.Press)
         }
     }
 

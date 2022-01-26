@@ -290,8 +290,6 @@ internal class PointerInteropFilter : PointerInputModifier {
                         changes.fastForEach {
                             it.consumeAllChanges()
                         }
-                        pointerEvent.internalPointerEvent?.suppressMovementConsumption =
-                            !disallowIntercept
                     }
                 }
             }
