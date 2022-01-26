@@ -33,19 +33,12 @@ import androidx.compose.ui.layout.findRoot
 
 internal class ModifiedFocusNode(
     wrapped: LayoutNodeWrapper,
-    focusModifier: FocusModifier
-) : DelegatingLayoutNodeWrapper<FocusModifier>(wrapped, focusModifier) {
+    modifier: FocusModifier
+) : DelegatingLayoutNodeWrapper<FocusModifier>(wrapped, modifier) {
 
     init {
-        focusModifier.focusNode = this
+        modifier.focusNode = this
     }
-
-    override var modifier: FocusModifier
-        get() = super.modifier
-        set(value) {
-            super.modifier = value
-            value.focusNode = this
-        }
 
     var focusState: FocusStateImpl
         get() = modifier.focusState

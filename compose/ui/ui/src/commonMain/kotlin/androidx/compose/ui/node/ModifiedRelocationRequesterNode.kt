@@ -14,21 +14,15 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation.relocation
+package androidx.compose.ui.node
 
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.RelocationRequesterModifier
 
-/**
- * Platform specific internal API to bring a rectangle into view.
- */
-internal expect class BringRectangleOnScreenRequester() {
-    fun bringRectangleOnScreen(rect: Rect)
+internal class ModifiedRelocationRequesterNode(
+    wrapped: LayoutNodeWrapper,
+    modifier: RelocationRequesterModifier
+) : DelegatingLayoutNodeWrapper<RelocationRequesterModifier>(wrapped, modifier) {
+    init {
+        modifier.relocationRequesterNode = this
+    }
 }
-
-/**
- * Companion Modifier to [BringRectangleOnScreenRequester].
- */
-internal expect fun Modifier.bringRectangleOnScreenRequester(
-    bringRectangleOnScreenRequester: BringRectangleOnScreenRequester
-): Modifier

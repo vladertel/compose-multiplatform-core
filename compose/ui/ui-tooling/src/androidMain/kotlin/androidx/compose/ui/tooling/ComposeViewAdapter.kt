@@ -33,6 +33,7 @@ import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.ActivityResultRegistryOwner
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.annotation.VisibleForTesting
+import androidx.compose.animation.core.InternalAnimationApi
 import androidx.compose.animation.core.Transition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
@@ -311,6 +312,7 @@ internal class ComposeViewAdapter : FrameLayout {
      * the ones we've got source information for.
      */
     @Suppress("UNCHECKED_CAST")
+    @OptIn(InternalAnimationApi::class)
     private fun findAndTrackTransitions() {
         @Suppress("UNCHECKED_CAST")
         fun List<Group>.findTransitionObjects(): List<Transition<Any>> {

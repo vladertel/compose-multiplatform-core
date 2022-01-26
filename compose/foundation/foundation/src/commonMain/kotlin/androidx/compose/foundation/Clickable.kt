@@ -30,8 +30,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.semantics.Role
@@ -396,12 +394,6 @@ internal suspend fun PressGestureScope.handlePressInteraction(
  */
 internal expect val TapIndicationDelay: Long
 
-/**
- * Whether the specified [KeyEvent] represents a user intent to perform a click.
- * (eg. When you press Enter on a focused button, it should perform a click).
- */
-internal expect val KeyEvent.isClick: Boolean
-
 internal fun Modifier.genericClickableWithoutGesture(
     gestureModifiers: Modifier,
     interactionSource: MutableInteractionSource,
@@ -413,7 +405,7 @@ internal fun Modifier.genericClickableWithoutGesture(
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ): Modifier {
-    fun Modifier.clickSemantics() = this.semantics(mergeDescendants = true) {
+    val semanticModifier = Modifier.semantics(mergeDescendants = true) {
         if (role != null) {
             this.role = role
         }
@@ -429,17 +421,8 @@ internal fun Modifier.genericClickableWithoutGesture(
             disabled()
         }
     }
-    fun Modifier.detectClickFromKey() = this.onKeyEvent {
-        if (enabled && it.isClick) {
-            onClick()
-            true
-        } else {
-            false
-        }
-    }
     return this
-        .clickSemantics()
-        .detectClickFromKey()
+        .then(semanticModifier)
         .indication(interactionSource, indication)
         .hoverable(enabled = enabled, interactionSource = interactionSource)
         .focusableInNonTouchMode(enabled = enabled, interactionSource = interactionSource)
