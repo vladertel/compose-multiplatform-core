@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation.text
+package androidx.compose.ui.platform
 
-import androidx.compose.ui.input.pointer.PointerIcon
-import java.awt.Cursor
+import androidx.compose.ui.node.LayoutNode
 
-internal actual val textPointerIcon: PointerIcon =
-    PointerIcon(Cursor(Cursor.TEXT_CURSOR))
+internal interface AccessibilityController {
+    fun onSemanticsChange()
+    fun onLayoutChange(layoutNode: LayoutNode)
+    suspend fun syncLoop()
+}

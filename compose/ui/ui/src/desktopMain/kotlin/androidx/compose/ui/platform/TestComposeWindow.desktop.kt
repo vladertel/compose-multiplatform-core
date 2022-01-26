@@ -32,6 +32,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -44,6 +45,11 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign
 
+@PublishedApi
+internal val EmptyDispatcher = object : CoroutineDispatcher() {
+    override fun dispatch(context: CoroutineContext, block: Runnable) = Unit
+}
+
 /**
  * A virtual window for testing purposes.
  *
@@ -53,6 +59,13 @@ import kotlin.math.sign
  * dispatcher as coroutineContext (for example, Dispatchers.Swing)
  */
 @OptIn(ExperimentalComposeUiApi::class)
+@Deprecated(
+    "use ImageComposeScene",
+    replaceWith = ReplaceWith(
+        "ImageComposeScene",
+        "androidx.compose.ui.ImageComposeScene"
+    )
+)
 class TestComposeWindow(
     val width: Int,
     val height: Int,
@@ -96,7 +109,7 @@ class TestComposeWindow(
      * Clear-up all acquired resources and stop all pending work
      */
     fun dispose() {
-        scene.dispose()
+        scene.close()
         coroutineScope.cancel()
     }
 

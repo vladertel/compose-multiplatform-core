@@ -26,31 +26,37 @@ import com.android.build.gradle.internal.lint.AndroidLintAnalysisTask
 import com.android.build.gradle.internal.lint.AndroidLintTask
 import com.android.build.gradle.internal.lint.LintModelWriterTask
 import com.android.build.gradle.internal.lint.VariantInputs
+import org.gradle.api.Named
 import kotlin.reflect.KFunction
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.attributes.Usage
-import org.gradle.api.tasks.testing.Test
+import org.gradle.api.component.ComponentWithCoordinates
+import org.gradle.api.component.ComponentWithVariants
+import org.gradle.api.internal.component.SoftwareComponentInternal
+import org.gradle.api.internal.java.usagecontext.FeatureConfigurationUsageContext
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.internal.dependencies.DefaultMavenDependency
+import org.gradle.api.publish.maven.internal.dependencies.MavenDependencyInternal
+import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.findByType
-import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.commonizer.util.transitiveClosure
-import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
-import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
-import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
-import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
-import org.jetbrains.kotlin.gradle.targets.js.KotlinJsCompilerAttribute
-import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinAndroidTarget
 import java.io.File
+import kotlin.reflect.full.memberProperties
+import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.plugin.mpp.*
 
 const val composeSourceOption =
     "plugin:androidx.compose.compiler.plugins.kotlin:sourceInformation=true"
@@ -87,6 +93,11 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
                     if (plugin is KotlinMultiplatformPluginWrapper) {
                         project.configureForMultiplatform()
+                        if (project.experimentalOELPublication() && (project.oelAndroidxVersion() == null)) {
+                            error("androidx version should be specified for OEL publications")
+                        }
+                        if (project.experimentalOELPublication())
+                            OELPublishingPrototype(project)
                     }
                 }
             }
@@ -312,8 +323,87 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
     }
 }
 
-fun Project.configureComposeImplPluginForAndroidx() {
+fun Project.experimentalOELPublication() : Boolean = findProperty("oel.publication") == "true"
+fun Project.oelAndroidxVersion() : String? = findProperty("oel.androidx.version") as String?
 
+// FIXME: reflection access! Some API in Kotlin is needed
+@Suppress("unchecked_cast")
+private val KotlinTarget.kotlinComponents: Iterable<KotlinTargetComponent>
+    get() = javaClass.kotlin.memberProperties
+        .single { it.name == "kotlinComponents" }
+            .get(this) as Iterable<KotlinTargetComponent>
+
+
+fun OELPublishingPrototype(project: Project) {
+    val ext = project.multiplatformExtension ?: error("expected a multiplatform project")
+
+    ext.targets.all { target ->
+        if (target is KotlinAndroidTarget) {
+            project.publishAndroidxReference(target)
+        }
+    }
+}
+
+@Suppress("unchecked_cast")
+private fun Project.publishAndroidxReference(target: KotlinTarget) {
+    afterEvaluate {
+        target.kotlinComponents.forEach { component ->
+            val componentName = component.name
+
+            val multiplatformExtension =
+                extensions.findByType(KotlinMultiplatformExtension::class.java)
+                    ?: error("Expected a multiplatform project")
+
+            if (component is KotlinVariant)
+                component.publishable = false
+
+            val usages = when (component) {
+                is KotlinVariant -> component.usages
+                is JointAndroidKotlinTargetComponent -> component.usages
+                else -> emptyList()
+            }
+
+            extensions.getByType(PublishingExtension::class.java)
+                .publications.withType(DefaultMavenPublication::class.java)
+                // isAlias is needed for Gradle to ignore the fact that there's a
+                // publication that is not referenced as an available-at variant of the root module
+                // and has the Maven coordinates that are different from those of the root module
+                // FIXME: internal Gradle API! We would rather not create the publications,
+                //        but some API for that is needed in the Kotlin Gradle plugin
+                .all { publication ->
+                    if (publication.name == componentName) {
+                        publication.isAlias = true
+                    }
+                }
+
+            usages.forEach {    usage ->
+                val configurationName = usage.name + "-published"
+
+                configurations.matching{it.name == configurationName}.all() { conf ->
+                    conf.artifacts.clear()
+                    conf.dependencies.clear()
+                    conf.setExtendsFrom(emptyList())
+                    val newDependency = target.project.group.toString().replace("org.jetbrains.compose", "androidx.compose") + ":" + name + ":" + target.project.oelAndroidxVersion()!!
+                    conf.dependencies.add(target.project.dependencies.create(newDependency))
+                }
+
+                val rootComponent : KotlinSoftwareComponent = target.project.components.withType(KotlinSoftwareComponent::class.java)
+                    .getByName("kotlin")
+
+                (rootComponent.usages as MutableSet).add(
+                    DefaultKotlinUsageContext(
+                        multiplatformExtension.metadata().compilations.getByName("main"),
+                        objects.named(Usage::class.java, "kotlin-api"),
+                        configurationName
+                    )
+                )
+
+            }
+        }
+    }
+}
+
+fun Project.configureComposeImplPluginForAndroidx() {
     val conf = project.configurations.create("kotlinPlugin")
     val kotlinPlugin = conf.incoming.artifactView { view ->
         view.attributes { attributes ->

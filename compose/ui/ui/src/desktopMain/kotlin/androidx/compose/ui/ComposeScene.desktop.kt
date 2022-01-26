@@ -21,6 +21,10 @@ import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventData
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.platform.AccessibilityController
+import androidx.compose.ui.platform.AccessibilityControllerImpl
+import androidx.compose.ui.platform.PlatformComponent
+import androidx.compose.ui.platform.SkiaBasedOwner
 import java.awt.event.InputMethodEvent
 import java.awt.event.MouseEvent
 
@@ -67,3 +71,8 @@ internal actual fun pointerInputEvent(
         nativeEvent as MouseEvent?
     )
 }
+
+internal actual fun makeAccessibilityController(
+    skiaBasedOwner: SkiaBasedOwner,
+    component: PlatformComponent
+): AccessibilityController = AccessibilityControllerImpl(skiaBasedOwner, component)

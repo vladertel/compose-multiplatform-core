@@ -16,8 +16,22 @@
 
 package androidx.compose.foundation.text
 
-import androidx.compose.ui.input.pointer.PointerIcon
-import java.awt.Cursor
+import androidx.compose.foundation.text.selection.SelectionManager
+import androidx.compose.foundation.text.selection.TextFieldSelectionManager
+import androidx.compose.runtime.Composable
 
-internal actual val textPointerIcon: PointerIcon =
-    PointerIcon(Cursor(Cursor.TEXT_CURSOR))
+@Composable
+internal actual fun ContextMenuArea(
+    manager: TextFieldSelectionManager,
+    content: @Composable () -> Unit
+) {
+    content()
+}
+
+@Composable
+internal actual fun ContextMenuArea(
+    manager: SelectionManager,
+    content: @Composable () -> Unit
+) {
+    content()
+}

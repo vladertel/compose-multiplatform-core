@@ -24,12 +24,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.TestComposeWindow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.use
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,15 +40,17 @@ import org.junit.runners.JUnit4
 @OptIn(ExperimentalComposeUiApi::class)
 @RunWith(JUnit4::class)
 class MouseHoverFilterTest {
-    private val window = TestComposeWindow(width = 100, height = 100, density = Density(2f))
-
     @Test
-    fun `inside window`() {
+    fun `inside window`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var moveCount = 0
         var enterCount = 0
         var exitCount = 0
 
-        window.setContent {
+        scene.setContent {
             Box(
                 modifier = Modifier
                     .pointerMove(
@@ -63,42 +67,35 @@ class MouseHoverFilterTest {
                     .size(10.dp, 20.dp)
             )
         }
-        window.onMouseEntered(
-            x = 0,
-            y = 0
-        )
-        window.onMouseMoved(
-            x = 10,
-            y = 20
-        )
+
+        scene.sendPointerEvent(PointerEventType.Enter, Offset(0f, 0f))
+        scene.sendPointerEvent(PointerEventType.Move, Offset(10f, 20f))
         assertThat(enterCount).isEqualTo(1)
         assertThat(exitCount).isEqualTo(0)
         assertThat(moveCount).isEqualTo(1)
 
-        window.onMouseMoved(
-            x = 10,
-            y = 15
-        )
+        scene.sendPointerEvent(PointerEventType.Move, Offset(10f, 15f))
         assertThat(enterCount).isEqualTo(1)
         assertThat(exitCount).isEqualTo(0)
         assertThat(moveCount).isEqualTo(2)
 
-        window.onMouseMoved(
-            x = 30,
-            y = 30
-        )
+        scene.sendPointerEvent(PointerEventType.Move, Offset(30f, 30f))
         assertThat(enterCount).isEqualTo(1)
         assertThat(exitCount).isEqualTo(1)
         assertThat(moveCount).isEqualTo(2)
     }
 
     @Test
-    fun `window enter`() {
+    fun `window enter`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(2f)
+    ).use { scene ->
         var moveCount = 0
         var enterCount = 0
         var exitCount = 0
 
-        window.setContent {
+        scene.setContent {
             Box(
                 modifier = Modifier
                     .pointerMove(
@@ -116,15 +113,12 @@ class MouseHoverFilterTest {
             )
         }
 
-        window.onMouseEntered(
-            x = 10,
-            y = 20
-        )
+        scene.sendPointerEvent(PointerEventType.Enter, Offset(10f, 20f))
         assertThat(enterCount).isEqualTo(1)
         assertThat(exitCount).isEqualTo(0)
         assertThat(moveCount).isEqualTo(0)
 
-        window.onMouseExited()
+        scene.sendPointerEvent(PointerEventType.Exit, Offset(-1f, -1f))
         assertThat(enterCount).isEqualTo(1)
         assertThat(exitCount).isEqualTo(1)
         assertThat(moveCount).isEqualTo(0)

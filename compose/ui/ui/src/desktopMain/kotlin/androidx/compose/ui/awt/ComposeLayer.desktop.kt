@@ -23,6 +23,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.ComposeScene
+import androidx.compose.ui.platform.AccessibilityControllerImpl
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.window.density
@@ -32,6 +33,7 @@ import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkikoView
 import org.jetbrains.skiko.SkiaRenderer
+import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
@@ -46,6 +48,8 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import java.awt.event.MouseWheelEvent
 import java.awt.im.InputMethodRequests
+import javax.accessibility.Accessible
+import javax.accessibility.AccessibleContext
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
@@ -68,7 +72,19 @@ internal class ComposeLayer {
 
     private val density get() = _component.density.density
 
-    private inner class ComponentImpl : SkiaLayer(), PlatformComponent {
+    fun makeAccessible(component: Component) = object : Accessible {
+        override fun getAccessibleContext(): AccessibleContext? {
+            if (System.getenv("COMPOSE_DISABLE_ACCESSIBILITY") != null) return null
+            val controller =
+                scene.mainOwner?.accessibilityController as? AccessibilityControllerImpl
+            val accessible = controller?.rootAccessible
+            accessible?.getAccessibleContext()?.accessibleParent = component.parent as Accessible
+            return accessible?.getAccessibleContext()
+        }
+    }
+
+    private inner class ComponentImpl :
+        SkiaLayer(externalAccessibleFactory = ::makeAccessible), Accessible, PlatformComponent {
         var currentInputMethodRequests: InputMethodRequests? = null
 
         override fun addNotify() {
@@ -202,7 +218,7 @@ internal class ComposeLayer {
 
     fun dispose() {
         check(!isDisposed)
-        scene.dispose()
+        scene.close()
         events.cancel()
         _component.dispose()
         _initContent = null

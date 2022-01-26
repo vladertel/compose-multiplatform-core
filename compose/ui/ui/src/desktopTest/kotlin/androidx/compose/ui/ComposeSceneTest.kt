@@ -450,11 +450,11 @@ class ComposeSceneTest {
 
     private class TestException : RuntimeException()
 
-    // TODO(https://github.com/JetBrains/compose-jb/issues/1136): fix deadlock
+    // TODO(b/202967533): fix deadlock
     @ExperimentalComposeUiApi
     @Ignore(
         "This test never ends because of the deadlock" +
-            "(https://github.com/JetBrains/compose-jb/issues/1136)"
+            "(https://issuetracker.google.com/issues/202967533)"
     )
     @Test
     fun `focus management by keys`() {

@@ -97,6 +97,8 @@ internal class SkiaBasedOwner(
         return bounds.contains(intOffset)
     }
 
+    internal var accessibilityController: AccessibilityController? = null
+
     internal var bounds by mutableStateOf(IntRect.Zero)
 
     override var density by mutableStateOf(density)
@@ -309,9 +311,13 @@ internal class SkiaBasedOwner(
         onDestroy = { needClearObservations = true }
     )
 
-    override fun onSemanticsChange() = Unit
+    override fun onSemanticsChange() {
+        accessibilityController?.onSemanticsChange()
+    }
 
-    override fun onLayoutChange(layoutNode: LayoutNode) = Unit
+    override fun onLayoutChange(layoutNode: LayoutNode) {
+        accessibilityController?.onLayoutChange(layoutNode)
+    }
 
     override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
         return when (keyEvent.key) {

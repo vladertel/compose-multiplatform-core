@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 @file:Suppress("DEPRECATION_ERROR", "DEPRECATION")
+@file:OptIn(ExperimentalComposeUiApi::class)
 
 package androidx.compose.foundation.text
 
@@ -28,7 +29,11 @@ import androidx.compose.foundation.text.selection.mouseSelectionDetector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -266,8 +271,12 @@ internal class TextController(val state: TextState) : RememberObserver {
                         return true
                     }
                 }
-                Modifier.pointerInput(mouseSelectionObserver) {
-                    mouseSelectionDetector(mouseSelectionObserver)
+
+                Modifier.composed {
+                    val currentMouseSelectionObserver by rememberUpdatedState(mouseSelectionObserver)
+                    pointerInput(Unit) {
+                        mouseSelectionDetector(currentMouseSelectionObserver)
+                    }
                 }.pointerHoverIcon(textPointerIcon)
             }
         } else {
