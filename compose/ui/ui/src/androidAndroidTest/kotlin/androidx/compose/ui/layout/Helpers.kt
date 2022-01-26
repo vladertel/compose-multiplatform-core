@@ -50,9 +50,6 @@ internal fun createDelegate(
             on { snapshotObserver } doAnswer {
                 OwnerSnapshotObserver { it.invoke() }
             }
-            on { forceMeasureTheSubtree(any()) } doAnswer {
-                delegate.forceMeasureTheSubtree(it.arguments[0] as LayoutNode)
-            }
         }
     )
     if (firstMeasureCompleted) {

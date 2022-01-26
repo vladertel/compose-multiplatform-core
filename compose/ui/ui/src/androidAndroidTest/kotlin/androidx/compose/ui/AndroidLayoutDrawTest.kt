@@ -114,6 +114,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -500,6 +501,21 @@ class AndroidLayoutDrawTest {
             }
         }
         validateSquareColors(outerColor = green, innerColor = white, size = 20)
+    }
+
+    // Tests that calling measure multiple times on the same Measurable causes an exception
+    @Test
+    fun multipleMeasureCall() {
+        val latch = CountDownLatch(1)
+        activityTestRule.runOnUiThreadIR {
+            activity.setContent {
+                TwoMeasureLayout(50, latch) {
+                    AtLeastSize(50) {
+                    }
+                }
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
     }
 
     @Test
@@ -3908,6 +3924,33 @@ internal fun Padding(
         },
         content = content
     )
+}
+
+@Composable
+fun TwoMeasureLayout(
+    size: Int,
+    latch: CountDownLatch,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Layout(modifier = modifier, content = content) { measurables, _ ->
+        val testConstraints = Constraints()
+        measurables.forEach { it.measure(testConstraints) }
+        val childConstraints = Constraints.fixed(size, size)
+        try {
+            val placeables2 = measurables.map { it.measure(childConstraints) }
+            fail("Measuring twice on the same Measurable should throw an exception")
+            layout(size, size) {
+                placeables2.forEach { child ->
+                    child.placeRelative(0, 0)
+                }
+            }
+        } catch (_: IllegalStateException) {
+            // expected
+            latch.countDown()
+        }
+        layout(0, 0) { }
+    }
 }
 
 @Composable
