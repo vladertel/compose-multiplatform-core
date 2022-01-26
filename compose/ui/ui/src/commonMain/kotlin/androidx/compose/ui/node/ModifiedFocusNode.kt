@@ -36,6 +36,13 @@ internal class ModifiedFocusNode(
     modifier: FocusModifier
 ) : DelegatingLayoutNodeWrapper<FocusModifier>(wrapped, modifier) {
 
+    override var modifier: FocusModifier
+        get() = super.modifier
+        set(value) {
+            clearFocusIfFocused()
+            super.modifier = value
+        }
+
     override fun onInitialize() {
         super.onInitialize()
         modifier.focusNode = this
