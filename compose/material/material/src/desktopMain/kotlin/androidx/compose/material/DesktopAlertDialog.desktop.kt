@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awt.awtEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.Key
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.rememberDialogState
+import java.awt.event.KeyEvent
 import androidx.compose.ui.window.Dialog as CoreDialog
 
 /**
@@ -183,7 +185,6 @@ interface AlertDialogProvider {
  */
 @ExperimentalMaterialApi
 object PopupAlertDialogProvider : AlertDialogProvider {
-    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     override fun AlertDialog(
         onDismissRequest: () -> Unit,
@@ -201,7 +202,7 @@ object PopupAlertDialogProvider : AlertDialogProvider {
             focusable = true,
             onDismissRequest = onDismissRequest,
             onKeyEvent = {
-                if (it.key == Key.Escape) {
+                if (it.awtEvent.keyCode == KeyEvent.VK_ESCAPE) {
                     onDismissRequest()
                     true
                 } else {

@@ -26,6 +26,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awt.awtEvent
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.rememberCursorPositionProvider
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
+import java.awt.event.KeyEvent
 
 /**
  * A Material Design [dropdown menu](https://material.io/components/menus#dropdown-menu).
@@ -73,7 +75,6 @@ import androidx.compose.ui.window.PopupPositionProvider
  * tapping outside the menu's bounds
  * @param offset [DpOffset] to be added to the position of the menu
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Suppress("ModifierParameter")
 @Composable
 fun DropdownMenu(
@@ -102,7 +103,7 @@ fun DropdownMenu(
             onDismissRequest = onDismissRequest,
             popupPositionProvider = popupPositionProvider,
             onKeyEvent = {
-                if (it.key == Key.Escape) {
+                if (it.awtEvent.keyCode == KeyEvent.VK_ESCAPE) {
                     onDismissRequest()
                     true
                 } else {
@@ -188,7 +189,7 @@ fun CursorDropdownMenu(
             onDismissRequest = onDismissRequest,
             popupPositionProvider = rememberCursorPositionProvider(),
             onKeyEvent = {
-                if (it.key == Key.Escape) {
+                if (it.awtEvent.keyCode == KeyEvent.VK_ESCAPE) {
                     onDismissRequest()
                     true
                 } else {
