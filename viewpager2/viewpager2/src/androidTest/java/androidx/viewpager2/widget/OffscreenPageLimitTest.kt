@@ -137,12 +137,6 @@ class OffscreenPageLimitTest(private val config: TestConfig) : BaseTest() {
                         )
                     }
                 }
-                is OnPageSelectedEvent -> {
-                    // Nothing
-                }
-                is OnPageScrollStateChangedEvent -> {
-                    // Nothing
-                }
             }
         }
         // Verify that laid out pages don't change after the last scroll event

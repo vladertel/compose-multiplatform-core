@@ -130,7 +130,6 @@ import org.jetbrains.kotlin.ir.types.isInt
 import org.jetbrains.kotlin.ir.types.isLong
 import org.jetbrains.kotlin.ir.types.isNothing
 import org.jetbrains.kotlin.ir.types.isNullableAny
-import org.jetbrains.kotlin.ir.types.isNullableNothing
 import org.jetbrains.kotlin.ir.types.isShort
 import org.jetbrains.kotlin.ir.types.isUnit
 import org.jetbrains.kotlin.ir.types.makeNullable
@@ -1556,7 +1555,7 @@ class ComposableFunctionBodyTransformer(
             index = 1,
             annotations = Annotations.EMPTY,
             name = KtxNameConventions.CHANGED_PARAMETER,
-            outType = builtIns.intType.toKotlinType(),
+            outType = builtIns.int,
             declaresDefaultValue = false,
             isCrossinline = false,
             isNoinline = false,
@@ -1730,10 +1729,7 @@ class ComposableFunctionBodyTransformer(
         while (expr != null && block != null) {
             if (expr is IrReturn) {
                 block.statements.pop()
-                return if (expr.value.type.isUnitOrNullableUnit() ||
-                    expr.value.type.isNothing() ||
-                    expr.value.type.isNullableNothing()
-                ) {
+                return if (expr.value.type.isUnitOrNullableUnit()) {
                     block.statements.add(expr.value)
                     original to null
                 } else {

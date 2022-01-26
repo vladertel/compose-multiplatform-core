@@ -2,13 +2,13 @@
 # -----------------------------------------------------------------------------
 # All of the following should be updated in sync.
 # -----------------------------------------------------------------------------
-androidGradlePlugin = "7.1.0-beta03"
+androidGradlePlugin = "7.1.0-alpha08"
 # NOTE: When updating the lint version we also need to update the `api` version
 # supported by `IssueRegistry`'s.' For e.g. r.android.com/1331903
-androidLint = "30.1.0-beta03"
+androidLint = "30.1.0-alpha08"
 # Once you have a chosen version of AGP to upgrade to, go to
 # https://developer.android.com/studio/archive and find the matching version of Studio.
-androidStudio = "2021.1.1.16"
+androidStudio = "2021.1.1.8"
 # -----------------------------------------------------------------------------
 
 androidLintMin = "27.2.1"
@@ -22,17 +22,17 @@ androidxTestExtTruth = "1.4.0"
 atomicFu = "0.14.4"
 autoService = "1.0-rc6"
 autoValue = "1.6.3"
-dagger = "2.40.1"
+dagger = "2.38.1"
 dexmaker = "2.25.0"
 espresso = "3.3.0"
 guavaJre = "29.0-jre"
-hilt = "2.40.1"
+hilt = "2.38.1"
 incap = "0.2"
-kotlin = "1.6.0"
+kotlin = "1.5.31"
 kotlinCompileTesting = "1.4.1"
 kotlinCoroutines = "1.5.2"
-ksp = "1.6.0-1.0.1"
-ktlint = "0.43.0"
+ksp = "1.5.31-1.0.0"
+ktlint = "0.42.1"
 leakcanary = "2.7"
 mockito = "2.25.0"
 skiko = "0.6.6"
@@ -135,7 +135,7 @@ mockitoKotlin = { module = "com.nhaarman.mockitokotlin2:mockito-kotlin", version
 multidex = { module = "androidx.multidex:multidex", version = "2.0.1" }
 nullaway = { module = "com.uber.nullaway:nullaway", version = "0.3.7" }
 okhttpMockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version = "3.14.7" }
-playCore = { module = "com.google.android.play:core", version = "1.10.2" }
+playCore = { module = "com.google.android.play:core", version = "1.9.1" }
 playServicesBase = { module = "com.google.android.gms:play-services-base", version = "17.0.0" }
 playServicesBasement = { module = "com.google.android.gms:play-services-basement", version = "17.0.0" }
 playServicesWearable = { module = "com.google.android.gms:play-services-wearable", version = "17.1.0" }

@@ -18,21 +18,18 @@ package androidx.glance.appwidget
 
 import android.os.Build
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import android.widget.ListView
 import android.widget.RelativeLayout
 import android.widget.TextView
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.core.view.children
-import androidx.glance.GlanceModifier
+import androidx.glance.Modifier
 import androidx.glance.appwidget.layout.LazyColumn
 import androidx.glance.appwidget.layout.ReservedItemIdRangeEnd
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Text
 import androidx.glance.layout.padding
+import androidx.glance.unit.Dp
+import androidx.glance.unit.dp
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
@@ -49,7 +46,7 @@ class LazyColumnTest {
     @Test
     fun modifier_modifiesColumn() {
         TestGlanceAppWidget.uiDefinition = {
-            LazyColumn(modifier = GlanceModifier.padding(5.dp, 6.dp, 7.dp, 8.dp)) {
+            LazyColumn(modifier = Modifier.padding(5.dp, 6.dp, 7.dp, 8.dp)) {
                 item { Text("1") }
                 item { Text("2") }
             }
@@ -161,10 +158,10 @@ class LazyColumnTest {
         mHostRule.startHost()
 
         waitForListViewChildren { list ->
-            val textView0 = list.getUnboxedListItem<TextView>(0)
-            val textView1 = list.getUnboxedListItem<TextView>(1)
-            val textView2 = list.getUnboxedListItem<TextView>(2)
-            val textView3 = list.getUnboxedListItem<TextView>(3)
+            val textView0 = list.getListItemAt<TextView>(0)
+            val textView1 = list.getListItemAt<TextView>(1)
+            val textView2 = list.getListItemAt<TextView>(2)
+            val textView3 = list.getListItemAt<TextView>(3)
             assertThat(textView0.text.toString()).isEqualTo("Row 0")
             assertThat(textView1.text.toString()).isEqualTo("Row 1")
             assertThat(textView2.text.toString()).isEqualTo("Row 2")
@@ -185,10 +182,10 @@ class LazyColumnTest {
         mHostRule.startHost()
 
         waitForListViewChildren { list ->
-            val textView0 = list.getUnboxedListItem<TextView>(0)
-            val textView1 = list.getUnboxedListItem<TextView>(1)
-            val textView2 = list.getUnboxedListItem<TextView>(2)
-            val textView3 = list.getUnboxedListItem<TextView>(3)
+            val textView0 = list.getListItemAt<TextView>(0)
+            val textView1 = list.getListItemAt<TextView>(1)
+            val textView2 = list.getListItemAt<TextView>(2)
+            val textView3 = list.getListItemAt<TextView>(3)
             assertThat(textView0.text.toString()).isEqualTo("Row 0")
             assertThat(textView1.text.toString()).isEqualTo("Row 1")
             assertThat(textView2.text.toString()).isEqualTo("Row 2")
@@ -209,7 +206,7 @@ class LazyColumnTest {
         mHostRule.startHost()
 
         waitForListViewChildren { list ->
-            list.getUnboxedListItem<TextView>(0)
+            list.getListItemAt<TextView>(0)
         }
     }
 
@@ -226,7 +223,7 @@ class LazyColumnTest {
         mHostRule.startHost()
 
         waitForListViewChildren { list ->
-            list.getUnboxedListItem<TextView>(0)
+            list.getListItemAt<TextView>(0)
         }
     }
 
@@ -243,7 +240,7 @@ class LazyColumnTest {
         mHostRule.startHost()
 
         waitForListViewChildren { list ->
-            val listItem = list.getUnboxedListItem<RelativeLayout>(0)
+            val listItem = list.getListItemAt<RelativeLayout>(0)
             assertThat(listItem.gravity).isEqualTo(Gravity.CENTER)
         }
     }
@@ -261,7 +258,7 @@ class LazyColumnTest {
         mHostRule.startHost()
 
         waitForListViewChildren { list ->
-            val listItem = list.getUnboxedListItem<RelativeLayout>(0)
+            val listItem = list.getListItemAt<RelativeLayout>(0)
             assertThat(listItem.gravity).isEqualTo(Gravity.END + Gravity.CENTER_VERTICAL)
         }
     }
@@ -280,10 +277,9 @@ class LazyColumnTest {
         mHostRule.startHost()
 
         waitForListViewChildren { list ->
-            val row = list.getUnboxedListItem<RelativeLayout>(0)
-            val (rowItem0, rowItem1) = row.notGoneChildren.toList()
-            assertIs<TextView>(rowItem0)
-            assertIs<TextView>(rowItem1)
+            val row = list.getListItemAt<RelativeLayout>(0)
+            val rowItem0 = assertIs<TextView>(row.getChildAt(0))
+            val rowItem1 = assertIs<TextView>(row.getChildAt(1))
             assertThat(rowItem0.text.toString()).isEqualTo("Row item 0")
             assertThat(rowItem1.text.toString()).isEqualTo("Row item 1")
         }
@@ -302,7 +298,7 @@ class LazyColumnTest {
         waitForListViewChildren { list ->
             // The adapter may report more layout types than the provider declared, e.g. adding a
             // loading layout
-            assertThat(list.adapter.viewTypeCount).isAtLeast(TopLevelLayoutsCount)
+            assertThat(list.adapter.viewTypeCount).isAtLeast(generatedLayouts.size)
         }
     }
 
@@ -317,25 +313,19 @@ class LazyColumnTest {
             }
         }
 
-        // Change in Ie0923d5de57d328b2cdd78219f0049bf38cb9bed to work around KT-49573
-        mHostRule.onUnboxedHostView2(action)
-    }
-
-    private inline fun <reified T : View> ListView.getUnboxedListItem(position: Int): T {
-        val remoteViewFrame = assertIs<FrameLayout>(getChildAt(position))
-        // Android R- have a RemoteViewsAdapter$RemoteViewsFrameLayout first, Android S+ do not.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return remoteViewFrame.getChildAt(0).getTargetView()
+        mHostRule.onHostView {
+            action(mHostRule.mHostView.findChildByType<ListView>()!!)
         }
-        val frame = assertIs<FrameLayout>(remoteViewFrame.getChildAt(0))
-        return frame.getChildAt(0).getTargetView()
     }
-}
 
-// Change in Ie0923d5de57d328b2cdd78219f0049bf38cb9bed to work around KT-49573
-inline fun AppWidgetHostRule.onUnboxedHostView2(crossinline block: (ListView) -> Unit) {
-    onHostActivity {
-        val boxingView = assertIs<ViewGroup>(mHostView.getChildAt(0))
-        block(boxingView.children.single().getTargetView())
+    private inline fun <reified T> ListView.getListItemAt(position: Int): T {
+        return assertIs<T>(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                this.getChildAt(position)
+            } else {
+                // Pre-S, a RemoteViewsAdapter is used which adds an extra wrapper FrameLayout
+                (this.getChildAt(position) as ViewGroup).getChildAt(0)
+            }
+        )
     }
 }

@@ -263,9 +263,6 @@ class SetItemWhileScrollInProgressTest(private val config: TestConfig) : BaseTes
                     )
                     prevPosition = currentPosition
                 }
-                is OnPageScrollStateChangedEvent -> {
-                    // Nothing
-                }
             }
         }
     }
