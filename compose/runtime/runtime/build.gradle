@@ -45,7 +45,9 @@ dependencies {
         testImplementation(libs.kotlinTestJunit)
         testImplementation(libs.junit)
         testImplementation(libs.robolectric)
-        testImplementation(libs.kotlinCoroutinesTest)
+        // kotlinCoroutinesTest is copy-pasted in source code to support multiplarform tests
+        // testImplementation(libs.kotlinCoroutinesTest)
+        testImplementation("org.jetbrains.kotlinx:atomicfu:0.14.4")
 
         androidTestImplementation(libs.kotlinTestJunit)
         androidTestImplementation(libs.testExtJunit)
@@ -65,6 +67,18 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     kotlin {
         android()
         jvm("desktop")
+        js(IR) {
+            nodejs {}
+            browser() {
+                testTask {
+                    testLogging.showStandardStreams = true
+                    useKarma {
+                        useChromeHeadless()
+                        useFirefox()
+                    }
+                }
+            }
+        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -90,15 +104,42 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 dependsOn(jvmMain)
             }
 
-            commonTest.dependencies {
-                implementation(kotlin("test-junit"))
-                implementation(libs.kotlinCoroutinesTest)
+            commonTest {
+                kotlin.srcDir("src/test/kotlin")
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore)
+                    implementation("org.jetbrains.kotlinx:atomicfu:0.14.4")
+                }
             }
             androidAndroidTest.dependencies {
                 implementation(libs.testExtJunit)
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
                 implementation(libs.truth)
+                // kotlinCoroutinesTest is copy-pasted in source code to support multiplarform tests
+                // implementation(libs.kotlinCoroutinesTest)
+            }
+
+            jsMain {
+                dependencies {
+                    implementation(kotlin("stdlib-js"))
+                }
+            }
+            jvmTest.dependencies {
+                implementation kotlin("test-junit")
+                // kotlinCoroutinesTest is copy-pasted in source code to support multiplarform tests
+                // implementation(libs.kotlinCoroutinesTest)
+            }
+            desktopTest {
+                dependsOn jvmTest
+            }
+            androidTest {
+                dependsOn jvmTest
+            }
+            jsTest {
+                dependencies {
+                    implementation kotlin("test-js")
+                }
             }
         }
     }
@@ -106,6 +147,18 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         samples(projectOrArtifact(":compose:runtime:runtime:runtime-samples"))
     }
 }
+
+//publishing {
+//     repositories {
+//        maven {
+//            url "https://maven.pkg.jetbrains.space/public/p/compose/dev"
+//            credentials {
+//                username = project.hasProperty("COMPOSE_REPO_USERNAME") ? "$COMPOSE_REPO_USERNAME" : ""
+//                password = project.hasProperty("COMPOSE_REPO_KEY") ? "$COMPOSE_REPO_KEY" : ""
+//            }
+//        }
+//    }
+//}
 
 android {
     defaultConfig {

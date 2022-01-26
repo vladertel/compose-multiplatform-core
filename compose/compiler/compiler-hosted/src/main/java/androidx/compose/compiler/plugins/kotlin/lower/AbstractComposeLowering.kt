@@ -132,9 +132,11 @@ import org.jetbrains.kotlin.ir.util.constructedClass
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.getArguments
 import org.jetbrains.kotlin.ir.util.getPrimitiveArrayElementType
+import org.jetbrains.kotlin.ir.util.getPropertyGetter
 import org.jetbrains.kotlin.ir.util.isCrossinline
 import org.jetbrains.kotlin.ir.util.isFunction
 import org.jetbrains.kotlin.ir.util.isNoinline
+import org.jetbrains.kotlin.ir.util.primaryConstructor
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -298,11 +300,24 @@ abstract class AbstractComposeLowering(
         val classSymbol = type.classOrNull ?: return this
         val klass = classSymbol.owner
         if (klass.isInline) {
-            return coerceInlineClasses(
-                this,
-                type,
-                type.unboxInlineClass()
-            ).unboxValueIfInline()
+            if (context.platform.isJvm()) {
+                return coerceInlineClasses(
+                    this,
+                    type,
+                    type.unboxInlineClass()
+                ).unboxValueIfInline()
+            } else {
+                val primaryValueParameter = klass
+                    .primaryConstructor
+                    ?.valueParameters
+                    ?.get(0) ?: error("Expected a value parameter")
+                val fieldGetter = klass.getPropertyGetter(primaryValueParameter.name.identifier)
+                    ?: error("Expected a getter")
+                return irCall(
+                    symbol = fieldGetter,
+                    dispatchReceiver = this
+                ).unboxValueIfInline()
+            }
         }
         return this
     }

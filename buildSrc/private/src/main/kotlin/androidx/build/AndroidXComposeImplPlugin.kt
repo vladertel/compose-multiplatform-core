@@ -34,15 +34,22 @@ import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.attributes.Usage
+import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.findByType
+import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.commonizer.util.transitiveClosure
+import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
 import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
+import org.jetbrains.kotlin.gradle.targets.js.KotlinJsCompilerAttribute
+import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import java.io.File
 
 const val composeSourceOption =
@@ -112,6 +119,12 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
             project.tasks.withType(KotlinCompile::class.java).configureEach { compile ->
                 // Needed to enable `expect` and `actual` keywords
                 compile.kotlinOptions.freeCompilerArgs += "-Xmulti-platform"
+            }
+
+            project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
+                compile.kotlinOptions.freeCompilerArgs += listOf(
+                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true"
+                )
             }
         }
 
@@ -230,7 +243,9 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                     java.includes.add("**/*.kt")
                 }
                 sourceSets.findByName("test")?.apply {
-                    java.srcDirs("src/test/kotlin")
+                    java.srcDirs(
+                        "src/test/kotlin", "src/commonTest/kotlin", "src/jvmTest/kotlin"
+                    )
                     res.srcDirs("src/test/res")
 
                     // Keep Kotlin files in java source sets so the source set is not empty when
