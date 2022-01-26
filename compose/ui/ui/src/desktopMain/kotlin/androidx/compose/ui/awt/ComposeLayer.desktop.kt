@@ -40,7 +40,6 @@ import kotlinx.coroutines.swing.Swing
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkikoView
-import org.jetbrains.skiko.SkiaRenderer
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
