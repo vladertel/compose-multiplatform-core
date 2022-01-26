@@ -21,18 +21,18 @@ package androidx.compose.ui.input.mouse
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineDispatcher
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -179,21 +179,71 @@ class MouseHoverFilterTest {
         assertThat(enterCounts.toList()).isEqualTo(listOf(1, 1, 1))
         assertThat(exitCounts.toList()).isEqualTo(listOf(1, 1, 1))
     }
-}
 
-private fun Modifier.pointerMove(
-    onMove: () -> Unit,
-    onExit: () -> Unit,
-    onEnter: () -> Unit,
-): Modifier = pointerInput(onMove, onExit, onEnter) {
-    awaitPointerEventScope {
-        while (true) {
-            val event = awaitPointerEvent()
-            when (event.type) {
-                PointerEventType.Move -> onMove()
-                PointerEventType.Enter -> onEnter()
-                PointerEventType.Exit -> onExit()
+
+ 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `send multiple move events with paused dispatcher`() {
+        var moveCount = 0
+        var enterCount = 0
+        var exitCount = 0
+
+        val dispatcher = TestCoroutineDispatcher().apply {
+            pauseDispatcher()
+        }
+
+        ImageComposeScene(
+            width = 100,
+            height = 100,
+            density = Density(1f),
+            coroutineContext = dispatcher
+        ).use { scene ->
+            scene.setContent {
+                Box(
+                    modifier = Modifier
+                        .pointerMove(
+                            onMove = {
+                                moveCount++
+                            },
+                            onEnter = {
+                                enterCount++
+                            },
+                            onExit = {
+                                exitCount++
+                            }
+                        )
+                        .size(20.dp, 20.dp)
+                )
             }
+            dispatcher.advanceUntilIdle()
+
+            scene.sendPointerEvent(PointerEventType.Enter, Offset(5f, 10f))
+            scene.sendPointerEvent(PointerEventType.Move, Offset(6f, 10f))
+            scene.sendPointerEvent(PointerEventType.Move, Offset(7f, 10f))
+            scene.sendPointerEvent(PointerEventType.Press, Offset(9f, 10f))
+            dispatcher.advanceUntilIdle()
+
+            assertThat(enterCount).isEqualTo(1)
+            assertThat(exitCount).isEqualTo(0)
+            assertThat(moveCount).isEqualTo(2)
+
+            scene.sendPointerEvent(PointerEventType.Move, Offset(100f, 10f))
+            dispatcher.advanceUntilIdle()
+
+            assertThat(enterCount).isEqualTo(1)
+            assertThat(exitCount).isEqualTo(1)
+            assertThat(moveCount).isEqualTo(2)
         }
     }
 }
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun Modifier.pointerMove(
+    onMove: () -> Unit = {},
+    onExit: () -> Unit = {},
+    onEnter: () -> Unit = {},
+): Modifier = this
+    .onPointerEvent(PointerEventType.Move) { onMove() }
+    .onPointerEvent(PointerEventType.Exit) { onExit() }
+    .onPointerEvent(PointerEventType.Enter) { onEnter() }

@@ -27,6 +27,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpOffset
@@ -71,6 +73,7 @@ import androidx.compose.ui.window.PopupPositionProvider
  * tapping outside the menu's bounds
  * @param offset [DpOffset] to be added to the position of the menu
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Suppress("ModifierParameter")
 @Composable
 fun DropdownMenu(
@@ -97,7 +100,15 @@ fun DropdownMenu(
         Popup(
             focusable = focusable,
             onDismissRequest = onDismissRequest,
-            popupPositionProvider = popupPositionProvider
+            popupPositionProvider = popupPositionProvider,
+            onKeyEvent = {
+                if (it.key == Key.Escape) {
+                    onDismissRequest()
+                    true
+                } else {
+                    false
+                }
+            },
         ) {
             DropdownMenuContent(
                 expandedStates = expandedStates,
@@ -175,7 +186,15 @@ fun CursorDropdownMenu(
         Popup(
             focusable = focusable,
             onDismissRequest = onDismissRequest,
-            popupPositionProvider = rememberCursorPositionProvider()
+            popupPositionProvider = rememberCursorPositionProvider(),
+            onKeyEvent = {
+                if (it.key == Key.Escape) {
+                    onDismissRequest()
+                    true
+                } else {
+                    false
+                }
+            },
         ) {
             DropdownMenuContent(
                 expandedStates = expandedStates,
@@ -234,6 +253,14 @@ private data class DesktopDropdownMenuPositionProvider(
 
         if (belowAnchor >= aboveAnchor) {
             y = anchorBounds.bottom + contentOffsetY
+        }
+
+        if (y + popupContentSize.height > windowSize.height) {
+            y = windowSize.height - popupContentSize.height
+        }
+
+        if (y < 0) {
+            y = 0
         }
 
         onPositionCalculated(

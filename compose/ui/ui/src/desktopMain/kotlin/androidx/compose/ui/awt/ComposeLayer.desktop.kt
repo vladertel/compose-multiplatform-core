@@ -21,6 +21,7 @@ import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.HitPathTracker
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
@@ -31,7 +32,9 @@ import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.swing.Swing
 import org.jetbrains.skia.Canvas
@@ -61,21 +64,37 @@ import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
 import javax.accessibility.AccessibleContext
 import javax.swing.SwingUtilities
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 internal class ComposeLayer {
     private var isDisposed = false
 
-    // TODO(demin): probably we need to get rid of asynchronous events. it was added because of
-    //  slow lazy scroll. But events become unpredictable, and we can't consume them.
-    //  Alternative solution to a slow scroll - merge multiple scroll events into a single one.
-    private val events = AWTDebounceEventQueue()
-
     private val _component = ComponentImpl()
     val component: SkiaLayer get() = _component
 
+    @OptIn(ExperimentalComposeUiApi::class)
+    private val coroutineExceptionHandler = object : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
+        override fun handleException(context: CoroutineContext, exception: Throwable) {
+            exceptionHandler?.onException(exception) ?: throw exception
+        }
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    var exceptionHandler: WindowExceptionHandler? = null
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    private fun catchExceptions(body: () -> Unit) {
+        try {
+            body()
+        } catch (e: Throwable) {
+            exceptionHandler?.onException(e) ?: throw e
+        }
+    }
+
     internal val scene = ComposeScene(
-        Dispatchers.Swing,
+        Dispatchers.Swing + coroutineExceptionHandler,
         _component,
         Density(1f),
         _component::needRedraw
@@ -186,86 +205,162 @@ internal class ComposeLayer {
         private fun refreshWindowFocus() {
             windowInfo.isWindowFocused = window?.isFocused ?: false
         }
+
+        override fun scheduleSyntheticMoveEvent() {
+            needSendSyntheticMove = true
+            SwingUtilities.invokeLater {
+                if (isDisposed) return@invokeLater
+                catchExceptions {
+                    flushSyntheticMoveEvent()
+                }
+            }
+        }
     }
 
     init {
         _component.skikoView = object : SkikoView {
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-                try {
+                catchExceptions {
+                    flushSyntheticMoveEvent()
                     scene.render(canvas, nanoTime)
-                } catch (e: Throwable) {
-                    if (System.getProperty("compose.desktop.render.ignore.errors") == null) {
-                        throw e
-                    }
                 }
             }
         }
 
         _component.addInputMethodListener(object : InputMethodListener {
             override fun caretPositionChanged(event: InputMethodEvent?) {
+                if (isDisposed) return
                 if (event != null) {
-                    scene.onInputMethodEvent(event)
+                    catchExceptions {
+                        scene.onInputMethodEvent(event)
+                    }
                 }
             }
 
-            override fun inputMethodTextChanged(event: InputMethodEvent) = events.post {
-                scene.onInputMethodEvent(event)
+            override fun inputMethodTextChanged(event: InputMethodEvent) {
+                if (isDisposed) return
+                catchExceptions {
+                    scene.onInputMethodEvent(event)
+                }
             }
         })
 
         _component.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) = Unit
-
-            override fun mousePressed(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseReleased(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseEntered(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseExited(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
+            override fun mousePressed(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseReleased(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseEntered(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseExited(event: MouseEvent) = onMouseEvent(event)
         })
         _component.addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseDragged(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
-
-            override fun mouseMoved(event: MouseEvent) = events.post {
-                scene.onMouseEvent(density, event)
-            }
+            override fun mouseDragged(event: MouseEvent) = onMouseEvent(event)
+            override fun mouseMoved(event: MouseEvent) = onMouseEvent(event)
         })
         _component.addMouseWheelListener { event ->
-            events.post {
-                scene.onMouseWheelEvent(density, event)
-            }
+            onMouseWheelEvent(event)
         }
         _component.focusTraversalKeysEnabled = false
         _component.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(event: KeyEvent) {
-                scene.sendKeyEvent(event)
-            }
-
-            override fun keyReleased(event: KeyEvent) {
-                scene.sendKeyEvent(event)
-            }
-
-            override fun keyTyped(event: KeyEvent) {
-                scene.sendKeyEvent(event)
-            }
+            override fun keyPressed(event: KeyEvent) = onKeyEvent(event)
+            override fun keyReleased(event: KeyEvent) = onKeyEvent(event)
+            override fun keyTyped(event: KeyEvent) = onKeyEvent(event)
         })
+    }
+
+    private fun onMouseEvent(event: MouseEvent) = catchExceptions {
+        // AWT can send events after the window is disposed
+        if (isDisposed) return@catchExceptions
+        checkSyntheticEvents(event)
+        scene.onMouseEvent(density, event)
+    }
+
+    private fun onMouseWheelEvent(event: MouseWheelEvent) = catchExceptions {
+        if (isDisposed) return@catchExceptions
+        checkSyntheticEvents(event)
+        scene.onMouseWheelEvent(density, event)
+    }
+
+    private var lastMouseEvent: MouseEvent? = null
+    private var needSendSyntheticMove = false
+
+    private fun flushSyntheticMoveEvent() {
+        val lastMouseEvent = lastMouseEvent ?: return
+        if (needSendSyntheticMove) {
+            needSendSyntheticMove = false
+            val source = lastMouseEvent.source as Component
+            val event = MouseEvent(
+                source,
+                MouseEvent.MOUSE_MOVED,
+                System.nanoTime(),
+                lastMouseEvent.modifiersEx,
+                lastMouseEvent.x,
+                lastMouseEvent.y,
+                0,
+                false
+            )
+            scene.onMouseEvent(density, event)
+        }
+    }
+
+    /**
+     * Compose can't work well if we miss Move event before, for example, Scroll event.
+     *
+     * This is because of the implementation of [HitPathTracker].
+     *
+     * Imaging two boxes:
+     * ```
+     * Column {
+     *   Box(size=10)
+     *   Box(size=10)
+     * }
+     * ```
+     *
+     * - we send Move's in the right order:
+     * 1. Move(5,5) -> box1 receives Enter(5,5)
+     * 2. Move(5,15) -> box1 receives Exit(5,15), box2 receives Enter(5,15)
+     * 3. Scroll(5,15) -> box2 receives Scroll(5,15)
+     *
+     * - we skip some Move's (AWT can skip them):
+     * 1. Move(5,5) -> box1 receives Enter(5,5)
+     * 2. Scroll(5,15) -> box1 receives Scroll(5,15), box2 receives Scroll(5,15)
+     * 3. Move(5,16) -> box2 receives Enter(5,16)
+     *
+     * You can see that box1 loses the Exit event.
+     */
+    private fun checkSyntheticEvents(event: MouseEvent) {
+        val lastMouseEvent = lastMouseEvent
+
+        val isMove = event.id == MouseEvent.MOUSE_MOVED
+            || event.id == MouseEvent.MOUSE_DRAGGED
+            || event.id == MouseEvent.MOUSE_ENTERED
+            || event.id == MouseEvent.MOUSE_EXITED
+
+        val isMoved = lastMouseEvent?.isSamePosition(event) == false
+
+        if (!isMove && isMoved) {
+            needSendSyntheticMove = true
+        }
+
+        this.lastMouseEvent = event
+
+        flushSyntheticMoveEvent()
+    }
+
+    private fun MouseEvent.isSamePosition(other: MouseEvent) =
+        x == other.x && y == other.y
+
+    private fun onKeyEvent(event: KeyEvent) {
+        if (isDisposed) return
+        catchExceptions {
+            if (scene.sendKeyEvent(ComposeKeyEvent(event))) {
+                event.consume()
+            }
+        }
     }
 
     fun dispose() {
         check(!isDisposed)
         scene.close()
-        events.cancel()
         _component.dispose()
         _initContent = null
         isDisposed = true
@@ -282,11 +377,13 @@ internal class ComposeLayer {
         // but the first composition will be useless, as we set density=1
         // (we don't know the real density if we have unattached component)
         _initContent = {
-            scene.setContent(
-                onPreviewKeyEvent = onPreviewKeyEvent,
-                onKeyEvent = onKeyEvent,
-                content = content
-            )
+            catchExceptions {
+                scene.setContent(
+                    onPreviewKeyEvent = onPreviewKeyEvent,
+                    onKeyEvent = onKeyEvent,
+                    content = content
+                )
+            }
         }
         initContent()
     }
@@ -347,11 +444,6 @@ private fun ComposeScene.onMouseWheelEvent(
         keyboardModifiers = event.keyboardModifiers,
         nativeEvent = event
     )
-}
-
-@OptIn(ExperimentalComposeUiApi::class)
-private fun ComposeScene.sendKeyEvent(event: KeyEvent) {
-    sendKeyEvent(ComposeKeyEvent(event))
 }
 
 @OptIn(ExperimentalComposeUiApi::class)

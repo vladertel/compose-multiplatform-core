@@ -18,6 +18,7 @@ package androidx.compose.ui.window
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -240,17 +241,20 @@ fun Dialog(
     content: @Composable DialogWindowScope.() -> Unit
 ) {
     val compositionLocalContext by rememberUpdatedState(currentCompositionLocalContext)
+    val windowExceptionHandlerFactory by rememberUpdatedState(LocalWindowExceptionHandlerFactory.current)
     AwtWindow(
         visible = visible,
         create = {
             create().apply {
                 this.compositionLocalContext = compositionLocalContext
+                this.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(this)
                 setContent(onPreviewKeyEvent, onKeyEvent, content)
             }
         },
         dispose = dispose,
         update = {
             it.compositionLocalContext = compositionLocalContext
+            it.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(it)
             update(it)
         }
     )
@@ -259,6 +263,7 @@ fun Dialog(
 /**
  * Receiver scope which is used by [androidx.compose.ui.window.Dialog].
  */
+@Stable
 interface DialogWindowScope : WindowScope {
     /**
      * [ComposeDialog] that was created inside [androidx.compose.ui.window.Dialog].

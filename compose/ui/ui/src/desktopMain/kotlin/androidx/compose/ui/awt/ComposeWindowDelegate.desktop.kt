@@ -21,9 +21,13 @@ import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.window.LocalWindow
+import androidx.compose.ui.window.UndecoratedWindowResizer
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
+import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.SkiaLayer
+import org.jetbrains.skiko.hostOs
+import java.awt.Color
 import java.awt.Component
 import java.awt.Window
 import java.awt.event.MouseListener
@@ -31,10 +35,15 @@ import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelListener
 import javax.swing.JLayeredPane
 
-internal class ComposeWindowDelegate(private val window: Window) {
+internal class ComposeWindowDelegate(
+    private val window: Window,
+    private val isUndecorated: () -> Boolean
+) {
     private var isDisposed = false
 
     val layer = ComposeLayer()
+    val undecoratedWindowResizer = UndecoratedWindowResizer(window)
+
     val pane = object : JLayeredPane() {
         override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
             layer.component.setSize(width, height)
@@ -67,6 +76,7 @@ internal class ComposeWindowDelegate(private val window: Window) {
     init {
         pane.layout = null
         pane.add(layer.component, Integer.valueOf(1))
+        setContent {}
     }
 
     fun add(component: Component): Component {
@@ -93,6 +103,7 @@ internal class ComposeWindowDelegate(private val window: Window) {
                 LocalLayerContainer provides pane
             ) {
                 content()
+                undecoratedWindowResizer.Content()
             }
         }
     }
@@ -115,6 +126,25 @@ internal class ComposeWindowDelegate(private val window: Window) {
 
     val renderApi: GraphicsApi
         get() = layer.component.renderApi
+
+    var isTransparent: Boolean
+        get() = layer.component.transparency
+        set(value) {
+            if (value != layer.component.transparency) {
+                check(isUndecorated()) { "Transparent window should be undecorated!" }
+                check(!window.isDisplayable) {
+                    "Cannot change transparency if window is already displayable."
+                }
+                layer.component.transparency = value
+                if (value) {
+                    if (hostOs != OS.Windows) {
+                        window.background = Color(0, 0, 0, 0)
+                    }
+                } else {
+                    window.background = null
+                }
+            }
+        }
 
     fun addMouseListener(listener: MouseListener) {
         layer.component.addMouseListener(listener)

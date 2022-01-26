@@ -25,6 +25,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MonotonicFrameClock
 import androidx.compose.runtime.Recomposer
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -240,6 +241,7 @@ suspend fun awaitApplication(
 /**
  * Scope used by [application], [awaitApplication], [launchApplication]
  */
+@Stable
 interface ApplicationScope {
     /**
      * Close all windows created inside the application and cancel all launched effects

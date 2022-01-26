@@ -17,17 +17,18 @@ package androidx.compose.ui.awt
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalContext
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.UndecoratedWindowResizer
+import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.WindowPlacement
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.hostOs
 import org.jetbrains.skiko.OS
 import java.awt.Color
 import java.awt.Component
+import java.awt.GraphicsConfiguration
 import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelListener
@@ -36,9 +37,14 @@ import javax.swing.JFrame
 /**
  * ComposeWindow is a window for building UI using Compose for Desktop.
  * ComposeWindow inherits javax.swing.JFrame.
+ *
+ * @param graphicsConfiguration the GraphicsConfiguration that is used to construct the new window.
+ * If null, the system default GraphicsConfiguration is assumed.
  */
-class ComposeWindow : JFrame() {
-    private val delegate = ComposeWindowDelegate(this)
+class ComposeWindow(
+    graphicsConfiguration: GraphicsConfiguration? = null
+) : JFrame(graphicsConfiguration) {
+    private val delegate = ComposeWindowDelegate(this, ::isUndecorated)
     internal val layer get() = delegate.layer
 
     init {
@@ -56,6 +62,12 @@ class ComposeWindow : JFrame() {
      * `null` if no composition locals should be provided.
      */
     var compositionLocalContext: CompositionLocalContext? by delegate::compositionLocalContext
+
+    /**
+     * Handler to catch uncaught exceptions during rendering frames, handling events, or processing background Compose operations.
+     */
+    @ExperimentalComposeUiApi
+    var exceptionHandler: WindowExceptionHandler? by layer::exceptionHandler
 
     /**
      * Composes the given composable into the ComposeWindow.
@@ -106,16 +118,14 @@ class ComposeWindow : JFrame() {
         super.dispose()
     }
 
-    private val undecoratedWindowResizer = UndecoratedWindowResizer(this, layer)
-
     override fun setUndecorated(value: Boolean) {
         super.setUndecorated(value)
-        undecoratedWindowResizer.enabled = isUndecorated && isResizable
+        delegate.undecoratedWindowResizer.enabled = isUndecorated && isResizable
     }
 
     override fun setResizable(value: Boolean) {
         super.setResizable(value)
-        undecoratedWindowResizer.enabled = isUndecorated && isResizable
+        delegate.undecoratedWindowResizer.enabled = isUndecorated && isResizable
     }
 
     /**
@@ -123,24 +133,7 @@ class ComposeWindow : JFrame() {
      * Transparency should be set only if window is not showing and `isUndecorated` is set to
      * `true`, otherwise AWT will throw an exception.
      */
-    var isTransparent: Boolean
-        get() = layer.component.transparency
-        set(value) {
-            if (value != layer.component.transparency) {
-                check(isUndecorated) { "Transparent window should be undecorated!" }
-                check(!isDisplayable) {
-                    "Cannot change transparency if window is already displayable."
-                }
-                layer.component.transparency = value
-                if (value) {
-                    if (hostOs != OS.Windows) {
-                        background = Color(0, 0, 0, 0)
-                    }
-                } else {
-                    background = null
-                }
-            }
-        }
+    var isTransparent: Boolean by delegate::isTransparent
 
     var placement: WindowPlacement
         get() = when {

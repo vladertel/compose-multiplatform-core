@@ -49,6 +49,7 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -96,6 +97,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIconDefaults
 import androidx.compose.ui.input.pointer.isBackPressed
 import androidx.compose.ui.input.pointer.isForwardPressed
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
@@ -112,6 +114,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDecoration.Companion.Underline
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -152,17 +155,19 @@ private fun FrameWindowScope.App() {
     MaterialTheme {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painterResource("androidx/compose/desktop/example/star.svg"),
-                                contentDescription = "Star"
-                            )
-                            Text(title)
+                WindowDraggableArea {
+                    TopAppBar(
+                        title = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Image(
+                                    painterResource("androidx/compose/desktop/example/star.svg"),
+                                    contentDescription = "Star"
+                                )
+                                Text(title)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             },
             floatingActionButton = {
                 ExtendedFloatingActionButton(
@@ -349,25 +354,18 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
                     "   }\n" +
                     "}",
                 fontFamily = italicFont,
-                modifier = Modifier.padding(10.dp).pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val position = event.changes.first().position
-                            when (event.type) {
-                                PointerEventType.Move -> {
-                                    overText = "Move position: $position"
-                                }
-                                PointerEventType.Enter -> {
-                                    overText = "Over enter"
-                                }
-                                PointerEventType.Exit -> {
-                                    overText = "Over exit"
-                                }
-                            }
-                        }
+                modifier = Modifier
+                    .padding(10.dp)
+                    .onPointerEvent(PointerEventType.Move) {
+                        val position = it.changes.first().position
+                        overText = "Move position: $position"
                     }
-                }
+                    .onPointerEvent(PointerEventType.Enter) {
+                        overText = "Over enter"
+                    }
+                    .onPointerEvent(PointerEventType.Exit) {
+                        overText = "Over exit"
+                    }
             )
         }
 

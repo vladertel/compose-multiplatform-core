@@ -17,6 +17,8 @@
 package androidx.compose.ui.input.key
 
 import androidx.compose.ui.awt.awtEvent
+import java.awt.event.KeyEvent.KEY_LOCATION_STANDARD
+import java.awt.event.KeyEvent.KEY_LOCATION_UNKNOWN
 import java.awt.event.KeyEvent.KEY_PRESSED
 import java.awt.event.KeyEvent.KEY_RELEASED
 
@@ -29,7 +31,10 @@ actual typealias NativeKeyEvent = Any
  * The key that was pressed.
  */
 actual val KeyEvent.key: Key
-    get() = Key(awtEvent.keyCode, awtEvent.keyLocation)
+    get() = Key(awtEvent.keyCode, awtEvent.keyLocationForCompose)
+
+private val java.awt.event.KeyEvent.keyLocationForCompose get() =
+    if (keyLocation == KEY_LOCATION_UNKNOWN) KEY_LOCATION_STANDARD else keyLocation
 
 /**
  * The UTF16 value corresponding to the key event that was pressed. The unicode character

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toIntRect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -79,8 +80,8 @@ internal val LocalComposeScene = staticCompositionLocalOf<ComposeScene> {
 class ComposeScene internal constructor(
     coroutineContext: CoroutineContext = Dispatchers.Unconfined,
     internal val component: PlatformComponent,
-    density: Density,
-    private val invalidate: () -> Unit
+    density: Density = Density(1f),
+    private val invalidate: () -> Unit = {}
 ) {
     /**
      * Constructs [ComposeScene]
@@ -120,7 +121,7 @@ class ComposeScene internal constructor(
 
     private fun invalidateIfNeeded() {
         hasPendingDraws = frameClock.hasAwaiters || list.any(SkiaBasedOwner::needRender)
-        if (hasPendingDraws && !isInvalidationDisabled) {
+        if (hasPendingDraws && !isInvalidationDisabled && !isClosed) {
             invalidate()
         }
     }
@@ -141,7 +142,6 @@ class ComposeScene internal constructor(
      */
     val roots: Set<RootForTest> get() = list
 
-    private var pointerId = 0L
     private val defaultPointerStateTracker = DefaultPointerStateTracker()
 
     private val job = Job()
@@ -214,31 +214,36 @@ class ComposeScene internal constructor(
         effectDispatcher.hasTasks() ||
         recomposeDispatcher.hasTasks()
 
-    internal fun attach(skiaBasedOwner: SkiaBasedOwner) {
+    internal fun attach(owner: SkiaBasedOwner) {
         check(!isClosed) { "ComposeScene is closed" }
-        list.add(skiaBasedOwner)
-        skiaBasedOwner.onNeedRender = ::invalidateIfNeeded
-        skiaBasedOwner.onDispatchCommand = ::dispatchCommand
-        skiaBasedOwner.constraints = constraints
-        skiaBasedOwner.containerCursor = component
-        skiaBasedOwner.accessibilityController = makeAccessibilityController(
-            skiaBasedOwner,
+        list.add(owner)
+        owner.onNeedRender = ::invalidateIfNeeded
+        owner.onDispatchCommand = ::dispatchCommand
+        owner.constraints = constraints
+        owner.accessibilityController = makeAccessibilityController(
+            owner,
             component
         )
         invalidateIfNeeded()
-        if (skiaBasedOwner.isFocusable) {
-            focusedOwner = skiaBasedOwner
+        if (owner.isFocusable) {
+            focusedOwner = owner
         }
     }
 
-    internal fun detach(skiaBasedOwner: SkiaBasedOwner) {
+    internal fun detach(owner: SkiaBasedOwner) {
         check(!isClosed) { "ComposeScene is closed" }
-        list.remove(skiaBasedOwner)
-        skiaBasedOwner.onDispatchCommand = null
-        skiaBasedOwner.onNeedRender = null
+        list.remove(owner)
+        owner.onDispatchCommand = null
+        owner.onNeedRender = null
         invalidateIfNeeded()
-        if (skiaBasedOwner == focusedOwner) {
+        if (owner == focusedOwner) {
             focusedOwner = list.lastOrNull { it.isFocusable }
+        }
+        if (owner == lastMouseMoveOwner) {
+            lastMouseMoveOwner = null
+        }
+        if (owner == mousePressOwner) {
+            mousePressOwner = null
         }
     }
 
@@ -290,8 +295,10 @@ class ComposeScene internal constructor(
         mainOwner?.dispose()
         val mainOwner = SkiaBasedOwner(
             platformInputService,
+            component,
             component.windowInfo,
             density,
+            IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect(),
             onPreviewKeyEvent = onPreviewKeyEvent,
             onKeyEvent = onKeyEvent
         )
@@ -317,6 +324,7 @@ class ComposeScene internal constructor(
             forEachOwner {
                 it.constraints = constraints
             }
+            mainOwner?.bounds = IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect()
         }
 
     /**
@@ -355,17 +363,23 @@ class ComposeScene internal constructor(
 
     private var focusedOwner: SkiaBasedOwner? = null
     private var mousePressOwner: SkiaBasedOwner? = null
-    private val hoveredOwner: SkiaBasedOwner?
-        get() = list.lastOrNull { it.isHovered(pointLocation) } ?: list.lastOrNull()
+    private var lastMouseMoveOwner: SkiaBasedOwner? = null
+    private fun hoveredOwner(event: PointerInputEvent): SkiaBasedOwner? =
+        list.lastOrNull { it.isHovered(event.pointers.first().position) }
 
     private fun SkiaBasedOwner?.isAbove(
         targetOwner: SkiaBasedOwner?
-    ) = list.indexOf(this) > list.indexOf(targetOwner)
+    ) = this != null && targetOwner != null && list.indexOf(this) > list.indexOf(targetOwner)
 
     // TODO(demin): return Boolean (when it is consumed).
-    //  see ComposeLayer todo about AWTDebounceEventQueue
     /**
      * Send pointer event to the content.
+     *
+     * Don't send non-Move event with a different position without sending Move event first.
+     * Otherwise hover can lose Exit/Enter events.
+     *
+     * Do: Move(5,5) -> Move(15,5) -> Scroll(15,5) -> Press(15,5) -> Move(20,5) -> Release(20,5)
+     * Don't: Move(5,5) -> Scroll(15,5) -> Press(15,5) -> Release(20,5)
      *
      * @param eventType Indicates the primary reason that the event was sent.
      * @param position The [Offset] of the current pointer event, relative to the content.
@@ -402,7 +416,7 @@ class ComposeScene internal constructor(
             timeMillis,
             nativeEvent,
             type,
-            pointerId,
+            pointerId = 0,
             scrollDelta,
             actualButtons,
             actualKeyboardModifiers
@@ -411,17 +425,10 @@ class ComposeScene internal constructor(
         when (eventType) {
             PointerEventType.Press -> onMousePressed(event)
             PointerEventType.Release -> onMouseReleased(event)
-            PointerEventType.Move -> {
-                pointLocation = position
-                if (actualButtons.areAnyPressed) {
-                    mousePressOwner?.processPointerInput(event)
-                } else {
-                    hoveredOwner?.processPointerInput(event)
-                }
-            }
-            PointerEventType.Enter -> hoveredOwner?.processPointerInput(event)
-            PointerEventType.Exit -> hoveredOwner?.processPointerInput(event)
-            PointerEventType.Scroll -> hoveredOwner?.processPointerInput(event)
+            PointerEventType.Move -> onMouseMove(event)
+            PointerEventType.Enter -> onMouseMove(event)
+            PointerEventType.Exit -> onMouseMove(event)
+            PointerEventType.Scroll -> onMouseScrolled(event)
         }
 
         if (!actualButtons.areAnyPressed) {
@@ -430,27 +437,46 @@ class ComposeScene internal constructor(
     }
 
     private fun onMousePressed(event: PointerInputEvent) {
-        val currentOwner = hoveredOwner
-        if (currentOwner != null) {
-            if (focusedOwner.isAbove(currentOwner)) {
-                focusedOwner?.onDismissRequest?.invoke()
-            } else {
-                currentOwner.processPointerInput(event)
-                mousePressOwner = currentOwner
-            }
+        val owner = hoveredOwner(event)
+        if (focusedOwner.isAbove(owner)) {
+            focusedOwner?.onDismissRequest?.invoke()
         } else {
-            focusedOwner?.processPointerInput(event)
-            mousePressOwner = focusedOwner
+            owner?.processPointerInput(event)
+            mousePressOwner = owner
         }
     }
 
     private fun onMouseReleased(event: PointerInputEvent) {
-        val owner = (mousePressOwner ?: hoveredOwner) ?: focusedOwner
+        val owner = mousePressOwner ?: hoveredOwner(event)
         owner?.processPointerInput(event)
-        pointerId += 1
     }
 
-    private var pointLocation = Offset.Zero
+    private fun onMouseMove(event: PointerInputEvent) {
+        val owner = if (event.buttons.areAnyPressed) mousePressOwner else hoveredOwner(event)
+
+        // Cases:
+        // - move from outside to the window (owner != null, lastMouseMoveOwner == null): Enter
+        // - move from the window to outside (owner == null, lastMouseMoveOwner != null): Exit
+        // - move from one point of the window to another (owner == lastMouseMoveOwner): Move
+        // - move from one popup to another (owner != lastMouseMoveOwner): [Popup 1] Exit, [Popup 2] Enter, Move
+
+        if (owner != lastMouseMoveOwner) {
+            lastMouseMoveOwner?.processPointerInput(event.copy(eventType = PointerEventType.Exit), isInBounds = false)
+            owner?.processPointerInput(event.copy(eventType = PointerEventType.Enter))
+        }
+        if (event.eventType == PointerEventType.Move) {
+            owner?.processPointerInput(event)
+        }
+
+        lastMouseMoveOwner = owner
+    }
+
+    private fun onMouseScrolled(event: PointerInputEvent) {
+        val owner = hoveredOwner(event)
+        if (!focusedOwner.isAbove(owner)) {
+            owner?.processPointerInput(event)
+        }
+    }
 
     /**
      * Send [KeyEvent] to the content.
@@ -495,7 +521,7 @@ internal expect fun pointerInputEvent(
 internal expect fun makeAccessibilityController(
     skiaBasedOwner: SkiaBasedOwner,
     component: PlatformComponent
-): AccessibilityController
+): AccessibilityController?
 
 internal expect val DefaultPointerButtons: PointerButtons
 internal expect val DefaultPointerKeyboardModifiers: PointerKeyboardModifiers

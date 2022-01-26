@@ -23,12 +23,14 @@ import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.isOutOfBounds
+import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.positionChangeConsumed
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.unit.Density
@@ -246,10 +248,16 @@ internal suspend fun AwaitPointerEventScope.awaitFirstDownOnPass(
     } while (
         !event.changes.fastAll {
             if (requireUnconsumed) it.changedToDown() else it.changedToDownIgnoreConsumed()
-        }
+        } || !event.isPrimaryButton
     )
     return event.changes[0]
 }
+
+private val PointerEvent.isPrimaryButton: Boolean
+    get() {
+        val isMouse = changes.all { it.type == PointerType.Mouse }
+        return !isMouse || buttons.isPrimaryPressed
+    }
 
 /**
  * Reads events until all pointers are up or the gesture was canceled. The gesture
