@@ -86,15 +86,6 @@ internal class HitPathTracker(private val rootCoordinates: LayoutCoordinates) {
         internalPointerEvent: InternalPointerEvent,
         isInBounds: Boolean = true
     ): Boolean {
-        val changed = root.buildCache(
-            internalPointerEvent.changes,
-            rootCoordinates,
-            internalPointerEvent,
-            isInBounds
-        )
-        if (!changed) {
-            return false
-        }
         var dispatchHit = root.dispatchMainEventPass(
             internalPointerEvent.changes,
             rootCoordinates,
@@ -137,24 +128,6 @@ internal class HitPathTracker(private val rootCoordinates: LayoutCoordinates) {
 @OptIn(InternalCoreApi::class)
 internal open class NodeParent {
     val children: MutableVector<Node> = mutableVectorOf()
-
-    open fun buildCache(
-        changes: Map<PointerId, PointerInputChange>,
-        parentCoordinates: LayoutCoordinates,
-        internalPointerEvent: InternalPointerEvent,
-        isInBounds: Boolean
-    ): Boolean {
-        var changed = false
-        children.forEach {
-            changed = it.buildCache(
-                changes,
-                parentCoordinates,
-                internalPointerEvent,
-                isInBounds
-            ) || changed
-        }
-        return changed
-    }
 
     /**
      * Dispatches [changes] down the tree, for the initial and main pass.
@@ -278,6 +251,9 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
         internalPointerEvent: InternalPointerEvent,
         isInBounds: Boolean
     ): Boolean {
+        // Build the cache that will be used for both the main and final pass
+        buildCache(changes, parentCoordinates, internalPointerEvent, isInBounds)
+
         // TODO(b/158243568): The below dispatching operations may cause the pointerInputFilter to
         //  become detached. Currently, they just no-op if it becomes detached and the detached
         //  pointerInputFilters are removed from being tracked with the next event. I currently
@@ -342,22 +318,14 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
      *
      * @see clearCache
      */
-    override fun buildCache(
+    private fun buildCache(
         changes: Map<PointerId, PointerInputChange>,
         parentCoordinates: LayoutCoordinates,
         internalPointerEvent: InternalPointerEvent,
         isInBounds: Boolean
-    ): Boolean {
-        val childChanged =
-            super.buildCache(
-                changes,
-                parentCoordinates,
-                internalPointerEvent,
-                isInBounds
-            )
-
+    ) {
         // Avoid future work if we know this node will no-op
-        if (!pointerInputFilter.isAttached) return true
+        if (!pointerInputFilter.isAttached) return
 
         coordinates = pointerInputFilter.layoutCoordinates
 
@@ -395,7 +363,7 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
         if (relevantChanges.isEmpty()) {
             pointerIds.clear()
             children.clear()
-            return true // not hit
+            return
         }
 
         // Clean up any pointerIds that weren't dispatched
@@ -433,25 +401,7 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
             if (event.type == PointerEventType.Enter) hasEntered = true
             if (event.type == PointerEventType.Exit) hasEntered = false
         }
-
-        val changed = childChanged || event.type != PointerEventType.Move ||
-            hasPositionChanged(pointerEvent, event)
         pointerEvent = event
-        return changed
-    }
-
-    private fun hasPositionChanged(oldEvent: PointerEvent?, newEvent: PointerEvent): Boolean {
-        if (oldEvent == null || oldEvent.changes.size != newEvent.changes.size) {
-            return true
-        }
-        for (i in 0 until newEvent.changes.size) {
-            val old = oldEvent.changes[i]
-            val current = newEvent.changes[i]
-            if (old.position != current.position) {
-                return true
-            }
-        }
-        return false
     }
 
     /**
@@ -463,6 +413,7 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
     private fun clearCache() {
         relevantChanges.clear()
         coordinates = null
+        pointerEvent = null
     }
 
     /**
