@@ -769,6 +769,3 @@ internal fun TextFieldSelectionManager.isSelectionHandleInVisibleBound(
 ): Boolean = state?.layoutCoordinates?.visibleBounds()?.containsInclusive(
     getHandlePosition(isStartHandle)
 ) ?: false
-
-// TODO(b/180075467) it should be part of PointerEvent API in one way or another
-internal expect val PointerEvent.isShiftPressed: Boolean
