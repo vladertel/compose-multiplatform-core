@@ -25,7 +25,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.test.IgnoreJsAndNative
 import kotlinx.test.IgnoreJsTarget
+import kotlinx.test.IgnoreNativeTarget
 import kotlinx.test._runBlocking
 
 class SnapshotStateMapTests {
@@ -135,7 +137,7 @@ class SnapshotStateMapTests {
     }
 
     @Test
-    @IgnoreJsTarget
+    @IgnoreJsAndNative
     fun validateEntriesIterator() {
         validateRead { map, normalMap ->
             for (entries in map.entries.zip(normalMap.entries)) {
@@ -403,7 +405,7 @@ class SnapshotStateMapTests {
         }
     }
 
-    @Test
+    @Test @IgnoreNativeTarget
     fun validateValuesRemove() {
         validateWrite { map ->
             map.values.remove(1f)
