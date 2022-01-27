@@ -93,9 +93,6 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
                     if (plugin is KotlinMultiplatformPluginWrapper) {
                         project.configureForMultiplatform()
-                        if (project.experimentalOELPublication() && (project.oelAndroidxVersion() == null)) {
-                            error("androidx version should be specified for OEL publications")
-                        }
                         if (project.experimentalOELPublication())
                             OELPublishingPrototype(project)
                     }
@@ -325,6 +322,7 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
 fun Project.experimentalOELPublication() : Boolean = findProperty("oel.publication") == "true"
 fun Project.oelAndroidxVersion() : String? = findProperty("oel.androidx.version") as String?
+fun Project.oelAndroidxMaterial3Version() : String? = findProperty("oel.androidx.material3.version") as String?
 
 // FIXME: reflection access! Some API in Kotlin is needed
 @Suppress("unchecked_cast")
@@ -383,8 +381,14 @@ private fun Project.publishAndroidxReference(target: KotlinTarget) {
                     conf.artifacts.clear()
                     conf.dependencies.clear()
                     conf.setExtendsFrom(emptyList())
-                    // TODO extract material3 version as a property?
-                    var version = if (target.project.group.toString().contains("org.jetbrains.compose.material3")) "1.0.0-alpha04" else target.project.oelAndroidxVersion()!!
+                    val composeVersion = requireNotNull(target.project.oelAndroidxVersion()) {
+                        "Please specify oel.androidx.version property"
+                    }
+                    val material3Version = requireNotNull(target.project.oelAndroidxMaterial3Version()) {
+                        "Please specify oel.androidx.material3.version property"
+                    }
+
+                    var version = if (target.project.group.toString().contains("org.jetbrains.compose.material3")) material3Version else composeVersion
                     val newDependency = target.project.group.toString().replace("org.jetbrains.compose", "androidx.compose") + ":" + name + ":" + version
                     conf.dependencies.add(target.project.dependencies.create(newDependency))
                 }
