@@ -509,7 +509,7 @@ internal fun CoreTextField(
         Modifier
     }
 
-    Box(modifier = decorationBoxModifier, propagateMinConstraints = true) {
+    CoreTextFieldRootBox(decorationBoxModifier, manager) {
         decorationBox {
             // Modifiers applied directly to the internal input field implementation. In general,
             // these will most likely include draw, layout and IME related modifiers.
