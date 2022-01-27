@@ -403,7 +403,7 @@ class ComposeScene internal constructor(
         buttons: PointerButtons? = null,
         keyboardModifiers: PointerKeyboardModifiers? = null,
         nativeEvent: Any? = null,
-    ) = postponeInvalidation {
+    ): Unit = postponeInvalidation {
         check(!isClosed) { "ComposeScene is closed" }
         defaultPointerStateTracker.onPointerEvent(eventType)
 

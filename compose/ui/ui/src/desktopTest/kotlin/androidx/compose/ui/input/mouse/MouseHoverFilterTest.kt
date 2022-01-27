@@ -19,22 +19,18 @@ package androidx.compose.ui.input.mouse
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awtWheelEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.swing.Swing
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineDispatcher
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -126,109 +122,113 @@ class MouseHoverFilterTest {
         assertThat(moveCount).isEqualTo(0)
     }
 
-    // TODO(demin): fix race condition with GlobalSnapshotManager. without it test is flaky.
-    private fun useImageComposeSceneInSwingThread(
-        width: Int,
-        height: Int,
-        density: Density = Density(1f),
-        body: (ImageComposeScene) -> Unit
-    ) {
-        runBlocking(Dispatchers.Swing) {
-            ImageComposeScene(
-                width = width,
-                height = height,
-                density = density
-            ).use(body)
-        }
-    }
-
     @Test
-    fun `scroll should trigger enter and exit`() = useImageComposeSceneInSwingThread(
+    fun `move from one component to another`() = ImageComposeScene(
         width = 100,
         height = 100,
-        density = Density(2f)
-    ) { scene ->
-        val boxCount = 3
-
-        val enterCounts = Array(boxCount) { 0 }
-        val exitCounts = Array(boxCount) { 0 }
+        density = Density(1f)
+    ).use { scene ->
+        var enterCount1 = 0
+        var exitCount1 = 0
+        var enterCount2 = 0
+        var exitCount2 = 0
 
         scene.setContent {
-            Column(
-                Modifier
-                    .size(10.dp, 20.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                repeat(boxCount) { index ->
-                    Box(
-                        modifier = Modifier
-                            .pointerMove(
-                                onMove = {},
-                                onEnter = {
-                                    enterCounts[index] = enterCounts[index] + 1
-                                },
-                                onExit = {
-                                    exitCounts[index] = exitCounts[index] + 1
-                                }
-                            )
-                            .size(10.dp, 20.dp)
-                    )
-                }
+            Column {
+                Box(
+                    modifier = Modifier
+                        .pointerMove(
+                            onEnter = { enterCount1++ },
+                            onExit = { exitCount1++ }
+                        )
+                        .size(10.dp, 10.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .pointerMove(
+                            onEnter = { enterCount2++ },
+                            onExit = { exitCount2++ }
+                        )
+                        .size(10.dp, 10.dp)
+                )
             }
         }
 
-        scene.sendPointerEvent(
-            eventType = PointerEventType.Enter,
-            position = Offset.Zero,
-        )
+        scene.sendPointerEvent(PointerEventType.Enter, Offset(5f, 5f))
+        assertThat(enterCount1).isEqualTo(1)
+        assertThat(exitCount1).isEqualTo(0)
+        assertThat(enterCount2).isEqualTo(0)
+        assertThat(exitCount2).isEqualTo(0)
 
-        scene.sendPointerEvent(
-            eventType = PointerEventType.Scroll,
-            position = Offset.Zero,
-            scrollDelta = Offset(0f, 1f),
-            nativeEvent = awtWheelEvent(isScrollByPages = true),
-        )
-        scene.render() // synthetic enter/exit will trigger only on relayout
-        assertThat(enterCounts.toList()).isEqualTo(listOf(1, 1, 0))
-        assertThat(exitCounts.toList()).isEqualTo(listOf(1, 0, 0))
+        scene.sendPointerEvent(PointerEventType.Move, Offset(5f, 15f))
+        assertThat(enterCount1).isEqualTo(1)
+        assertThat(exitCount1).isEqualTo(1)
+        assertThat(enterCount2).isEqualTo(1)
+        assertThat(exitCount2).isEqualTo(0)
+    }
 
-        scene.sendPointerEvent(
-            eventType = PointerEventType.Move,
-            position = Offset(1f, 1f),
-        )
-        scene.sendPointerEvent(
-            eventType = PointerEventType.Scroll,
-            position = Offset(2f, 2f),
-            scrollDelta = Offset(0f, 1f),
-            nativeEvent = awtWheelEvent(isScrollByPages = true),
-        )
-        scene.render()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `send multiple move events with paused dispatcher`() {
+        var moveCount = 0
+        var enterCount = 0
+        var exitCount = 0
 
-        assertThat(enterCounts.toList()).isEqualTo(listOf(1, 1, 1))
-        assertThat(exitCounts.toList()).isEqualTo(listOf(1, 1, 0))
+        val dispatcher = TestCoroutineDispatcher().apply {
+            pauseDispatcher()
+        }
 
-        scene.sendPointerEvent(
-            eventType = PointerEventType.Exit,
-            position = Offset(-1f, -1f),
-        )
-        assertThat(enterCounts.toList()).isEqualTo(listOf(1, 1, 1))
-        assertThat(exitCounts.toList()).isEqualTo(listOf(1, 1, 1))
+        ImageComposeScene(
+            width = 100,
+            height = 100,
+            density = Density(1f),
+            coroutineContext = dispatcher
+        ).use { scene ->
+            scene.setContent {
+                Box(
+                    modifier = Modifier
+                        .pointerMove(
+                            onMove = {
+                                moveCount++
+                            },
+                            onEnter = {
+                                enterCount++
+                            },
+                            onExit = {
+                                exitCount++
+                            }
+                        )
+                        .size(20.dp, 20.dp)
+                )
+            }
+            dispatcher.advanceUntilIdle()
+
+            scene.sendPointerEvent(PointerEventType.Enter, Offset(5f, 10f))
+            scene.sendPointerEvent(PointerEventType.Move, Offset(6f, 10f))
+            scene.sendPointerEvent(PointerEventType.Move, Offset(7f, 10f))
+            scene.sendPointerEvent(PointerEventType.Press, Offset(9f, 10f))
+            dispatcher.advanceUntilIdle()
+
+            assertThat(enterCount).isEqualTo(1)
+            assertThat(exitCount).isEqualTo(0)
+            assertThat(moveCount).isEqualTo(2)
+
+            scene.sendPointerEvent(PointerEventType.Move, Offset(100f, 10f))
+            dispatcher.advanceUntilIdle()
+
+            assertThat(enterCount).isEqualTo(1)
+            assertThat(exitCount).isEqualTo(1)
+            assertThat(moveCount).isEqualTo(2)
+        }
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 private fun Modifier.pointerMove(
-    onMove: () -> Unit,
-    onExit: () -> Unit,
-    onEnter: () -> Unit,
-): Modifier = pointerInput(onMove, onExit, onEnter) {
-    awaitPointerEventScope {
-        while (true) {
-            val event = awaitPointerEvent()
-            when (event.type) {
-                PointerEventType.Move -> onMove()
-                PointerEventType.Enter -> onEnter()
-                PointerEventType.Exit -> onExit()
-            }
-        }
-    }
-}
+    onMove: () -> Unit = {},
+    onExit: () -> Unit = {},
+    onEnter: () -> Unit = {},
+): Modifier = this
+    .onPointerEvent(PointerEventType.Move) { onMove() }
+    .onPointerEvent(PointerEventType.Exit) { onExit() }
+    .onPointerEvent(PointerEventType.Enter) { onEnter() }
