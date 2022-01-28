@@ -32,7 +32,7 @@ allprojects {
         kotlinOptions {
             jvmTarget = "11"
             freeCompilerArgs += [
-                    "-Werror",
+//                    "-Werror",
                     "-Xskip-runtime-version-check",
                     "-Xskip-metadata-version-check",
                     // Allow `@OptIn` and `@UseExperimental`

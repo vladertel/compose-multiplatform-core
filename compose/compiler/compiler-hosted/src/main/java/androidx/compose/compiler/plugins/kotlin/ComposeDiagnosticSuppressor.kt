@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(IDEAPluginsCompatibilityAPI::class)
+
 package androidx.compose.compiler.plugins.kotlin
 
 import com.intellij.openapi.extensions.Extensions
@@ -26,6 +28,7 @@ import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.callUtil.getCall
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.diagnostics.DiagnosticSuppressor
+import org.jetbrains.kotlin.utils.IDEAPluginsCompatibilityAPI
 
 open class ComposeDiagnosticSuppressor : DiagnosticSuppressor {
 

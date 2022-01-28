@@ -90,9 +90,9 @@ import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.BindingTrace
 import org.jetbrains.kotlin.resolve.DescriptorUtils
-import org.jetbrains.kotlin.resolve.multiplatform.ExpectedActualResolver.findCompatibleExpectedForActual
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import kotlin.math.min
+import org.jetbrains.kotlin.resolve.multiplatform.findCompatibleExpectsForActual
 
 @Suppress("DEPRECATION")
 class ComposerParamTransformer(
@@ -277,7 +277,7 @@ class ComposerParamTransformer(
         endOffset: Int = UNDEFINED_OFFSET
     ): IrExpression {
         val classSymbol = classOrNull
-        if (this !is IrSimpleType || hasQuestionMark || classSymbol?.owner?.isInline != true) {
+        if (this !is IrSimpleType || hasQuestionMark || classSymbol?.owner?.isValue != true) {
             return if (isMarkedNullable()) {
                 IrConstImpl.constNull(startOffset, endOffset, context.irBuiltIns.nothingNType)
             } else {
@@ -669,7 +669,7 @@ class ComposerParamTransformer(
     @OptIn(ObsoleteDescriptorBasedAPI::class)
     private fun IrFunction.expectDescriptor(): CallableDescriptor? =
         if (descriptor !is IrBasedDeclarationDescriptor<*>) {
-            descriptor.findCompatibleExpectedForActual(module).singleOrNull() as? CallableDescriptor
+            descriptor.findCompatibleExpectsForActual { it == module }.singleOrNull() as? CallableDescriptor
         } else {
             null
         }

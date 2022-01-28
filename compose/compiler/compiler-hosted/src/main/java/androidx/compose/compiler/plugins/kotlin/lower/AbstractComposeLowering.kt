@@ -49,7 +49,6 @@ import org.jetbrains.kotlin.descriptors.ValueParameterDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor
 import org.jetbrains.kotlin.descriptors.impl.ValueParameterDescriptorImpl
-import org.jetbrains.kotlin.fir.java.topLevelName
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
@@ -144,6 +143,7 @@ import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.load.kotlin.computeJvmDescriptor
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.isChildOf
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
@@ -301,7 +301,7 @@ abstract class AbstractComposeLowering(
     fun IrType.unboxType(): IrType? {
         val classSymbol = classOrNull ?: return null
         val klass = classSymbol.owner
-        if (!klass.isInline) return null
+        if (!klass.isValue) return null
 
         // TODO: Apply type substitutions
         val underlyingType = getUnderlyingType(klass).unboxInlineClass()
@@ -315,7 +315,7 @@ abstract class AbstractComposeLowering(
         if (type.isNullable()) return this
         val classSymbol = type.classOrNull ?: return this
         val klass = classSymbol.owner
-        if (klass.isInline) {
+        if (klass.isValue) {
             if (context.platform.isJvm()) {
                 return coerceInlineClasses(
                     this,
@@ -547,6 +547,7 @@ abstract class AbstractComposeLowering(
                     )
                 },
                 null,
+                emptyList(),
                 emptyList(),
                 kotlinType.getValueParameterTypesFromFunctionType().mapIndexed { i, t ->
                     ValueParameterDescriptorImpl(
@@ -1195,7 +1196,7 @@ abstract class AbstractComposeLowering(
                 // special case mathematical operators that are in the stdlib. These are
                 // immutable operations so the overall result is static if the operands are
                 // also static
-                val isStableOperator = fqName.topLevelName() == "kotlin" ||
+                val isStableOperator = fqName.isChildOf(FqName.topLevel(Name.identifier("kotlin")))  ||
                     function.hasStableAnnotation()
 
                 val typeIsStable = stabilityOf(type).knownStable()

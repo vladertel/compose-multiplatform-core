@@ -279,6 +279,7 @@ class ComposeComponentRegistrar : ComponentRegistrar {
                 ComposeDiagnosticSuppressor()
             )
             @Suppress("EXPERIMENTAL_API_USAGE_ERROR")
+            @OptIn(org.jetbrains.kotlin.extensions.internal.InternalNonStableExtensionPoints::class)
             TypeResolutionInterceptor.registerExtension(
                 project,
                 @Suppress("IllegalExperimentalApiUsage")

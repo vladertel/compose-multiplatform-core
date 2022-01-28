@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
+@file:OptIn(IDEAPluginsCompatibilityAPI::class)
+
 package androidx.compose.compiler.plugins.kotlin
 
 import org.jetbrains.kotlin.diagnostics.rendering.DefaultErrorMessages
 import org.jetbrains.kotlin.diagnostics.rendering.DiagnosticFactoryToRendererMap
 import org.jetbrains.kotlin.diagnostics.rendering.Renderers
 import org.jetbrains.kotlin.diagnostics.rendering.Renderers.RENDER_TYPE_WITH_ANNOTATIONS
+import org.jetbrains.kotlin.utils.IDEAPluginsCompatibilityAPI
 
 class ComposeErrorMessages : DefaultErrorMessages.Extension {
     private val MAP =

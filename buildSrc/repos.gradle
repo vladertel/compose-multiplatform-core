@@ -56,19 +56,25 @@ def addMavenRepositories(RepositoryHandler handler) {
             includeGroup("")
         }
     }
-    handler.maven {
-        url("${repos.prebuiltsRoot}/androidx/external")
-        metadataSources {
-            mavenPom()
-            artifact()
-        }
-    }
+//    handler.maven {
+//        url("${repos.prebuiltsRoot}/androidx/external")
+//        metadataSources {
+//            mavenPom()
+//            artifact()
+//        }
+//    }
     if (System.getenv("ALLOW_PUBLIC_REPOS") != null || System.getProperty("ALLOW_PUBLIC_REPOS") != null) {
         handler.mavenCentral()
         handler.google()
         handler.gradlePluginPortal()
         handler.maven {
                url("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        }
+        handler.maven {
+            def usrHome = System.getenv("HOME")
+            def path = "file:///" + usrHome + "/.m2/repository"
+            println("Global mavenLocal path  = " + path)
+            url(path)
         }
         handler.mavenLocal()
     }

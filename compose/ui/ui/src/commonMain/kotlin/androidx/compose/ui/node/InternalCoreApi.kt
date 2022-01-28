@@ -16,7 +16,7 @@
 
 package androidx.compose.ui.node
 
-@RequiresOptIn(message = "This API is internal to library.")
+//@RequiresOptIn(message = "This API is internal to library.")
 @Target(
     AnnotationTarget.CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY,
     AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER

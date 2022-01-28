@@ -985,28 +985,28 @@ class IrSourcePrinterVisitor(
         }
         return "${if (value < 0) "-" else ""}0b$result"
     }
-
-    override fun <T> visitConst(expression: IrConst<T>) {
-        val result = when (expression.kind) {
-            is IrConstKind.Null -> "${expression.value}"
-            is IrConstKind.Boolean -> "${expression.value}"
-            is IrConstKind.Char -> "'${expression.value}'"
-            is IrConstKind.Byte -> "${expression.value}"
-            is IrConstKind.Short -> "${expression.value}"
-            is IrConstKind.Int -> {
-                if (printIntsAsBinary) {
-                    intAsBinaryString(expression.value as Int)
-                } else {
-                    "${expression.value}"
-                }
-            }
-            is IrConstKind.Long -> "${expression.value}L"
-            is IrConstKind.Float -> "${expression.value}f"
-            is IrConstKind.Double -> "${expression.value}"
-            is IrConstKind.String -> "\"${expression.value}\""
-        }
-        print(result)
-    }
+//
+//    override fun <T> visitConst(expression: IrConst<T>) {
+//        val result = when (expression.kind) {
+//            is IrConstKind.Null -> "${expression.value}"
+//            is IrConstKind.Boolean -> "${expression.value}"
+//            is IrConstKind.Char -> "'${expression.value}'"
+//            is IrConstKind.Byte -> "${expression.value}"
+//            is IrConstKind.Short -> "${expression.value}"
+//            is IrConstKind.Int -> {
+//                if (printIntsAsBinary) {
+//                    intAsBinaryString(expression.value as Int)
+//                } else {
+//                    "${expression.value}"
+//                }
+//            }
+//            is IrConstKind.Long -> "${expression.value}L"
+//            is IrConstKind.Float -> "${expression.value}f"
+//            is IrConstKind.Double -> "${expression.value}"
+//            is IrConstKind.String -> "\"${expression.value}\""
+//        }
+//        print(result)
+//    }
 
     override fun visitBlockBody(body: IrBlockBody) {
         body.statements.printJoin("\n")

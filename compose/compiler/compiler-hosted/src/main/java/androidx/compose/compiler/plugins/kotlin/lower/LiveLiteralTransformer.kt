@@ -89,6 +89,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetObjectValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrStringConcatenationImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrVarargImpl
+import org.jetbrains.kotlin.ir.expressions.impl.copyWithOffsets
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
@@ -395,68 +396,68 @@ open class LiveLiteralTransformer(
         }
     }
 
-    @OptIn(ObsoleteDescriptorBasedAPI::class)
-    override fun <T> visitConst(expression: IrConst<T>): IrExpression {
-        when (expression.kind) {
-            IrConstKind.Null -> return expression
-            else -> {
-                /* Continue visiting expression */
-            }
-        }
-        val (key, success) = keyVisitor.buildPath(
-            prefix = expression.kind.asString,
-            pathSeparator = "\$",
-            siblingSeparator = "-"
-        )
-        // NOTE: Even if `liveLiteralsEnabled` is false, we are still going to throw an exception
-        // here because the presence of a duplicate key represents a bug in this transform since
-        // it should be impossible. By checking this always, we are making it so that bugs in
-        // this transform will get caught _early_ and that there will be implicitly high coverage
-        // of the key generation algorithm despite this transform only being used by tooling.
-        // Developers have the ability to "silence" this exception by marking the surrounding
-        // class/file/function with the `@NoLiveLiterals` annotation.
-        if (!success) {
-            val file = currentFile ?: return expression
-            val src = file.fileEntry.getSourceRangeInfo(
-                expression.startOffset,
-                expression.endOffset
-            )
-
-            error(
-                "Duplicate live literal key found: $key\n" +
-                    "Caused by element at: " +
-                    "${src.filePath}:${src.startLineNumber}:${src.startColumnNumber}\n" +
-                    "If you encounter this error, please file a bug at " +
-                    "https://issuetracker.google.com/issues?q=componentid:610764\n" +
-                    "Try adding the `@NoLiveLiterals` annotation around the surrounding code to " +
-                    "avoid this exception."
-            )
-        }
-        // If live literals are enabled, don't do anything
-        if (!liveLiteralsEnabled) return expression
-
-        // create the getter function on the live literals class
-        val getter = irLiveLiteralGetter(
-            key = key,
-            // Move the start/endOffsets to the call of the getter since we don't
-            // want to step into <clinit> in the debugger.
-            literalValue = expression.copyWithOffsets(UNDEFINED_OFFSET, UNDEFINED_OFFSET),
-            literalType = expression.type,
-            startOffset = expression.startOffset
-        )
-
-        // return a call to the getter in place of the constant
-        return IrCallImpl(
-            expression.startOffset,
-            expression.endOffset,
-            expression.type,
-            getter.symbol,
-            getter.symbol.owner.typeParameters.size,
-            getter.symbol.owner.valueParameters.size
-        ).apply {
-            dispatchReceiver = irGetLiveLiteralsClass(expression.startOffset, expression.endOffset)
-        }
-    }
+//    @OptIn(ObsoleteDescriptorBasedAPI::class)
+//    override fun <T> visitConst(expression: IrConst<T>): IrExpression {
+//        when (expression.kind) {
+//            IrConstKind.Null -> return expression
+//            else -> {
+//                /* Continue visiting expression */
+//            }
+//        }
+//        val (key, success) = keyVisitor.buildPath(
+//            prefix = expression.kind.asString,
+//            pathSeparator = "\$",
+//            siblingSeparator = "-"
+//        )
+//        // NOTE: Even if `liveLiteralsEnabled` is false, we are still going to throw an exception
+//        // here because the presence of a duplicate key represents a bug in this transform since
+//        // it should be impossible. By checking this always, we are making it so that bugs in
+//        // this transform will get caught _early_ and that there will be implicitly high coverage
+//        // of the key generation algorithm despite this transform only being used by tooling.
+//        // Developers have the ability to "silence" this exception by marking the surrounding
+//        // class/file/function with the `@NoLiveLiterals` annotation.
+//        if (!success) {
+//            val file = currentFile ?: return expression
+//            val src = file.fileEntry.getSourceRangeInfo(
+//                expression.startOffset,
+//                expression.endOffset
+//            )
+//
+//            error(
+//                "Duplicate live literal key found: $key\n" +
+//                    "Caused by element at: " +
+//                    "${src.filePath}:${src.startLineNumber}:${src.startColumnNumber}\n" +
+//                    "If you encounter this error, please file a bug at " +
+//                    "https://issuetracker.google.com/issues?q=componentid:610764\n" +
+//                    "Try adding the `@NoLiveLiterals` annotation around the surrounding code to " +
+//                    "avoid this exception."
+//            )
+//        }
+//        // If live literals are enabled, don't do anything
+//        if (!liveLiteralsEnabled) return expression
+//
+//        // create the getter function on the live literals class
+//        val getter = irLiveLiteralGetter(
+//            key = key,
+//            // Move the start/endOffsets to the call of the getter since we don't
+//            // want to step into <clinit> in the debugger.
+//            literalValue = expression.copyWithOffsets(UNDEFINED_OFFSET, UNDEFINED_OFFSET),
+//            literalType = expression.type,
+//            startOffset = expression.startOffset
+//        )
+//
+//        // return a call to the getter in place of the constant
+//        return IrCallImpl(
+//            expression.startOffset,
+//            expression.endOffset,
+//            expression.type,
+//            getter.symbol,
+//            getter.symbol.owner.typeParameters.size,
+//            getter.symbol.owner.valueParameters.size
+//        ).apply {
+//            dispatchReceiver = irGetLiveLiteralsClass(expression.startOffset, expression.endOffset)
+//        }
+//    }
 
     override fun visitClass(declaration: IrClass): IrStatement {
         if (declaration.hasNoLiveLiteralsAnnotation()) return declaration

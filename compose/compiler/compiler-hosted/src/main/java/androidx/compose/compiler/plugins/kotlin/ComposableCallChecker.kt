@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(IDEAPluginsCompatibilityAPI::class)
+
 package androidx.compose.compiler.plugins.kotlin
 
 import androidx.compose.compiler.plugins.kotlin.analysis.ComposeWritableSlices
@@ -67,6 +69,7 @@ import org.jetbrains.kotlin.types.typeUtil.builtIns
 import org.jetbrains.kotlin.types.typeUtil.isAnyOrNullableAny
 import org.jetbrains.kotlin.types.upperIfFlexible
 import org.jetbrains.kotlin.util.OperatorNameConventions
+import org.jetbrains.kotlin.utils.IDEAPluginsCompatibilityAPI
 
 open class ComposableCallChecker :
     CallChecker,

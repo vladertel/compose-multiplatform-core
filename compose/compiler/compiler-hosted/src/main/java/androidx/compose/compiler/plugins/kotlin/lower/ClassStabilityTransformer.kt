@@ -95,7 +95,7 @@ class ClassStabilityTransformer(
             cls.isInner ||
             cls.isFileClass ||
             cls.isCompanion ||
-            cls.isInline
+            cls.isValue
         ) return cls
 
         if (declaration.hasStableMarker()) {
