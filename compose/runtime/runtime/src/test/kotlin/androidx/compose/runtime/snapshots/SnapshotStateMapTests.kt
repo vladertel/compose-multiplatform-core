@@ -138,6 +138,9 @@ class SnapshotStateMapTests {
 
     @Test
     @IgnoreJsAndNative
+    // Ignored on js and native:
+    // test passes if the order is changed to
+    // assertEquals(entries.first, entries.second)
     fun validateEntriesIterator() {
         validateRead { map, normalMap ->
             for (entries in map.entries.zip(normalMap.entries)) {
@@ -406,6 +409,10 @@ class SnapshotStateMapTests {
     }
 
     @Test @IgnoreNativeTarget
+    // Ignored for native:
+    // SnapshotStateMap removes a correct element (same as on jvm and js) - entry(key=1,value=1f)
+    // The test fails because MutableMap (normalMap) removes entry(key=1, value=5f)
+    // due to an entry search by value starting from the end of an array (in native HashMap impl).
     fun validateValuesRemove() {
         validateWrite { map ->
             map.values.remove(1f)
