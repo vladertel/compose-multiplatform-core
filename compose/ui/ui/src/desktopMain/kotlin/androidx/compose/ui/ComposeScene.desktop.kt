@@ -84,12 +84,7 @@ internal actual fun pointerInputEvent(
 internal actual fun makeAccessibilityController(
     skiaBasedOwner: SkiaBasedOwner,
     component: PlatformComponent
-): AccessibilityController? =
-    if (DesktopPlatform.Current == DesktopPlatform.MacOS) {
-        AccessibilityControllerImpl(skiaBasedOwner, component)
-    } else {
-        null
-    }
+): AccessibilityController? = AccessibilityControllerImpl(skiaBasedOwner, component)
 
 @OptIn(ExperimentalComposeUiApi::class)
 internal actual val DefaultPointerButtons: PointerButtons = PointerButtons()
