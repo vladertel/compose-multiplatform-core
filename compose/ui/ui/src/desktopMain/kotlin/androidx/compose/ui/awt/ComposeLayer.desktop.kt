@@ -102,10 +102,14 @@ internal class ComposeLayer {
 
     private val density get() = _component.density.density
 
+    private val a11yDisabled by lazy {
+        System.getProperty("compose.accessibility.enable") == "false" ||
+        System.getenv("COMPOSE_DISABLE_ACCESSIBILITY") != null
+    }
+
     fun makeAccessible(component: Component) = object : Accessible {
         override fun getAccessibleContext(): AccessibleContext? {
-            // TODO move System.getenv out of this method
-            if (System.getenv("COMPOSE_DISABLE_ACCESSIBILITY") != null) return null
+            if (a11yDisabled) return null
             val controller =
                 scene.mainOwner?.accessibilityController as? AccessibilityControllerImpl
             val accessible = controller?.rootAccessible
