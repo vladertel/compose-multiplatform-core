@@ -28,6 +28,9 @@ import org.jetbrains.skia.Typeface as SkTypeface
 import kotlin.native.Platform as NativePlatform
 import kotlin.native.OsFamily as NativeOsFamily
 
+internal actual fun cacheKeyPrefix(font: PlatformFont): String {
+    return font::class.qualifiedName ?: ""
+}
 
 internal val GenericFontFamiliesMapping by lazy {
     when (Platform.Current) {

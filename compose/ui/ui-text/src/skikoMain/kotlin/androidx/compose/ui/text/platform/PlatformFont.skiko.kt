@@ -29,10 +29,13 @@ import org.jetbrains.skia.paragraph.TypefaceFontProvider
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.Typeface
 
-expect sealed class PlatformFont : Font {
+sealed class PlatformFont : Font {
     abstract val identity: String
     internal val cacheKey: String
+        get() = "${cacheKeyPrefix(this)}|$identity"
 }
+
+internal expect fun cacheKeyPrefix(font: PlatformFont): String
 
 /**
  * Defines a Font using byte array with loaded font data.

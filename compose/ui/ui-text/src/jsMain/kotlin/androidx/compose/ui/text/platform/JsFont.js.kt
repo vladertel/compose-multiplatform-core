@@ -26,6 +26,10 @@ import androidx.compose.ui.util.fastForEach
 import org.jetbrains.skia.Data
 import org.jetbrains.skia.Typeface as SkTypeface
 
+internal actual fun cacheKeyPrefix(font: PlatformFont): String {
+    return font.asDynamic().constructor.name
+}
+
 internal val GenericFontFamiliesMapping by lazy {
     when (Platform.Current) {
         Platform.Windows ->
