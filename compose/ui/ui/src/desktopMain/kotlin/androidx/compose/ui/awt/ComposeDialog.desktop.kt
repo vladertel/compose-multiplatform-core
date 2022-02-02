@@ -43,6 +43,11 @@ class ComposeDialog : JDialog {
         modalityType: ModalityType = ModalityType.MODELESS
     ) : super(owner, modalityType)
 
+    @Deprecated("Use the constructor with setting owner explicitly")
+    constructor(
+        modalityType: ModalityType = ModalityType.MODELESS
+    ) : super(null, modalityType)
+
     constructor() : super()
 
     private val delegate = ComposeWindowDelegate(this, ::isUndecorated)
