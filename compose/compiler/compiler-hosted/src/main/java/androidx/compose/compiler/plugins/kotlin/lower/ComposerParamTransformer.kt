@@ -277,7 +277,7 @@ class ComposerParamTransformer(
         endOffset: Int = UNDEFINED_OFFSET
     ): IrExpression {
         val classSymbol = classOrNull
-        if (this !is IrSimpleType || hasQuestionMark || classSymbol?.owner?.isValue != true) {
+        if (this !is IrSimpleType || hasQuestionMark || classSymbol?.owner?.isInline != true) {
             return if (isMarkedNullable()) {
                 IrConstImpl.constNull(startOffset, endOffset, context.irBuiltIns.nothingNType)
             } else {
