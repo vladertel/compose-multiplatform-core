@@ -3154,6 +3154,28 @@ class CompositionTests {
             }
         }
     }
+
+    @Test // b/197064250 and others
+    fun canInvalidateDuringApplyChanges() = compositionTest {
+        var value by mutableStateOf(0)
+        compose {
+            Wrap {
+                val scope = currentRecomposeScope
+                ComposeNode<View, ViewApplier>(
+                    factory = { View().also { it.name = "linear" } },
+                    update = {
+                        set(value) {
+                            scope.invalidate()
+                            this.attributes["value"] = value.toString()
+                        }
+                    }
+                )
+            }
+        }
+
+        value = 2
+        expectChanges()
+    }
 }
 
 var stateA by mutableStateOf(1000)
