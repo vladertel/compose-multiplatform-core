@@ -203,6 +203,41 @@ class SliderTest {
     }
 
     @Test
+    fun slider_drag_out_of_bounds() {
+        val state = mutableStateOf(0f)
+        var slop = 0f
+
+        rule.setMaterialContent {
+            slop = LocalViewConfiguration.current.touchSlop
+            Slider(
+                modifier = Modifier.testTag(tag),
+                value = state.value,
+                onValueChange = { state.value = it }
+            )
+        }
+
+        rule.runOnUiThread {
+            Truth.assertThat(state.value).isEqualTo(0f)
+        }
+
+        var expected = 0f
+
+        rule.onNodeWithTag(tag)
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(width.toFloat(), 0f))
+                moveBy(Offset(-width.toFloat(), 0f))
+                moveBy(Offset(-width.toFloat(), 0f))
+                moveBy(Offset(width.toFloat() + 100f, 0f))
+                up()
+                expected = calculateFraction(left, right, centerX + 100 - slop)
+            }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isWithin(0.001f).of(expected)
+        }
+    }
+
+    @Test
     fun slider_tap() {
         val state = mutableStateOf(0f)
 
@@ -299,6 +334,44 @@ class SliderTest {
     }
 
     @Test
+    fun slider_drag_out_of_bounds_rtl() {
+        val state = mutableStateOf(0f)
+        var slop = 0f
+
+        rule.setMaterialContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                slop = LocalViewConfiguration.current.touchSlop
+                Slider(
+                    modifier = Modifier.testTag(tag),
+                    value = state.value,
+                    onValueChange = { state.value = it }
+                )
+            }
+        }
+
+        rule.runOnUiThread {
+            Truth.assertThat(state.value).isEqualTo(0f)
+        }
+
+        var expected = 0f
+
+        rule.onNodeWithTag(tag)
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(width.toFloat(), 0f))
+                moveBy(Offset(-width.toFloat(), 0f))
+                moveBy(Offset(-width.toFloat(), 0f))
+                moveBy(Offset(width.toFloat() + 100f, 0f))
+                up()
+                // subtract here as we're in rtl and going in the opposite direction
+                expected = calculateFraction(left, right, centerX - 100 + slop)
+            }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isWithin(0.001f).of(expected)
+        }
+    }
+
+    @Test
     fun slider_tap_rtl() {
         val state = mutableStateOf(0f)
 
@@ -360,8 +433,13 @@ class SliderTest {
         }
     }
 
-    private fun calculateFraction(a: Float, b: Float, pos: Float) =
-        ((pos - a) / (b - a)).coerceIn(0f, 1f)
+    private fun calculateFraction(left: Float, right: Float, pos: Float) = with(rule.density) {
+        val offset = ThumbRadius.toPx()
+        val start = left + offset
+        val end = right - offset
+
+        ((pos - start) / (end - start)).coerceIn(0f, 1f)
+    }
 
     @Test
     fun slider_sizes() {
@@ -532,6 +610,43 @@ class SliderTest {
 
     @ExperimentalMaterialApi
     @Test
+    fun rangeSlider_drag_out_of_bounds() {
+        val state = mutableStateOf(0f..1f)
+        var slop = 0f
+
+        rule.setMaterialContent {
+            slop = LocalViewConfiguration.current.touchSlop
+            RangeSlider(
+                modifier = Modifier.testTag(tag),
+                values = state.value,
+                onValueChange = { state.value = it }
+            )
+        }
+
+        rule.runOnUiThread {
+            Truth.assertThat(state.value).isEqualTo(0f..1f)
+        }
+
+        var expected = 0f
+
+        rule.onNodeWithTag(tag)
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(width.toFloat(), 0f))
+                moveBy(Offset(-width.toFloat(), 0f))
+                moveBy(Offset(-width.toFloat(), 0f))
+                moveBy(Offset(width.toFloat() + 100f, 0f))
+                up()
+                expected = calculateFraction(left, right, centerX + 100 - slop)
+            }
+        rule.runOnIdle {
+            Truth.assertThat(state.value.start).isEqualTo(0f)
+            Truth.assertThat(state.value.endInclusive).isWithin(0.001f).of(expected)
+        }
+    }
+
+    @ExperimentalMaterialApi
+    @Test
     fun rangeSlider_tap() {
         val state = mutableStateOf(0f..1f)
 
@@ -621,6 +736,46 @@ class SliderTest {
             .performTouchInput {
                 down(center)
                 moveBy(Offset(100f, 0f))
+                up()
+                // subtract here as we're in rtl and going in the opposite direction
+                expected = calculateFraction(left, right, centerX - 100 + slop)
+            }
+        rule.runOnIdle {
+            Truth.assertThat(state.value.start).isEqualTo(0f)
+            Truth.assertThat(state.value.endInclusive).isWithin(0.001f).of(expected)
+        }
+    }
+
+    @ExperimentalMaterialApi
+    @Test
+    fun rangeSlider_drag_out_of_bounds_rtl() {
+        val state = mutableStateOf(0f..1f)
+        var slop = 0f
+
+        rule.setMaterialContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                slop = LocalViewConfiguration.current.touchSlop
+                RangeSlider(
+                    modifier = Modifier.testTag(tag),
+                    values = state.value,
+                    onValueChange = { state.value = it }
+                )
+            }
+        }
+
+        rule.runOnUiThread {
+            Truth.assertThat(state.value).isEqualTo(0f..1f)
+        }
+
+        var expected = 0f
+
+        rule.onNodeWithTag(tag)
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(width.toFloat(), 0f))
+                moveBy(Offset(-width.toFloat(), 0f))
+                moveBy(Offset(-width.toFloat(), 0f))
+                moveBy(Offset(width.toFloat() + 100f, 0f))
                 up()
                 // subtract here as we're in rtl and going in the opposite direction
                 expected = calculateFraction(left, right, centerX - 100 + slop)
