@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,10 +56,7 @@ internal fun runApplicationTest(
         withTimeout(30000) {
             val exceptionHandler = TestExceptionHandler()
             withExceptionHandler(exceptionHandler) {
-                val testScope = WindowTestScope(this, useDelay, exceptionHandler)
-                if (testScope.isOpen) {
-                    testScope.body()
-                }
+                WindowTestScope(this, useDelay, exceptionHandler).body()
             }
             exceptionHandler.throwIfCaught()
         }
@@ -142,7 +140,22 @@ internal class WindowTestScope(
     var isOpen by mutableStateOf(true)
     private val initialRecomposers = Recomposer.runningRecomposers.value
 
+    // TODO(demin) replace launchApplication to launchTestApplication in all tests,
+    //  because we don't close the window with simple launchApplication
+    fun launchTestApplication(
+        content: @Composable ApplicationScope.() -> Unit
+    ) = launchApplication {
+        if (isOpen) {
+            content()
+        }
+    }
+
+    // TODO(demin) remove when we migrate from launchApplication to launchTestApplication (see TODO above)
     fun exitApplication() {
+        isOpen = false
+    }
+
+    fun exitTestApplication() {
         isOpen = false
     }
 
