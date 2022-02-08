@@ -17,7 +17,6 @@
 package androidx.compose.ui.window
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.getValue
@@ -30,6 +29,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.ComponentUpdater
+import androidx.compose.ui.util.makeDisplayable
 import androidx.compose.ui.util.setIcon
 import androidx.compose.ui.util.setPositionSafely
 import androidx.compose.ui.util.setSizeSafely
@@ -261,6 +261,11 @@ fun Dialog(
             it.compositionLocalContext = compositionLocalContext
             it.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(it)
             update(it)
+
+            if (!it.isDisplayable) {
+                it.makeDisplayable()
+                it.contentPane.paint(it.graphics)
+            }
         }
     )
 }
