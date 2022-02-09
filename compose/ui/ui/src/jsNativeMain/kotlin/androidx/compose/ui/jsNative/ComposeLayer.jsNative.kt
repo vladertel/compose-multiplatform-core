@@ -24,7 +24,7 @@ import androidx.compose.ui.input.pointer.toCompose
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.getTimeMilliseconds
+import androidx.compose.ui.currentMillis
 import androidx.compose.ui.input.pointer.PointerEventType
 import kotlinx.coroutines.CoroutineDispatcher
 import org.jetbrains.skia.Canvas
@@ -69,7 +69,7 @@ internal class ComposeLayer {
                         eventType = event.kind.toCompose(),
                         // TODO: account for the proper density.
                         position = Offset(event.x.toFloat(), event.y.toFloat()), // * density,
-                        timeMillis = getTimeMilliseconds(),
+                        timeMillis = currentMillis(),
                         type = PointerType.Touch,
                         nativeEvent = event
                     )
@@ -82,7 +82,7 @@ internal class ComposeLayer {
                 eventType = event.kind.toCompose(),
                 // TODO: account for the proper density.
                 position = Offset(event.x.toFloat(), event.y.toFloat()), // * density,
-                timeMillis = getTimeMilliseconds(),
+                timeMillis = currentMillis(),
                 type = PointerType.Mouse,
                 nativeEvent = event
             )
@@ -105,7 +105,7 @@ internal class ComposeLayer {
     fun dispose() {
         check(!isDisposed)
         this.layer.detach()
-        scene.dispose()
+        scene.close()
         _initContent = null
         isDisposed = true
     }
