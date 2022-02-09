@@ -119,27 +119,6 @@ class FixComposableLambdaCalls(
         return super.visitClass(declaration)
     }
 
-    private fun IrExpression.hasLocalFunForLambda(): Boolean {
-        var foundLocalFunctionForLambda = false
-        this.transformChildrenVoid(object : IrElementTransformerVoid() {
-            override fun visitElement(element: IrElement): IrElement {
-                if (foundLocalFunctionForLambda) {
-                    return element
-                }
-                return super.visitElement(element)
-            }
-
-            override fun visitFunction(declaration: IrFunction): IrStatement {
-                if (declaration.isLocal) {
-                    foundLocalFunctionForLambda = true
-                    return declaration
-                }
-                return super.visitFunction(declaration)
-            }
-        })
-        return foundLocalFunctionForLambda
-    }
-
     override fun visitCall(expression: IrCall): IrExpression {
         val original = super.visitCall(expression) as IrCall
 
@@ -152,6 +131,7 @@ class FixComposableLambdaCalls(
             return original
         }
 
+        // skip if lambda has non-Unit return type
         if ((dispatchReceiver.type as IrSimpleType).arguments.last().typeOrNull?.isUnit() != true) {
             return original
         }
@@ -167,76 +147,6 @@ class FixComposableLambdaCalls(
             return original
         }
 
-        // There are cases when dispatchReceiver is not of ComposableLambdaImpl type, so
-        // we need to add a type check like below at runtime:
-        // if (content is ComposableLambdaImpl)
-        //     content.invoke(composer, 14 & changed)
-        // else {
-        //     content(composer, 14 & changed)
-        // }
-        val hoistedArguments = mutableListOf<IrVariableImpl>()
-        val realArguments = mutableListOf<IrExpression?>()
-
-        // hoist the dispatchReceiver expression into a variable to avoid
-        // dispatchReceiver expression being called multiple times
-        val dispatchReceiverVar = IrVariableImpl(
-            UNDEFINED_OFFSET,
-            UNDEFINED_OFFSET,
-            IrDeclarationOrigin.DEFINED,
-            IrVariableSymbolImpl(),
-            Name.identifier("\$invokeComposable_dispatchReceiver"),
-            type = original.dispatchReceiver!!.type,
-            isVar = false,
-            isConst = false,
-            isLateinit = false
-        ).also {
-            it.initializer = original.dispatchReceiver
-        }
-
-        // Hoist argument expressions to avoid anonymous lambdas declarations duplicates
-        // in if..then..else branches.
-        repeat(original.valueArgumentsCount) {
-            val arg = original.getValueArgument(it)
-            if (arg != null && arg.hasLocalFunForLambda()) {
-                val hoistedArg = IrVariableImpl(
-                    UNDEFINED_OFFSET,
-                    UNDEFINED_OFFSET,
-                    IrDeclarationOrigin.DEFINED,
-                    IrVariableSymbolImpl(),
-                    Name.identifier("\$hoistedArg_$${hoistedArguments.size}"),
-                    type = arg.type.makeNullable(),
-                    isVar = false,
-                    isConst = false,
-                    isLateinit = false
-                ).also {
-                    it.initializer = arg
-                }
-                hoistedArguments.add(hoistedArg)
-                irGet(hoistedArg)
-            } else {
-                arg
-            }.also {  realArgExpr ->
-                realArguments.add(realArgExpr)
-            }
-        }
-
-        fun actualCall(actualSymbol: IrSimpleFunctionSymbol): IrCall {
-            return IrCallImpl(
-                startOffset = UNDEFINED_OFFSET,
-                endOffset = UNDEFINED_OFFSET,
-                type = original.type,
-                symbol = actualSymbol,
-                typeArgumentsCount = 0,
-                valueArgumentsCount = original.valueArgumentsCount,
-                origin = null
-            ).also {
-                it.dispatchReceiver = irGet(dispatchReceiverVar)
-                repeat(original.valueArgumentsCount) { ix ->
-                    it.putValueArgument(ix, realArguments[ix])
-                }
-            }
-        }
-
         val targetInvoke = composableLambdaClassImpl.declarations.firstOrNull {
             it is IrFunction
                 && it.name.asString() == "invoke"
@@ -245,15 +155,19 @@ class FixComposableLambdaCalls(
             "ComposableLambdaImpl.invoke() not found " + original.dump()
         )
 
-        val invokeIrCall =  actualCall(actualSymbol = targetInvoke.symbol)
-
-        return irBlock(
-            type = expression.type,
-            statements = mutableListOf<IrStatement>().apply {
-                add(dispatchReceiverVar)
-                addAll(hoistedArguments)
-                add(invokeIrCall)
+        return IrCallImpl(
+            startOffset = UNDEFINED_OFFSET,
+            endOffset = UNDEFINED_OFFSET,
+            type = original.type,
+            symbol = targetInvoke.symbol,
+            typeArgumentsCount = 0,
+            valueArgumentsCount = original.valueArgumentsCount,
+            origin = null
+        ).also {
+            it.dispatchReceiver = dispatchReceiver
+            repeat(original.valueArgumentsCount) { ix ->
+                it.putValueArgument(ix, original.getValueArgument(ix))
             }
-        )
+        }
     }
 }
