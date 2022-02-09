@@ -24,11 +24,13 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
+import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
+import org.jetbrains.kotlin.ir.declarations.name
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -44,7 +46,10 @@ import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrVariableSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.classFqName
+import org.jetbrains.kotlin.ir.types.isUnit
 import org.jetbrains.kotlin.ir.types.makeNullable
+import org.jetbrains.kotlin.ir.types.typeOrNull
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.ir.util.dump
@@ -83,6 +88,13 @@ class FixComposableLambdaCalls(
             "FixComposableLambdaCalls transformation is intended only for kotlin/js targets"
         }
         module.transformChildrenVoid(this)
+    }
+
+    override fun visitFile(declaration: IrFile): IrFile {
+        if (declaration.name.contains("RecomposeScopeImpl.kt")) {
+            return declaration
+        }
+        return super.visitFile(declaration)
     }
 
     private fun IrType.hasComposerDirectly(): Boolean {
@@ -137,6 +149,10 @@ class FixComposableLambdaCalls(
         val dispatchReceiver = original.dispatchReceiver ?: return original
 
         if (!dispatchReceiver.type.isFunction() || !dispatchReceiver.type.hasComposerDirectly()) {
+            return original
+        }
+
+        if ((dispatchReceiver.type as IrSimpleType).arguments.last().typeOrNull?.isUnit() != true) {
             return original
         }
 
@@ -221,52 +237,22 @@ class FixComposableLambdaCalls(
             }
         }
 
-        val conditionalInvoke = IrIfThenElseImpl(
-            UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-            original.type
-        ).apply {
-            val targetInvoke = composableLambdaClassImpl.declarations.firstOrNull {
-                it is IrFunction
-                    && it.name.asString() == "invoke"
-                    && it.valueParameters.size == original.valueArgumentsCount
-            } as? IrSimpleFunction ?: error(
-                "ComposableLambdaImpl.invoke() not found " + original.dump()
-            )
-            branches.add(
-                IrBranchImpl(
-                    // if (content is ComposableLambdaImpl)
-                    condition = IrTypeOperatorCallImpl(
-                        startOffset = UNDEFINED_OFFSET,
-                        endOffset = UNDEFINED_OFFSET,
-                        type = context.irBuiltIns.booleanType,
-                        operator = IrTypeOperator.INSTANCEOF,
-                        typeOperand = composableLambdaClassImpl.defaultType,
-                        argument = irGet(dispatchReceiverVar)
-                    ),
-                    // then: content.invoke(composer, 14 & changed)
-                    result = actualCall(actualSymbol = targetInvoke.symbol)
-                )
-            )
-            branches.add(
-                // else: content(composer, 14 & changed)
-                IrElseBranchImpl(
-                    condition = IrConstImpl(
-                        UNDEFINED_OFFSET,
-                        UNDEFINED_OFFSET,
-                        context.irBuiltIns.booleanType,
-                        IrConstKind.Boolean,
-                        true
-                    ),
-                    result = actualCall(actualSymbol = original.symbol)
-                )
-            )
-        }
+        val targetInvoke = composableLambdaClassImpl.declarations.firstOrNull {
+            it is IrFunction
+                && it.name.asString() == "invoke"
+                && it.valueParameters.size == original.valueArgumentsCount
+        } as? IrSimpleFunction ?: error(
+            "ComposableLambdaImpl.invoke() not found " + original.dump()
+        )
+
+        val invokeIrCall =  actualCall(actualSymbol = targetInvoke.symbol)
+
         return irBlock(
             type = expression.type,
             statements = mutableListOf<IrStatement>().apply {
                 add(dispatchReceiverVar)
                 addAll(hoistedArguments)
-                add(conditionalInvoke)
+                add(invokeIrCall)
             }
         )
     }
