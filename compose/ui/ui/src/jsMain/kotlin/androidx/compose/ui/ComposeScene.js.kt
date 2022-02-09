@@ -15,45 +15,5 @@
  */
 package androidx.compose.ui
 
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerId
-import androidx.compose.ui.input.pointer.PointerInputEvent
-import androidx.compose.ui.input.pointer.PointerInputEventData
-import androidx.compose.ui.input.pointer.PointerType
-import org.jetbrains.skiko.SkikoPointerEvent
-
-internal actual fun ComposeScene.onPlatformInputMethodEvent(event: Any) {
-    TODO("implement js onPlatformInputMethodEvent")
-}
-
-internal actual fun pointerInputEvent(
-    eventType: PointerEventType,
-    position: Offset,
-    timeMillis: Long,
-    nativeEvent: Any?,
-    type: PointerType,
-    isMousePressed: Boolean,
-    pointerId: Long,
-    scrollDelta: Offset
-): PointerInputEvent {
-    return PointerInputEvent(
-        eventType,
-        timeMillis,
-        listOf(
-            PointerInputEventData(
-                PointerId(pointerId),
-                timeMillis,
-                position,
-                position,
-                isMousePressed,
-                type,
-                scrollDelta = scrollDelta
-            )
-        ),
-        nativeEvent as SkikoPointerEvent?
-    )
-}
-
-internal actual fun getTimeMilliseconds(): Long = (kotlinx.browser.window.performance.now() * 1_000_000).toLong()
+internal actual fun currentMillis(): Long = (kotlinx.browser.window.performance.now() * 1_000_000).toLong()
 
