@@ -13,6 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package androidx.compose.ui
 
-internal actual fun currentMillis(): Long = kotlin.system.getTimeMillis()
+package androidx.compose.ui.text.platform
+
+internal actual class SynchronizedObject
+
+internal actual fun createSynchronizedObject() = SynchronizedObject()
+
+internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R = block()

@@ -112,3 +112,74 @@ actual val PointerKeyboardModifiers.isScrollLockOn: Boolean
 
 actual val PointerKeyboardModifiers.isNumLockOn: Boolean
     get() = TODO("implement native events")
+
+/**
+ * Creates [PointerButtons] with the specified state of the pressed buttons.
+ */
+fun PointerButtons(
+    isPrimaryPressed: Boolean = false,
+    isSecondaryPressed: Boolean = false,
+    isTertiaryPressed: Boolean = false,
+    isBackPressed: Boolean = false,
+    isForwardPressed: Boolean = false
+): PointerButtons {
+    var res = 0
+    if (isPrimaryPressed) res = res or ButtonMasks.Primary
+    if (isSecondaryPressed) res = res or ButtonMasks.Secondary
+    if (isTertiaryPressed) res = res or ButtonMasks.Tertiary
+    if (isBackPressed) res = res or ButtonMasks.Back
+    if (isForwardPressed) res = res or ButtonMasks.Forward
+    return PointerButtons(res)
+}
+
+private object ButtonMasks {
+    const val Primary = 1 shl 0
+    const val Secondary = 1 shl 1
+    const val Tertiary = 1 shl 2
+    const val Back = 1 shl 3
+    const val Forward = 1 shl 4
+}
+
+private object KeyboardModifierMasks {
+    const val CtrlPressed = 1 shl 0
+    const val MetaPressed = 1 shl 1
+    const val AltPressed = 1 shl 2
+    const val AltGraphPressed = 1 shl 3
+    const val SymPressed = 1 shl 4
+    const val ShiftPressed = 1 shl 5
+    const val FunctionPressed = 1 shl 6
+    const val CapsLockOn = 1 shl 7
+    const val ScrollLockOn = 1 shl 8
+    const val NumLockOn = 1 shl 9
+}
+
+/**
+ * Creates [PointerKeyboardModifiers] with the specified state of the pressed keyboard modifiers.
+ */
+fun PointerKeyboardModifiers(
+    isCtrlPressed: Boolean = false,
+    isMetaPressed: Boolean = false,
+    isAltPressed: Boolean = false,
+    isShiftPressed: Boolean = false,
+    isAltGraphPressed: Boolean = false,
+    isSymPressed: Boolean = false,
+    isFunctionPressed: Boolean = false,
+    isCapsLockOn: Boolean = false,
+    isScrollLockOn: Boolean = false,
+    isNumLockOn: Boolean = false,
+): PointerKeyboardModifiers {
+    var res = 0
+    if (isCtrlPressed) res = res or KeyboardModifierMasks.CtrlPressed
+    if (isMetaPressed) res = res or KeyboardModifierMasks.MetaPressed
+    if (isAltPressed) res = res or KeyboardModifierMasks.AltPressed
+    if (isShiftPressed) res = res or KeyboardModifierMasks.ShiftPressed
+    if (isAltGraphPressed) res = res or KeyboardModifierMasks.AltGraphPressed
+    if (isSymPressed) res = res or KeyboardModifierMasks.SymPressed
+    if (isFunctionPressed) res = res or KeyboardModifierMasks.FunctionPressed
+    if (isCapsLockOn) res = res or KeyboardModifierMasks.CapsLockOn
+    if (isScrollLockOn) res = res or KeyboardModifierMasks.ScrollLockOn
+    if (isNumLockOn) res = res or KeyboardModifierMasks.NumLockOn
+    return PointerKeyboardModifiers(res)
+}
+
+
