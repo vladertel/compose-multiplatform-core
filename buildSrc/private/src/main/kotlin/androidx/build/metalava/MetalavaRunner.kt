@@ -91,12 +91,14 @@ abstract class MetalavaWorkAction @Inject constructor(
 }
 
 fun Project.getMetalavaClasspath(): FileCollection {
+    @Suppress("UnstableApiUsage") // Usage of VersionCatalogsExtension
     val configuration = configurations.findByName("metalava") ?: configurations.create("metalava") {
         val libs = project.extensions.getByType(
             VersionCatalogsExtension::class.java
         ).find("libs").get()
+        @Suppress("DEPRECATION") // TODO: remove when studio upgrades to Gradle 7.4-rc-1
         val dependency = dependencies.create(
-            libs.findLibrary("metalava").get().get()
+            libs.findDependency("metalava").get().get()
         )
         it.dependencies.add(dependency)
     }
