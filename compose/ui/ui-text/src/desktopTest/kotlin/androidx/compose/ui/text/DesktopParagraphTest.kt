@@ -304,6 +304,19 @@ class DesktopParagraphTest {
         Truth.assertThat(paragraphWithoutStyles.getLineBottom(1)).isNotEqualTo(secondLineBottom)
     }
 
+    @Test
+    fun `line heights`() {
+        val paragraph = simpleParagraph(
+            text = "aaa\n\naaa\n\n\naaa\n   \naaa",
+            style = TextStyle(fontSize = 50.sp)
+        )
+        val firstLineHeight = paragraph.getLineHeight(0)
+
+        for (i in 1 until paragraph.lineCount) {
+            Truth.assertThat(paragraph.getLineHeight(i)).isEqualTo(firstLineHeight)
+        }
+    }
+
     private fun simpleParagraph(
         text: String = "",
         style: TextStyle? = null,
