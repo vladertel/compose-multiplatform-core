@@ -378,7 +378,7 @@ class StabilityInferencer(val context: IrPluginContext) {
                 substitutions,
                 currentlyAnalyzing
             )
-            context.platform.isJvm() && type.isInlineClassType() -> stabilityOf(
+            type.isInlineClassType() -> stabilityOf(
                 type.getInlinedClass()!!,
                 substitutions,
                 currentlyAnalyzing
