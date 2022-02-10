@@ -35,7 +35,9 @@ internal actual fun pointerInputEvent(
     type: PointerType,
     isMousePressed: Boolean,
     pointerId: Long,
-    scrollDelta: Offset
+    scrollDelta: Offset,
+    buttons: PointerButtons,
+    keyboardModifiers: PointerKeyboardModifiers,
 ): PointerInputEvent {
     return PointerInputEvent(
         eventType,
@@ -51,9 +53,11 @@ internal actual fun pointerInputEvent(
                 scrollDelta = scrollDelta
             )
         ),
+        buttons,
+        keyboardModifiers,
         nativeEvent as SkikoPointerEvent?
     )
 }
 
-internal actual fun getTimeMilliseconds(): Long = (kotlinx.browser.window.performance.now() * 1_000_000).toLong()
+internal actual fun currentMillis(): Long = (kotlinx.browser.window.performance.now() * 1_000_000).toLong()
 
