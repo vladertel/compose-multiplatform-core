@@ -74,6 +74,10 @@ class ParagraphLayouter(
 
     val defaultHeight get() = builder.defaultHeight
 
+    val indentInserted get() = builder.indentInserted
+
+    val indentPx get() = builder.indentPx
+
     fun layoutParagraph(
         width: Float = this.width,
         maxLines: Int = builder.maxLines,
@@ -99,10 +103,10 @@ class ParagraphLayouter(
                 textDecoration = textDecoration
             )
             para = builder.build()
-            para.layout(width)
+            para.layout(width - indentPx)
         } else if (this.width != width) {
             this.width = width
-            para.layout(width)
+            para.layout(width - indentPx)
         }
         return para
     }

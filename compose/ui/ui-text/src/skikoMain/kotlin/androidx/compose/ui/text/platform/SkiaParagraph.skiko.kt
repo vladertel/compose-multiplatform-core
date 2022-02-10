@@ -137,7 +137,8 @@ internal class SkiaParagraph(
     )
 
     init {
-        para.layout(width)
+        // TODO Do we still need this?
+        para.layout(width - layouter.indentPx)
     }
 
     private val text: String
@@ -171,9 +172,22 @@ internal class SkiaParagraph(
 
     override val placeholderRects: List<Rect?>
         get() =
-            para.rectsForPlaceholders.map {
-                it.rect.toComposeRect()
-            }
+            para.rectsForPlaceholders.toComposeRects()
+
+    private fun Array<TextBox>.toComposeRects(): List<Rect?> {
+        if (isEmpty()) return emptyList()
+
+        // If a fake placeholder was inserted to inner paragraph
+        // for text indent, remove it to avoid confusion
+        val dropIndentRect = layouter.indentInserted
+
+        val start = if (dropIndentRect) 1 else 0
+        val result = ArrayList<Rect?>(size - start)
+        for (i in start until size) {
+            result[i] = this[i].rect.toComposeRect()
+        }
+        return result
+    }
 
     override fun getPathForRange(start: Int, end: Int): Path {
         val boxes = para.getRectsForRange(
@@ -378,7 +392,13 @@ internal class SkiaParagraph(
             textDecoration = textDecoration
         )
 
-        para.paint(canvas.nativeCanvas, 0.0f, 0.0f)
+        // TODO Skia has poor support of placeholders with negative width.
+        // TODO RTL support (first line trimmed if textIndent.firstLine < textIndent.restLine
+        // TODO fix assertion failures in main.jvm.kt (they are Skia asserts)
+        // TODO fix text selection
+        val isRtl = paragraphIntrinsics.textDirection == ResolvedTextDirection.Rtl
+        val xOffset = if (isRtl) 0.0f else layouter.indentPx
+        para.paint(canvas.nativeCanvas, xOffset, 0.0f)
     }
 }
 
@@ -526,6 +546,12 @@ internal class ParagraphBuilder(
     val density: Density,
     val textDirection: ResolvedTextDirection
 ) {
+    var indentInserted: Boolean = false
+        private set
+
+    var indentPx: Float = 0.0f
+        private set
+
     private lateinit var initialStyle: SpanStyle
     private lateinit var defaultStyle: ComputedStyle
     private lateinit var ops: List<Op>
@@ -559,6 +585,18 @@ internal class ParagraphBuilder(
         val pb = ParagraphBuilder(ps, fontLoader.fonts)
 
         var addText = true
+
+        indentInserted = false
+        indentPx = 0.0f
+        textStyle.textIndent?.apply {
+            if (firstLine.isNonZero() || restLine.isNonZero()) {
+                val firstLinePx = fontSizeInHierarchy(density, defaultStyle.fontSize, firstLine)
+                val restLinePx = fontSizeInHierarchy(density, defaultStyle.fontSize, restLine)
+                pb.addIndent(firstLinePx - restLinePx)
+                indentInserted = true
+                indentPx = restLinePx
+            }
+        }
 
         for (op in ops) {
             if (addText && pos < op.position) {
@@ -866,4 +904,18 @@ internal fun TextBox.cursorHorizontalPosition(opposite: Boolean = false): Float 
         SkDirection.LTR -> if (opposite) rect.left else rect.right
         SkDirection.RTL -> if (opposite) rect.right else rect.left
     }
+}
+
+private fun TextUnit.isNonZero() = isSpecified && value != 0.0f
+
+private fun ParagraphBuilder.addIndent(indent: Float) {
+    addPlaceholder(
+        PlaceholderStyle(
+            width = indent,
+            height = 0.0f,
+            alignment = PlaceholderAlignment.TOP,
+            baselineMode = BaselineMode.ALPHABETIC,
+            baseline = 0.0f,
+        )
+    )
 }
