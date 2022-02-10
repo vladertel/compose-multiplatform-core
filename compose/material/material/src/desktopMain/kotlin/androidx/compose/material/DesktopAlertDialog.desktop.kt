@@ -180,6 +180,8 @@ interface AlertDialogProvider {
 
 // TODO(https://github.com/JetBrains/compose-jb/issues/933): is it right to use Popup to show a
 //  dialog?
+//  Probably we need to use RootLayer, rename it to RootLayerAlertDialogProvider,
+//  and deprecate PopupAlertDialogProvider
 /**
  * Shows Alert dialog as popup in the middle of the window.
  */

@@ -90,16 +90,9 @@ internal class SkiaBasedOwner(
     override val windowInfo: WindowInfo,
     density: Density = Density(1f, 1f),
     bounds: IntRect = IntRect.Zero,
-    val isFocusable: Boolean = true,
-    val onDismissRequest: (() -> Unit)? = null,
     private val onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
     private val onKeyEvent: (KeyEvent) -> Boolean = { false },
 ) : Owner, RootForTest, SkiaRootForTest, PositionCalculator {
-
-    internal fun isHovered(point: Offset): Boolean {
-        val intOffset = IntOffset(point.x.toInt(), point.y.toInt())
-        return bounds.contains(intOffset)
-    }
 
     internal var accessibilityController: AccessibilityController? = null
 
@@ -338,12 +331,12 @@ internal class SkiaBasedOwner(
 
     private val scheduleSyntheticEvents = component::scheduleSyntheticMoveEvent
 
-    internal fun processPointerInput(event: PointerInputEvent, isInBounds: Boolean = true): ProcessResult {
+    internal fun processPointerInput(event: PointerInputEvent): ProcessResult {
         measureAndLayout()
         return pointerInputEventProcessor.process(
             event,
             this,
-            isInBounds = isInBounds && event.pointers.all {
+            isInBounds = event.pointers.all {
                 bounds.contains(it.position.round())
             }
         ).also {
