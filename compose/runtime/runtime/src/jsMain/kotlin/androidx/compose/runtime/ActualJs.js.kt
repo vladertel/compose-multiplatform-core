@@ -48,7 +48,7 @@ internal actual class SnapshotThreadLocal<T> actual constructor() {
     }
 }
 
-actual class AtomicInt actual constructor(private var value: Int) {
+internal actual class AtomicInt actual constructor(private var value: Int) {
     actual fun get(): Int = value
 
     actual fun set(value: Int) {
@@ -100,7 +100,7 @@ internal actual fun identityHashCode(instance: Any?): Int {
     }
 }
 
-actual fun ensureMutable(it: Any) { /* NOTHING */ }
+internal actual fun ensureMutable(it: Any) { /* NOTHING */ }
 
 actual annotation class CompositionContextLocal {}
 
