@@ -87,6 +87,7 @@ import org.jetbrains.kotlin.ir.util.isTypeParameter
 import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.ir.util.statements
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
+import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.resolve.BindingTrace
 
 /**
@@ -203,6 +204,8 @@ class ComposableTargetAnnotationsTransformer(
     )
 
     override fun lower(module: IrModuleFragment) {
+        if (context.platform.isJs()) return
+
         // Only transform if the attributes being inferred are in the runtime
         if (
             ComposableTargetClass != null &&
