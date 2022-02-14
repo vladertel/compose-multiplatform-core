@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.FlushCoroutineDispatcher
 import androidx.compose.ui.platform.GlobalSnapshotManager
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.node.RootForTest
+import androidx.compose.ui.platform.NativeEventFactory
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -122,7 +123,7 @@ class ComposeScene internal constructor(
     }
 
     private fun invalidateIfNeeded() {
-        hasPendingDraws = frameClock.hasAwaiters || needLayout || needDraw
+        hasPendingDraws = frameClock.hasAwaiters || needLayout || needDraw || pointerPositionUpdater.needUpdate
         if (hasPendingDraws && !isInvalidationDisabled && !isClosed) {
             invalidate()
         }
@@ -169,6 +170,7 @@ class ComposeScene internal constructor(
 
     private val recomposer = Recomposer(coroutineContext + job + effectDispatcher)
 
+    internal val pointerPositionUpdater = PointerPositionUpdater(::invalidateIfNeeded, ::sendAsMove)
     internal val platformInputService: PlatformInput = PlatformInput(component)
 
     internal var mainOwner: SkiaBasedOwner? = null
@@ -308,11 +310,13 @@ class ComposeScene internal constructor(
         content: @Composable () -> Unit
     ) {
         check(!isClosed) { "ComposeScene is closed" }
+        pointerPositionUpdater.reset()
         composition?.dispose()
         mainOwner?.dispose()
         val mainOwner = SkiaBasedOwner(
             platformInputService,
             component,
+            pointerPositionUpdater,
             component.windowInfo,
             density,
             IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect(),
@@ -367,6 +371,7 @@ class ComposeScene internal constructor(
         frameClock.sendFrame(nanoTime)
         needLayout = false
         forEachOwner { it.measureAndLayout() }
+        pointerPositionUpdater.update()
         needDraw = false
         forEachOwner { it.draw(canvas) }
         forEachOwner { it.clearInvalidObservations() }
@@ -391,12 +396,6 @@ class ComposeScene internal constructor(
     // TODO(demin): return Boolean (when it is consumed).
     /**
      * Send pointer event to the content.
-     *
-     * Don't send non-Move event with a different position without sending Move event first.
-     * Otherwise hover can lose Exit/Enter events.
-     *
-     * Do: Move(5,5) -> Move(15,5) -> Scroll(15,5) -> Press(15,5) -> Move(20,5) -> Release(20,5)
-     * Don't: Move(5,5) -> Scroll(15,5) -> Press(15,5) -> Release(20,5)
      *
      * @param eventType Indicates the primary reason that the event was sent.
      * @param position The [Offset] of the current pointer event, relative to the content.
@@ -439,7 +438,12 @@ class ComposeScene internal constructor(
         )
         needLayout = false
         forEachOwner { it.measureAndLayout() }
+        pointerPositionUpdater.beforeEvent(event)
         processPointerInput(event)
+    }
+
+    private fun sendAsMove(sourceEvent: PointerInputEvent, positionSourceEvent: PointerInputEvent) {
+        processPointerInput(createMoveEvent(component.nativeEventFactory, sourceEvent, positionSourceEvent))
     }
 
     @OptIn(ExperimentalComposeUiApi::class)
@@ -557,6 +561,21 @@ internal fun pointerInputEvent(
         nativeEvent
     )
 }
+
+private fun createMoveEvent(
+    nativeFactory: NativeEventFactory,
+    sourceEvent: PointerInputEvent,
+    positionSourceEvent: PointerInputEvent
+) = pointerInputEvent(
+    eventType = PointerEventType.Move,
+    position = positionSourceEvent.pointers.first().position,
+    timeMillis = sourceEvent.uptime,
+    nativeEvent = nativeFactory.createMoveEvent(sourceEvent.nativeEvent, positionSourceEvent.nativeEvent),
+    type = sourceEvent.pointers.first().type,
+    scrollDelta = Offset(0f, 0f),
+    buttons = sourceEvent.buttons,
+    keyboardModifiers = sourceEvent.keyboardModifiers
+)
 
 internal expect fun makeAccessibilityController(
     skiaBasedOwner: SkiaBasedOwner,

@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.ui.PointerPositionUpdater
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
 import androidx.compose.ui.focus.FocusDirection
@@ -86,6 +87,7 @@ private typealias Command = () -> Unit
 internal class SkiaBasedOwner(
     private val platformInputService: PlatformInput,
     private val component: PlatformComponent,
+    private val pointerPositionUpdater: PointerPositionUpdater,
     override val windowInfo: WindowInfo,
     density: Density = Density(1f, 1f),
     bounds: IntRect = IntRect.Zero,
@@ -240,9 +242,11 @@ internal class SkiaBasedOwner(
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
         if (
-            measureAndLayoutDelegate.measureAndLayout(
-                scheduleSyntheticEvents.takeIf { sendPointerUpdate }
-            )
+            measureAndLayoutDelegate.measureAndLayout {
+                if (sendPointerUpdate) {
+                    pointerPositionUpdater.onLayout()
+                }
+            }
         ) {
             requestDraw?.invoke()
         }
@@ -312,8 +316,6 @@ internal class SkiaBasedOwner(
     fun draw(canvas: org.jetbrains.skia.Canvas) {
         root.draw(canvas.asComposeCanvas())
     }
-
-    private val scheduleSyntheticEvents = component::scheduleSyntheticMoveEvent
 
     internal fun processPointerInput(event: PointerInputEvent, isInBounds: Boolean = true): ProcessResult {
         return pointerInputEventProcessor.process(
