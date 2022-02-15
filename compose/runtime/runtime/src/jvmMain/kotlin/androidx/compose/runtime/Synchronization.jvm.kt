@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.platform
+package androidx.compose.runtime
 
-@PublishedApi
-internal expect inline fun <R> synchronized(lock: Any, block: () -> R): R
+actual class SynchronizedObject
+
+actual fun createSynchronizedObject() = SynchronizedObject()
+
+actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R {
+    return kotlin.synchronized(lock, block)
+}

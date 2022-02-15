@@ -17,6 +17,7 @@
 package kotlinx.coroutines.test
 
 import androidx.compose.runtime.synchronized
+import androidx.compose.runtime.createSynchronizedObject
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlin.coroutines.AbstractCoroutineContextElement
@@ -54,21 +55,22 @@ public class TestCoroutineExceptionHandler :
     AbstractCoroutineContextElement(CoroutineExceptionHandler), UncaughtExceptionCaptor, CoroutineExceptionHandler
 {
     private val _exceptions = mutableListOf<Throwable>()
+    private val _exceptionsLock = createSynchronizedObject()
 
     /** @suppress **/
     override fun handleException(context: CoroutineContext, exception: Throwable) {
-        synchronized(_exceptions) {
+        synchronized(_exceptionsLock) {
             _exceptions += exception
         }
     }
 
     /** @suppress **/
     override val uncaughtExceptions: List<Throwable>
-        get() = synchronized(_exceptions) { _exceptions.toList() }
+        get() = synchronized(_exceptionsLock) { _exceptions.toList() }
 
     /** @suppress **/
     override fun cleanupTestCoroutines() {
-        synchronized(_exceptions) {
+        synchronized(_exceptionsLock) {
             val exception = _exceptions.firstOrNull() ?: return
             // log the rest
             _exceptions.drop(1).forEach { it.printStackTrace() }

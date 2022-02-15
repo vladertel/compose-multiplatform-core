@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.text.platform
+package androidx.compose.runtime
 
-internal actual class SynchronizedObject
+actual class SynchronizedObject : kotlinx.atomicfu.locks.SynchronizedObject()
 
-internal actual fun createSynchronizedObject() = SynchronizedObject()
+actual fun createSynchronizedObject() = SynchronizedObject()
 
-internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R {
-    return kotlin.synchronized(lock, block)
-}
+actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R =
+    kotlinx.atomicfu.locks.synchronized(lock, block)

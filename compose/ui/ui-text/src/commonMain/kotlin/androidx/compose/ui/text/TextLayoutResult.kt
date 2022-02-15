@@ -23,9 +23,9 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.font.toFontFamily
-import androidx.compose.ui.text.platform.SynchronizedObject
-import androidx.compose.ui.text.platform.createSynchronizedObject
-import androidx.compose.ui.text.platform.synchronized
+import androidx.compose.runtime.SynchronizedObject
+import androidx.compose.runtime.createSynchronizedObject
+import androidx.compose.runtime.synchronized
 import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
