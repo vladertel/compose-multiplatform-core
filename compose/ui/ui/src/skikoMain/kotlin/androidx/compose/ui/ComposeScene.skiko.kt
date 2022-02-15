@@ -359,7 +359,7 @@ class ComposeScene internal constructor(
      * Render the current content on [canvas]. Passed [nanoTime] will be used to drive all
      * animations in the content (or any other code, which uses [withFrameNanos]
      */
-    fun render(canvas: Canvas, nanoTime: Long) = postponeInvalidation {
+    fun render(canvas: Canvas, nanoTime: Long): Unit = postponeInvalidation {
         check(!isClosed) { "ComposeScene is closed" }
         // We must see the actual state before we will render the frame
         Snapshot.sendApplyNotifications()
