@@ -43,6 +43,7 @@ import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
+import java.awt.IllegalComponentStateException
 import java.awt.Point
 import java.awt.Toolkit
 import java.awt.Window
@@ -432,3 +433,9 @@ private val MouseEvent.isMacOsCtrlClick
                     ((modifiersEx and InputEvent.BUTTON1_DOWN_MASK) != 0) &&
                     ((modifiersEx and InputEvent.CTRL_DOWN_MASK) != 0)
             )
+
+
+@Deprecated("Will be removed in Compose 1.3")
+internal class SyntheticMouseEvent(
+    source: Component, id: Int, `when`: Long, modifiers: Int, x: Int, y: Int
+) : MouseEvent(source, id, `when`, modifiers, x, y, 0, false)
