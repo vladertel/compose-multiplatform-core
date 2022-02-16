@@ -50,7 +50,7 @@ import androidx.compose.ui.platform.FlushCoroutineDispatcher
 import androidx.compose.ui.platform.GlobalSnapshotManager
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.node.RootForTest
-import androidx.compose.ui.platform.NativeEventFactory
+import androidx.compose.ui.platform.synchronized
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -84,7 +84,10 @@ class ComposeScene internal constructor(
     coroutineContext: CoroutineContext = Dispatchers.Unconfined,
     internal val component: PlatformComponent,
     density: Density = Density(1f),
-    private val invalidate: () -> Unit = {}
+    private val invalidate: () -> Unit = {},
+    @Deprecated("Will be removed in Compose 1.3")
+    internal val createSyntheticNativeMoveEvent:
+        (sourceEvent: Any?, positionSourceEvent: Any?) -> Any? = { _, _ -> null },
 ) {
     /**
      * Constructs [ComposeScene]
@@ -442,8 +445,10 @@ class ComposeScene internal constructor(
         processPointerInput(event)
     }
 
+    @Suppress("DEPRECATION")
     private fun sendAsMove(sourceEvent: PointerInputEvent, positionSourceEvent: PointerInputEvent) {
-        processPointerInput(createMoveEvent(component.nativeEventFactory, sourceEvent, positionSourceEvent))
+        val nativeEvent = createSyntheticNativeMoveEvent(sourceEvent.nativeEvent, positionSourceEvent.nativeEvent)
+        processPointerInput(createMoveEvent(nativeEvent, sourceEvent, positionSourceEvent))
     }
 
     @OptIn(ExperimentalComposeUiApi::class)
@@ -563,14 +568,14 @@ internal fun pointerInputEvent(
 }
 
 private fun createMoveEvent(
-    nativeFactory: NativeEventFactory,
+    nativeEvent: Any?,
     sourceEvent: PointerInputEvent,
     positionSourceEvent: PointerInputEvent
 ) = pointerInputEvent(
     eventType = PointerEventType.Move,
     position = positionSourceEvent.pointers.first().position,
     timeMillis = sourceEvent.uptime,
-    nativeEvent = nativeFactory.createMoveEvent(sourceEvent.nativeEvent, positionSourceEvent.nativeEvent),
+    nativeEvent = nativeEvent,
     type = sourceEvent.pointers.first().type,
     scrollDelta = Offset(0f, 0f),
     buttons = sourceEvent.buttons,

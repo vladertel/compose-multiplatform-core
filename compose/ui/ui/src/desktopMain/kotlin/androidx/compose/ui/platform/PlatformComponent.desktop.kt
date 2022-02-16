@@ -23,7 +23,6 @@ import java.awt.im.InputMethodRequests
 
 internal actual interface PlatformComponent : PlatformInputComponent, PlatformComponentWithCursor {
     actual val windowInfo: WindowInfo
-    actual val nativeEventFactory: NativeEventFactory
 }
 
 internal actual interface PlatformComponentWithCursor {
@@ -43,7 +42,4 @@ internal actual object DummyPlatformComponent : PlatformComponent {
     override val density: Density
         get() = Density(1f, 1f)
     override val windowInfo = WindowInfoImpl()
-    override val nativeEventFactory = object : NativeEventFactory {
-        override fun createMoveEvent(sourceEvent: Any?, positionSourceEvent: Any?): Any? = null
-    }
 }
