@@ -79,6 +79,10 @@ internal val LocalComposeScene = staticCompositionLocalOf<ComposeScene> {
  *
  * After [ComposeScene] will no longer needed, you should call [close] method, so all resources
  * and subscriptions will be properly closed. Otherwise there can be a memory leak.
+ *
+ * [ComposeScene] doesn't support concurrent read/write access from different threads. Except:
+ * - [hasInvalidations] can be called from any thread
+ * - [invalidate] callback can be called from any thread
  */
 class ComposeScene internal constructor(
     coroutineContext: CoroutineContext = Dispatchers.Unconfined,
@@ -127,6 +131,7 @@ class ComposeScene internal constructor(
 
     private fun invalidateIfNeeded() {
         hasPendingDraws = frameClock.hasAwaiters || needLayout || needDraw || pointerPositionUpdater.needUpdate
+            || snapshotChanges.hasCommands
         if (hasPendingDraws && !isInvalidationDisabled && !isClosed) {
             invalidate()
         }
@@ -219,11 +224,7 @@ class ComposeScene internal constructor(
         isClosed = true
     }
 
-    private fun dispatchCommand(command: () -> Unit) {
-        coroutineScope.launch {
-            command()
-        }
-    }
+    private val snapshotChanges = CommandList(::invalidateIfNeeded)
 
     /**
      * Returns true if there are pending recompositions, renders or dispatched tasks.
@@ -239,7 +240,7 @@ class ComposeScene internal constructor(
         list.add(owner)
         owner.requestLayout = ::requestLayout
         owner.requestDraw = ::requestDraw
-        owner.onDispatchCommand = ::dispatchCommand
+        owner.dispatchSnapshotChanges = snapshotChanges::add
         owner.constraints = constraints
         owner.accessibilityController = makeAccessibilityController(
             owner,
@@ -254,7 +255,7 @@ class ComposeScene internal constructor(
     internal fun detach(owner: SkiaBasedOwner) {
         check(!isClosed) { "ComposeScene is closed" }
         list.remove(owner)
-        owner.onDispatchCommand = null
+        owner.dispatchSnapshotChanges = null
         owner.requestDraw = null
         owner.requestLayout = null
         invalidateIfNeeded()
@@ -368,8 +369,12 @@ class ComposeScene internal constructor(
      */
     fun render(canvas: Canvas, nanoTime: Long) = postponeInvalidation {
         check(!isClosed) { "ComposeScene is closed" }
-        // We must see the actual state before we will render the frame
-        Snapshot.sendApplyNotifications()
+        // TODO(https://github.com/JetBrains/compose-jb/issues/1854) get rid of synchronized
+        synchronized(GlobalSnapshotManager) {
+            // We must see the actual state before we will render the frame
+            Snapshot.sendApplyNotifications()
+        }
+        snapshotChanges.perform()
         recomposeDispatcher.flush()
         frameClock.sendFrame(nanoTime)
         needLayout = false
@@ -424,6 +429,7 @@ class ComposeScene internal constructor(
         nativeEvent: Any? = null,
     ): Unit = postponeInvalidation {
         check(!isClosed) { "ComposeScene is closed" }
+        snapshotChanges.perform()
         defaultPointerStateTracker.onPointerEvent(eventType)
 
         val actualButtons = buttons ?: defaultPointerStateTracker.buttons
