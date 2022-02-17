@@ -28,7 +28,6 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.platform.AccessibilityControllerImpl
 import androidx.compose.ui.platform.DesktopPlatform
 import androidx.compose.ui.platform.PlatformComponent
-import androidx.compose.ui.platform.NativeEventFactory
 import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
@@ -44,6 +43,7 @@ import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
+import java.awt.IllegalComponentStateException
 import java.awt.Point
 import java.awt.Toolkit
 import java.awt.Window
@@ -96,7 +96,8 @@ internal class ComposeLayer {
         Dispatchers.Swing + coroutineExceptionHandler,
         _component,
         Density(1f),
-        _component::needRedraw
+        _component::needRedraw,
+        createSyntheticNativeMoveEvent = _component::createSyntheticMouseEvent,
     )
 
     private val density get() = _component.density.density
@@ -210,22 +211,19 @@ internal class ComposeLayer {
             windowInfo.isWindowFocused = window?.isFocused ?: false
         }
 
-        override val nativeEventFactory = object : NativeEventFactory {
-            override fun createMoveEvent(sourceEvent: Any?, positionSourceEvent: Any?): Any {
-                sourceEvent as MouseEvent
-                positionSourceEvent as MouseEvent
+        @Suppress("DEPRECATION")
+        fun createSyntheticMouseEvent(sourceEvent: Any?, positionSourceEvent: Any?): Any {
+            sourceEvent as MouseEvent
+            positionSourceEvent as MouseEvent
 
-                return MouseEvent(
-                    sourceEvent.source as Component,
-                    MouseEvent.MOUSE_MOVED,
-                    sourceEvent.`when`,
-                    sourceEvent.modifiersEx,
-                    positionSourceEvent.x,
-                    positionSourceEvent.y,
-                    0,
-                    false
-                )
-            }
+            return SyntheticMouseEvent(
+                sourceEvent.source as Component,
+                MouseEvent.MOUSE_MOVED,
+                sourceEvent.`when`,
+                sourceEvent.modifiersEx,
+                positionSourceEvent.x,
+                positionSourceEvent.y
+            )
         }
     }
 
@@ -435,3 +433,9 @@ private val MouseEvent.isMacOsCtrlClick
                     ((modifiersEx and InputEvent.BUTTON1_DOWN_MASK) != 0) &&
                     ((modifiersEx and InputEvent.CTRL_DOWN_MASK) != 0)
             )
+
+
+@Deprecated("Will be removed in Compose 1.3")
+internal class SyntheticMouseEvent(
+    source: Component, id: Int, `when`: Long, modifiers: Int, x: Int, y: Int
+) : MouseEvent(source, id, `when`, modifiers, x, y, 0, false)
