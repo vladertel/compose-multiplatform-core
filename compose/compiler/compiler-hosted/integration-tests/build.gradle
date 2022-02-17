@@ -59,9 +59,15 @@ dependencies {
     testImplementation("androidx.core:core-ktx:1.1.0")
     testImplementation("androidx.activity:activity-ktx:1.2.0")
 
-    if (AndroidXComposePlugin.isJsCompilerTestsEnabled(project)) {
+    testImplementation("io.apisense:rhino-android:1.1.1")
+    testImplementation("org.graalvm.js:js:22.0.0.2")
+    testImplementation("org.graalvm.js:js-scriptengine:22.0.0.2")
+    testImplementation("org.graalvm.sdk:graal-sdk:22.0.0.2")
+    testImplementation(libs.kotlinCoroutinesCore)
+
+//    if (AndroidXComposePlugin.isJsCompilerTestsEnabled(project)) {
         testJsRuntimeOnly(project(":compose:runtime:runtime"))
-    }
+//    }
 }
 
 afterEvaluate {

@@ -36,7 +36,6 @@ import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
 import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.cli.js.messageCollectorLogger
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
@@ -51,14 +50,12 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmDescriptorMangler
 import org.jetbrains.kotlin.incremental.components.LookupTracker
-import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.backend.js.TopDownAnalyzerFacadeForJSIR
 import org.jetbrains.kotlin.ir.backend.js.isBuiltIns
 import org.jetbrains.kotlin.ir.backend.js.jsResolveLibraries
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsIrLinker
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerDesc
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerIr
-import org.jetbrains.kotlin.ir.backend.jvm.serialization.EmptyLoggingContext
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmIrLinker
 import org.jetbrains.kotlin.ir.builders.TranslationPluginContext
 import org.jetbrains.kotlin.ir.builders.declarations.buildClass
@@ -67,8 +64,6 @@ import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.declarations.persistent.PersistentIrFactory
-import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
-import org.jetbrains.kotlin.ir.descriptors.IrFunctionFactory
 import org.jetbrains.kotlin.ir.util.ExternalDependenciesGenerator
 import org.jetbrains.kotlin.ir.util.IrMessageLogger
 import org.jetbrains.kotlin.ir.util.ReferenceSymbolTable
@@ -95,6 +90,7 @@ import org.jetbrains.kotlin.serialization.deserialization.descriptors.Deserializ
 import org.jetbrains.kotlin.storage.LockBasedStorageManager
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import java.io.File
+import org.jetbrains.kotlin.ir.backend.js.toResolverLogger
 
 @Suppress("LeakingThis")
 abstract class ComposeIrTransformTest : AbstractIrTransformTest() {
@@ -560,9 +556,7 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
             val deps = jsResolveLibraries(
                 dependencyFiles,
                 emptyList(),
-                messageCollectorLogger(
-                    environment.configuration[CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY]!! as MessageCollector
-                )
+                configuration[IrMessageLogger.IR_MESSAGE_LOGGER].toResolverLogger()
             )
 
             val moduleProvider = JsModuleProvider(environment, deps)
@@ -604,8 +598,8 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
             )
 
             val irBuiltIns = generatorContext.irBuiltIns
-            val functionFactory = IrFunctionFactory(irBuiltIns, generatorContext.symbolTable)
-            irBuiltIns.functionFactory = functionFactory
+//            val functionFactory = IrFunctionFactory(irBuiltIns, generatorContext.symbolTable)
+//            irBuiltIns.functionFactory = functionFactory
 
             val messageLogger = environment.configuration[IrMessageLogger.IR_MESSAGE_LOGGER]
                 ?: IrMessageLogger.None
@@ -615,7 +609,6 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
                 messageLogger,
                 generatorContext.irBuiltIns,
                 generatorContext.symbolTable,
-                functionFactory,
                 JsIrLinker.JsFePluginContext(
                     result.moduleDescriptor,
                     generatorContext.symbolTable,
@@ -630,13 +623,12 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
 
             val sybmols = BuiltinSymbolsBase(
                 irBuiltIns,
-                irBuiltIns.builtIns,
                 generatorContext.symbolTable
             )
 
-            psi2Ir.addPostprocessingStep {
-                postProcessingStep(it, generatorContext, irLinker, messageLogger, sybmols)
-            }
+//            psi2Ir.addPostprocessingStep {
+//                postProcessingStep(it, generatorContext, irLinker, messageLogger, sybmols)
+//            }
 
             val moduleFragment = psi2Ir.generateModuleFragment(
                 generatorContext,
@@ -660,7 +652,8 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
     private class JsModuleProvider(
         private val environment: KotlinCoreEnvironment,
         private val deps: KotlinLibraryResolveResult
-    ) {
+    )
+    {
         private val JsFactories = KlibMetadataFactories(
             { object : KotlinBuiltIns(it) {} },
             DynamicTypeDeserializer

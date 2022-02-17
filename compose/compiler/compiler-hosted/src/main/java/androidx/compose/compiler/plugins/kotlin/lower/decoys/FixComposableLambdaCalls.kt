@@ -46,10 +46,12 @@ import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
+import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.isFunction
 import org.jetbrains.kotlin.ir.util.isLocal
+import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.name.FqName
@@ -83,6 +85,7 @@ class FixComposableLambdaCalls(
             "FixComposableLambdaCalls transformation is intended only for kotlin/js targets"
         }
         module.transformChildrenVoid(this)
+        module.patchDeclarationParents()
     }
 
     private fun IrType.hasComposerDirectly(): Boolean {
@@ -216,7 +219,7 @@ class FixComposableLambdaCalls(
             ).also {
                 it.dispatchReceiver = irGet(dispatchReceiverVar)
                 repeat(original.valueArgumentsCount) { ix ->
-                    it.putValueArgument(ix, realArguments[ix])
+                    it.putValueArgument(ix, realArguments[ix]?.deepCopyWithSymbols())
                 }
             }
         }
