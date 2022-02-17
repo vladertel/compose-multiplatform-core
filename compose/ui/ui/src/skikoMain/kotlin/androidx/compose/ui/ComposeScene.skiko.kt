@@ -262,11 +262,11 @@ class ComposeScene internal constructor(
         if (owner == focusedOwner) {
             focusedOwner = list.lastOrNull { it.isFocusable }
         }
-        if (owner == lastMouseMoveOwner) {
-            lastMouseMoveOwner = null
+        if (owner == lastMoveOwner) {
+            lastMoveOwner = null
         }
-        if (owner == mousePressOwner) {
-            mousePressOwner = null
+        if (owner == pressOwner) {
+            pressOwner = null
         }
     }
 
@@ -392,8 +392,8 @@ class ComposeScene internal constructor(
     }
 
     private var focusedOwner: SkiaBasedOwner? = null
-    private var mousePressOwner: SkiaBasedOwner? = null
-    private var lastMouseMoveOwner: SkiaBasedOwner? = null
+    private var pressOwner: SkiaBasedOwner? = null
+    private var lastMoveOwner: SkiaBasedOwner? = null
     private fun hoveredOwner(event: PointerInputEvent): SkiaBasedOwner? =
         list.lastOrNull { it.isHovered(event.pointers.first().position) }
 
@@ -453,62 +453,67 @@ class ComposeScene internal constructor(
 
     @Suppress("DEPRECATION")
     private fun sendAsMove(sourceEvent: PointerInputEvent, positionSourceEvent: PointerInputEvent) {
-        val nativeEvent = createSyntheticNativeMoveEvent(sourceEvent.nativeEvent, positionSourceEvent.nativeEvent)
-        processPointerInput(createMoveEvent(nativeEvent, sourceEvent, positionSourceEvent))
+        if (lastMoveOwner != null) {
+            val nativeEvent = createSyntheticNativeMoveEvent(sourceEvent.nativeEvent, positionSourceEvent.nativeEvent)
+            processPointerInput(createMoveEvent(nativeEvent, sourceEvent, positionSourceEvent))
+        }
     }
 
     @OptIn(ExperimentalComposeUiApi::class)
     private fun processPointerInput(event: PointerInputEvent) {
         when (event.eventType) {
-            PointerEventType.Press -> onMousePressed(event)
-            PointerEventType.Release -> onMouseReleased(event)
-            PointerEventType.Move -> onMouseMove(event)
-            PointerEventType.Enter -> onMouseMove(event)
-            PointerEventType.Exit -> onMouseMove(event)
-            PointerEventType.Scroll -> onMouseScrolled(event)
+            PointerEventType.Press -> processPress(event)
+            PointerEventType.Release -> processRelease(event)
+            PointerEventType.Move -> processMove(event)
+            PointerEventType.Enter -> processMove(event)
+            PointerEventType.Exit -> processMove(event)
+            PointerEventType.Scroll -> processScroll(event)
         }
 
         if (!event.buttons.areAnyPressed) {
-            mousePressOwner = null
+            pressOwner = null
         }
     }
 
-    private fun onMousePressed(event: PointerInputEvent) {
+    private fun processPress(event: PointerInputEvent) {
         val owner = hoveredOwner(event)
         if (focusedOwner.isAbove(owner)) {
             focusedOwner?.onDismissRequest?.invoke()
         } else {
             owner?.processPointerInput(event)
-            mousePressOwner = owner
+            pressOwner = owner
         }
     }
 
-    private fun onMouseReleased(event: PointerInputEvent) {
-        val owner = mousePressOwner ?: hoveredOwner(event)
+    private fun processRelease(event: PointerInputEvent) {
+        val owner = pressOwner ?: hoveredOwner(event)
         owner?.processPointerInput(event)
     }
 
-    private fun onMouseMove(event: PointerInputEvent) {
-        val owner = if (event.buttons.areAnyPressed) mousePressOwner else hoveredOwner(event)
+    private fun processMove(event: PointerInputEvent) {
+        val owner = when {
+            event.buttons.areAnyPressed -> pressOwner
+            event.eventType == PointerEventType.Exit -> null
+            else -> hoveredOwner(event)
+        }
 
         // Cases:
-        // - move from outside to the window (owner != null, lastMouseMoveOwner == null): Enter
-        // - move from the window to outside (owner == null, lastMouseMoveOwner != null): Exit
-        // - move from one point of the window to another (owner == lastMouseMoveOwner): Move
-        // - move from one popup to another (owner != lastMouseMoveOwner): [Popup 1] Exit, [Popup 2] Enter, Move
+        // - move from outside to the window (owner != null, lastMoveOwner == null): Enter
+        // - move from the window to outside (owner == null, lastMoveOwner != null): Exit
+        // - move from one point of the window to another (owner == lastMoveOwner): Move
+        // - move from one popup to another (owner != lastMoveOwner): [Popup 1] Exit, [Popup 2] Enter
 
-        if (owner != lastMouseMoveOwner) {
-            lastMouseMoveOwner?.processPointerInput(event.copy(eventType = PointerEventType.Exit), isInBounds = false)
+        if (owner != lastMoveOwner) {
+            lastMoveOwner?.processPointerInput(event.copy(eventType = PointerEventType.Exit), isInBounds = false)
             owner?.processPointerInput(event.copy(eventType = PointerEventType.Enter))
-        }
-        if (event.eventType == PointerEventType.Move) {
-            owner?.processPointerInput(event)
+        } else {
+            owner?.processPointerInput(event.copy(eventType = PointerEventType.Move))
         }
 
-        lastMouseMoveOwner = owner
+        lastMoveOwner = owner
     }
 
-    private fun onMouseScrolled(event: PointerInputEvent) {
+    private fun processScroll(event: PointerInputEvent) {
         val owner = hoveredOwner(event)
         if (!focusedOwner.isAbove(owner)) {
             owner?.processPointerInput(event)
