@@ -18,16 +18,30 @@ package androidx.compose.ui
 
 import androidx.compose.ui.platform.synchronized
 
+/**
+ * Allows postponing execution of some code (command), adding it to the list via [add],
+ * and performing all added commands in some time in the future via [perform]
+ */
 internal class CommandList(
     private var onNewCommand: () -> Unit
 ) {
     private val list = mutableListOf<() -> Unit>()
     private val listCopy = mutableListOf<() -> Unit>()
 
+    /**
+     * true if there are any commands added.
+     *
+     * Can be called concurrently from multiple threads.
+     */
     val hasCommands: Boolean get() = synchronized(list) {
         list.isNotEmpty()
     }
 
+    /**
+     * Add command to the list, and notify observer via [onNewCommand].
+     *
+     * Can be called concurrently from multiple threads.
+     */
     fun add(command: () -> Unit) {
         synchronized(list) {
             list.add(command)
@@ -35,6 +49,12 @@ internal class CommandList(
         onNewCommand()
     }
 
+    /**
+     * Clear added commands and perform them.
+     *
+     * Doesn't support multiple [perform]'s from different threads. But does support concurrent [perform]
+     * and concurrent [add].
+     */
     fun perform() {
         synchronized(list) {
             listCopy.addAll(list)
