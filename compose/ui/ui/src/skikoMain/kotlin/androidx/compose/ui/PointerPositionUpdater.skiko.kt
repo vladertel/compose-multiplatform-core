@@ -37,7 +37,9 @@ internal class PointerPositionUpdater(
     fun beforeEvent(event: PointerInputEvent) {
         if (isMoveEventMissing(lastEvent, event) || needUpdate) {
             needUpdate = false
-            lastEvent?.sendAsUpdate(pointersSource = event)
+            if (!event.isMove()) {
+                lastEvent?.sendAsUpdate(pointersSource = event)
+            }
         }
         lastEvent = event
     }
