@@ -61,6 +61,7 @@ import javax.accessibility.AccessibleValue
 import javax.swing.text.AttributeSet
 import kotlin.math.roundToInt
 import org.jetbrains.skia.BreakIterator
+import javax.swing.text.SimpleAttributeSet
 
 private fun <T> SemanticsConfiguration.getFirstOrNull(key: SemanticsPropertyKey<List<T>>): T? {
     return getOrNull(key)?.firstOrNull()
@@ -78,7 +79,7 @@ internal class ComposeAccessible(
     val accessibleContext: ComposeAccessibleComponent by lazy { ComposeAccessibleComponent() }
     override fun getAccessibleContext(): AccessibleContext = accessibleContext
 
-    open inner class ComposeAccessibleComponent : AccessibleContext(), AccessibleComponent {
+    open inner class ComposeAccessibleComponent : AccessibleContext(), AccessibleComponent, AccessibleAction {
         val textSelectionRange
             get() = semanticsNode.config.getOrNull(SemanticsProperties.TextSelectionRange)
         val setText
@@ -509,7 +510,8 @@ internal class ComposeAccessible(
 
             override fun getCharacterAttribute(i: Int): AttributeSet {
                 println("Not implemented: getCharacterAttribute")
-                TODO("Not yet implemented")
+                // TODO("Not yet implemented")
+                return SimpleAttributeSet()
             }
 
             override fun getSelectionStart(): Int {
@@ -770,6 +772,20 @@ internal class ComposeAccessible(
         override fun setVisible(b: Boolean) {
             println("Not implemented: setVisible")
             TODO("Not yet implemented")
+        }
+
+        // For some reasons JDK's CAccessibility does not call getAccessibleAction
+        // and performs actions on current component itself
+        override fun getAccessibleActionCount(): Int {
+            return accessibleAction?.accessibleActionCount ?: 0
+        }
+
+        override fun getAccessibleActionDescription(i: Int): String {
+            return accessibleAction?.getAccessibleActionDescription(i) ?: ""
+        }
+
+        override fun doAccessibleAction(i: Int): Boolean {
+            return accessibleAction?.doAccessibleAction(i) ?: false
         }
     }
 }
