@@ -21,6 +21,7 @@ import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.CoroutineScope
 import java.util.AbstractMap
 import java.util.function.Function
+import org.intellij.lang.annotations.Language
 import org.jetbrains.kotlin.ir.declarations.IrFile
 
 
@@ -47,6 +48,10 @@ class KJsComposableTestCase {
 
     fun kotlinCode(block: () -> String) {
         kotlinCodeBlock = block
+    }
+
+    fun kotlinCode(@Language("kotlin") code:  String) {
+        kotlinCodeBlock = { code }
     }
 
     fun applyOnJsCode(block: AbstractKJsCompileTest.OnJsSourceApplier.() -> Unit) {
