@@ -390,7 +390,7 @@ class WindowStateTest {
     @Test
     fun `restore size and position after maximize`() = runApplicationTest {
         // Swing/macOs can't re-change isMaximized in a deterministic way:
-//        fun main() = runBlocking(Dispatchers.Swing) {
+//        fun main() = runBlocking(MainUIDispatcher) {
 //            val window = ComposeWindow()
 //            window.size = Dimension(200, 200)
 //            window.isVisible = true
@@ -494,7 +494,7 @@ class WindowStateTest {
     @Test
     fun `minimize window before show`() = runApplicationTest {
         // Linux/macos doesn't support this:
-//        fun main() = runBlocking(Dispatchers.Swing) {
+//        fun main() = runBlocking(MainUIDispatcher) {
 //            val window = ComposeWindow()
 //            window.size = Dimension(200, 200)
 //            window.isMinimized = true
