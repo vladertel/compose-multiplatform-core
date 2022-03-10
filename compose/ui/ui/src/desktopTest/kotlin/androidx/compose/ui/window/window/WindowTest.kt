@@ -46,11 +46,10 @@ import androidx.compose.ui.window.launchApplication
 import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.runApplicationTest
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.swing.Swing
+import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Assume.assumeFalse
 import org.junit.Test
 import java.awt.Dimension
@@ -415,7 +414,7 @@ class WindowTest {
 
         val oldRecomposers = Recomposer.runningRecomposers.value
 
-        runBlocking(Dispatchers.Swing) {
+        runBlocking(MainUIDispatcher) {
             repeat(10) {
                 val window = ComposeWindow()
                 window.size = Dimension(200, 200)

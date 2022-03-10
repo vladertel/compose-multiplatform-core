@@ -14,9 +14,8 @@ import androidx.compose.ui.sendMouseEvent
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.runApplicationTest
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.swing.Swing
+import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Assume
 import org.junit.Test
 import java.awt.GraphicsEnvironment
@@ -28,7 +27,7 @@ class ComposeWindowTest {
     fun `don't override user preferred size`() {
         Assume.assumeFalse(GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance)
 
-        runBlocking(Dispatchers.Swing) {
+        runBlocking(MainUIDispatcher) {
             val window = ComposeWindow()
             try {
                 window.preferredSize = Dimension(234, 345)
@@ -46,7 +45,7 @@ class ComposeWindowTest {
     fun `pack to Compose content`() {
         Assume.assumeFalse(GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance)
 
-        runBlocking(Dispatchers.Swing) {
+        runBlocking(MainUIDispatcher) {
             val window = ComposeWindow()
             try {
                 window.setContent {
@@ -73,7 +72,7 @@ class ComposeWindowTest {
 
         val layoutPassConstraints = mutableListOf<Constraints>()
 
-        runBlocking(Dispatchers.Swing) {
+        runBlocking(MainUIDispatcher) {
             val window = ComposeWindow()
             try {
                 window.size = Dimension(300, 400)

@@ -23,9 +23,8 @@ import androidx.compose.material.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.ui.Modifier
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.swing.Swing
+import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Test
 
 @Suppress("DEPRECATION")
@@ -51,7 +50,7 @@ class TestComposeWindowTest {
 
     @Test(timeout = 5000)
     fun `disposing TestComposeWindow should not cancel coroutineContext's Job`() {
-        runBlocking(Dispatchers.Swing) {
+        runBlocking(MainUIDispatcher) {
             val window = TestComposeWindow(100, 100, coroutineContext = coroutineContext)
             window.dispose()
         }

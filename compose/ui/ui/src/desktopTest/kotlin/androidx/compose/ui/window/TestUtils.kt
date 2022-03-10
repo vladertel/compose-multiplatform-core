@@ -23,16 +23,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
+import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Assume.assumeFalse
 import java.awt.GraphicsEnvironment
 
@@ -52,7 +51,7 @@ internal fun runApplicationTest(
 ) {
     assumeFalse(GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadlessInstance)
 
-    runBlocking(Dispatchers.Swing) {
+    runBlocking(MainUIDispatcher) {
         withTimeout(30000) {
             val exceptionHandler = TestExceptionHandler()
             withExceptionHandler(exceptionHandler) {
@@ -104,7 +103,7 @@ import java.awt.event.ComponentEvent
 import javax.swing.JFrame
 
 fun main()  {
-    runBlocking(Dispatchers.Swing) {
+    runBlocking(MainUIDispatcher) {
         repeat(10) {
             val actions = mutableListOf<String>()
             val frame = JFrame()
