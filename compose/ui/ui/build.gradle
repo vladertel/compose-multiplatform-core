@@ -168,7 +168,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 dependsOn(skikoMain)
                 dependencies {
                     implementation(libs.kotlinStdlibJdk8)
-                    api(libs.kotlinCoroutinesSwing)
                 }
             }
 
