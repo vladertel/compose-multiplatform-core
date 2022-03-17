@@ -185,9 +185,9 @@ internal abstract class LayoutNodeWrapper(
         protected set
 
     override val parentData: Any?
-        get() = entities.head(EntityList.ParentDataEntityType).parentData
+        get() = entities.head(EntityList.ParentDataEntityType).simpleEntityParentData
 
-    private val SimpleEntity<ParentDataModifier>?.parentData: Any?
+    private val SimpleEntity<ParentDataModifier>?.simpleEntityParentData: Any?
         get() = if (this == null) {
             wrapped?.parentData
         } else {
@@ -196,7 +196,7 @@ internal abstract class LayoutNodeWrapper(
                  * ParentData provided through the parentData node will override the data provided
                  * through a modifier.
                  */
-                measureScope.modifyParentData(next.parentData)
+                measureScope.modifyParentData(next.simpleEntityParentData)
             }
         }
 
