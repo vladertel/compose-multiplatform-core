@@ -22,12 +22,10 @@ import android.content.Intent
 import android.util.Pair
 import android.view.WindowMetrics
 import androidx.window.core.ExperimentalWindowApi
-import androidx.window.extensions.embedding.EmbeddingRule as OEMEmbeddingRule
-import androidx.window.extensions.embedding.ActivityRule as OEMActivityRule
+import java.lang.IllegalArgumentException
+import java.util.function.Predicate
 import androidx.window.extensions.embedding.ActivityRule.Builder as ActivityRuleBuilder
-import androidx.window.extensions.embedding.SplitPairRule as OEMSplitPairRule
 import androidx.window.extensions.embedding.SplitPairRule.Builder as SplitPairRuleBuilder
-import androidx.window.extensions.embedding.SplitPlaceholderRule as OEMSplitPlaceholderRule
 import androidx.window.extensions.embedding.SplitPlaceholderRule.Builder as SplitPlaceholderRuleBuilder
 
 /**
@@ -62,16 +60,16 @@ internal class EmbeddingAdapter {
         }
         val secondaryFragment = ActivityStack(
             secondaryActivityStack.activities,
-            isSecondaryStackEmpty
-        )
+            isSecondaryStackEmpty)
         return SplitInfo(primaryFragment, secondaryFragment, splitInfo.splitRatio)
     }
 
     @SuppressLint("ClassVerificationFailure", "NewApi")
     fun translateActivityPairPredicates(
         splitPairFilters: Set<SplitPairFilter>
-    ): (Pair<Activity, Activity>) -> Boolean {
-        return { (first, second) ->
+    ): Predicate<Pair<Activity, Activity>> {
+        return Predicate<Pair<Activity, Activity>> {
+            (first, second) ->
             splitPairFilters.any { filter -> filter.matchesActivityPair(first, second) }
         }
     }
@@ -79,8 +77,9 @@ internal class EmbeddingAdapter {
     @SuppressLint("ClassVerificationFailure", "NewApi")
     fun translateActivityIntentPredicates(
         splitPairFilters: Set<SplitPairFilter>
-    ): (Pair<Activity, Intent>) -> Boolean {
-        return { (first, second) ->
+    ): Predicate<Pair<Activity, Intent>> {
+        return Predicate<Pair<Activity, Intent>> {
+            (first, second) ->
             splitPairFilters.any { filter -> filter.matchesActivityIntentPair(first, second) }
         }
     }
@@ -88,8 +87,9 @@ internal class EmbeddingAdapter {
     @SuppressLint("ClassVerificationFailure", "NewApi")
     fun translateParentMetricsPredicate(
         splitRule: SplitRule
-    ): (WindowMetrics) -> Boolean {
-        return { windowMetrics ->
+    ): Predicate<WindowMetrics> {
+        return Predicate<WindowMetrics> {
+            windowMetrics ->
             splitRule.checkParentMetrics(windowMetrics)
         }
     }
@@ -97,8 +97,9 @@ internal class EmbeddingAdapter {
     @SuppressLint("ClassVerificationFailure", "NewApi")
     fun translateActivityPredicates(
         activityFilters: Set<ActivityFilter>
-    ): (Activity) -> Boolean {
-        return { activity ->
+    ): Predicate<Activity> {
+        return Predicate<Activity> {
+            activity ->
             activityFilters.any { filter -> filter.matchesActivity(activity) }
         }
     }
@@ -106,8 +107,9 @@ internal class EmbeddingAdapter {
     @SuppressLint("ClassVerificationFailure", "NewApi")
     fun translateIntentPredicates(
         activityFilters: Set<ActivityFilter>
-    ): (Intent) -> Boolean {
-        return { intent ->
+    ): Predicate<Intent> {
+        return Predicate<Intent> {
+            intent ->
             activityFilters.any { filter -> filter.matchesIntent(intent) }
         }
     }
@@ -115,7 +117,7 @@ internal class EmbeddingAdapter {
     @SuppressLint("WrongConstant") // Converting from Jetpack to Extensions constants
     private fun translateSplitPairRule(
         rule: SplitPairRule
-    ): OEMSplitPairRule {
+    ): androidx.window.extensions.embedding.SplitPairRule {
         val builder = SplitPairRuleBuilder(
             translateActivityPairPredicates(rule.filters),
             translateActivityIntentPredicates(rule.filters),
@@ -137,7 +139,7 @@ internal class EmbeddingAdapter {
     @SuppressLint("WrongConstant") // Converting from Jetpack to Extensions constants
     private fun translateSplitPlaceholderRule(
         rule: SplitPlaceholderRule
-    ): OEMSplitPlaceholderRule {
+    ): androidx.window.extensions.embedding.SplitPlaceholderRule {
         val builder = SplitPlaceholderRuleBuilder(
             rule.placeholderIntent,
             translateActivityPredicates(rule.filters),
@@ -156,21 +158,23 @@ internal class EmbeddingAdapter {
         return builder.build()
     }
 
-    private fun translateActivityRule(rule: ActivityRule): OEMActivityRule {
-        return ActivityRuleBuilder(
-            translateActivityPredicates(rule.filters),
-            translateIntentPredicates(rule.filters)
-        )
-            .setShouldAlwaysExpand(rule.alwaysExpand)
-            .build()
-    }
-
-    fun translate(rules: Set<EmbeddingRule>): Set<OEMEmbeddingRule> {
-        return rules.map { rule ->
+    fun translate(
+        rules: Set<EmbeddingRule>
+    ): Set<androidx.window.extensions.embedding.EmbeddingRule> {
+        return rules.map {
+            rule ->
             when (rule) {
-                is SplitPairRule -> translateSplitPairRule(rule)
-                is SplitPlaceholderRule -> translateSplitPlaceholderRule(rule)
-                is ActivityRule -> translateActivityRule(rule)
+                is SplitPairRule ->
+                    translateSplitPairRule(rule)
+                is SplitPlaceholderRule ->
+                    translateSplitPlaceholderRule(rule)
+                is ActivityRule ->
+                    ActivityRuleBuilder(
+                        translateActivityPredicates(rule.filters),
+                        translateIntentPredicates(rule.filters)
+                    )
+                        .setShouldAlwaysExpand(rule.alwaysExpand)
+                        .build()
                 else -> throw IllegalArgumentException("Unsupported rule type")
             }
         }.toSet()
