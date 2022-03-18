@@ -184,7 +184,7 @@ fun Modifier.focusProperties(scope: FocusProperties.() -> Unit): Modifier = this
 
 @Stable
 internal class FocusPropertiesModifier(
-    val focusPropertiesScope: FocusProperties.() -> Unit,
+    val focusPropertiesScope: InvokeOnFocusProperties,
     inspectorInfo: InspectorInfo.() -> Unit
 ) : ModifierLocalConsumer,
     ModifierLocalProvider<FocusPropertiesModifier?>,
@@ -208,7 +208,7 @@ internal class FocusPropertiesModifier(
 
     fun calculateProperties(focusProperties: FocusProperties) {
         // Populate with the specified focus properties.
-        focusProperties.apply(focusPropertiesScope)
+        focusPropertiesScope.invoke(focusProperties)
 
         // Parent can override any values set by this
         parent?.calculateProperties(focusProperties)

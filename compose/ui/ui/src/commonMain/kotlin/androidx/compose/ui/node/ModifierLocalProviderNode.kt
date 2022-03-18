@@ -22,12 +22,17 @@ import androidx.compose.ui.modifier.ModifierLocalProvider
 internal class ModifierLocalProviderNode <T> (
     wrapped: LayoutNodeWrapper,
     modifier: ModifierLocalProvider<T>
-) : DelegatingLayoutNodeWrapper<ModifierLocalProvider<T>>(wrapped, modifier), () -> Unit {
+) : DelegatingLayoutNodeWrapper<ModifierLocalProvider<T>>(wrapped, modifier), SimpleInvoke {
+
+    private val onEndApplyChangesListener = {
+        invoke()
+    }
+
     override fun attach() {
         super.attach()
 
         // Invalidate children that read this ModifierLocal
-        layoutNode.owner?.registerOnEndApplyChangesListener(this)
+        layoutNode.owner?.registerOnEndApplyChangesListener(onEndApplyChangesListener)
     }
 
     override fun detach() {
@@ -38,7 +43,7 @@ internal class ModifierLocalProviderNode <T> (
 
     override fun onModifierChanged() {
         super.onModifierChanged()
-        layoutNode.owner?.registerOnEndApplyChangesListener(this)
+        layoutNode.owner?.registerOnEndApplyChangesListener(onEndApplyChangesListener)
     }
 
     override fun invalidateConsumersOf(local: ModifierLocal<*>) {
