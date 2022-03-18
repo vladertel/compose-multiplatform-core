@@ -158,7 +158,9 @@ fun Modifier.focusOrder(
     @Suppress("DEPRECATION")
     focusOrderReceiver: FocusOrder.() -> Unit
 ): Modifier =
-    focusProperties(FocusOrderToProperties(focusOrderReceiver))
+    focusProperties({
+        FocusOrderToProperties(focusOrderReceiver).invoke(this)
+    })
 
 /**
  * A modifier that lets you specify a [FocusRequester] for the current composable so that this
@@ -189,7 +191,9 @@ fun Modifier.focusOrder(
     focusOrderReceiver: FocusOrder.() -> Unit
 ): Modifier = this
     .focusRequester(focusRequester)
-    .focusProperties(FocusOrderToProperties(focusOrderReceiver))
+    .focusProperties({
+        FocusOrderToProperties(focusOrderReceiver).invoke(this)
+    })
 
 /**
  * Search up the component tree for any parent/parents that have specified a custom focus order.
@@ -226,10 +230,14 @@ internal fun FocusModifier.customFocusSearch(
     }
 }
 
+fun interface InvokeOnFocusProperties {
+    fun invoke(focusProperties: FocusProperties)
+}
+
 @Suppress("DEPRECATION")
 internal class FocusOrderToProperties(
     val focusOrderReceiver: FocusOrder.() -> Unit
-) : (FocusProperties) -> Unit {
+) : InvokeOnFocusProperties {
     override fun invoke(focusProperties: FocusProperties) {
         focusOrderReceiver(FocusOrder(focusProperties))
     }
