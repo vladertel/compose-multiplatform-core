@@ -114,50 +114,6 @@ internal class EmbeddingAdapter {
         }
     }
 
-    @SuppressLint("WrongConstant") // Converting from Jetpack to Extensions constants
-    private fun translateSplitPairRule(
-        rule: SplitPairRule
-    ): androidx.window.extensions.embedding.SplitPairRule {
-        val builder = SplitPairRuleBuilder(
-            translateActivityPairPredicates(rule.filters),
-            translateActivityIntentPredicates(rule.filters),
-            translateParentMetricsPredicate(rule)
-        )
-            .setSplitRatio(rule.splitRatio)
-            .setLayoutDirection(rule.layoutDirection)
-            .setShouldClearTop(rule.clearTop)
-
-        try {
-            builder.setFinishPrimaryWithSecondary(rule.finishPrimaryWithSecondary)
-            builder.setFinishSecondaryWithPrimary(rule.finishSecondaryWithPrimary)
-        } catch (error: NoSuchMethodError) {
-            // TODO(b/205181250): Old extension interface, to be dropped with next developer preview
-        }
-        return builder.build()
-    }
-
-    @SuppressLint("WrongConstant") // Converting from Jetpack to Extensions constants
-    private fun translateSplitPlaceholderRule(
-        rule: SplitPlaceholderRule
-    ): androidx.window.extensions.embedding.SplitPlaceholderRule {
-        val builder = SplitPlaceholderRuleBuilder(
-            rule.placeholderIntent,
-            translateActivityPredicates(rule.filters),
-            translateIntentPredicates(rule.filters),
-            translateParentMetricsPredicate(rule)
-        )
-            .setSplitRatio(rule.splitRatio)
-            .setLayoutDirection(rule.layoutDirection)
-
-        try {
-            builder.setSticky(rule.isSticky)
-            builder.setFinishPrimaryWithSecondary(rule.finishPrimaryWithSecondary)
-        } catch (error: NoSuchMethodError) {
-            // TODO(b/205181250): Old extension interface, to be dropped with next developer preview
-        }
-        return builder.build()
-    }
-
     fun translate(
         rules: Set<EmbeddingRule>
     ): Set<androidx.window.extensions.embedding.EmbeddingRule> {
@@ -165,9 +121,27 @@ internal class EmbeddingAdapter {
             rule ->
             when (rule) {
                 is SplitPairRule ->
-                    translateSplitPairRule(rule)
+                    SplitPairRuleBuilder(
+                        translateActivityPairPredicates(rule.filters),
+                        translateActivityIntentPredicates(rule.filters),
+                        translateParentMetricsPredicate(rule)
+                    )
+                        .setSplitRatio(rule.splitRatio)
+                        .setLayoutDirection(rule.layoutDirection)
+                        .setShouldFinishPrimaryWithSecondary(rule.finishPrimaryWithSecondary)
+                        .setShouldFinishSecondaryWithPrimary(rule.finishSecondaryWithPrimary)
+                        .setShouldClearTop(rule.clearTop)
+                        .build()
                 is SplitPlaceholderRule ->
-                    translateSplitPlaceholderRule(rule)
+                    SplitPlaceholderRuleBuilder(
+                        rule.placeholderIntent,
+                        translateActivityPredicates(rule.filters),
+                        translateIntentPredicates(rule.filters),
+                        translateParentMetricsPredicate(rule)
+                    )
+                        .setSplitRatio(rule.splitRatio)
+                        .setLayoutDirection(rule.layoutDirection)
+                        .build()
                 is ActivityRule ->
                     ActivityRuleBuilder(
                         translateActivityPredicates(rule.filters),

@@ -40,19 +40,13 @@ public class SplitPlaceholderRule extends SplitRule {
     private final Predicate<Intent> mIntentPredicate;
     @NonNull
     private final Intent mPlaceholderIntent;
-    private final boolean mIsSticky;
-    @SplitFinishBehavior
-    private final int mFinishPrimaryWithSecondary;
 
     SplitPlaceholderRule(@NonNull Intent placeholderIntent,
-            float splitRatio, @LayoutDir int layoutDirection, boolean isSticky,
-            @SplitFinishBehavior int finishPrimaryWithSecondary,
+            float splitRatio, @LayoutDir int layoutDirection,
             @NonNull Predicate<Activity> activityPredicate,
             @NonNull Predicate<Intent> intentPredicate,
             @NonNull Predicate<WindowMetrics> parentWindowMetricsPredicate) {
         super(parentWindowMetricsPredicate, splitRatio, layoutDirection);
-        mIsSticky = isSticky;
-        mFinishPrimaryWithSecondary = finishPrimaryWithSecondary;
         mActivityPredicate = activityPredicate;
         mIntentPredicate = intentPredicate;
         mPlaceholderIntent = placeholderIntent;
@@ -85,23 +79,6 @@ public class SplitPlaceholderRule extends SplitRule {
     }
 
     /**
-     * Determines whether the placeholder will show on top in a smaller window size after it first
-     * appeared in a split with sufficient minimum width.
-     */
-    public boolean isSticky() {
-        return mIsSticky;
-    }
-
-    /**
-     * Determines what happens with the primary container when all activities are finished in the
-     * associated secondary/placeholder container.
-     */
-    @SplitFinishBehavior
-    public int getFinishPrimaryWithSecondary() {
-        return mFinishPrimaryWithSecondary;
-    }
-
-    /**
      * Builder for {@link SplitPlaceholderRule}.
      */
     public static final class Builder {
@@ -116,9 +93,6 @@ public class SplitPlaceholderRule extends SplitRule {
         private float mSplitRatio;
         @LayoutDir
         private int mLayoutDirection;
-        private boolean mIsSticky = false;
-        @SplitFinishBehavior
-        private int mFinishPrimaryWithSecondary = FINISH_ALWAYS;
 
         public Builder(@NonNull Intent placeholderIntent,
                 @NonNull Predicate<Activity> activityPredicate,
@@ -144,26 +118,12 @@ public class SplitPlaceholderRule extends SplitRule {
             return this;
         }
 
-        /** @see SplitPlaceholderRule#isSticky() */
-        @NonNull
-        public Builder setSticky(boolean sticky) {
-            mIsSticky = sticky;
-            return this;
-        }
-
-        /** @see SplitPlaceholderRule#getFinishPrimaryWithSecondary() */
-        @NonNull
-        public Builder setFinishPrimaryWithSecondary(@SplitFinishBehavior int finishBehavior) {
-            mFinishPrimaryWithSecondary = finishBehavior;
-            return this;
-        }
-
         /** Builds a new instance of {@link SplitPlaceholderRule}. */
         @NonNull
         public SplitPlaceholderRule build() {
             return new SplitPlaceholderRule(mPlaceholderIntent, mSplitRatio,
-                    mLayoutDirection, mIsSticky, mFinishPrimaryWithSecondary, mActivityPredicate,
-                    mIntentPredicate, mParentWindowMetricsPredicate);
+                    mLayoutDirection, mActivityPredicate, mIntentPredicate,
+                    mParentWindowMetricsPredicate);
         }
     }
 
@@ -171,15 +131,11 @@ public class SplitPlaceholderRule extends SplitRule {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof SplitPlaceholderRule)) return false;
-        if (!super.equals(o)) return false;
-
         SplitPlaceholderRule that = (SplitPlaceholderRule) o;
-
-        if (mIsSticky != that.mIsSticky) return false;
-        if (mFinishPrimaryWithSecondary != that.mFinishPrimaryWithSecondary) return false;
-        if (!mActivityPredicate.equals(that.mActivityPredicate)) return false;
-        if (!mIntentPredicate.equals(that.mIntentPredicate)) return false;
-        return mPlaceholderIntent.equals(that.mPlaceholderIntent);
+        return super.equals(o)
+                && mActivityPredicate.equals(that.mActivityPredicate)
+                && mIntentPredicate.equals(that.mIntentPredicate)
+                && mPlaceholderIntent.equals(that.mPlaceholderIntent);
     }
 
     @Override
@@ -188,18 +144,12 @@ public class SplitPlaceholderRule extends SplitRule {
         result = 31 * result + mActivityPredicate.hashCode();
         result = 31 * result + mIntentPredicate.hashCode();
         result = 31 * result + mPlaceholderIntent.hashCode();
-        result = 31 * result + (mIsSticky ? 1 : 0);
-        result = 31 * result + mFinishPrimaryWithSecondary;
         return result;
     }
 
     @NonNull
     @Override
     public String toString() {
-        return "SplitPlaceholderRule{"
-                + "mActivityPredicate=" + mActivityPredicate
-                + ", mIsSticky=" + mIsSticky
-                + ", mFinishPrimaryWithPlaceholder=" + mFinishPrimaryWithSecondary
-                + '}';
+        return "SplitPlaceholderRule{" + "mPlaceholderIntent=" + mPlaceholderIntent + '}';
     }
 }
