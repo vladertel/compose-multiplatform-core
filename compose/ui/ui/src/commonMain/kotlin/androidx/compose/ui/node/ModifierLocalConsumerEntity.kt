@@ -21,10 +21,14 @@ import androidx.compose.ui.modifier.ModifierLocal
 import androidx.compose.ui.modifier.ModifierLocalConsumer
 import androidx.compose.ui.modifier.ModifierLocalReadScope
 
+fun interface SimpleInvoke {
+    fun invoke()
+}
+
 internal class ModifierLocalConsumerEntity(
     var provider: ModifierLocalProviderEntity,
     val modifier: ModifierLocalConsumer
-) : () -> Unit, OwnerScope, ModifierLocalReadScope {
+) : SimpleInvoke, OwnerScope, ModifierLocalReadScope {
     private val modifierLocalsRead = mutableVectorOf<ModifierLocal<*>>()
     var isAttached = false
         private set
@@ -64,10 +68,14 @@ internal class ModifierLocalConsumerEntity(
             }
         }
 
+    private val onEndApplyChangesListener = {
+        invoke()
+    }
+
     fun invalidateConsumersOf(local: ModifierLocal<*>) {
         if (local in modifierLocalsRead) {
             // Trigger the value to be read again
-            provider.layoutNode.owner?.registerOnEndApplyChangesListener(this)
+            provider.layoutNode.owner?.registerOnEndApplyChangesListener(onEndApplyChangesListener)
         }
     }
 
@@ -88,7 +96,7 @@ internal class ModifierLocalConsumerEntity(
      * the consumer has to be re-run after the tree is configured.
      */
     fun invalidateConsumer() {
-        provider.layoutNode.owner?.registerOnEndApplyChangesListener(this)
+        provider.layoutNode.owner?.registerOnEndApplyChangesListener(onEndApplyChangesListener)
     }
 
     /**
