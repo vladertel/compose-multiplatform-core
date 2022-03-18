@@ -21,10 +21,14 @@ import androidx.compose.ui.modifier.ModifierLocal
 import androidx.compose.ui.modifier.ModifierLocalConsumer
 import androidx.compose.ui.modifier.ModifierLocalReadScope
 
+fun interface SimpleInvoke {
+    fun invoke()
+}
+
 internal class ModifierLocalConsumerNode(
     wrapped: LayoutNodeWrapper,
     modifier: ModifierLocalConsumer
-) : DelegatingLayoutNodeWrapper<ModifierLocalConsumer>(wrapped, modifier), () -> Unit,
+) : DelegatingLayoutNodeWrapper<ModifierLocalConsumer>(wrapped, modifier), SimpleInvoke,
     ModifierLocalReadScope {
     private val modifierLocalsRead = mutableVectorOf<ModifierLocal<*>>()
 
@@ -58,10 +62,14 @@ internal class ModifierLocalConsumerNode(
             }
         }
 
+    private val onEndApplyChangesListener = {
+        invoke()
+    }
+
     override fun invalidateConsumersOf(local: ModifierLocal<*>) {
         if (local in modifierLocalsRead) {
             // Trigger the value to be read again
-            layoutNode.owner?.registerOnEndApplyChangesListener(this)
+            layoutNode.owner?.registerOnEndApplyChangesListener(onEndApplyChangesListener)
         }
         super.invalidateConsumersOf(local)
     }
