@@ -35,19 +35,16 @@ class SplitPairRule(
     filters: Set<SplitPairFilter>,
 
     /**
-     * Determines what happens with the primary container when all activities are finished in the
-     * associated secondary container.
-     * @see SplitRule.SplitFinishBehavior
+     * When all activities are finished in the secondary container, the activity in the primary
+     * container that created the split should also be finished.
      */
-    @SplitFinishBehavior
-    val finishPrimaryWithSecondary: Int = FINISH_NEVER,
+    val finishPrimaryWithSecondary: Boolean = false,
 
     /**
-     * Determines what happens with the secondary container when all activities are finished in the
-     * associated primary container.
-     * @see SplitRule.SplitFinishBehavior
+     * When all activities are finished in the primary container, the activities in the secondary
+     * container in the split should also be finished.
      */
-    val finishSecondaryWithPrimary: Int = FINISH_ALWAYS,
+    val finishSecondaryWithPrimary: Boolean = true,
 
     /**
      * If there is an existing split with the same primary container, indicates whether the
