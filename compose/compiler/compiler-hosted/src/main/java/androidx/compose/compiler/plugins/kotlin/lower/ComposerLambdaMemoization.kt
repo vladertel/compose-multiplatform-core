@@ -33,6 +33,7 @@ import org.jetbrains.kotlin.backend.common.push
 import org.jetbrains.kotlin.backend.jvm.codegen.anyTypeArgument
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
@@ -64,6 +65,7 @@ import org.jetbrains.kotlin.ir.declarations.IrSymbolOwner
 import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.declarations.copyAttributes
+import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -73,12 +75,15 @@ import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
 import org.jetbrains.kotlin.ir.expressions.IrValueAccessExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionReferenceImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetObjectValueImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrInstanceInitializerCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrVarargImpl
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
@@ -882,8 +887,8 @@ class ComposerLambdaMemoization(
                     getTypeArgument(it) as IrType
                 }
             )
-            putValueArgument(
-                lambdaArgumentIndex,
+
+            val calculationExpression = if (context.platform.isJvm()) {
                 irBuilder.irLambdaExpression(
                     descriptor = irBuilder.createFunctionDescriptor(
                         substitutedLambdaType
@@ -893,6 +898,43 @@ class ComposerLambdaMemoization(
                         +irReturn(expression)
                     }
                 )
+            } else {
+                IrFunctionExpressionImpl(
+                    startOffset = startOffset,
+                    endOffset = endOffset,
+                    type = substitutedLambdaType,
+                    origin = IrStatementOrigin.LAMBDA,
+                    function = IrFunctionImpl(
+                        startOffset = SYNTHETIC_OFFSET,
+                        endOffset = SYNTHETIC_OFFSET,
+                        origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA,
+                        symbol = IrSimpleFunctionSymbolImpl(),
+                        name = Name.special("<anonymous>"),
+                        visibility = DescriptorVisibilities.LOCAL,
+                        modality = Modality.FINAL,
+                        returnType = substitutedLambdaType,
+                        isInline = false,
+                        isExternal = false,
+                        isTailrec = false,
+                        isSuspend = false,
+                        isOperator = false,
+                        isInfix = false,
+                        isExpect = false,
+                    ).apply {
+                        body = irBuilder.irBlockBody {
+                            val tmp = irTemporary(value = expression)
+                            +irReturn(
+                                target = symbol,
+                                value = IrGetValueImpl(SYNTHETIC_OFFSET, SYNTHETIC_OFFSET, tmp.symbol)
+                            )
+                        }
+                    }
+                )
+            }
+
+            putValueArgument(
+                lambdaArgumentIndex,
+                calculationExpression
             )
         }.patchDeclarationParents(declaration).markAsSynthetic(mark = true)
     }
