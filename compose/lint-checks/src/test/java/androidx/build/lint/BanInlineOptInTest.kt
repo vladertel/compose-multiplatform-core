@@ -23,26 +23,43 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
-class MetadataTagInsideApplicationTagDetectorTest : AbstractLintDetectorTest(
-    useDetector = MetadataTagInsideApplicationTagDetector(),
-    useIssues = listOf(MetadataTagInsideApplicationTagDetector.ISSUE),
+class BanInlineOptInTest : AbstractLintDetectorTest(
+    useDetector = BanInlineOptIn(),
+    useIssues = listOf(BanInlineOptIn.ISSUE),
 ) {
 
     @Test
-    fun `Detect usage of metadata tag inside application tag`() {
-        val input = arrayOf(
-            manifestSample()
+    fun `Detect inline function with an OptIn annotation`() {
+        val input = kotlin(
+            """
+@RequiresOptIn
+annotation class ExperimentalSampleAnnotation
+
+@OptIn(ExperimentalSampleAnnotation::class)
+inline fun String.myInlineFun() = this.length
+            """.trimIndent()
         )
 
         /* ktlint-disable max-line-length */
         val expected = """
-AndroidManifest.xml:19: Error: Detected <application>-level meta-data tag. [MetadataTagInsideApplicationTag]
-        <meta-data android:name="name" android:value="value" />
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExperimentalSampleAnnotation.kt:5: Error: Inline functions cannot opt into experimental APIs. [BanInlineOptIn]
+inline fun String.myInlineFun() = this.length
+                  ~~~~~~~~~~~
 1 errors, 0 warnings
-        """.trimIndent()
+          """.trimIndent()
         /* ktlint-enable max-line-length */
 
-        check(*input).expect(expected)
+        check(input).expect(expected)
+    }
+
+    @Test
+    fun `Detect inline function without an OptIn annotation`() {
+        val input = kotlin(
+            """
+inline fun String.myInlineFun() = this.length
+            """.trimIndent()
+        )
+
+        check(input).expectClean()
     }
 }

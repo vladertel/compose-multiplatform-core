@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:Suppress("UnstableApiUsage")
-
 package androidx.build.lint
 
 import com.android.tools.lint.client.api.UElementHandler
@@ -27,21 +25,25 @@ import com.android.tools.lint.detector.api.Issue
 import com.android.tools.lint.detector.api.JavaContext
 import com.android.tools.lint.detector.api.Scope
 import com.android.tools.lint.detector.api.Severity
-import com.intellij.lang.jvm.JvmModifier
 import org.jetbrains.uast.UMethod
 
-class BanSynchronizedMethods : Detector(), Detector.UastScanner {
+@Suppress("UnstableApiUsage")
+class BanInlineOptIn : Detector(), Detector.UastScanner {
 
     override fun getApplicableUastTypes() = listOf(UMethod::class.java)
 
-    override fun createUastHandler(context: JavaContext) = object : UElementHandler() {
+    override fun createUastHandler(context: JavaContext): UElementHandler {
+        return MethodChecker(context)
+    }
+
+    private inner class MethodChecker(val context: JavaContext) : UElementHandler() {
         override fun visitMethod(node: UMethod) {
-            if (node.hasModifier(JvmModifier.SYNCHRONIZED)) {
-                val incident = Incident(context)
-                    .fix(null)
-                    .issue(ISSUE)
-                    .location(context.getLocation(node))
-                    .message("Use of synchronized methods is not recommended")
+            val hasOptInAnnotation = context.evaluator.getAnnotation(node, "kotlin.OptIn") != null
+
+            if (context.evaluator.isInline(node) && hasOptInAnnotation) {
+                val incident = Incident(context, ISSUE)
+                    .location(context.getNameLocation((node)))
+                    .message("Inline functions cannot opt into experimental APIs.")
                     .scope(node)
                 context.report(incident)
             }
@@ -49,15 +51,19 @@ class BanSynchronizedMethods : Detector(), Detector.UastScanner {
     }
 
     companion object {
-        @SuppressWarnings("LintImplUnexpectedDomain")
         val ISSUE = Issue.create(
-            "BanSynchronizedMethods",
-            "Method is synchronized",
-            "Use of synchronized methods is not recommended," +
-                " please refer to https://android.googlesource.com/platform/frameworks/" +
-                "support/+/androidx-main/docs/api_guidelines.md",
-            Category.CORRECTNESS, 5, Severity.ERROR,
-            Implementation(BanSynchronizedMethods::class.java, Scope.JAVA_FILE_SCOPE)
+            id = "BanInlineOptIn",
+            briefDescription = "Uses @OptIn annotation on an inline function",
+            explanation = "Use of the @OptIn annotation is not allowed on inline functions," +
+                " as libraries using this method will inline the reference to the opted-in" +
+                " class. This can potentially create a compatibility issue.",
+            category = Category.CORRECTNESS,
+            priority = 5,
+            severity = Severity.ERROR,
+            implementation = Implementation(
+                BanInlineOptIn::class.java,
+                Scope.JAVA_FILE_SCOPE
+            )
         )
     }
 }

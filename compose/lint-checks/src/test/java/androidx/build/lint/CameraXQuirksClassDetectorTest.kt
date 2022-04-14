@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,23 +23,30 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
-class MetadataTagInsideApplicationTagDetectorTest : AbstractLintDetectorTest(
-    useDetector = MetadataTagInsideApplicationTagDetector(),
-    useIssues = listOf(MetadataTagInsideApplicationTagDetector.ISSUE),
+class CameraXQuirksClassDetectorTest : AbstractLintDetectorTest(
+    useDetector = CameraXQuirksClassDetector(),
+    useIssues = listOf(CameraXQuirksClassDetector.ISSUE)
 ) {
 
     @Test
-    fun `Detect usage of metadata tag inside application tag`() {
+    fun `Detection of CameraX Quirks in Java`() {
         val input = arrayOf(
-            manifestSample()
+            javaSample("androidx.CameraXMissingQuirkSummaryJava")
         )
 
         /* ktlint-disable max-line-length */
         val expected = """
-AndroidManifest.xml:19: Error: Detected <application>-level meta-data tag. [MetadataTagInsideApplicationTag]
-        <meta-data android:name="name" android:value="value" />
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1 errors, 0 warnings
+            src/androidx/CameraXMissingQuirkSummaryJava.java:22: Error: CameraX quirks should include this template in the javadoc:
+
+            * <p>QuirkSummary
+            *     Bug Id:
+            *     Description:
+            *     Device(s):
+
+             [CameraXQuirksClassDetector]
+            public class CameraXMissingQuirkSummaryJava implements Quirk {
+                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            1 errors, 0 warnings
         """.trimIndent()
         /* ktlint-enable max-line-length */
 
