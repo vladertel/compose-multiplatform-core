@@ -252,7 +252,7 @@ internal class FocusOrderToProperties(
 @Suppress("DEPRECATION")
 internal class FocusOrderModifierToProperties(
     val modifier: FocusOrderModifier
-) : (FocusProperties) -> Unit {
+) : InvokeOnFocusProperties {
     override fun invoke(focusProperties: FocusProperties) {
         modifier.populateFocusOrder(FocusOrder(focusProperties))
     }
