@@ -23,7 +23,7 @@ import androidx.compose.ui.modifier.ModifierLocalProvider
 internal class ModifierLocalProviderEntity(
     val layoutNode: LayoutNode,
     val modifier: ModifierLocalProvider<*>
-) : () -> Unit {
+) : SimpleInvoke {
     /**
      * The next (wrapped) ModifierLocalProviderEntity on the LayoutNode. This forms the
      * linked list of providers.
@@ -58,13 +58,17 @@ internal class ModifierLocalProviderEntity(
         consumers.forEach { it.attach() }
     }
 
+    private val onEndApplyChangesListener = {
+        invoke()
+    }
+
     /**
      * The attach has been done, but we want to notify changes after the tree is completely applied.
      */
     fun attachDelayed() {
         isAttached = true
         // Invalidate children that read this ModifierLocal
-        layoutNode.owner?.registerOnEndApplyChangesListener(this)
+        layoutNode.owner?.registerOnEndApplyChangesListener(onEndApplyChangesListener)
 
         consumers.forEach { it.attachDelayed() }
     }
