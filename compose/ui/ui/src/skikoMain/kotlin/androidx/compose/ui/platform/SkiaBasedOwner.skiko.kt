@@ -391,7 +391,7 @@ internal class SkiaBasedOwner(
 
     override fun registerOnLayoutCompletedListener(listener: Owner.OnLayoutCompletedListener) {
         measureAndLayoutDelegate.registerOnLayoutCompletedListener(listener)
-        requestLayout()
+        requestLayout?.invoke()
     }
 
     override val pointerIconService: PointerIconService =
