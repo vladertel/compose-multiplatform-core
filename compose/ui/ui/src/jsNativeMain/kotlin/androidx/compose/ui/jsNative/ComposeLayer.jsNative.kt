@@ -22,10 +22,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 import androidx.compose.ui.input.pointer.toCompose
 import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.platform.PlatformComponent
+import androidx.compose.ui.platform.Platform
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.currentMillis
-import androidx.compose.ui.input.pointer.PointerEventType
 import kotlinx.coroutines.CoroutineDispatcher
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkiaLayer
@@ -33,12 +32,10 @@ import org.jetbrains.skiko.SkikoView
 import org.jetbrains.skiko.SkikoInputEvent
 import org.jetbrains.skiko.SkikoKeyboardEvent
 import org.jetbrains.skiko.SkikoPointerEvent
-import org.jetbrains.skiko.SkikoPointerEventKind
 import org.jetbrains.skiko.SkikoTouchEvent
 import org.jetbrains.skiko.SkikoTouchEventKind
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.platform.WindowInfoImpl
+import org.jetbrains.skiko.currentNanoTime
 import androidx.compose.ui.createSkiaLayer
 
 internal class ComposeLayer {
@@ -46,7 +43,7 @@ internal class ComposeLayer {
 
     internal val layer = createSkiaLayer()
 
-    inner class ComponentImpl : SkikoView, PlatformComponent {
+    inner class ComponentImpl : SkikoView, Platform by Platform.Empty {
         override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
             val contentScale = layer.contentScale
             canvas.scale(contentScale, contentScale)
@@ -89,8 +86,6 @@ internal class ComposeLayer {
                 nativeEvent = event
             )
         }
-
-        override val windowInfo = WindowInfoImpl()
     }
 
     val view = ComponentImpl()
@@ -148,3 +143,5 @@ internal class ComposeLayer {
 }
 
 internal expect fun getMainDispatcher(): CoroutineDispatcher
+
+private fun currentMillis() = (currentNanoTime() / 1E6).toLong()
