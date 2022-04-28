@@ -70,6 +70,24 @@ public class CameraQuirks {
         if (YuvImageOnePixelShiftQuirk.load(cameraCharacteristicsCompat)) {
             quirks.add(new YuvImageOnePixelShiftQuirk());
         }
+        if (FlashTooSlowQuirk.load(cameraCharacteristicsCompat)) {
+            quirks.add(new FlashTooSlowQuirk());
+        }
+        if (AfRegionFlipHorizontallyQuirk.load(cameraCharacteristicsCompat)) {
+            quirks.add(new AfRegionFlipHorizontallyQuirk());
+        }
+        if (ConfigureSurfaceToSecondarySessionFailQuirk.load(cameraCharacteristicsCompat)) {
+            quirks.add(new ConfigureSurfaceToSecondarySessionFailQuirk());
+        }
+        if (PreviewOrientationIncorrectQuirk.load(cameraCharacteristicsCompat)) {
+            quirks.add(new PreviewOrientationIncorrectQuirk());
+        }
+        if (CaptureSessionStuckQuirk.load(cameraCharacteristicsCompat)) {
+            quirks.add(new CaptureSessionStuckQuirk());
+        }
+        if (ImageCaptureWithFlashUnderexposureQuirk.load(cameraCharacteristicsCompat)) {
+            quirks.add(new ImageCaptureWithFlashUnderexposureQuirk());
+        }
 
         return new Quirks(quirks);
     }

@@ -42,6 +42,7 @@ android {
     buildFeatures {
         viewBinding true
     }
+    namespace "androidx.wear.compose.integration.navigation"
 }
 
 dependencies {
@@ -58,4 +59,10 @@ dependencies {
     implementation(project(":wear:compose:compose-foundation-samples"))
     implementation(project(":wear:compose:compose-material-samples"))
     implementation(project(':wear:compose:compose-navigation'))
+    // old version of common-java8 conflicts with newer version, because both have
+    // DefaultLifecycleEventObserver.
+    // Outside of androidx this is resolved via constraint added to lifecycle-common,
+    // but it doesn't work in androidx.
+    // See aosp/1804059
+    androidTestImplementation projectOrArtifact(":lifecycle:lifecycle-common-java8")
 }

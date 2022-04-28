@@ -19,7 +19,6 @@ package androidx.glance.appwidget
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.DisplayMetrics
@@ -43,9 +42,11 @@ import androidx.glance.LocalContext
 import androidx.glance.LocalGlanceId
 import androidx.glance.LocalSize
 import androidx.glance.LocalState
-import kotlinx.coroutines.CancellationException
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.state.GlanceState
 import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -82,7 +83,14 @@ public abstract class GlanceAppWidget(
     /**
      * Data store for widget data specific to the view.
      */
-    public open val stateDefinition: GlanceStateDefinition<*>? = null
+    public open val stateDefinition: GlanceStateDefinition<*>? = PreferencesGlanceStateDefinition
+
+    /**
+     * Method called by the framework when an App Widget has been removed from its host.
+     *
+     * When the method returns, the state associated with the [glanceId] will be deleted.
+     */
+    public open suspend fun onDelete(context: Context, glanceId: GlanceId) {}
 
     /**
      * Triggers the composition of [Content] and sends the result to the [AppWidgetManager].
@@ -92,6 +100,26 @@ public abstract class GlanceAppWidget(
             "The glanceId '$glanceId' is not a valid App Widget glance id"
         }
         update(context, AppWidgetManager.getInstance(context), glanceId.appWidgetId)
+    }
+
+    /**
+     * Calls [onDelete], then clear local data associated with the [appWidgetId].
+     *
+     * This is meant to be called when the App Widget instance has been deleted from the host.
+     */
+    internal suspend fun deleted(context: Context, appWidgetId: Int) {
+        val glanceId = AppWidgetId(appWidgetId)
+        try {
+            onDelete(context, glanceId)
+        } catch (cancelled: CancellationException) {
+            // Nothing to do here
+        } catch (t: Throwable) {
+            Log.e(GlanceAppWidgetTag, "Error in user-provided deletion callback", t)
+        } finally {
+            stateDefinition?.let {
+                GlanceState.deleteStore(context, it, createUniqueRemoteUiName(appWidgetId))
+            }
+        }
     }
 
     /**
@@ -140,7 +168,7 @@ public abstract class GlanceAppWidget(
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
     ): DpSize {
-        val info = appWidgetManager.getAppWidgetInfo(appWidgetId)
+        val info = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: return DpSize.Zero
         val minWidth = min(
             info.minWidth,
             if (info.resizeMode and AppWidgetProviderInfo.RESIZE_HORIZONTAL != 0) {
@@ -348,13 +376,11 @@ public abstract class GlanceAppWidget(
         val recomposer = Recomposer(coroutineContext)
         val composition = Composition(applier, recomposer)
         val glanceId = AppWidgetId(appWidgetId)
-        val uiKey = createUniqueRemoteUiName(appWidgetId)
         composition.setContent {
             CompositionLocalProvider(
                 LocalContext provides context,
                 LocalGlanceId provides glanceId,
                 LocalAppWidgetOptions provides options,
-                LocalUiKey provides uiKey,
                 LocalState provides state,
                 LocalSize provides size,
             ) { Content() }
@@ -368,10 +394,10 @@ public abstract class GlanceAppWidget(
         translateComposition(
             context,
             appWidgetId,
-            this@GlanceAppWidget.javaClass,
             root,
             layoutConfig,
-            layoutConfig.addLayout(root)
+            layoutConfig.addLayout(root),
+            size
         )
     }
 
@@ -438,9 +464,15 @@ internal fun createUniqueRemoteUiName(appWidgetId: Int) = "appWidget-$appWidgetI
 internal data class AppWidgetId(val appWidgetId: Int) : GlanceId
 
 // Extract the sizes from the bundle
-internal fun Bundle.extractAllSizes(minSize: () -> DpSize): List<DpSize> =
-    getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
-        ?.map { DpSize(it.width.dp, it.height.dp) } ?: estimateSizes(minSize)
+@Suppress("DEPRECATION")
+internal fun Bundle.extractAllSizes(minSize: () -> DpSize): List<DpSize> {
+    val sizes = getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
+    return if (sizes.isNullOrEmpty()) {
+        estimateSizes(minSize)
+    } else {
+        sizes.map { DpSize(it.width.dp, it.height.dp) }
+    }
+}
 
 // If the list of sizes is not available, estimate it from the min/max width and height.
 // We can assume that the min width and max height correspond to the portrait mode and the max
@@ -507,14 +539,24 @@ internal fun logException(throwable: Throwable) {
     Log.e(GlanceAppWidgetTag, "Error in Glance App Widget", throwable)
 }
 
-private fun Intent.extractAppWidgetIds() =
-    getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
-        ?: intArrayOf(
-            getIntExtra(
-                AppWidgetManager.EXTRA_APPWIDGET_ID,
-                AppWidgetManager.INVALID_APPWIDGET_ID
-            ).also {
-                check(it != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                    "Cannot determine the app widget id"
-                }
-            })
+/** Update all App Widgets managed by the [GlanceAppWidget] class. */
+public suspend fun GlanceAppWidget.updateAll(@Suppress("ContextFirst") context: Context) {
+    val manager = GlanceAppWidgetManager(context)
+    manager.getGlanceIds(javaClass).forEach { update(context, it) }
+}
+
+/**
+ * Update all App Widgets managed by the [GlanceAppWidget] class, if they fulfill some condition.
+ */
+public suspend inline fun <reified State> GlanceAppWidget.updateIf(
+    @Suppress("ContextFirst") context: Context,
+    predicate: (State) -> Boolean
+) {
+    val stateDef = stateDefinition
+    requireNotNull(stateDef) { "GlanceAppWidget.updateIf cannot be used if no state is defined." }
+    val manager = GlanceAppWidgetManager(context)
+    manager.getGlanceIds(javaClass).forEach { glanceId ->
+        val state = getAppWidgetState(context, stateDef, glanceId) as State
+        if (predicate(state)) update(context, glanceId)
+    }
+}

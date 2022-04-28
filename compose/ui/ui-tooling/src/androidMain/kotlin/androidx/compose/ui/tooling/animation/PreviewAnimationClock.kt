@@ -107,7 +107,7 @@ internal open class PreviewAnimationClock(private val setAnimationsTimeCallback:
         notifySubscribe(composeAnimation)
     }
 
-    fun trackAnimatedVisibility(parent: Transition<Any>) {
+    fun trackAnimatedVisibility(parent: Transition<Any>, onSeek: () -> Unit = {}) {
         synchronized(animatedVisibilityStatesLock) {
             if (animatedVisibilityStates.containsKey(parent)) {
                 if (DEBUG) {
@@ -136,6 +136,7 @@ internal open class PreviewAnimationClock(private val setAnimationsTimeCallback:
             targetState = target,
             0
         )
+        onSeek()
         trackedAnimatedVisibility.add(composeAnimation)
         notifySubscribe(composeAnimation)
     }
@@ -283,22 +284,29 @@ internal open class PreviewAnimationClock(private val setAnimationsTimeCallback:
      * via reflection from Android Studio.
      */
     fun setClockTime(animationTimeMs: Long) {
-        val timeNs = TimeUnit.MILLISECONDS.toNanos(animationTimeMs)
-        trackedTransitions.forEach { composeAnimation ->
-            composeAnimation.animationObject.let {
-                val states = transitionStates[it] ?: return@let
-                it.setPlaytimeAfterInitialAndTargetStateEstablished(
-                    states.current,
-                    states.target,
-                    timeNs
-                )
-            }
-        }
-        trackedAnimatedVisibility.forEach { composeAnimation ->
-            composeAnimation.animationObject.let {
-                val (current, target) =
-                    animatedVisibilityStates[it]?.toCurrentTargetPair() ?: return@let
-                it.setPlaytimeAfterInitialAndTargetStateEstablished(current, target, timeNs)
+        setClockTimes((trackedTransitions + trackedAnimatedVisibility)
+            .associateWith { animationTimeMs })
+    }
+
+    /**
+     * Seeks each animation being tracked to the given [animationTimeMillis]. Expected to be called
+     * via reflection from Android Studio.
+     */
+    fun setClockTimes(animationTimeMillis: Map<ComposeAnimation, Long>) {
+        animationTimeMillis.forEach { (composeAnimation, millis) ->
+            val timeNs = TimeUnit.MILLISECONDS.toNanos(millis)
+            if (trackedTransitions.contains(composeAnimation)) {
+                (composeAnimation as TransitionComposeAnimation).animationObject.let {
+                    val states = transitionStates[it] ?: return@let
+                    it.setPlaytimeAfterInitialAndTargetStateEstablished(
+                        states.current, states.target, timeNs)
+                }
+            } else if (trackedAnimatedVisibility.contains(composeAnimation)) {
+                (composeAnimation as AnimatedVisibilityComposeAnimation).animationObject.let {
+                    val (current, target) =
+                        animatedVisibilityStates[it]?.toCurrentTargetPair() ?: return@let
+                    it.setPlaytimeAfterInitialAndTargetStateEstablished(current, target, timeNs)
+                }
             }
         }
         setAnimationsTimeCallback.invoke()

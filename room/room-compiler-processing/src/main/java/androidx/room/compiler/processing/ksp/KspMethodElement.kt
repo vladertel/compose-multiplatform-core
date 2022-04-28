@@ -16,12 +16,14 @@
 
 package androidx.room.compiler.processing.ksp
 
+import androidx.room.compiler.processing.XEnumTypeElement
 import androidx.room.compiler.processing.XExecutableParameterElement
 import androidx.room.compiler.processing.XMethodElement
 import androidx.room.compiler.processing.XMethodType
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeElement
 import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticContinuationParameterElement
+import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticReceiverParameterElement
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.closestClassDeclaration
 import com.google.devtools.ksp.symbol.ClassKind
@@ -40,13 +42,42 @@ internal sealed class KspMethodElement(
 ),
     XMethodElement {
 
+    override val name: String
+        get() = declaration.simpleName.asString()
+
     @OptIn(KspExperimental::class)
-    override val name: String by lazy {
+    override val jvmName: String by lazy {
         val jvmName = runCatching {
             // see https://github.com/google/ksp/issues/716
             env.resolver.getJvmName(declaration)
         }
         jvmName.getOrNull() ?: declaration.simpleName.asString()
+    }
+
+    override val parameters: List<XExecutableParameterElement> by lazy {
+        buildList<XExecutableParameterElement> {
+            val extensionReceiver = declaration.extensionReceiver
+            if (extensionReceiver != null) {
+                // Synthesize the receiver parameter to be consistent with KAPT
+                add(
+                    KspSyntheticReceiverParameterElement(
+                        env = env,
+                        enclosingElement = this@KspMethodElement,
+                        receiverType = extensionReceiver,
+                    )
+                )
+            }
+            addAll(
+                declaration.parameters.mapIndexed { index, param ->
+                    KspExecutableParameterElement(
+                        env = env,
+                        enclosingElement = this@KspMethodElement,
+                        parameter = param,
+                        parameterIndex = index
+                    )
+                }
+            )
+        }
     }
 
     override val executableType: XMethodType by lazy {
@@ -74,6 +105,16 @@ internal sealed class KspMethodElement(
         }
     }
 
+    override val enclosingElement: KspMemberContainer
+        // KSFunctionDeclarationJavaImpl.parent returns null for generated static enum functions
+        // `values` and `valueOf` in Java source(https://github.com/google/ksp/issues/816).
+        // To bypass this we use `containing` for these functions.
+        get() = if (containing is XEnumTypeElement && (name == "values" || name == "valueOf")) {
+            containing
+        } else {
+            super.enclosingElement
+        }
+
     override fun isJavaDefault(): Boolean {
         return declaration.modifiers.contains(Modifier.JAVA_DEFAULT) ||
             declaration.hasJvmDefaultAnnotation()
@@ -97,6 +138,8 @@ internal sealed class KspMethodElement(
             !declaration.isAbstract &&
             !isPrivate()
     }
+
+    override fun isExtensionFunction() = declaration.extensionReceiver != null
 
     override fun overrides(other: XMethodElement, owner: XTypeElement): Boolean {
         return env.resolver.overrides(this, other)
@@ -146,7 +189,7 @@ internal sealed class KspMethodElement(
         override val parameters: List<XExecutableParameterElement>
             get() = super.parameters + KspSyntheticContinuationParameterElement(
                 env = env,
-                enclosingMethodElement = this
+                enclosingElement = this
             )
     }
 

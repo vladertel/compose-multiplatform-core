@@ -23,24 +23,24 @@ import androidx.glance.Button
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.action.actionLaunchActivity
+import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.proto.LayoutProto
 import androidx.glance.appwidget.test.R
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ContentScale
+import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.width
 import androidx.glance.layout.wrapContentWidth
-import androidx.glance.appwidget.proto.LayoutProto
-import androidx.glance.layout.Box
-import androidx.glance.layout.Row
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineScope
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,19 +51,23 @@ import org.robolectric.RobolectricTestRunner
 class WidgetLayoutTest {
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private lateinit var fakeCoroutineScope: TestCoroutineScope
+    private lateinit var fakeCoroutineScope: TestScope
 
     @Before
     fun setUp() {
-        fakeCoroutineScope = TestCoroutineScope()
+        fakeCoroutineScope = TestScope()
     }
 
     @Test
-    fun testLayout() = fakeCoroutineScope.runBlockingTest {
+    fun testLayout() = fakeCoroutineScope.runTest {
         val root = runTestingComposition {
             Column(horizontalAlignment = Alignment.End) {
-                CheckBox(checked = false, modifier = GlanceModifier.fillMaxSize())
-                Button(text = "test", onClick = actionLaunchActivity<Activity>())
+                CheckBox(
+                    checked = false,
+                    onCheckedChange = null,
+                    modifier = GlanceModifier.fillMaxSize()
+                )
+                Button(text = "test", onClick = actionStartActivity<Activity>())
                 Image(
                     ImageProvider(R.drawable.oval),
                     "description",
@@ -98,21 +102,26 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testChange_size() = fakeCoroutineScope.runBlockingTest {
+    fun testChange_size() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Column {
-                CheckBox(checked = true, modifier = GlanceModifier.fillMaxSize())
-                Button(text = "test", onClick = actionLaunchActivity<Activity>())
+                CheckBox(
+                    checked = true,
+                    onCheckedChange = null,
+                    modifier = GlanceModifier.fillMaxSize()
+                )
+                Button(text = "test", onClick = actionStartActivity<Activity>())
             }
         }
         val root2 = runTestingComposition {
             Column {
                 CheckBox(
                     checked = true,
+                    onCheckedChange = null,
                     modifier = GlanceModifier.wrapContentWidth().fillMaxHeight()
                 )
-                Button(text = "test", onClick = actionLaunchActivity<Activity>())
+                Button(text = "test", onClick = actionStartActivity<Activity>())
             }
         }
 
@@ -122,7 +131,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testChange_imageScale() = fakeCoroutineScope.runBlockingTest {
+    fun testChange_imageScale() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Column {
@@ -141,7 +150,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testNotChange_imageDescription() = fakeCoroutineScope.runBlockingTest {
+    fun testNotChange_imageDescription() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Column {
@@ -160,7 +169,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testChange_columnAlignment() = fakeCoroutineScope.runBlockingTest {
+    fun testChange_columnAlignment() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -179,7 +188,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testNotChange_columnAlignment() = fakeCoroutineScope.runBlockingTest {
+    fun testNotChange_columnAlignment() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Column(verticalAlignment = Alignment.CenterVertically) {
@@ -198,7 +207,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testChange_rowAlignment() = fakeCoroutineScope.runBlockingTest {
+    fun testChange_rowAlignment() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -217,7 +226,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testNotChange_rowAlignment() = fakeCoroutineScope.runBlockingTest {
+    fun testNotChange_rowAlignment() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Row(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -236,7 +245,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testChange_boxHorizontalAlignment() = fakeCoroutineScope.runBlockingTest {
+    fun testChange_boxHorizontalAlignment() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Box(contentAlignment = Alignment.Center) {
@@ -255,7 +264,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testChange_boxVerticalAlignment() = fakeCoroutineScope.runBlockingTest {
+    fun testChange_boxVerticalAlignment() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Box(contentAlignment = Alignment.Center) {
@@ -274,7 +283,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testChange_lazyColumnAlignment() = fakeCoroutineScope.runBlockingTest {
+    fun testChange_lazyColumnAlignment() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             LazyColumn(horizontalAlignment = Alignment.Start) {
@@ -297,7 +306,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testNotChange_lazyColumnAlignmentContent() = fakeCoroutineScope.runBlockingTest {
+    fun testNotChange_lazyColumnAlignmentContent() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             LazyColumn(horizontalAlignment = Alignment.Start) {
@@ -320,18 +329,26 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun testNotChange() = fakeCoroutineScope.runBlockingTest {
+    fun testNotChange() = fakeCoroutineScope.runTest {
         val appId = 787
         val root = runTestingComposition {
             Column {
-                CheckBox(checked = true, modifier = GlanceModifier.fillMaxSize())
-                Button(text = "test", onClick = actionLaunchActivity<Activity>())
+                CheckBox(
+                    checked = true,
+                    onCheckedChange = null,
+                    modifier = GlanceModifier.fillMaxSize()
+                )
+                Button(text = "test", onClick = actionStartActivity<Activity>())
             }
         }
         val root2 = runTestingComposition {
             Column {
-                CheckBox(checked = false, modifier = GlanceModifier.fillMaxSize())
-                Button(text = "testtesttest", onClick = actionLaunchActivity<Activity>())
+                CheckBox(
+                    checked = false,
+                    onCheckedChange = null,
+                    modifier = GlanceModifier.fillMaxSize()
+                )
+                Button(text = "testtesttest", onClick = actionStartActivity<Activity>())
             }
         }
 
@@ -341,7 +358,7 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun widgetAllocation_dontReuse() = fakeCoroutineScope.runBlockingTest {
+    fun widgetAllocation_dontReuse() = fakeCoroutineScope.runTest {
         val appId = 999
         val root = runTestingComposition {
             Column {

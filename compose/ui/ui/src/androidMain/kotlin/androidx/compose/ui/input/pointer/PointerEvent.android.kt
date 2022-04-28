@@ -18,6 +18,7 @@ package androidx.compose.ui.input.pointer
 
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.MotionEvent.ACTION_SCROLL
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 
@@ -61,6 +62,7 @@ actual class PointerEvent internal actual constructor(
                 MotionEvent.ACTION_MOVE -> PointerEventType.Move
                 MotionEvent.ACTION_HOVER_ENTER -> PointerEventType.Enter
                 MotionEvent.ACTION_HOVER_EXIT -> PointerEventType.Exit
+                ACTION_SCROLL -> PointerEventType.Scroll
 
                 else -> PointerEventType.Unknown
             }
@@ -143,31 +145,24 @@ actual fun PointerButtons.indexOfFirstPressed(): Int {
         return -1
     }
     var index = 0
-    var shifted = packedValue
+    // shift stylus primary and secondary to primary and secondary
+    var shifted = ((packedValue and 0x60) ushr 5) or (packedValue and 0x60.inv())
     while (shifted and 1 == 0) {
         index++
         shifted = shifted ushr 1
     }
-    return indexRemovingStylusPrimaryAndSecondary(index)
+    return index
 }
 
 actual fun PointerButtons.indexOfLastPressed(): Int {
-    var shifted = packedValue
+    // shift stylus primary and secondary to primary and secondary
+    var shifted = ((packedValue and 0x60) ushr 5) or (packedValue and 0x60.inv())
     var index = -1
     while (shifted != 0) {
         index++
         shifted = shifted ushr 1
     }
-    return indexRemovingStylusPrimaryAndSecondary(index)
-}
-
-private fun indexRemovingStylusPrimaryAndSecondary(buttonIndex: Int): Int {
-    return when (buttonIndex) {
-        -1, 0, 1, 2, 3, 4 -> buttonIndex
-        5 -> 0 // stylus primary is just primary
-        6 -> 1 // stylus secondary is just secondary
-        else -> buttonIndex - 2
-    }
+    return index
 }
 
 actual val PointerKeyboardModifiers.isCtrlPressed: Boolean

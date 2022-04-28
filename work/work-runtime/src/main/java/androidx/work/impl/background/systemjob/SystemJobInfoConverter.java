@@ -31,10 +31,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
-import androidx.core.os.BuildCompat;
 import androidx.work.BackoffPolicy;
 import androidx.work.Constraints;
-import androidx.work.ContentUriTriggers;
 import androidx.work.Logger;
 import androidx.work.NetworkType;
 import androidx.work.impl.WorkManagerImpl;
@@ -110,12 +108,12 @@ class SystemJobInfoConverter {
         }
 
         if (Build.VERSION.SDK_INT >= 24 && constraints.hasContentUriTriggers()) {
-            ContentUriTriggers contentUriTriggers = constraints.getContentUriTriggers();
-            for (ContentUriTriggers.Trigger trigger : contentUriTriggers.getTriggers()) {
+            //noinspection ConstantConditions
+            for (Constraints.ContentUriTrigger trigger : constraints.getContentUriTriggers()) {
                 builder.addTriggerContentUri(convertContentUriTrigger(trigger));
             }
-            builder.setTriggerContentUpdateDelay(constraints.getTriggerContentUpdateDelay());
-            builder.setTriggerContentMaxDelay(constraints.getTriggerMaxContentDelay());
+            builder.setTriggerContentUpdateDelay(constraints.getContentTriggerUpdateDelayMillis());
+            builder.setTriggerContentMaxDelay(constraints.getContentTriggerMaxDelayMillis());
         }
 
         // We don't want to persist these jobs because we reschedule these jobs on BOOT_COMPLETED.
@@ -128,7 +126,7 @@ class SystemJobInfoConverter {
         // Retries cannot be expedited jobs, given they will occur at some point in the future.
         boolean isRetry = workSpec.runAttemptCount > 0;
         boolean isDelayed = offset > 0;
-        if (BuildCompat.isAtLeastS() && workSpec.expedited && !isRetry && !isDelayed) {
+        if (Build.VERSION.SDK_INT >= 31 && workSpec.expedited && !isRetry && !isDelayed) {
             //noinspection NewApi
             builder.setExpedited(true);
         }
@@ -137,8 +135,8 @@ class SystemJobInfoConverter {
 
     @RequiresApi(24)
     private static JobInfo.TriggerContentUri convertContentUriTrigger(
-            ContentUriTriggers.Trigger trigger) {
-        int flag = trigger.shouldTriggerForDescendants()
+            Constraints.ContentUriTrigger trigger) {
+        int flag = trigger.isTriggeredForDescendants()
                 ? JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS : 0;
         return new JobInfo.TriggerContentUri(trigger.getUri(), flag);
     }

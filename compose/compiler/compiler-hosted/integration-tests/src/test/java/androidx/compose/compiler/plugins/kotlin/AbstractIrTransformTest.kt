@@ -25,7 +25,6 @@ import org.jetbrains.kotlin.backend.common.ir.BuiltinSymbolsBase
 import org.jetbrains.kotlin.backend.common.ir.createParameterDeclarations
 import org.jetbrains.kotlin.backend.jvm.JvmGeneratorExtensionsImpl
 import org.jetbrains.kotlin.backend.jvm.JvmIrTypeSystemContext
-import org.jetbrains.kotlin.backend.jvm.JvmNameProvider
 import org.jetbrains.kotlin.backend.jvm.serialization.JvmIdSignatureDescriptor
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
@@ -67,15 +66,18 @@ import java.io.File
 abstract class ComposeIrTransformTest : AbstractIrTransformTest() {
     open val liveLiteralsEnabled get() = false
     open val liveLiteralsV2Enabled get() = false
+    open val generateFunctionKeyMetaClasses get() = false
     open val sourceInformationEnabled get() = true
+    open val intrinsicRememberEnabled get() = false
     open val decoysEnabled get() = false
     open val metricsDestination: String? get() = null
 
     protected val extension = ComposeIrGenerationExtension(
         liveLiteralsEnabled,
         liveLiteralsV2Enabled,
+        generateFunctionKeyMetaClasses,
         sourceInformationEnabled,
-        intrinsicRememberEnabled = true,
+        intrinsicRememberEnabled,
         decoysEnabled,
         metricsDestination
     )
@@ -157,6 +159,7 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
         extra: String = "",
         validator: (element: IrElement) -> Unit = { },
         dumpTree: Boolean = false,
+        truncateTracingInfoMode: TruncateTracingInfoMode = TruncateTracingInfoMode.TRUNCATE_ALL,
         compilation: Compilation = JvmCompilation()
     ) {
         if (!compilation.enabled) {
@@ -198,6 +201,20 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
                 Regex("(sourceInformationMarkerStart\\(%composer, )([-\\d]+)")
             ) {
                 "${it.groupValues[1]}<>"
+            }
+            // replace traceEventStart values with a token
+            // TODO(174715171): capture actual values for testing
+            .replace(
+                Regex("traceEventStart\\(-?\\d+, (-?\\d+, -?\\d+), (.*)")
+            ) {
+                when (truncateTracingInfoMode) {
+                    TruncateTracingInfoMode.TRUNCATE_ALL ->
+                        "traceEventStart(<>)"
+                    TruncateTracingInfoMode.TRUNCATE_KEY ->
+                        "traceEventStart(<>, ${it.groupValues[1]}, ${it.groupValues[2]}"
+                    TruncateTracingInfoMode.KEEP_INFO_STRING ->
+                        "traceEventStart(<>, ${it.groupValues[2]}"
+                }
             }
             // replace source information with source it references
             .replace(
@@ -390,8 +407,7 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
                 ?: IrMessageLogger.None
             val symbolTable = SymbolTable(
                 JvmIdSignatureDescriptor(mangler),
-                IrFactoryImpl,
-                JvmNameProvider
+                IrFactoryImpl
             )
 
             val analysisResult = JvmResolveUtil.analyze(files, environment)
@@ -491,5 +507,11 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
     interface Compilation {
         val enabled: Boolean
         fun compile(files: List<KtFile>): IrModuleFragment
+    }
+
+    enum class TruncateTracingInfoMode {
+        TRUNCATE_ALL, // truncates all trace information replacing it with a token
+        TRUNCATE_KEY, // truncates only the `key` parameter
+        KEEP_INFO_STRING, // truncates everything except for the `info` string
     }
 }

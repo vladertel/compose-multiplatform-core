@@ -37,6 +37,7 @@ import androidx.work.impl.WorkDatabase;
 import androidx.work.impl.WorkManagerImpl;
 import androidx.work.impl.constraints.WorkConstraintsCallback;
 import androidx.work.impl.constraints.WorkConstraintsTracker;
+import androidx.work.impl.constraints.WorkConstraintsTrackerImpl;
 import androidx.work.impl.model.WorkSpec;
 import androidx.work.impl.utils.taskexecutor.TaskExecutor;
 
@@ -108,7 +109,7 @@ public class SystemForegroundDispatcher implements WorkConstraintsCallback, Exec
         mForegroundInfoById = new LinkedHashMap<>();
         mTrackedWorkSpecs = new HashSet<>();
         mWorkSpecById = new HashMap<>();
-        mConstraintsTracker = new WorkConstraintsTracker(mContext, mTaskExecutor, this);
+        mConstraintsTracker = new WorkConstraintsTrackerImpl(mWorkManagerImpl.getTrackers(), this);
         mWorkManagerImpl.getProcessor().addExecutionListener(this);
     }
 
@@ -205,10 +206,6 @@ public class SystemForegroundDispatcher implements WorkConstraintsCallback, Exec
         mCallback = callback;
     }
 
-    WorkManagerImpl getWorkManager() {
-        return mWorkManagerImpl;
-    }
-
     void onStartCommand(@NonNull Intent intent) {
         String action = intent.getAction();
         if (ACTION_START_FOREGROUND.equals(action)) {
@@ -239,7 +236,7 @@ public class SystemForegroundDispatcher implements WorkConstraintsCallback, Exec
         Logger.get().info(TAG, "Started foreground service " + intent);
         final String workSpecId = intent.getStringExtra(KEY_WORKSPEC_ID);
         final WorkDatabase database = mWorkManagerImpl.getWorkDatabase();
-        mTaskExecutor.executeOnBackgroundThread(new Runnable() {
+        mTaskExecutor.executeOnTaskThread(new Runnable() {
             @Override
             public void run() {
                 WorkSpec workSpec = database.workSpecDao().getWorkSpec(workSpecId);
