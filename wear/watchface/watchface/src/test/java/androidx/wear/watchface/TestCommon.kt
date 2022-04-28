@@ -47,9 +47,9 @@ internal class TestWatchFaceService(
         surfaceHolder: SurfaceHolder,
         currentUserStyleRepository: CurrentUserStyleRepository,
         watchState: WatchState,
-    ) -> TestRenderer,
+    ) -> Renderer,
     private val userStyleSchema: UserStyleSchema,
-    private val watchState: MutableWatchState,
+    private val watchState: MutableWatchState?,
     private val handler: Handler,
     private val tapListener: WatchFace.TapListener?,
     private val preAndroidR: Boolean,
@@ -61,22 +61,28 @@ internal class TestWatchFaceService(
             override fun setNormalPriority() {}
 
             override fun setInteractivePriority() {}
-        }
+        },
+    private val complicationCache: MutableMap<String, ByteArray>? = null,
+    private val forceIsVisible: Boolean = false
 ) : WatchFaceService() {
     /** The ids of the [ComplicationSlot]s that have been tapped. */
     val tappedComplicationSlotIds: List<Int>
         get() = mutableTappedComplicationIds
     var complicationSelected: Int? = null
     var mockZoneId: ZoneId = ZoneId.of("UTC")
-    var renderer: TestRenderer? = null
+    var renderer: Renderer? = null
 
     /** A mutable list of the ids of the complicationSlots that have been tapped. */
     private val mutableTappedComplicationIds: MutableList<Int> = ArrayList()
 
+    override fun forceIsVisibleForTesting() = forceIsVisible
+
     fun reset() {
         clearTappedState()
         complicationSelected = null
-        renderer?.lastOnDrawZonedDateTime = null
+        if (renderer is TestRenderer) {
+            (renderer as TestRenderer).lastOnDrawZonedDateTime = null
+        }
         mockSystemTimeMillis = 0L
     }
 
@@ -114,12 +120,16 @@ internal class TestWatchFaceService(
         currentUserStyleRepository: CurrentUserStyleRepository
     ): WatchFace {
         renderer = rendererFactory(surfaceHolder, currentUserStyleRepository, watchState)
-        return WatchFace(watchFaceType, renderer!!)
+        val watchFace = WatchFace(watchFaceType, renderer!!)
             .setSystemTimeProvider(object : WatchFace.SystemTimeProvider {
                 override fun getSystemTimeMillis() = mockSystemTimeMillis
 
                 override fun getSystemTimeZoneId() = mockZoneId
-            }).setTapListener(tapListener)
+            })
+        tapListener?.let {
+            watchFace.setTapListener(it)
+        }
+        return watchFace
     }
 
     override fun getUiThreadHandlerImpl() = handler
@@ -128,7 +138,7 @@ internal class TestWatchFaceService(
     // handler.
     override fun getBackgroundThreadHandlerImpl() = handler
 
-    override fun getMutableWatchState() = watchState
+    override fun getMutableWatchState() = watchState ?: MutableWatchState()
 
     override fun getChoreographer() = choreographer
 
@@ -141,7 +151,19 @@ internal class TestWatchFaceService(
         context: Context,
         fileName: String,
         prefs: WallpaperInteractiveWatchFaceInstanceParams
+    ) {}
+
+    override fun readComplicationDataCacheByteArray(
+        context: Context,
+        fileName: String
+    ): ByteArray? = complicationCache?.get(fileName)
+
+    override fun writeComplicationDataCacheByteArray(
+        context: Context,
+        fileName: String,
+        byteArray: ByteArray
     ) {
+        complicationCache?.set(fileName, byteArray)
     }
 
     override fun expectPreRInitFlow() = preAndroidR
@@ -207,6 +229,7 @@ public class WatchFaceServiceStub(private val iWatchFaceService: IWatchFaceServi
     }
 }
 
+@Suppress("deprecation")
 public open class TestRenderer(
     surfaceHolder: SurfaceHolder,
     currentUserStyleRepository: CurrentUserStyleRepository,
@@ -220,7 +243,7 @@ public open class TestRenderer(
     interactiveFrameRateMs
 ) {
     public var lastOnDrawZonedDateTime: ZonedDateTime? = null
-    public var lastRenderParameters: RenderParameters = RenderParameters.DEFAULT_INTERACTIVE
+    public var lastRenderWasForScreenshot: Boolean? = null
 
     override fun render(
         canvas: Canvas,
@@ -228,7 +251,7 @@ public open class TestRenderer(
         zonedDateTime: ZonedDateTime
     ) {
         lastOnDrawZonedDateTime = zonedDateTime
-        lastRenderParameters = renderParameters
+        lastRenderWasForScreenshot = renderParameters.isForScreenshot
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime) {

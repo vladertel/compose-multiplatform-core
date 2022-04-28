@@ -175,6 +175,10 @@ object ProcessorErrors {
     val CANNOT_FIND_UPDATE_RESULT_ADAPTER = "Not sure how to handle update method's " +
         "return type. Currently the supported return types are void, int or Int."
 
+    fun suspendReturnsDeferredType(returnTypeName: String) = "Dao functions that have a suspend " +
+        "modifier must not return a deferred/async type ($returnTypeName). Most probably this " +
+        "is an error. Consider changing the return type or removing the suspend modifier."
+
     val CANNOT_FIND_INSERT_RESULT_ADAPTER = "Not sure how to handle insert method's return type."
 
     val UPDATE_MISSING_PARAMS = "Method annotated with" +
@@ -1021,4 +1025,8 @@ object ProcessorErrors {
     val AUTOMIGRATION_SPEC_MISSING_NOARG_CONSTRUCTOR = "Classes that are used as " +
         "AutoMigrationSpec " +
         "implementations must have no-argument public constructors."
+
+    val JVM_NAME_ON_OVERRIDDEN_METHOD = "Using @JvmName annotation on a function or accessor " +
+        "that will be overridden by Room is not supported. If this is important for your use " +
+        "case, please file a bug at $ISSUE_TRACKER_LINK with details."
 }

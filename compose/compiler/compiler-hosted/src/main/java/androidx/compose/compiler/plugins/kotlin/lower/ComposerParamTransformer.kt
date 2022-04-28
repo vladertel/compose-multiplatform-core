@@ -90,7 +90,7 @@ import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.BindingTrace
 import org.jetbrains.kotlin.resolve.DescriptorUtils
-import org.jetbrains.kotlin.resolve.multiplatform.ExpectedActualResolver.findCompatibleExpectedForActual
+import org.jetbrains.kotlin.resolve.multiplatform.findCompatibleExpectsForActual
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import kotlin.math.min
 
@@ -391,6 +391,7 @@ class ComposerParamTransformer(
             containerSource
         ).also { fn ->
             if (this is IrSimpleFunction) {
+                fn.copyAttributes(this)
                 val propertySymbol = correspondingPropertySymbol
                 if (propertySymbol != null) {
                     fn.correspondingPropertySymbol = propertySymbol
@@ -428,7 +429,10 @@ class ComposerParamTransformer(
                     fn,
                     name = newName,
                     type = newType,
-                    isAssignable = param.defaultValue != null
+                    isAssignable = param.defaultValue != null,
+                    defaultValue = param.defaultValue?.copyWithNewTypeParams(
+                        source = this, target = fn
+                    )
                 )
             }
             fn.annotations = annotations.toList()
@@ -665,7 +669,9 @@ class ComposerParamTransformer(
     @OptIn(ObsoleteDescriptorBasedAPI::class)
     private fun IrFunction.expectDescriptor(): CallableDescriptor? =
         if (descriptor !is IrBasedDeclarationDescriptor<*>) {
-            descriptor.findCompatibleExpectedForActual(module).singleOrNull() as? CallableDescriptor
+            descriptor.findCompatibleExpectsForActual {
+                it == module
+            }.singleOrNull() as? CallableDescriptor
         } else {
             null
         }

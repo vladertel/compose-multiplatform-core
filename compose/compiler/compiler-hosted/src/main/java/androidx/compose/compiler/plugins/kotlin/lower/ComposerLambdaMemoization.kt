@@ -30,6 +30,7 @@ import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.common.peek
 import org.jetbrains.kotlin.backend.common.pop
 import org.jetbrains.kotlin.backend.common.push
+import org.jetbrains.kotlin.backend.jvm.codegen.anyTypeArgument
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
@@ -94,7 +95,6 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.BindingTrace
-import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.types.typeUtil.isUnit
 
 private class CaptureCollector {
@@ -345,22 +345,24 @@ class ComposerLambdaMemoization(
     }
 
     override fun visitFile(declaration: IrFile): IrFile {
-        val prevFile = currentFile
-        val prevClass = composableSingletonsClass
-        try {
-            currentFile = declaration
-            composableSingletonsClass = null
-            val file = super.visitFile(declaration)
-            // if there were no constants found in the entire file, then we don't need to
-            // create this class at all
-            val resultingClass = composableSingletonsClass
-            if (resultingClass != null && resultingClass.declarations.isNotEmpty()) {
-                file.addChild(resultingClass)
+        includeFileNameInExceptionTrace(declaration) {
+            val prevFile = currentFile
+            val prevClass = composableSingletonsClass
+            try {
+                currentFile = declaration
+                composableSingletonsClass = null
+                val file = super.visitFile(declaration)
+                // if there were no constants found in the entire file, then we don't need to
+                // create this class at all
+                val resultingClass = composableSingletonsClass
+                if (resultingClass != null && resultingClass.declarations.isNotEmpty()) {
+                    file.addChild(resultingClass)
+                }
+                return file
+            } finally {
+                currentFile = prevFile
+                composableSingletonsClass = prevClass
             }
-            return file
-        } finally {
-            currentFile = prevFile
-            composableSingletonsClass = prevClass
         }
     }
 
@@ -601,6 +603,15 @@ class ComposerLambdaMemoization(
         )
 
         if (!collector.hasCaptures) {
+            if (!context.platform.isJvm() && hasTypeParameter(expression.type)) {
+                // This is a workaround
+                // for TypeParameters having initial parents (old IrFunctions before deepCopy).
+                // Otherwise it doesn't compile on k/js and k/native (can't find symbols).
+                // Ideally we will find a solution to remap symbols of TypeParameters in
+                // ComposableSingletons properties after ComposerParamTransformer
+                // (deepCopy in ComposerParamTransformer didn't help).
+                return wrapped
+            }
             return irGetComposableSingleton(
                 lambdaExpression = wrapped,
                 lambdaType = expression.type
@@ -608,6 +619,10 @@ class ComposerLambdaMemoization(
         } else {
             return wrapped
         }
+    }
+
+    private fun hasTypeParameter(type: IrType): Boolean {
+        return type.anyTypeArgument { true }
     }
 
     private fun irGetComposableSingleton(
@@ -631,7 +646,7 @@ class ComposerLambdaMemoization(
                 f.correspondingPropertySymbol = p.symbol
                 f.parent = clazz
                 f.initializer = DeclarationIrBuilder(context, clazz.symbol)
-                    .irExprBody(lambdaExpression)
+                    .irExprBody(lambdaExpression.markIsTransformedLambda())
             }
             p.addGetter {
                 returnType = lambdaType
@@ -730,10 +745,7 @@ class ComposerLambdaMemoization(
             // key parameter
             putValueArgument(
                 index++,
-                irBuilder.irInt(
-                    @Suppress("DEPRECATION")
-                    symbol.descriptor.fqNameSafe.hashCode() xor expression.startOffset
-                )
+                irBuilder.irInt(expression.function.sourceKey())
             )
 
             // tracked parameter
@@ -756,11 +768,11 @@ class ComposerLambdaMemoization(
             }
 
             // block parameter
-            putValueArgument(index, expression)
+            putValueArgument(index, expression.markIsTransformedLambda())
         }
 
         return if (!isJs) {
-            composableLambdaExpression
+            composableLambdaExpression.markHasTransformedLambda()
         } else {
             /*
              * JS doesn't have ability to extend FunctionN types, therefore the lambda call must be
@@ -801,8 +813,12 @@ class ComposerLambdaMemoization(
         expression: IrExpression,
         captures: List<IrValueDeclaration>
     ): IrExpression {
+        // Kotlin/JS doesn't have an optimization for non-capturing lambdas
+        // https://youtrack.jetbrains.com/issue/KT-49923
+        val skipNonCapturingLambdas = !context.platform.isJs()
+
         // If the function doesn't capture, Kotlin's default optimization is sufficient
-        if (captures.isEmpty()) {
+        if (captures.isEmpty() && skipNonCapturingLambdas) {
             metrics.recordLambda(
                 composable = false,
                 memoized = true,
@@ -952,6 +968,25 @@ class ComposerLambdaMemoization(
         // around this call
         context.irTrace.record(
             ComposeWritableSlices.IS_COMPOSABLE_SINGLETON_CLASS,
+            this,
+            true
+        )
+        return this
+    }
+
+    private fun <T : IrAttributeContainer> T.markHasTransformedLambda(): T {
+        // Mark so that the target annotation transformer can find the original lambda
+        context.irTrace.record(
+            ComposeWritableSlices.HAS_TRANSFORMED_LAMBDA,
+            this,
+            true
+        )
+        return this
+    }
+
+    private fun <T : IrAttributeContainer> T.markIsTransformedLambda(): T {
+        context.irTrace.record(
+            ComposeWritableSlices.IS_TRANSFORMED_LAMBDA,
             this,
             true
         )

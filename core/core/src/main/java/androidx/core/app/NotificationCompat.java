@@ -972,6 +972,7 @@ public class NotificationCompat {
          * with the NotitifactionCompat.Builder API.
          */
         @RequiresApi(19)
+        @SuppressWarnings("deprecation")
         public Builder(@NonNull Context context,
                 @NonNull Notification notification) {
             this(context, getChannelId(notification));
@@ -3163,6 +3164,7 @@ public class NotificationCompat {
          */
         @RestrictTo(LIBRARY_GROUP_PREFIX)
         @Override
+        @SuppressWarnings("deprecation")
         protected void restoreFromCompatExtras(@NonNull Bundle extras) {
             super.restoreFromCompatExtras(extras);
 
@@ -3863,6 +3865,7 @@ public class NotificationCompat {
          */
         @RestrictTo(LIBRARY_GROUP_PREFIX)
         @Override
+        @SuppressWarnings("deprecation")
         protected void restoreFromCompatExtras(@NonNull Bundle extras) {
             super.restoreFromCompatExtras(extras);
             mMessages.clear();
@@ -4106,6 +4109,7 @@ public class NotificationCompat {
             }
 
             @Nullable
+            @SuppressWarnings("deprecation")
             static Message getMessageFromBundle(@NonNull Bundle bundle) {
                 try {
                     if (!bundle.containsKey(KEY_TEXT) || !bundle.containsKey(KEY_TIMESTAMP)) {
@@ -4488,7 +4492,14 @@ public class NotificationCompat {
     /**
      * Structure to encapsulate a named action that can be shown as part of this notification.
      * It must include an icon, a label, and a {@link PendingIntent} to be fired when the action is
-     * selected by the user. Action buttons won't appear on platforms prior to Android 4.1.
+     * selected by the user. Action buttons won't appear on platforms prior to Android
+     * {@link android.os.Build.VERSION_CODES#JELLY_BEAN}.
+     * <p>
+     * As of Android {@link android.os.Build.VERSION_CODES#N},
+     * action button icons will not be displayed on action buttons, but are still required and
+     * are available to
+     * {@link android.service.notification.NotificationListenerService notification listeners},
+     * which may display them in other contexts, for example on a wearable device.
      * <p>
      * Apps should use {@link NotificationCompat.Builder#addAction(int, CharSequence, PendingIntent)}
      * or {@link NotificationCompat.Builder#addAction(NotificationCompat.Action)}
@@ -6380,6 +6391,7 @@ public class NotificationCompat {
          *
          * @param notification The notification from which to copy options.
          */
+        @SuppressWarnings("deprecation")
         public CarExtender(@NonNull Notification notification) {
             if (Build.VERSION.SDK_INT < 21) {
                 return;
@@ -6397,6 +6409,7 @@ public class NotificationCompat {
         }
 
         @RequiresApi(21)
+        @SuppressWarnings("deprecation")
         private static UnreadConversation getUnreadConversationFromBundle(@Nullable Bundle b) {
             if (b == null) {
                 return null;
@@ -7369,6 +7382,7 @@ public class NotificationCompat {
      * Update the bundle to have a typed array so fetches in the future don't need
      * to do an array copy.
      */
+    @SuppressWarnings("deprecation")
     static @NonNull Notification[] getNotificationArrayFromBundle(@NonNull Bundle bundle,
             @NonNull String key) {
         Parcelable[] array = bundle.getParcelableArray(key);
@@ -7551,6 +7565,7 @@ public class NotificationCompat {
      * On platforms which do not have the {@link android.app.Person} class, the
      * {@link Person} objects will contain only the URI from {@link Builder#addPerson(String)}.
      */
+    @SuppressWarnings("deprecation")
     public static @NonNull List<Person> getPeople(@NonNull Notification notification) {
         ArrayList<Person> result = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= 28) {

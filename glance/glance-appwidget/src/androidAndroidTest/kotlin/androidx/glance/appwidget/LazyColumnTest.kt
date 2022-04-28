@@ -21,16 +21,14 @@ import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
-import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ListView
 import android.widget.TextView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.glance.Button
-import androidx.core.view.children
 import androidx.glance.GlanceModifier
-import androidx.glance.action.actionLaunchActivity
+import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.ReservedItemIdRangeEnd
@@ -323,11 +321,11 @@ class LazyColumnTest {
                 item {
                     Text(
                         "Text",
-                        modifier = GlanceModifier.clickable(actionLaunchActivity<Activity>())
+                        modifier = GlanceModifier.clickable(actionStartActivity<Activity>())
                     )
                     Button(
                         "Button",
-                        onClick = actionLaunchActivity<Activity>()
+                        onClick = actionStartActivity<Activity>()
                     )
                 }
             }
@@ -356,25 +354,16 @@ class LazyColumnTest {
             }
         }
 
-        // b/206630723: Change in Ie0923d5de57d328b2cdd78219f0049bf38cb9bed to work around KT-49573
-        mHostRule.onUnboxedHostView2(action)
+        mHostRule.onUnboxedHostView(action)
     }
 
     private inline fun <reified T : View> ListView.getUnboxedListItem(position: Int): T {
         val remoteViewFrame = assertIs<FrameLayout>(getChildAt(position))
-        // Android R- have a RemoteViewsAdapter$RemoteViewsFrameLayout first, Android S+ do not.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        // Android S- have a RemoteViewsAdapter$RemoteViewsFrameLayout first, Android T+ do not.
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S) {
             return remoteViewFrame.getChildAt(0).getTargetView()
         }
         val frame = assertIs<FrameLayout>(remoteViewFrame.getChildAt(0))
         return frame.getChildAt(0).getTargetView()
-    }
-}
-
-// b/206630723 Change in Ie0923d5de57d328b2cdd78219f0049bf38cb9bed to work around KT-49573
-inline fun AppWidgetHostRule.onUnboxedHostView2(crossinline block: (ListView) -> Unit) {
-    onHostActivity {
-        val boxingView = assertIs<ViewGroup>(mHostView.getChildAt(0))
-        block(boxingView.children.single().getTargetView())
     }
 }

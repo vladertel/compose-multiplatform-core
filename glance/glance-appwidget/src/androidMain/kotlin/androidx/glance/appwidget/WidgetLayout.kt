@@ -34,6 +34,8 @@ import androidx.glance.GlanceModifier
 import androidx.glance.appwidget.lazy.EmittableLazyColumn
 import androidx.glance.appwidget.lazy.EmittableLazyList
 import androidx.glance.appwidget.lazy.EmittableLazyListItem
+import androidx.glance.appwidget.lazy.EmittableLazyVerticalGrid
+import androidx.glance.appwidget.lazy.EmittableLazyVerticalGridListItem
 import androidx.glance.appwidget.proto.LayoutProto
 import androidx.glance.appwidget.proto.LayoutProto.LayoutConfig
 import androidx.glance.appwidget.proto.LayoutProto.LayoutDefinition
@@ -126,7 +128,6 @@ internal class LayoutConfiguration private constructor(
         /**
          * Create a new, empty, [LayoutConfiguration].
          */
-        @VisibleForTesting
         internal fun create(context: Context, appWidgetId: Int) =
             LayoutConfiguration(
                 context,
@@ -280,11 +281,13 @@ private object LayoutStateDefinition : GlanceStateDefinition<LayoutProto.LayoutC
     override fun getLocation(context: Context, fileKey: String): File =
         context.dataStoreFile(fileKey)
 
-    @Suppress("UNCHECKED_CAST")
-    override suspend fun <T> getDataStore(context: Context, fileKey: String): DataStore<T> =
+    override suspend fun getDataStore(
+        context: Context,
+        fileKey: String,
+    ): DataStore<LayoutProto.LayoutConfig> =
         DataStoreFactory.create(serializer = LayoutProtoSerializer) {
             context.dataStoreFile(fileKey)
-        } as DataStore<T>
+        }
 }
 
 private fun Alignment.Vertical.toProto() = when (this) {
@@ -305,8 +308,20 @@ private fun Emittable.getLayoutType(): LayoutProto.LayoutType =
     when (this) {
         is EmittableBox -> LayoutProto.LayoutType.BOX
         is EmittableButton -> LayoutProto.LayoutType.BUTTON
-        is EmittableRow -> LayoutProto.LayoutType.ROW
-        is EmittableColumn -> LayoutProto.LayoutType.COLUMN
+        is EmittableRow -> {
+            if (modifier.isSelectableGroup) {
+                LayoutProto.LayoutType.RADIO_ROW
+            } else {
+                LayoutProto.LayoutType.ROW
+            }
+        }
+        is EmittableColumn -> {
+            if (modifier.isSelectableGroup) {
+                LayoutProto.LayoutType.RADIO_COLUMN
+            } else {
+                LayoutProto.LayoutType.COLUMN
+            }
+        }
         is EmittableText -> LayoutProto.LayoutType.TEXT
         is EmittableLazyListItem -> LayoutProto.LayoutType.LIST_ITEM
         is EmittableLazyColumn -> LayoutProto.LayoutType.LAZY_COLUMN
@@ -315,7 +330,12 @@ private fun Emittable.getLayoutType(): LayoutProto.LayoutType =
         is EmittableSpacer -> LayoutProto.LayoutType.SPACER
         is EmittableSwitch -> LayoutProto.LayoutType.SWITCH
         is EmittableImage -> LayoutProto.LayoutType.IMAGE
+        is EmittableLinearProgressIndicator -> LayoutProto.LayoutType.LINEAR_PROGRESS_INDICATOR
+        is EmittableCircularProgressIndicator -> LayoutProto.LayoutType.CIRCULAR_PROGRESS_INDICATOR
+        is EmittableLazyVerticalGrid -> LayoutProto.LayoutType.LAZY_VERTICAL_GRID
+        is EmittableLazyVerticalGridListItem -> LayoutProto.LayoutType.LIST_ITEM
         is RemoteViewsRoot -> LayoutProto.LayoutType.REMOTE_VIEWS_ROOT
+        is EmittableRadioButton -> LayoutProto.LayoutType.RADIO_BUTTON
         else ->
             throw IllegalArgumentException("Unknown element type ${this.javaClass.canonicalName}")
     }
