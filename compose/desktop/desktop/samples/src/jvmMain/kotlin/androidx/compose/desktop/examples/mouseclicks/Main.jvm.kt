@@ -16,6 +16,7 @@
 
 package androidx.compose.desktop.examples.mouseclicks
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -24,43 +25,63 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.singleWindowApplication
-import androidx.compose.desktop.*
+import androidx.compose.foundation.combinedMouseClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.Checkbox
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 
+@OptIn(ExperimentalFoundationApi::class)
 fun main() {
     singleWindowApplication(
         title = "Desktop Mouse Clicks",
         state = WindowState(width = 1024.dp, height = 850.dp)
     ) {
-        Box(
-            modifier = Modifier.size(200.dp).background(Color.Red)
-                .combinedMouseClickable(
-                    filterMouseButtons = {
-                        it.isPrimaryPressed
-                    },
-                    onLongPress = { modifiers ->
-                        println("Left LongPress ($modifiers)")
-                    },
-                    onDoubleClick = { modifiers ->
-                        println("Left 2xClick ($modifiers)")
+        val checked = remember { mutableStateOf(true) }
+
+
+        Column {
+            Box(
+                modifier = Modifier.size(200.dp).background(Color.Red)
+                    .combinedMouseClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = rememberRipple(),
+                        enabled = checked.value,
+                        filterMouseButtons = {
+                            it.isPrimaryPressed
+                        },
+                        onLongPress = { modifiers ->
+                            println("Left LongPress ($modifiers)")
+                        },
+                        onDoubleClick = { modifiers ->
+                            println("Left 2xClick ($modifiers)")
+                        }
+                    ) { modifiers ->
+                        println("Left Click ($modifiers)")
                     }
-                ) { modifiers ->
-                    println("Left Click ($modifiers)")
-                }
-                .combinedMouseClickable(
-                    filterMouseButtons = {
-                        it.isSecondaryPressed
-                    },
-                    onLongPress = { modifiers ->
-                        println("Right LongPress ($modifiers)")
-                    },
-                    onDoubleClick = { modifiers ->
-                        println("Right 2xClick ($modifiers)")
+                    .combinedMouseClickable(
+                        filterMouseButtons = {
+                            it.isSecondaryPressed
+                        },
+                        onLongPress = { modifiers ->
+                            println("Right LongPress ($modifiers)")
+                        },
+                        onDoubleClick = { modifiers ->
+                            println("Right 2xClick ($modifiers)")
+                        }
+                    ) { modifiers ->
+                        println("Right Click ($modifiers)")
                     }
-                ) { modifiers ->
-                    println("Right Click ($modifiers)")
-                }
-        )
+            )
+
+
+            Checkbox(checked.value, onCheckedChange = {
+                checked.value = it
+            })
+        }
     }
 }
