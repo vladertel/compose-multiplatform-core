@@ -18,6 +18,8 @@ package androidx.compose.desktop.examples.mouseclicks
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
@@ -28,12 +30,15 @@ import androidx.compose.ui.window.singleWindowApplication
 import androidx.compose.foundation.combinedMouseClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.mouseClickable
 import androidx.compose.material.Checkbox
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
 
 @OptIn(ExperimentalFoundationApi::class)
 fun main() {
@@ -47,36 +52,55 @@ fun main() {
         Column {
             Box(
                 modifier = Modifier.size(200.dp).background(Color.Red)
+//                    .clickable {  }
+//                    .combinedClickable {  }
+//                    .mouseClickable {  }
+                    .combinedMouseClickable(buttons = { it.isSecondaryPressed }) {
+                        println("RIGHT CLICK")
+                    }
                     .combinedMouseClickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = rememberRipple(),
                         enabled = checked.value,
-                        filterMouseButtons = {
+                        buttons = {
                             it.isPrimaryPressed
                         },
-                        onLongPress = { modifiers ->
-                            println("Left LongPress ($modifiers)")
+                        keyModifiers = {
+                            true
+                            //it.isShiftPressed
+                                       },
+                        onLongPress = {
+                            println("Left LongPress ()")
                         },
-                        onDoubleClick = { modifiers ->
-                            println("Left 2xClick ($modifiers)")
-                        }
-                    ) { modifiers ->
-                        println("Left Click ($modifiers)")
+//                        onDoubleClick = {
+//                            println("Left 2xClick ()")
+//                        }
+                    ) {
+                        println("Left Click ()")
                     }
-                    .combinedMouseClickable(
-                        filterMouseButtons = {
-                            it.isSecondaryPressed
-                        },
-                        onLongPress = { modifiers ->
-                            println("Right LongPress ($modifiers)")
-                        },
-                        onDoubleClick = { modifiers ->
-                            println("Right 2xClick ($modifiers)")
+            ) {
+
+                Box(
+                    modifier = Modifier.padding(25.dp).size(150.dp).background(Color.Green)
+                        .combinedMouseClickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = rememberRipple(),
+                            enabled = checked.value,
+                            buttons = {
+                                it.isPrimaryPressed
+                            },
+                            onLongPress = {
+                                println("Inner: Left LongPress ()")
+                            },
+//                            onDoubleClick = { modifiers ->
+//                                println("Inner: Left 2xClick ($modifiers)")
+//                            }
+                        ) {
+                            println("Inner: Left Click ()")
                         }
-                    ) { modifiers ->
-                        println("Right Click ($modifiers)")
-                    }
-            )
+                )
+
+            }
 
 
             Checkbox(checked.value, onCheckedChange = {
