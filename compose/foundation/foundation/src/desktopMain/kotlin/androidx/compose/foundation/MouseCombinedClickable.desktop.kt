@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
@@ -48,6 +49,9 @@ import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.util.fastAll
+import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastForEach
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -93,7 +97,7 @@ private class MouseHandlerScope(
                 pressScope.reset()
 
                 val firstPress = awaitPress().apply {
-                    changes.forEach { it.consume() }
+                    changes.fastForEach { it.consume() }
                 }
 
                 handlePressInteraction(firstPress.changes[0].position)
@@ -105,7 +109,7 @@ private class MouseHandlerScope(
 
                 val firstRelease = withTimeoutOrNull(longPressTimeout) {
                     awaitReleaseOrCancelled().apply {
-                        this?.changes?.forEach { it.consume() }
+                        this?.changes?.fastForEach { it.consume() }
                         cancelled = this == null
                     }
                 }
@@ -141,7 +145,7 @@ private class MouseHandlerScope(
         val secondPress = awaitSecondPress(
             firstRelease.changes[0]
         )?.apply {
-            changes.forEach { it.consume() }
+            changes.fastForEach { it.consume() }
         }
 
         if (secondPress == null) {
@@ -153,7 +157,7 @@ private class MouseHandlerScope(
 
             val secondRelease = withTimeoutOrNull(longPressTimeout) {
                 awaitReleaseOrCancelled().apply {
-                    this?.changes?.forEach { it.consume() }
+                    this?.changes?.fastForEach { it.consume() }
                     cancelled = this == null
                 }
             }
@@ -187,7 +191,7 @@ private class MouseHandlerScope(
                 )
             }
             changes = event?.changes?.takeIf {
-                it.all { it.type == PointerType.Mouse && !it.isConsumed }
+                it.fastAll { it.type == PointerType.Mouse && !it.isConsumed }
             } ?: emptyList()
         }
 
@@ -215,7 +219,7 @@ private class MouseHandlerScope(
         while (event == null || filterMouseButtons.value(event.buttons) || changes.isEmpty()) {
             event = awaitPointerEvent()
 
-            val cancelled = event.changes.any {
+            val cancelled = event.changes.fastAny {
                 it.type == PointerType.Mouse && it.isOutOfBounds(size, Size.Zero)
             } || !filterKeyboardModifiers.value(event.keyboardModifiers)
 
@@ -226,6 +230,13 @@ private class MouseHandlerScope(
             changes = event?.changes?.takeIf {
                 it.all { it.type == PointerType.Mouse && !it.isConsumed }
             } ?: emptyList()
+
+            // Check for cancel by position consumption. We can look on the Final pass of the
+            // existing pointer event because it comes after the Main pass we checked above.
+            val consumeCheck = awaitPointerEvent(PointerEventPass.Final)
+            if (consumeCheck.changes.fastAny { it.isConsumed }) {
+                return null
+            }
         }
 
         return event
