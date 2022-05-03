@@ -26,56 +26,275 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
+import androidx.compose.ui.input.pointer.isAltPressed
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.DefaultViewConfiguration
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class, ExperimentalCoroutinesApi::class)
 class MouseCombinedClickableTest {
-    @Test
-    fun click() = ImageComposeScene(
+
+    private fun testClick(
+        filterButtons: (PointerButtons) -> Boolean,
+        pressButtons: PointerButtons,
+    ) = ImageComposeScene(
         width = 100,
         height = 100,
         density = Density(1f)
     ).use { scene ->
-        val clicks = mutableListOf<Unit>()
+        var clicksCount = 0
 
         scene.setContent {
             Box(
                 modifier = Modifier
-                    .combinedMouseClickable {
-                        clicks.add(Unit)
-                    }
-                    .size(10.dp, 20.dp)
+                    .combinedMouseClickable(buttons = filterButtons) {
+                        clicksCount++
+                    }.size(10.dp, 20.dp)
             )
         }
 
-        var downButtons = PointerButtons(isPrimaryPressed = true)
-        var upButtons = PointerButtons(isPrimaryPressed = false)
-        val downKeyboardModifiers = PointerKeyboardModifiers(isCtrlPressed = true)
-        val upKeyboardModifiers = PointerKeyboardModifiers(isCtrlPressed = true, isShiftPressed = true)
+        val upButtons = PointerButtons()
+        scene.sendPointerEvent(PointerEventType.Move, Offset(0f, 0f))
+        scene.sendPointerEvent(PointerEventType.Press, Offset(0f, 0f), buttons = pressButtons)
+        scene.sendPointerEvent(PointerEventType.Release, Offset(0f, 0f), buttons = upButtons)
+        assertThat(clicksCount).isEqualTo(1)
+
+        scene.sendPointerEvent(PointerEventType.Move, Offset(5f, 5f))
+        scene.sendPointerEvent(PointerEventType.Press, Offset(5f, 5f), buttons = pressButtons)
+        scene.sendPointerEvent(PointerEventType.Release, Offset(5f, 5f), buttons = upButtons)
+        assertThat(clicksCount).isEqualTo(2)
+    }
+
+    @Test
+    fun primaryClicks() = testClick(
+        filterButtons = { it.isPrimaryPressed },
+        pressButtons = PointerButtons(isPrimaryPressed = true)
+    )
+
+    @Test
+    fun secondaryClicks() = testClick(
+        filterButtons = { it.isSecondaryPressed },
+        pressButtons = PointerButtons(isSecondaryPressed = true)
+    )
+
+    private fun testDoubleClick(
+        filterButtons: (PointerButtons) -> Boolean,
+        pressButtons: PointerButtons,
+    ) = runBlocking {
+        val density = Density(1f)
+        val viewConfiguration = DefaultViewConfiguration(density)
+        ImageComposeScene(
+            width = 100,
+            height = 100,
+            density = density
+        ).use { scene ->
+            var clicksCount = 0
+            var doubleClickCount = 0
+
+            scene.setContent {
+                Box(
+                    modifier = Modifier
+                        .combinedMouseClickable(buttons = filterButtons, onDoubleClick = {
+                            doubleClickCount++
+                        }) {
+                            clicksCount++
+                        }.size(10.dp, 20.dp)
+                )
+            }
+
+            val upButtons = PointerButtons()
+            scene.sendPointerEvent(PointerEventType.Move, Offset(0f, 0f))
+            scene.sendPointerEvent(PointerEventType.Press, Offset(0f, 0f), buttons = pressButtons)
+            scene.sendPointerEvent(PointerEventType.Release, Offset(0f, 0f), buttons = upButtons)
+            delay(viewConfiguration.doubleTapTimeoutMillis * 2)
+            assertThat(clicksCount).isEqualTo(1)
+            assertThat(doubleClickCount).isEqualTo(0)
+
+            scene.sendPointerEvent(PointerEventType.Move, Offset(5f, 5f))
+            scene.sendPointerEvent(PointerEventType.Press, Offset(5f, 5f), buttons = pressButtons)
+            scene.sendPointerEvent(PointerEventType.Release, Offset(5f, 5f), buttons = upButtons)
+            delay(viewConfiguration.doubleTapTimeoutMillis / 2)
+            scene.sendPointerEvent(PointerEventType.Press, Offset(5f, 5f), buttons = pressButtons)
+            scene.sendPointerEvent(PointerEventType.Release, Offset(5f, 5f), buttons = upButtons)
+            assertThat(clicksCount).isEqualTo(1)
+            assertThat(doubleClickCount).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun primaryDoubleClick() = testDoubleClick(
+        filterButtons = { it.isPrimaryPressed },
+        pressButtons = PointerButtons(isPrimaryPressed = true)
+    )
+
+    @Test
+    fun secondaryDoubleClick() = testDoubleClick(
+        filterButtons = { it.isSecondaryPressed },
+        pressButtons = PointerButtons(isSecondaryPressed = true)
+    )
+
+    private fun testLongClick(
+        filterButtons: (PointerButtons) -> Boolean,
+        pressButtons: PointerButtons,
+    ) = runBlocking {
+        val density = Density(1f)
+        val viewConfiguration = DefaultViewConfiguration(density)
+        ImageComposeScene(
+            width = 100,
+            height = 100,
+            density = density
+        ).use { scene ->
+            var clicksCount = 0
+            var longClickCount = 0
+
+            scene.setContent {
+                Box(
+                    modifier = Modifier
+                        .combinedMouseClickable(buttons = filterButtons, onLongPress = {
+                            longClickCount++
+                        }) {
+                            clicksCount++
+                        }.size(10.dp, 20.dp)
+                )
+            }
+
+            val upButtons = PointerButtons(isPrimaryPressed = false)
+            scene.sendPointerEvent(PointerEventType.Move, Offset(0f, 0f))
+            scene.sendPointerEvent(PointerEventType.Press, Offset(0f, 0f), buttons = pressButtons)
+            scene.sendPointerEvent(PointerEventType.Release, Offset(0f, 0f), buttons = upButtons)
+            assertThat(clicksCount).isEqualTo(1)
+            assertThat(longClickCount).isEqualTo(0)
+
+            scene.sendPointerEvent(PointerEventType.Move, Offset(5f, 5f))
+            scene.sendPointerEvent(PointerEventType.Press, Offset(5f, 5f), buttons = pressButtons)
+            delay(viewConfiguration.longPressTimeoutMillis * 2)
+            assertThat(clicksCount).isEqualTo(1)
+            assertThat(longClickCount).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun primaryLongClick() = testLongClick(
+        filterButtons = { it.isPrimaryPressed },
+        pressButtons = PointerButtons(isPrimaryPressed = true)
+    )
+
+    @Test
+    fun secondaryLongClick() = testLongClick(
+        filterButtons = { it.isSecondaryPressed },
+        pressButtons = PointerButtons(isSecondaryPressed = true)
+    )
+
+    @Test
+    fun `handles primary and secondary clicks`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(1f)
+    ).use { scene ->
+        var primaryClicks = 0
+        var secondaryClicks = 0
+
+        scene.setContent {
+            Box(
+                modifier = Modifier
+                    .combinedMouseClickable(buttons = { it.isPrimaryPressed }) {
+                        primaryClicks++
+                    }
+                    .combinedMouseClickable(buttons = { it.isSecondaryPressed }) {
+                        secondaryClicks++
+                    }
+                    .size(40.dp, 40.dp)
+            )
+        }
+
         scene.sendPointerEvent(PointerEventType.Move, Offset(0f, 0f))
         scene.sendPointerEvent(
-            PointerEventType.Press, Offset(0f, 0f), buttons = downButtons, keyboardModifiers = downKeyboardModifiers
+            PointerEventType.Press, Offset(0f, 0f),
+            buttons = PointerButtons(isPrimaryPressed = true)
         )
         scene.sendPointerEvent(
-            PointerEventType.Release, Offset(0f, 0f), buttons = upButtons, keyboardModifiers = upKeyboardModifiers
+            PointerEventType.Release, Offset(0f, 0f),
+            buttons = PointerButtons(isPrimaryPressed = false)
         )
-        assertThat(clicks.size).isEqualTo(1)
 
-        downButtons = PointerButtons(isPrimaryPressed = true)
-        upButtons = PointerButtons(isPrimaryPressed = false)
-        scene.sendPointerEvent(PointerEventType.Move, Offset(5f, 5f))
+        assertThat(primaryClicks).isEqualTo(1)
+        assertThat(secondaryClicks).isEqualTo(0)
+
         scene.sendPointerEvent(
-            PointerEventType.Press, Offset(5f, 5f), buttons = downButtons, keyboardModifiers = downKeyboardModifiers
+            PointerEventType.Press, Offset(0f, 0f),
+            buttons = PointerButtons(isSecondaryPressed = true)
         )
         scene.sendPointerEvent(
-            PointerEventType.Release, Offset(5f, 5f), buttons = upButtons, keyboardModifiers = upKeyboardModifiers
+            PointerEventType.Release, Offset(0f, 0f),
+            buttons = PointerButtons(isSecondaryPressed = false)
         )
-        assertThat(clicks.size).isEqualTo(2)
+
+        assertThat(primaryClicks).isEqualTo(1)
+        assertThat(secondaryClicks).isEqualTo(1)
+    }
+
+    @Test
+    fun `handles primary click with alt keyModifier`() = ImageComposeScene(
+        width = 100,
+        height = 100,
+        density = Density(1f)
+    ).use { scene ->
+        var genericClicks = 0
+        var withAltClicks = 0
+
+        scene.setContent {
+            Box(
+                modifier = Modifier
+                    .combinedClickable {
+                        genericClicks++
+                    }
+                    .combinedMouseClickable(
+                        keyModifiers = { it.isAltPressed }
+                    ) {
+                        withAltClicks++
+                    }
+                    .size(40.dp, 40.dp)
+            )
+        }
+
+        scene.sendPointerEvent(PointerEventType.Move, Offset(0f, 0f))
+        // With Alt pressed
+        scene.sendPointerEvent(
+            PointerEventType.Press, Offset(0f, 0f),
+            buttons = PointerButtons(isPrimaryPressed = true),
+            keyboardModifiers = PointerKeyboardModifiers(isAltPressed = true)
+        )
+        scene.sendPointerEvent(
+            PointerEventType.Release, Offset(0f, 0f),
+            buttons = PointerButtons(isPrimaryPressed = false),
+            keyboardModifiers = PointerKeyboardModifiers(isAltPressed = true)
+        )
+
+        assertThat(withAltClicks).isEqualTo(1)
+        assertThat(genericClicks).isEqualTo(0)
+
+        // Without Alt pressed (for generic click handler)
+        scene.sendPointerEvent(
+            PointerEventType.Press, Offset(0f, 0f),
+            buttons = PointerButtons(isPrimaryPressed = true),
+            keyboardModifiers = PointerKeyboardModifiers(isAltPressed = false)
+        )
+        scene.sendPointerEvent(
+            PointerEventType.Release, Offset(0f, 0f),
+            buttons = PointerButtons(isPrimaryPressed = false),
+            keyboardModifiers = PointerKeyboardModifiers(isAltPressed = false)
+        )
+        assertThat(withAltClicks).isEqualTo(1)
+        assertThat(genericClicks).isEqualTo(1)
     }
 
     @Test
