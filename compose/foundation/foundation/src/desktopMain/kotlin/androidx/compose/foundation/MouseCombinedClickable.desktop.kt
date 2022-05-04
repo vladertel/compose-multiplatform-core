@@ -18,17 +18,30 @@ package androidx.compose.foundation
 
 import androidx.compose.foundation.gestures.GestureCancellationException
 import androidx.compose.foundation.gestures.PressGestureScope
+import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEvent
@@ -41,6 +54,7 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
@@ -366,7 +380,6 @@ fun Modifier.combinedMouseClickable(
     }
 )
 
-
 @ExperimentalFoundationApi
 fun Modifier.combinedMouseClickable(
     enabled: Boolean = true,
@@ -406,4 +419,121 @@ fun Modifier.combinedMouseClickable(
         )
     }
 )
+
+data class DragChange(
+    val offset: Offset = Offset.Zero,
+    val previousKeyboardModifiers: PointerKeyboardModifiers,
+    val currentKeyboardModifiers: PointerKeyboardModifiers
+) {
+    fun keyboardModifierChanged(): Boolean =
+        previousKeyboardModifiers != currentKeyboardModifiers
+}
+
+fun Modifier.mouseDraggable(
+    buttons: (PointerButtons) -> Boolean = { it.isPrimaryPressed },
+    onDragStart: (Offset, PointerKeyboardModifiers) -> Unit = { _, _ -> },
+    onDragCancel: () -> Unit = {},
+    onDragEnd: () -> Unit = {},
+    onDrag: (DragChange) -> Unit
+): Modifier = composed {
+    suspend fun AwaitPointerEventScope.awaitPress(): PointerEvent {
+        var event: PointerEvent? = null
+        var changes: List<PointerInputChange> = emptyList()
+
+        while (event == null || changes.isEmpty()) {
+            event = awaitPointerEvent().takeIf {
+                it.type == PointerEventType.Press && buttons(it.buttons)
+            }
+            changes = event?.changes?.takeIf {
+                it.fastAll { it.type == PointerType.Mouse }
+            } ?: emptyList()
+        }
+
+        return event
+    }
+
+    suspend fun AwaitPointerEventScope.awaitReleaseOrCancelled(): PointerEvent? {
+        var event: PointerEvent? = null
+        var changes: List<PointerInputChange> = emptyList()
+
+        while (event == null || buttons(event!!.buttons) || changes.isEmpty()) {
+            event = awaitPointerEvent()
+
+            val cancelled = event!!.changes.fastAny {
+                it.type == PointerType.Mouse && it.isOutOfBounds(size, Size.Zero)
+            }
+
+            if (cancelled) return null
+
+            event = event.takeIf { it!!.type == PointerEventType.Release }
+
+            changes = event?.changes?.takeIf {
+                it.all { it.type == PointerType.Mouse }
+            } ?: emptyList()
+        }
+
+        return event
+    }
+
+    val focusRequester = remember { FocusRequester() }
+    var dragInProgress by remember { mutableStateOf(false) }
+    var focused: Boolean by remember { mutableStateOf(false) }
+    val previousKeyboardModifiers = remember { mutableStateOf(PointerKeyboardModifiers()) }
+
+    val interactionSource = remember { MutableInteractionSource() }
+
+    val focusManager = LocalFocusManager.current
+
+    println("REcomposing")
+
+    this.pointerInput(focusManager) {
+        while (currentCoroutineContext().isActive) {
+            dragInProgress = false
+            awaitPointerEventScope {
+                val press = awaitPress()
+                val wasFocusedBefore = focused
+                if (!wasFocusedBefore) focusRequester.requestFocus()
+                dragInProgress = true
+                onDragStart(
+                    press.changes[0].position,
+                    press.keyboardModifiers
+                )
+                previousKeyboardModifiers.value = press.keyboardModifiers
+                val release = awaitReleaseOrCancelled()
+                if (focused && !wasFocusedBefore) focusManager.clearFocus()
+                onDragEnd()
+                dragInProgress = false
+            }
+        }
+    }.onFocusChanged {
+        println("Focus changed ${it.isFocused}")
+        focused = it.isFocused
+    }.focusRequester(focusRequester)
+        .onKeyEvent {
+        if (dragInProgress && focused) {
+            val newKeyboardModifiers = PointerKeyboardModifiers(
+                isCtrlPressed = it.isCtrlPressed,
+                isMetaPressed = it.isMetaPressed,
+                isAltPressed = it.isAltPressed,
+                isAltGraphPressed = it.isAltPressed,
+                isShiftPressed = it.isShiftPressed,
+                // TODO: add implementations
+                isSymPressed = false,
+                isCapsLockOn = false,
+                isFunctionPressed = false,
+                isScrollLockOn = false,
+                isNumLockOn = false
+            )
+            if (previousKeyboardModifiers.value != newKeyboardModifiers) {
+                onDrag(DragChange(Offset.Zero, previousKeyboardModifiers.value, newKeyboardModifiers))
+                previousKeyboardModifiers.value = newKeyboardModifiers
+                true
+            }  else {
+                false
+            }
+        } else {
+            false
+        }
+    }.focusable(enabled = true, interactionSource)
+}
 
