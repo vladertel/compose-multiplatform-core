@@ -18,30 +18,17 @@ package androidx.compose.foundation
 
 import androidx.compose.foundation.gestures.GestureCancellationException
 import androidx.compose.foundation.gestures.PressGestureScope
-import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEvent
@@ -54,7 +41,6 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
@@ -72,242 +58,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-
-private class MouseHandlerScope(
-    pointerInputScope: PointerInputScope,
-    val interactionSource: MutableInteractionSource,
-    val pressedInteraction: MutableState<PressInteraction.Press?>,
-    val filterMouseButtons: State<(PointerButtons) -> Boolean>,
-    val filterKeyboardModifiers: State<(PointerKeyboardModifiers) -> Boolean>,
-    val onDoubleClick: State<(() -> Unit)?>,
-    val onLongPress: State<(() -> Unit)?>,
-    val onClick: State<() -> Unit>
-) : PointerInputScope by pointerInputScope {
-
-    private val pressScope = PressGestureScopeImpl(this)
-
-    private val longPressTimeout: Long
-        get() = if (onLongPress.value != null) {
-            viewConfiguration.longPressTimeoutMillis
-        } else {
-            Long.MAX_VALUE / 2
-        }
-
-
-    private fun CoroutineScope.handlePressInteraction(pressOffset: Offset) {
-        launch {
-            pressScope.handlePressInteraction(
-                pressPoint = pressOffset,
-                interactionSource = interactionSource,
-                pressedInteraction = pressedInteraction,
-                delayPressInteraction = mutableStateOf({ false })
-            )
-        }
-    }
-
-    suspend fun awaitMouseEvents() {
-        coroutineScope {
-            awaitPointerEventScope {
-                pressScope.reset()
-
-                val firstPress = awaitPress().apply {
-                    changes.fastForEach { it.consume() }
-                }
-
-                handlePressInteraction(firstPress.changes[0].position)
-
-                var cancelled = false
-
-                // `firstRelease` will be null if either event is cancelled or it's timed out
-                // use `cancelled` flag to distinguish between two cases
-
-                val firstRelease = withTimeoutOrNull(longPressTimeout) {
-                    awaitReleaseOrCancelled().apply {
-                        this?.changes?.fastForEach { it.consume() }
-                        cancelled = this == null
-                    }
-                }
-
-                if (cancelled) {
-                    pressScope.cancel()
-                } else if (firstRelease != null) {
-                    pressScope.release()
-                }
-
-                if (firstRelease == null) {
-                    if (onLongPress.value != null && !cancelled) {
-                        onLongPress.value!!.invoke()
-                        awaitReleaseOrCancelled()
-                        pressScope.release()
-                    }
-                } else if (onDoubleClick.value == null) {
-                    onClick.value()
-                } else {
-                    processSecondClickIfAny(firstPress, firstRelease, this@coroutineScope)
-                }
-            }
-        }
-    }
-
-    private suspend fun AwaitPointerEventScope.processSecondClickIfAny(
-        firstPress: PointerEvent,
-        firstRelease: PointerEvent,
-        coroutineScope: CoroutineScope,
-    ) {
-        pressScope.reset()
-
-        val secondPress = awaitSecondPress(
-            firstRelease.changes[0]
-        )?.apply {
-            changes.fastForEach { it.consume() }
-        }
-
-        if (secondPress == null) {
-            onClick.value()
-        } else {
-            coroutineScope.handlePressInteraction(secondPress.changes[0].position)
-
-            var cancelled = false
-
-            val secondRelease = withTimeoutOrNull(longPressTimeout) {
-                awaitReleaseOrCancelled().apply {
-                    this?.changes?.fastForEach { it.consume() }
-                    cancelled = this == null
-                }
-            }
-
-            if (cancelled) {
-                pressScope.cancel()
-            } else if (secondRelease != null) {
-                pressScope.release()
-            }
-
-            if (secondRelease == null) {
-                if (onLongPress.value != null && !cancelled) {
-                    onLongPress.value!!.invoke()
-                    awaitReleaseOrCancelled()
-                    pressScope.release()
-                }
-            } else if (!cancelled) {
-                onDoubleClick.value?.invoke()
-            }
-        }
-    }
-
-    private suspend fun AwaitPointerEventScope.awaitPress(): PointerEvent {
-        var event: PointerEvent? = null
-        var changes: List<PointerInputChange> = emptyList()
-
-        while (event == null || changes.isEmpty()) {
-            event = awaitPointerEvent().takeIf {
-                it.type == PointerEventType.Press && filterMouseButtons.value(it.buttons) && filterKeyboardModifiers.value(
-                    it.keyboardModifiers
-                )
-            }
-            changes = event?.changes?.takeIf {
-                it.fastAll { it.type == PointerType.Mouse && !it.isConsumed }
-            } ?: emptyList()
-        }
-
-        return event
-    }
-
-    private suspend fun AwaitPointerEventScope.awaitSecondPress(
-        firstUp: PointerInputChange
-    ): PointerEvent? = withTimeoutOrNull(viewConfiguration.doubleTapTimeoutMillis) {
-        val minUptime = firstUp.uptimeMillis + viewConfiguration.doubleTapMinTimeMillis
-        var event: PointerEvent
-        var change: PointerInputChange
-        // The second tap doesn't count if it happens before DoubleTapMinTime of the first tap
-        do {
-            event = awaitPress()
-            change = event.changes[0]
-        } while (change.uptimeMillis < minUptime)
-        event
-    }
-
-    private suspend fun AwaitPointerEventScope.awaitReleaseOrCancelled(): PointerEvent? {
-        var event: PointerEvent? = null
-        var changes: List<PointerInputChange> = emptyList()
-
-        while (event == null || filterMouseButtons.value(event.buttons) || changes.isEmpty()) {
-            event = awaitPointerEvent()
-
-            val cancelled = event.changes.fastAny {
-                it.type == PointerType.Mouse && it.isOutOfBounds(size, Size.Zero)
-            } || !filterKeyboardModifiers.value(event.keyboardModifiers)
-
-            if (cancelled) return null
-
-            event = event.takeIf { it.type == PointerEventType.Release }
-
-            changes = event?.changes?.takeIf {
-                it.all { it.type == PointerType.Mouse && !it.isConsumed }
-            } ?: emptyList()
-
-            // Check for cancel by position consumption. We can look on the Final pass of the
-            // existing pointer event because it comes after the Main pass we checked above.
-            val consumeCheck = awaitPointerEvent(PointerEventPass.Final)
-            if (consumeCheck.changes.fastAny { it.isConsumed }) {
-                return null
-            }
-        }
-
-        return event
-    }
-
-    private class PressGestureScopeImpl(
-        density: Density
-    ) : PressGestureScope, Density by density {
-        private var isReleased = false
-        private var isCanceled = false
-        private val mutex = Mutex(locked = false)
-
-        /**
-         * Called when a gesture has been canceled.
-         */
-        fun cancel() {
-            isCanceled = true
-            mutex.unlock()
-        }
-
-        /**
-         * Called when all pointers are up.
-         */
-        fun release() {
-            isReleased = true
-            mutex.unlock()
-        }
-
-        /**
-         * Called when a new gesture has started.
-         */
-        fun reset() {
-            mutex.tryLock() // If tryAwaitRelease wasn't called, this will be unlocked.
-            isReleased = false
-            isCanceled = false
-        }
-
-        override suspend fun awaitRelease() {
-            if (!tryAwaitRelease()) {
-                throw GestureCancellationException("The press gesture was canceled.")
-            }
-        }
-
-        override suspend fun tryAwaitRelease(): Boolean {
-            if (!isReleased && !isCanceled) {
-                mutex.lock()
-            }
-            return isReleased
-        }
-    }
-}
-
-data class CombinedMouseClickableLabels(
-    val onDoubleClickLabel: String? = null,
-    val onLongPressLabel: String? = null,
-    val onClickLabel: String? = null
-)
 
 @ExperimentalFoundationApi
 fun Modifier.combinedMouseClickable(
@@ -420,120 +170,245 @@ fun Modifier.combinedMouseClickable(
     }
 )
 
-data class DragChange(
-    val offset: Offset = Offset.Zero,
-    val previousKeyboardModifiers: PointerKeyboardModifiers,
-    val currentKeyboardModifiers: PointerKeyboardModifiers
-) {
-    fun keyboardModifierChanged(): Boolean =
-        previousKeyboardModifiers != currentKeyboardModifiers
-}
+data class CombinedMouseClickableLabels(
+    val onDoubleClickLabel: String? = null,
+    val onLongPressLabel: String? = null,
+    val onClickLabel: String? = null
+)
 
-fun Modifier.mouseDraggable(
-    buttons: (PointerButtons) -> Boolean = { it.isPrimaryPressed },
-    onDragStart: (Offset, PointerKeyboardModifiers) -> Unit = { _, _ -> },
-    onDragCancel: () -> Unit = {},
-    onDragEnd: () -> Unit = {},
-    onDrag: (DragChange) -> Unit
-): Modifier = composed {
-    suspend fun AwaitPointerEventScope.awaitPress(): PointerEvent {
-        var event: PointerEvent? = null
-        var changes: List<PointerInputChange> = emptyList()
+private class MouseHandlerScope(
+    pointerInputScope: PointerInputScope,
+    val interactionSource: MutableInteractionSource,
+    val pressedInteraction: MutableState<PressInteraction.Press?>,
+    val filterMouseButtons: State<(PointerButtons) -> Boolean>,
+    val filterKeyboardModifiers: State<(PointerKeyboardModifiers) -> Boolean>,
+    val onDoubleClick: State<(() -> Unit)?>,
+    val onLongPress: State<(() -> Unit)?>,
+    val onClick: State<() -> Unit>
+) : PointerInputScope by pointerInputScope {
 
-        while (event == null || changes.isEmpty()) {
-            event = awaitPointerEvent().takeIf {
-                it.type == PointerEventType.Press && buttons(it.buttons)
-            }
-            changes = event?.changes?.takeIf {
-                it.fastAll { it.type == PointerType.Mouse }
-            } ?: emptyList()
+    private val pressScope = PressGestureScopeImpl(this)
+
+    private val longPressTimeout: Long
+        get() = if (onLongPress.value != null) {
+            viewConfiguration.longPressTimeoutMillis
+        } else {
+            Long.MAX_VALUE / 2
         }
 
-        return event
+
+    private fun CoroutineScope.handlePressInteraction(pressOffset: Offset) {
+        launch {
+            pressScope.handlePressInteraction(
+                pressPoint = pressOffset,
+                interactionSource = interactionSource,
+                pressedInteraction = pressedInteraction,
+                delayPressInteraction = mutableStateOf({ false })
+            )
+        }
     }
 
-    suspend fun AwaitPointerEventScope.awaitReleaseOrCancelled(): PointerEvent? {
+    suspend fun awaitMouseEvents() {
+        coroutineScope {
+            awaitPointerEventScope {
+                pressScope.reset()
+
+                val firstPress = awaitPress().apply {
+                    changes.fastForEach { it.consume() }
+                }
+
+                handlePressInteraction(firstPress.changes[0].position)
+
+                var cancelled = false
+
+                // `firstRelease` will be null if either event is cancelled or it's timed out
+                // use `cancelled` flag to distinguish between two cases
+
+                val firstRelease = withTimeoutOrNull(longPressTimeout) {
+                    awaitReleaseOrCancelled().apply {
+                        this?.changes?.fastForEach { it.consume() }
+                        cancelled = this == null
+                    }
+                }
+
+                if (cancelled) {
+                    pressScope.cancel()
+                } else if (firstRelease != null) {
+                    pressScope.release()
+                }
+
+                if (firstRelease == null) {
+                    if (onLongPress.value != null && !cancelled) {
+                        onLongPress.value!!.invoke()
+                        awaitReleaseOrCancelled()
+                        pressScope.release()
+                    }
+                } else if (onDoubleClick.value == null) {
+                    onClick.value()
+                } else {
+                    processSecondClickIfAny(firstRelease, this@coroutineScope)
+                }
+            }
+        }
+    }
+
+    private suspend fun AwaitPointerEventScope.processSecondClickIfAny(
+        firstRelease: PointerEvent,
+        coroutineScope: CoroutineScope,
+    ) {
+        pressScope.reset()
+
+        val secondPress = awaitSecondPressUnconsumed(
+            firstRelease.changes[0]
+        )?.apply {
+            changes.fastForEach { it.consume() }
+        }
+
+        if (secondPress == null) {
+            onClick.value()
+        } else {
+            coroutineScope.handlePressInteraction(secondPress.changes[0].position)
+
+            var cancelled = false
+
+            val secondRelease = withTimeoutOrNull(longPressTimeout) {
+                awaitReleaseOrCancelled().apply {
+                    this?.changes?.fastForEach { it.consume() }
+                    cancelled = this == null
+                }
+            }
+
+            if (cancelled) {
+                pressScope.cancel()
+            } else if (secondRelease != null) {
+                pressScope.release()
+            }
+
+            if (secondRelease == null) {
+                if (onLongPress.value != null && !cancelled) {
+                    onLongPress.value!!.invoke()
+                    awaitReleaseOrCancelled()
+                    pressScope.release()
+                }
+            } else if (!cancelled) {
+                onDoubleClick.value?.invoke()
+            }
+        }
+    }
+
+    private suspend fun AwaitPointerEventScope.awaitPress(): PointerEvent {
+        return awaitPress(filterMouseButtons.value, filterKeyboardModifiers.value)
+    }
+
+    private suspend fun AwaitPointerEventScope.awaitSecondPressUnconsumed(
+        firstUp: PointerInputChange
+    ): PointerEvent? = withTimeoutOrNull(viewConfiguration.doubleTapTimeoutMillis) {
+        val minUptime = firstUp.uptimeMillis + viewConfiguration.doubleTapMinTimeMillis
+        var event: PointerEvent
+        var change: PointerInputChange
+        // The second tap doesn't count if it happens before DoubleTapMinTime of the first tap
+        do {
+            event = awaitPress()
+            change = event.changes[0]
+        } while (change.uptimeMillis < minUptime)
+        event
+    }
+
+    private suspend fun AwaitPointerEventScope.awaitReleaseOrCancelled(): PointerEvent? {
         var event: PointerEvent? = null
         var changes: List<PointerInputChange> = emptyList()
 
-        while (event == null || buttons(event!!.buttons) || changes.isEmpty()) {
+        while (event == null || filterMouseButtons.value(event.buttons) || changes.isEmpty()) {
             event = awaitPointerEvent()
 
-            val cancelled = event!!.changes.fastAny {
+            val cancelled = event.changes.fastAny {
                 it.type == PointerType.Mouse && it.isOutOfBounds(size, Size.Zero)
-            }
+            } || !filterKeyboardModifiers.value(event.keyboardModifiers)
 
             if (cancelled) return null
 
-            event = event.takeIf { it!!.type == PointerEventType.Release }
+            event = event.takeIf { it.type == PointerEventType.Release }
 
             changes = event?.changes?.takeIf {
-                it.all { it.type == PointerType.Mouse }
+                it.all { !it.isConsumed }
             } ?: emptyList()
+
+            // Check for cancel by position consumption. We can look on the Final pass of the
+            // existing pointer event because it comes after the Main pass we checked above.
+            val consumeCheck = awaitPointerEvent(PointerEventPass.Final)
+            if (consumeCheck.changes.fastAny { it.isConsumed }) {
+                return null
+            }
         }
 
         return event
     }
 
-    val focusRequester = remember { FocusRequester() }
-    var dragInProgress by remember { mutableStateOf(false) }
-    var focused: Boolean by remember { mutableStateOf(false) }
-    val previousKeyboardModifiers = remember { mutableStateOf(PointerKeyboardModifiers()) }
+    private class PressGestureScopeImpl(
+        density: Density
+    ) : PressGestureScope, Density by density {
+        private var isReleased = false
+        private var isCanceled = false
+        private val mutex = Mutex(locked = false)
 
-    val interactionSource = remember { MutableInteractionSource() }
+        /**
+         * Called when a gesture has been canceled.
+         */
+        fun cancel() {
+            isCanceled = true
+            mutex.unlock()
+        }
 
-    val focusManager = LocalFocusManager.current
+        /**
+         * Called when all pointers are up.
+         */
+        fun release() {
+            isReleased = true
+            mutex.unlock()
+        }
 
-    println("REcomposing")
+        /**
+         * Called when a new gesture has started.
+         */
+        fun reset() {
+            mutex.tryLock() // If tryAwaitRelease wasn't called, this will be unlocked.
+            isReleased = false
+            isCanceled = false
+        }
 
-    this.pointerInput(focusManager) {
-        while (currentCoroutineContext().isActive) {
-            dragInProgress = false
-            awaitPointerEventScope {
-                val press = awaitPress()
-                val wasFocusedBefore = focused
-                if (!wasFocusedBefore) focusRequester.requestFocus()
-                dragInProgress = true
-                onDragStart(
-                    press.changes[0].position,
-                    press.keyboardModifiers
-                )
-                previousKeyboardModifiers.value = press.keyboardModifiers
-                val release = awaitReleaseOrCancelled()
-                if (focused && !wasFocusedBefore) focusManager.clearFocus()
-                onDragEnd()
-                dragInProgress = false
+        override suspend fun awaitRelease() {
+            if (!tryAwaitRelease()) {
+                throw GestureCancellationException("The press gesture was canceled.")
             }
         }
-    }.onFocusChanged {
-        println("Focus changed ${it.isFocused}")
-        focused = it.isFocused
-    }.focusRequester(focusRequester)
-        .onKeyEvent {
-        if (dragInProgress && focused) {
-            val newKeyboardModifiers = PointerKeyboardModifiers(
-                isCtrlPressed = it.isCtrlPressed,
-                isMetaPressed = it.isMetaPressed,
-                isAltPressed = it.isAltPressed,
-                isAltGraphPressed = it.isAltPressed,
-                isShiftPressed = it.isShiftPressed,
-                // TODO: add implementations
-                isSymPressed = false,
-                isCapsLockOn = false,
-                isFunctionPressed = false,
-                isScrollLockOn = false,
-                isNumLockOn = false
-            )
-            if (previousKeyboardModifiers.value != newKeyboardModifiers) {
-                onDrag(DragChange(Offset.Zero, previousKeyboardModifiers.value, newKeyboardModifiers))
-                previousKeyboardModifiers.value = newKeyboardModifiers
-                true
-            }  else {
-                false
+
+        override suspend fun tryAwaitRelease(): Boolean {
+            if (!isReleased && !isCanceled) {
+                mutex.lock()
             }
-        } else {
-            false
+            return isReleased
         }
-    }.focusable(enabled = true, interactionSource)
+    }
 }
 
+internal suspend fun AwaitPointerEventScope.awaitPress(
+    filterMouseButtons: (PointerButtons) -> Boolean,
+    filterKeyboardModifiers: (PointerKeyboardModifiers) -> Boolean = { _ -> true },
+    requireUnconsumed: Boolean = true
+): PointerEvent {
+    var event: PointerEvent? = null
+    var changes: List<PointerInputChange> = emptyList()
+
+    while (event == null || changes.isEmpty()) {
+        event = awaitPointerEvent().takeIf {
+            it.type == PointerEventType.Press &&
+                filterMouseButtons(it.buttons) &&
+                filterKeyboardModifiers(it.keyboardModifiers)
+        }
+        changes = event?.changes?.takeIf {
+            !requireUnconsumed || it.fastAll { !it.isConsumed }
+        } ?: emptyList()
+    }
+
+    return event
+}

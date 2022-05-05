@@ -18,8 +18,7 @@ package androidx.compose.desktop.examples.mouseclicks
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
@@ -28,27 +27,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.singleWindowApplication
 import androidx.compose.foundation.combinedMouseClickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.mouseClickable
 import androidx.compose.foundation.mouseDraggable
 import androidx.compose.material.Checkbox
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.focus.onFocusEvent
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.isAltPressed
+import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
-import androidx.compose.ui.input.pointer.pointerInput
-import kotlin.coroutines.coroutineContext
-import kotlinx.coroutines.isActive
+import androidx.compose.ui.unit.IntOffset
 
 @OptIn(ExperimentalFoundationApi::class)
 fun main() {
@@ -56,94 +54,83 @@ fun main() {
         title = "Desktop Mouse Clicks",
         state = WindowState(width = 512.dp, height = 425.dp)
     ) {
-        val checked = remember { mutableStateOf(true) }
+        var enabled by remember { mutableStateOf(true) }
 
         Column {
-            Box(modifier = Modifier.size(100.dp).background(Color.Blue)
-                .mouseDraggable(
-                onDragStart = { o, km -> println("Blue: Start, offset=$o, km=$km")},
-                onDragEnd = { println("Blue: End") }
-            ) {
-                println("Blue: On DragChange $it")
-            })
-
-            Box(
-                modifier = Modifier.size(100.dp).background(Color.Black)
-                    .mouseDraggable(
-                        onDragStart = { o, km -> println("Black: Start, offset=$o, km=$km")},
-                        onDragEnd = { println("Black: End") }
-                    ) {
-                        println("Black: On DragChange $it")
-                    }
-//                    .focusable(true, remember { MutableInteractionSource() })
-//                    .focusRequester(focusRequester)
-////                    .focusable()
-//                    .onFocusEvent {
-//                        println("Focus event $it")
-//                    }
-//                    .onFocusChanged {
-//                        println("Focus changed $it")
-//                    }
-//                    .onKeyEvent {
-//                        println("Key event $it")
-//                        true
-//                    }
-//                    .clickable {
-//                        focusRequester.requestFocus()
-//                    }
-//                    .combinedClickable {  }
-//                    .mouseClickable {  }
-//                    .combinedMouseClickable(buttons = { it.isSecondaryPressed }) {
-//                        println("RIGHT CLICK")
-//                    }
-//                    .combinedMouseClickable(
-//                        interactionSource = remember { MutableInteractionSource() },
-//                        indication = rememberRipple(),
-//                        enabled = checked.value,
-//                        buttons = {
-//                            it.isPrimaryPressed
-//                        },
-//                        keyModifiers = {
-//                            true
-//                            //it.isShiftPressed
-//                                       },
-//                        onLongPress = {
-//                            println("Left LongPress ()")
-//                        },
-////                        onDoubleClick = {
-////                            println("Left 2xClick ()")
-////                        }
-//                    ) {
-//                        println("Left Click ()")
-//                    }
-            ) {
-
-//                Box(
-//                    modifier = Modifier.padding(25.dp).size(150.dp).background(Color.Green)
-//                        .combinedMouseClickable(
-//                            interactionSource = remember { MutableInteractionSource() },
-//                            indication = rememberRipple(),
-//                            enabled = checked.value,
-//                            buttons = {
-//                                it.isPrimaryPressed
-//                            },
-//                            onLongPress = {
-//                                println("Inner: Left LongPress ()")
-//                            },
-////                            onDoubleClick = { modifiers ->
-////                                println("Inner: Left 2xClick ($modifiers)")
-////                            }
-//                        ) {
-//                            println("Inner: Left Click ()")
-//                        }
-//                )
-
+            Box(modifier = Modifier.fillMaxWidth().border(1.dp, Color.Black)) {
+                Row(modifier = Modifier.align(Alignment.Center)) {
+                    Checkbox(enabled, onCheckedChange = {
+                        enabled = it
+                    })
+                    Text("enabled all", modifier = Modifier.padding(top = 16.dp, start = 8.dp))
+                }
             }
 
 
-            Checkbox(checked.value, onCheckedChange = {
-                checked.value = it
-            })
+            Row {
+                Column(modifier = Modifier.padding(25.dp)) {
+                    Text("combinedMouseClickable")
+
+                    Box(modifier = Modifier.size(100.dp).background(Color.LightGray)
+                        .combinedMouseClickable(
+                            enabled = enabled,
+                            onDoubleClick = {
+                                println("Simple LClick DoubleClick")
+                            },
+                            onLongPress = {
+                                println("Simple LClick LongPress")
+                            })
+                        {
+                            println("Simple LClick click")
+                        }
+                        .combinedMouseClickable(
+                            enabled = enabled,
+                            buttons = { it.isPrimaryPressed },
+                            keyModifiers = { it.isShiftPressed }
+                        ) {
+                            println("LClick + Shit")
+                        }
+                        .combinedMouseClickable(
+                            enabled = enabled,
+                            buttons = { it.isSecondaryPressed },
+                            keyModifiers = { it.isAltPressed }
+                        ) {
+                            println("RClick + Alt")
+                        }
+                    ) {
+                        Text("LClick + Shit | RClick + Alt | Simple LClick & DoubleClick & LongPress")
+                    }
+                }
+
+                Column(modifier = Modifier.padding(25.dp)) {
+                    Text("mouseDraggable")
+                    var offset1 by remember { mutableStateOf(Offset.Zero) }
+                    Box(modifier = Modifier.offset { IntOffset(offset1.x.toInt(), offset1.y.toInt()) }
+                        .size(100.dp).background(Color.Blue)
+                        .mouseDraggable(
+                            buttons = { it.isSecondaryPressed },
+                            onDragStart = { o, km -> println("Blue: Start, offset=$o, km=$km") },
+                            onDragEnd = { println("Blue: End") }
+                        ) {
+                            offset1 += it.offset * if (it.currentKeyboardModifiers.isCtrlPressed) 2.0f else 1.0f
+                        }) {
+                        Text("Use Right Mouse")
+                    }
+
+                    var offset2 by remember { mutableStateOf(Offset.Zero) }
+                    Box(
+                        modifier = Modifier.offset { IntOffset(offset2.x.toInt(), offset2.y.toInt()) }
+                            .size(100.dp).background(Color.Gray)
+                            .mouseDraggable(
+                                onDragStart = { o, km -> println("Gray: Start, offset=$o, km=$km") },
+                                onDragEnd = { println("Gray: End") }
+                            ) {
+                                offset2 += it.offset * if (it.currentKeyboardModifiers.isCtrlPressed) 2.0f else 1.0f
+                            }) {
+                        Text("Use Left Mouse")
+                    }
+                }
+            }
         }
     }
 }
