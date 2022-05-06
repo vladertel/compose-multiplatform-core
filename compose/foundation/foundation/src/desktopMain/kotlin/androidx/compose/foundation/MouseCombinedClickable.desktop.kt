@@ -33,11 +33,9 @@ import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
-import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
@@ -213,6 +211,11 @@ private class MouseHandlerScope(
             awaitPointerEventScope {
                 pressScope.reset()
 
+                // wait until a button is unpressed if needed
+                while (filterMouseButtons.value(currentEvent.buttons)) {
+                    awaitPointerEvent()
+                }
+
                 val firstPress = awaitPress().apply {
                     changes.fastForEach { it.consume() }
                 }
@@ -318,16 +321,19 @@ private class MouseHandlerScope(
         var event: PointerEvent? = null
         var changes: List<PointerInputChange> = emptyList()
 
-        while (event == null || filterMouseButtons.value(event.buttons) || changes.isEmpty()) {
+        // check if already released
+        if (!filterMouseButtons.value(currentEvent.buttons)) return null
+
+        while (event == null || changes.isEmpty()) {
             event = awaitPointerEvent()
 
             val cancelled = event.changes.fastAny {
-                it.type == PointerType.Mouse && it.isOutOfBounds(size, Size.Zero)
+                it.isOutOfBounds(size, Size.Zero)
             } || !filterKeyboardModifiers.value(event.keyboardModifiers)
 
             if (cancelled) return null
 
-            event = event.takeIf { it.type == PointerEventType.Release }
+            event = event.takeIf { !filterMouseButtons.value(it.buttons) }
 
             changes = event?.changes?.takeIf {
                 it.all { !it.isConsumed }
@@ -399,15 +405,21 @@ internal suspend fun AwaitPointerEventScope.awaitPress(
     var event: PointerEvent? = null
     var changes: List<PointerInputChange> = emptyList()
 
+    var previousMouseButtons = currentEvent.buttons
+
     while (event == null || changes.isEmpty()) {
         event = awaitPointerEvent().takeIf {
-            it.type == PointerEventType.Press &&
+            // TODO: interpret Touch as primary click
+            //it.changes[0].type == PointerType.Touch && it.changes[0].changedToDown() //primary
+
+            !filterMouseButtons(previousMouseButtons) &&
                 filterMouseButtons(it.buttons) &&
                 filterKeyboardModifiers(it.keyboardModifiers)
         }
         changes = event?.changes?.takeIf {
             !requireUnconsumed || it.fastAll { !it.isConsumed }
         } ?: emptyList()
+        previousMouseButtons = currentEvent.buttons
     }
 
     return event

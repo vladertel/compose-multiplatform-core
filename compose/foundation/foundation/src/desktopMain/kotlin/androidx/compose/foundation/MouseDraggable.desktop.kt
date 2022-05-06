@@ -114,7 +114,7 @@ fun Modifier.mouseDraggable(
                             onDragEnd()
                         }
                         dragInProgress = false
-                        if (focused && !wasFocusedBefore) focusManager.clearFocus()
+                        if (focused && !wasFocusedBefore) focusManager.clearFocus() //TODO: Maybe keep focus
                     }
                 }
             }
