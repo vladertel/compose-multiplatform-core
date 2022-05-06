@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.mouseDraggable
+import androidx.compose.foundation.onPrimaryCombinedClickable
 import androidx.compose.material.Checkbox
 import androidx.compose.material.Text
 import androidx.compose.runtime.mutableStateOf
@@ -72,7 +73,7 @@ fun main() {
                     Text("combinedMouseClickable")
 
                     Box(modifier = Modifier.size(100.dp).background(Color.LightGray)
-                        .combinedMouseClickable(
+                        .onPrimaryCombinedClickable(
                             enabled = enabled,
                             onDoubleClick = {
                                 println("Simple LClick DoubleClick")

@@ -28,10 +28,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerInputChange
@@ -73,7 +69,10 @@ fun Modifier.mouseDraggable(
                 awaitPointerEventScope {
                     var drag: PointerInputChange?
                     var overSlop = Offset.Zero
-                    val press = awaitPress(filterMouseButtons = buttons, requireUnconsumed = false)
+                    val press = awaitPress(
+                        requireUnconsumed = false,
+                        filterPressEvent = { e -> buttons(e.buttons) }
+                    )
                     do {
                         drag = awaitPointerSlopOrCancellation(
                             press.changes[0].id,
@@ -123,19 +122,7 @@ fun Modifier.mouseDraggable(
         }.focusRequester(focusRequester)
             .onKeyEvent {
                 if (dragInProgress && focused) {
-                    val newKeyboardModifiers = PointerKeyboardModifiers(
-                        isCtrlPressed = it.isCtrlPressed,
-                        isMetaPressed = it.isMetaPressed,
-                        isAltPressed = it.isAltPressed,
-                        isAltGraphPressed = it.isAltPressed,
-                        isShiftPressed = it.isShiftPressed,
-                        // TODO: add implementations
-                        isSymPressed = false,
-                        isCapsLockOn = false,
-                        isFunctionPressed = false,
-                        isScrollLockOn = false,
-                        isNumLockOn = false
-                    )
+                    val newKeyboardModifiers = it.toPointerKeyboardModifiers()
                     if (previousKeyboardModifiers != newKeyboardModifiers) {
                         onDrag(DragChange(Offset.Zero, previousKeyboardModifiers, newKeyboardModifiers))
                         previousKeyboardModifiers = newKeyboardModifiers
