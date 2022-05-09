@@ -44,7 +44,7 @@ import org.junit.Test
 class MouseCombinedClickableTest {
 
     private fun testClick(
-        filterButtons: (PointerButtons) -> Boolean,
+        filterButtons: (PointerButton) -> Boolean,
         pressButtons: PointerButtons,
     ) = ImageComposeScene(
         width = 100,
@@ -76,18 +76,18 @@ class MouseCombinedClickableTest {
 
     @Test
     fun primaryClicks() = testClick(
-        filterButtons = { it.isPrimaryPressed },
+        filterButtons = { it == PointerButton.Primary },
         pressButtons = PointerButtons(isPrimaryPressed = true)
     )
 
     @Test
     fun secondaryClicks() = testClick(
-        filterButtons = { it.isSecondaryPressed },
+        filterButtons = { it == PointerButton.Secondary },
         pressButtons = PointerButtons(isSecondaryPressed = true)
     )
 
     private fun testDoubleClick(
-        filterButtons: (PointerButtons) -> Boolean,
+        filterButtons: (PointerButton) -> Boolean,
         pressButtons: PointerButtons,
     ) = runBlocking {
         val density = Density(1f)
@@ -132,18 +132,18 @@ class MouseCombinedClickableTest {
 
     @Test
     fun primaryDoubleClick() = testDoubleClick(
-        filterButtons = { it.isPrimaryPressed },
+        filterButtons = { it == PointerButton.Primary },
         pressButtons = PointerButtons(isPrimaryPressed = true)
     )
 
     @Test
     fun secondaryDoubleClick() = testDoubleClick(
-        filterButtons = { it.isSecondaryPressed },
+        filterButtons = { it == PointerButton.Secondary },
         pressButtons = PointerButtons(isSecondaryPressed = true)
     )
 
     private fun testLongClick(
-        filterButtons: (PointerButtons) -> Boolean,
+        filterButtons: (PointerButton) -> Boolean,
         pressButtons: PointerButtons,
     ) = runBlocking {
         val density = Density(1f)
@@ -184,13 +184,13 @@ class MouseCombinedClickableTest {
 
     @Test
     fun primaryLongClick() = testLongClick(
-        filterButtons = { it.isPrimaryPressed },
+        filterButtons = { it == PointerButton.Primary },
         pressButtons = PointerButtons(isPrimaryPressed = true)
     )
 
     @Test
     fun secondaryLongClick() = testLongClick(
-        filterButtons = { it.isSecondaryPressed },
+        filterButtons = { it == PointerButton.Secondary },
         pressButtons = PointerButtons(isSecondaryPressed = true)
     )
 
@@ -206,10 +206,10 @@ class MouseCombinedClickableTest {
         scene.setContent {
             Box(
                 modifier = Modifier
-                    .combinedMouseClickable(buttons = { it.isPrimaryPressed }) {
+                    .combinedMouseClickable(buttons = { it == PointerButton.Primary }) {
                         primaryClicks++
                     }
-                    .combinedMouseClickable(buttons = { it.isSecondaryPressed }) {
+                    .combinedMouseClickable(buttons = { it == PointerButton.Secondary }) {
                         secondaryClicks++
                     }
                     .size(40.dp, 40.dp)

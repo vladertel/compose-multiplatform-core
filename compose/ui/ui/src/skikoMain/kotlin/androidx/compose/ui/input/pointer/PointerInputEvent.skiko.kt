@@ -22,5 +22,6 @@ internal actual data class PointerInputEvent(
     actual val pointers: List<PointerInputEventData>,
     val buttons: PointerButtons = PointerButtons(0),
     val keyboardModifiers: PointerKeyboardModifiers = PointerKeyboardModifiers(0),
-    val nativeEvent: Any? = null
+    val nativeEvent: Any? = null,
+    val changedButton: Int
 )

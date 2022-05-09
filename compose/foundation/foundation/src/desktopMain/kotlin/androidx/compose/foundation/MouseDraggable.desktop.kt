@@ -50,7 +50,7 @@ data class DragChange(
 
 fun Modifier.mouseDraggable(
     enabled: Boolean = true,
-    buttons: (PointerButtons) -> Boolean = { it.isPrimaryPressed },
+    buttons: (PointerButton) -> Boolean = { it == PointerButton.Primary },
     onDragStart: (Offset, PointerKeyboardModifiers) -> Unit = { _, _ -> },
     onDragCancel: () -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -71,7 +71,7 @@ fun Modifier.mouseDraggable(
                     var overSlop = Offset.Zero
                     val press = awaitPress(
                         requireUnconsumed = false,
-                        filterPressEvent = { e -> buttons(e.buttons) }
+                        filterPressEvent = { relatedPointerButton != null && buttons(relatedPointerButton) }
                     )
                     do {
                         drag = awaitPointerSlopOrCancellation(
@@ -83,7 +83,7 @@ fun Modifier.mouseDraggable(
                         }
                     } while (drag != null && !drag.isConsumed)
 
-                    if (drag != null && buttons(currentEvent.buttons)) {
+                    if (drag != null) {
                         val wasFocusedBefore = focused
                         if (!wasFocusedBefore) focusRequester.requestFocus()
                         dragInProgress = true

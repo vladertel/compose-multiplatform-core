@@ -397,6 +397,8 @@ class ComposeScene internal constructor(
         targetOwner: SkiaBasedOwner?
     ) = this != null && targetOwner != null && list.indexOf(this) > list.indexOf(targetOwner)
 
+    private var pressedButtonsIndexes = 0
+
     // TODO(demin): return Boolean (when it is consumed)
     /**
      * Send pointer event to the content.
@@ -430,6 +432,13 @@ class ComposeScene internal constructor(
         val actualKeyboardModifiers =
             keyboardModifiers ?: defaultPointerStateTracker.keyboardModifiers
 
+        // calculate the index of a mouse button that was changed (down or up)
+        val changedButton = (pressedButtonsIndexes xor actualButtons.packedValue).takeLowestOneBit()
+
+        if (eventType == PointerEventType.Press || eventType == PointerEventType.Release) {
+            pressedButtonsIndexes = actualButtons.packedValue
+        }
+
         val event = pointerInputEvent(
             eventType,
             position,
@@ -438,7 +447,8 @@ class ComposeScene internal constructor(
             type,
             scrollDelta,
             actualButtons,
-            actualKeyboardModifiers
+            actualKeyboardModifiers,
+            changedButton
         )
         needLayout = false
         forEachOwner { it.measureAndLayout() }
@@ -559,7 +569,8 @@ private fun pointerInputEvent(
     type: PointerType,
     scrollDelta: Offset,
     buttons: PointerButtons,
-    keyboardModifiers: PointerKeyboardModifiers
+    keyboardModifiers: PointerKeyboardModifiers,
+    changedButton: Int
 ): PointerInputEvent {
     return PointerInputEvent(
         eventType,
@@ -577,7 +588,8 @@ private fun pointerInputEvent(
         ),
         buttons,
         keyboardModifiers,
-        nativeEvent
+        nativeEvent,
+        changedButton
     )
 }
 
@@ -593,7 +605,8 @@ private fun createMoveEvent(
     type = sourceEvent.pointers.first().type,
     scrollDelta = Offset(0f, 0f),
     buttons = sourceEvent.buttons,
-    keyboardModifiers = sourceEvent.keyboardModifiers
+    keyboardModifiers = sourceEvent.keyboardModifiers,
+    changedButton = 0
 )
 
 internal expect fun makeAccessibilityController(

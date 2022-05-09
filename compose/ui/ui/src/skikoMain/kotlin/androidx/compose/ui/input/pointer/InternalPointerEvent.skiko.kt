@@ -21,7 +21,8 @@ internal actual class InternalPointerEvent constructor(
     actual val changes: Map<PointerId, PointerInputChange>,
     val buttons: PointerButtons,
     val keyboardModifiers: PointerKeyboardModifiers,
-    val nativeEvent: Any?
+    val nativeEvent: Any?,
+    val changedButton: Int
 ) {
     actual constructor(
         changes: Map<PointerId, PointerInputChange>,
@@ -31,7 +32,8 @@ internal actual class InternalPointerEvent constructor(
         changes,
         pointerInputEvent.buttons,
         pointerInputEvent.keyboardModifiers,
-        pointerInputEvent.nativeEvent
+        pointerInputEvent.nativeEvent,
+        pointerInputEvent.changedButton
     )
 
     actual var suppressMovementConsumption: Boolean = false

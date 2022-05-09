@@ -115,7 +115,9 @@ actual data class PointerEvent internal constructor(
      * - there was a synthetic move event sent by compose on relayout
      * - there was a synthetic move event sent by compose when move is missing between two non-move events
      */
-    val nativeEvent: Any?
+    val nativeEvent: Any?,
+
+    val changedButton: Int
 ) {
     internal actual constructor(
         changes: List<PointerInputChange>,
@@ -125,7 +127,8 @@ actual data class PointerEvent internal constructor(
         internalPointerEvent?.buttons ?: PointerButtons(0),
         internalPointerEvent?.keyboardModifiers ?: PointerKeyboardModifiers(0),
         internalPointerEvent?.type ?: PointerEventType.Unknown,
-        internalPointerEvent?.nativeEvent
+        internalPointerEvent?.nativeEvent,
+        internalPointerEvent?.changedButton ?: 0
     )
 
     /**
@@ -136,7 +139,8 @@ actual data class PointerEvent internal constructor(
         buttons = PointerButtons(0),
         keyboardModifiers = PointerKeyboardModifiers(0),
         _type = PointerEventType.Unknown,
-        nativeEvent = null
+        nativeEvent = null,
+        changedButton = 0
     )
 
     actual var type: PointerEventType = _type

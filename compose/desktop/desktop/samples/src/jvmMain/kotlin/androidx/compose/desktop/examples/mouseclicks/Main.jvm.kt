@@ -17,6 +17,7 @@
 package androidx.compose.desktop.examples.mouseclicks
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.PointerButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -86,14 +87,14 @@ fun main() {
                         }
                         .combinedMouseClickable(
                             enabled = enabled,
-                            buttons = { it.isPrimaryPressed },
+                            buttons = { it == PointerButton.Primary},
                             keyModifiers = { it.isShiftPressed }
                         ) {
                             println("LClick + Shit")
                         }
                         .combinedMouseClickable(
                             enabled = enabled,
-                            buttons = { it.isSecondaryPressed },
+                            buttons = { it == PointerButton.Secondary },
                             keyModifiers = { it.isAltPressed }
                         ) {
                             println("RClick + Alt")
@@ -109,7 +110,7 @@ fun main() {
                     Box(modifier = Modifier.offset { IntOffset(offset1.x.toInt(), offset1.y.toInt()) }
                         .size(100.dp).background(Color.Blue)
                         .mouseDraggable(
-                            buttons = { it.isSecondaryPressed },
+                            buttons = { it == PointerButton.Secondary },
                             onDragStart = { o, km -> println("Blue: Start, offset=$o, km=$km") },
                             onDragEnd = { println("Blue: End") }
                         ) {
