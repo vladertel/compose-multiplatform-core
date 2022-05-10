@@ -27,6 +27,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.PointerIconService
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.TextToolbar
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Owner implements the connection to the underlying view system. On Android, this connects
@@ -130,6 +132,9 @@ internal interface Owner {
     val fontFamilyResolver: FontFamily.Resolver
 
     val layoutDirection: LayoutDirection
+
+    @ExperimentalComposeUiApi
+    val keyboardModifiers: Flow<PointerKeyboardModifiers>
 
     /**
      * `true` when layout should draw debug bounds.

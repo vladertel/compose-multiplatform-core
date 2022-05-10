@@ -48,7 +48,7 @@ fun Modifier.onPrimaryCombinedClickable(
 ): Modifier = composed {
 
     fun Modifier.detectClickFromKey() = this.onKeyEvent {
-        if (enabled && it.isClick && keyboardModifiers(it.toPointerKeyboardModifiers())) {
+        if (enabled && it.isClick && keyboardModifiers(PointerKeyboardModifiers(it))) {
             onClick()
             true
         } else {

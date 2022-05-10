@@ -18,25 +18,21 @@ package androidx.compose.foundation
 
 import androidx.compose.foundation.gestures.awaitPointerSlopOrCancellation
 import androidx.compose.foundation.gestures.drag
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
-import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalKeyboardModifiers
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.isActive
 
 data class DragChange(
@@ -56,14 +52,21 @@ fun Modifier.mouseDraggable(
     onDragEnd: () -> Unit = {},
     onDrag: (DragChange) -> Unit
 ): Modifier = composed {
-    val focusManager = LocalFocusManager.current
-    val focusRequester = remember { FocusRequester() }
+    val keyModifiers = LocalKeyboardModifiers.current
     var dragInProgress by remember { mutableStateOf(false) }
-    var focused by remember { mutableStateOf(false) }
     var previousKeyboardModifiers by remember { mutableStateOf(PointerKeyboardModifiers()) }
 
     if (enabled) {
-        Modifier.pointerInput(focusManager) {
+        LaunchedEffect(keyModifiers) {
+            keyModifiers.filter {
+                dragInProgress && previousKeyboardModifiers != it
+            }.collect {
+                onDrag(DragChange(Offset.Zero, previousKeyboardModifiers, it))
+                previousKeyboardModifiers = it
+            }
+        }
+
+        Modifier.pointerInput(Unit) {
             while (currentCoroutineContext().isActive) {
                 dragInProgress = false
                 awaitPointerEventScope {
@@ -84,8 +87,6 @@ fun Modifier.mouseDraggable(
                     } while (drag != null && !drag.isConsumed)
 
                     if (drag != null) {
-                        val wasFocusedBefore = focused
-                        if (!wasFocusedBefore) focusRequester.requestFocus()
                         dragInProgress = true
                         onDragStart(
                             press.changes[0].position,
@@ -113,27 +114,10 @@ fun Modifier.mouseDraggable(
                             onDragEnd()
                         }
                         dragInProgress = false
-                        if (focused && !wasFocusedBefore) focusManager.clearFocus() //TODO: Maybe keep focus
                     }
                 }
             }
-        }.onFocusChanged {
-            focused = it.isFocused
-        }.focusRequester(focusRequester)
-            .onKeyEvent {
-                if (dragInProgress && focused) {
-                    val newKeyboardModifiers = it.toPointerKeyboardModifiers()
-                    if (previousKeyboardModifiers != newKeyboardModifiers) {
-                        onDrag(DragChange(Offset.Zero, previousKeyboardModifiers, newKeyboardModifiers))
-                        previousKeyboardModifiers = newKeyboardModifiers
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            }.focusable()
+        }
     } else {
         Modifier
     }

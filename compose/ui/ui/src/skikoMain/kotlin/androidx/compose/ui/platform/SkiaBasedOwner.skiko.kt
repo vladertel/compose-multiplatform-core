@@ -56,6 +56,7 @@ import androidx.compose.ui.input.pointer.PointerIconDefaults
 import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.ProcessResult
 import androidx.compose.ui.input.pointer.TestPointerInputEventData
@@ -80,6 +81,8 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.round
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 private typealias Command = () -> Unit
 
@@ -176,6 +179,12 @@ internal class SkiaBasedOwner(
     override val snapshotObserver = OwnerSnapshotObserver { command ->
         dispatchSnapshotChanges?.invoke(command)
     }
+
+    private val _keyboardModifiers = MutableStateFlow(PointerKeyboardModifiers())
+
+    override val keyboardModifiers: Flow<PointerKeyboardModifiers>
+        get() = _keyboardModifiers
+
     private val pointerInputEventProcessor = PointerInputEventProcessor(root)
     private val measureAndLayoutDelegate = MeasureAndLayoutDelegate(root)
 
@@ -218,8 +227,10 @@ internal class SkiaBasedOwner(
 
     override val viewConfiguration: ViewConfiguration = DefaultViewConfiguration(density)
 
-    override fun sendKeyEvent(keyEvent: KeyEvent): Boolean =
-        sendKeyEvent(platformInputService, keyInputModifier, keyEvent)
+    override fun sendKeyEvent(keyEvent: KeyEvent): Boolean {
+        _keyboardModifiers.tryEmit(PointerKeyboardModifiers(keyEvent))
+        return sendKeyEvent(platformInputService, keyInputModifier, keyEvent)
+    }
 
     override var showLayoutBounds = false
 

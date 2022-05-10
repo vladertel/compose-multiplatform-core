@@ -27,6 +27,7 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.pointer.PointerIconService
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.node.Owner
 import androidx.compose.ui.text.font.Font
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import kotlinx.coroutines.flow.Flow
 
 /**
  * The CompositionLocal to provide communication with platform accessibility service.
@@ -86,6 +88,14 @@ val LocalDensity = staticCompositionLocalOf<Density> {
  */
 val LocalFocusManager = staticCompositionLocalOf<FocusManager> {
     noLocalProvidedFor("LocalFocusManager")
+}
+
+/**
+ * The CompositionLocal that can be used to observe [PointerKeyboardModifiers] changes
+ */
+@ExperimentalComposeUiApi
+val LocalKeyboardModifiers = staticCompositionLocalOf<Flow<PointerKeyboardModifiers>> {
+    noLocalProvidedFor("LocalKeyboardModifiers")
 }
 
 /**
@@ -193,6 +203,7 @@ internal fun ProvideCommonCompositionLocals(
         LocalViewConfiguration provides owner.viewConfiguration,
         LocalWindowInfo provides owner.windowInfo,
         LocalPointerIconService provides owner.pointerIconService,
+        LocalKeyboardModifiers provides owner.keyboardModifiers,
         content = content
     )
 }

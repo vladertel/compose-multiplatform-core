@@ -16,6 +16,11 @@
 
 package androidx.compose.ui.input.pointer
 
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import org.jetbrains.skiko.SkikoPointerEventKind
 import org.jetbrains.skiko.SkikoGestureEventState
 import org.jetbrains.skiko.SkikoTouchEventKind
@@ -84,6 +89,22 @@ fun PointerKeyboardModifiers(
     if (isScrollLockOn) res = res or KeyboardModifierMasks.ScrollLockOn
     if (isNumLockOn) res = res or KeyboardModifierMasks.NumLockOn
     return PointerKeyboardModifiers(res)
+}
+
+fun PointerKeyboardModifiers(keyEvent: KeyEvent): PointerKeyboardModifiers {
+    return PointerKeyboardModifiers(
+        isCtrlPressed = keyEvent.isCtrlPressed,
+        isMetaPressed = keyEvent.isMetaPressed,
+        isAltPressed = keyEvent.isAltPressed,
+        isAltGraphPressed = keyEvent.isAltPressed,
+        isShiftPressed = keyEvent.isShiftPressed,
+        // TODO: add implementations
+        isSymPressed = false,
+        isCapsLockOn = false,
+        isFunctionPressed = false,
+        isScrollLockOn = false,
+        isNumLockOn = false
+    )
 }
 
 /**
