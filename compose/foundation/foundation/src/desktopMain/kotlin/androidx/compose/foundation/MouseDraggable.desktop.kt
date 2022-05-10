@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
@@ -35,6 +36,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.isActive
 
+@ExperimentalFoundationApi
 data class DragChange(
     val offset: Offset = Offset.Zero,
     val previousKeyboardModifiers: PointerKeyboardModifiers,
@@ -44,9 +46,25 @@ data class DragChange(
         previousKeyboardModifiers != currentKeyboardModifiers
 }
 
-fun Modifier.mouseDraggable(
+
+@OptIn(ExperimentalComposeUiApi::class)
+@ExperimentalFoundationApi
+/**
+ * @param pressFilter - allows to filter press events which initialise the drag. By default, it expects
+ * either [PointerButton.isPrimary] for mouse or usual tap for non-mouse pointers.
+ * @param onDrag - receives an instance of [DragChange]  for every pointer position change when dragging or
+ * when [PointerKeyboardModifiers] state changes after drag started and before it ends.
+ */
+fun Modifier.draggable(
     enabled: Boolean = true,
-    buttons: (PointerButton) -> Boolean = { it == PointerButton.Primary },
+    pressFilter: ClickFilterScope.() -> Boolean = {
+        // Primary button for mouse and usual tap for non-mouse pointers
+        if (isMouse && relatedPointerButton != null) {
+            relatedPointerButton.isPrimary
+        } else {
+            allChangedToDown()
+        }
+    },
     onDragStart: (Offset, PointerKeyboardModifiers) -> Unit = { _, _ -> },
     onDragCancel: () -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -74,7 +92,7 @@ fun Modifier.mouseDraggable(
                     var overSlop = Offset.Zero
                     val press = awaitPress(
                         requireUnconsumed = false,
-                        filterPressEvent = { relatedPointerButton != null && buttons(relatedPointerButton) }
+                        filterPressEvent = pressFilter
                     )
                     do {
                         drag = awaitPointerSlopOrCancellation(

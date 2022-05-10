@@ -63,9 +63,8 @@ fun Modifier.onPrimaryCombinedClickable(
         role = role,
         labels = labels,
         filterScope = {
-            val unconsumed = allChangesUnconsumed()
             val eligible = if (isMouse) {
-                (isPress || isRelease) && relatedPointerButton == PointerButton.Primary
+                (isPress || isRelease) && relatedPointerButton?.isPrimary == true
             } else {
                 if (isPress) {
                     allChangedToDown()
@@ -75,7 +74,7 @@ fun Modifier.onPrimaryCombinedClickable(
                     false
                 }
             }
-            eligible && unconsumed && keyboardModifiers(keyModifiers)
+            eligible && keyboardModifiers(keyModifiers)
         },
         onDoubleClick = onDoubleClick,
         onLongPress = onLongPress,

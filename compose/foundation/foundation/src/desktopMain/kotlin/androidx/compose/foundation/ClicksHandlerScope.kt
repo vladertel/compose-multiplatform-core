@@ -283,17 +283,3 @@ internal suspend fun AwaitPointerEventScope.awaitPress(
 
     return event
 }
-
-internal fun KeyEvent.toPointerKeyboardModifiers(): PointerKeyboardModifiers = PointerKeyboardModifiers(
-    isCtrlPressed = this.isCtrlPressed,
-    isMetaPressed = this.isMetaPressed,
-    isAltPressed = this.isAltPressed,
-    isAltGraphPressed = this.isAltPressed,
-    isShiftPressed = this.isShiftPressed,
-    // TODO: add implementations
-    isSymPressed = false,
-    isCapsLockOn = false,
-    isFunctionPressed = false,
-    isScrollLockOn = false,
-    isNumLockOn = false
-)
