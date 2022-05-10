@@ -56,8 +56,7 @@ internal class ClicksHandlerScope(
     val onDoubleClick: State<(() -> Unit)?>,
     val onLongPress: State<(() -> Unit)?>,
     val onClick: State<() -> Unit>
-) : PointerInputScope by pointerInputScope
-{
+) : PointerInputScope by pointerInputScope {
 
     private val pressScope = PressGestureScopeImpl(this)
 

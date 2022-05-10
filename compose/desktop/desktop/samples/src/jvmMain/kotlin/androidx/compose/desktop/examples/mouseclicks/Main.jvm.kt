@@ -20,35 +20,35 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.PointerButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.WindowState
-import androidx.compose.ui.window.singleWindowApplication
 import androidx.compose.foundation.combinedMouseClickable
+import androidx.compose.foundation.isPrimary
+import androidx.compose.foundation.isSecondary
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.mouseDraggable
 import androidx.compose.foundation.onPrimaryCombinedClickable
 import androidx.compose.material.Checkbox
 import androidx.compose.material.Text
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.isAltPressed
 import androidx.compose.ui.input.pointer.isCtrlPressed
-import androidx.compose.ui.input.pointer.isPrimaryPressed
-import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.WindowState
+import androidx.compose.ui.window.singleWindowApplication
 
 @OptIn(ExperimentalFoundationApi::class)
 fun main() {
@@ -87,15 +87,17 @@ fun main() {
                         }
                         .combinedMouseClickable(
                             enabled = enabled,
-                            buttons = { it == PointerButton.Primary},
-                            keyModifiers = { it.isShiftPressed }
+                            clickFilter = { button, keyModifiers ->
+                                button.isPrimary && keyModifiers.isShiftPressed
+                            },
                         ) {
                             println("LClick + Shit")
                         }
                         .combinedMouseClickable(
                             enabled = enabled,
-                            buttons = { it == PointerButton.Secondary },
-                            keyModifiers = { it.isAltPressed }
+                            clickFilter = { button, keyModifiers ->
+                                button.isSecondary && keyModifiers.isAltPressed
+                            },
                         ) {
                             println("RClick + Alt")
                         }
@@ -110,6 +112,7 @@ fun main() {
                     Box(modifier = Modifier.offset { IntOffset(offset1.x.toInt(), offset1.y.toInt()) }
                         .size(100.dp).background(Color.Blue)
                         .mouseDraggable(
+                            enabled = enabled,
                             buttons = { it == PointerButton.Secondary },
                             onDragStart = { o, km -> println("Blue: Start, offset=$o, km=$km") },
                             onDragEnd = { println("Blue: End") }
@@ -124,6 +127,7 @@ fun main() {
                         modifier = Modifier.offset { IntOffset(offset2.x.toInt(), offset2.y.toInt()) }
                             .size(100.dp).background(Color.Gray)
                             .mouseDraggable(
+                                enabled = enabled,
                                 onDragStart = { o, km -> println("Gray: Start, offset=$o, km=$km") },
                                 onDragEnd = { println("Gray: End") }
                             ) {

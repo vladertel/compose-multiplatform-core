@@ -56,7 +56,7 @@ fun Modifier.onPrimaryCombinedClickable(
         }
     }
 
-    Modifier.customCombinedClickable(
+    Modifier.combinedClickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = LocalIndication.current,
         enabled = enabled,
@@ -75,12 +75,17 @@ fun Modifier.onPrimaryCombinedClickable(
                     false
                 }
             }
-            eligible && unconsumed&& keyboardModifiers(keyModifiers)
+            eligible && unconsumed && keyboardModifiers(keyModifiers)
         },
         onDoubleClick = onDoubleClick,
         onLongPress = onLongPress,
         onClick = onClick
     ).detectClickFromKey()
+}
+
+@ExperimentalFoundationApi
+fun interface ClicksFilter {
+    fun filter(button: PointerButton, keyModifiers: PointerKeyboardModifiers): Boolean
 }
 
 @ExperimentalFoundationApi
@@ -90,8 +95,7 @@ fun Modifier.combinedMouseClickable(
     enabled: Boolean = true,
     role: Role? = null,
     labels: CombinedClickableLabels? = null,
-    buttons: (PointerButton) -> Boolean = { it == PointerButton.Primary },
-    keyModifiers: (PointerKeyboardModifiers) -> Boolean = { true },
+    clickFilter: ClicksFilter = ClicksFilter { button, _ -> button == PointerButton.Primary },
     onDoubleClick: (() -> Unit)? = null,
     onLongPress: (() -> Unit)? = null,
     onClick: () -> Unit
@@ -99,8 +103,7 @@ fun Modifier.combinedMouseClickable(
     inspectorInfo = {
         name = "combinedMouseClickable"
         properties["enabled"] = enabled
-        properties["buttons"] = buttons
-        properties["keyModifiers"] = keyModifiers
+        properties["clickFilter"] = clickFilter
         properties["role"] = role
         properties["labels"] = labels
         properties["onDoubleClick"] = onDoubleClick
@@ -110,7 +113,7 @@ fun Modifier.combinedMouseClickable(
         properties["interactionSource"] = interactionSource
     },
     factory = {
-        Modifier.customCombinedClickable(
+        Modifier.combinedClickable(
             interactionSource = interactionSource,
             indication = indication,
             enabled = enabled,
@@ -119,8 +122,7 @@ fun Modifier.combinedMouseClickable(
             filterScope = {
                 isMouse &&
                     relatedPointerButton != null &&
-                    buttons(relatedPointerButton) &&
-                    keyModifiers(this.keyModifiers)
+                    clickFilter.filter(relatedPointerButton, this.keyModifiers)
             },
             onDoubleClick = onDoubleClick,
             onLongPress = onLongPress,
@@ -132,8 +134,7 @@ fun Modifier.combinedMouseClickable(
 @ExperimentalFoundationApi
 fun Modifier.combinedMouseClickable(
     enabled: Boolean = true,
-    buttons: (PointerButton) -> Boolean = { it == PointerButton.Primary },
-    keyModifiers: (PointerKeyboardModifiers) -> Boolean = { true },
+    clickFilter: ClicksFilter = ClicksFilter { button, _ -> button == PointerButton.Primary },
     role: Role? = null,
     labels: CombinedClickableLabels? = null,
     onDoubleClick: (() -> Unit)? = null,
@@ -143,8 +144,7 @@ fun Modifier.combinedMouseClickable(
     inspectorInfo = debugInspectorInfo {
         name = "combinedMouseClickable"
         properties["enabled"] = enabled
-        properties["buttons"] = buttons
-        properties["keyModifiers"] = keyModifiers
+        properties["clickFilter"] = clickFilter
         properties["role"] = role
         properties["labels"] = labels
         properties["onDoubleClick"] = onDoubleClick
@@ -159,9 +159,8 @@ fun Modifier.combinedMouseClickable(
             indication = indication,
             enabled = enabled,
             role = role,
+            clickFilter = clickFilter,
             labels = labels,
-            buttons = buttons,
-            keyModifiers = keyModifiers,
             onDoubleClick = onDoubleClick,
             onLongPress = onLongPress,
             onClick = onClick
@@ -176,7 +175,7 @@ data class CombinedClickableLabels(
 )
 
 @ExperimentalFoundationApi
-internal fun Modifier.customCombinedClickable(
+fun Modifier.combinedClickable(
     interactionSource: MutableInteractionSource,
     indication: Indication? = null,
     enabled: Boolean = true,
