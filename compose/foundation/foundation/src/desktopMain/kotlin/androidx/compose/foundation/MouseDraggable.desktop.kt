@@ -50,21 +50,14 @@ data class DragChange(
 @OptIn(ExperimentalComposeUiApi::class)
 @ExperimentalFoundationApi
 /**
- * @param pressFilter - allows to filter press events which initialise the drag. By default, it expects
+ * @param filter - allows to filter press events which initialise the drag. By default, it expects
  * either [PointerButton.isPrimary] for mouse or usual tap for non-mouse pointers.
  * @param onDrag - receives an instance of [DragChange]  for every pointer position change when dragging or
  * when [PointerKeyboardModifiers] state changes after drag started and before it ends.
  */
 fun Modifier.draggable(
     enabled: Boolean = true,
-    pressFilter: ClickFilterScope.() -> Boolean = {
-        // Primary button for mouse and usual tap for non-mouse pointers
-        if (isMouse && relatedPointerButton != null) {
-            relatedPointerButton.isPrimary
-        } else {
-            allChangedToDown()
-        }
-    },
+    filter: PointerFilterScope.() -> Boolean = { isMouse && button.isPrimary || !isMouse },
     onDragStart: (Offset, PointerKeyboardModifiers) -> Unit = { _, _ -> },
     onDragCancel: () -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -92,7 +85,7 @@ fun Modifier.draggable(
                     var overSlop = Offset.Zero
                     val press = awaitPress(
                         requireUnconsumed = false,
-                        filterPressEvent = pressFilter
+                        filterPressEvent = filter
                     )
                     do {
                         drag = awaitPointerSlopOrCancellation(

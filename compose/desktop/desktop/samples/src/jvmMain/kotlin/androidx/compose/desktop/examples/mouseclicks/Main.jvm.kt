@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package androidx.compose.desktop.examples.mouseclicks
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.PointerButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedMouseClickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isPrimary
 import androidx.compose.foundation.isSecondary
 import androidx.compose.foundation.layout.Box
@@ -31,7 +32,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.draggable
-import androidx.compose.foundation.onPrimaryCombinedClickable
 import androidx.compose.material.Checkbox
 import androidx.compose.material.Text
 import androidx.compose.runtime.getValue
@@ -39,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -74,29 +75,29 @@ fun main() {
                     Text("combinedMouseClickable")
 
                     Box(modifier = Modifier.size(100.dp).background(Color.LightGray)
-                        .onPrimaryCombinedClickable(
+                        .combinedClickable(
                             enabled = enabled,
                             onDoubleClick = {
                                 println("Simple LClick DoubleClick")
                             },
-                            onLongPress = {
+                            onLongClick = {
                                 println("Simple LClick LongPress")
                             })
                         {
                             println("Simple LClick click")
                         }
-                        .combinedMouseClickable(
+                        .combinedClickable(
                             enabled = enabled,
-                            clickFilter = { button, keyModifiers ->
-                                button.isPrimary && keyModifiers.isShiftPressed
+                            filter = {
+                                button.isPrimary && keyboardModifiers.isShiftPressed
                             },
                         ) {
                             println("LClick + Shit")
                         }
-                        .combinedMouseClickable(
+                        .combinedClickable(
                             enabled = enabled,
-                            clickFilter = { button, keyModifiers ->
-                                button.isSecondary && keyModifiers.isAltPressed
+                            filter = {
+                                button.isSecondary && keyboardModifiers.isAltPressed
                             },
                         ) {
                             println("RClick + Alt")
@@ -113,7 +114,7 @@ fun main() {
                         .size(100.dp).background(Color.Blue)
                         .draggable(
                             enabled = enabled,
-                            pressFilter = { relatedPointerButton?.isSecondary == true },
+                            filter = { button?.isSecondary == true },
                             onDragStart = { o, km -> println("Blue: Start, offset=$o, km=$km") },
                             onDragEnd = { println("Blue: End") }
                         ) {
