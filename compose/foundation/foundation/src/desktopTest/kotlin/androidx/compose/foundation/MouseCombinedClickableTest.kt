@@ -35,6 +35,10 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
 import com.google.common.truth.Truth.assertThat
+import kotlin.math.ceil
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -425,5 +429,79 @@ class MouseCombinedClickableTest {
         scene.sendPointerEvent(PointerEventType.Release, Offset(20f, 0f), buttons = upButtons)
         assertThat(outerBoxTotalPan).isEqualTo(Offset(20f, 0f))
         assertThat(innerBoxClicks).isEqualTo(1)
+    }
+
+    @Test
+    fun `draggable by mouse primary button`() {
+        val density = Density(1f)
+        val viewConfiguration = DefaultViewConfiguration(density)
+
+        ImageComposeScene(
+            width = 100,
+            height = 100,
+            density = density
+        ).use { scene ->
+
+            var dragStartResult: (() -> Pair<Offset, PointerKeyboardModifiers>)? = null
+            var dragCanceled = false
+            var dragEnded = false
+            var onDragCounter = 0
+            lateinit var lastDragChange: DragChange
+
+            scene.setContent {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp, 40.dp)
+                        .draggable(
+                            enabled = true,
+                            onDragStart = { offset, keyModifiers ->
+                                dragStartResult = { offset to keyModifiers }
+                            },
+                            onDragCancel = { dragCanceled = true },
+                            onDragEnd = { dragEnded = true },
+                            onDrag = {
+                                lastDragChange = it
+                                onDragCounter++
+                            }
+                        )
+                )
+            }
+
+            val downButtons = PointerButtons(isPrimaryPressed = true)
+            scene.sendPointerEvent(PointerEventType.Move, Offset(5f, 5f))
+            scene.sendPointerEvent(PointerEventType.Press, Offset(5f, 5f), buttons = downButtons)
+            scene.sendPointerEvent(PointerEventType.Move, Offset(5f + viewConfiguration.touchSlop, 5f), buttons = downButtons)
+
+            assertEquals(
+                Offset(5f, 5f) to PointerKeyboardModifiers(),
+                dragStartResult?.invoke()
+            )
+            assertEquals(ceil(viewConfiguration.touchSlop), ceil(lastDragChange.offset.x))
+            assertEquals(1, onDragCounter)
+            assertEquals(0f, 0f)
+            assertFalse(dragCanceled)
+            assertFalse(dragEnded)
+
+            scene.sendPointerEvent(PointerEventType.Move, Offset(5f + viewConfiguration.touchSlop, 15f), buttons = downButtons)
+            assertEquals(0f, lastDragChange.offset.x)
+            assertEquals(10f, lastDragChange.offset.y)
+            assertEquals(2, onDragCounter)
+            assertFalse(dragCanceled)
+            assertFalse(dragEnded)
+
+            scene.sendPointerEvent(PointerEventType.Move, Offset(5f + viewConfiguration.touchSlop, 25f), buttons = downButtons)
+            assertEquals(0f, lastDragChange.offset.x)
+            assertEquals(10f, lastDragChange.offset.y)
+            assertEquals(3, onDragCounter)
+            assertFalse(dragCanceled)
+            assertFalse(dragEnded)
+
+            scene.sendPointerEvent(PointerEventType.Release, Offset(viewConfiguration.touchSlop, 15f))
+            assertEquals(-5f, lastDragChange.offset.x)
+            assertEquals(-10f, lastDragChange.offset.y)
+            assertTrue(dragEnded)
+            assertFalse(dragCanceled)
+            assertEquals(4, onDragCounter)
+        }
     }
 }
