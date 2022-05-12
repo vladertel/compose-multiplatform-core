@@ -27,8 +27,6 @@ import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.isAltPressed
-import androidx.compose.ui.input.pointer.isPrimaryPressed
-import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.DefaultViewConfiguration
 import androidx.compose.ui.unit.Density
@@ -48,7 +46,7 @@ import org.junit.Test
 class MouseCombinedClickableTest {
 
     private fun testClick(
-        filterButtons: ClicksFilter,
+        filter: PointerFilterScope.() -> Boolean,
         pressButtons: PointerButtons,
     ) = ImageComposeScene(
         width = 100,
@@ -60,7 +58,7 @@ class MouseCombinedClickableTest {
         scene.setContent {
             Box(
                 modifier = Modifier
-                    .combinedMouseClickable(clickFilter = filterButtons) {
+                    .combinedClickable(filter = filter) {
                         clicksCount++
                     }.size(10.dp, 20.dp)
             )
@@ -80,18 +78,18 @@ class MouseCombinedClickableTest {
 
     @Test
     fun primaryClicks() = testClick(
-        filterButtons = { button, _ -> button.isPrimary },
+        filter = { button.isPrimary },
         pressButtons = PointerButtons(isPrimaryPressed = true)
     )
 
     @Test
     fun secondaryClicks() = testClick(
-        filterButtons = { button, _ -> button.isSecondary },
+        filter = { button.isSecondary },
         pressButtons = PointerButtons(isSecondaryPressed = true)
     )
 
     private fun testDoubleClick(
-        filterButtons: ClicksFilter,
+        filter: PointerFilterScope.() -> Boolean,
         pressButtons: PointerButtons,
     ) = runBlocking {
         val density = Density(1f)
@@ -107,7 +105,7 @@ class MouseCombinedClickableTest {
             scene.setContent {
                 Box(
                     modifier = Modifier
-                        .combinedMouseClickable(clickFilter = filterButtons, onDoubleClick = {
+                        .combinedClickable(filter = filter, onDoubleClick = {
                             doubleClickCount++
                         }) {
                             clicksCount++
@@ -136,18 +134,18 @@ class MouseCombinedClickableTest {
 
     @Test
     fun primaryDoubleClick() = testDoubleClick(
-        filterButtons = { button, _ -> button.isPrimary },
+        filter = { button.isPrimary },
         pressButtons = PointerButtons(isPrimaryPressed = true)
     )
 
     @Test
     fun secondaryDoubleClick() = testDoubleClick(
-        filterButtons = { button, _ -> button.isSecondary },
+        filter = { button.isSecondary },
         pressButtons = PointerButtons(isSecondaryPressed = true)
     )
 
     private fun testLongClick(
-        filterButtons: ClicksFilter,
+        filter: PointerFilterScope.() -> Boolean,
         pressButtons: PointerButtons,
     ) = runBlocking {
         val density = Density(1f)
@@ -163,7 +161,7 @@ class MouseCombinedClickableTest {
             scene.setContent {
                 Box(
                     modifier = Modifier
-                        .combinedMouseClickable(clickFilter = filterButtons, onLongPress = {
+                        .combinedClickable(filter = filter, onLongPress = {
                             longClickCount++
                         }) {
                             clicksCount++
@@ -188,13 +186,13 @@ class MouseCombinedClickableTest {
 
     @Test
     fun primaryLongClick() = testLongClick(
-        filterButtons = { button, _ -> button.isPrimary },
+        filter = { button.isPrimary },
         pressButtons = PointerButtons(isPrimaryPressed = true)
     )
 
     @Test
     fun secondaryLongClick() = testLongClick(
-        filterButtons = { button, _ -> button.isSecondary },
+        filter = { button.isSecondary },
         pressButtons = PointerButtons(isSecondaryPressed = true)
     )
 
@@ -210,10 +208,10 @@ class MouseCombinedClickableTest {
         scene.setContent {
             Box(
                 modifier = Modifier
-                    .combinedMouseClickable(clickFilter = { button, _ ->  button.isPrimary }) {
+                    .combinedClickable(filter = { button.isPrimary }) {
                         primaryClicks++
                     }
-                    .combinedMouseClickable(clickFilter = { button, _ ->  button.isSecondary }) {
+                    .combinedClickable(filter = { button.isSecondary }) {
                         secondaryClicks++
                     }
                     .size(40.dp, 40.dp)
@@ -261,10 +259,8 @@ class MouseCombinedClickableTest {
                     .combinedClickable {
                         genericClicks++
                     }
-                    .combinedMouseClickable(
-                        clickFilter = { button, keyModifiers ->
-                            button.isPrimary && keyModifiers.isAltPressed
-                        }
+                    .combinedClickable(
+                        filter = { isMouse && button.isPrimary && keyboardModifiers.isAltPressed }
                     ) {
                         withAltClicks++
                     }
@@ -315,14 +311,14 @@ class MouseCombinedClickableTest {
         scene.setContent {
             Box(
                 modifier = Modifier
-                    .combinedMouseClickable {
+                    .combinedClickable {
                         outerBoxClicks++
                     }
                     .size(40.dp, 40.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .combinedMouseClickable {
+                        .combinedClickable {
                             innerBoxClicks++
                         }
                         .size(10.dp, 20.dp)
@@ -357,14 +353,14 @@ class MouseCombinedClickableTest {
         scene.setContent {
             Box(
                 modifier = Modifier
-                    .combinedMouseClickable {
+                    .combinedClickable {
                         outerBoxClicks++
                     }
                     .size(40.dp, 40.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .combinedMouseClickable {
+                        .combinedClickable {
                             innerBoxClicks++
                         }
                         .size(10.dp, 20.dp)
@@ -408,7 +404,7 @@ class MouseCombinedClickableTest {
             ) {
                 Box(
                     modifier = Modifier
-                        .combinedMouseClickable {
+                        .combinedClickable {
                             innerBoxClicks++
                         }
                         .size(50.dp, 50.dp)

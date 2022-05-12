@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package androidx.compose.foundation
 
 import androidx.compose.foundation.gestures.GestureCancellationException
@@ -23,21 +25,18 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
-import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
-import androidx.compose.ui.input.pointer.areAnyPressed
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.util.fastAll
@@ -52,7 +51,7 @@ internal class ClicksHandlerScope(
     pointerInputScope: PointerInputScope,
     val interactionSource: MutableInteractionSource,
     val pressedInteraction: MutableState<PressInteraction.Press?>,
-    val filterState: State<ClickFilterScope.() -> Boolean>,
+    val filterState: State<PointerFilterScope.() -> Boolean>,
     val onDoubleClick: State<(() -> Unit)?>,
     val onLongPress: State<(() -> Unit)?>,
     val onClick: State<() -> Unit>
@@ -198,8 +197,8 @@ internal class ClicksHandlerScope(
             if (cancelled) return null
 
             event = event.takeIf {
-                it.type == PointerEventType.Release &&
-                    filterState.value(ClickFilterScope(it))
+                it.isAllPressedUp() &&
+                    filterState.value(PointerFilterScope(it))
             }
 
             changes = event?.changes?.takeIf {
@@ -265,7 +264,7 @@ internal class ClicksHandlerScope(
 }
 
 internal suspend fun AwaitPointerEventScope.awaitPress(
-    filterPressEvent: ClickFilterScope.() -> Boolean,
+    filterPressEvent: PointerFilterScope.() -> Boolean,
     requireUnconsumed: Boolean = true
 ): PointerEvent {
     var event: PointerEvent? = null
@@ -273,9 +272,10 @@ internal suspend fun AwaitPointerEventScope.awaitPress(
 
     while (event == null || changes.isEmpty()) {
         event = awaitPointerEvent().takeIf {
-                it.type == PointerEventType.Press &&
-                filterPressEvent(ClickFilterScope(it))
+            it.isAllPressedDown() &&
+            filterPressEvent(PointerFilterScope(it))
         }
+
         changes = event?.changes?.takeIf {
             !requireUnconsumed || it.fastAll { !it.isConsumed }
         } ?: emptyList()
@@ -283,3 +283,11 @@ internal suspend fun AwaitPointerEventScope.awaitPress(
 
     return event
 }
+
+private fun PointerEvent.isAllPressedDown() = type == PointerEventType.Press &&
+    changes.all { it.type == PointerType.Mouse } ||
+    changes.all { it.changedToDown() }
+
+private fun PointerEvent.isAllPressedUp()  = type == PointerEventType.Release &&
+    changes.all { it.type == PointerType.Mouse } ||
+    changes.all { it.changedToUp() }

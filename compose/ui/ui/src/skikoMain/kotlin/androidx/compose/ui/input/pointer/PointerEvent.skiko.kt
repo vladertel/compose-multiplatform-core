@@ -22,7 +22,6 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import org.jetbrains.skiko.SkikoPointerEventKind
-import org.jetbrains.skiko.SkikoGestureEventState
 import org.jetbrains.skiko.SkikoTouchEventKind
 
 internal actual typealias NativePointerButtons = Int
@@ -138,7 +137,7 @@ actual data class PointerEvent internal constructor(
      */
     val nativeEvent: Any?,
 
-    val changedButton: Int
+    val button: Int
 ) {
     internal actual constructor(
         changes: List<PointerInputChange>,
@@ -161,7 +160,7 @@ actual data class PointerEvent internal constructor(
         keyboardModifiers = PointerKeyboardModifiers(0),
         _type = PointerEventType.Unknown,
         nativeEvent = null,
-        changedButton = 0
+        button = 0
     )
 
     actual var type: PointerEventType = _type
