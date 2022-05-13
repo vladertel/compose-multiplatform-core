@@ -36,6 +36,8 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.unit.Density
@@ -47,20 +49,21 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 
+@OptIn(ExperimentalFoundationApi::class)
 internal class ClicksHandlerScope(
     pointerInputScope: PointerInputScope,
     val interactionSource: MutableInteractionSource,
     val pressedInteraction: MutableState<PressInteraction.Press?>,
     val filterState: State<PointerFilterScope.() -> Boolean>,
     val onDoubleClick: State<(() -> Unit)?>,
-    val onLongPress: State<(() -> Unit)?>,
+    val onLongClick: State<(() -> Unit)?>,
     val onClick: State<() -> Unit>
 ) : PointerInputScope by pointerInputScope {
 
     private val pressScope = PressGestureScopeImpl(this)
 
     private val longPressTimeout: Long
-        get() = if (onLongPress.value != null) {
+        get() = if (onLongClick.value != null) {
             viewConfiguration.longPressTimeoutMillis
         } else {
             Long.MAX_VALUE / 2
@@ -107,8 +110,8 @@ internal class ClicksHandlerScope(
                 }
 
                 if (firstRelease == null) {
-                    if (onLongPress.value != null && !cancelled) {
-                        onLongPress.value!!.invoke()
+                    if (onLongClick.value != null && !cancelled) {
+                        onLongClick.value!!.invoke()
                         awaitReleaseOrCancelled()
                         pressScope.release()
                     }
@@ -154,8 +157,8 @@ internal class ClicksHandlerScope(
             }
 
             if (secondRelease == null) {
-                if (onLongPress.value != null && !cancelled) {
-                    onLongPress.value!!.invoke()
+                if (onLongClick.value != null && !cancelled) {
+                    onLongClick.value!!.invoke()
                     awaitReleaseOrCancelled()
                     pressScope.release()
                 }
@@ -185,9 +188,8 @@ internal class ClicksHandlerScope(
 
     private suspend fun AwaitPointerEventScope.awaitReleaseOrCancelled(): PointerEvent? {
         var event: PointerEvent? = null
-        var changes: List<PointerInputChange> = emptyList()
 
-        while (event == null || changes.isEmpty()) {
+        while (event == null) {
             event = awaitPointerEvent()
 
             val cancelled = event.changes.fastAny {
@@ -197,13 +199,9 @@ internal class ClicksHandlerScope(
             if (cancelled) return null
 
             event = event.takeIf {
-                it.isAllPressedUp() &&
+                it.isAllPressedUp(requireUnconsumed = true) &&
                     filterState.value(PointerFilterScope(it))
             }
-
-            changes = event?.changes?.takeIf {
-                it.all { !it.isConsumed }
-            } ?: emptyList()
 
             // Check for cancel by position consumption. We can look on the Final pass of the
             // existing pointer event because it comes after the Main pass we checked above.
@@ -263,31 +261,29 @@ internal class ClicksHandlerScope(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 internal suspend fun AwaitPointerEventScope.awaitPress(
     filterPressEvent: PointerFilterScope.() -> Boolean,
     requireUnconsumed: Boolean = true
 ): PointerEvent {
     var event: PointerEvent? = null
-    var changes: List<PointerInputChange> = emptyList()
 
-    while (event == null || changes.isEmpty()) {
+    while (event == null) {
         event = awaitPointerEvent().takeIf {
-            it.isAllPressedDown() &&
+            it.isAllPressedDown(requireUnconsumed = requireUnconsumed) &&
             filterPressEvent(PointerFilterScope(it))
         }
-
-        changes = event?.changes?.takeIf {
-            !requireUnconsumed || it.fastAll { !it.isConsumed }
-        } ?: emptyList()
     }
 
     return event
 }
 
-private fun PointerEvent.isAllPressedDown() = type == PointerEventType.Press &&
-    changes.all { it.type == PointerType.Mouse } ||
-    changes.all { it.changedToDown() }
+private fun PointerEvent.isAllPressedDown(requireUnconsumed: Boolean = true) =
+    type == PointerEventType.Press &&
+        changes.fastAll { it.type == PointerType.Mouse && (!requireUnconsumed || !it.isConsumed) } ||
+        changes.fastAll { if (requireUnconsumed) it.changedToDown() else it.changedToDownIgnoreConsumed() }
 
-private fun PointerEvent.isAllPressedUp()  = type == PointerEventType.Release &&
-    changes.all { it.type == PointerType.Mouse } ||
-    changes.all { it.changedToUp() }
+private fun PointerEvent.isAllPressedUp(requireUnconsumed: Boolean = true) =
+    type == PointerEventType.Release &&
+        changes.fastAll { it.type == PointerType.Mouse && (!requireUnconsumed || !it.isConsumed) } ||
+        changes.fastAll { if (requireUnconsumed) it.changedToUp() else it.changedToUpIgnoreConsumed() }

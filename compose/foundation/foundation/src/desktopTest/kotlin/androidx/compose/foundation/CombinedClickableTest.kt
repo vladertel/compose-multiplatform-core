@@ -27,6 +27,11 @@ import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.isAltPressed
+import androidx.compose.ui.input.pointer.isBack
+import androidx.compose.ui.input.pointer.isForward
+import androidx.compose.ui.input.pointer.isPrimary
+import androidx.compose.ui.input.pointer.isSecondary
+import androidx.compose.ui.input.pointer.isTertiary
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.DefaultViewConfiguration
 import androidx.compose.ui.unit.Density
@@ -43,7 +48,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class, ExperimentalCoroutinesApi::class)
-class MouseCombinedClickableTest {
+class CombinedClickableTest {
 
     private fun testClick(
         filter: PointerFilterScope.() -> Boolean,
@@ -86,6 +91,24 @@ class MouseCombinedClickableTest {
     fun secondaryClicks() = testClick(
         filter = { button.isSecondary },
         pressButtons = PointerButtons(isSecondaryPressed = true)
+    )
+
+    @Test
+    fun tertiaryClicks() = testClick(
+        filter = { button.isTertiary },
+        pressButtons = PointerButtons(isTertiaryPressed = true)
+    )
+
+    @Test
+    fun backClicks() = testClick(
+        filter = { button.isBack },
+        pressButtons = PointerButtons(isBackPressed = true)
+    )
+
+    @Test
+    fun forwardClicks() = testClick(
+        filter = { button.isForward },
+        pressButtons = PointerButtons(isForwardPressed = true)
     )
 
     private fun testDoubleClick(
@@ -144,6 +167,12 @@ class MouseCombinedClickableTest {
         pressButtons = PointerButtons(isSecondaryPressed = true)
     )
 
+    @Test
+    fun tertiaryDoubleClick() = testDoubleClick(
+        filter = { button.isTertiary },
+        pressButtons = PointerButtons(isTertiaryPressed = true)
+    )
+
     private fun testLongClick(
         filter: PointerFilterScope.() -> Boolean,
         pressButtons: PointerButtons,
@@ -161,7 +190,7 @@ class MouseCombinedClickableTest {
             scene.setContent {
                 Box(
                     modifier = Modifier
-                        .combinedClickable(filter = filter, onLongPress = {
+                        .combinedClickable(filter = filter, onLongClick = {
                             longClickCount++
                         }) {
                             clicksCount++
@@ -194,6 +223,12 @@ class MouseCombinedClickableTest {
     fun secondaryLongClick() = testLongClick(
         filter = { button.isSecondary },
         pressButtons = PointerButtons(isSecondaryPressed = true)
+    )
+
+    @Test
+    fun tertiaryLongClick() = testLongClick(
+        filter = { button.isTertiary },
+        pressButtons = PointerButtons(isTertiaryPressed = true)
     )
 
     @Test

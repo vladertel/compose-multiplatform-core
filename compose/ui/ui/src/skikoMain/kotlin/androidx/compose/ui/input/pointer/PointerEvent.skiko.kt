@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.input.pointer
 
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -109,6 +110,7 @@ fun PointerKeyboardModifiers(keyEvent: KeyEvent): PointerKeyboardModifiers {
 /**
  * Describes a pointer input change event that has occurred at a particular point in time.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 actual data class PointerEvent internal constructor(
     /**
      * The changes.
@@ -137,7 +139,7 @@ actual data class PointerEvent internal constructor(
      */
     val nativeEvent: Any?,
 
-    val button: Int
+    val button: PointerButton?
 ) {
     internal actual constructor(
         changes: List<PointerInputChange>,
@@ -148,7 +150,7 @@ actual data class PointerEvent internal constructor(
         internalPointerEvent?.keyboardModifiers ?: PointerKeyboardModifiers(0),
         internalPointerEvent?.type ?: PointerEventType.Unknown,
         internalPointerEvent?.nativeEvent,
-        internalPointerEvent?.changedButton ?: 0
+        internalPointerEvent?.button
     )
 
     /**
@@ -160,7 +162,7 @@ actual data class PointerEvent internal constructor(
         keyboardModifiers = PointerKeyboardModifiers(0),
         _type = PointerEventType.Unknown,
         nativeEvent = null,
-        button = 0
+        button = null
     )
 
     actual var type: PointerEventType = _type

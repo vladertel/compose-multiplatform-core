@@ -17,15 +17,17 @@
 package androidx.compose.foundation
 
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.util.fastAll
 
-@ExperimentalComposeUiApi
+@ExperimentalFoundationApi
 class PointerFilterScope internal constructor(
     internal val event: PointerEvent
 ) {
-    val button: PointerButton? = PointerButton(event.button)
+    @OptIn(ExperimentalComposeUiApi::class)
+    val button: PointerButton? = event.button
     val keyboardModifiers = event.keyboardModifiers
 
     val isMouse: Boolean = event.changes.fastAll { it.type == PointerType.Mouse }

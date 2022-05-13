@@ -16,13 +16,16 @@
 
 package androidx.compose.ui.input.pointer
 
+import androidx.compose.ui.ExperimentalComposeUiApi
+
+@OptIn(ExperimentalComposeUiApi::class)
 internal actual class InternalPointerEvent constructor(
     val type: PointerEventType,
     actual val changes: Map<PointerId, PointerInputChange>,
     val buttons: PointerButtons,
     val keyboardModifiers: PointerKeyboardModifiers,
     val nativeEvent: Any?,
-    val changedButton: Int
+    val button: PointerButton?
 ) {
     actual constructor(
         changes: Map<PointerId, PointerInputChange>,
@@ -33,7 +36,7 @@ internal actual class InternalPointerEvent constructor(
         pointerInputEvent.buttons,
         pointerInputEvent.keyboardModifiers,
         pointerInputEvent.nativeEvent,
-        pointerInputEvent.changedButton
+        pointerInputEvent.button
     )
 
     actual var suppressMovementConsumption: Boolean = false

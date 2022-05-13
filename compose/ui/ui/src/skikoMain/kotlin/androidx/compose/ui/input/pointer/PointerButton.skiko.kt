@@ -14,30 +14,39 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation
+package androidx.compose.ui.input.pointer
+
+import androidx.compose.ui.ExperimentalComposeUiApi
+import kotlin.jvm.JvmInline
 
 @JvmInline
-value class PointerButton(internal val index: Int) {
+@ExperimentalComposeUiApi
+value class PointerButton(val index: Int) {
     companion object {
-        val Primary = PointerButton(1 shl 0)
-        val Secondary = PointerButton(1 shl 1)
-        val Tertiary = PointerButton(1 shl 2)
-        val Back = PointerButton(1 shl 3)
-        val Forward = PointerButton(1 shl 4)
+        val Primary = PointerButton(0)
+        val Secondary = PointerButton(1)
+        val Tertiary = PointerButton(2)
+        val Back = PointerButton(3)
+        val Forward = PointerButton(4)
     }
 }
 
+@ExperimentalComposeUiApi
 val PointerButton?.isPrimary: Boolean
     get() { return this == PointerButton.Primary }
 
+@ExperimentalComposeUiApi
 val PointerButton?.isSecondary: Boolean
     get() { return this == PointerButton.Secondary }
 
+@ExperimentalComposeUiApi
 val PointerButton?.isTertiary: Boolean
     get() { return this == PointerButton.Tertiary }
 
+@ExperimentalComposeUiApi
 val PointerButton?.isBack: Boolean
     get() { return this == PointerButton.Back }
 
+@ExperimentalComposeUiApi
 val PointerButton?.isForward: Boolean
     get() { return this == PointerButton.Forward }

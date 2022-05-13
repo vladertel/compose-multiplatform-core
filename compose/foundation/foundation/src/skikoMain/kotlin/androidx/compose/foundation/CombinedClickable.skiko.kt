@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.input.pointer.isPrimary
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
@@ -52,17 +53,17 @@ fun Modifier.combinedClickable(
     labels: CombinedClickableLabels? = null,
     filter: PointerFilterScope.() -> Boolean = { isMouse && button.isPrimary || !isMouse },
     onDoubleClick: (() -> Unit)? = null,
-    onLongPress: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) = composed(
     inspectorInfo = {
-        name = "combinedMixedClickable"
+        name = "combinedClickable"
         properties["enabled"] = enabled
         properties["filter"] = filter
         properties["role"] = role
         properties["labels"] = labels
         properties["onDoubleClick"] = onDoubleClick
-        properties["onLongPress"] = onLongPress
+        properties["onLongClick"] = onLongClick
         properties["onClick"] = onClick
         properties["indication"] = indication
     },
@@ -71,7 +72,7 @@ fun Modifier.combinedClickable(
         val pressedInteraction = remember { mutableStateOf<PressInteraction.Press?>(null) }
         val onClickState = rememberUpdatedState(onClick)
         val on2xClickState = rememberUpdatedState(onDoubleClick)
-        val onLongClickState = rememberUpdatedState(onLongPress)
+        val onLongClickState = rememberUpdatedState(onLongClick)
         val filterState = rememberUpdatedState(filter)
 
         val gestureModifier = if (enabled) {
@@ -82,7 +83,7 @@ fun Modifier.combinedClickable(
                     pressedInteraction = pressedInteraction,
                     filterState = filterState,
                     onDoubleClick = on2xClickState,
-                    onLongPress = onLongClickState,
+                    onLongClick = onLongClickState,
                     onClick = onClickState
                 )
 
@@ -100,8 +101,8 @@ fun Modifier.combinedClickable(
                 if (role != null) this.role = role
                 this.onClick(labels?.onClickLabel) { onClick(); true }
 
-                if (onLongPress != null) {
-                    this.onLongClick(labels?.onLongPressLabel) { onLongPress(); true }
+                if (onLongClick != null) {
+                    this.onLongClick(labels?.onLongPressLabel) { onLongClick(); true }
                 }
 
                 if (!enabled) disabled()

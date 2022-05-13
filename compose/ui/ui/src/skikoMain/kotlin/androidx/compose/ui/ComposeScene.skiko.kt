@@ -33,6 +33,7 @@ import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputEvent
@@ -433,7 +434,7 @@ class ComposeScene internal constructor(
             keyboardModifiers ?: defaultPointerStateTracker.keyboardModifiers
 
         // calculate the index of a mouse button that was changed (down or up)
-        val changedButton = (pressedButtonsIndexes xor actualButtons.packedValue).takeLowestOneBit()
+        val changedButtonIndex = (pressedButtonsIndexes xor actualButtons.packedValue).countTrailingZeroBits()
 
         if (eventType == PointerEventType.Press || eventType == PointerEventType.Release) {
             pressedButtonsIndexes = actualButtons.packedValue
@@ -448,7 +449,7 @@ class ComposeScene internal constructor(
             scrollDelta,
             actualButtons,
             actualKeyboardModifiers,
-            changedButton
+            PointerButton(changedButtonIndex)
         )
         needLayout = false
         forEachOwner { it.measureAndLayout() }
@@ -496,6 +497,7 @@ class ComposeScene internal constructor(
         owner?.processPointerInput(event)
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     private fun processMove(event: PointerInputEvent) {
         val owner = when {
             event.buttons.areAnyPressed -> pressOwner
@@ -561,6 +563,7 @@ private class DefaultPointerStateTracker {
 
 internal expect fun ComposeScene.onPlatformInputMethodEvent(event: Any)
 
+@OptIn(ExperimentalComposeUiApi::class)
 private fun pointerInputEvent(
     eventType: PointerEventType,
     position: Offset,
@@ -570,7 +573,7 @@ private fun pointerInputEvent(
     scrollDelta: Offset,
     buttons: PointerButtons,
     keyboardModifiers: PointerKeyboardModifiers,
-    changedButton: Int
+    changedButton: PointerButton?
 ): PointerInputEvent {
     return PointerInputEvent(
         eventType,
@@ -593,6 +596,7 @@ private fun pointerInputEvent(
     )
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 private fun createMoveEvent(
     nativeEvent: Any?,
     sourceEvent: PointerInputEvent,
@@ -606,7 +610,7 @@ private fun createMoveEvent(
     scrollDelta = Offset(0f, 0f),
     buttons = sourceEvent.buttons,
     keyboardModifiers = sourceEvent.keyboardModifiers,
-    changedButton = 0
+    changedButton = null
 )
 
 internal expect fun makeAccessibilityController(
