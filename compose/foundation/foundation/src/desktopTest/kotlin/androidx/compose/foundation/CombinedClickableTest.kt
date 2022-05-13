@@ -535,4 +535,79 @@ class CombinedClickableTest {
             assertEquals(4, onDragCounter)
         }
     }
+
+    @Test
+    fun `draggable by mouse OnLongPress primary button`() = runBlocking {
+        val density = Density(1f)
+        val viewConfiguration = DefaultViewConfiguration(density)
+
+        ImageComposeScene(
+            width = 100,
+            height = 100,
+            density = density
+        ).use { scene ->
+
+            var dragStartResult: (() -> Pair<Offset, PointerKeyboardModifiers>)? = null
+            var dragCanceled = false
+            var dragEnded = false
+            var onDragCounter = 0
+            lateinit var lastDragChange: DragChange
+
+            scene.setContent {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp, 40.dp)
+                        .draggable(
+                            enabled = true,
+                            awaitForDragStart = AwaitDragStart.OnLongPress,
+                            onDragStart = { offset, keyModifiers ->
+                                dragStartResult = { offset to keyModifiers }
+                            },
+                            onDragCancel = { dragCanceled = true },
+                            onDragEnd = { dragEnded = true },
+                            onDrag = {
+                                lastDragChange = it
+                                onDragCounter++
+                            }
+                        )
+                )
+            }
+
+            val downButtons = PointerButtons(isPrimaryPressed = true)
+            scene.sendPointerEvent(PointerEventType.Move, Offset(5f, 5f))
+            scene.sendPointerEvent(PointerEventType.Press, Offset(5f, 5f), buttons = downButtons)
+
+            delay(viewConfiguration.longPressTimeoutMillis * 2)
+
+            assertEquals(
+                Offset(5f, 5f) to PointerKeyboardModifiers(),
+                dragStartResult?.invoke()
+            )
+            assertEquals(0, onDragCounter)
+            assertEquals(0f, 0f)
+            assertFalse(dragCanceled)
+            assertFalse(dragEnded)
+
+            scene.sendPointerEvent(PointerEventType.Move, Offset(5f, 10f), buttons = downButtons)
+            assertEquals(0f, lastDragChange.offset.x)
+            assertEquals(5f, lastDragChange.offset.y)
+            assertEquals(1, onDragCounter)
+            assertFalse(dragCanceled)
+            assertFalse(dragEnded)
+
+            scene.sendPointerEvent(PointerEventType.Move, Offset(15f, 10f), buttons = downButtons)
+            assertEquals(10f, lastDragChange.offset.x)
+            assertEquals(0f, lastDragChange.offset.y)
+            assertEquals(2, onDragCounter)
+            assertFalse(dragCanceled)
+            assertFalse(dragEnded)
+
+            scene.sendPointerEvent(PointerEventType.Release, Offset(5f, 5f))
+            assertEquals(-10f, lastDragChange.offset.x)
+            assertEquals(-5f, lastDragChange.offset.y)
+            assertTrue(dragEnded)
+            assertFalse(dragCanceled)
+            assertEquals(3, onDragCounter)
+        }
+    }
 }
