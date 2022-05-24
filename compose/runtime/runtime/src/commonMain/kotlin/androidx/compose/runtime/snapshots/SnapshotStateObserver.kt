@@ -21,8 +21,8 @@ import androidx.compose.runtime.collection.IdentityArrayMap
 import androidx.compose.runtime.collection.IdentityArraySet
 import androidx.compose.runtime.collection.IdentityScopeMap
 import androidx.compose.runtime.collection.mutableVectorOf
-import androidx.compose.util.synchronized
-import androidx.compose.util.createSynchronizedObject
+import androidx.compose.runtime.synchronized
+import androidx.compose.runtime.createSynchronizedObject
 
 /**
  * Helper class to efficiently observe snapshot state reads. See [observeReads] for more details.

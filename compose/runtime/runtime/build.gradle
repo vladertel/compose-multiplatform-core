@@ -67,7 +67,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         desktop()
         js()
         darwin()
-        includeUtil()
     }
 
     kotlin {
@@ -148,13 +147,6 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     }
     dependencies {
         samples(projectOrArtifact(":compose:runtime:runtime:runtime-samples"))
-    }
-} else {
-    android {
-        sourceSets.main.java {
-           srcDirs += "../../util/util/src/commonMain/kotlin"
-           srcDirs += "../../util/util/src/jvmMain/kotlin"
-        }
     }
 }
 
