@@ -59,7 +59,8 @@ interface FocusManager {
  * @param focusModifier The modifier that will be used as the root focus modifier.
  */
 internal class FocusManagerImpl(
-    private val focusModifier: FocusModifier = FocusModifier(Inactive)
+    private val focusModifier: FocusModifier = FocusModifier(Inactive),
+    private val parent: FocusManager? = null,
 ) : FocusManager {
 
     /**
@@ -116,6 +117,7 @@ internal class FocusManagerImpl(
                 Deactivated, DeactivatedParent -> Deactivated
                 Inactive -> Inactive
             }
+            parent?.clearFocus(force)
         }
     }
 
@@ -138,13 +140,15 @@ internal class FocusManagerImpl(
             return true
         }
 
-        return focusModifier.focusSearch(focusDirection, layoutDirection) { destination ->
+        val foundNextItem = focusModifier.focusSearch(focusDirection, layoutDirection) { destination ->
             if (destination == source) return@focusSearch false
             checkNotNull(destination.parent) { "Move focus landed at the root." }
             // If we found a potential next item, move focus to it.
             destination.requestFocus()
             true
-        }.let { foundNextItem -> foundNextItem || wrapAroundFocus(focusDirection) }
+        }
+
+        return foundNextItem || moveParentFocus(focusDirection) || wrapAroundFocus(focusDirection)
     }
 
     /**
@@ -168,6 +172,9 @@ internal class FocusManagerImpl(
     internal fun getActiveFocusModifier(): FocusModifier? {
         return focusModifier.findActiveItem()
     }
+
+    private fun moveParentFocus(focusDirection: FocusDirection) =
+        parent?.moveFocus(focusDirection) == true
 
     // TODO(b/144116848): This is a hack to make Next/Previous wrap around. This must be
     //  replaced by code that sends the move request back to the view system. The view system
