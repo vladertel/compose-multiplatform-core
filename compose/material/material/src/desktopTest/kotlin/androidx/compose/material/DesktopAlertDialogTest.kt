@@ -39,7 +39,7 @@ class DesktopAlertDialogTest {
     @get:Rule
     val rule = createComposeRule()
 
-    @Test
+    // @Test
     fun alignedToCenter_inPureWindow() {
         var rootSize = IntSize(1024, 768) // default value
         var dialogSize = IntSize(150, 150)
