@@ -33,7 +33,7 @@ import org.junit.runner.RunWith
 import org.junit.Rule
 import org.junit.Test
 
-@RunWith(JUnit4::class)
+//@RunWith(JUnit4::class)
 class DesktopAlertDialogTest {
 
     @get:Rule
