@@ -289,16 +289,6 @@ class DeepCopyIrTreeWithSymbolsPreservingMetadata(
         return super.visitCall(expression)
     }
 
-    override fun <T> visitConst(expression: IrConst<T>): IrConst<T> =
-        // unlike the original visitConst, this one remaps type as well
-        IrConstImpl(
-            expression.startOffset,
-            expression.endOffset,
-            expression.type.remapType(),
-            expression.kind,
-            expression.value
-        ).copyAttributes(expression)
-
     private fun IrSimpleFunctionSymbol.isBoundButNotRemapped(): Boolean {
         return this.isBound && symbolRemapper.getReferencedFunction(this) == this
     }

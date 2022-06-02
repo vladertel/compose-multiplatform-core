@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -65,6 +66,7 @@ class DefaultContextMenuRepresentation(
     private val textColor: Color,
     private val itemHoverColor: Color
 ) : ContextMenuRepresentation {
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     override fun Representation(state: ContextMenuState, items: List<ContextMenuItem>) {
         val isOpen = state.status is ContextMenuState.Status.Open

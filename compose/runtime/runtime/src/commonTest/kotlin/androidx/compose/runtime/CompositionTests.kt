@@ -55,7 +55,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.test.IgnoreJsTarget
-import kotlinx.test.IgnoreJsTarget
 
 @Composable
 fun Container(content: @Composable () -> Unit) = content()
