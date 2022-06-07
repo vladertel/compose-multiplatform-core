@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-@file:Suppress("UnstableApiUsage")
-
 package androidx.build.lint
 
 import com.android.tools.lint.client.api.UElementHandler
-
 import com.android.tools.lint.detector.api.Category
 import com.android.tools.lint.detector.api.Detector
 import com.android.tools.lint.detector.api.Implementation
@@ -28,13 +25,13 @@ import com.android.tools.lint.detector.api.Issue
 import com.android.tools.lint.detector.api.JavaContext
 import com.android.tools.lint.detector.api.Scope
 import com.android.tools.lint.detector.api.Severity
+import com.android.tools.lint.detector.api.isJava
 import org.jetbrains.uast.UAnnotation
 
 /**
- * Enforces policy banning use of the `@TargetApi` annotation.
+ * Checks for usages of JetBrains nullability annotations in Java code.
  */
-class TargetApiAnnotationUsageDetector : Detector(), Detector.UastScanner {
-
+class NullabilityAnnotationsDetector : Detector(), Detector.UastScanner {
     override fun getApplicableUastTypes() = listOf(UAnnotation::class.java)
 
     override fun createUastHandler(context: JavaContext): UElementHandler {
@@ -43,19 +40,38 @@ class TargetApiAnnotationUsageDetector : Detector(), Detector.UastScanner {
 
     private inner class AnnotationChecker(val context: JavaContext) : UElementHandler() {
         override fun visitAnnotation(node: UAnnotation) {
-            if (node.qualifiedName == "android.annotation.TargetApi") {
-                val lintFix = fix().name("Replace with `@RequiresApi`")
+            if (isJava(node.sourcePsi)) {
+                checkForAnnotation(node, "NotNull", "NonNull")
+                checkForAnnotation(node, "Nullable", "Nullable")
+            }
+        }
+
+        /**
+         * Check if the node is org.jetbrains.annotations.$jetBrainsAnnotation, replace with
+         * androidx.annotation.$androidxAnnotation if so.
+         */
+        private fun checkForAnnotation(
+            node: UAnnotation,
+            jetBrainsAnnotation: String,
+            androidxAnnotation: String
+        ) {
+            val incorrectAnnotation = "org.jetbrains.annotations.$jetBrainsAnnotation"
+            val replacementAnnotation = "androidx.annotation.$androidxAnnotation"
+            val patternToReplace = "(?:org\\.jetbrains\\.annotations\\.)?$jetBrainsAnnotation"
+
+            if (node.qualifiedName == incorrectAnnotation) {
+                val lintFix = fix().name("Replace with `@$replacementAnnotation`")
                     .replace()
-                    .pattern("(?:android\\.annotation\\.)?TargetApi")
-                    .with("androidx.annotation.RequiresApi")
+                    .pattern(patternToReplace)
+                    .with(replacementAnnotation)
                     .shortenNames()
                     .autoFix(true, true)
                     .build()
                 val incident = Incident(context)
-                    .fix(lintFix)
                     .issue(ISSUE)
+                    .fix(lintFix)
                     .location(context.getNameLocation(node))
-                    .message("Use `@RequiresApi` instead of `@TargetApi`")
+                    .message("Use `@$replacementAnnotation` instead of `@$incorrectAnnotation`")
                     .scope(node)
                 context.report(incident)
             }
@@ -64,14 +80,13 @@ class TargetApiAnnotationUsageDetector : Detector(), Detector.UastScanner {
 
     companion object {
         val ISSUE = Issue.create(
-            "BanTargetApiAnnotation",
-            "Replace usage of `@TargetApi` with `@RequiresApi`",
-            "The `@TargetApi` annotation satisfies the `NewApi` lint check, but it does " +
-                "not ensure that calls to the annotated API are correctly guarded on an `SDK_INT`" +
-                " (or equivalent) check. Instead, use the `@RequiresApi` annotation to ensure " +
-                "that all calls are correctly guarded.",
+            "NullabilityAnnotationsDetector",
+            "Replace usages of JetBrains nullability annotations with androidx " +
+                "versions in Java code",
+            "The androidx nullability annotations should be used in androidx libraries " +
+                "instead of JetBrains annotations.",
             Category.CORRECTNESS, 5, Severity.ERROR,
-            Implementation(TargetApiAnnotationUsageDetector::class.java, Scope.JAVA_FILE_SCOPE)
+            Implementation(NullabilityAnnotationsDetector::class.java, Scope.JAVA_FILE_SCOPE)
         )
     }
 }

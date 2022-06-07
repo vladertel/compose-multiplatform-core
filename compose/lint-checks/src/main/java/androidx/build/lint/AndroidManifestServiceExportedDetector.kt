@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("UnstableApiUsage")
 
 package androidx.build.lint
 
-import com.android.SdkConstants.TAG_META_DATA
+import com.android.SdkConstants
 import com.android.tools.lint.detector.api.Category
 import com.android.tools.lint.detector.api.Detector
 import com.android.tools.lint.detector.api.Implementation
@@ -26,39 +25,37 @@ import com.android.tools.lint.detector.api.Issue
 import com.android.tools.lint.detector.api.Scope
 import com.android.tools.lint.detector.api.Severity
 import com.android.tools.lint.detector.api.XmlContext
-import com.android.xml.AndroidManifest.NODE_APPLICATION
-
+import com.android.tools.lint.detector.api.XmlScanner
 import org.w3c.dom.Element
 
-class MetadataTagInsideApplicationTagDetector : Detector(), Detector.XmlScanner {
+@Suppress("UnstableApiUsage")
+class AndroidManifestServiceExportedDetector : Detector(), XmlScanner {
 
     override fun getApplicableElements(): Collection<String> {
-        return listOf(TAG_META_DATA)
+        return listOf(SdkConstants.TAG_SERVICE)
     }
 
     override fun visitElement(context: XmlContext, element: Element) {
-        if (element.parentNode.nodeName == NODE_APPLICATION) {
-            val incident = Incident(context)
-                .issue(ISSUE)
-                .location(context.getLocation(element))
-                .message("Detected <application>-level meta-data tag.")
-                .scope(element)
-
+        val attrExported = element.getAttribute("android:${SdkConstants.ATTR_EXPORTED}")
+        if (attrExported != "true") {
+            val incident = Incident(context, ISSUE)
+                .message("Missing exported=true in <service> tag")
+                .at(element)
             context.report(incident)
         }
     }
 
     companion object {
         val ISSUE = Issue.create(
-            "MetadataTagInsideApplicationTag",
-            "Detected <application>-level <meta-data> tag in library manifest",
-            "Developers should not add <application>-level <meta-data> tags to library manifests" +
-                " because doing so may inadvertently cause denial-of-service attacks against" +
-                " other apps. Instead, developers may consider adding <metadata> nested " +
-                "inside of placeholder <service> tags.",
-            Category.CORRECTNESS, 5, Severity.ERROR,
-            Implementation(
-                MetadataTagInsideApplicationTagDetector::class.java,
+            id = "MissingServiceExportedEqualsTrue",
+            briefDescription = "Missing exported=true declaration in the <service> tag inside" +
+                " the library manifest",
+            explanation = "Library-defined services should set the exported attribute to true.",
+            category = Category.CORRECTNESS,
+            priority = 5,
+            severity = Severity.ERROR,
+            implementation = Implementation(
+                AndroidManifestServiceExportedDetector::class.java,
                 Scope.MANIFEST_SCOPE
             )
         )

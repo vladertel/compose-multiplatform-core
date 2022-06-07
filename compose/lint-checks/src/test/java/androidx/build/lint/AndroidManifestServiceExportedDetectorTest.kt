@@ -23,26 +23,44 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
-class MetadataTagInsideApplicationTagDetectorTest : AbstractLintDetectorTest(
-    useDetector = MetadataTagInsideApplicationTagDetector(),
-    useIssues = listOf(MetadataTagInsideApplicationTagDetector.ISSUE),
+class AndroidManifestServiceExportedDetectorTest : AbstractLintDetectorTest(
+    useDetector = AndroidManifestServiceExportedDetector(),
+    useIssues = listOf(AndroidManifestServiceExportedDetector.ISSUE),
 ) {
 
     @Test
-    fun `Detect usage of metadata tag inside application tag`() {
+    fun `Detect missing exported=true declaration in service tag`() {
         val input = arrayOf(
             manifestSample()
         )
 
         /* ktlint-disable max-line-length */
         val expected = """
-AndroidManifest.xml:19: Error: Detected <application>-level meta-data tag. [MetadataTagInsideApplicationTag]
-        <meta-data android:name="name" android:value="value" />
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+AndroidManifest.xml:21: Error: Missing exported=true in <service> tag [MissingServiceExportedEqualsTrue]
+        <service android:name="androidx.core.app.JobIntentService">
+        ^
 1 errors, 0 warnings
         """.trimIndent()
         /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
+    }
+
+    @Test
+    fun `Detect present exported=true declaration in service tag`() {
+        val input = xml(
+            "AndroidManifest.xml",
+            """
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <service
+            android:name="androidx.service"
+            android:exported="true" />
+    </application>
+</manifest>
+                """.trimIndent()
+        )
+
+        check(input).expectClean()
     }
 }
