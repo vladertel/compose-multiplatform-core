@@ -45,17 +45,13 @@ class ComposableFunInterfaceLowering(private val context: IrPluginContext) :
         val operator = expression.operator
         val type = expression.typeOperand
         val functionClass = type.classOrNull
-        val isForJsAndComposable = context.platform.isJs() &&
-            functionClass?.functions?.singleOrNull {
-                it.owner.modality == Modality.ABSTRACT
-            }?.owner?.annotations?.hasAnnotation(ComposeFqNames.Composable) == true
 
         return operator == IrTypeOperator.SAM_CONVERSION &&
             argument is IrFunctionExpression &&
             argument.origin.isLambda &&
             functionClass != null &&
             functionClass.owner.isFun &&
-            isForJsAndComposable
+            !context.platform.isJs()
         // IMPORTANT(b/178663739):
         // We are transforming not just SAM conversions for composable fun interfaces, but ALL
         // fun interfaces temporarily until KT-44622 gets fixed in the version of kotlin we
