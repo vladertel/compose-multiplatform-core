@@ -41,6 +41,9 @@ dependencies {
 val unzipTask = tasks.register("unzipWasm", Copy::class) {
     destinationDir = file(resourcesDir)
     from(skikoWasm.map { zipTree(it) })
+    rename { filename ->
+        filename.replace("skiko.js", "skiko1.js")
+    }
 }
 
 repositories {

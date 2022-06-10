@@ -30,13 +30,11 @@ import org.jetbrains.kotlin.backend.common.serialization.mangle.descriptor.Ir2De
 import org.jetbrains.kotlin.backend.common.serialization.metadata.DynamicTypeDeserializer
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureDescriptor
 import org.jetbrains.kotlin.backend.jvm.JvmGeneratorExtensions
-import org.jetbrains.kotlin.backend.jvm.JvmNameProvider
 import org.jetbrains.kotlin.backend.jvm.serialization.JvmIdSignatureDescriptor
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
 import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.cli.js.messageCollectorLogger
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
@@ -51,14 +49,12 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmDescriptorMangler
 import org.jetbrains.kotlin.incremental.components.LookupTracker
-import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.backend.js.TopDownAnalyzerFacadeForJSIR
 import org.jetbrains.kotlin.ir.backend.js.isBuiltIns
 import org.jetbrains.kotlin.ir.backend.js.jsResolveLibraries
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsIrLinker
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerDesc
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerIr
-import org.jetbrains.kotlin.ir.backend.jvm.serialization.EmptyLoggingContext
 import org.jetbrains.kotlin.ir.backend.jvm.serialization.JvmIrLinker
 import org.jetbrains.kotlin.ir.builders.TranslationPluginContext
 import org.jetbrains.kotlin.ir.builders.declarations.buildClass
@@ -66,9 +62,6 @@ import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
-import org.jetbrains.kotlin.ir.declarations.persistent.PersistentIrFactory
-import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
-import org.jetbrains.kotlin.ir.descriptors.IrFunctionFactory
 import org.jetbrains.kotlin.ir.util.ExternalDependenciesGenerator
 import org.jetbrains.kotlin.ir.util.IrMessageLogger
 import org.jetbrains.kotlin.ir.util.ReferenceSymbolTable
@@ -549,115 +542,7 @@ abstract class AbstractIrTransformTest : AbstractCodegenTest() {
         override val enabled: Boolean = classpath.isNotEmpty()
 
         override fun compile(files: List<KtFile>): IrModuleFragment {
-            val configuration = newConfiguration()
-            val dependencyFiles = classpath.map { it.absolutePath }
-            configuration.put(JSConfigurationKeys.LIBRARIES, dependencyFiles)
-
-            val environment = KotlinCoreEnvironment.createForTests(
-                myTestRootDisposable,
-                configuration,
-                EnvironmentConfigFiles.JS_CONFIG_FILES
-            )
-            setupEnvironment(environment)
-
-            val analyzer = AnalyzerWithCompilerReport(environment.configuration)
-            val deps = jsResolveLibraries(
-                dependencyFiles,
-                emptyList(),
-                messageCollectorLogger(
-                    environment.configuration[CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY]!! as MessageCollector
-                )
-            )
-
-            val moduleProvider = JsModuleProvider(environment, deps)
-
-            analyzer.analyzeAndReport(files) {
-                TopDownAnalyzerFacadeForJSIR.analyzeFiles(
-                    files,
-                    environment.project,
-                    environment.configuration,
-                    deps.getFullList().map { moduleProvider.getModuleDescriptor(it) },
-                    friendModuleDescriptors = emptyList(),
-                    thisIsBuiltInsModule = false,
-                    customBuiltInsModule = moduleProvider.builtInsModule,
-                    targetEnvironment = org.jetbrains.kotlin.resolve.CompilerEnvironment
-                )
-            }
-
-            val result = analyzer.analysisResult
-            TopDownAnalyzerFacadeForJSIR.checkForErrors(
-                files,
-                result.bindingContext,
-                ErrorTolerancePolicy.NONE
-            )
-            val mangler = JsManglerDesc
-            val signaturer = IdSignatureDescriptor(mangler)
-
-            val psi2Ir = Psi2IrTranslator(
-                configuration.languageVersionSettings,
-                Psi2IrConfiguration(),
-            )
-
-            val symbolTable = SymbolTable(signaturer, PersistentIrFactory())
-
-            val generatorContext = psi2Ir.createGeneratorContext(
-                result.moduleDescriptor,
-                result.bindingContext,
-                symbolTable,
-                GeneratorExtensions()
-            )
-
-            val irBuiltIns = generatorContext.irBuiltIns
-            val functionFactory = IrFunctionFactory(irBuiltIns, generatorContext.symbolTable)
-            irBuiltIns.functionFactory = functionFactory
-
-            val messageLogger = environment.configuration[IrMessageLogger.IR_MESSAGE_LOGGER]
-                ?: IrMessageLogger.None
-
-            val irLinker = JsIrLinker(
-                generatorContext.moduleDescriptor,
-                messageLogger,
-                generatorContext.irBuiltIns,
-                generatorContext.symbolTable,
-                functionFactory,
-                JsIrLinker.JsFePluginContext(
-                    result.moduleDescriptor,
-                    generatorContext.symbolTable,
-                    generatorContext.typeTranslator,
-                    generatorContext.irBuiltIns
-                ),
-            )
-
-            deps.getFullList(TopologicalLibraryOrder).forEach {
-                irLinker.deserializeOnlyHeaderModule(moduleProvider.getModuleDescriptor(it), it)
-            }
-
-            val sybmols = BuiltinSymbolsBase(
-                irBuiltIns,
-                irBuiltIns.builtIns,
-                generatorContext.symbolTable
-            )
-
-            psi2Ir.addPostprocessingStep {
-                postProcessingStep(it, generatorContext, irLinker, messageLogger, sybmols)
-            }
-
-            val moduleFragment = psi2Ir.generateModuleFragment(
-                generatorContext,
-                files,
-                listOf(irLinker),
-                emptyList(),
-            )
-
-            if (verifySignatures) {
-                moduleFragment.acceptVoid(
-                    ManglerChecker(JsManglerIr, Ir2DescriptorManglerAdapter(JsManglerDesc))
-                )
-            }
-
-            irLinker.postProcess()
-
-            return moduleFragment
+            TODO("implement")
         }
     }
 

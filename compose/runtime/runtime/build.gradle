@@ -16,6 +16,7 @@
 
 import androidx.build.AndroidXComposePlugin
 import androidx.build.LibraryType
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 
 plugins {
     id("AndroidXPlugin")
@@ -147,6 +148,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     }
     dependencies {
         samples(projectOrArtifact(":compose:runtime:runtime:runtime-samples"))
+    }
+}
+
+tasks.withType(KotlinNativeCompile).configureEach {
+    kotlinOptions {
+        // TODO: the current compose binary surprises LLVM, so disable checks for now.
+        freeCompilerArgs += ["-Xdisable-phases=VerifyBitcode"]
     }
 }
 
