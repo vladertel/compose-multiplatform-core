@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,22 @@
 
 package androidx;
 
-import androidx.annotation.NonNull;
+import android.view.SearchEvent;
+import android.view.Window;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import androidx.annotation.RequiresApi;
 
+/**
+ * Test class containing unsafe method reference that uses a value defined with a qualified class.
+ */
 @SuppressWarnings("unused")
-public class ConcurrentHashMapUsageJava {
-
-    private final ConcurrentHashMap<?, ?> mMap = new ConcurrentHashMap<>();
-
-    @NonNull
-    public <V, K> Map<V, K> createMap() {
-        return new ConcurrentHashMap<>();
+public class AutofixUnsafeMethodWithQualifiedClass {
+    /**
+     * This method uses Window.Callback (not Callback), so the fix should also use Window.Callback.
+     */
+    @RequiresApi(23)
+    public boolean unsafeReferenceOnQualifiedClass(Window.Callback callback,
+            SearchEvent searchEvent) {
+        return callback.onSearchRequested(searchEvent);
     }
 }

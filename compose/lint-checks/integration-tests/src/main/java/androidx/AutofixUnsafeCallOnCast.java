@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,20 @@
 
 package androidx;
 
-@SuppressWarnings("unused")
-public class SynchronizedMethodJava {
+import android.os.Build;
+import android.view.DisplayCutout;
 
-    public synchronized void someMethod() {
+/**
+ * Test class containing unsafe reference on cast object.
+ */
+@SuppressWarnings("unused")
+public class AutofixUnsafeCallOnCast {
+    /**
+     * Method making unsafe reference on cast object.
+     */
+    public void unsafeReferenceOnCastObject(Object secretDisplayCutout) {
+        if (Build.VERSION.SDK_INT >= 28) {
+            ((DisplayCutout) secretDisplayCutout).getSafeInsetTop();
+        }
     }
 }
