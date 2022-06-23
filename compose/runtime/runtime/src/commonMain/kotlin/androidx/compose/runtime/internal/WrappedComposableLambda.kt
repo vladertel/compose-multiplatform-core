@@ -90,7 +90,7 @@ private fun wrapComposableLambda(
     invokeArgumentsCount: Int
 ): Any? {
     return when (invokeArgumentsCount) {
-        2 -> {
+        2 -> { // 2 is min. ComposableLambda has at least Composer and change: Int parameters
             val l: (Composer, Int) -> Any? = { composer, changed ->
                 composableLambda.invoke(composer, changed)
             }
@@ -115,21 +115,166 @@ private fun wrapComposableLambda(
             l
         }
         6 -> {
-            val l: (Any?, Any?, Any?, Any?, Composer, Int) -> Any? = { p1, p2, p3, p4, composer, changed ->
-                composableLambda.invoke(p1, p2, p3, p4, composer, changed)
-            }
+            val l: (Any?, Any?, Any?, Any?, Composer, Int) -> Any? =
+                { p1, p2, p3, p4, composer, changed ->
+                    composableLambda.invoke(p1, p2, p3, p4, composer, changed)
+                }
             l
         }
         7 -> {
-            val l: (Any?, Any?, Any?, Any?, Any?, Composer, Int) -> Any? = { p1, p2, p3, p4, p5, composer, changed ->
-                composableLambda.invoke(p1, p2, p3, p4, p5, composer, changed)
-            }
+            val l: (Any?, Any?, Any?, Any?, Any?, Composer, Int) -> Any? =
+                { p1, p2, p3, p4, p5, composer, changed ->
+                    composableLambda.invoke(p1, p2, p3, p4, p5, composer, changed)
+                }
             l
         }
         8 -> {
-            val l: (Any?, Any?, Any?, Any?, Any?, Any?, Composer, Int) -> Any? = { p1, p2, p3, p4, p5, p6, composer, changed ->
-                composableLambda.invoke(p1, p2, p3, p4, p5, p6, composer, changed)
-            }
+            val l: (Any?, Any?, Any?, Any?, Any?, Any?, Composer, Int) -> Any? =
+                { p1, p2, p3, p4, p5, p6, composer, changed ->
+                    composableLambda.invoke(p1, p2, p3, p4, p5, p6, composer, changed)
+                }
+            l
+        }
+        9 -> {
+            val l: (Any?, Any?, Any?, Any?, Any?, Any?, Any?, Composer, Int) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, composer, changed ->
+                    composableLambda.invoke(p1, p2, p3, p4, p5, p6, p7, composer, changed)
+                }
+            l
+        }
+        10 -> {
+            val l: (Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Composer, Int) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, composer, changed ->
+                    composableLambda.invoke(p1, p2, p3, p4, p5, p6, p7, p8, composer, changed)
+                }
+            l
+        }
+        11 -> {
+            val l: (Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Composer, Int) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, composer, changed ->
+                    composableLambda.invoke(p1, p2, p3, p4, p5, p6, p7, p8, p9, composer, changed)
+                }
+            l
+        }
+        13 -> {
+            val l: (
+                Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Composer, Int, Int
+            ) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, composer, changed, changed2 ->
+                    composableLambda.invoke(
+                        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10,
+                        composer, changed, changed2
+                    )
+                }
+            l
+        }
+        14 -> {
+            val l: (
+                Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Composer, Int, Int
+            ) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, composer, changed, changed2 ->
+                    composableLambda.invoke(
+                        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11,
+                        composer, changed, changed2
+                    )
+                }
+            l
+        }
+        15 -> {
+            val l: (
+                Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?,
+                Composer, Int, Int
+            ) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, composer, changed, changed2 ->
+                    composableLambda.invoke(
+                        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12,
+                        composer, changed, changed2
+                    )
+                }
+            l
+        }
+        16 -> {
+            val l: (
+                Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?,
+                Composer, Int, Int
+            ) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13,
+                    composer, changed, changed2 ->
+                    composableLambda.invoke(
+                        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13,
+                        composer, changed, changed2
+                    )
+                }
+            l
+        }
+        17 -> {
+            val l: (
+                Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?,
+                Composer, Int, Int
+            ) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14,
+                    composer, changed, changed2 ->
+                    composableLambda.invoke(
+                        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14,
+                        composer, changed, changed2
+                    )
+                }
+            l
+        }
+        18 -> {
+            val l: (
+                Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?,
+                Any?, Composer, Int, Int
+            ) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15,
+                    composer, changed, changed2 ->
+                    composableLambda.invoke(
+                        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15,
+                        composer, changed, changed2
+                    )
+                }
+            l
+        }
+        19 -> {
+            val l: (
+                Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?,
+                Any?, Any?, Composer, Int, Int
+            ) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16,
+                    composer, changed, changed2 ->
+                    composableLambda.invoke(
+                        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16,
+                        composer, changed, changed2
+                    )
+                }
+            l
+        }
+        20 -> {
+            val l: (
+                Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?,
+                Any?, Any?, Any?, Composer, Int, Int
+            ) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17,
+                    composer, changed, changed2 ->
+                    composableLambda.invoke(
+                        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17,
+                        composer, changed, changed2
+                    )
+                }
+            l
+        }
+        21 -> {
+            val l: (
+                Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?, Any?,
+                Any?, Any?, Any?, Any?, Composer, Int, Int
+            ) -> Any? =
+                { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18,
+                    composer, changed, changed2 ->
+                    composableLambda.invoke(
+                        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17,
+                        p18, composer, changed, changed2
+                    )
+                }
             l
         }
         else -> null

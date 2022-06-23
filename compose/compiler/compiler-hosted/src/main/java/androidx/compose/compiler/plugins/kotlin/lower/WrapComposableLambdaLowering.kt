@@ -21,12 +21,14 @@ import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.SYNTHETIC_OFFSET
+import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.resolve.BindingTrace
 
@@ -96,12 +98,14 @@ class WrapComposableLambdaLowering(
 
     companion object {
         // To be wrapped
-        const val COMPOSABLE_LAMBDA = "composableLambda"
-        const val COMPOSABLE_LAMBDA_INSTANCE = "composableLambdaInstance"
+        private const val COMPOSABLE_LAMBDA = "composableLambda"
+        private const val COMPOSABLE_LAMBDA_INSTANCE = "composableLambdaInstance"
 
         // The wrappers
-        const val WRAPPED_COMPOSABLE_LAMBDA = "wrappedComposableLambda"
-        const val WRAPPED_COMPOSABLE_LAMBDA_INSTANCE = "wrappedComposableLambdaInstance"
+        private const val WRAPPED_COMPOSABLE_LAMBDA = "wrappedComposableLambda"
+        private const val WRAPPED_COMPOSABLE_LAMBDA_INSTANCE = "wrappedComposableLambdaInstance"
+
+        private const val MAX_ARGUMENTS_ALLOWED = 21 // According to ComposableLambda interface
     }
 
     private val composableLambdaSymbol = symbolRemapper.getReferencedSimpleFunction(
@@ -139,6 +143,11 @@ class WrapComposableLambdaLowering(
         val lambda = originalCall.getValueArgument(originalCall.valueArgumentsCount - 1)
             as IrFunctionExpression
 
+        val argumentsCount = lambda.function.valueParameters.size +
+            if (lambda.function.extensionReceiverParameter != null) 1 else 0
+
+        ensureValidArgumentsCount(argumentsCount, originalCall)
+
         return IrCallImpl(
             startOffset = SYNTHETIC_OFFSET,
             endOffset = SYNTHETIC_OFFSET,
@@ -151,13 +160,7 @@ class WrapComposableLambdaLowering(
             putValueArgument(0, originalCall.getValueArgument(0)) // composer
             putValueArgument(1, originalCall.getValueArgument(1)) // key
             putValueArgument(2, originalCall.getValueArgument(2)) // tracked
-            val invokeArgumentsCount = IrConstImpl.int(
-                SYNTHETIC_OFFSET, SYNTHETIC_OFFSET,
-                context.irBuiltIns.intType,
-                lambda.function.valueParameters.size +
-                    if (lambda.function.extensionReceiverParameter != null) 1 else 0
-            )
-            putValueArgument(3, invokeArgumentsCount) // invokeArgumentsCount
+            putValueArgument(3, argumentsCount.asIrConst()) // invokeArgumentsCount
             putValueArgument(4, lambda)
         }
     }
@@ -165,6 +168,12 @@ class WrapComposableLambdaLowering(
     private fun visitComposableLambdaInstanceCall(originalCall: IrCall): IrCall {
         val lambda = originalCall.getValueArgument(originalCall.valueArgumentsCount - 1)
             as IrFunctionExpression
+
+        val argumentsCount = lambda.function.valueParameters.size +
+            if (lambda.function.extensionReceiverParameter != null) 1 else 0
+
+        ensureValidArgumentsCount(argumentsCount, originalCall)
+
         return IrCallImpl(
             startOffset = SYNTHETIC_OFFSET,
             endOffset = SYNTHETIC_OFFSET,
@@ -174,14 +183,35 @@ class WrapComposableLambdaLowering(
             valueArgumentsCount = 2,
             origin = originalCall.origin
         ).apply {
-            val invokeArgumentsCount = IrConstImpl.int(
-                SYNTHETIC_OFFSET, SYNTHETIC_OFFSET,
-                context.irBuiltIns.intType,
-                lambda.function.valueParameters.size +
-                    if (lambda.function.extensionReceiverParameter != null) 1 else 0
-            )
-            putValueArgument(0, invokeArgumentsCount) // invokeArgumentsCount
+            putValueArgument(0, argumentsCount.asIrConst()) // invokeArgumentsCount
             putValueArgument(1, originalCall) // call to composableLambda
         }
+    }
+
+    /**
+     * [argumentsCount] Can't be:
+     * - less than 2. ComposableLambda has a least 2 parameters: Composer and changed: Int
+     * - equal to 12. It's invalid. If there are more than 11 arguments, then 1 extra
+     *   `changed: Int` needed to keep "changed" bitmask for all parameters.
+     *   Therefore the next possible arity is 13.
+     * - more than MAX_ARGUMENTS_ALLOWED. According to `invoke` overloads in ComposableLambda:
+     *   18 arbitrary parameters + 1 Composer + 2 changed: Int
+     */
+    private fun ensureValidArgumentsCount(argumentsCount: Int, expressionToDump: IrExpression) {
+        if (argumentsCount < 2 || argumentsCount == 12) {
+            error("Unexpected call arguments count - $argumentsCount: ${expressionToDump.dump()}")
+        } else if (argumentsCount > MAX_ARGUMENTS_ALLOWED) {
+            error("ComposableLambda should never exceed $MAX_ARGUMENTS_ALLOWED parameters, " +
+                "but had $argumentsCount: ${expressionToDump.dump()}"
+            )
+        }
+    }
+
+    private fun Int.asIrConst(): IrConst<Int> {
+        return IrConstImpl.int(
+            SYNTHETIC_OFFSET, SYNTHETIC_OFFSET,
+            context.irBuiltIns.intType,
+            this
+        )
     }
 }
