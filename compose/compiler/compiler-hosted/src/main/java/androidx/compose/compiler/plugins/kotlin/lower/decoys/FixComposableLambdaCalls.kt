@@ -82,7 +82,7 @@ class FixComposableLambdaCalls(
         require(context.platform.isJs()) {
             "FixComposableLambdaCalls transformation is intended only for kotlin/js targets"
         }
-        module.transformChildrenVoid(this)
+        //module.transformChildrenVoid(this)
     }
 
     private fun IrType.hasComposerDirectly(): Boolean {

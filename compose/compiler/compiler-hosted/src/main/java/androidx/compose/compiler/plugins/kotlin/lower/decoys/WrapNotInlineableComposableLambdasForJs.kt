@@ -106,7 +106,7 @@ class WrapNotInlineableComposableLambdasForJs(
         require(context.platform.isJs()) {
             "This transformation is intended only for kotlin/js targets"
         }
-        module.transformChildrenVoid(this)
+        //module.transformChildrenVoid(this)
     }
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {

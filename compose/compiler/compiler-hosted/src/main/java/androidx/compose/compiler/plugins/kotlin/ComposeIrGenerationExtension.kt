@@ -29,6 +29,7 @@ import androidx.compose.compiler.plugins.kotlin.lower.DurableKeyVisitor
 import androidx.compose.compiler.plugins.kotlin.lower.KlibAssignableParamTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.DurableFunctionKeyTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.LiveLiteralTransformer
+import androidx.compose.compiler.plugins.kotlin.lower.WrapComposableLambdaLowering
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.CreateDecoysTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.FixComposableLambdaCalls
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.RecordDecoySignaturesTransformer
@@ -222,6 +223,18 @@ class ComposeIrGenerationExtension(
                 symbolRemapper,
                 bindingTrace,
                 metrics,
+            ).lower(moduleFragment)
+        }
+
+        if (pluginContext.platform.isJs()) {
+            // This lowering works on JVM and k/native too, but it's redundant for them.
+            // It should run last:
+            // It modifies IR in a way, that can be unexpected for other lowerings logic.
+            WrapComposableLambdaLowering(
+                pluginContext,
+                symbolRemapper,
+                bindingTrace,
+                metrics
             ).lower(moduleFragment)
         }
 

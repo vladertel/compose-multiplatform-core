@@ -19,7 +19,17 @@ package androidx.compose.runtime
 import androidx.compose.runtime.internal.ComposableLambda
 
 actual internal fun invokeComposable(composer: Composer, composable: @Composable () -> Unit) {
-    composable.unsafeCast<ComposableLambda>().invoke(composer, 1)
+    if (composable is ComposableLambda) {
+        composable.unsafeCast<ComposableLambda>().invoke(composer, 1)
+    } else {
+        js("typeof composable;")
+        composable.unsafeCast<Function2<Any, Int, Unit>>().invoke(composer, 1)
+    }
+//    composable.unsafeCast<ComposableLambda>().invoke(composer, 1)
+//    if (ComposeVersion.version <= 6700) {
+//        composable.unsafeCast<ComposableLambda>().invoke(composer, 1)
+//    } else {
+//    }
 }
 
 actual internal fun <T> invokeComposableForResult(
