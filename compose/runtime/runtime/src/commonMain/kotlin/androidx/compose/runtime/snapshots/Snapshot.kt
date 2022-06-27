@@ -29,7 +29,7 @@ import androidx.compose.runtime.createSynchronizedObject
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-import kotlin.jvm.JvmDefaultWithCompatibility
+import androidx.compose.runtime.JvmDefaultWithCompatibility
 
 /**
  * A snapshot of the values return by mutable states and other state objects. All state object

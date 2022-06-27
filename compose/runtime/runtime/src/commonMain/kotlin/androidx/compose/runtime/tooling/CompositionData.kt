@@ -16,7 +16,7 @@
 
 package androidx.compose.runtime.tooling
 
-import kotlin.jvm.JvmDefaultWithCompatibility
+import androidx.compose.runtime.JvmDefaultWithCompatibility
 
 /**
  * A [CompositionData] is the data tracked by the composer during composition.

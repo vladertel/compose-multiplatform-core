@@ -17,7 +17,7 @@
 package androidx.compose.ui.layout
 
 import androidx.compose.ui.Modifier
-import kotlin.jvm.JvmDefaultWithCompatibility
+import androidx.compose.runtime.JvmDefaultWithCompatibility
 
 /**
  * A [Modifier.Element] that provides a [Remeasurement] object associated with the layout node

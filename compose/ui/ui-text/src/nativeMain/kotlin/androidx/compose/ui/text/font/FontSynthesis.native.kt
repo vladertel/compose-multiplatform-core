@@ -1,5 +1,7 @@
+package androidx.compose.ui.text.font
+
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package androidx.compose.ui.graphics.drawscope
-
-import androidx.compose.runtime.JvmDefaultWithCompatibility
 
 /**
- * Receiver scope for drawing content into a layout, where the content can
- * be drawn between other canvas operations. If [drawContent] is not called,
- * the contents of the layout will not be drawn.
+ * Do not do font synthesis on native
  */
-@JvmDefaultWithCompatibility
-interface ContentDrawScope : DrawScope {
-    /**
-     * Causes child drawing operations to run during the `onPaint` lambda.
-     */
-    fun drawContent()
-}
+internal actual fun FontSynthesis.synthesizeTypeface(
+    typeface: Any,
+    font: Font,
+    requestedWeight: FontWeight,
+    requestedStyle: FontStyle
+): Any = typeface
