@@ -21,13 +21,16 @@ import kotlin.test.Test
 import kotlin.test.assertSame
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.withContext
+import kotlinx.test.IgnoreJsAndNative
 
 @OptIn(ExperimentalComposeApi::class)
 class SnapshotContextElementTests {
     @Test
-    fun coroutineEntersExpectedSnapshot() = runBlocking {
+    @IgnoreJsAndNative
+    fun coroutineEntersExpectedSnapshot() = runTest(UnconfinedTestDispatcher()) {
         val snapshot = Snapshot.takeSnapshot()
         try {
             withContext(snapshot.asContextElement()) {
@@ -39,11 +42,12 @@ class SnapshotContextElementTests {
     }
 
     @Test
+    @IgnoreJsAndNative
     fun snapshotRestoredAfterResume() {
         val snapshotOne = Snapshot.takeSnapshot()
         val snapshotTwo = Snapshot.takeSnapshot()
         try {
-            runBlocking {
+            runTest(UnconfinedTestDispatcher()) {
                 val stopA = Job()
                 val jobA = launch(snapshotOne.asContextElement()) {
                     assertSame(snapshotOne, Snapshot.current, "expected snapshotOne, A")

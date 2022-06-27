@@ -16,6 +16,8 @@
 
 package androidx.compose.runtime
 
+import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.runtime.snapshots.SnapshotContextElement
 import kotlinx.coroutines.CoroutineScope
 
 // TODO(aelias): Mark the typealiases internal when https://youtrack.jetbrains.com/issue/KT-36695 is fixed.
@@ -118,3 +120,10 @@ internal expect fun <T> invokeComposableForResult(
     composer: Composer,
     composable: @Composable () -> T
 ): T
+
+expect annotation class JvmDefaultWithCompatibility()
+
+@OptIn(ExperimentalComposeApi::class)
+internal expect class SnapshotContextElementImpl(
+    snapshot: Snapshot
+) : SnapshotContextElement

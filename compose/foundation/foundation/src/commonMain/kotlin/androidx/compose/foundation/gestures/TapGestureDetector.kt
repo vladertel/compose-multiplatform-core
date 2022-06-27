@@ -38,7 +38,7 @@ import androidx.compose.ui.util.fastForEach
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlin.jvm.JvmDefaultWithCompatibility
+import androidx.compose.runtime.JvmDefaultWithCompatibility
 
 /**
  * Receiver scope for [detectTapGestures]'s `onPress` lambda. This offers
