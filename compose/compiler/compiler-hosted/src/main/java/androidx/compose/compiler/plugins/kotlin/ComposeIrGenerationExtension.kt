@@ -227,14 +227,12 @@ class ComposeIrGenerationExtension(
         }
 
         if (pluginContext.platform.isJs()) {
-            // This lowering works on JVM and k/native too, but it's redundant for them.
-            // It should run last:
-            // It modifies IR in a way, that can be unexpected for other lowerings logic.
             WrapComposableLambdaLowering(
                 pluginContext,
                 symbolRemapper,
+                idSignatureBuilder!!,
                 bindingTrace,
-                metrics
+                metrics,
             ).lower(moduleFragment)
         }
 
