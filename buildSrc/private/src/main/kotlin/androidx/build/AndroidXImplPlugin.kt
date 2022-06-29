@@ -279,7 +279,7 @@ class AndroidXImplPlugin : Plugin<Project> {
             }
         }
         if (plugin is KotlinMultiplatformPluginWrapper) {
-            project.configureKonanDirectory()
+            //project.configureKonanDirectory()
             project.extensions.findByType<LibraryExtension>()?.apply {
                 configureAndroidLibraryWithMultiplatformPluginOptions()
             }
