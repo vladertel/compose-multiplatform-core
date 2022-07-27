@@ -137,7 +137,7 @@ fun BadgedBox(
 @Composable
 fun Badge(
     modifier: Modifier = Modifier,
-    containerColor: Color = BadgeDefaults.ContainerColor,
+    containerColor: Color = BadgeDefaults.containerColor,
     contentColor: Color = contentColorFor(containerColor),
     content: @Composable (RowScope.() -> Unit)? = null,
 ) {
@@ -169,8 +169,10 @@ fun Badge(
             CompositionLocalProvider(
                 LocalContentColor provides contentColor
             ) {
-                val style =
-                    MaterialTheme.typography.fromToken(BadgeTokens.LargeLabelTextFont)
+                val style = copyAndSetFontPadding(
+                    style = MaterialTheme.typography.fromToken(BadgeTokens.LargeLabelTextFont),
+                    includeFontPadding = false
+                )
                 ProvideTextStyle(
                     value = style,
                     content = { content() }
@@ -183,7 +185,7 @@ fun Badge(
 /** Default values used for [Badge] implementations. */
 object BadgeDefaults {
     /** Default container color for a badge. */
-    val ContainerColor: Color @Composable get() = BadgeTokens.Color.toColor()
+    val containerColor: Color @Composable get() = BadgeTokens.Color.toColor()
 }
 
 /*@VisibleForTesting*/

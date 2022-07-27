@@ -173,7 +173,14 @@ fun Slider(
                 minWidth = SliderTokens.HandleWidth,
                 minHeight = SliderTokens.HandleHeight
             )
-            .sliderSemantics(value, enabled, onValueChange, valueRange, steps)
+            .sliderSemantics(
+                value,
+                enabled,
+                onValueChange,
+                onValueChangeFinished,
+                valueRange,
+                steps
+            )
             .focusable(enabled, interactionSource)
     ) {
         val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -378,6 +385,7 @@ fun RangeSlider(
             coercedStart,
             enabled,
             { value -> onValueChangeState.value.invoke(value..coercedEnd) },
+            onValueChangeFinished,
             valueRange.start..coercedEnd,
             startSteps
         )
@@ -385,6 +393,7 @@ fun RangeSlider(
             coercedEnd,
             enabled,
             { value -> onValueChangeState.value.invoke(coercedStart..value) },
+            onValueChangeFinished,
             coercedStart..valueRange.endInclusive,
             endSteps
         )
@@ -600,7 +609,7 @@ private fun SliderImpl(
         val trackStrokeWidth: Float
         val widthDp: Dp
         with(LocalDensity.current) {
-            trackStrokeWidth = SliderTokens.ActiveTrackHeight.toPx()
+            trackStrokeWidth = TrackHeight.toPx()
             widthDp = width.toDp()
         }
 
@@ -680,8 +689,11 @@ private fun Track(
     thumbWidth: Dp,
     trackStrokeWidth: Float
 ) {
-    val thumbRadiusPx = with(LocalDensity.current) {
-        thumbWidth.toPx() / 2
+    val thumbRadiusPx: Float
+    val tickSize: Float
+    with(LocalDensity.current) {
+        thumbRadiusPx = thumbWidth.toPx() / 2
+        tickSize = TickSize.toPx()
     }
     val inactiveTrackColor = colors.trackColor(enabled, active = false)
     val activeTrackColor = colors.trackColor(enabled, active = true)
@@ -725,7 +737,7 @@ private fun Track(
                     },
                     PointMode.Points,
                     (if (outsideFraction) inactiveTickColor else activeTickColor).value,
-                    trackStrokeWidth,
+                    tickSize,
                     StrokeCap.Round
                 )
             }
@@ -778,6 +790,7 @@ private fun Modifier.sliderSemantics(
     value: Float,
     enabled: Boolean,
     onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     steps: Int = 0
 ): Modifier {
@@ -812,6 +825,7 @@ private fun Modifier.sliderSemantics(
                     false
                 } else {
                     onValueChange(resolvedValue)
+                    onValueChangeFinished?.invoke()
                     true
                 }
             }
@@ -1079,9 +1093,10 @@ private val ThumbHeight = SliderTokens.HandleHeight
 private val ThumbSize = DpSize(ThumbWidth, ThumbHeight)
 private val ThumbDefaultElevation = 1.dp
 private val ThumbPressedElevation = 6.dp
+private val TickSize = SliderTokens.TickMarksContainerSize
 
 // Internal to be referred to in tests
-internal val TrackHeight = 4.dp
+internal val TrackHeight = SliderTokens.InactiveTrackHeight
 private val SliderHeight = 48.dp
 private val SliderMinWidth = 144.dp // TODO: clarify min width
 private val DefaultSliderConstraints =

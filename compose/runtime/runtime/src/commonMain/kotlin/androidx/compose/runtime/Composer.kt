@@ -1116,6 +1116,15 @@ private var compositionTracer: CompositionTracer? = null
 @ComposeCompilerApi
 fun isTraceInProgress(): Boolean = compositionTracer.let { it != null && it.isTraceInProgress() }
 
+@OptIn(InternalComposeTracingApi::class)
+@ComposeCompilerApi
+@Deprecated(
+    message = "Use the overload with \$dirty metadata instead",
+    ReplaceWith("traceEventStart(key, dirty1, dirty2, info)"),
+    DeprecationLevel.HIDDEN
+)
+fun traceEventStart(key: Int, info: String): Unit = traceEventStart(key, -1, -1, info)
+
 /**
  * Internal tracing API.
  *
@@ -1126,8 +1135,9 @@ fun isTraceInProgress(): Boolean = compositionTracer.let { it != null && it.isTr
  */
 @OptIn(InternalComposeTracingApi::class)
 @ComposeCompilerApi
-fun traceEventStart(key: Int, dirty1: Int, dirty2: Int, info: String): Unit =
-    compositionTracer?.traceEventStart(key, dirty1, dirty2, info) ?: Unit
+fun traceEventStart(key: Int, dirty1: Int, dirty2: Int, info: String) {
+    compositionTracer?.traceEventStart(key, dirty1, dirty2, info)
+}
 
 /**
  * Internal tracing API.
@@ -1136,7 +1146,9 @@ fun traceEventStart(key: Int, dirty1: Int, dirty2: Int, info: String): Unit =
  */
 @OptIn(InternalComposeTracingApi::class)
 @ComposeCompilerApi
-fun traceEventEnd(): Unit = compositionTracer?.traceEventEnd() ?: Unit
+fun traceEventEnd() {
+    compositionTracer?.traceEventEnd()
+}
 
 /**
  * A Compose internal function. DO NOT call directly.
@@ -3074,7 +3086,7 @@ internal class ComposerImpl(
             nodeIndex = 0
             invalidations.fastForEach { (scope, instances) ->
                 if (instances != null) {
-                    instances.forEach { instance ->
+                    instances.fastForEach { instance ->
                         tryImminentInvalidation(scope, instance)
                     }
                 } else {

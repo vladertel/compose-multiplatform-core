@@ -48,7 +48,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
@@ -93,7 +92,7 @@ import kotlin.math.roundToInt
 @Composable
 fun NavigationBar(
     modifier: Modifier = Modifier,
-    containerColor: Color = NavigationBarDefaults.ContainerColor,
+    containerColor: Color = NavigationBarDefaults.containerColor,
     contentColor: Color = MaterialTheme.colorScheme.contentColorFor(containerColor),
     tonalElevation: Dp = NavigationBarDefaults.Elevation,
     content: @Composable RowScope.() -> Unit
@@ -243,11 +242,11 @@ fun RowScope.NavigationBarItem(
 
 /** Defaults used in [NavigationBar]. */
 object NavigationBarDefaults {
-    /** Default color for a navigation bar. */
-    val ContainerColor: Color @Composable get() = NavigationBarTokens.ContainerColor.toColor()
-
     /** Default elevation for a navigation bar. */
     val Elevation: Dp = NavigationBarTokens.ContainerElevation
+
+    /** Default color for a navigation bar. */
+    val containerColor: Color @Composable get() = NavigationBarTokens.ContainerColor.toColor()
 }
 
 /** Defaults used in [NavigationBarItem]. */
@@ -503,9 +502,8 @@ private fun MeasureScope.placeLabelAndIcon(
 ): MeasureResult {
     val height = constraints.maxHeight
 
-    val baseline = labelPlaceable[LastBaseline]
     // Label should be `ItemVerticalPadding` from the bottom
-    val labelY = height - baseline - NavigationBarItemVerticalPadding.roundToPx()
+    val labelY = height - labelPlaceable.height - NavigationBarItemVerticalPadding.roundToPx()
 
     // Icon (when selected) should be `ItemVerticalPadding` from the top
     val selectedIconY = NavigationBarItemVerticalPadding.roundToPx()

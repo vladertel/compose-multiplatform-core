@@ -112,7 +112,7 @@ fun AssistChip(
     trailingIcon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     elevation: ChipElevation? = AssistChipDefaults.assistChipElevation(),
-    shape: Shape = AssistChipDefaults.Shape,
+    shape: Shape = AssistChipDefaults.shape,
     border: ChipBorder? = AssistChipDefaults.assistChipBorder(),
     colors: ChipColors = AssistChipDefaults.assistChipColors()
 ) = Chip(
@@ -184,7 +184,7 @@ fun ElevatedAssistChip(
     trailingIcon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     elevation: ChipElevation? = AssistChipDefaults.elevatedAssistChipElevation(),
-    shape: Shape = AssistChipDefaults.Shape,
+    shape: Shape = AssistChipDefaults.shape,
     border: ChipBorder? = null,
     colors: ChipColors = AssistChipDefaults.elevatedAssistChipColors()
 ) = Chip(
@@ -220,8 +220,8 @@ fun ElevatedAssistChip(
  * This filter chip is applied with a flat style. If you want an elevated style, use the
  * [ElevatedFilterChip].
  *
- * Tapping on a filter chip selects it, and in case a [selectedIcon] is provided (e.g. a checkmark),
- * it's appended to the starting edge of the chip's label, drawn instead of any given [leadingIcon].
+ * Tapping on a filter chip toggles its selection state. A selection state [leadingIcon] can be
+ * provided (e.g. a checkmark) to be appended at the starting edge of the chip's label.
  *
  * Example of a flat FilterChip with a trailing icon:
  * @sample androidx.compose.material3.samples.FilterChipSample
@@ -236,9 +236,9 @@ fun ElevatedAssistChip(
  * @param enabled controls the enabled state of this chip. When `false`, this component will not
  * respond to user input, and it will appear visually disabled and disabled to accessibility
  * services.
- * @param leadingIcon optional icon at the start of the chip, preceding the [label] text
- * @param selectedIcon optional icon at the start of the chip, preceding the [label] text, which is
- * displayed when the chip is selected, instead of any given [leadingIcon]
+ * @param leadingIcon optional icon at the start of the chip, preceding the [label] text. When
+ * [selected] is true, this icon may visually indicate that the chip is selected (for example, via a
+ * checkmark icon).
  * @param trailingIcon optional icon at the end of the chip
  * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
  * for this chip. You can create and pass in your own `remember`ed instance to observe
@@ -263,11 +263,10 @@ fun FilterChip(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     leadingIcon: @Composable (() -> Unit)? = null,
-    selectedIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     elevation: SelectableChipElevation? = FilterChipDefaults.filterChipElevation(),
-    shape: Shape = FilterChipDefaults.Shape,
+    shape: Shape = FilterChipDefaults.shape,
     border: SelectableChipBorder? = FilterChipDefaults.filterChipBorder(),
     colors: SelectableChipColors = FilterChipDefaults.filterChipColors()
 ) = SelectableChip(
@@ -277,7 +276,7 @@ fun FilterChip(
     enabled = enabled,
     label = label,
     labelTextStyle = MaterialTheme.typography.fromToken(FilterChipTokens.LabelTextFont),
-    leadingIcon = if (selected) selectedIcon else leadingIcon,
+    leadingIcon = leadingIcon,
     avatar = null,
     trailingIcon = trailingIcon,
     elevation = elevation,
@@ -304,8 +303,8 @@ fun FilterChip(
  * This filter chip is applied with an elevated style. If you want a flat style, use the
  * [FilterChip].
  *
- * Tapping on a filter chip selects it, and in case a [selectedIcon] is provided (e.g. a checkmark),
- * it's appended to the starting edge of the chip's label, drawn instead of any given [leadingIcon].
+ * Tapping on a filter chip toggles its selection state. A selection state [leadingIcon] can be
+ * provided (e.g. a checkmark) to be appended at the starting edge of the chip's label.
  *
  * Example of an elevated FilterChip with a trailing icon:
  * @sample androidx.compose.material3.samples.ElevatedFilterChipSample
@@ -317,9 +316,9 @@ fun FilterChip(
  * @param enabled controls the enabled state of this chip. When `false`, this component will not
  * respond to user input, and it will appear visually disabled and disabled to accessibility
  * services.
- * @param leadingIcon optional icon at the start of the chip, preceding the [label] text
- * @param selectedIcon optional icon at the start of the chip, preceding the [label] text, which is
- * displayed when the chip is selected, instead of any given [leadingIcon]
+ * @param leadingIcon optional icon at the start of the chip, preceding the [label] text. When
+ * [selected] is true, this icon may visually indicate that the chip is selected (for example, via a
+ * checkmark icon).
  * @param trailingIcon optional icon at the end of the chip
  * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
  * for this chip. You can create and pass in your own `remember`ed instance to observe
@@ -344,11 +343,10 @@ fun ElevatedFilterChip(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     leadingIcon: @Composable (() -> Unit)? = null,
-    selectedIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     elevation: SelectableChipElevation? = FilterChipDefaults.elevatedFilterChipElevation(),
-    shape: Shape = FilterChipDefaults.Shape,
+    shape: Shape = FilterChipDefaults.shape,
     border: SelectableChipBorder? = null,
     colors: SelectableChipColors = FilterChipDefaults.elevatedFilterChipColors()
 ) = SelectableChip(
@@ -358,7 +356,7 @@ fun ElevatedFilterChip(
     enabled = enabled,
     label = label,
     labelTextStyle = MaterialTheme.typography.fromToken(FilterChipTokens.LabelTextFont),
-    leadingIcon = if (selected) selectedIcon else leadingIcon,
+    leadingIcon = leadingIcon,
     avatar = null,
     trailingIcon = trailingIcon,
     elevation = elevation,
@@ -433,7 +431,7 @@ fun InputChip(
     trailingIcon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     elevation: SelectableChipElevation? = InputChipDefaults.inputChipElevation(),
-    shape: Shape = InputChipDefaults.Shape,
+    shape: Shape = InputChipDefaults.shape,
     border: SelectableChipBorder? = InputChipDefaults.inputChipBorder(),
     colors: SelectableChipColors = InputChipDefaults.inputChipColors()
 ) {
@@ -529,7 +527,7 @@ fun SuggestionChip(
     icon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     elevation: ChipElevation? = SuggestionChipDefaults.suggestionChipElevation(),
-    shape: Shape = SuggestionChipDefaults.Shape,
+    shape: Shape = SuggestionChipDefaults.shape,
     border: ChipBorder? = SuggestionChipDefaults.suggestionChipBorder(),
     colors: ChipColors = SuggestionChipDefaults.suggestionChipColors()
 ) = Chip(
@@ -598,7 +596,7 @@ fun ElevatedSuggestionChip(
     icon: @Composable (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     elevation: ChipElevation? = SuggestionChipDefaults.elevatedSuggestionChipElevation(),
-    shape: Shape = SuggestionChipDefaults.Shape,
+    shape: Shape = SuggestionChipDefaults.shape,
     border: ChipBorder? = null,
     colors: ChipColors = SuggestionChipDefaults.elevatedSuggestionChipColors()
 ) = Chip(
@@ -829,9 +827,6 @@ interface SelectableChipBorder {
  */
 @ExperimentalMaterial3Api
 object AssistChipDefaults {
-    /** Default shape of an assist chip. */
-    val Shape: Shape @Composable get() = AssistChipTokens.ContainerShape.toShape()
-
     /**
      * The height applied for an assist chip.
      * Note that you can override it by applying Modifier.height directly on a chip.
@@ -1024,6 +1019,9 @@ object AssistChipDefaults {
             )
         }
     }
+
+    /** Default shape of an assist chip. */
+    val shape: Shape @Composable get() = AssistChipTokens.ContainerShape.toShape()
 }
 
 /**
@@ -1031,9 +1029,6 @@ object AssistChipDefaults {
  */
 @ExperimentalMaterial3Api
 object FilterChipDefaults {
-    /** Default shape of a filter chip. */
-    val Shape: Shape @Composable get() = FilterChipTokens.ContainerShape.toShape()
-
     /**
      * The height applied for a filter chip.
      * Note that you can override it by applying Modifier.height directly on a chip.
@@ -1269,6 +1264,9 @@ object FilterChipDefaults {
             )
         }
     }
+
+    /** Default shape of a filter chip. */
+    val shape: Shape @Composable get() = FilterChipTokens.ContainerShape.toShape()
 }
 
 /**
@@ -1276,9 +1274,6 @@ object FilterChipDefaults {
  */
 @ExperimentalMaterial3Api
 object InputChipDefaults {
-    /** Default shape of an input chip. */
-    val Shape: Shape @Composable get() = InputChipTokens.ContainerShape.toShape()
-
     /**
      * The height applied for an input chip.
      * Note that you can override it by applying Modifier.height directly on a chip.
@@ -1430,6 +1425,9 @@ object InputChipDefaults {
             )
         }
     }
+
+    /** Default shape of an input chip. */
+    val shape: Shape @Composable get() = InputChipTokens.ContainerShape.toShape()
 }
 
 /**
@@ -1437,9 +1435,6 @@ object InputChipDefaults {
  */
 @ExperimentalMaterial3Api
 object SuggestionChipDefaults {
-    /** Default shape of a suggestion chip. */
-    val Shape: Shape @Composable get() = SuggestionChipTokens.ContainerShape.toShape()
-
     /**
      * The height applied for a suggestion chip.
      * Note that you can override it by applying Modifier.height directly on a chip.
@@ -1626,6 +1621,9 @@ object SuggestionChipDefaults {
             )
         }
     }
+
+    /** Default shape of a suggestion chip. */
+    val shape: Shape @Composable get() = SuggestionChipTokens.ContainerShape.toShape()
 }
 
 @ExperimentalMaterial3Api

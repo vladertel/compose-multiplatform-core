@@ -17,6 +17,7 @@
 package androidx.build
 
 import java.io.File
+import org.gradle.api.GradleException
 
 /**
  * The self-built jars that we need to successfully apply the plugin
@@ -26,20 +27,46 @@ import java.io.File
 class BuildJars(private val outBuildSrcPath: String) {
     private val outBuildSrc = File(outBuildSrcPath)
 
-    val privateJar = outBuildSrc.resolve("private/build/libs/private.jar")
-    private val publicJar = outBuildSrc.resolve("public/build/libs/public.jar")
-    private val jetpadIntegrationJar =
-        outBuildSrc.resolve("jetpad-integration/build/libs/jetpad-integration.jar")
+    private fun findJar(name: String) = outBuildSrc.resolve("$name/build/libs/$name.jar")
+    val privateJar = findJar("private")
+    val pluginsJar = findJar("plugins")
+    private val publicJar = findJar("public")
+    private val jetpadIntegrationJar = findJar("jetpad-integration")
 
     fun classpathEntries(): String {
+        // b/239026887: Sometimes, we suspect, the jars are still being written when we run our
+        //              first test.  Hopefully, b/239066130 will allow us to drop these checks
+
+        waitForFileToExist(privateJar)
+        waitForFileToExist(publicJar)
+        waitForFileToExist(jetpadIntegrationJar)
+
         return """|// Needed for androidx extension
                   |classpath(project.files("${privateJar.path}"))
                   |
                   |// Needed for androidx/build/gradle/ExtensionsKt, among others
                   |classpath(project.files("${publicJar.path}"))
                   |
+                  |// Needed to resolve plugin { id("AndroidXPlugin") }
+                  |classpath(project.files("${pluginsJar.path}"))
+                  |
                   |// Needed for androidx/build/jetpad/LibraryBuildInfoFile
                   |classpath(project.files("${jetpadIntegrationJar.path}"))
                   |""".trimMargin()
+    }
+
+    private fun waitForFileToExist(
+        file: File,
+        millisToWait: Long = 5000,
+        waitStepMillis: Long = 50
+    ) {
+        val startStamp = System.currentTimeMillis()
+        val deadline = startStamp + millisToWait
+        while (!file.exists()) {
+            if (System.currentTimeMillis() > deadline) {
+                throw GradleException("${file.path} not found (even after $millisToWait ms)")
+            }
+            Thread.sleep(waitStepMillis)
+        }
     }
 }
