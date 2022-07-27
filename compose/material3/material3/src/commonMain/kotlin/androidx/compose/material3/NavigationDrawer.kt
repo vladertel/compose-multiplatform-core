@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.tokens.NavigationDrawerTokens
-import androidx.compose.material3.tokens.PaletteTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
@@ -262,11 +261,11 @@ fun ModalNavigationDrawer(
     modifier: Modifier = Modifier,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
     gesturesEnabled: Boolean = true,
-    drawerShape: Shape = DrawerDefaults.Shape,
+    drawerShape: Shape = DrawerDefaults.shape,
     drawerTonalElevation: Dp = DrawerDefaults.ModalDrawerElevation,
-    drawerContainerColor: Color = DrawerDefaults.ContainerColor,
+    drawerContainerColor: Color = DrawerDefaults.containerColor,
     drawerContentColor: Color = contentColorFor(drawerContainerColor),
-    scrimColor: Color = DrawerDefaults.ScrimColor,
+    scrimColor: Color = DrawerDefaults.scrimColor,
     content: @Composable () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -355,11 +354,11 @@ fun NavigationDrawer(
     modifier: Modifier = Modifier,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
     gesturesEnabled: Boolean = true,
-    drawerShape: Shape = DrawerDefaults.Shape,
+    drawerShape: Shape = DrawerDefaults.shape,
     drawerTonalElevation: Dp = DrawerDefaults.ModalDrawerElevation,
-    drawerContainerColor: Color = DrawerDefaults.ContainerColor,
+    drawerContainerColor: Color = DrawerDefaults.containerColor,
     drawerContentColor: Color = contentColorFor(drawerContainerColor),
-    scrimColor: Color = DrawerDefaults.ScrimColor,
+    scrimColor: Color = DrawerDefaults.scrimColor,
     content: @Composable () -> Unit
 ) {
     ModalNavigationDrawer(
@@ -544,9 +543,6 @@ fun PermanentNavigationDrawer(
  */
 @ExperimentalMaterial3Api
 object DrawerDefaults {
-    /** Default shape for a navigation drawer. */
-    val Shape: Shape @Composable get() = NavigationDrawerTokens.ContainerShape.toShape()
-
     /**
      * Default Elevation for drawer container in the [ModalNavigationDrawer] as specified in the
      * Material specification.
@@ -565,13 +561,15 @@ object DrawerDefaults {
      */
     val DismissibleDrawerElevation = NavigationDrawerTokens.StandardContainerElevation
 
+    /** Default shape for a navigation drawer. */
+    val shape: Shape @Composable get() = NavigationDrawerTokens.ContainerShape.toShape()
+
     /** Default color of the scrim that obscures content when the drawer is open */
-    val ScrimColor: Color
-        @Composable
-        get() = PaletteTokens.NeutralVariant0.copy(alpha = NavigationDrawerTokens.ScrimOpacity)
+    val scrimColor: Color
+        @Composable get() = MaterialTheme.colorScheme.scrim.copy(.32f)
 
     /** Default container color for a navigation drawer */
-    val ContainerColor: Color @Composable get() = NavigationDrawerTokens.ContainerColor.toColor()
+    val containerColor: Color @Composable get() = NavigationDrawerTokens.ContainerColor.toColor()
 }
 
 /**

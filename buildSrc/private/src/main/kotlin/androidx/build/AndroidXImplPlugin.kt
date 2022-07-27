@@ -51,7 +51,6 @@ import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.TestExtension
 import com.android.build.gradle.TestPlugin
 import com.android.build.gradle.TestedExtension
-import com.android.build.gradle.internal.lint.AndroidLintTask
 import com.android.build.gradle.internal.tasks.AnalyticsRecordingTask
 import com.android.build.gradle.internal.tasks.ListingFileRedirectTask
 import org.gradle.api.GradleException
@@ -105,6 +104,11 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
         if (project.isRoot)
             throw Exception("Root project should use AndroidXRootImplPlugin instead")
         val extension = project.extensions.create<AndroidXExtension>(EXTENSION_NAME, project)
+
+        project.extensions.create<AndroidXMultiplatformExtension>(
+            AndroidXMultiplatformExtension.EXTENSION_NAME,
+            project
+        )
         // Perform different actions based on which plugins have been applied to the project.
         // Many of the actions overlap, ex. API tracking.
         project.plugins.all { plugin ->
@@ -134,6 +138,7 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
         project.registerProjectOrArtifact()
 
         project.configurations.create("samples")
+        project.validateMultiplatformPluginHasNotBeenApplied()
     }
 
     private fun Project.registerProjectOrArtifact() {
@@ -256,7 +261,7 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
                 )
             task.systemProperty(
                 "robolectric.dependency.dir",
-                robolectricDependencies.absolutePath
+                robolectricDependencies.relativeTo(project.projectDir)
             )
         }
     }
@@ -296,6 +301,7 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
                 project.tasks.withType(KotlinCompile::class.java).configureEach { task ->
                     // Workaround for https://youtrack.jetbrains.com/issue/KT-37652
                     if (task.name.endsWith("TestKotlin")) return@configureEach
+                    if (task.name.endsWith("TestKotlinJvm")) return@configureEach
                     task.kotlinOptions.freeCompilerArgs += listOf("-Xexplicit-api=strict")
                 }
             }
@@ -319,7 +325,11 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
         project.extensions.getByType<ApplicationAndroidComponentsExtension>().apply {
             onVariants { it.configureLicensePackaging() }
             finalizeDsl {
-                project.configureAndroidProjectForLint(it.lint, androidXExtension)
+                project.configureAndroidProjectForLint(
+                    it.lint,
+                    androidXExtension,
+                    isLibrary = false
+                )
             }
         }
     }
@@ -373,17 +383,6 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
             }
         }
 
-        // Remove the lint and column attributes from generated lint baseline XML.
-        project.tasks.withType(AndroidLintTask::class.java).configureEach { task ->
-            if (task.name.startsWith("updateLintBaseline")) {
-                task.doLast {
-                    task.outputs.files.find { it.name == "lint-baseline.xml" }?.let { file ->
-                        file.writeText(removeLineAndColumnAttributes(file.readText()))
-                    }
-                }
-            }
-        }
-
         // Remove the android:targetSdkVersion element from the manifest used for AARs.
         project.extensions.getByType<LibraryAndroidComponentsExtension>().onVariants { variant ->
             project.tasks.register(
@@ -410,7 +409,9 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
                 variant.enableUnitTest = false
             }
             onVariants { it.configureLicensePackaging() }
-            finalizeDsl { project.configureAndroidProjectForLint(it.lint, androidXExtension) }
+            finalizeDsl {
+                project.configureAndroidProjectForLint(it.lint, androidXExtension, isLibrary = true)
+            }
         }
 
         project.configurePublicResourcesStub(libraryExtension)
@@ -1093,6 +1094,14 @@ fun Project.validateProjectStructure(groupId: String) {
     if (expectDir != actualDir) {
         throw GradleException(
             "Invalid project structure! Expected $expectDir as project directory, found $actualDir"
+        )
+    }
+}
+
+fun Project.validateMultiplatformPluginHasNotBeenApplied() {
+    if (plugins.hasPlugin(KotlinMultiplatformPluginWrapper::class.java)) {
+        throw GradleException(
+            "The Kotlin multiplatform plugin should only be applied by the AndroidX plugin."
         )
     }
 }
