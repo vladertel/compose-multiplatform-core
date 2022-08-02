@@ -1871,6 +1871,7 @@ package androidx.compose.ui.layout {
     method public long localPositionOf(androidx.compose.ui.layout.LayoutCoordinates sourceCoordinates, long relativeToSource);
     method public long localToRoot(long relativeToLocal);
     method public long localToWindow(long relativeToLocal);
+    method public default void transformFrom(androidx.compose.ui.layout.LayoutCoordinates sourceCoordinates, float[] matrix);
     method public long windowToLocal(long relativeToWindow);
     property public abstract boolean isAttached;
     property public abstract androidx.compose.ui.layout.LayoutCoordinates? parentCoordinates;
@@ -1883,6 +1884,7 @@ package androidx.compose.ui.layout {
     method public static androidx.compose.ui.geometry.Rect boundsInParent(androidx.compose.ui.layout.LayoutCoordinates);
     method public static androidx.compose.ui.geometry.Rect boundsInRoot(androidx.compose.ui.layout.LayoutCoordinates);
     method public static androidx.compose.ui.geometry.Rect boundsInWindow(androidx.compose.ui.layout.LayoutCoordinates);
+    method public static androidx.compose.ui.layout.LayoutCoordinates findRootCoordinates(androidx.compose.ui.layout.LayoutCoordinates);
     method public static long positionInParent(androidx.compose.ui.layout.LayoutCoordinates);
     method public static long positionInRoot(androidx.compose.ui.layout.LayoutCoordinates);
     method public static long positionInWindow(androidx.compose.ui.layout.LayoutCoordinates);
@@ -1905,6 +1907,7 @@ package androidx.compose.ui.layout {
     method public androidx.compose.ui.unit.LayoutDirection getLayoutDirection();
     method public java.util.List<androidx.compose.ui.layout.ModifierInfo> getModifierInfo();
     method public androidx.compose.ui.layout.LayoutInfo? getParentInfo();
+    method public int getSemanticsId();
     method public androidx.compose.ui.platform.ViewConfiguration getViewConfiguration();
     method public int getWidth();
     method public boolean isAttached();
@@ -1916,6 +1919,7 @@ package androidx.compose.ui.layout {
     property public abstract boolean isPlaced;
     property public abstract androidx.compose.ui.unit.LayoutDirection layoutDirection;
     property public abstract androidx.compose.ui.layout.LayoutInfo? parentInfo;
+    property public abstract int semanticsId;
     property public abstract androidx.compose.ui.platform.ViewConfiguration viewConfiguration;
     property public abstract int width;
   }
@@ -2805,9 +2809,9 @@ package androidx.compose.ui.semantics {
   }
 
   @kotlin.jvm.JvmDefaultWithCompatibility public interface SemanticsModifier extends androidx.compose.ui.Modifier.Element {
-    method public int getId();
+    method @Deprecated public default int getId();
     method public androidx.compose.ui.semantics.SemanticsConfiguration getSemanticsConfiguration();
-    property public abstract int id;
+    property @Deprecated public default int id;
     property public abstract androidx.compose.ui.semantics.SemanticsConfiguration semanticsConfiguration;
   }
 

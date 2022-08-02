@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.platform.simpleIdentityToString
 import androidx.compose.ui.semantics.SemanticsEntity
+import androidx.compose.ui.semantics.SemanticsModifierCore.Companion.generateSemanticsId
 import androidx.compose.ui.semantics.outerSemantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
@@ -74,7 +75,9 @@ internal class LayoutNode(
     // virtual nodes will be treated as the direct children of the virtual node parent.
     // This whole concept will be replaced with a proper subcomposition logic which allows to
     // subcompose multiple times into the same LayoutNode and define offsets.
-    private val isVirtual: Boolean = false
+    private val isVirtual: Boolean = false,
+    // The unique semantics ID that is used by all semantics modifiers attached to this LayoutNode.
+    override val semanticsId: Int = generateSemanticsId()
 ) : Remeasurement, OwnerScope, LayoutInfo, ComposeUiNode,
     Owner.OnLayoutCompletedListener {
 
@@ -273,6 +276,10 @@ internal class LayoutNode(
         if (owner != null) {
             instance.attach(owner)
         }
+
+        if (instance.layoutDelegate.childrenAccessingCoordinatesDuringPlacement > 0) {
+            layoutDelegate.childrenAccessingCoordinatesDuringPlacement++
+        }
     }
 
     internal fun onZSortedChildrenInvalidated() {
@@ -310,6 +317,9 @@ internal class LayoutNode(
     }
 
     private fun onChildRemoved(child: LayoutNode) {
+        if (child.layoutDelegate.childrenAccessingCoordinatesDuringPlacement > 0) {
+            layoutDelegate.childrenAccessingCoordinatesDuringPlacement--
+        }
         if (owner != null) {
             child.detach()
         }
@@ -542,15 +552,6 @@ internal class LayoutNode(
             }
         }
 
-    /**
-     * The scope used to [measure][MeasurePolicy.measure] children.
-     */
-    internal val measureScope: MeasureScope = object : MeasureScope, Density {
-        override val density: Float get() = this@LayoutNode.density.density
-        override val fontScale: Float get() = this@LayoutNode.density.fontScale
-        override val layoutDirection: LayoutDirection get() = this@LayoutNode.layoutDirection
-    }
-
     internal var mLookaheadScope: LookaheadScope? = null
         private set(newScope) {
             if (newScope != field) {
@@ -670,7 +671,7 @@ internal class LayoutNode(
             }
         }
 
-    internal val innerLayoutNodeWrapper: LayoutNodeWrapper = InnerPlaceable(this)
+    internal val innerLayoutNodeWrapper = InnerPlaceable(this)
     internal val layoutDelegate = LayoutNodeLayoutDelegate(this, innerLayoutNodeWrapper)
     internal val outerLayoutNodeWrapper: LayoutNodeWrapper
         get() = layoutDelegate.outerWrapper
@@ -774,7 +775,8 @@ internal class LayoutNode(
 
             // Create a new chain of LayoutNodeWrappers, reusing existing ones from wrappers
             // when possible.
-            val outerWrapper = modifier.foldOut(innerLayoutNodeWrapper) { mod, toWrap ->
+            val innerPlaceable: LayoutNodeWrapper = innerLayoutNodeWrapper
+            val outerWrapper = modifier.foldOut(innerPlaceable) { mod, toWrap ->
                 if (mod is RemeasurementModifier) {
                     mod.onRemeasurementAvailable(this)
                 }
@@ -890,7 +892,8 @@ internal class LayoutNode(
         with(measurePassDelegate) {
             Placeable.PlacementScope.executeWithRtlMirroringValues(
                 measuredWidth,
-                layoutDirection
+                layoutDirection,
+                parent?.innerLayoutNodeWrapper
             ) {
                 placeRelative(x, y)
             }

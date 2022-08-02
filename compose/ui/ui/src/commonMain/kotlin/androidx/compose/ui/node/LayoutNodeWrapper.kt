@@ -31,6 +31,7 @@ import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.DefaultCameraDistance
 import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.ReusableGraphicsLayerScope
 import androidx.compose.ui.graphics.TransformOrigin
@@ -39,13 +40,12 @@ import androidx.compose.ui.input.pointer.PointerInputModifier
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.LookaheadLayoutCoordinatesImpl
+import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
-import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.ParentDataModifier
 import androidx.compose.ui.layout.Placeable
-import androidx.compose.ui.layout.LookaheadScope
-import androidx.compose.ui.layout.findRoot
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.SemanticsEntity
 import androidx.compose.ui.semantics.SemanticsModifier
@@ -62,19 +62,27 @@ import androidx.compose.ui.unit.plus
  * Measurable and Placeable type that has a position.
  */
 internal abstract class LayoutNodeWrapper(
-    internal val layoutNode: LayoutNode
+    override val layoutNode: LayoutNode
 ) : LookaheadCapablePlaceable(), Measurable, LayoutCoordinates, OwnerScope,
         (Canvas) -> Unit {
 
     internal open val wrapped: LayoutNodeWrapper? get() = null
     internal var wrappedBy: LayoutNodeWrapper? = null
 
-    /**
-     * The scope used to measure the wrapped. InnerPlaceables are using the MeasureScope
-     * of the LayoutNode. For fewer allocations, everything else is reusing the measure scope of
-     * their wrapped.
-     */
-    abstract val measureScope: MeasureScope
+    override val layoutDirection: LayoutDirection
+        get() = layoutNode.layoutDirection
+
+    override val density: Float
+        get() = layoutNode.density.density
+
+    override val fontScale: Float
+        get() = layoutNode.density.fontScale
+
+    override val parent: LookaheadCapablePlaceable?
+        get() = wrappedBy
+
+    override val coordinates: LayoutCoordinates
+        get() = this
 
     // Size exposed to LayoutCoordinates.
     final override val size: IntSize get() = measuredSize
@@ -216,7 +224,7 @@ internal abstract class LayoutNodeWrapper(
                  * ParentData provided through the parentData node will override the data provided
                  * through a modifier.
                  */
-                measureScope.modifyParentData(next.parentData)
+                modifyParentData(next.parentData)
             }
         }
 
@@ -290,6 +298,8 @@ internal abstract class LayoutNodeWrapper(
         onLayerBlockUpdated(layerBlock)
         if (this.position != position) {
             this.position = position
+            layoutNode.layoutDelegate.measurePassDelegate
+                .notifyChildrenUsingCoordinatesWhilePlacing()
             val layer = layer
             if (layer != null) {
                 layer.move(position)
@@ -662,7 +672,7 @@ internal abstract class LayoutNodeWrapper(
             return Rect.Zero
         }
 
-        val root = findRoot()
+        val root = findRootCoordinates()
 
         val bounds = rectCache
         val padding = calculateMinimumTouchTargetPadding(minimumTouchTargetSize)
@@ -685,7 +695,7 @@ internal abstract class LayoutNodeWrapper(
 
     override fun windowToLocal(relativeToWindow: Offset): Offset {
         check(isAttached) { ExpectAttachedLayoutCoordinates }
-        val root = findRoot()
+        val root = findRootCoordinates()
         val positionInRoot = layoutNode.requireOwner()
             .calculateLocalPosition(relativeToWindow) - root.positionInRoot()
         return localPositionOf(root, positionInRoot)
@@ -715,6 +725,43 @@ internal abstract class LayoutNodeWrapper(
         }
 
         return ancestorToLocal(commonAncestor, position)
+    }
+
+    override fun transformFrom(sourceCoordinates: LayoutCoordinates, matrix: Matrix) {
+        val layoutNodeWrapper = sourceCoordinates.toWrapper()
+        val commonAncestor = findCommonAncestor(layoutNodeWrapper)
+
+        matrix.reset()
+        // Transform from the source to the common ancestor
+        layoutNodeWrapper.transformToAncestor(commonAncestor, matrix)
+        // Transform from the common ancestor to this
+        transformFromAncestor(commonAncestor, matrix)
+    }
+
+    private fun transformToAncestor(ancestor: LayoutNodeWrapper, matrix: Matrix) {
+        var wrapper = this
+        while (wrapper != ancestor) {
+            wrapper.layer?.transform(matrix)
+            val position = wrapper.position
+            if (position != IntOffset.Zero) {
+                tmpMatrix.reset()
+                tmpMatrix.translate(position.x.toFloat(), position.y.toFloat())
+                matrix.timesAssign(tmpMatrix)
+            }
+            wrapper = wrapper.wrappedBy!!
+        }
+    }
+
+    private fun transformFromAncestor(ancestor: LayoutNodeWrapper, matrix: Matrix) {
+        if (ancestor != this) {
+            wrappedBy!!.transformFromAncestor(ancestor, matrix)
+            if (position != IntOffset.Zero) {
+                tmpMatrix.reset()
+                tmpMatrix.translate(-position.x.toFloat(), -position.y.toFloat())
+                matrix.timesAssign(tmpMatrix)
+            }
+            layer?.inverseTransform(matrix)
+        }
     }
 
     override fun localBoundingBoxOf(
@@ -1128,6 +1175,14 @@ internal abstract class LayoutNodeWrapper(
                     wrapper.updateLayerParameters()
                     if (!tmpLayerPositionalProperties.hasSameValuesAs(layerPositionalProperties)) {
                         val layoutNode = wrapper.layoutNode
+                        val layoutDelegate = layoutNode.layoutDelegate
+                        if (layoutDelegate.childrenAccessingCoordinatesDuringPlacement > 0) {
+                            if (layoutDelegate.coordinatesAccessedDuringPlacement) {
+                                layoutNode.requestRelayout()
+                            }
+                            layoutDelegate.measurePassDelegate
+                                .notifyChildrenUsingCoordinatesWhilePlacing()
+                        }
                         layoutNode.owner?.requestOnPositionedCallback(layoutNode)
                     }
                 }
@@ -1138,6 +1193,10 @@ internal abstract class LayoutNodeWrapper(
         }
         private val graphicsLayerScope = ReusableGraphicsLayerScope()
         private val tmpLayerPositionalProperties = LayerPositionalProperties()
+
+        // Used for matrix calculations. It should not be used for anything that could lead to
+        // reentrancy.
+        private val tmpMatrix = Matrix()
 
         /**
          * Hit testing specifics for pointer input.

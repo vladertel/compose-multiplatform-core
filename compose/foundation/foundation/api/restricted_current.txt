@@ -36,6 +36,7 @@ package androidx.compose.foundation {
   }
 
   public final class CheckScrollableContainerConstraintsKt {
+    method public static void checkScrollableContainerConstraints(long constraints, androidx.compose.foundation.gestures.Orientation orientation);
   }
 
   public final class ClickableKt {
@@ -47,6 +48,7 @@ package androidx.compose.foundation {
   }
 
   public final class ClipScrollableContainerKt {
+    method public static androidx.compose.ui.Modifier clipScrollableContainer(androidx.compose.ui.Modifier, androidx.compose.foundation.gestures.Orientation orientation);
   }
 
   public final class DarkThemeKt {
@@ -231,6 +233,7 @@ package androidx.compose.foundation.gestures {
 
   public final class ScrollableDefaults {
     method @androidx.compose.runtime.Composable public androidx.compose.foundation.gestures.FlingBehavior flingBehavior();
+    method public boolean reverseDirection(androidx.compose.ui.unit.LayoutDirection layoutDirection, androidx.compose.foundation.gestures.Orientation orientation, boolean reverseScrolling);
     field public static final androidx.compose.foundation.gestures.ScrollableDefaults INSTANCE;
   }
 
@@ -446,7 +449,7 @@ package androidx.compose.foundation.lazy {
   public final class LazyListItemPlacementAnimatorKt {
   }
 
-  public final class LazyListItemProviderImplKt {
+  public final class LazyListItemProviderKt {
   }
 
   public final class LazyListKt {
@@ -581,7 +584,7 @@ package androidx.compose.foundation.lazy.grid {
   public final class LazyGridItemPlacementAnimatorKt {
   }
 
-  public final class LazyGridItemProviderImplKt {
+  public final class LazyGridItemProviderKt {
   }
 
   @androidx.compose.foundation.lazy.grid.LazyGridScopeMarker @androidx.compose.runtime.Stable public sealed interface LazyGridItemScope {
@@ -672,6 +675,9 @@ package androidx.compose.foundation.lazy.grid {
 package androidx.compose.foundation.lazy.layout {
 
   public final class IntervalListKt {
+  }
+
+  public final class LazyLayoutItemProviderKt {
   }
 
   public final class LazyLayoutKt {
@@ -943,6 +949,9 @@ package androidx.compose.foundation.text {
   public final class StringHelpers_jvmKt {
   }
 
+  public final class TextDelegateKt {
+  }
+
   public final class TextFieldCursorKt {
   }
 
@@ -983,6 +992,9 @@ package androidx.compose.foundation.text {
   }
 
   public final class UndoManager_jvmKt {
+  }
+
+  public final class ValidatingOffsetMappingKt {
   }
 
 }
