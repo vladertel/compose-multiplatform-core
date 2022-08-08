@@ -23,6 +23,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusModifier
 import androidx.compose.ui.focus.FocusStateImpl
+import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.input.key.KeyInputModifier
 import androidx.compose.ui.input.pointer.PointerInputModifier
 import androidx.compose.ui.input.pointer.PointerInteropFilter
@@ -49,12 +50,12 @@ class LayoutNodeWrapperInitializationTest {
 
         // Act.
         rule.setContent {
-            Box(modifier = focusModifier)
+            Box(Modifier.focusTarget(focusModifier))
         }
 
         // Assert.
         rule.runOnIdle {
-            assertThat(focusModifier.focusNode).isNotNull()
+            assertThat(focusModifier).isNotNull()
         }
     }
 
@@ -70,7 +71,7 @@ class LayoutNodeWrapperInitializationTest {
 
         // Assert.
         rule.runOnIdle {
-            assertThat(keyInputModifier.keyInputNode).isNotNull()
+            assertThat(keyInputModifier.layoutNode).isNotNull()
         }
     }
 
@@ -117,14 +118,14 @@ class LayoutNodeWrapperInitializationTest {
         rule.setContent {
             scope = currentRecomposeScope
             focusModifier = FocusModifier(FocusStateImpl.Inactive)
-            Box(modifier = focusModifier)
+            Box(Modifier.focusTarget(focusModifier))
         }
 
         // Act.
         rule.runOnIdle { scope.invalidate() }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusModifier.focusNode).isNotNull() }
+        rule.runOnIdle { assertThat(focusModifier).isNotNull() }
     }
 
     @Test
@@ -143,7 +144,7 @@ class LayoutNodeWrapperInitializationTest {
 
         // Assert.
         rule.runOnIdle {
-            assertThat(keyInputModifier.keyInputNode).isNotNull()
+            assertThat(keyInputModifier.layoutNode).isNotNull()
         }
     }
 

@@ -19,6 +19,7 @@ package androidx.compose.material3
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.tokens.NavigationBarTokens
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +32,7 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
@@ -56,10 +58,10 @@ import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth
+import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import androidx.compose.material3.tokens.NavigationBar as NavigationBarTokens
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
@@ -72,7 +74,7 @@ class NavigationBarTest {
 
     @Test
     fun defaultSemantics() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             NavigationBar {
                 NavigationBarItem(
                     modifier = Modifier.testTag("item"),
@@ -101,7 +103,7 @@ class NavigationBarTest {
 
     @Test
     fun disabledSemantics() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             NavigationBar {
                 NavigationBarItem(
                     enabled = false,
@@ -123,6 +125,56 @@ class NavigationBarTest {
             .assertIsSelected()
             .assertIsNotEnabled()
             .assertHasClickAction()
+    }
+
+    @Test
+    fun navigationBarItem_clearsIconSemantics_whenLabelIsPresent() {
+        rule.setMaterialContent(lightColorScheme()) {
+            NavigationBar {
+                NavigationBarItem(
+                    modifier = Modifier.testTag("item1"),
+                    icon = {
+                        Icon(Icons.Filled.Favorite, "Favorite")
+                    },
+                    label = {
+                        Text("Favorite")
+                    },
+                    selected = true,
+                    alwaysShowLabel = false,
+                    onClick = {}
+                )
+                NavigationBarItem(
+                    modifier = Modifier.testTag("item2"),
+                    icon = {
+                        Icon(Icons.Filled.Favorite, "Favorite")
+                    },
+                    label = {
+                        Text("Favorite")
+                    },
+                    selected = false,
+                    alwaysShowLabel = false,
+                    onClick = {}
+                )
+                NavigationBarItem(
+                    modifier = Modifier.testTag("item3"),
+                    icon = {
+                        Icon(Icons.Filled.Favorite, "Favorite")
+                    },
+                    selected = false,
+                    onClick = {}
+                )
+            }
+        }
+
+        val node1 = rule.onNodeWithTag("item1").fetchSemanticsNode()
+        val node2 = rule.onNodeWithTag("item2").fetchSemanticsNode()
+        val node3 = rule.onNodeWithTag("item3").fetchSemanticsNode()
+
+        assertThat(node1.config.getOrNull(SemanticsProperties.ContentDescription)).isNull()
+        assertThat(node2.config.getOrNull(SemanticsProperties.ContentDescription))
+            .isEqualTo(listOf("Favorite"))
+        assertThat(node3.config.getOrNull(SemanticsProperties.ContentDescription))
+            .isEqualTo(listOf("Favorite"))
     }
 
     @Test
@@ -150,6 +202,7 @@ class NavigationBarTest {
         lateinit var parentCoords: LayoutCoordinates
         val itemCoords = mutableMapOf<Int, LayoutCoordinates>()
         rule.setMaterialContent(
+            lightColorScheme(),
             Modifier.onGloballyPositioned { coords: LayoutCoordinates ->
                 parentCoords = coords
             }
@@ -173,24 +226,27 @@ class NavigationBarTest {
 
         rule.runOnIdleWithDensity {
             val totalWidth = parentCoords.size.width
+            val availableWidth =
+                totalWidth.toFloat() - (NavigationBarItemHorizontalPadding.toPx() * 3)
 
-            val expectedItemWidth = totalWidth / 4
-            val expectedItemHeight = NavigationBarTokens.ContainerHeight.roundToPx()
+            val expectedItemWidth = (availableWidth / 4)
+            val expectedItemHeight = NavigationBarTokens.ContainerHeight.toPx()
 
             Truth.assertThat(itemCoords.size).isEqualTo(4)
 
             itemCoords.forEach { (index, coord) ->
-                Truth.assertThat(coord.size.width).isEqualTo(expectedItemWidth)
-                Truth.assertThat(coord.size.height).isEqualTo(expectedItemHeight)
-                Truth.assertThat(coord.positionInWindow().x)
-                    .isEqualTo((expectedItemWidth * index).toFloat())
+                // Rounding differences for width can occur on smaller screens
+                Truth.assertThat(coord.size.width.toFloat()).isWithin(1f).of(expectedItemWidth)
+                Truth.assertThat(coord.size.height).isEqualTo(expectedItemHeight.toInt())
+                Truth.assertThat(coord.positionInWindow().x).isWithin(1f)
+                    .of((expectedItemWidth + NavigationBarItemHorizontalPadding.toPx()) * index)
             }
         }
     }
 
     @Test
     fun navigationBarItemContent_withLabel_sizeAndPosition() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             Box {
                 NavigationBar {
                     NavigationBarItem(
@@ -211,20 +267,16 @@ class NavigationBarTest {
         val itemBounds = rule.onNodeWithTag("item").getUnclippedBoundsInRoot()
         val iconBounds = rule.onNodeWithTag("icon", useUnmergedTree = true)
             .getUnclippedBoundsInRoot()
-        val textBounds = rule.onNodeWithText("ItemText").getUnclippedBoundsInRoot()
+        val textBounds = rule.onNodeWithText("ItemText", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
 
-        // Distance from the bottom to the text baseline, and from the top of the icon to the
-        // top of the item
+        // Distance from the bottom of the item to the text bottom, and from the top of the icon to
+        // the top of the item
         val verticalPadding = NavigationBarItemVerticalPadding
 
-        // Relative position of the baseline to the top of text
-        val relativeTextBaseline = rule.onNodeWithText("ItemText").getLastBaselinePosition()
-        // Absolute y position of the text baseline
-        val absoluteTextBaseline = textBounds.top + relativeTextBaseline
-
         val itemBottom = itemBounds.height + itemBounds.top
-        // Text baseline should be `verticalPadding` from the bottom of the item
-        absoluteTextBaseline.assertIsEqualTo(itemBottom - verticalPadding)
+        // Text bottom should be `verticalPadding` from the bottom of the item
+        textBounds.bottom.assertIsEqualTo(itemBottom - verticalPadding)
 
         rule.onNodeWithTag("icon", useUnmergedTree = true)
             // The icon should be centered in the item
@@ -235,7 +287,7 @@ class NavigationBarTest {
 
     @Test
     fun navigationBarItemContent_withLabel_unselected_sizeAndPosition() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             Box {
                 NavigationBar {
                     NavigationBarItem(
@@ -269,7 +321,7 @@ class NavigationBarTest {
 
     @Test
     fun navigationBarItemContent_withoutLabel_sizeAndPosition() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             Box {
                 NavigationBar {
                     NavigationBarItem(
@@ -297,7 +349,7 @@ class NavigationBarTest {
 
     @Test
     fun navigationBar_selectNewItem() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             var selectedItem by remember { mutableStateOf(0) }
             val items = listOf("Songs", "Artists", "Playlists")
 
@@ -336,7 +388,7 @@ class NavigationBarTest {
     @Test
     fun disabled_noClicks() {
         var clicks = 0
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             NavigationBar {
                 NavigationBarItem(
                     enabled = false,

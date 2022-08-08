@@ -16,8 +16,9 @@
 
 package androidx.window.extensions.embedding;
 
+import android.app.Activity;
+
 import androidx.annotation.NonNull;
-import androidx.window.extensions.ExperimentalWindowExtensionsApi;
 
 import java.util.List;
 import java.util.Set;
@@ -30,7 +31,6 @@ import java.util.function.Consumer;
  * <p>This interface should be implemented by OEM and deployed to the target devices.
  * @see androidx.window.extensions.WindowExtensions
  */
-@ExperimentalWindowExtensionsApi
 public interface ActivityEmbeddingComponent {
 
     /**
@@ -44,4 +44,10 @@ public interface ActivityEmbeddingComponent {
      */
     @SuppressWarnings("ExecutorRegistration") // Jetpack will post it on the app-provided executor.
     void setSplitInfoCallback(@NonNull Consumer<List<SplitInfo>> consumer);
+
+    /**
+     * Checks if an activity's' presentation is customized by its or any other process and only
+     * occupies a portion of Task bounds.
+     */
+    boolean isActivityEmbedded(@NonNull Activity activity);
 }

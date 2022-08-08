@@ -26,17 +26,26 @@ import androidx.annotation.DoNotInline
 import androidx.annotation.LayoutRes
 import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.core.widget.RemoteViewsCompat.setLinearLayoutGravity
 import androidx.glance.Emittable
 import androidx.glance.EmittableButton
 import androidx.glance.EmittableImage
+import androidx.glance.GlanceModifier
 import androidx.glance.appwidget.lazy.EmittableLazyColumn
 import androidx.glance.appwidget.lazy.EmittableLazyListItem
-import androidx.glance.appwidget.translators.setText
+import androidx.glance.appwidget.lazy.EmittableLazyVerticalGrid
+import androidx.glance.appwidget.lazy.EmittableLazyVerticalGridListItem
 import androidx.glance.appwidget.translators.translateEmittableCheckBox
+import androidx.glance.appwidget.translators.translateEmittableCircularProgressIndicator
 import androidx.glance.appwidget.translators.translateEmittableImage
 import androidx.glance.appwidget.translators.translateEmittableLazyColumn
 import androidx.glance.appwidget.translators.translateEmittableLazyListItem
+import androidx.glance.appwidget.translators.translateEmittableLazyVerticalGrid
+import androidx.glance.appwidget.translators.translateEmittableLazyVerticalGridListItem
+import androidx.glance.appwidget.translators.translateEmittableLinearProgressIndicator
+import androidx.glance.appwidget.translators.translateEmittableRadioButton
 import androidx.glance.appwidget.translators.translateEmittableSwitch
 import androidx.glance.appwidget.translators.translateEmittableText
 import androidx.glance.layout.Alignment
@@ -44,6 +53,8 @@ import androidx.glance.layout.EmittableBox
 import androidx.glance.layout.EmittableColumn
 import androidx.glance.layout.EmittableRow
 import androidx.glance.layout.EmittableSpacer
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.padding
 import androidx.glance.text.EmittableText
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -51,19 +62,19 @@ import java.util.concurrent.atomic.AtomicInteger
 internal fun translateComposition(
     context: Context,
     appWidgetId: Int,
-    appWidgetClass: Class<out GlanceAppWidget>,
     element: RemoteViewsRoot,
-    layoutConfiguration: LayoutConfiguration,
+    layoutConfiguration: LayoutConfiguration?,
     rootViewIndex: Int,
+    layoutSize: DpSize,
 ) =
     translateComposition(
         TranslationContext(
             context,
             appWidgetId,
-            appWidgetClass,
             context.isRtl,
             layoutConfiguration,
-            itemPosition = -1
+            itemPosition = -1,
+            layoutSize = layoutSize,
         ),
         element.children,
         rootViewIndex,
@@ -95,14 +106,20 @@ internal fun translateComposition(
 internal data class TranslationContext(
     val context: Context,
     val appWidgetId: Int,
-    val appWidgetClass: Class<out GlanceAppWidget>,
     val isRtl: Boolean,
-    val layoutConfiguration: LayoutConfiguration,
+    val layoutConfiguration: LayoutConfiguration?,
     val itemPosition: Int,
     val isLazyCollectionDescendant: Boolean = false,
     val lastViewId: AtomicInteger = AtomicInteger(0),
     val parentContext: InsertedViewInfo = InsertedViewInfo(),
     val isBackgroundSpecified: AtomicBoolean = AtomicBoolean(false),
+    val layoutSize: DpSize = DpSize.Zero,
+    val layoutCollectionViewId: Int = View.NO_ID,
+    val layoutCollectionItemId: Int = -1,
+    val canUseSelectableGroup: Boolean = false,
+    val actionTargetId: Int? = null,
+    val isAdapterView: Boolean = false,
+    val isCompoundButton: Boolean = false,
 ) {
     fun nextViewId() = lastViewId.incrementAndGet()
 
@@ -113,6 +130,20 @@ internal data class TranslationContext(
         forChild(pos = 0, parent = root.view)
 
     fun resetViewId(newViewId: Int = 0) = copy(lastViewId = AtomicInteger(newViewId))
+
+    fun forLazyCollection(viewId: Int) =
+        copy(isLazyCollectionDescendant = true, layoutCollectionViewId = viewId)
+
+    fun forLazyViewItem(itemId: Int, newViewId: Int = 0) =
+        copy(lastViewId = AtomicInteger(newViewId), layoutCollectionViewId = itemId)
+
+    fun canUseSelectableGroup() = copy(canUseSelectableGroup = true)
+
+    fun forActionTargetId(viewId: Int) = copy(actionTargetId = viewId)
+
+    fun forAdapterView() = copy(isAdapterView = true)
+
+    fun forCompoundButton() = copy(isCompoundButton = true)
 }
 
 internal fun RemoteViews.translateChild(
@@ -134,6 +165,19 @@ internal fun RemoteViews.translateChild(
         is EmittableSpacer -> translateEmittableSpacer(translationContext, element)
         is EmittableSwitch -> translateEmittableSwitch(translationContext, element)
         is EmittableImage -> translateEmittableImage(translationContext, element)
+        is EmittableLinearProgressIndicator -> {
+            translateEmittableLinearProgressIndicator(translationContext, element)
+        }
+        is EmittableCircularProgressIndicator -> {
+            translateEmittableCircularProgressIndicator(translationContext, element)
+        }
+        is EmittableLazyVerticalGrid -> {
+            translateEmittableLazyVerticalGrid(translationContext, element)
+        }
+        is EmittableLazyVerticalGridListItem -> {
+          translateEmittableLazyVerticalGridListItem(translationContext, element)
+        }
+        is EmittableRadioButton -> translateEmittableRadioButton(translationContext, element)
         else -> {
             throw IllegalArgumentException(
                 "Unknown element type ${element.javaClass.canonicalName}"
@@ -187,6 +231,9 @@ private fun RemoteViews.translateEmittableBox(
         element.modifier,
         viewDef
     )
+    element.children.forEach {
+        it.modifier = it.modifier.then(AlignmentModifier(element.contentAlignment))
+    }
     setChildren(
         translationContext,
         viewDef,
@@ -198,9 +245,16 @@ private fun RemoteViews.translateEmittableRow(
     translationContext: TranslationContext,
     element: EmittableRow
 ) {
+    val layoutType = if (
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && element.modifier.isSelectableGroup
+    ) {
+        LayoutType.RadioRow
+    } else {
+        LayoutType.Row
+    }
     val viewDef = insertContainerView(
         translationContext,
-        LayoutType.Row,
+        layoutType,
         element.children.size,
         element.modifier,
         horizontalAlignment = null,
@@ -208,10 +262,10 @@ private fun RemoteViews.translateEmittableRow(
     )
     setLinearLayoutGravity(
         viewDef.mainViewId,
-        element.horizontalAlignment.toGravity()
+        Alignment(element.horizontalAlignment, element.verticalAlignment).toGravity()
     )
     applyModifiers(
-        translationContext,
+        translationContext.canUseSelectableGroup(),
         this,
         element.modifier,
         viewDef
@@ -221,15 +275,23 @@ private fun RemoteViews.translateEmittableRow(
         viewDef,
         element.children
     )
+    if (element.modifier.isSelectableGroup) checkSelectableGroupChildren(element.children)
 }
 
 private fun RemoteViews.translateEmittableColumn(
     translationContext: TranslationContext,
     element: EmittableColumn
 ) {
+    val layoutType = if (
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && element.modifier.isSelectableGroup
+    ) {
+        LayoutType.RadioColumn
+    } else {
+        LayoutType.Column
+    }
     val viewDef = insertContainerView(
         translationContext,
-        LayoutType.Column,
+        layoutType,
         element.children.size,
         element.modifier,
         horizontalAlignment = element.horizontalAlignment,
@@ -237,10 +299,10 @@ private fun RemoteViews.translateEmittableColumn(
     )
     setLinearLayoutGravity(
         viewDef.mainViewId,
-        element.verticalAlignment.toGravity()
+        Alignment(element.horizontalAlignment, element.verticalAlignment).toGravity()
     )
     applyModifiers(
-        translationContext,
+        translationContext.canUseSelectableGroup(),
         this,
         element.modifier,
         viewDef
@@ -250,6 +312,14 @@ private fun RemoteViews.translateEmittableColumn(
         viewDef,
         element.children
     )
+    if (element.modifier.isSelectableGroup) checkSelectableGroupChildren(element.children)
+}
+
+private fun checkSelectableGroupChildren(children: List<Emittable>) {
+    check(children.count { it is EmittableRadioButton && it.checked } <= 1) {
+        "When using GlanceModifier.selectableGroup(), no more than one RadioButton " +
+        "may be checked at a time."
+    }
 }
 
 private fun RemoteViews.translateEmittableAndroidRemoteViews(
@@ -282,16 +352,20 @@ private fun RemoteViews.translateEmittableButton(
     translationContext: TranslationContext,
     element: EmittableButton
 ) {
-    val viewDef = insertView(translationContext, LayoutType.Button, element.modifier)
-    setText(
-        translationContext,
-        viewDef.mainViewId,
-        element.text,
-        element.style,
-        verticalTextGravity = Gravity.CENTER_VERTICAL,
-    )
-    setBoolean(viewDef.mainViewId, "setEnabled", element.enabled)
-    applyModifiers(translationContext, this, element.modifier, viewDef)
+    // Separate the button into a wrapper and the text, this allows us to set the color of the text
+    // background, while maintaining the ripple for the click indicator.
+    // TODO: add Image button
+    val content = EmittableText().apply {
+        text = element.text
+        style = element.style
+        maxLines = element.maxLines
+        modifier =
+            GlanceModifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .doNotUnsetAction()
+    }
+    translateEmittableText(translationContext, content)
 }
 
 private fun RemoteViews.translateEmittableSpacer(
@@ -321,7 +395,7 @@ internal fun RemoteViews.setChildren(
 /**
  * Add stable view if on Android S+, otherwise simply add the view.
  */
-private fun RemoteViews.addChildView(viewId: Int, childView: RemoteViews, stableId: Int) {
+internal fun RemoteViews.addChildView(viewId: Int, childView: RemoteViews, stableId: Int) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         RemoteViewsTranslatorApi31Impl.addChildView(this, viewId, childView, stableId)
         return

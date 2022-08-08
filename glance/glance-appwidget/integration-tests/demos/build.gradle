@@ -23,7 +23,6 @@ plugins {
 }
 
 dependencies {
-    kotlinPlugin(project(":compose:compiler:compiler"))
 
     implementation(libs.kotlinStdlib)
     implementation(project(":glance:glance"))
@@ -45,4 +44,5 @@ android {
         // part of CI.
         archivesBaseName = "glance-appwidget-demos-testapp"
     }
+    namespace "androidx.glance.appwidget.demos"
 }

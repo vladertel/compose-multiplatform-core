@@ -19,25 +19,26 @@
 package androidx.build.lint
 
 import com.android.SdkConstants.ATTR_VALUE
-import com.android.tools.lint.checks.ApiDetector.Companion.REQUIRES_API_ANNOTATION
-import com.android.tools.lint.client.api.UElementHandler
-import com.android.tools.lint.detector.api.JavaContext
-import com.android.tools.lint.detector.api.SourceCodeScanner
 import com.android.tools.lint.checks.ApiLookup
 import com.android.tools.lint.checks.ApiLookup.equivalentName
-import com.android.tools.lint.checks.ApiLookup.startsWithEquivalentPrefix
-import com.android.tools.lint.checks.VersionChecks.Companion.codeNameToApi
+import com.android.tools.lint.checks.DesugaredMethodLookup
+import com.android.tools.lint.client.api.UElementHandler
 import com.android.tools.lint.detector.api.Category
 import com.android.tools.lint.detector.api.Context
 import com.android.tools.lint.detector.api.Desugaring
 import com.android.tools.lint.detector.api.Detector
 import com.android.tools.lint.detector.api.Implementation
+import com.android.tools.lint.detector.api.Incident
 import com.android.tools.lint.detector.api.Issue
+import com.android.tools.lint.detector.api.JavaContext
 import com.android.tools.lint.detector.api.LintFix
 import com.android.tools.lint.detector.api.Location
 import com.android.tools.lint.detector.api.Scope
 import com.android.tools.lint.detector.api.Severity
+import com.android.tools.lint.detector.api.SourceCodeScanner
 import com.android.tools.lint.detector.api.UastLintUtils.Companion.getLongAttribute
+import com.android.tools.lint.detector.api.VersionChecks
+import com.android.tools.lint.detector.api.VersionChecks.Companion.REQUIRES_API_ANNOTATION
 import com.android.tools.lint.detector.api.getInternalMethodName
 import com.android.tools.lint.detector.api.isKotlin
 import com.intellij.psi.PsiAnonymousClass
@@ -49,6 +50,7 @@ import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiSuperExpression
 import com.intellij.psi.PsiType
 import com.intellij.psi.util.PsiTreeUtil
+import kotlin.math.min
 import org.jetbrains.uast.UCallExpression
 import org.jetbrains.uast.UClass
 import org.jetbrains.uast.UElement
@@ -59,12 +61,8 @@ import org.jetbrains.uast.USuperExpression
 import org.jetbrains.uast.UThisExpression
 import org.jetbrains.uast.getContainingUClass
 import org.jetbrains.uast.getContainingUMethod
-import org.jetbrains.uast.java.JavaUAnnotation
-import org.jetbrains.uast.java.JavaUQualifiedReferenceExpression
-import org.jetbrains.uast.java.JavaUSimpleNameReferenceExpression
 import org.jetbrains.uast.util.isConstructorCall
 import org.jetbrains.uast.util.isMethodCall
-import kotlin.math.min
 
 /**
  * This check detects references to platform APIs that are likely to cause class verification
@@ -415,48 +413,19 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
                         return
                     }
                 }
-
-                // If it's a method we have source for, obviously it shouldn't be a
-                // violation. (This happens for example when compiling the support library.)
-                if (method !is PsiCompiledElement) {
-                    return
-                }
             }
 
-            // Desugar rewrites compare calls (see b/36390874)
-            if (name == "compare" &&
-                api == 19 &&
-                startsWithEquivalentPrefix(owner, "java/lang/") &&
-                desc.length == 4 &&
-                (
-                    desc == "(JJ)" ||
-                        desc == "(ZZ)" ||
-                        desc == "(BB)" ||
-                        desc == "(CC)" ||
-                        desc == "(II)" ||
-                        desc == "(SS)"
-                    )
-            ) {
-                if (context.project.isDesugaring(Desugaring.LONG_COMPARE)) {
-                    return
-                }
+            // Builtin R8 desugaring, such as rewriting compare calls (see b/36390874)
+            if (owner.startsWith("java.") &&
+                DesugaredMethodLookup.isDesugared(owner, name, desc)) {
+                return
             }
 
-            // Desugar rewrites Objects.requireNonNull calls (see b/32446315)
-            if (name == "requireNonNull" &&
-                api == 19 &&
-                owner == "java.util.Objects" &&
-                desc == "(Ljava.lang.Object;)"
-            ) {
-                if (context.project.isDesugaring(Desugaring.OBJECTS_REQUIRE_NON_NULL)) {
-                    return
-                }
-            }
-
-            if (name == "addSuppressed" &&
-                api == 19 &&
-                owner == "java.lang.Throwable" &&
-                desc == "(Ljava.lang.Throwable;)"
+            // These methods are not included in the R8 backported list so handle them manually
+            // the way R8 seems to
+            if (api == 19 && owner == "java.lang.Throwable" &&
+                (name == "addSuppressed" && desc == "(Ljava.lang.Throwable;)" ||
+                    name == "getSuppressed" && desc == "()")
             ) {
                 if (context.project.isDesugaring(Desugaring.TRY_WITH_RESOURCES)) {
                     return
@@ -504,15 +473,17 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
 
             // call.getContainingUClass()!! refers to the direct parent class of this method
             val containingClassName = call.getContainingUClass()!!.qualifiedName.toString()
-            val fix = createLintFix(method, call, api)
-
-            context.report(
-                ISSUE, reference, location,
-                "This call references a method added in API level $api; however, the " +
+            val lintFix = createLintFix(method, call, api)
+            val incident = Incident(context)
+                .fix(lintFix)
+                .issue(ISSUE)
+                .location(location)
+                .message("This call references a method added in API level $api; however, the " +
                     "containing class $containingClassName is reachable from earlier API " +
-                    "levels and will fail run-time class verification.",
-                fix,
-            )
+                    "levels and will fail run-time class verification.")
+                .scope(reference)
+
+            context.report(incident)
         }
 
         /**
@@ -549,7 +520,7 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
                 call.valueArguments,
                 wrapperClassName,
                 wrapperMethodName
-            ) ?: return null
+            )
 
             return fix().name("Extract to static inner class")
                 .composite(
@@ -614,6 +585,7 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
                     }
                     $wrapperMethodBody
                 }
+
                 """.trimIndent()
             } else {
                 implInsertionPoint = context.getLocation(existingWrapperClass.lastChild)
@@ -628,9 +600,7 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
         }
 
         /**
-         * Generates source code for a call to the generated wrapper method, or `null` if we don't
-         * know how to do that. Currently, this method is capable of handling static calls --
-         * including constructor calls -- and simple reference expressions from Java source code.
+         * Generates source code for a call to the generated wrapper method.
          *
          * Source code follows the general format:
          *
@@ -651,12 +621,7 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
             callValueArguments: List<UExpression>,
             wrapperClassName: String,
             wrapperMethodName: String,
-        ): String? {
-            var unwrappedCallReceiver = callReceiver
-            while (unwrappedCallReceiver is UParenthesizedExpression) {
-                unwrappedCallReceiver = unwrappedCallReceiver.expression
-            }
-
+        ): String {
             val callReceiverStr = when {
                 // Static method
                 context.evaluator.isStatic(method) ->
@@ -664,17 +629,13 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
                 // Constructor
                 method.isConstructor ->
                     null
-                // Simple reference
-                unwrappedCallReceiver is JavaUSimpleNameReferenceExpression ->
-                    unwrappedCallReceiver.identifier
-                // Qualified reference
-                unwrappedCallReceiver is JavaUQualifiedReferenceExpression ->
-                    "${unwrappedCallReceiver.receiver}.${unwrappedCallReceiver.selector}"
-                else -> {
-                    // We don't know how to handle this type of receiver. If this happens a lot, we
-                    // might try returning `UElement.asSourceString()` by default.
-                    return null
-                }
+                // If there is no call receiver, and the method isn't a constructor or static,
+                // it must be a call to an instance method using `this` implicitly.
+                callReceiver == null ->
+                    "this"
+                // Otherwise, use the original call receiver string (removing extra parens)
+                else ->
+                    unwrapExpression(callReceiver).asSourceString()
             }
 
             val callValues = if (callValueArguments.isNotEmpty()) {
@@ -688,6 +649,18 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
             val replacementArgs = listOfNotNull(callReceiverStr, callValues).joinToString(", ")
 
             return "$wrapperClassName.$wrapperMethodName($replacementArgs)"
+        }
+
+        /**
+         * Remove parentheses from the expression (unwrap the expression until it is no longer a
+         * UParenthesizedExpression).
+         */
+        private fun unwrapExpression(expr: UExpression): UExpression {
+            var unwrappedExpr = expr
+            while (unwrappedExpr is UParenthesizedExpression) {
+                unwrappedExpr = unwrappedExpr.expression
+            }
+            return unwrappedExpr
         }
 
         /**
@@ -714,10 +687,13 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
             val isStatic = evaluator.isStatic(method)
             val isConstructor = method.isConstructor
 
-            // Neither of these should be null if we're looking at Java code.
+            // None of these should be null if we're looking at Java code.
             val containingClass = method.containingClass ?: return null
-            val hostType = containingClass.name ?: return null
-            val hostVar = hostType[0].lowercaseChar() + hostType.substring(1)
+            // When referencing the type, use the fully qualified type in case it isn't imported
+            // (shortenTypes will simplify if it is). For the variable name, use just the class name
+            val hostType = containingClass.qualifiedName ?: return null
+            val hostClassName = containingClass.name ?: return null
+            val hostVar = hostClassName[0].lowercaseChar() + hostClassName.substring(1)
 
             val hostParam = if (isStatic || isConstructor) { null } else { "$hostType $hostVar" }
 
@@ -728,7 +704,7 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
             }
 
             val typedParams = method.parameters.map { param ->
-                "${(param.type as? PsiType)?.presentableText} ${param.name}"
+                "${(param.type as? PsiType)?.canonicalText} ${param.name}"
             }
             val typedParamsStr = (listOfNotNull(hostParam) + typedParams).joinToString(", ")
 
@@ -748,7 +724,7 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
                 receiverStr = "new "
             } else {
                 wrapperMethodName = methodName
-                returnTypeStr = method.returnType?.presentableText ?: "void"
+                returnTypeStr = method.returnType?.canonicalText ?: "void"
                 returnStmtStr = if ("void" == returnTypeStr) "" else "return "
                 receiverStr = if (isStatic) "$hostType." else "$hostVar."
             }
@@ -798,28 +774,28 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
         }
 
         private fun getRequiresApiFromAnnotations(modifierListOwner: PsiModifierListOwner): Int {
-            for (annotation in context.evaluator.getAllAnnotations(modifierListOwner, false)) {
+            for (annotation in context.evaluator.getAnnotations(modifierListOwner)) {
                 val qualifiedName = annotation.qualifiedName
                 if (REQUIRES_API_ANNOTATION.isEquals(qualifiedName)) {
-                    val wrapped = JavaUAnnotation.wrap(annotation)
                     var api = getLongAttribute(
-                        context, wrapped,
+                        context, annotation,
                         ATTR_VALUE, NO_API_REQUIREMENT.toLong()
                     ).toInt()
                     if (api <= 1) {
                         // @RequiresApi has two aliasing attributes: api and value
-                        api = getLongAttribute(context, wrapped, "api", NO_API_REQUIREMENT.toLong())
-                            .toInt()
+                        api = getLongAttribute(
+                            context, annotation, "api", NO_API_REQUIREMENT.toLong()).toInt()
                     }
                     return api
                 } else if (qualifiedName == null) {
                     // Work around UAST type resolution problems
                     // Work around bugs in UAST type resolution for file annotations:
                     // parse the source string instead.
-                    if (annotation is PsiCompiledElement) {
+                    val psiAnnotation = annotation.javaPsi
+                    if (psiAnnotation == null || psiAnnotation is PsiCompiledElement) {
                         continue
                     }
-                    val text = annotation.text
+                    val text = psiAnnotation.text
                     if (text.contains("RequiresApi(")) {
                         val start = text.indexOf('(')
                         val end = text.indexOf(')', start + 1)
@@ -842,7 +818,7 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
                                         return api
                                     }
                                 } else {
-                                    return codeNameToApi(name)
+                                    return VersionChecks.codeNameToApi(name)
                                 }
                             }
                         }
@@ -862,44 +838,15 @@ class ClassVerificationFailureDetector : Detector(), SourceCodeScanner {
                 "may not be available at run time, including platform APIs introduced after a " +
                 "library's minSdkVersion.",
             """
-                The Java language requires a virtual machine to verify the class files it
-                loads and executes. A class may fail verification for a wide variety of
-                reasons, but in practice it‘s usually because the class’s code refers to
-                unknown classes or methods.
-                
                 References to APIs added after a library's minSdkVersion -- regardless of
                 any surrounding version checks -- will fail run-time class verification if
-                the API does not exist on the device, leading to reduced run-time
-                performance.
+                the API does not exist on the device, leading to reduced run-time performance.
 
-                Gating references on SDK checks alone DOES NOT address class verification
-                failures.
+                To prevent class verification failures, references to new APIs must be moved to
+                methods within inner classes that are only initialized inside of an appropriate
+                SDK check. These methods must be paired with the @DoNotInline annotation.
 
-                To prevent class verification failures, references to new APIs must be
-                moved to inner classes that are only initialized inside of an appropriate
-                SDK check.
-
-                For example, if our minimum SDK is 14 and platform method a.x(params...)
-                was added in SDK 16, the method call must be moved to an inner class like:
-
-                @RequiresApi(16)
-                private static class Api16Impl{
-                  @DoNotInline
-                  static void callX(params...) {
-                    a.x(params...);
-                  }
-                }
-
-                The call site is changed from a.x(params...) to Api16Impl.callX(params).
-
-                Since ART will only try to optimize Api16Impl when it's on the execution
-                path, we are guaranteed to have a.x(...) available.
-
-                In addition, optimizers like R8 or Proguard may inline the method in the
-                separate class and replace the wrapper call with the actual call, so you
-                must disable inlining using the @DoNotInline annotation.
-
-                Failure to do the above may result in overall performance degradation.
+                For more details and an example, see go/androidx-api-guidelines#compat-sdk.
             """,
             Category.CORRECTNESS, 5, Severity.ERROR,
             Implementation(ClassVerificationFailureDetector::class.java, Scope.JAVA_FILE_SCOPE)

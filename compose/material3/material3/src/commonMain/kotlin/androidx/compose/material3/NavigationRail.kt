@@ -20,6 +20,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -30,12 +31,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.ripple.rememberRipple
-import androidx.compose.material3.tokens.NavigationRail
+import androidx.compose.material3.tokens.NavigationRailTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
@@ -45,27 +45,34 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
 /**
+ * <a href="https://m3.material.io/components/navigation-rail/overview" class="external" target="_blank">Material Design bottom navigation rail</a>.
+ *
+ * Navigation rails provide access to primary destinations in apps when using tablet and desktop
+ * screens.
+ *
  * ![Navigation rail image](https://developer.android.com/images/reference/androidx/compose/material3/navigation-rail.png)
  *
- * Material Design navigation rail.
- *
- * [NavigationRail] is a side navigation component that allows movement between primary destinations
- * in an app. The navigation rail should be used to display three to seven app destinations and,
- * optionally, a Floating Action Button or a logo header. Each destination is typically represented
- * by an icon and an optional text label.
+ * The navigation rail should be used to display three to seven app destinations and, optionally, a
+ * [FloatingActionButton] or a logo header. Each destination is typically represented by an icon and
+ * an optional text label.
  *
  * [NavigationRail] should contain multiple [NavigationRailItem]s, each representing a singular
  * destination.
@@ -76,19 +83,19 @@ import kotlin.math.roundToInt
  * See [NavigationRailItem] for configuration specific to each item, and not the overall
  * NavigationRail component.
  *
- * @param modifier optional [Modifier] for this NavigationRail
- * @param containerColor the container color for this NavigationRail
- * @param contentColor the preferred content color provided by this NavigationRail to its children.
- * Defaults to either the matching content color for [containerColor], or if [containerColor] is not
- * a color from the theme, this will keep the same value set above this NavigationRail
- * @param header optional header that may hold a Floating Action Button or a logo
- * @param content destinations inside this NavigationRail. This should contain multiple
- * [NavigationRailItem]s
+ * @param modifier the [Modifier] to be applied to this navigation rail
+ * @param containerColor the color used for the background of this navigation rail. Use
+ * [Color.Transparent] to have no color.
+ * @param contentColor the preferred color for content inside this navigation rail. Defaults to
+ * either the matching content color for [containerColor], or to the current [LocalContentColor] if
+ * [containerColor] is not a color from the theme.
+ * @param header optional header that may hold a [FloatingActionButton] or a logo
+ * @param content the content of this navigation rail, typically 3-7 [NavigationRailItem]s
  */
 @Composable
 fun NavigationRail(
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.fromToken(NavigationRail.ContainerColor),
+    containerColor: Color = NavigationRailDefaults.ContainerColor,
     contentColor: Color = contentColorFor(containerColor),
     header: @Composable (ColumnScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
@@ -99,8 +106,9 @@ fun NavigationRail(
         modifier = modifier,
     ) {
         Column(
-            Modifier.fillMaxHeight()
-                .width(NavigationRail.ContainerWidth)
+            Modifier
+                .fillMaxHeight()
+                .widthIn(min = NavigationRailTokens.ContainerWidth)
                 .padding(vertical = NavigationRailVerticalPadding)
                 .selectableGroup(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -120,23 +128,27 @@ fun NavigationRail(
  *
  * A [NavigationRailItem] represents a destination within a [NavigationRail].
  *
+ * Navigation rails provide access to primary destinations in apps when using tablet and desktop
+ * screens.
+ *
  * The text label is always shown (if it exists) when selected. Showing text labels if not selected
  * is controlled by [alwaysShowLabel].
  *
  * @param selected whether this item is selected
- * @param onClick the callback to be invoked when this item is selected
+ * @param onClick called when this item is clicked
  * @param icon icon for this item, typically an [Icon]
- * @param modifier optional [Modifier] for this item
- * @param enabled controls the enabled state of this item. When false, this item will not be
- * clickable and will appear disabled to accessibility services
+ * @param modifier the [Modifier] to be applied to this item
+ * @param enabled controls the enabled state of this item. When `false`, this component will not
+ * respond to user input, and it will appear visually disabled and disabled to accessibility
+ * services.
  * @param label optional text label for this item
  * @param alwaysShowLabel whether to always show the label for this item. If false, the label will
  * only be shown when this item is selected.
+ * @param colors [NavigationRailItemColors] that will be used to resolve the colors used for this
+ * item in different states. See [NavigationRailItemDefaults.colors].
  * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
- * for this NavigationRailItem. You can create and pass in your own remembered
- * [MutableInteractionSource] if you want to observe [Interaction]s and customize the appearance /
- * behavior of this NavigationRailItem in different [Interaction]s.
- * @param colors the various colors used in elements of this item
+ * for this item. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this item in different states.
  */
 @Composable
 fun NavigationRailItem(
@@ -147,17 +159,21 @@ fun NavigationRailItem(
     enabled: Boolean = true,
     label: @Composable (() -> Unit)? = null,
     alwaysShowLabel: Boolean = true,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     colors: NavigationRailItemColors = NavigationRailItemDefaults.colors(),
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
 ) {
     val styledIcon = @Composable {
         val iconColor by colors.iconColor(selected = selected)
-        CompositionLocalProvider(LocalContentColor provides iconColor, content = icon)
+        // If there's a label, don't have a11y services repeat the icon description.
+        val clearSemantics = label != null && (alwaysShowLabel || selected)
+        Box(modifier = if (clearSemantics) Modifier.clearAndSetSemantics {} else Modifier) {
+            CompositionLocalProvider(LocalContentColor provides iconColor, content = icon)
+        }
     }
 
     val styledLabel: @Composable (() -> Unit)? = label?.let {
         @Composable {
-            val style = MaterialTheme.typography.fromToken(NavigationRail.LabelTextFont)
+            val style = MaterialTheme.typography.fromToken(NavigationRailTokens.LabelTextFont)
             val textColor by colors.textColor(selected = selected)
             CompositionLocalProvider(LocalContentColor provides textColor) {
                 ProvideTextStyle(style, content = label)
@@ -173,9 +189,10 @@ fun NavigationRailItem(
                 enabled = enabled,
                 role = Role.Tab,
                 interactionSource = interactionSource,
-                indication = rememberRipple(),
+                indication = null,
             )
-            .size(width = NavigationRailItemWidth, height = NavigationRailItemHeight),
+            .height(height = NavigationRailItemHeight)
+            .widthIn(min = NavigationRailItemWidth),
         contentAlignment = Alignment.Center
     ) {
         val animationProgress: Float by animateFloatAsState(
@@ -183,21 +200,48 @@ fun NavigationRailItem(
             animationSpec = tween(ItemAnimationDurationMillis)
         )
 
+        // The entire item is selectable, but only the indicator pill shows the ripple. To achieve
+        // this, we re-map the coordinates of the item's InteractionSource into the coordinates of
+        // the indicator.
+        val deltaOffset: Offset
+        with(LocalDensity.current) {
+            val itemWidth = NavigationRailItemWidth.roundToPx()
+            val indicatorWidth = NavigationRailTokens.ActiveIndicatorWidth.roundToPx()
+            deltaOffset = Offset((itemWidth - indicatorWidth).toFloat() / 2, 0f)
+        }
+        val offsetInteractionSource = remember(interactionSource, deltaOffset) {
+            MappedInteractionSource(interactionSource, deltaOffset)
+        }
+
+        val indicatorShape = if (label != null) {
+            NavigationRailTokens.ActiveIndicatorShape.toShape()
+        } else {
+            NavigationRailTokens.NoLabelActiveIndicatorShape.toShape()
+        }
+
+        // The indicator has a width-expansion animation which interferes with the timing of the
+        // ripple, which is why they are separate composables
+        val indicatorRipple = @Composable {
+            Box(
+                Modifier
+                    .layoutId(IndicatorRippleLayoutIdTag)
+                    .clip(indicatorShape)
+                    .indication(offsetInteractionSource, rememberRipple())
+            )
+        }
         val indicator = @Composable {
             Box(
-                Modifier.layoutId(IndicatorLayoutIdTag)
+                Modifier
+                    .layoutId(IndicatorLayoutIdTag)
                     .background(
                         color = colors.indicatorColor.copy(alpha = animationProgress),
-                        shape = if (label != null) {
-                            NavigationRail.ActiveIndicatorShape
-                        } else {
-                            NavigationRail.NoLabelActiveIndicatorShape
-                        }
+                        shape = indicatorShape
                     )
             )
         }
 
         NavigationRailItemBaselineLayout(
+            indicatorRipple = indicatorRipple,
             indicator = indicator,
             icon = styledIcon,
             label = styledLabel,
@@ -207,6 +251,12 @@ fun NavigationRailItem(
     }
 }
 
+/** Defaults used in [NavigationRail] */
+object NavigationRailDefaults {
+    /** Default container color of a navigation rail. */
+    val ContainerColor: Color @Composable get() = NavigationRailTokens.ContainerColor.toColor()
+}
+
 /** Defaults used in [NavigationRailItem]. */
 object NavigationRailItemDefaults {
     /**
@@ -214,24 +264,19 @@ object NavigationRailItemDefaults {
      * specification.
      *
      * @param selectedIconColor the color to use for the icon when the item is selected.
-     * @param unselectedIconColor the color to use for the icon when the item is unselected.
      * @param selectedTextColor the color to use for the text label when the item is selected.
-     * @param unselectedTextColor the color to use for the text label when the item is unselected.
      * @param indicatorColor the color to use for the indicator when the item is selected.
+     * @param unselectedIconColor the color to use for the icon when the item is unselected.
+     * @param unselectedTextColor the color to use for the text label when the item is unselected.
      * @return the resulting [NavigationRailItemColors] used for [NavigationRailItem]
      */
     @Composable
     fun colors(
-        selectedIconColor: Color =
-            MaterialTheme.colorScheme.fromToken(NavigationRail.ActiveIconColor),
-        unselectedIconColor: Color =
-            MaterialTheme.colorScheme.fromToken(NavigationRail.InactiveIconColor),
-        selectedTextColor: Color =
-            MaterialTheme.colorScheme.fromToken(NavigationRail.ActiveLabelTextColor),
-        unselectedTextColor: Color =
-            MaterialTheme.colorScheme.fromToken(NavigationRail.InactiveLabelTextColor),
-        indicatorColor: Color =
-            MaterialTheme.colorScheme.fromToken(NavigationRail.ActiveIndicatorColor),
+        selectedIconColor: Color = NavigationRailTokens.ActiveIconColor.toColor(),
+        selectedTextColor: Color = NavigationRailTokens.ActiveLabelTextColor.toColor(),
+        indicatorColor: Color = NavigationRailTokens.ActiveIndicatorColor.toColor(),
+        unselectedIconColor: Color = NavigationRailTokens.InactiveIconColor.toColor(),
+        unselectedTextColor: Color = NavigationRailTokens.InactiveLabelTextColor.toColor(),
     ): NavigationRailItemColors = remember(
         selectedIconColor,
         unselectedIconColor,
@@ -276,10 +321,10 @@ interface NavigationRailItemColors {
 @Stable
 private class DefaultNavigationRailItemColors(
     private val selectedIconColor: Color,
-    private val unselectedIconColor: Color,
     private val selectedTextColor: Color,
-    private val unselectedTextColor: Color,
     private val selectedIndicatorColor: Color,
+    private val unselectedIconColor: Color,
+    private val unselectedTextColor: Color,
 ) : NavigationRailItemColors {
     @Composable
     override fun iconColor(selected: Boolean): State<Color> {
@@ -305,6 +350,7 @@ private class DefaultNavigationRailItemColors(
 /**
  * Base layout for a [NavigationRailItem].
  *
+ * @param indicatorRipple indicator ripple for this item when it is selected
  * @param indicator indicator for this item when it is selected
  * @param icon icon for this item
  * @param label text label for this item
@@ -316,6 +362,7 @@ private class DefaultNavigationRailItemColors(
  */
 @Composable
 private fun NavigationRailItemBaselineLayout(
+    indicatorRipple: @Composable () -> Unit,
     indicator: @Composable () -> Unit,
     icon: @Composable () -> Unit,
     label: @Composable (() -> Unit)?,
@@ -323,6 +370,7 @@ private fun NavigationRailItemBaselineLayout(
     animationProgress: Float,
 ) {
     Layout({
+        indicatorRipple()
         if (animationProgress > 0) {
             indicator()
         }
@@ -331,7 +379,8 @@ private fun NavigationRailItemBaselineLayout(
 
         if (label != null) {
             Box(
-                Modifier.layoutId(LabelLayoutIdTag)
+                Modifier
+                    .layoutId(LabelLayoutIdTag)
                     .alpha(if (alwaysShowLabel) 1f else animationProgress)
             ) { label() }
         }
@@ -348,6 +397,15 @@ private fun NavigationRailItemBaselineLayout(
         }
         val indicatorHeight = iconPlaceable.height + (indicatorVerticalPadding * 2).roundToPx()
 
+        val indicatorRipplePlaceable =
+            measurables
+                .first { it.layoutId == IndicatorRippleLayoutIdTag }
+                .measure(
+                    Constraints.fixed(
+                        width = totalIndicatorWidth,
+                        height = indicatorHeight
+                    )
+                )
         val indicatorPlaceable =
             measurables
                 .firstOrNull { it.layoutId == IndicatorLayoutIdTag }
@@ -370,11 +428,12 @@ private fun NavigationRailItemBaselineLayout(
             }
 
         if (label == null) {
-            placeIcon(iconPlaceable, indicatorPlaceable, constraints)
+            placeIcon(iconPlaceable, indicatorRipplePlaceable, indicatorPlaceable, constraints)
         } else {
             placeLabelAndIcon(
                 labelPlaceable!!,
                 iconPlaceable,
+                indicatorRipplePlaceable,
                 indicatorPlaceable,
                 constraints,
                 alwaysShowLabel,
@@ -385,19 +444,28 @@ private fun NavigationRailItemBaselineLayout(
 }
 
 /**
- * Places the provided [iconPlaceable], and possibly [indicatorPlaceable] if it exists, in the
- * center of the provided [constraints].
+ * Places the provided [Placeable]s in the center of the provided [constraints].
  */
 private fun MeasureScope.placeIcon(
     iconPlaceable: Placeable,
+    indicatorRipplePlaceable: Placeable,
     indicatorPlaceable: Placeable?,
     constraints: Constraints,
 ): MeasureResult {
-    val width = constraints.maxWidth
+    val width = constraints.constrainWidth(
+        maxOf(
+            iconPlaceable.width,
+            indicatorRipplePlaceable.width,
+            indicatorPlaceable?.width ?: 0
+        )
+    )
     val height = constraints.maxHeight
 
     val iconX = (width - iconPlaceable.width) / 2
     val iconY = (height - iconPlaceable.height) / 2
+
+    val rippleX = (width - indicatorRipplePlaceable.width) / 2
+    val rippleY = (height - indicatorRipplePlaceable.height) / 2
 
     return layout(width, height) {
         indicatorPlaceable?.let {
@@ -406,12 +474,13 @@ private fun MeasureScope.placeIcon(
             it.placeRelative(indicatorX, indicatorY)
         }
         iconPlaceable.placeRelative(iconX, iconY)
+        indicatorRipplePlaceable.placeRelative(rippleX, rippleY)
     }
 }
 
 /**
- * Places the provided [labelPlaceable], [iconPlaceable], and [indicatorPlaceable] in the correct
- * position, depending on [alwaysShowLabel] and [animationProgress].
+ * Places the provided [Placeable]s in the correct position, depending on [alwaysShowLabel] and
+ * [animationProgress].
  *
  * When [alwaysShowLabel] is true, the positions do not move. The [iconPlaceable] will be placed
  * near the top of the item and the [labelPlaceable] will be placed near the bottom, according to
@@ -426,11 +495,12 @@ private fun MeasureScope.placeIcon(
  * When [animationProgress] is animating between these values, [iconPlaceable] and [labelPlaceable]
  * will be placed at a corresponding interpolated position.
  *
- * [indicatorPlaceable] will always be placed in such a way that it shares the same center as
- * [iconPlaceable].
+ * [indicatorRipplePlaceable] and [indicatorPlaceable] will always be placed in such a way that to
+ * share the same center as [iconPlaceable].
  *
  * @param labelPlaceable text label placeable inside this item
  * @param iconPlaceable icon placeable inside this item
+ * @param indicatorRipplePlaceable indicator ripple placeable inside this item
  * @param indicatorPlaceable indicator placeable inside this item, if it exists
  * @param constraints constraints of the item
  * @param alwaysShowLabel whether to always show the label for this item. If true, icon and label
@@ -443,6 +513,7 @@ private fun MeasureScope.placeIcon(
 private fun MeasureScope.placeLabelAndIcon(
     labelPlaceable: Placeable,
     iconPlaceable: Placeable,
+    indicatorRipplePlaceable: Placeable,
     indicatorPlaceable: Placeable?,
     constraints: Constraints,
     alwaysShowLabel: Boolean,
@@ -464,10 +535,17 @@ private fun MeasureScope.placeLabelAndIcon(
     // The interpolated fraction of iconDistance that all placeables need to move based on
     // animationProgress, since the icon is higher in the selected state.
     val offset = (iconDistance * (1 - animationProgress)).roundToInt()
-
-    val width = constraints.maxWidth
+    val width = constraints.constrainWidth(
+        maxOf(
+            iconPlaceable.width,
+            labelPlaceable.width,
+            indicatorPlaceable?.width ?: 0
+        )
+    )
     val labelX = (width - labelPlaceable.width) / 2
     val iconX = (width - iconPlaceable.width) / 2
+    val rippleX = (width - indicatorRipplePlaceable.width) / 2
+    val rippleY = selectedIconY - IndicatorVerticalPaddingWithLabel.roundToPx()
 
     return layout(width, height) {
         indicatorPlaceable?.let {
@@ -479,8 +557,11 @@ private fun MeasureScope.placeLabelAndIcon(
             labelPlaceable.placeRelative(labelX, labelY + offset)
         }
         iconPlaceable.placeRelative(iconX, selectedIconY + offset)
+        indicatorRipplePlaceable.placeRelative(rippleX, rippleY + offset)
     }
 }
+
+private const val IndicatorRippleLayoutIdTag: String = "indicatorRipple"
 
 private const val IndicatorLayoutIdTag: String = "indicator"
 
@@ -504,21 +585,21 @@ private const val ItemAnimationDurationMillis: Int = 150
 
 /*@VisibleForTesting*/
 /** Width of an individual [NavigationRailItem]. */
-internal val NavigationRailItemWidth: Dp = NavigationRail.ContainerWidth
+internal val NavigationRailItemWidth: Dp = NavigationRailTokens.ContainerWidth
 
 /*@VisibleForTesting*/
 /** Height of an individual [NavigationRailItem]. */
-internal val NavigationRailItemHeight: Dp = NavigationRail.NoLabelActiveIndicatorHeight
+internal val NavigationRailItemHeight: Dp = NavigationRailTokens.NoLabelActiveIndicatorHeight
 
 /*@VisibleForTesting*/
 /** Vertical padding between the contents of a [NavigationRailItem] and its top/bottom. */
 internal val NavigationRailItemVerticalPadding: Dp = 4.dp
 
 private val IndicatorHorizontalPadding: Dp =
-    (NavigationRail.ActiveIndicatorWidth - NavigationRail.IconSize) / 2
+    (NavigationRailTokens.ActiveIndicatorWidth - NavigationRailTokens.IconSize) / 2
 
 private val IndicatorVerticalPaddingWithLabel: Dp =
-    (NavigationRail.ActiveIndicatorHeight - NavigationRail.IconSize) / 2
+    (NavigationRailTokens.ActiveIndicatorHeight - NavigationRailTokens.IconSize) / 2
 
 private val IndicatorVerticalPaddingNoLabel: Dp =
-    (NavigationRail.NoLabelActiveIndicatorHeight - NavigationRail.IconSize) / 2
+    (NavigationRailTokens.NoLabelActiveIndicatorHeight - NavigationRailTokens.IconSize) / 2

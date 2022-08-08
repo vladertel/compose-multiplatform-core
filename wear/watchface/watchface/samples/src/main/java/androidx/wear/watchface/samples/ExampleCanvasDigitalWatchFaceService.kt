@@ -95,10 +95,6 @@ internal val RIGHT_CIRCLE_COMPLICATION_CENTER_FRACTION = PointF(0.823f, 0.5f)
 internal val MARGIN_FRACTION_WITHOUT_COMPLICATION = Vec2f(0.2f, 0.2f)
 internal val MARGIN_FRACTION_WITH_COMPLICATION = Vec2f(0.4f, 0.4f)
 
-// If the lightness in HSL color space is greater than this threshold, this color would be regarded
-// as a light color.
-internal const val BACKGROUND_COLOR_LIGHTNESS_THRESHOLD = 0.5f
-
 enum class ComplicationID {
     UPPER,
     RIGHT,
@@ -465,10 +461,6 @@ internal fun createBoundsRect(
     )
 }
 
-fun Byte.toUnsigned(): Int {
-    return if (this < 0) this + 256 else this.toInt()
-}
-
 /** A simple example canvas based digital watch face. */
 class ExampleCanvasDigitalWatchFaceService : WatchFaceService() {
     // Lazy because the context isn't initialized til later.
@@ -527,15 +519,18 @@ class ExampleCanvasDigitalWatchFaceService : WatchFaceService() {
             ComplicationType.MONOCHROMATIC_IMAGE,
             ComplicationType.SMALL_IMAGE
         ),
-        DefaultComplicationDataSourcePolicy(SystemDataSources.DATA_SOURCE_WATCH_BATTERY),
+        DefaultComplicationDataSourcePolicy(
+            SystemDataSources.DATA_SOURCE_WATCH_BATTERY,
+            ComplicationType.SHORT_TEXT
+        ),
         ComplicationSlotBounds(
             createBoundsRect(
                 LEFT_CIRCLE_COMPLICATION_CENTER_FRACTION,
                 CIRCLE_COMPLICATION_DIAMETER_FRACTION
             )
         )
-    ).setDefaultDataSourceType(ComplicationType.SHORT_TEXT)
-        .build()
+    ).setNameResourceId(R.string.left_complication_screen_name)
+        .setScreenReaderNameResourceId(R.string.left_complication_screen_reader_name).build()
 
     private val rightComplication = ComplicationSlot.createRoundRectComplicationSlotBuilder(
         ComplicationID.RIGHT.ordinal,
@@ -546,15 +541,18 @@ class ExampleCanvasDigitalWatchFaceService : WatchFaceService() {
             ComplicationType.MONOCHROMATIC_IMAGE,
             ComplicationType.SMALL_IMAGE
         ),
-        DefaultComplicationDataSourcePolicy(SystemDataSources.DATA_SOURCE_DATE),
+        DefaultComplicationDataSourcePolicy(
+            SystemDataSources.DATA_SOURCE_DATE,
+            ComplicationType.SHORT_TEXT
+        ),
         ComplicationSlotBounds(
             createBoundsRect(
                 RIGHT_CIRCLE_COMPLICATION_CENTER_FRACTION,
                 CIRCLE_COMPLICATION_DIAMETER_FRACTION
             )
         )
-    ).setDefaultDataSourceType(ComplicationType.SHORT_TEXT)
-        .build()
+    ).setNameResourceId(R.string.right_complication_screen_name)
+        .setScreenReaderNameResourceId(R.string.right_complication_screen_reader_name).build()
 
     private val upperAndLowerComplicationTypes = listOf(
         ComplicationType.LONG_TEXT,
@@ -568,10 +566,13 @@ class ExampleCanvasDigitalWatchFaceService : WatchFaceService() {
         ComplicationID.UPPER.ordinal,
         canvasComplicationFactory,
         upperAndLowerComplicationTypes,
-        DefaultComplicationDataSourcePolicy(SystemDataSources.DATA_SOURCE_WORLD_CLOCK),
+        DefaultComplicationDataSourcePolicy(
+            SystemDataSources.DATA_SOURCE_WORLD_CLOCK,
+            ComplicationType.LONG_TEXT
+        ),
         ComplicationSlotBounds(
             ComplicationType.values().associateWith {
-                if (it == ComplicationType.LONG_TEXT) {
+                if (it == ComplicationType.LONG_TEXT || it == ComplicationType.NO_DATA) {
                     createBoundsRect(
                         UPPER_ROUND_RECT_COMPLICATION_CENTER_FRACTION,
                         ROUND_RECT_COMPLICATION_SIZE_FRACTION
@@ -582,19 +583,23 @@ class ExampleCanvasDigitalWatchFaceService : WatchFaceService() {
                         CIRCLE_COMPLICATION_DIAMETER_FRACTION
                     )
                 }
-            }
+            },
+            ComplicationType.values().associateWith { RectF() }
         )
-    ).setDefaultDataSourceType(ComplicationType.LONG_TEXT)
-        .build()
+    ).setNameResourceId(R.string.upper_complication_screen_name)
+        .setScreenReaderNameResourceId(R.string.upper_complication_screen_reader_name).build()
 
     private val lowerComplication = ComplicationSlot.createRoundRectComplicationSlotBuilder(
         ComplicationID.LOWER.ordinal,
         canvasComplicationFactory,
         upperAndLowerComplicationTypes,
-        DefaultComplicationDataSourcePolicy(SystemDataSources.DATA_SOURCE_NEXT_EVENT),
+        DefaultComplicationDataSourcePolicy(
+            SystemDataSources.DATA_SOURCE_NEXT_EVENT,
+            ComplicationType.LONG_TEXT
+        ),
         ComplicationSlotBounds(
             ComplicationType.values().associateWith {
-                if (it == ComplicationType.LONG_TEXT) {
+                if (it == ComplicationType.LONG_TEXT || it == ComplicationType.NO_DATA) {
                     createBoundsRect(
                         LOWER_ROUND_RECT_COMPLICATION_CENTER_FRACTION,
                         ROUND_RECT_COMPLICATION_SIZE_FRACTION
@@ -605,17 +610,19 @@ class ExampleCanvasDigitalWatchFaceService : WatchFaceService() {
                         CIRCLE_COMPLICATION_DIAMETER_FRACTION
                     )
                 }
-            }
+            },
+            ComplicationType.values().associateWith { RectF() }
         )
-    ).setDefaultDataSourceType(ComplicationType.LONG_TEXT)
-        .build()
+    ).setNameResourceId(R.string.lower_complication_screen_name)
+        .setScreenReaderNameResourceId(R.string.lower_complication_screen_reader_name).build()
 
     private val backgroundComplication = ComplicationSlot.createBackgroundComplicationSlotBuilder(
         ComplicationID.BACKGROUND.ordinal,
         canvasComplicationFactory,
         listOf(ComplicationType.PHOTO_IMAGE),
         DefaultComplicationDataSourcePolicy()
-    ).build()
+    ).setNameResourceId(R.string.background_complication_screen_name)
+        .setScreenReaderNameResourceId(R.string.background_complication_screen_reader_name).build()
 
     override fun createUserStyleSchema() = UserStyleSchema(listOf(colorStyleSetting))
 
@@ -677,6 +684,7 @@ class ExampleCanvasDigitalWatchFaceService : WatchFaceService() {
     }
 }
 
+@Suppress("Deprecation")
 class ExampleDigitalWatchCanvasRenderer(
     surfaceHolder: SurfaceHolder,
     private val context: Context,
@@ -690,7 +698,8 @@ class ExampleDigitalWatchCanvasRenderer(
     currentUserStyleRepository,
     watchState,
     CanvasType.HARDWARE,
-    INTERACTIVE_UPDATE_RATE_MS
+    INTERACTIVE_UPDATE_RATE_MS,
+    clearWithBackgroundTintBeforeRenderingHighlightLayer = true
 ) {
     internal var oldBounds = Rect(0, 0, 0, 0)
 
@@ -1022,8 +1031,6 @@ class ExampleDigitalWatchCanvasRenderer(
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime) {
-        canvas.drawColor(renderParameters.highlightLayer!!.backgroundTint)
-
         drawComplicationHighlights(canvas, zonedDateTime)
     }
 
@@ -1133,11 +1140,15 @@ class ExampleDigitalWatchCanvasRenderer(
     private fun drawComplications(canvas: Canvas, zonedDateTime: ZonedDateTime) {
         // First, draw the background complication if not in ambient mode
         if (renderParameters.drawMode != DrawMode.AMBIENT) {
-            complicationSlotsManager[ComplicationID.BACKGROUND.ordinal]!!.render(
-                canvas,
-                zonedDateTime,
-                renderParameters
-            )
+            complicationSlotsManager[ComplicationID.BACKGROUND.ordinal]?.let {
+                if (it.complicationData.value.type != ComplicationType.NO_DATA) {
+                    it.render(
+                        canvas,
+                        zonedDateTime,
+                        renderParameters
+                    )
+                }
+            }
         }
         for (i in FOREGROUND_COMPLICATION_IDS) {
             val complication = complicationSlotsManager[i] as ComplicationSlot

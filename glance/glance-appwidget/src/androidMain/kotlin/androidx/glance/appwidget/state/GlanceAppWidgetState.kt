@@ -17,18 +17,21 @@
 package androidx.glance.appwidget.state
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.glance.GlanceId
 import androidx.glance.appwidget.AppWidgetId
+import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.createUniqueRemoteUiName
 import androidx.glance.state.GlanceState
 import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
 
 /**
  * Retrieve the state of an app widget.
  *
  * The state definition must be the one used for that particular app widget.
  */
-public suspend fun <T> getAppWidgetState(
+suspend fun <T> getAppWidgetState(
     context: Context,
     definition: GlanceStateDefinition<T>,
     glanceId: GlanceId,
@@ -42,7 +45,7 @@ public suspend fun <T> getAppWidgetState(
  *
  * The state definition must be the one used for that particular app widget.
  */
-public suspend fun <T> updateAppWidgetState(
+suspend fun <T> updateAppWidgetState(
     context: Context,
     definition: GlanceStateDefinition<T>,
     glanceId: GlanceId,
@@ -56,3 +59,32 @@ public suspend fun <T> updateAppWidgetState(
         updateState,
     )
 }
+
+/**
+ * Update the state of an app widget using the global PreferencesGlanceStateDefinition.
+ *
+ * The state definition must be the one used for that particular app widget.
+ */
+suspend fun updateAppWidgetState(
+    context: Context,
+    glanceId: GlanceId,
+    updateState: suspend (MutablePreferences) -> Unit,
+) {
+    updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) {
+        it.toMutablePreferences().apply {
+            updateState(this)
+        }
+    }
+}
+
+/** Get the state of an App Widget. */
+@Suppress("UNCHECKED_CAST")
+suspend fun <T> GlanceAppWidget.getAppWidgetState(
+    @Suppress("ContextFirst") context: Context,
+    glanceId: GlanceId
+): T =
+    getAppWidgetState(
+        context,
+        checkNotNull(stateDefinition) { "No state defined in this provider" },
+        glanceId
+    ) as T

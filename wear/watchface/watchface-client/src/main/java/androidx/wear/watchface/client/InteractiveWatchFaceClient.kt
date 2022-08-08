@@ -88,6 +88,16 @@ public interface InteractiveWatchFaceClient : AutoCloseable {
     public val previewReferenceInstant: Instant
 
     /**
+     * The watchface's [OverlayStyle] which configures the system status overlay on
+     * Wear 3.0 and beyond. Note for older watch faces which don't support this, the default value
+     * will be returned.
+     */
+    @get:Throws(RemoteException::class)
+    public val overlayStyle: OverlayStyle
+        // Default implementation, overridden below.
+        get() = OverlayStyle()
+
+    /**
      * Renames this instance to [newInstanceId] (must be unique, usually this would be different
      * from the old ID but that's not a requirement). Sets the current [UserStyle] and clears
      * any complication data. Setting the new UserStyle may have a side effect of enabling or
@@ -165,6 +175,10 @@ public interface InteractiveWatchFaceClient : AutoCloseable {
 
     /**
      * Sends a tap event to the watch face for processing.
+     *
+     * @param xPosition The x-coordinate of the tap in pixels
+     * @param yPosition The y-coordinate of the tap in pixels
+     * @param tapType The [TapType] of the event
      */
     @Throws(RemoteException::class)
     public fun sendTouchEvent(@Px xPosition: Int, @Px yPosition: Int, @TapType tapType: Int)
@@ -316,6 +330,16 @@ internal class InteractiveWatchFaceClientImpl internal constructor(
     override val previewReferenceInstant: Instant
         get() = Instant.ofEpochMilli(iInteractiveWatchFace.previewReferenceTimeMillis)
 
+    override val overlayStyle: OverlayStyle
+        get() {
+            if (iInteractiveWatchFace.apiVersion >= 4) {
+                iInteractiveWatchFace.watchFaceOverlayStyle?.let {
+                    return OverlayStyle(it.backgroundColor, it.foregroundColor)
+                }
+            }
+            return OverlayStyle(null, null)
+        }
+
     override fun updateWatchFaceInstance(newInstanceId: String, userStyle: UserStyle) = TraceEvent(
         "InteractiveWatchFaceClientImpl.updateInstance"
     ).use {
@@ -362,13 +386,13 @@ internal class InteractiveWatchFaceClientImpl internal constructor(
     }
 
     override val contentDescriptionLabels: List<ContentDescriptionLabel>
-        get() = iInteractiveWatchFace.contentDescriptionLabels.map {
+        get() = iInteractiveWatchFace.contentDescriptionLabels?.map {
             ContentDescriptionLabel(
                 it.text.toApiComplicationText(),
                 it.bounds,
                 it.tapAction
             )
-        }
+        } ?: emptyList()
 
     override fun setWatchUiState(
         watchUiState: androidx.wear.watchface.client.WatchUiState

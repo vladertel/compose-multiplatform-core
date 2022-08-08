@@ -24,6 +24,7 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcel;
@@ -32,6 +33,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.FocusFinder;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -54,7 +56,7 @@ import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.R;
 import androidx.core.view.AccessibilityDelegateCompat;
-import androidx.core.view.InputDeviceCompat;
+import androidx.core.view.MotionEventCompat;
 import androidx.core.view.NestedScrollingChild3;
 import androidx.core.view.NestedScrollingChildHelper;
 import androidx.core.view.NestedScrollingParent3;
@@ -79,6 +81,22 @@ public class NestedScrollView extends FrameLayout implements NestedScrollingPare
 
     private static final String TAG = "NestedScrollView";
     private static final int DEFAULT_SMOOTH_SCROLL_DURATION = 250;
+
+    /**
+     * The following are copied from OverScroller to determine how far a fling will go.
+     */
+    private static final float SCROLL_FRICTION = 0.015f;
+    private static final float INFLEXION = 0.35f; // Tension lines cross at (INFLEXION, 1)
+    private static final float DECELERATION_RATE = (float) (Math.log(0.78) / Math.log(0.9));
+    private final float mPhysicalCoeff;
+
+    /**
+     * When flinging the stretch towards scrolling content, it should destretch quicker than the
+     * fling would normally do. The visual effect of flinging the stretch looks strange as little
+     * appears to happen at first and then when the stretch disappears, the content starts
+     * scrolling quickly.
+     */
+    private static final float FLING_DESTRETCH_FACTOR = 4f;
 
     /**
      * Interface definition for a callback to be invoked when the scroll
@@ -213,6 +231,12 @@ public class NestedScrollView extends FrameLayout implements NestedScrollingPare
         super(context, attrs, defStyleAttr);
         mEdgeGlowTop = EdgeEffectCompat.create(context, attrs);
         mEdgeGlowBottom = EdgeEffectCompat.create(context, attrs);
+
+        final float ppi = context.getResources().getDisplayMetrics().density * 160.0f;
+        mPhysicalCoeff = SensorManager.GRAVITY_EARTH // g (m/s^2)
+                * 39.37f // inch/meter
+                * ppi
+                * 0.84f; // look and feel tuning
 
         initScrollView();
 
@@ -1013,12 +1037,86 @@ public class NestedScrollView extends FrameLayout implements NestedScrollingPare
         return true;
     }
 
+    /**
+     * Returns true if edgeEffect should call onAbsorb() with veclocity or false if it should
+     * animate with a fling. It will animate with a fling if the velocity will remove the
+     * EdgeEffect through its normal operation.
+     *
+     * @param edgeEffect The EdgeEffect that might absorb the velocity.
+     * @param velocity The velocity of the fling motion
+     * @return true if the velocity should be absorbed or false if it should be flung.
+     */
+    private boolean shouldAbsorb(@NonNull EdgeEffect edgeEffect, int velocity) {
+        if (velocity > 0) {
+            return true;
+        }
+        float distance = EdgeEffectCompat.getDistance(edgeEffect) * getHeight();
+
+        // This is flinging without the spring, so let's see if it will fling past the overscroll
+        float flingDistance = getSplineFlingDistance(-velocity);
+
+        return flingDistance < distance;
+    }
+
+    /**
+     * If mTopGlow or mBottomGlow is currently active and the motion will remove some of the
+     * stretch, this will consume any of unconsumedY that the glow can. If the motion would
+     * increase the stretch, or the EdgeEffect isn't a stretch, then nothing will be consumed.
+     *
+     * @param unconsumedY The vertical delta that might be consumed by the vertical EdgeEffects
+     * @return The remaining unconsumed delta after the edge effects have consumed.
+     */
+    int consumeFlingInVerticalStretch(int unconsumedY) {
+        int height = getHeight();
+        if (unconsumedY > 0 && EdgeEffectCompat.getDistance(mEdgeGlowTop) != 0f) {
+            float deltaDistance = -unconsumedY * FLING_DESTRETCH_FACTOR / height;
+            int consumed = Math.round(-height / FLING_DESTRETCH_FACTOR
+                    * EdgeEffectCompat.onPullDistance(mEdgeGlowTop, deltaDistance, 0.5f));
+            if (consumed != unconsumedY) {
+                mEdgeGlowTop.finish();
+            }
+            return unconsumedY - consumed;
+        }
+        if (unconsumedY < 0 && EdgeEffectCompat.getDistance(mEdgeGlowBottom) != 0f) {
+            float deltaDistance = unconsumedY * FLING_DESTRETCH_FACTOR / height;
+            int consumed = Math.round(height / FLING_DESTRETCH_FACTOR
+                    * EdgeEffectCompat.onPullDistance(mEdgeGlowBottom, deltaDistance, 0.5f));
+            if (consumed != unconsumedY) {
+                mEdgeGlowBottom.finish();
+            }
+            return unconsumedY - consumed;
+        }
+        return unconsumedY;
+    }
+
+    /**
+     * Copied from OverScroller, this returns the distance that a fling with the given velocity
+     * will go.
+     * @param velocity The velocity of the fling
+     * @return The distance that will be traveled by a fling of the given velocity.
+     */
+    private float getSplineFlingDistance(int velocity) {
+        final double l =
+                Math.log(INFLEXION * Math.abs(velocity) / (SCROLL_FRICTION * mPhysicalCoeff));
+        final double decelMinusOne = DECELERATION_RATE - 1.0;
+        return (float) (SCROLL_FRICTION * mPhysicalCoeff
+                * Math.exp(DECELERATION_RATE / decelMinusOne * l));
+    }
+
     private boolean edgeEffectFling(int velocityY) {
         boolean consumed = true;
         if (EdgeEffectCompat.getDistance(mEdgeGlowTop) != 0) {
-            mEdgeGlowTop.onAbsorb(velocityY);
+            if (shouldAbsorb(mEdgeGlowTop, velocityY)) {
+                mEdgeGlowTop.onAbsorb(velocityY);
+            } else {
+                fling(-velocityY);
+            }
         } else if (EdgeEffectCompat.getDistance(mEdgeGlowBottom) != 0) {
-            mEdgeGlowBottom.onAbsorb(-velocityY);
+            if (shouldAbsorb(mEdgeGlowBottom, -velocityY)) {
+                mEdgeGlowBottom.onAbsorb(-velocityY);
+            } else {
+                fling(-velocityY);
+            }
         } else {
             consumed = false;
         }
@@ -1039,11 +1137,11 @@ public class NestedScrollView extends FrameLayout implements NestedScrollingPare
     private boolean stopGlowAnimations(MotionEvent e) {
         boolean stopped = false;
         if (EdgeEffectCompat.getDistance(mEdgeGlowTop) != 0) {
-            EdgeEffectCompat.onPullDistance(mEdgeGlowTop, 0, e.getY() / getHeight());
+            EdgeEffectCompat.onPullDistance(mEdgeGlowTop, 0, e.getX() / getWidth());
             stopped = true;
         }
         if (EdgeEffectCompat.getDistance(mEdgeGlowBottom) != 0) {
-            EdgeEffectCompat.onPullDistance(mEdgeGlowBottom, 0, 1 - e.getY() / getHeight());
+            EdgeEffectCompat.onPullDistance(mEdgeGlowBottom, 0, 1 - e.getX() / getWidth());
             stopped = true;
         }
         return stopped;
@@ -1067,29 +1165,65 @@ public class NestedScrollView extends FrameLayout implements NestedScrollingPare
 
     @Override
     public boolean onGenericMotionEvent(@NonNull MotionEvent event) {
-        if ((event.getSource() & InputDeviceCompat.SOURCE_CLASS_POINTER) != 0) {
-            if (event.getAction() == MotionEvent.ACTION_SCROLL) {
-                if (!mIsBeingDragged) {
-                    final float vscroll = event.getAxisValue(MotionEvent.AXIS_VSCROLL);
-                    if (vscroll != 0) {
-                        final int delta = (int) (vscroll * getVerticalScrollFactorCompat());
-                        final int range = getScrollRange();
-                        int oldScrollY = getScrollY();
-                        int newScrollY = oldScrollY - delta;
-                        if (newScrollY < 0) {
-                            newScrollY = 0;
-                        } else if (newScrollY > range) {
-                            newScrollY = range;
-                        }
-                        if (newScrollY != oldScrollY) {
-                            super.scrollTo(getScrollX(), newScrollY);
-                            return true;
-                        }
+        if (event.getAction() == MotionEvent.ACTION_SCROLL && !mIsBeingDragged) {
+            final float vscroll;
+            if (MotionEventCompat.isFromSource(event, InputDevice.SOURCE_CLASS_POINTER)) {
+                vscroll = event.getAxisValue(MotionEvent.AXIS_VSCROLL);
+            } else if (MotionEventCompat.isFromSource(event, InputDevice.SOURCE_ROTARY_ENCODER)) {
+                vscroll = event.getAxisValue(MotionEvent.AXIS_SCROLL);
+            } else {
+                vscroll = 0;
+            }
+            if (vscroll != 0) {
+                final int delta = (int) (vscroll * getVerticalScrollFactorCompat());
+                final int range = getScrollRange();
+                int oldScrollY = getScrollY();
+                int newScrollY = oldScrollY - delta;
+                boolean absorbed = false;
+                if (newScrollY < 0) {
+                    // We don't want an EdgeEffect for mouse wheel operations
+                    final boolean canOverScroll = canOverScroll()
+                            && !MotionEventCompat.isFromSource(event, InputDevice.SOURCE_MOUSE);
+                    if (canOverScroll) {
+                        EdgeEffectCompat.onPullDistance(mEdgeGlowTop,
+                                -((float) newScrollY) / getHeight(),
+                                0.5f);
+                        mEdgeGlowTop.onRelease();
+                        invalidate();
+                        absorbed = true;
                     }
+                    newScrollY = 0;
+                } else if (newScrollY > range) {
+                    // We don't want an EdgeEffect for mouse wheel operations
+                    final boolean canOverScroll = canOverScroll()
+                            && !MotionEventCompat.isFromSource(event, InputDevice.SOURCE_MOUSE);
+                    if (canOverScroll) {
+                        EdgeEffectCompat.onPullDistance(mEdgeGlowBottom,
+                                ((float) (newScrollY - range)) / getHeight(),
+                                0.5f);
+                        mEdgeGlowBottom.onRelease();
+                        invalidate();
+                        absorbed = true;
+                    }
+                    newScrollY = range;
                 }
+                if (newScrollY != oldScrollY) {
+                    super.scrollTo(getScrollX(), newScrollY);
+                    return true;
+                }
+                return absorbed;
             }
         }
         return false;
+    }
+
+    /**
+     * Returns true if the NestedScrollView supports over scroll.
+     */
+    private boolean canOverScroll() {
+        final int mode = getOverScrollMode();
+        return mode == OVER_SCROLL_ALWAYS
+                || (mode == OVER_SCROLL_IF_CONTENT_SCROLLS && getScrollRange() > 0);
     }
 
     private float getVerticalScrollFactorCompat() {
@@ -1667,7 +1801,7 @@ public class NestedScrollView extends FrameLayout implements NestedScrollingPare
 
         mScroller.computeScrollOffset();
         final int y = mScroller.getCurrY();
-        int unconsumed = y - mLastScrollerY;
+        int unconsumed = consumeFlingInVerticalStretch(y - mLastScrollerY);
         mLastScrollerY = y;
 
         // Nested Scrolling Pre Pass
@@ -1926,7 +2060,7 @@ public class NestedScrollView extends FrameLayout implements NestedScrollingPare
     }
 
     @Override
-    public boolean requestChildRectangleOnScreen(View child, Rect rectangle,
+    public boolean requestChildRectangleOnScreen(@NonNull View child, Rect rectangle,
             boolean immediate) {
         // offset into coordinate space of this scroll view
         rectangle.offset(child.getLeft() - child.getScrollX(),

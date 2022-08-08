@@ -27,17 +27,20 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.integration.demos.common.ActivityDemo
 import androidx.compose.integration.demos.common.Demo
 import androidx.compose.integration.demos.common.DemoCategory
+import androidx.compose.integration.demos.settings.DecorFitsSystemWindowsEffect
+import androidx.compose.integration.demos.settings.DecorFitsSystemWindowsSetting
+import androidx.compose.integration.demos.settings.DynamicThemeSetting
+import androidx.compose.integration.demos.settings.SoftInputModeEffect
+import androidx.compose.integration.demos.settings.SoftInputModeSetting
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,18 +53,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 
 /**
  * Main [Activity] containing all Compose related demos.
+ *
+ * You can pass a specific demo's name as string extra "demoname" to launch this demo only.
+ * Read this module's readme to learn more!
  */
+@Suppress("DEPRECATION")
 class DemoActivity : FragmentActivity() {
     lateinit var hostView: View
     lateinit var focusManager: FocusManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val rootDemo = when (val demoName = intent.getStringExtra(DEMO_NAME)) {
+            null -> AllDemosCategory
+            else -> requireDemo(demoName, Navigator.findDemo(AllDemosCategory, demoName))
+        }
 
         ComposeView(this).also {
             setContentView(it)
@@ -72,23 +82,15 @@ class DemoActivity : FragmentActivity() {
                 startActivity(Intent(this, demo.activityClass.java))
             }
             val navigator = rememberSaveable(
-                saver = Navigator.Saver(AllDemosCategory, onBackPressedDispatcher, activityStarter)
+                saver = Navigator.Saver(rootDemo, onBackPressedDispatcher, activityStarter)
             ) {
-                Navigator(AllDemosCategory, onBackPressedDispatcher, activityStarter)
+                Navigator(rootDemo, onBackPressedDispatcher, activityStarter)
             }
-            val isDynamicThemeOn = remember { mutableStateOf(IsDynamicThemingAvailable) }
-            DisposableEffect(lifecycle) {
-                val obs = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
-                        isDynamicThemeOn.value = isDynamicThemeSettingOn(applicationContext)
-                    }
-                }
-                lifecycle.addObserver(obs)
-                onDispose {
-                    lifecycle.removeObserver(obs)
-                }
-            }
-            DemoTheme(isDynamicThemeOn.value, window) {
+
+            SoftInputModeEffect(SoftInputModeSetting.asState().value, window)
+            DecorFitsSystemWindowsEffect(DecorFitsSystemWindowsSetting.asState().value, window)
+
+            DemoTheme(DynamicThemeSetting.asState().value, window) {
                 val filteringMode = rememberSaveable(
                     saver = FilterMode.Saver(onBackPressedDispatcher)
                 ) {
@@ -118,6 +120,14 @@ class DemoActivity : FragmentActivity() {
                     }
                 )
             }
+        }
+    }
+
+    companion object {
+        const val DEMO_NAME = "demoname"
+
+        internal fun requireDemo(demoName: String, demo: Demo?) = requireNotNull(demo) {
+            "No demo called \"$demoName\" could be found."
         }
     }
 }
@@ -204,7 +214,7 @@ private class Navigator private constructor(
 
     companion object {
         fun Saver(
-            rootDemo: DemoCategory,
+            rootDemo: Demo,
             backDispatcher: OnBackPressedDispatcher,
             launchActivityDemo: (ActivityDemo<*>) -> Unit
         ): Saver<Navigator, *> = listSaver<Navigator, String>(
@@ -221,7 +231,7 @@ private class Navigator private constructor(
             }
         )
 
-        private fun findDemo(demo: Demo, title: String): Demo? {
+        fun findDemo(demo: Demo, title: String): Demo? {
             if (demo.title == title) {
                 return demo
             }

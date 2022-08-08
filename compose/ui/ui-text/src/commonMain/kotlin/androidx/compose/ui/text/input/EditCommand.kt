@@ -31,22 +31,25 @@ interface EditCommand {
      * Apply the command on the editing buffer.
      */
     fun applyTo(buffer: EditingBuffer)
+
+    /**
+     * Generate a description of the command that is suitable for logging – this should not include
+     * any user-entered text, which may be sensitive.
+     */
+    // Do not return toString() by default, since that might contain sensitive text.
+    fun toStringForLog(): String = this::class.simpleName ?: "{anonymous EditCommand}"
 }
 
 /**
  * Commit final [text] to the text box and set the new cursor position.
  *
- * See <https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#commitText(java.lang.CharSequence,%20int)>
+ * See [`commitText`](https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#commitText(java.lang.CharSequence,%20int)).
+ *
+ * @param annotatedString The text to commit.
+ * @param newCursorPosition The cursor position after inserted text.
  */
 class CommitTextCommand(
-    /**
-     * The text to commit.
-     */
     val annotatedString: AnnotatedString,
-
-    /**
-     * The cursor position after inserted text.
-     */
     val newCursorPosition: Int
 ) : EditCommand {
 
@@ -106,22 +109,21 @@ class CommitTextCommand(
     override fun toString(): String {
         return "CommitTextCommand(text='$text', newCursorPosition=$newCursorPosition)"
     }
+
+    override fun toStringForLog(): String =
+        "CommitTextCommand(text.length=${text.length}, newCursorPosition=$newCursorPosition)"
 }
 
 /**
  * Mark a certain region of text as composing text.
  *
- * See <https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#setComposingRegion(int,%2520int)>
+ * See [`setComposingRegion`](https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#setComposingRegion(int,%2520int)).
+ *
+ * @param start The inclusive start offset of the composing region.
+ * @param end The exclusive end offset of the composing region
  */
 class SetComposingRegionCommand(
-    /**
-     * The inclusive start offset of the composing region.
-     */
     val start: Int,
-
-    /**
-     * The exclusive end offset of the composing region
-     */
     val end: Int
 ) : EditCommand {
 
@@ -163,22 +165,21 @@ class SetComposingRegionCommand(
     override fun toString(): String {
         return "SetComposingRegionCommand(start=$start, end=$end)"
     }
+
+    override fun toStringForLog(): String = toString()
 }
 
 /**
  * Replace the currently composing text with the given text, and set the new cursor position. Any
  * composing text set previously will be removed automatically.
  *
- * See <https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#setComposingText(java.lang.CharSequence,%2520int)>
+ * See [`setComposingText`](https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#setComposingText(java.lang.CharSequence,%2520int)).
+ *
+ * @param annotatedString The composing text.
+ * @param newCursorPosition The cursor position after setting composing text.
  */
 class SetComposingTextCommand(
-    /**
-     * The composing text.
-     */
     val annotatedString: AnnotatedString,
-    /**
-     * The cursor position after setting composing text.
-     */
     val newCursorPosition: Int
 ) : EditCommand {
 
@@ -246,6 +247,9 @@ class SetComposingTextCommand(
     override fun toString(): String {
         return "SetComposingTextCommand(text='$text', newCursorPosition=$newCursorPosition)"
     }
+
+    override fun toStringForLog(): String =
+        "SetComposingTextCommand(text.length=${text.length}, newCursorPosition=$newCursorPosition)"
 }
 
 /**
@@ -255,18 +259,24 @@ class SetComposingTextCommand(
  * Before and after refer to the order of the characters in the string, not to their visual
  * representation.
  *
- * See <https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#deleteSurroundingText(int,%2520int)>
+ * See [`deleteSurroundingText`](https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#deleteSurroundingText(int,%2520int)).
+ *
+ * @param lengthBeforeCursor The number of characters in UTF-16 before the cursor to be deleted.
+ * Must be non-negative.
+ * @param lengthAfterCursor The number of characters in UTF-16 after the cursor to be deleted.
+ * Must be non-negative.
  */
 class DeleteSurroundingTextCommand(
-    /**
-     * The number of characters in UTF-16 before the cursor to be deleted.
-     */
     val lengthBeforeCursor: Int,
-    /**
-     * The number of characters in UTF-16 after the cursor to be deleted.
-     */
     val lengthAfterCursor: Int
 ) : EditCommand {
+    init {
+        require(lengthBeforeCursor >= 0 && lengthAfterCursor >= 0) {
+            "Expected lengthBeforeCursor and lengthAfterCursor to be non-negative, were " +
+                "$lengthBeforeCursor and $lengthAfterCursor respectively."
+        }
+    }
+
     override fun applyTo(buffer: EditingBuffer) {
         buffer.delete(
             buffer.selectionEnd,
@@ -299,6 +309,8 @@ class DeleteSurroundingTextCommand(
         return "DeleteSurroundingTextCommand(lengthBeforeCursor=$lengthBeforeCursor, " +
             "lengthAfterCursor=$lengthAfterCursor)"
     }
+
+    override fun toStringForLog(): String = toString()
 }
 
 /**
@@ -307,18 +319,24 @@ class DeleteSurroundingTextCommand(
  * * This command does nothing if there are one or more invalid surrogate pairs
  * in the requested range.
  *
- * See <https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#deleteSurroundingTextInCodePoints(int,%2520int)>
+ * See [`deleteSurroundingTextInCodePoints`](https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#deleteSurroundingTextInCodePoints(int,%2520int)).
+ *
+ * @param lengthBeforeCursor The number of characters in Unicode code points before the cursor to be
+ * deleted. Must be non-negative.
+ * @param lengthAfterCursor The number of characters in Unicode code points after the cursor to be
+ * deleted. Must be non-negative.
  */
 class DeleteSurroundingTextInCodePointsCommand(
-    /**
-     * The number of characters in Unicode code points before the cursor to be deleted.
-     */
     val lengthBeforeCursor: Int,
-    /**
-     * The number of characters in Unicode code points after the cursor to be deleted.
-     */
     val lengthAfterCursor: Int
 ) : EditCommand {
+    init {
+        require(lengthBeforeCursor >= 0 && lengthAfterCursor >= 0) {
+            "Expected lengthBeforeCursor and lengthAfterCursor to be non-negative, were " +
+                "$lengthBeforeCursor and $lengthAfterCursor respectively."
+        }
+    }
+
     override fun applyTo(buffer: EditingBuffer) {
         // Convert code point length into character length. Then call the common logic of the
         // DeleteSurroundingTextEditOp
@@ -374,22 +392,21 @@ class DeleteSurroundingTextInCodePointsCommand(
         return "DeleteSurroundingTextInCodePointsCommand(lengthBeforeCursor=$lengthBeforeCursor, " +
             "lengthAfterCursor=$lengthAfterCursor)"
     }
+
+    override fun toStringForLog(): String = toString()
 }
 
 /**
  * Sets the selection on the text. When [start] and [end] have the same value, it sets the cursor
  * position.
  *
- * See <https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#setSelection(int,%2520int)>
+ * See [`setSelection`](https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#setSelection(int,%2520int)).
+ *
+ * @param start The inclusive start offset of the selection region.
+ * @param end The exclusive end offset of the selection region.
  */
 class SetSelectionCommand(
-    /**
-     * The inclusive start offset of the selection region.
-     */
     val start: Int,
-    /**
-     * The exclusive end offset of the selection region.
-     */
     val end: Int
 ) : EditCommand {
 
@@ -423,13 +440,16 @@ class SetSelectionCommand(
     override fun toString(): String {
         return "SetSelectionCommand(start=$start, end=$end)"
     }
+
+    override fun toStringForLog(): String = toString()
 }
+
 /**
  * Finishes the composing text that is currently active. This simply leaves the text as-is,
  * removing any special composing styling or other state that was around it. The cursor position
  * remains unchanged.
  *
- * See <https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#finishComposingText()>
+ * See [`finishComposingText`](https://developer.android.com/reference/android/view/inputmethod/InputConnection.html#finishComposingText()).
  */
 class FinishComposingTextCommand : EditCommand {
 
@@ -443,6 +463,8 @@ class FinishComposingTextCommand : EditCommand {
     override fun toString(): String {
         return "FinishComposingTextCommand()"
     }
+
+    override fun toStringForLog(): String = toString()
 }
 
 /**
@@ -483,6 +505,8 @@ class BackspaceCommand : EditCommand {
     override fun toString(): String {
         return "BackspaceCommand()"
     }
+
+    override fun toStringForLog(): String = toString()
 }
 
 /**
@@ -490,13 +514,10 @@ class BackspaceCommand : EditCommand {
  *
  * If there is selection, cancel the selection first and move the cursor to the selection start
  * position. Then perform the cursor movement.
+ *
+ * @param amount The amount of cursor movement. If you want to move backward, pass negative value.
  */
 class MoveCursorCommand(
-    /**
-     * The amount of cursor movement.
-     *
-     * If you want to move backward, pass negative value.
-     */
     val amount: Int
 ) : EditCommand {
 
@@ -540,6 +561,8 @@ class MoveCursorCommand(
     override fun toString(): String {
         return "MoveCursorCommand(amount=$amount)"
     }
+
+    override fun toStringForLog(): String = toString()
 }
 
 /**
@@ -557,6 +580,8 @@ class DeleteAllCommand : EditCommand {
     override fun toString(): String {
         return "DeleteAllCommand()"
     }
+
+    override fun toStringForLog(): String = toString()
 }
 
 /**
