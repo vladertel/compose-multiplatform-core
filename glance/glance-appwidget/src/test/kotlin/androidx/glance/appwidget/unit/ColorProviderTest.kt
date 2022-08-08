@@ -26,6 +26,7 @@ import com.google.common.truth.Truth.assertThat
 import androidx.glance.appwidget.ColorSubject.Companion.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -58,13 +59,13 @@ class ColorProviderTest {
         )
 
         assertIs<CheckedUncheckedColorProvider>(provider)
-        assertThat(provider.resolve(context, isNightMode = false, isChecked = true))
+        assertThat(provider.getColor(context, isNightMode = false, isChecked = true))
             .isSameColorAs("#FF0000")
-        assertThat(provider.resolve(context, isNightMode = true, isChecked = true))
+        assertThat(provider.getColor(context, isNightMode = true, isChecked = true))
             .isSameColorAs("#FFFF00")
-        assertThat(provider.resolve(context, isNightMode = false, isChecked = false))
+        assertThat(provider.getColor(context, isNightMode = false, isChecked = false))
             .isSameColorAs(Color.Red)
-        assertThat(provider.resolve(context, isNightMode = true, isChecked = false))
+        assertThat(provider.getColor(context, isNightMode = true, isChecked = false))
             .isSameColorAs(Color.Yellow)
     }
 
@@ -78,13 +79,13 @@ class ColorProviderTest {
         )
 
         assertIs<CheckedUncheckedColorProvider>(provider)
-        assertThat(provider.resolve(context, isNightMode = false, isChecked = true))
+        assertThat(provider.getColor(context, isNightMode = false, isChecked = true))
             .isSameColorAs(Color.Blue)
-        assertThat(provider.resolve(context, isNightMode = true, isChecked = true))
+        assertThat(provider.getColor(context, isNightMode = true, isChecked = true))
             .isSameColorAs(Color.Green)
-        assertThat(provider.resolve(context, isNightMode = false, isChecked = false))
+        assertThat(provider.getColor(context, isNightMode = false, isChecked = false))
             .isSameColorAs("#0000FF")
-        assertThat(provider.resolve(context, isNightMode = true, isChecked = false))
+        assertThat(provider.getColor(context, isNightMode = true, isChecked = false))
             .isSameColorAs("#00FFFF")
     }
 
@@ -98,13 +99,13 @@ class ColorProviderTest {
         )
 
         assertIs<CheckedUncheckedColorProvider>(provider)
-        assertThat(provider.resolve(context, isNightMode = false, isChecked = true))
+        assertThat(provider.getColor(context, isNightMode = false, isChecked = true))
             .isSameColorAs(Color.Blue)
-        assertThat(provider.resolve(context, isNightMode = true, isChecked = true))
+        assertThat(provider.getColor(context, isNightMode = true, isChecked = true))
             .isSameColorAs(Color.Green)
-        assertThat(provider.resolve(context, isNightMode = false, isChecked = false))
+        assertThat(provider.getColor(context, isNightMode = false, isChecked = false))
             .isSameColorAs(Color.Red)
-        assertThat(provider.resolve(context, isNightMode = true, isChecked = false))
+        assertThat(provider.getColor(context, isNightMode = true, isChecked = false))
             .isSameColorAs(Color.Yellow)
     }
 
@@ -118,13 +119,13 @@ class ColorProviderTest {
         )
 
         assertIs<CheckedUncheckedColorProvider>(provider)
-        assertThat(provider.resolve(context, isNightMode = false, isChecked = true))
+        assertThat(provider.getColor(context, isNightMode = false, isChecked = true))
             .isSameColorAs(Color.Blue)
-        assertThat(provider.resolve(context, isNightMode = true, isChecked = true))
+        assertThat(provider.getColor(context, isNightMode = true, isChecked = true))
             .isSameColorAs(Color.Blue)
-        assertThat(provider.resolve(context, isNightMode = false, isChecked = false))
+        assertThat(provider.getColor(context, isNightMode = false, isChecked = false))
             .isSameColorAs(Color.Red)
-        assertThat(provider.resolve(context, isNightMode = true, isChecked = false))
+        assertThat(provider.getColor(context, isNightMode = true, isChecked = false))
             .isSameColorAs(Color.Red)
     }
 
@@ -150,5 +151,23 @@ class ColorProviderTest {
                 fallback = R.color.my_checkbox_colors
             )
         }
+    }
+
+    @Test
+    fun resolveColorProvider_FixedColorProvider() {
+        assertThat(ColorProvider(Color.Blue).getColor(context)).isSameColorAs(Color.Blue)
+    }
+
+    @Test
+    fun resolveColorProvider_ResourceColorProvider() {
+        assertThat(ColorProvider(R.color.my_color).getColor(context))
+            .isSameColorAs(Color(0xFFEEEEEE))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun resolveColorProvider_DayNightColorProvider() {
+        assertThat(ColorProvider(Color.Blue, Color.Red).getColor(context))
+            .isSameColorAs(Color.Red)
     }
 }

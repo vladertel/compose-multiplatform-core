@@ -47,17 +47,13 @@ import androidx.camera.testing.fakes.FakeCamera
 import androidx.camera.testing.fakes.FakeCameraDeviceSurfaceManager
 import androidx.camera.testing.fakes.FakeCameraFactory
 import androidx.camera.testing.fakes.FakeCameraInfoInternal
-import androidx.camera.video.QualitySelector.QUALITY_FHD
-import androidx.camera.video.QualitySelector.QUALITY_HD
-import androidx.camera.video.QualitySelector.QUALITY_HIGHEST
-import androidx.camera.video.QualitySelector.QUALITY_LOWEST
-import androidx.camera.video.QualitySelector.QUALITY_SD
-import androidx.camera.video.QualitySelector.QUALITY_UHD
-import androidx.camera.video.VideoOutput.StreamState
+import androidx.camera.video.StreamInfo.StreamState
 import androidx.camera.video.impl.VideoCaptureConfig
 import androidx.core.util.Consumer
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -68,7 +64,6 @@ import org.mockito.Mockito.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.internal.DoNotInstrument
-import java.util.concurrent.TimeUnit
 
 private val ANY_SIZE = Size(640, 480)
 private const val CAMERA_ID_0 = "0"
@@ -170,10 +165,10 @@ class VideoCaptureTest {
 
         // Camera 0 support 2160P(UHD) and 720P(HD)
         val qualityList = arrayOf(
-            QUALITY_UHD to RESOLUTION_2160P,
-            QUALITY_HD to RESOLUTION_720P,
-            QUALITY_HIGHEST to RESOLUTION_2160P,
-            QUALITY_LOWEST to RESOLUTION_720P,
+            Quality.UHD to RESOLUTION_2160P,
+            Quality.HD to RESOLUTION_720P,
+            Quality.HIGHEST to RESOLUTION_2160P,
+            Quality.LOWEST to RESOLUTION_720P,
         )
         qualityList.forEach { (quality, resolution) ->
             surfaceManager.setSuggestedResolution(
@@ -184,7 +179,7 @@ class VideoCaptureTest {
 
             val videoOutput = createVideoOutput(
                 mediaSpec = MediaSpec.builder().configureVideo {
-                    it.setQualitySelector(QualitySelector.of(quality))
+                    it.setQualitySelector(QualitySelector.from(quality))
                 }.build()
             )
             val videoCapture = VideoCapture.Builder(videoOutput)
@@ -223,10 +218,14 @@ class VideoCaptureTest {
         val videoOutput = createVideoOutput(
             mediaSpec = MediaSpec.builder().configureVideo {
                 it.setQualitySelector(
-                    QualitySelector.firstTry(QUALITY_UHD) // 2160P
-                        .thenTry(QUALITY_SD) // 480P
-                        .thenTry(QUALITY_HD) // 720P
-                        .finallyTry(QUALITY_FHD) // 1080P
+                    QualitySelector.fromOrderedList(
+                        listOf(
+                            Quality.UHD, // 2160P
+                            Quality.SD, // 480P
+                            Quality.HD, // 720P
+                            Quality.FHD // 1080P
+                        )
+                    )
                 )
             }.build()
         )
@@ -239,7 +238,8 @@ class VideoCaptureTest {
 
         // Assert.
         assertSupportedResolutions(
-            videoCapture, RESOLUTION_2160P, RESOLUTION_480P, RESOLUTION_720P, RESOLUTION_1080P
+            videoCapture, RESOLUTION_2160P, RESOLUTION_480P
+            // RESOLUTION_720P, RESOLUTION_1080P is filtered out
         )
         assertThat(videoCapture.attachedSurfaceResolution).isEqualTo(RESOLUTION_480P)
     }
@@ -254,7 +254,7 @@ class VideoCaptureTest {
         // Camera 0 support 2160P(UHD) and 720P(HD)
         val videoOutput = createVideoOutput(
             mediaSpec = MediaSpec.builder().configureVideo {
-                it.setQualitySelector(QualitySelector.of(QUALITY_FHD))
+                it.setQualitySelector(QualitySelector.from(Quality.FHD))
             }.build()
         )
         val videoCapture = VideoCapture.Builder(videoOutput)
@@ -277,7 +277,7 @@ class VideoCaptureTest {
 
         val videoOutput = createVideoOutput(
             mediaSpec = MediaSpec.builder().configureVideo {
-                it.setQualitySelector(QualitySelector.of(QUALITY_UHD))
+                it.setQualitySelector(QualitySelector.from(Quality.UHD))
             }.build()
         )
         val videoCapture = VideoCapture.Builder(videoOutput)
@@ -322,6 +322,40 @@ class VideoCaptureTest {
 
         // Act.
         cameraUseCaseAdapter.removeUseCases(listOf(videoCapture))
+
+        // Assert.
+        assertThat(surfaceResult!!.resultCode).isEqualTo(
+            SurfaceRequest.Result.RESULT_SURFACE_USED_SUCCESSFULLY
+        )
+    }
+
+    @Test
+    fun detachUseCases_receiveResultOfSurfaceRequest() {
+        // Arrange.
+        setupCamera()
+        cameraUseCaseAdapter =
+            CameraUtil.createCameraUseCaseAdapter(context, CameraSelector.DEFAULT_BACK_CAMERA)
+
+        var surfaceResult: SurfaceRequest.Result? = null
+        val videoOutput = createVideoOutput { surfaceRequest ->
+            surfaceRequest.provideSurface(
+                mock(Surface::class.java),
+                CameraXExecutors.directExecutor()
+            ) { surfaceResult = it }
+        }
+        val videoCapture = VideoCapture.Builder(videoOutput)
+            .setSessionOptionUnpacker { _, _ -> }
+            .build()
+
+        // Act.
+        cameraUseCaseAdapter.addUseCases(listOf(videoCapture))
+
+        // Assert.
+        // Surface is in use, should not receive any result.
+        assertThat(surfaceResult).isNull()
+
+        // Act.
+        cameraUseCaseAdapter.detachUseCases()
 
         // Assert.
         assertThat(surfaceResult!!.resultCode).isEqualTo(
@@ -402,6 +436,40 @@ class VideoCaptureTest {
         assertThat(transformationInfo!!.targetRotation).isEqualTo(Surface.ROTATION_180)
     }
 
+    @Test
+    fun filterOutResolutions() {
+        // Arrange.
+        val inputs = listOf(
+            listOf(RESOLUTION_2160P, RESOLUTION_1080P, RESOLUTION_720P), // 0
+            listOf(RESOLUTION_2160P, RESOLUTION_720P, RESOLUTION_1080P), // 1
+            listOf(RESOLUTION_1080P, RESOLUTION_2160P, RESOLUTION_720P), // 2
+            listOf(RESOLUTION_1080P, RESOLUTION_720P, RESOLUTION_2160P), // 3
+            listOf(RESOLUTION_720P, RESOLUTION_2160P, RESOLUTION_1080P), // 4
+            listOf(RESOLUTION_720P, RESOLUTION_1080P, RESOLUTION_2160P), // 5
+            listOf(RESOLUTION_1080P, RESOLUTION_1080P, RESOLUTION_720P), // 6 contain duplicate
+        )
+
+        val expected = listOf(
+            listOf(RESOLUTION_2160P, RESOLUTION_1080P, RESOLUTION_720P), // 0
+            listOf(RESOLUTION_2160P, RESOLUTION_720P), // 1
+            listOf(RESOLUTION_1080P, RESOLUTION_720P), // 2
+            listOf(RESOLUTION_1080P, RESOLUTION_720P), // 3
+            listOf(RESOLUTION_720P), // 4
+            listOf(RESOLUTION_720P), // 5
+            listOf(RESOLUTION_1080P, RESOLUTION_720P), // 6
+        )
+
+        inputs.zip(expected).forEachIndexed { index, (input, exp) ->
+            // Act.
+            val result = VideoCapture.filterOutResolutions(input)
+
+            // Assert.
+            assertWithMessage("filterOutResolutions fails on index: $index")
+                .that(result)
+                .isEqualTo(exp)
+        }
+    }
+
     private fun assertSupportedResolutions(
         videoCapture: VideoCapture<out VideoOutput>,
         vararg expectedResolutions: Size
@@ -426,8 +494,13 @@ class VideoCaptureTest {
         val surfaceRequestCallback: Consumer<SurfaceRequest>
     ) : VideoOutput {
 
-        private val streamStateObservable: MutableStateObservable<StreamState> =
-            MutableStateObservable.withInitialState(streamState)
+        private val streamInfoObservable: MutableStateObservable<StreamInfo> =
+            MutableStateObservable.withInitialState(
+                StreamInfo.of(
+                    StreamInfo.STREAM_ID_ANY,
+                    streamState
+                )
+            )
 
         private val mediaSpecObservable: MutableStateObservable<MediaSpec> =
             MutableStateObservable.withInitialState(mediaSpec)
@@ -436,11 +509,12 @@ class VideoCaptureTest {
             surfaceRequestCallback.accept(surfaceRequest)
         }
 
-        override fun getStreamState(): Observable<StreamState> = streamStateObservable
+        override fun getStreamInfo(): Observable<StreamInfo> = streamInfoObservable
 
         override fun getMediaSpec(): Observable<MediaSpec> = mediaSpecObservable
 
-        fun setStreamState(streamState: StreamState) = streamStateObservable.setState(streamState)
+        fun setStreamState(streamState: StreamState) =
+            streamInfoObservable.setState(StreamInfo.of(StreamInfo.STREAM_ID_ANY, streamState))
 
         fun setMediaSpec(mediaSpec: MediaSpec) = mediaSpecObservable.setState(mediaSpec)
     }

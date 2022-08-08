@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import androidx.build.LibraryGroups
 import androidx.build.LibraryType
 import androidx.build.Publish
 import androidx.build.AndroidXComposePlugin
@@ -29,7 +28,6 @@ plugins {
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project, /* isMultiplatformEnabled= */false)
 
 dependencies {
-    kotlinPlugin(project(":compose:compiler:compiler"))
 
     api("androidx.annotation:annotation:1.2.0")
     api("androidx.compose.runtime:runtime:1.1.0-beta01")
@@ -40,7 +38,9 @@ dependencies {
     api("androidx.datastore:datastore-preferences:1.0.0")
 
     implementation("androidx.annotation:annotation:1.1.0")
+    implementation("com.google.android.material:material:1.6.0")
     implementation(libs.kotlinStdlib)
+    implementation(project(":compose:runtime:runtime"))
 
     testImplementation(libs.robolectric)
     testImplementation(libs.testCore)
@@ -61,12 +61,13 @@ dependencies {
 android {
     // Use Robolectric 4.+
     testOptions.unitTests.includeAndroidResources = true
+    resourcePrefix "glance_"
+    namespace "androidx.glance"
 }
 
 androidx {
     name = "Glance Core Library"
     type = LibraryType.PUBLISHED_LIBRARY
-    publish = Publish.SNAPSHOT_ONLY
     mavenGroup = LibraryGroups.GLANCE
     inceptionYear = "2021"
     description = "Glance allows developers to build layouts for remote surfaces using a Jetpack " +

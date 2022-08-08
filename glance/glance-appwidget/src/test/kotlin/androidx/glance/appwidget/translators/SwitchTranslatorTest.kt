@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.glance.appwidget.ImageViewSubject.Companion.assertThat
 import androidx.glance.appwidget.Switch
 import androidx.glance.appwidget.SwitchColors
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.applyRemoteViews
 import androidx.glance.appwidget.configurationContext
 import androidx.glance.appwidget.findView
@@ -32,9 +34,10 @@ import androidx.glance.appwidget.test.R
 import androidx.glance.appwidget.unit.ColorProvider
 import androidx.glance.unit.ColorProvider
 import androidx.test.core.app.ApplicationProvider
+import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineScope
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,21 +51,22 @@ import kotlin.test.assertIs
 @RunWith(RobolectricTestRunner::class)
 class SwitchTranslatorTest {
 
-    private lateinit var fakeCoroutineScope: TestCoroutineScope
+    private lateinit var fakeCoroutineScope: TestScope
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val lightContext = configurationContext { uiMode = Configuration.UI_MODE_NIGHT_NO }
     private val darkContext = configurationContext { uiMode = Configuration.UI_MODE_NIGHT_YES }
 
     @Before
     fun setUp() {
-        fakeCoroutineScope = TestCoroutineScope()
+        fakeCoroutineScope = TestScope()
     }
 
     @Test
-    fun canTranslateSwitch_fixed_unchecked() = fakeCoroutineScope.runBlockingTest {
+    fun canTranslateSwitch_fixed_unchecked() = fakeCoroutineScope.runTest {
         val rv = context.runAndTranslate {
             Switch(
                 checked = false,
+                onCheckedChange = null,
                 text = "Switch",
                 colors = SwitchColors(
                     checkedThumbColor = ColorProvider(Color.Blue),
@@ -79,10 +83,11 @@ class SwitchTranslatorTest {
     }
 
     @Test
-    fun canTranslateSwitch_fixed_checked() = fakeCoroutineScope.runBlockingTest {
+    fun canTranslateSwitch_fixed_checked() = fakeCoroutineScope.runTest {
         val rv = context.runAndTranslate {
             Switch(
                 checked = true,
+                onCheckedChange = null,
                 text = "Switch",
                 colors = SwitchColors(
                     checkedThumbColor = ColorProvider(Color.Blue),
@@ -99,10 +104,11 @@ class SwitchTranslatorTest {
     }
 
     @Test
-    fun canTranslateSwitch_dayNight_unchecked_day() = fakeCoroutineScope.runBlockingTest {
+    fun canTranslateSwitch_dayNight_unchecked_day() = fakeCoroutineScope.runTest {
         val rv = lightContext.runAndTranslate {
             Switch(
                 checked = false,
+                onCheckedChange = null,
                 text = "Switch",
                 colors = SwitchColors(
                     checkedThumbColor = ColorProvider(day = Color.Blue, night = Color.Red),
@@ -122,10 +128,11 @@ class SwitchTranslatorTest {
     }
 
     @Test
-    fun canTranslateSwitch_dayNight_unchecked_night() = fakeCoroutineScope.runBlockingTest {
+    fun canTranslateSwitch_dayNight_unchecked_night() = fakeCoroutineScope.runTest {
         val rv = darkContext.runAndTranslate {
             Switch(
                 checked = false,
+                onCheckedChange = null,
                 text = "Switch",
                 colors = SwitchColors(
                     checkedThumbColor = ColorProvider(day = Color.Blue, night = Color.Red),
@@ -145,10 +152,11 @@ class SwitchTranslatorTest {
     }
 
     @Test
-    fun canTranslateSwitch_dayNight_checked_day() = fakeCoroutineScope.runBlockingTest {
+    fun canTranslateSwitch_dayNight_checked_day() = fakeCoroutineScope.runTest {
         val rv = lightContext.runAndTranslate {
             Switch(
                 checked = true,
+                onCheckedChange = null,
                 text = "Switch",
                 colors = SwitchColors(
                     checkedThumbColor = ColorProvider(day = Color.Blue, night = Color.Red),
@@ -168,10 +176,11 @@ class SwitchTranslatorTest {
     }
 
     @Test
-    fun canTranslateSwitch_dayNight_checked_night() = fakeCoroutineScope.runBlockingTest {
+    fun canTranslateSwitch_dayNight_checked_night() = fakeCoroutineScope.runTest {
         val rv = darkContext.runAndTranslate {
             Switch(
                 checked = true,
+                onCheckedChange = null,
                 text = "Switch",
                 colors = SwitchColors(
                     checkedThumbColor = ColorProvider(day = Color.Blue, night = Color.Red),
@@ -191,10 +200,11 @@ class SwitchTranslatorTest {
     }
 
     @Test
-    fun canTranslateSwitch_resource_unchecked() = fakeCoroutineScope.runBlockingTest {
+    fun canTranslateSwitch_resource_unchecked() = fakeCoroutineScope.runTest {
         val rv = lightContext.runAndTranslate {
             Switch(
                 checked = false,
+                onCheckedChange = null,
                 text = "Switch",
                 colors = SwitchColors(
                     thumbColor = R.color.my_switch_thumb_colors,
@@ -209,10 +219,11 @@ class SwitchTranslatorTest {
     }
 
     @Test
-    fun canTranslateSwitch_resource_checked() = fakeCoroutineScope.runBlockingTest {
+    fun canTranslateSwitch_resource_checked() = fakeCoroutineScope.runTest {
         val rv = lightContext.runAndTranslate {
             Switch(
                 checked = true,
+                onCheckedChange = null,
                 text = "Switch",
                 colors = SwitchColors(
                     thumbColor = R.color.my_switch_thumb_colors,
@@ -226,15 +237,43 @@ class SwitchTranslatorTest {
         assertThat(switchRoot.trackImageView).hasColorFilter("#22040040")
     }
 
+    @Test
+    fun canTranslateSwitch_onCheckedChange_null() = fakeCoroutineScope.runTest {
+        val rv = context.runAndTranslate {
+            Switch(
+                checked = true,
+                onCheckedChange = null,
+                text = "Switch",
+            )
+        }
+
+        val switchRoot = assertIs<ViewGroup>(context.applyRemoteViews(rv))
+        assertThat(switchRoot.hasOnClickListeners()).isFalse()
+    }
+
+    @Test
+    fun canTranslateSwitch_onCheckedChange_withAction() = fakeCoroutineScope.runTest {
+        val rv = context.runAndTranslate {
+            Switch(
+                checked = true,
+                onCheckedChange = actionRunCallback<ActionCallback>(),
+                text = "Switch",
+            )
+        }
+
+        val switchRoot = assertIs<ViewGroup>(context.applyRemoteViews(rv))
+        assertThat(switchRoot.hasOnClickListeners()).isTrue()
+    }
+
     private val ViewGroup.thumbImageView: ImageView?
         get() = findView {
             shadowOf(it.drawable).createdFromResId ==
-                androidx.glance.appwidget.R.drawable.switch_thumb_material
+                androidx.glance.appwidget.R.drawable.glance_switch_thumb_animated
         }
 
     private val ViewGroup.trackImageView: ImageView?
         get() = findView {
             shadowOf(it.drawable).createdFromResId ==
-                androidx.glance.appwidget.R.drawable.switch_track_material
+                androidx.glance.appwidget.R.drawable.glance_switch_track
         }
 }

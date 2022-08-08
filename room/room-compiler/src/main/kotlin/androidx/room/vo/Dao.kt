@@ -30,6 +30,7 @@ data class Dao(
     val insertionMethods: List<InsertionMethod>,
     val deletionMethods: List<DeletionMethod>,
     val updateMethods: List<UpdateMethod>,
+    val upsertionMethods: List<UpsertionMethod>,
     val transactionMethods: List<TransactionMethod>,
     val delegatingMethods: List<KotlinBoxedPrimitiveMethodDelegate>,
     val kotlinDefaultMethodDelegates: List<KotlinDefaultMethodDelegate>,
@@ -47,7 +48,7 @@ data class Dao(
 
     val typeName: ClassName by lazy { element.className }
 
-    val shortcutMethods: List<ShortcutMethod> by lazy {
+    val deleteOrUpdateShortcutMethods: List<DeleteOrUpdateShortcutMethod> by lazy {
         deletionMethods + updateMethods
     }
 

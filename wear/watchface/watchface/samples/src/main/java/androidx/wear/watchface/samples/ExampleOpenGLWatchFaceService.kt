@@ -81,7 +81,7 @@ const val EXAMPLE_OPENGL_COMPLICATION_ID = 101
  * NB this is open for testing.
  */
 open class ExampleOpenGLWatchFaceService : WatchFaceService() {
-    // Lazy because the context isn't initialized til later.
+    // Lazy because the context isn't initialized till later.
     private val watchFaceStyle by lazy {
         WatchFaceColorStyle.create(this, "white_style")
     }
@@ -127,10 +127,12 @@ open class ExampleOpenGLWatchFaceService : WatchFaceService() {
             ComplicationType.MONOCHROMATIC_IMAGE,
             ComplicationType.SMALL_IMAGE
         ),
-        DefaultComplicationDataSourcePolicy(SystemDataSources.DATA_SOURCE_DAY_OF_WEEK),
+        DefaultComplicationDataSourcePolicy(
+            SystemDataSources.DATA_SOURCE_DAY_OF_WEEK,
+            ComplicationType.SHORT_TEXT
+        ),
         ComplicationSlotBounds(RectF(0.2f, 0.7f, 0.4f, 0.9f))
-    ).setDefaultDataSourceType(ComplicationType.SHORT_TEXT)
-        .build()
+    ).build()
 
     public override fun createUserStyleSchema() = UserStyleSchema(listOf(colorStyleSetting))
 
@@ -168,6 +170,7 @@ open class ExampleOpenGLWatchFaceService : WatchFaceService() {
         )
 }
 
+@Suppress("Deprecation")
 class ExampleOpenGLRenderer(
     surfaceHolder: SurfaceHolder,
     private val currentUserStyleRepository: CurrentUserStyleRepository,
@@ -1154,6 +1157,13 @@ class Gles2TexturedTriangleList(
             GLES20.glDisableVertexAttribArray(textureCoordinateHandle)
             if (CHECK_GL_ERRORS) {
                 checkGlError("glDisableVertexAttribArray")
+            }
+        }
+
+        fun onDestroy() {
+            GLES20.glDeleteProgram(programId)
+            if (CHECK_GL_ERRORS) {
+                checkGlError("glDeleteProgram")
             }
         }
 

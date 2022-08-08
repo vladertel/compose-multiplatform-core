@@ -20,6 +20,7 @@ import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.Upsert
 import androidx.room.Query
 import androidx.room.RawQuery
 import androidx.room.RoomWarnings
@@ -449,4 +450,13 @@ interface BooksDao {
 
     // This is a private method to validate b/194706278
     private fun getNullAuthor(): Author? = null
+
+    @Query("SELECT * FROM Publisher JOIN Book ON (Publisher.publisherId == Book.bookPublisherId)")
+    fun getBooksByPublisher(): Map<Publisher, List<Book>>
+
+    @get:Query("SELECT * FROM Book")
+    val allBooks: List<Book>
+
+    @Upsert
+    fun upsertPublishers(vararg publishers: Publisher)
 }

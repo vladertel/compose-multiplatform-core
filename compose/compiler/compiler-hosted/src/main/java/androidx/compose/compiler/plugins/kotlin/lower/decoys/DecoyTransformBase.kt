@@ -70,7 +70,7 @@ internal interface DecoyTransformBase {
             is IdSignature.LoweredDeclarationSignature -> TODO()
             is IdSignature.FileSignature -> TODO()
             is IdSignature.CommonSignature -> id!!
-            is IdSignature.CompositeSignature -> this.getSignatureId()
+            is IdSignature.CompositeSignature -> this.nearestPublicSig().getSignatureId()
             is IdSignature.LocalSignature -> this.getSignatureId()
         }
     }
@@ -176,11 +176,9 @@ internal interface DecoyTransformBase {
     ): IrSymbol = resolveBySignatureInModule(idSignature, FUNCTION_SYMBOL, moduleDescriptor.name)
 }
 
-@OptIn(ObsoleteDescriptorBasedAPI::class)
 fun IrDeclaration.isDecoy(): Boolean =
     hasAnnotationSafe(DecoyFqNames.Decoy)
 
-@OptIn(ObsoleteDescriptorBasedAPI::class)
 fun IrDeclaration.isDecoyImplementation(): Boolean =
     hasAnnotationSafe(DecoyFqNames.DecoyImplementation)
 

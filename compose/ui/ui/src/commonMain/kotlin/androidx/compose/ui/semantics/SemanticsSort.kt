@@ -26,8 +26,8 @@ import androidx.compose.ui.util.fastMap
 
 // This part is a copy from ViewGroup#addChildrenForAccessibility.
 internal fun LayoutNode.findOneLayerOfSemanticsWrappersSortedByBounds(
-    list: MutableList<SemanticsWrapper> = mutableListOf()
-): List<SemanticsWrapper> {
+    list: MutableList<SemanticsEntity> = mutableListOf()
+): List<SemanticsEntity> {
     fun sortWithStrategy(holders: List<NodeLocationHolder>): List<NodeLocationHolder> {
         // This is gross but the least risky solution. The current comparison
         // strategy breaks transitivity but produces very good results. Coming
@@ -124,16 +124,6 @@ internal class NodeLocationHolder internal constructor(
         if (topDifference != 0f) {
             return if (topDifference < 0) -1 else 1
         }
-        // Break tie by height.
-        val heightDifference = location.height - other.location.height
-        if (heightDifference != 0f) {
-            return if (heightDifference < 0) 1 else -1
-        }
-        // Break tie by width.
-        val widthDifference = location.width - other.location.width
-        if (widthDifference != 0f) {
-            return if (widthDifference < 0) 1 else -1
-        }
 
         // Find a child of each view with different screen bounds. If we get here, node and
         // other.node must be attached.
@@ -190,5 +180,5 @@ internal fun LayoutNode.findNodeByPredicateTraversal(
  * innerLayoutNodeWrapper because it seems the bounds after padding is the effective content.
  */
 internal fun LayoutNode.findWrapperToGetBounds(): LayoutNodeWrapper {
-    return outerMergingSemantics ?: outerSemantics ?: innerLayoutNodeWrapper
+    return (outerMergingSemantics ?: outerSemantics)?.layoutNodeWrapper ?: innerLayoutNodeWrapper
 }

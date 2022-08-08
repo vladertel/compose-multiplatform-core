@@ -17,6 +17,7 @@
 package androidx.compose.ui
 
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 
 /**
  * An ordered, immutable collection of [modifier elements][Modifier.Element] that decorate or add
@@ -56,6 +57,7 @@ import androidx.compose.runtime.Stable
  */
 @Suppress("ModifierFactoryExtensionFunction")
 @Stable
+@JvmDefaultWithCompatibility
 interface Modifier {
 
     /**
@@ -102,6 +104,7 @@ interface Modifier {
     /**
      * A single element contained within a [Modifier] chain.
      */
+    @JvmDefaultWithCompatibility
     interface Element : Modifier {
         override fun <R> foldIn(initial: R, operation: (R, Element) -> R): R =
             operation(initial, this)
@@ -125,7 +128,7 @@ interface Modifier {
      *
      * @sample androidx.compose.ui.samples.ModifierParameterSample
      */
-    // The companion object implements `Modifier` so that it may be used  as the start of a
+    // The companion object implements `Modifier` so that it may be used as the start of a
     // modifier extension factory expression.
     companion object : Modifier {
         override fun <R> foldIn(initial: R, operation: (R, Element) -> R): R = initial

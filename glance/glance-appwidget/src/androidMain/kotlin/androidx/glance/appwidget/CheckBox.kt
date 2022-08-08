@@ -22,6 +22,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.glance.Emittable
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceNode
+import androidx.glance.action.Action
+import androidx.glance.action.ActionModifier
+import androidx.glance.appwidget.action.CompoundButtonAction
 import androidx.glance.appwidget.unit.CheckableColorProvider
 import androidx.glance.appwidget.unit.CheckedUncheckedColorProvider.Companion.createCheckableColorProvider
 import androidx.glance.appwidget.unit.ResourceCheckableColorProvider
@@ -30,7 +33,7 @@ import androidx.glance.unit.ColorProvider
 import androidx.glance.unit.FixedColorProvider
 
 /** Set of colors to apply to a CheckBox depending on the checked state. */
-public sealed class CheckBoxColors {
+sealed class CheckBoxColors {
     internal abstract val checkBox: CheckableColorProvider
 }
 
@@ -45,7 +48,7 @@ internal data class CheckBoxColorsImpl(
  * @param checkedColor the [Color] to use when the CheckBox is checked
  * @param uncheckedColor the [Color] to use when the CheckBox is not checked
  */
-public fun CheckBoxColors(checkedColor: Color, uncheckedColor: Color): CheckBoxColors =
+fun CheckBoxColors(checkedColor: Color, uncheckedColor: Color): CheckBoxColors =
     CheckBoxColors(FixedColorProvider(checkedColor), FixedColorProvider(uncheckedColor))
 
 /**
@@ -60,7 +63,7 @@ public fun CheckBoxColors(checkedColor: Color, uncheckedColor: Color): CheckBoxC
  * @param uncheckedColor the [ColorProvider] to use when the check box is not checked, or null to
  * use the default tint
  */
-public fun CheckBoxColors(
+fun CheckBoxColors(
     checkedColor: ColorProvider? = null,
     uncheckedColor: ColorProvider? = null
 ): CheckBoxColors =
@@ -82,7 +85,7 @@ public fun CheckBoxColors(
  * @param checkBoxColor the resource to use to tint the check box. If an invalid resource id is
  * provided, the default check box colors will be used.
  */
-public fun CheckBoxColors(@ColorRes checkBoxColor: Int): CheckBoxColors =
+fun CheckBoxColors(@ColorRes checkBoxColor: Int): CheckBoxColors =
     CheckBoxColorsImpl(
         ResourceCheckableColorProvider(
             resId = checkBoxColor,
@@ -90,37 +93,45 @@ public fun CheckBoxColors(@ColorRes checkBoxColor: Int): CheckBoxColors =
         )
     )
 
-/** Collection of defaults for [CheckBox]es. */
-public object CheckBoxDefaults {
-    /** Default colors applied to a CheckBox. */
-    val colors = CheckBoxColors()
-}
-
 /**
  * Adds a check box view to the glance view.
  *
  * @param checked whether the check box is checked
+ * @param onCheckedChange the action to be run when the checkbox is clicked. The current value of
+ * checked is provided to this action in its ActionParameters, and can be retrieved using the
+ * [ToggleableStateKey]. If this action launches an activity, the current value of checked will be
+ * passed as an intent extra with the name [RemoteViews.EXTRA_CHECKED].
  * @param modifier the modifier to apply to the check box
  * @param text the text to display to the end of the check box
  * @param style the style to apply to [text]
  * @param colors the color tint to apply to the check box
+ * @param maxLines An optional maximum number of lines for the text to span, wrapping if
+ * necessary. If the text exceeds the given number of lines, it will be truncated.
  */
 @Composable
-public fun CheckBox(
+fun CheckBox(
     checked: Boolean,
+    onCheckedChange: Action?,
     modifier: GlanceModifier = GlanceModifier,
     text: String = "",
     style: TextStyle? = null,
-    colors: CheckBoxColors = CheckBoxDefaults.colors
+    colors: CheckBoxColors = CheckBoxColors(),
+    maxLines: Int = Int.MAX_VALUE,
 ) {
+    val finalModifier = if (onCheckedChange != null) {
+        modifier.then(ActionModifier(CompoundButtonAction(onCheckedChange, checked)))
+    } else {
+        modifier
+    }
     GlanceNode(
         factory = ::EmittableCheckBox,
         update = {
             this.set(checked) { this.checked = it }
             this.set(text) { this.text = it }
-            this.set(modifier) { this.modifier = it }
+            this.set(finalModifier) { this.modifier = it }
             this.set(style) { this.style = it }
             this.set(colors) { this.colors = it }
+            this.set(maxLines) { this.maxLines = it }
         }
     )
 }
@@ -130,13 +141,15 @@ internal class EmittableCheckBox : Emittable {
     var checked: Boolean = false
     var text: String = ""
     var style: TextStyle? = null
-    var colors: CheckBoxColors = CheckBoxDefaults.colors
+    var colors: CheckBoxColors = CheckBoxColors()
+    var maxLines: Int = Int.MAX_VALUE
 
     override fun toString(): String = "EmittableCheckBox(" +
-        "modifier=$modifier" +
+        "modifier=$modifier, " +
         "checked=$checked, " +
         "text=$text, " +
         "style=$style, " +
-        "colors=$colors" +
+        "colors=$colors, " +
+        "maxLines=$maxLines" +
         ")"
 }

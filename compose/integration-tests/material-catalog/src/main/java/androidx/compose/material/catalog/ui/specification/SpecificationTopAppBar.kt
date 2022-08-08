@@ -16,7 +16,13 @@
 
 package androidx.compose.material.catalog.ui.specification
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -25,9 +31,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
-import com.google.accompanist.insets.navigationBarsPadding
-import com.google.accompanist.insets.statusBarsPadding
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpecificationTopAppBar(
     title: String,
@@ -35,7 +40,7 @@ fun SpecificationTopAppBar(
 ) {
     val backgroundColors = TopAppBarDefaults.centerAlignedTopAppBarColors()
     val backgroundColor = backgroundColors.containerColor(
-        scrollFraction = scrollBehavior?.scrollFraction ?: 0f
+        colorTransitionFraction = scrollBehavior?.state?.overlappedFraction ?: 0f
     ).value
     val foregroundColors = TopAppBarDefaults.centerAlignedTopAppBarColors(
         containerColor = Color.Transparent,
@@ -54,9 +59,9 @@ fun SpecificationTopAppBar(
             },
             scrollBehavior = scrollBehavior,
             colors = foregroundColors,
-            modifier = Modifier
-                .statusBarsPadding()
-                .navigationBarsPadding(bottom = false)
+            modifier = Modifier.windowInsetsPadding(
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
+            )
         )
     }
 }

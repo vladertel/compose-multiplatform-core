@@ -16,6 +16,7 @@
 
 package androidx.glance.appwidget.demos
 
+import androidx.compose.material.Text as ComposeText
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -23,29 +24,35 @@ import android.os.Handler
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material.Text as ComposeText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.glance.Button
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
-import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.action.ActionParameters
-import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.CheckBox
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.action.actionLaunchActivity
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.ToggleableStateKey
+import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.demos.ScrollableAppWidget.Companion.CheckboxKey
+import androidx.glance.appwidget.lazy.GridCells
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.itemsIndexed
+import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
+import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -68,6 +75,8 @@ class ScrollableAppWidget : GlanceAppWidget() {
         private val singleColumn = DpSize(100.dp, 48.dp)
         private val doubleColumn = DpSize(200.dp, 48.dp)
         private val tripleColumn = DpSize(300.dp, 48.dp)
+
+        val CheckboxKey = booleanPreferencesKey("checkbox")
     }
 
     override val sizeMode: SizeMode = SizeMode.Responsive(
@@ -87,17 +96,14 @@ class ScrollableAppWidget : GlanceAppWidget() {
                     .background(Color(0x0a000000))
             )
             val width = LocalSize.current.width
-            if (width <= singleColumn.width) {
-                ScrollColumn(GlanceModifier.fillMaxSize())
-            } else {
-                Row {
+            when {
+                width <= singleColumn.width -> ScrollColumn(GlanceModifier.fillMaxSize())
+                width <= doubleColumn.width -> Row {
                     val modifier = GlanceModifier.fillMaxHeight().defaultWeight()
                     ScrollColumn(modifier)
                     ScrollColumn(modifier)
-                    if (width >= tripleColumn.width) {
-                        ScrollColumn(modifier)
-                    }
                 }
+                else -> SampleGrid(cells = GridCells.Fixed(3))
             }
         }
     }
@@ -125,7 +131,7 @@ private fun ScrollColumn(modifier: GlanceModifier) {
             ) {
                 Button(
                     text = "Activity ${index + 1}",
-                    onClick = actionLaunchActivity(
+                    onClick = actionStartActivity(
                         Intent(
                             LocalContext.current,
                             activityClass
@@ -159,6 +165,19 @@ private fun ScrollColumn(modifier: GlanceModifier) {
                             actionParametersOf(ClickedItemKey to index)
                         )
                     )
+            )
+        }
+        item {
+            SectionHeading(
+                title = "Compound buttons",
+                description = "Check buttons below"
+            )
+        }
+        item {
+            CheckBox(
+                checked = currentState(CheckboxKey) ?: false,
+                onCheckedChange = actionRunCallback<ListToggleAction>(),
+                text = "Checkbox"
             )
         }
     }
@@ -197,7 +216,11 @@ class ListClickDestinationActivity : ComponentActivity() {
 
 /** Work executed when [ScrollableAppWidget] list's item is clicked. */
 class LogItemClickAction : ActionCallback {
-    override suspend fun onRun(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
         Handler(context.mainLooper).post {
             Toast.makeText(
                 context,
@@ -205,6 +228,19 @@ class LogItemClickAction : ActionCallback {
                 Toast.LENGTH_SHORT
             ).show()
         }
+    }
+}
+
+class ListToggleAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
+        updateAppWidgetState(context, glanceId) { state ->
+            state[CheckboxKey] = parameters[ToggleableStateKey] ?: false
+        }
+        ScrollableAppWidget().update(context, glanceId)
     }
 }
 

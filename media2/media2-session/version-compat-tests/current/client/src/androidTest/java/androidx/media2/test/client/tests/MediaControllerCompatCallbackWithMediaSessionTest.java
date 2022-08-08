@@ -19,6 +19,7 @@ package androidx.media2.test.client.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import android.media.AudioManager;
 import android.os.Build;
@@ -51,6 +52,7 @@ import androidx.test.filters.LargeTest;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -79,6 +81,9 @@ public class MediaControllerCompatCallbackWithMediaSessionTest extends MediaSess
     @Before
     @Override
     public void setUp() throws Exception {
+        // b/230354064
+        assumeTrue(Build.VERSION.SDK_INT != 17);
+
         super.setUp();
         mSession = new RemoteMediaSession(TAG, mContext, null);
         mControllerCompat = new MediaControllerCompat(mContext, mSession.getCompatToken());
@@ -88,9 +93,12 @@ public class MediaControllerCompatCallbackWithMediaSessionTest extends MediaSess
     @Override
     public void cleanUp() throws Exception {
         super.cleanUp();
-        mSession.close();
+        if (mSession != null) {
+            mSession.close();
+        }
     }
 
+    @Ignore("b/202942942")
     @Test
     public void gettersAfterConnected() throws Exception {
         int testState = SessionPlayer.PLAYER_STATE_PLAYING;
@@ -543,6 +551,7 @@ public class MediaControllerCompatCallbackWithMediaSessionTest extends MediaSess
         assertEquals(speed, mControllerCompat.getPlaybackState().getPlaybackSpeed(), EPSILON);
     }
 
+    @Ignore("b/202942942")
     @Test
     public void bufferingStateChange() throws Exception {
         List<MediaItem> testPlaylist = MediaTestUtils.createFileMediaItems(3);
@@ -593,7 +602,7 @@ public class MediaControllerCompatCallbackWithMediaSessionTest extends MediaSess
         assertEquals(testSeekPosition, mControllerCompat.getPlaybackState().getPosition());
     }
 
-    @FlakyTest(bugId = 187338985)
+    @Ignore("b/202942942")
     @Test
     public void currentMediaItemChange() throws Exception {
         int testItemIndex = 3;
@@ -758,6 +767,7 @@ public class MediaControllerCompatCallbackWithMediaSessionTest extends MediaSess
         assertEquals(playlistTitle, queueTitleRef.get().toString());
     }
 
+    @Ignore("b/202942942")
     @Test
     public void onAudioInfoChanged_isCalled_byVolumeChange() throws Exception {
         Bundle playerConfig = new RemoteMediaSession.MockPlayerConfigBuilder()

@@ -78,6 +78,8 @@ public interface WatchFaceHostApi {
     public fun setActiveComplicationSlots(complicationSlotIds: IntArray)
 
     /**
+     * For WSL flow, not used in androidx flow.
+     *
      * Accepts a list of custom complication data sources to attempt to set as the default
      * complication data source for the specified watch face [ComplicationSlot] id. The custom
      * complication data sources are tried in turn, if the first doesn't exist then the next one
@@ -124,4 +126,15 @@ public interface WatchFaceHostApi {
 
     /** Intent to launch the complication permission rationale activity. */
     public fun getComplicationRationaleIntent(): Intent?
+
+    /** Schedules a call to serialize [ComplicationSlotsManager]'s [ComplicationData]. */
+    @UiThread
+    public fun scheduleWriteComplicationDataCache()
+
+    /**
+     * Sent by the system at the top of the minute. This may trigger rendering if SysUI hasn't sent
+     * called setWatchUiState.
+     */
+    @UiThread
+    public fun onActionTimeTick() {}
 }

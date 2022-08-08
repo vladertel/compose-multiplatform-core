@@ -59,13 +59,19 @@ class EditProcessor {
         value: TextFieldValue,
         textInputSession: TextInputSession?,
     ) {
+        var textChanged = false
+        var selectionChanged = false
+        val compositionChanged = value.composition != mBuffer.composition
+
         if (mBufferState.annotatedString != value.annotatedString) {
             mBuffer = EditingBuffer(
                 text = value.annotatedString,
                 selection = value.selection
             )
+            textChanged = true
         } else if (mBufferState.selection != value.selection) {
             mBuffer.setSelection(value.selection.min, value.selection.max)
+            selectionChanged = true
         }
 
         if (value.composition == null) {
@@ -74,9 +80,20 @@ class EditProcessor {
             mBuffer.setComposition(value.composition.min, value.composition.max)
         }
 
+        // this is the same code as in TextInputServiceAndroid class where restartInput is decided
+        // if restartInput is going to be called the composition has to be cleared otherwise it
+        // results in keyboards behaving strangely.
+        val newValue = if (textChanged || (!selectionChanged && compositionChanged)) {
+            mBuffer.commitComposition()
+            value.copy(composition = null)
+        } else {
+            value
+        }
+
         val oldValue = mBufferState
-        mBufferState = value
-        textInputSession?.updateState(oldValue, value)
+        mBufferState = newValue
+
+        textInputSession?.updateState(oldValue, newValue)
     }
 
     /**
@@ -90,16 +107,20 @@ class EditProcessor {
      * @return the [TextFieldValue] representation of the final buffer state.
      */
     fun apply(editCommands: List<EditCommand>): TextFieldValue {
-        editCommands.fastForEach { it.applyTo(mBuffer) }
+        var lastCommand: EditCommand? = null
+        try {
+            editCommands.fastForEach {
+                lastCommand = it
+                it.applyTo(mBuffer)
+            }
+        } catch (e: Exception) {
+            throw RuntimeException(generateBatchErrorMessage(editCommands, lastCommand), e)
+        }
 
         val newState = TextFieldValue(
             annotatedString = mBuffer.toAnnotatedString(),
-            selection = TextRange(mBuffer.selectionStart, mBuffer.selectionEnd),
-            composition = if (mBuffer.hasComposition()) {
-                TextRange(mBuffer.compositionStart, mBuffer.compositionEnd)
-            } else {
-                null
-            }
+            selection = mBuffer.selection,
+            composition = mBuffer.composition
         )
 
         mBufferState = newState
@@ -110,4 +131,21 @@ class EditProcessor {
      * Returns the current state of the internal editing buffer as a [TextFieldValue].
      */
     fun toTextFieldValue(): TextFieldValue = mBufferState
+
+    private fun generateBatchErrorMessage(
+        editCommands: List<EditCommand>,
+        failedCommand: EditCommand?,
+    ): String = buildString {
+        appendLine(
+            "Error while applying EditCommand batch to buffer (" +
+                "length=${mBuffer.length}, " +
+                "composition=${mBuffer.composition}, " +
+                "selection=${mBuffer.selection}):"
+        )
+        @Suppress("ListIterator")
+        editCommands.joinTo(this, separator = "\n") {
+            val prefix = if (failedCommand === it) " > " else "   "
+            prefix + it.toStringForLog()
+        }
+    }
 }

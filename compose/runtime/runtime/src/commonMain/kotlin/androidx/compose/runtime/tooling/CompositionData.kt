@@ -16,6 +16,8 @@
 
 package androidx.compose.runtime.tooling
 
+import androidx.compose.runtime.internal.JvmDefaultWithCompatibility
+
 /**
  * A [CompositionData] is the data tracked by the composer during composition.
  *
@@ -48,6 +50,7 @@ interface CompositionData {
  * have access to data tracked during composition. The tools API should be used instead which
  * provides a more usable interpretation of the slot table.
  */
+@JvmDefaultWithCompatibility
 interface CompositionGroup : CompositionData {
     /**
      * A value used to identify the group within its siblings and is typically a compiler
@@ -71,7 +74,14 @@ interface CompositionGroup : CompositionData {
     /**
      * The data stored in the slot table for this group. This information includes the values
      * stored for parameters that are checked for change, any value passed as a parameter for
-     * [remember] and the last value returned by [remember], etc.
+     * [androidx.compose.runtime.remember] and the last value returned by
+     * [androidx.compose.runtime.remember], etc.
      */
     val data: Iterable<Any?>
+
+    /**
+     * A value that identifies a Group independently of movement caused by recompositions.
+     */
+    val identity: Any?
+      get() = null
 }

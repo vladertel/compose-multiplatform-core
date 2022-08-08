@@ -16,9 +16,13 @@
 
 package androidx.room.compiler.processing.ksp
 
+import androidx.room.compiler.processing.XConstructorType
+import androidx.room.compiler.processing.XExecutableType
 import androidx.room.compiler.processing.XFiler
 import androidx.room.compiler.processing.XMessager
+import androidx.room.compiler.processing.XMethodType
 import androidx.room.compiler.processing.XProcessingEnv
+import androidx.room.compiler.processing.XProcessingEnvConfig
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeElement
 import androidx.room.compiler.processing.javac.XTypeElementStore
@@ -41,8 +45,15 @@ internal class KspProcessingEnv(
     override val options: Map<String, String>,
     codeGenerator: CodeGenerator,
     logger: KSPLogger,
+    override val config: XProcessingEnvConfig,
 ) : XProcessingEnv {
     override val backend: XProcessingEnv.Backend = XProcessingEnv.Backend.KSP
+
+    // No API to get this but Kotlin's default is 8, so go with it for now.
+    // TODO: https://github.com/google/ksp/issues/810
+    override val jvmVersion: Int
+        get() = 8
+
     private val ksFileMemberContainers = mutableMapOf<KSFile, KspFileMemberContainer>()
 
     /**
@@ -281,6 +292,28 @@ internal class KspProcessingEnv(
 
     internal fun clearCache() {
         typeElementStore.clear()
+    }
+
+    internal fun isSameType(type1: XExecutableType, type2: XExecutableType): Boolean {
+        if (type1 == type2) {
+            return true
+        }
+        if (type1.parameterTypes.size != type2.parameterTypes.size) {
+            return false
+        }
+        type1.parameterTypes.indices.forEach { i ->
+            if (!type1.parameterTypes[i].isSameType(type2.parameterTypes[i])) {
+                return false
+            }
+        }
+        fun returnType(type: XExecutableType): XType {
+            return when (type) {
+                is XMethodType -> type.returnType
+                is XConstructorType -> voidType
+                else -> error("Unexpected XExecutableType: $type")
+            }
+        }
+        return returnType(type1).isSameType(returnType(type2))
     }
 
     class CommonTypes(resolver: Resolver) {

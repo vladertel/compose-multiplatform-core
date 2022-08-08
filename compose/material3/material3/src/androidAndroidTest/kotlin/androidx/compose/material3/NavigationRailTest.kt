@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
@@ -74,7 +75,7 @@ class NavigationRailTest {
 
     @Test
     fun defaultSemantics() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             NavigationRail {
                 NavigationRailItem(
                     modifier = Modifier.testTag("item"),
@@ -103,7 +104,7 @@ class NavigationRailTest {
 
     @Test
     fun disabledSemantics() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             NavigationRail {
                 NavigationRailItem(
                     enabled = false,
@@ -128,6 +129,56 @@ class NavigationRailTest {
     }
 
     @Test
+    fun navigationRailItem_clearsIconSemantics_whenLabelIsPresent() {
+        rule.setMaterialContent(lightColorScheme()) {
+            NavigationRail {
+                NavigationRailItem(
+                    modifier = Modifier.testTag("item1"),
+                    icon = {
+                        Icon(Icons.Filled.Favorite, "Favorite")
+                    },
+                    label = {
+                        Text("Favorite")
+                    },
+                    selected = true,
+                    alwaysShowLabel = false,
+                    onClick = {}
+                )
+                NavigationRailItem(
+                    modifier = Modifier.testTag("item2"),
+                    icon = {
+                        Icon(Icons.Filled.Favorite, "Favorite")
+                    },
+                    label = {
+                        Text("Favorite")
+                    },
+                    selected = false,
+                    alwaysShowLabel = false,
+                    onClick = {}
+                )
+                NavigationRailItem(
+                    modifier = Modifier.testTag("item3"),
+                    icon = {
+                        Icon(Icons.Filled.Favorite, "Favorite")
+                    },
+                    selected = false,
+                    onClick = {}
+                )
+            }
+        }
+
+        val node1 = rule.onNodeWithTag("item1").fetchSemanticsNode()
+        val node2 = rule.onNodeWithTag("item2").fetchSemanticsNode()
+        val node3 = rule.onNodeWithTag("item3").fetchSemanticsNode()
+
+        Truth.assertThat(node1.config.getOrNull(SemanticsProperties.ContentDescription)).isNull()
+        Truth.assertThat(node2.config.getOrNull(SemanticsProperties.ContentDescription))
+            .isEqualTo(listOf("Favorite"))
+        Truth.assertThat(node3.config.getOrNull(SemanticsProperties.ContentDescription))
+            .isEqualTo(listOf("Favorite"))
+    }
+
+    @Test
     fun navigationRail_width() {
         val defaultWidth = NavigationRailItemWidth
         rule.setMaterialContentForSizeAssertions {
@@ -149,7 +200,7 @@ class NavigationRailTest {
     @Test
     fun navigationRailItem_sizeAndPositions() {
         val itemCoords = mutableMapOf<Int, LayoutCoordinates>()
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             Box {
                 NavigationRail {
                     repeat(4) { index ->
@@ -194,7 +245,7 @@ class NavigationRailTest {
 
     @Test
     fun navigationRailItemContent_withLabel_sizeAndPosition() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             Box {
                 NavigationRail {
                     NavigationRailItem(
@@ -237,7 +288,7 @@ class NavigationRailTest {
 
     @Test
     fun navigationRailItemContent_withLabel_unselected_sizeAndPosition() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             Box {
                 NavigationRail {
                     NavigationRailItem(
@@ -274,7 +325,7 @@ class NavigationRailTest {
 
     @Test
     fun navigationRailItemContent_withoutLabel_sizeAndPosition() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             Box {
                 NavigationRail {
                     NavigationRailItem(
@@ -305,7 +356,7 @@ class NavigationRailTest {
 
     @Test
     fun navigationRail_selectNewItem() {
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             var selectedItem by remember { mutableStateOf(0) }
             val items = listOf("Home", "Search", "Settings")
             val icons = listOf(Icons.Filled.Home, Icons.Filled.Search, Icons.Filled.Settings)
@@ -344,7 +395,7 @@ class NavigationRailTest {
     @Test
     fun disabled_noClicks() {
         var clicks = 0
-        rule.setMaterialContent {
+        rule.setMaterialContent(lightColorScheme()) {
             NavigationRail {
                 NavigationRailItem(
                     enabled = false,

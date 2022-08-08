@@ -16,7 +16,9 @@
 
 package androidx.glance.appwidget
 
+import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.glance.GlanceId
 
 class TestGlanceAppWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = TestGlanceAppWidget
@@ -29,6 +31,20 @@ object TestGlanceAppWidget : GlanceAppWidget(errorUiLayout = 0) {
     @Composable
     override fun Content() {
         uiDefinition()
+    }
+
+    private var onDeleteBlock: ((GlanceId) -> Unit)? = null
+
+    fun setOnDeleteBlock(block: (GlanceId) -> Unit) {
+        onDeleteBlock = block
+    }
+
+    fun resetOnDeleteBlock() {
+        onDeleteBlock = null
+    }
+
+    override suspend fun onDelete(context: Context, glanceId: GlanceId) {
+        onDeleteBlock?.apply { this(glanceId) }
     }
 
     var uiDefinition: @Composable () -> Unit = { }

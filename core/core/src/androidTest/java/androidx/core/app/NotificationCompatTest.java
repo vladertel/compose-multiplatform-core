@@ -749,6 +749,7 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testNotificationActionBuilder_assignsColorized() throws Throwable {
         Notification n = newNotificationBuilder().setColorized(true).build();
         if (Build.VERSION.SDK_INT >= 26) {
@@ -757,6 +758,7 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testNotificationActionBuilder_unassignesColorized() throws Throwable {
         Notification n = newNotificationBuilder().setColorized(false).build();
         if (Build.VERSION.SDK_INT >= 26) {
@@ -1357,6 +1359,7 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
     }
 
     @SdkSuppress(minSdkVersion = 16)
+    @SuppressWarnings("deprecation")
     @Test
     public void testBigPictureStyle_withNullBigLargeIcon() {
         Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(),
@@ -1420,6 +1423,7 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
     }
 
     @SdkSuppress(minSdkVersion = 24)
+    @SuppressWarnings("deprecation")
     @Test
     public void testBigPictureStyle_isRecovered() {
         Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(),
@@ -1444,6 +1448,7 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
     }
 
     @SdkSuppress(minSdkVersion = 19)
+    @SuppressWarnings("deprecation")
     @Test
     public void testBigPictureStyle_recoverStyleWithBitmap() {
         Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(),
@@ -1481,6 +1486,7 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
     }
 
     @SdkSuppress(minSdkVersion = 23)
+    @SuppressWarnings("deprecation")
     @Test
     public void testBigPictureStyle_recoverStyleWithResIcon() {
         Notification n = new Notification.Builder(mContext)
@@ -1500,6 +1506,127 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
                 .setStyle(style)
                 .build();
         Icon rebuiltIcon = n.extras.getParcelable(Notification.EXTRA_LARGE_ICON_BIG);
+        assertEquals(Icon.TYPE_RESOURCE, rebuiltIcon.getType());
+    }
+
+    @SdkSuppress(minSdkVersion = 19, maxSdkVersion = 30)
+    @Test
+    // minSdkVersion selected because extras are not populated before 19.
+    // maxSdkVersion selected because EXTRA_PICTURE_ICON not set before 31.
+    public void testBigPictureStyle_bigPictureWithBitmap_legacy() {
+
+        Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(),
+                R.drawable.notification_bg_low_pressed);
+        Notification n = new NotificationCompat.Builder(mContext, "channelId")
+                .setSmallIcon(1)
+                .setStyle(new NotificationCompat.BigPictureStyle()
+                        .bigPicture(bitmap))
+                .build();
+
+        Bundle extras = NotificationCompat.getExtras(n);
+        assertNotNull(extras);
+        // Because the bigPicture was a bitmap, it'll be stored in EXTRA_PICTURE.
+        assertTrue(extras.containsKey(NotificationCompat.EXTRA_PICTURE));
+        assertNotNull(extras.get(NotificationCompat.EXTRA_PICTURE));
+        // EXTRA_PICTURE_ICON was not set before 31.
+        assertFalse(extras.containsKey(NotificationCompat.EXTRA_PICTURE_ICON));
+
+        Parcelable firstBuiltIcon = n.extras.getParcelable(NotificationCompat.EXTRA_PICTURE);
+        // Checks that the data is unparcled as a bitmap. Because the original data was a
+        // bitmap, this ensures maximal backwards compatibility for existing listeners expecting
+        // a bitmap from extras.
+        assertSame(Bitmap.class, firstBuiltIcon.getClass());
+
+        // Ensures that the icon's EXTRA_PICTURE gets rebuilt from style.
+        Style style = Style.extractStyleFromNotification(n);
+        assertNotNull(style);
+        assertSame(NotificationCompat.BigPictureStyle.class, style.getClass());
+        n = new NotificationCompat.Builder(mContext, "channelId")
+                .setSmallIcon(1)
+                .setStyle(style)
+                .build();
+        Parcelable rebuiltIcon = n.extras.getParcelable(NotificationCompat.EXTRA_PICTURE);
+        assertSame(Bitmap.class, rebuiltIcon.getClass());
+
+    }
+
+    @SdkSuppress(minSdkVersion = 31)
+    @Test
+    // minSdkVersion selected because EXTRA_PICTURE_ICON not set before 31.
+    public void testBigPictureStyle_bigPictureWithBitmap() {
+
+        Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(),
+                R.drawable.notification_bg_low_pressed);
+        Notification n = new NotificationCompat.Builder(mContext, "channelId")
+                .setSmallIcon(1)
+                .setStyle(new NotificationCompat.BigPictureStyle()
+                        .bigPicture(bitmap))
+                .build();
+
+        Bundle extras = NotificationCompat.getExtras(n);
+        assertNotNull(extras);
+        // Because the bigPicture was a bitmap, it'll be stored in EXTRA_PICTURE.
+        assertTrue(extras.containsKey(NotificationCompat.EXTRA_PICTURE));
+        assertNotNull(extras.get(NotificationCompat.EXTRA_PICTURE));
+        // EXTRA_PICTURE_ICON began being set in 31.
+        // However, we avoid storing both the Icon version and the Bitmap
+        // version in extras, so the stored value is null.
+        assertTrue(extras.containsKey(NotificationCompat.EXTRA_PICTURE_ICON));
+        assertNull(extras.get(NotificationCompat.EXTRA_PICTURE_ICON));
+
+        Parcelable firstBuiltIcon = n.extras.getParcelable(NotificationCompat.EXTRA_PICTURE);
+        // Checks that the data is unparcled as a bitmap. Because the original data was a
+        // bitmap, this ensures maximal backwards compatibility for existing listeners expecting
+        // a bitmap from extras.
+        assertSame(Bitmap.class, firstBuiltIcon.getClass());
+
+        // Ensures that the icon's EXTRA_PICTURE gets rebuilt from style.
+        Style style = Style.extractStyleFromNotification(n);
+        assertNotNull(style);
+        assertSame(NotificationCompat.BigPictureStyle.class, style.getClass());
+        n = new NotificationCompat.Builder(mContext, "channelId")
+                .setSmallIcon(1)
+                .setStyle(style)
+                .build();
+        Parcelable rebuiltIcon = n.extras.getParcelable(NotificationCompat.EXTRA_PICTURE);
+        assertSame(Bitmap.class, rebuiltIcon.getClass());
+
+    }
+
+    @SdkSuppress(minSdkVersion = 31)
+    @Test
+    // minSdkVersion selected because setting BigPicture from Icon added in 31.
+    public void testBigPictureStyle_bigPictureWithIcon() {
+        Notification n = new NotificationCompat.Builder(mContext)
+                .setSmallIcon(1)
+                .setStyle(new NotificationCompat.BigPictureStyle()
+                        .bigPicture(Icon.createWithResource(mContext,
+                                R.drawable.notification_template_icon_bg)))
+                .build();
+
+        Bundle extras = NotificationCompat.getExtras(n);
+        assertNotNull(extras);
+        // Because the notification was created with a non-bitmap bigPicture, it will be
+        // stored in EXTRA_PICTURE_ICON.
+        assertTrue(extras.containsKey(NotificationCompat.EXTRA_PICTURE_ICON));
+        assertNotNull(extras.get(NotificationCompat.EXTRA_PICTURE_ICON));
+        // We avoid storing both the Icon version and the Bitmap version in extras.
+        assertTrue(extras.containsKey(NotificationCompat.EXTRA_PICTURE));
+        assertNull(extras.get(NotificationCompat.EXTRA_PICTURE));
+
+        Icon firstBuiltIcon = n.extras.getParcelable(NotificationCompat.EXTRA_PICTURE_ICON);
+        assertEquals(Icon.TYPE_RESOURCE, firstBuiltIcon.getType());
+
+        // Ensures that the icon's EXTRA_PICTURE gets rebuilt.
+        Style style = Style.extractStyleFromNotification(n);
+        assertNotNull(style);
+        assertSame(NotificationCompat.BigPictureStyle.class, style.getClass());
+        n = new NotificationCompat.Builder(mContext, "channelId")
+                .setSmallIcon(1)
+                .setStyle(style)
+                .build();
+
+        Icon rebuiltIcon = n.extras.getParcelable(NotificationCompat.EXTRA_PICTURE_ICON);
         assertEquals(Icon.TYPE_RESOURCE, rebuiltIcon.getType());
     }
 
@@ -1835,6 +1962,7 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
     }
 
     @SdkSuppress(minSdkVersion = 28)
+    @SuppressWarnings("deprecation")
     @Test
     public void testMessagingStyle_apply_writesMessagePerson() {
         Notification msNotification = newMsNotification(true, true);
@@ -1846,6 +1974,7 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
     }
 
     @SdkSuppress(minSdkVersion = 24, maxSdkVersion = 27)
+    @SuppressWarnings("deprecation")
     @Test
     public void testMessagingStyle_apply_writesMessagePerson_legacy() {
         Notification msNotification = newMsNotification(true, true);
@@ -2185,6 +2314,7 @@ public class NotificationCompatTest extends BaseInstrumentationTestCase<TestActi
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testPeopleField() {
         final Person person1 = new Person.Builder().setName("test name").setKey("key").build();
         final Person person2 = new Person.Builder()

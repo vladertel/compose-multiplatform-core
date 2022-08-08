@@ -40,7 +40,12 @@ separators `.` or `:`. For example, `androidx.core:core-role` would use project
 name `:core:core-role` and directory `/core/core-role`.
 
 New modules in androidx can be created using the
-[project creator script](#module-creator).
+[project creator script](#module-creation).
+
+NOTE Modules for OEM-implemented shared libraries (also known as extensions or
+sidecars) that ship on-device and are referenced via the `<uses-library>` tag
+should follow the naming convention `com.android.extensions.<feature-name>` to
+avoid placing `androidx`-packaged code in the platform's boot classpath.
 
 #### Project directory structure {#module-structure}
 
@@ -53,7 +58,7 @@ Library groups should organize their projects into directories and project names
 ```
 <feature-name>/
   <feature-name>-<sub-feature>/ [<feature-name>:<feature-name>-<sub-feature>]
-    samples/ [<feature-name>:<feature-name>-<sub-feature>:samples]
+    samples/ [<feature-name>:<feature-name>-<sub-feature>-samples]
   integration-tests/
     testapp/ [<feature-name>:testapp]
     testlib/ [<feature-name>:testlib]
@@ -92,6 +97,29 @@ cd development/project-creator && \
 ./create_project.py androidx.foo foo-bar
 ```
 
+If you are creating an unpublished module such as an integration test app with \
+the project creator script, it may not make sense to follow the same naming \
+conventions as published libraries. In this situation it is safe to comment out
+\
+the `artifact_id` validation from the script or rename the module after it has \
+been created.
+
+If you see an error message `No module named 'toml'` try the following steps.
+
+*   Install necessary tools if they are not already installed
+    *   (Linux) `sudo apt-get install virtualenv python3-venv`
+    *   (Mac) `pip3 install virtualenv`
+*   Create a virtual environment with `virtualenv androidx_project_creator` (you
+    can choose another name for your virtualenv if you wish).
+*   Install the `toml` library in your virtual env with
+    `androidx_project_creator/bin/pip3 install toml`
+*   Run the project creator script from your virtual env with
+    `androidx_project_creator/bin/python3
+    ../../development/project-creator/create_project.py androidx.foo foo-bar`
+*   Delete your virtual env with `rm -rf ./androidx-project_creator`
+    *   virtualenv will automatically .gitignore itself, but you may want to to
+        remove it anyway.
+
 #### Common sub-feature names {#module-naming-subfeature}
 
 *   `-testing` for an artifact intended to be used while testing usages of your
@@ -101,6 +129,8 @@ cd development/project-creator && \
 *   `-ktx` for an Kotlin artifact that exposes idiomatic Kotlin APIs as an
     extension to a Java-only library (see
     [additional -ktx guidance](#module-ktx))
+*   `-samples` for sample code which can be inlined in documentation (see
+    [Sample code in Kotlin modules](#sample-code-in-kotlin-modules)
 *   `-<third-party>` for an artifact that integrates an optional third-party API
     surface, e.g. `-proto` or `-rxjava2`. Note that a major version is included
     in the sub-feature name for third-party API surfaces where the major version
@@ -151,13 +181,13 @@ on libraries within the group. Such groups must increment the version of every
 library at the same time and release all libraries at the same time.
 
 Atomic groups are specified in
-[`LibraryGroups.kt`](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:buildSrc/src/main/kotlin/androidx/build/LibraryGroups.kt):
+[libraryversions.toml](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:libraryversions.toml):
 
-```kotlin
+```
 // Non-atomic library group
-val APPCOMPAT = LibraryGroup("androidx.appcompat", null)
+APPCOMPAT = { group = "androidx.appcompat" }
 // Atomic library group
-val APPSEARCH = LibraryGroup("androidx.appsearch", LibraryVersions.APPSEARCH)
+APPSEARCH = { group = "androidx.appsearch", atomicGroupVersion = "versions.APPSEARCH" }
 ```
 
 Libraries within an atomic group should not specify a version in their
@@ -275,13 +305,14 @@ Implementation requirements
 *   Superclass **must** be `Object`
 *   Class **must** be non-instantiable, i.e. constructor is private no-op
 *   Static fields and static methods **must** match match signatures with
-    `PlatformClass`
+    `<PlatformClass>`
     *   Static fields that can be inlined, ex. integer constants, **must not**
         be shimmed
 *   Public method names **must** match platform method names
-*   Public methods **must** be static and take `PlatformClass` as first
-    parameter
-*   Implementation *may* delegate to `PlatformClass` methods when available
+*   Public methods **must** be static and take `<PlatformClass>` as first
+    parameter (except in the case of static methods on the platform class, as
+    shown below)
+*   Implementation *may* delegate to `<PlatformClass>` methods when available
 
 #### Sample {#static-shim-sample}
 
@@ -457,12 +488,14 @@ public final class ModemInfoCompat {
   // loading and prevent optimization.
   @RequiresApi(23)
   private static class Api23Impl {
+    @DoNotInline
     @NonNull
     static ModemInfo create() {
       return new ModemInfo();
     }
 
-    static boolean isLteSupported(PlatformClass obj) {
+    @DoNotInline
+    static boolean isLteSupported(ModemInfo obj) {
       return obj.isLteSupported();
     }
   }
@@ -540,6 +573,55 @@ class ModemInfoCompat {
     classes targeted to the SDK level at which the operation was added.
     *   See the [sample](#wrapper-sample) for an example of interacting with a
         method that was added in SDK level 23.
+
+### Safe super. invocation {#safe-super-calls}
+
+When to use?
+
+*   When invoking `method.superMethodIntroducedSinceMinSdk()`
+
+Implementation requirements
+
+*   Class must be a *non-static* **inner class** (captures `this` pointer)
+*   Class may not be exposed in public API
+
+This should only be used when calling `super` methods that will not verify (such
+as when overriding a new method to provide back compat).
+
+Super calls is not available in a `static` context in Java. It can however be
+called from an inner class.
+
+#### Sample {#safe-super-calls-sample}
+
+```java
+class AppCompatTextView : TextView {
+
+  @Nullable
+  SuperCaller mSuperCaller = null;
+
+  @Override
+  int getPropertyFromApi99() {
+  if (Build.VERSION.SDK_INT > 99) {
+    getSuperCaller().getPropertyFromApi99)();
+  }
+
+  @NonNull
+  @RequiresApi(99)
+  SuperCaller getSuperCaller() {
+    if (mSuperCaller == null) {
+      mSuperCaller = new SuperCaller();
+    }
+    return mSuperCaller;
+  }
+
+  @RequiresApi(99)
+  class SuperCaller {
+    int getPropertyFromApi99() {
+      return AppCompatTextView.super.getPropertyFromApi99();
+    }
+  }
+}
+```
 
 ### Standalone (ex. [ArraySet](https://developer.android.com/reference/android/support/v4/util/ArraySet.html), [Fragment](https://developer.android.com/reference/android/support/v4/app/Fragment.html)) {#standalone}
 
@@ -775,8 +857,8 @@ different versions of libraries and should be treated similarly to public API.
 
 #### Data structures
 
-**Do not** use Parcelable for any class that may be used for IPC or otherwise
-exposed as public API. The data format used by Parcelable does not provide any
+**Do not** use `Parcelable` for any class that may be used for IPC or otherwise
+exposed as public API. The wire format used by `Parcelable` does not provide any
 compatibility guarantees and will result in crashes if fields are added or
 removed between library versions.
 
@@ -786,10 +868,15 @@ is difficult and error-prone.
 
 Developers **should** use protocol buffers for most cases. See
 [Protobuf](#dependencies-protobuf) for more information on using protocol
-buffers in your library.
+buffers in your library. **Do** use protocol buffers if your data structure is
+complex and likely to change over time. If your data includes `FileDescriptor`s,
+`Binder`s, or other platform-defined `Parcelable` data structures, they will
+need to be stored alongside the protobuf bytes in a `Bundle`.
 
-Developers **may** use `Bundle` in simple cases that require sending `Binder`s
-or `FileDescriptor`s across IPC. Note that `Bundle` has several caveats:
+Developers **may** use `Bundle` in simple cases that require sending `Binder`s,
+`FileDescriptor`s, or platform `Parcelable`s across IPC
+([example](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:core/core/src/main/java/androidx/core/graphics/drawable/IconCompat.java;l=820)).
+Note that `Bundle` has several caveats:
 
 -   When running on Android S and below, accessing *any* entry in a `Bundle`
     will result in the platform attempting to deserialize *every* entry. This
@@ -807,6 +894,18 @@ or `FileDescriptor`s across IPC. Note that `Bundle` has several caveats:
     tracking the keys or value types associated with a `Bundle`. Library owners
     are responsible for providing their own system for guaranteeing wire format
     compatibility between versions.
+
+Developers **may** use `VersionedParcelable` in cases where they are already
+using the library and understand its limitations.
+
+In all cases, **do not** expose your serialization mechanism in your API
+surface.
+
+NOTE We are currently investigating the suitability of Square's
+[`wire` library](https://github.com/square/wire) for handling protocol buffers
+in Android libraries. If adopted, it will replace `proto` library dependencies.
+Libraries that expose their serialization mechanism in their API surface *will
+not be able to migrate*.
 
 #### Communication protocols
 
@@ -882,8 +981,17 @@ encourages them -- through Lint warnings -- to migrate elsewhere. This is
 accomplished by adding a `@Deprecated` and `@deprecated` (with migration
 comment) annotation pair to *every* class and interface in the artifact.
 
-Entire packages (including Kotlin) can be deprecated by using a
-`package-info.java` file and applying the `@Deprecated` annotation there.
+To deprecate an entire artifact:
+
+1.  Mark every top-level API (class, interface, extension function, etc.) in the
+    artifact as `@Deprecated` and update the API files
+    ([example CL](https://android-review.googlesource.com/c/platform/frameworks/support/+/1938773))
+1.  Schedule a release of the artifact as a new minor version. When you populate
+    the release notes, explain that the entire artifact has been deprecated.
+    Include the reason for deprecation and the migration strategy.
+1.  After the artifact has been released, remove the artifact from the source
+    tree, versions file, and tip-of-tree docs configuration
+    ([example CL](https://android-review.googlesource.com/c/platform/frameworks/support/+/2061731/))
 
 The fully-deprecated artifact will be released as a deprecation release -- it
 will ship normally with accompanying release notes indicating the reason for
@@ -1296,8 +1404,9 @@ classes, e.g. the Java `Builder` pattern.
 
 ### Open-source compatibility {#dependencies-aosp}
 
-[Jetpack Principles](principles.md) require that libraries consider the
-open-source compatibility implications of their dependencies, including:
+Jetpack's [open-source](open_source.md) principle requires that libraries
+consider the open-source compatibility implications of their dependencies,
+including:
 
 -   Closed-source or proprietary libraries or services that may not be available
     on AOSP devices
@@ -1306,7 +1415,7 @@ open-source compatibility implications of their dependencies, including:
 
 Primary artifacts, e.g. `workmanager`, **must not** depend on closed-source
 components including libraries and hard-coded references to packages,
-permissions, or IPC mechanisms that may only be fulfulled by closed-source
+permissions, or IPC mechanisms that may only be fulfilled by closed-source
 components.
 
 Optional artifacts, e.g. `workmanager-gcm`, *may* depend on closed-source
@@ -1316,7 +1425,7 @@ component via service discovery or initialization.
 Some examples of safely depending on closed-source components include:
 
 -   WorkManager's GCM Network Manager integration, which uses
-    [manifest metadata](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-master-dev:work/workmanager-gcm/src/main/AndroidManifest.xml)
+    [manifest metadata](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:work/workmanager-gcm/src/main/AndroidManifest.xml)
     for service discovery and provides an optional artifact exposing the
     service.
 -   Ads Identifier's Play Services integration, which provides a default backend
@@ -1324,7 +1433,7 @@ Some examples of safely depending on closed-source components include:
     [`Intent` handling](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-master-dev:ads/ads-identifier-provider/src/main/java/androidx/ads/identifier/provider/AdvertisingIdProviderManager.java;l=108)
     as a service discovery mechanism for Play Services.
 -   Downloadable Fonts integration with Play Services, which plugs in via a
-    [`ContentProvider`](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-master-dev:core/core/src/androidTest/java/androidx/core/provider/MockFontProvider.java)
+    [`ContentProvider`](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:core/core/src/androidTest/java/androidx/core/provider/MockFontProvider.java)
     as a service discovery mechanism with developer-specified
     [signature verification](https://developer.android.com/guide/topics/ui/look-and-feel/downloadable-fonts#adding-certificates)
     for additional security.
@@ -1439,10 +1548,14 @@ may only be removed during an alpha pre-release stage. Removing the experimental
 marker from an API is equivalent to adding the API to the current API surface.
 
 When transitioning an entire feature surface out of experimental, you *should*
-remove the definition for the associated annotation.
+remove the definition for the associated experimental marker annotation.
 
 When making any change to the experimental API surface, you *must* run
 `./gradlew updateApi` prior to uploading your change.
+
+NOTE Experimental marker annotation *are themselves* experimental, meaning that
+it's considered binary compatible to refactor or remove an experimental marker
+annotation.
 
 ### `@RestrictTo` APIs {#restricted-api}
 
@@ -1599,14 +1712,47 @@ Views *may* implement a four-arg constructor in one of the following ways:
 
 #### With return values {#async-return}
 
+###### Kotlin
+
 Traditionally, asynchronous work on Android that results in an output value
 would use a callback; however, better alternatives exist for libraries.
 
-Kotlin libraries should prefer
+Kotlin libraries should consider
 [coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html) and
-`suspend` functions, but please refer to the guidance on
-[allowable dependencies](#dependencies-coroutines) before adding a new
-dependency on coroutines.
+`suspend` functions for APIs according to the following rules, but please refer
+to the guidance on [allowable dependencies](#dependencies-coroutines) before
+adding a new dependency on coroutines.
+
+Kotlin suspend fun vs blocking       | Behavior
+------------------------------------ | --------------------------
+blocking function with @WorkerThread | API is blocking
+suspend                              | API is async (e.g. Future)
+
+In general, do not introduce a suspend function entirely to switch threads for
+blocking calls. To do so correctly requires that we allow the developer to
+configure the Dispatcher. As there is already a coroutines-based API for
+changing dispatchers (withContext) that the caller may use to switch threads, it
+is unecessary API overhead to provide a duplicate mechanism. In addition, it
+unecessary limits callers to coroutine contexts.
+
+```kotlin
+// DO expose blocking calls as blocking calls
+@WorkerThread
+fun blockingCall()
+
+// DON'T wrap in suspend functions (only to switch threads)
+suspend fun blockingCallWrappedInSuspend(
+  dispatcher: CoroutineDispatcher = Dispatchers.Default
+) = withContext(dispatcher) { /* ... */ }
+
+// DO expose async calls as suspend funs
+suspend fun asyncCall(): ReturnValue
+
+// DON'T expose async calls as a callback-based API (for the main API)
+fun asyncCall(executor: Executor, callback: (ReturnValue) -> Unit)
+```
+
+###### Java
 
 Java libraries should prefer `ListenableFuture` and the
 [`CallbackToFutureAdapter`](https://developer.android.com/reference/androidx/concurrent/futures/CallbackToFutureAdapter)
@@ -1686,7 +1832,7 @@ that are more lightweight, depending on your use case:
 *   Update a value from multiple threads atomically
 *   Maintain granular control of your concurrency invariants
 
-### Kotlin {#kotlin}
+### Kotlin-specific guidelines {#kotlin}
 
 #### Nullability from Java (new APIs)
 
@@ -1965,6 +2111,37 @@ Compose).
 
 ### [Do not Mock, AndroidX](do_not_mock.md)
 
+### Validating class verification fixes
+
+To verify class verification, the best way is to look for `adb` output during
+install time.
+
+You can generate class verification logs from test APKs. Simply call the
+class/method that should generate a class verification failure in a test.
+
+The test APK will generate class verification logs on install.
+
+```bash
+# Enable ART logging (requires root). Note the 2 pairs of quotes!
+adb root
+adb shell setprop dalvik.vm.dex2oat-flags '"--runtime-arg -verbose:verifier"'
+
+# Restart Android services to pick up the settings
+adb shell stop && adb shell start
+
+# Optional: clear logs which aren't relevant
+adb logcat -c
+
+# Install the app and check for ART logs
+# This line is what triggers log lines, and can be repeated
+adb install -d -r someApk.apk
+
+# it's useful to run this _during_ install in another shell
+adb logcat | grep 'dex2oat'
+...
+... I dex2oat : Soft verification failures in
+```
+
 ## Android Lint Guidelines
 
 ### Suppression vs Baselines
@@ -1988,14 +2165,11 @@ if you are in a Java library without Android dependencies, or when enabling a
 new lint check, and it is prohibitively expensive / not possible to fix the
 errors generated by enabling this lint check.
 
-To update a lint baseline (`lint-baseline.xml`) after you have fixed issues,
-first **manually delete the `lint-baseline.xml` file** for your project and then
-run the `lintDebug` task for your project with the argument
-`-PupdateLintBaseline`.
+To update a lint baseline (`lint-baseline.xml`) after you have fixed issues, run
+the `updateLintBaseline` task.
 
 ```shell
-rm core/core/lint-baseline.xml
-./gradlew :core:core:lintDebug -PupdateLintBaseline
+./gradlew :core:core:updateLintBaseline
 ```
 
 ## Metalava API Lint
@@ -2152,7 +2326,8 @@ unmaintained and outdated.
 
 The follow demonstrates how to reference sample functions from public API. It is
 also recommended to reuse these samples in unit tests / integration tests / test
-apps / library demos where possible.
+apps / library demos where possible to help ensure that the samples work as
+intended.
 
 **Public API:**
 
@@ -2178,7 +2353,7 @@ fun fancySample() {
 }
 ```
 
-**Generated documentation visible on d.android.com\***
+**Generated documentation visible on d.android.com / within Android Studio**
 
 ```
 fun fancyPrint(str: String)
@@ -2192,16 +2367,37 @@ Fancy prints the given [string]
 <code>
 ```
 
-\**still some improvements to be made to DAC side, such as syntax highlighting*
+Warning: Only the body of the function is used in generated documentation, so
+any other references to elements defined outside the body of the function (such
+as variables defined within the sample file) will not be visible. To ensure that
+samples can be easily copy and pasted without errors, make sure that any
+references are defined within the body of the function.
 
 ### Module configuration
 
-The following module setups should be used for sample functions, and are
-enforced by lint:
+The following module setups should be used for sample functions:
+
+**Per-module samples**
+
+For library groups with relatively independent sub-libraries. This is the
+recommended project setup, and should be used in most cases.
+
+Gradle project name: `:foo-library:foo-module:foo-module-samples`
+
+```
+foo-library/
+  foo-module/
+    samples/
+```
 
 **Group-level samples**
 
-For library groups with strongly related samples that want to share code.
+For library groups with strongly related samples that want to share code and be
+reused across a library group, a singular shared samples library can be created.
+In most cases this is discouraged - samples should be small and show the usage
+of a particular API / small set of APIs, instead of more complicated usage
+combining multiple APIs from across libraries. For these cases a sample
+application is more appropriate.
 
 Gradle project name: `:foo-library:foo-library-samples`
 
@@ -2212,22 +2408,10 @@ foo-library/
   samples/
 ```
 
-**Per-module samples**
-
-For library groups with complex, relatively independent sub-libraries
-
-Gradle project name: `:foo-library:foo-module:foo-module-samples`
-
-```
-foo-library/
-  foo-module/
-    samples/
-```
-
 **Samples module configuration**
 
 Samples modules are published to GMaven so that they are available to Android
-Studio, which displays code in @Sample annotations as hover-over pop-ups.
+Studio, which displays referenced samples as hover-over pop-ups.
 
 To achieve this, samples modules must declare the same MavenGroup and `publish`
 as the library(s) they are samples for.
