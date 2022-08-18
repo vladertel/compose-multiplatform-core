@@ -387,6 +387,54 @@ class CompositionAndDerivedStateTests {
     }
 
     @Test
+    fun observingDerivedStateInMultipleScopes() = compositionTest {
+        var observeInFirstScope by mutableStateOf(true)
+        var count by mutableStateOf(0)
+
+        compose {
+            val items by remember {
+                derivedStateOf {
+                    List(count) { it }
+                }
+            }
+
+            Linear {
+                if (observeInFirstScope) {
+                    Text("List of size ${items.size}")
+                }
+            }
+
+            Linear {
+                Text("List of size ${items.size}")
+            }
+        }
+
+        validate {
+            Linear {
+                Text("List of size 0")
+            }
+
+            Linear {
+                Text("List of size 0")
+            }
+        }
+
+        observeInFirstScope = false
+        advance()
+        count++
+        advance()
+
+        validate {
+            Linear {
+            }
+
+            Linear {
+                Text("List of size 1")
+            }
+        }
+    }
+
+    @Test
     fun changingTheDerivedStateInstanceShouldClearDependencies() = compositionTest {
         var reload by mutableStateOf(0)
 
@@ -455,8 +503,35 @@ class CompositionAndDerivedStateTests {
 
         // Validate there are only 2 observed dependencies, one for intermediateState, one for itemValue
         val observed = (composition as? CompositionImpl)?.derivedStateDependencies ?: emptyList()
-        println(observed)
         assertEquals(2, observed.count())
+    }
+
+    @Test
+    fun changingDerivedStateShouldNotAccumulateConditionalScopes() = compositionTest {
+
+        var reload by mutableStateOf(0)
+
+        compose {
+            val derivedState = remember {
+                derivedStateOf {
+                    List(reload) { it }
+                }
+            }
+
+            if (reload % 2 == 0) {
+                Wrap {
+                    Text("${derivedState.value.size}")
+                }
+            }
+        }
+
+        reload++
+
+        advance()
+
+        val conditionalScopes = (composition as? CompositionImpl)?.conditionalScopes ?: emptyList()
+
+        assertEquals(0, conditionalScopes.count { it.isConditional })
     }
 }
 

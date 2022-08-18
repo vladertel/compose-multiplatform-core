@@ -1776,7 +1776,7 @@ internal class ComposerImpl(
                     is RecomposeScopeImpl -> {
                         val composition = previous.composition
                         if (composition != null) {
-                            previous.composition = null
+                            previous.release()
                             composition.pendingInvalidScopes = true
                         }
                     }
@@ -2350,6 +2350,9 @@ internal class ComposerImpl(
                 // Invoke the scope's composition function
                 firstInRange.scope.compose(this)
 
+                // We could have moved out of a provider so the provider cache is invalid.
+                providerCache = null
+
                 // Restore the parent of the reader to the previous parent
                 reader.restoreParent(parent)
             } else {
@@ -2668,7 +2671,7 @@ internal class ComposerImpl(
                             val composition = data.composition
                             if (composition != null) {
                                 composition.pendingInvalidScopes = true
-                                data.composition = null
+                                data.release()
                             }
                             reader.reposition(group)
                             recordSlotTableOperation { _, slots, _ ->
@@ -2977,7 +2980,7 @@ internal class ComposerImpl(
                                 // The recompose scope is always at slot 0 of a restart group.
                                 val recomposeScope = slots.slot(anchor, 0) as? RecomposeScopeImpl
                                 // Check for null as the anchor might not be for a recompose scope
-                                recomposeScope?.let { it.composition = toComposition }
+                                recomposeScope?.adoptedBy(toComposition)
                             }
                         }
                     }
@@ -3972,7 +3975,7 @@ internal fun SlotWriter.removeCurrentGroup(rememberManager: RememberManager) {
                 val composition = slot.composition
                 if (composition != null) {
                     composition.pendingInvalidScopes = true
-                    slot.composition = null
+                    slot.release()
                 }
             }
         }
