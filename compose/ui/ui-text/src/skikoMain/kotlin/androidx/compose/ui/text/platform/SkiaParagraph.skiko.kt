@@ -220,7 +220,7 @@ internal class SkiaParagraph(
             start,
             end,
             RectHeightMode.MAX,
-            RectWidthMode.MAX
+            RectWidthMode.TIGHT
         )
         val path = Path()
         for (b in boxes) {
