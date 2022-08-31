@@ -17,6 +17,8 @@
 package androidx.compose.material3
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.tokens.NavigationBarTokens
@@ -53,6 +55,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onParent
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -128,7 +131,7 @@ class NavigationBarTest {
     }
 
     @Test
-    fun navigationBarItem_clearsSemanticsOfIcon_whenLabelIsPresent() {
+    fun navigationBarItem_clearsIconSemantics_whenLabelIsPresent() {
         rule.setMaterialContent(lightColorScheme()) {
             NavigationBar {
                 NavigationBarItem(
@@ -155,14 +158,25 @@ class NavigationBarTest {
                     alwaysShowLabel = false,
                     onClick = {}
                 )
+                NavigationBarItem(
+                    modifier = Modifier.testTag("item3"),
+                    icon = {
+                        Icon(Icons.Filled.Favorite, "Favorite")
+                    },
+                    selected = false,
+                    onClick = {}
+                )
             }
         }
 
         val node1 = rule.onNodeWithTag("item1").fetchSemanticsNode()
         val node2 = rule.onNodeWithTag("item2").fetchSemanticsNode()
+        val node3 = rule.onNodeWithTag("item3").fetchSemanticsNode()
 
         assertThat(node1.config.getOrNull(SemanticsProperties.ContentDescription)).isNull()
         assertThat(node2.config.getOrNull(SemanticsProperties.ContentDescription))
+            .isEqualTo(listOf("Favorite"))
+        assertThat(node3.config.getOrNull(SemanticsProperties.ContentDescription))
             .isEqualTo(listOf("Favorite"))
     }
 
@@ -184,6 +198,22 @@ class NavigationBarTest {
         }
             .assertWidthIsEqualTo(rule.rootWidth())
             .assertHeightIsEqualTo(height)
+    }
+
+    @Test
+    fun navigationBar_respectContentPadding() {
+        rule.setMaterialContentForSizeAssertions {
+            NavigationBar(windowInsets = WindowInsets(17.dp, 17.dp, 17.dp, 17.dp)) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .testTag("content")
+                )
+            }
+        }
+        rule.onNodeWithTag("content")
+            .assertLeftPositionInRootIsEqualTo(17.dp)
+            .assertTopPositionInRootIsEqualTo(17.dp)
     }
 
     @Test

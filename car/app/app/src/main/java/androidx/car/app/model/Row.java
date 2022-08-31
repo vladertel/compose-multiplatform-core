@@ -25,11 +25,13 @@ import android.annotation.SuppressLint;
 import android.os.Looper;
 
 import androidx.annotation.IntDef;
+import androidx.annotation.IntRange;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.car.app.annotations.CarProtocol;
+import androidx.car.app.annotations.ExperimentalCarApi;
 import androidx.car.app.annotations.RequiresCarApi;
 import androidx.car.app.model.constraints.ActionsConstraints;
 import androidx.car.app.model.constraints.CarIconConstraints;
@@ -51,6 +53,9 @@ import java.util.Objects;
 public final class Row implements Item {
     /** A boat that belongs to you. */
     private static final String YOUR_BOAT = "\uD83D\uDEA3"; // 🚣
+
+    /** An integer value indicating no decoration should be shown. */
+    public static final int NO_DECORATION = -1;
 
     /**
      * The type of images supported within rows.
@@ -106,8 +111,7 @@ public final class Row implements Item {
     @Keep
     private final List<Action> mActions;
     @Keep
-    @Nullable
-    private final CarIcon mDecoration;
+    private final int mNumericDecoration;
     @Keep
     @Nullable
     private final Toggle mToggle;
@@ -159,6 +163,7 @@ public final class Row implements Item {
      *
      * @see Builder#addAction(Action)
      */
+    @ExperimentalCarApi
     @NonNull
     public List<Action> getActions() {
         return mActions;
@@ -171,14 +176,18 @@ public final class Row implements Item {
     }
 
     /**
-     * Returns the decoration to display the end of the row, but before any actions or {@code null}
-     * if the row does not contain a decoration
+     * Returns the numeric decoration.
      *
-     * @see Builder#setDecoration(CarIcon)
+     * <p> Numeric decorations are displayed at the end of the row, but before any actions.
+     *
+     * <p> {@link Row#NO_DECORATION} will be returned if the row does not contain a decoration.
+     *
+     * @see Builder#setNumericDecoration(int)
      */
-    @Nullable
-    public CarIcon getDecoration() {
-        return mDecoration;
+    @ExperimentalCarApi
+    @RequiresCarApi(6)
+    public int getNumericDecoration() {
+        return mNumericDecoration;
     }
 
     /**
@@ -306,7 +315,7 @@ public final class Row implements Item {
         mTexts = CollectionUtils.unmodifiableCopy(builder.mTexts);
         mImage = builder.mImage;
         mActions = CollectionUtils.unmodifiableCopy(builder.mActions);
-        mDecoration = builder.mDecoration;
+        mNumericDecoration = builder.mDecoration;
         mToggle = builder.mToggle;
         mOnClickDelegate = builder.mOnClickDelegate;
         mMetadata = builder.mMetadata;
@@ -321,7 +330,7 @@ public final class Row implements Item {
         mTexts = Collections.emptyList();
         mImage = null;
         mActions = Collections.emptyList();
-        mDecoration = null;
+        mNumericDecoration = NO_DECORATION;
         mToggle = null;
         mOnClickDelegate = null;
         mMetadata = EMPTY_METADATA;
@@ -339,8 +348,7 @@ public final class Row implements Item {
         @Nullable
         CarIcon mImage;
         final List<Action> mActions = new ArrayList<>();
-        @Nullable
-        CarIcon mDecoration;
+        int mDecoration = Row.NO_DECORATION;
         @Nullable
         Toggle mToggle;
         @Nullable
@@ -530,6 +538,7 @@ public final class Row implements Item {
          *                                  exceeds the maximum number of allowed actions or does
          *                                  not contain a valid {@link CarIcon}.
          */
+        @ExperimentalCarApi
         @NonNull
         public Builder addAction(@NonNull Action action) {
             List<Action> mActionsCopy = new ArrayList<>(mActions);
@@ -540,15 +549,33 @@ public final class Row implements Item {
         }
 
         /**
-         * Sets a decoration the end of the row, but before any actions with the default size
-         * {@link #IMAGE_TYPE_SMALL}.
+         * Sets a numeric decoration to display in the row.
          *
-         * @param decoration the {@link CarIcon} to display
-         * @throws NullPointerException if {@code decoration} is {@code null}
+         * <p> Numeric decorations are displayed at the end of the row, but before any actions.
+         *
+         * <p> Numeric decorations typically represent a quantity of unseen content. For example, a
+         * decoration might represent a number of missed notifications, or a number of unread
+         * messages in a conversation.
+         *
+         * @param decoration the {@code int} to display. Must be positive, zero, or equal to
+         * {@link Row#NO_DECORATION}.
+         * @throws IllegalArgumentException if {@code decoration} is invalid
          */
+        @ExperimentalCarApi
         @NonNull
-        public Builder setDecoration(@NonNull CarIcon decoration) {
-            CarIconConstraints.UNCONSTRAINED.validateOrThrow(requireNonNull(decoration));
+        @RequiresCarApi(6)
+        @IntRange(from = 0)
+        public Builder setNumericDecoration(int decoration) {
+            if (decoration < 0 && decoration != NO_DECORATION) {
+                throw new IllegalArgumentException(
+                        String.format(
+                                "Decoration should be positive, zero, or equal to NO_DECORATION. "
+                                        + "Instead, was %d",
+                                decoration
+                        )
+                );
+            }
+
             mDecoration = decoration;
             return this;
         }

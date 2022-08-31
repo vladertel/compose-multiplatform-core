@@ -131,12 +131,16 @@ Downloading file\:\$SUPPORT\/gradle\/wrapper\/.*
 Daemon will be stopped at the end of the build
 # > Configure project :appsearch:appsearch\-local\-backend
 Configuration on demand is an incubating feature\.
+Calculating task graph as configuration cache cannot be reused because the set of Gradle properties has changed\.
 You are using legacy USE_ANDROIDX_REMOTE_BUILD_CACHE=true type, this cache has been turned down, so you are \*not\* using a remote cache\. Please move to the new cache using http://go/androidx\-dev\#remote\-build\-cache
 Configuration cache is an incubating feature\.
 # > Configure project :
 updated local\.properties
 # > Configure project :compose:test\-utils
 The following Kotlin source sets were configured but not added to any Kotlin compilation:
+\* iosArm[0-9]+Main
+\* iosSimulatorArm[0-9]+Main
+\* iosX[0-9]+Main
 \* androidAndroidTestRelease
 \* androidTestFixtures
 \* androidTestFixturesDebug
@@ -272,6 +276,14 @@ in DClass UserStyle
 @param copySelectedOptions
 in DClass Builder
 Did you make a typo\? Are you trying to refer to something not visible to users\?
+WARNING: do not use 'an' before the exception type in an @throws statement\. This is against jdoc spec, will be an error in the next version of dackka, and your exception is not being linked and looks bad\. This was observed in Throws\(root=CustomDocTag\(children=\[P\(children=\[DocumentationLink\(dri=java\.lang/IllegalArgumentException///PointingToDeclaration/, children=\[Text\(body=IllegalArgumentException, children=\[\], params=\{\}\)\], params=\{\}\), Text\(body= if the property name or index is invalid\., children=\[\], params=\{\}\)\], params=\{\}\)\], params=\{\}, name=MARKDOWN_FILE\), name=an, exceptionAddress=null\)\.
+WARNING: do not use 'an' before the exception type in an @throws statement\. This is against jdoc spec, will be an error in the next version of dackka, and your exception is not being linked and looks bad\. This was observed in Throws\(root=CustomDocTag\(children=\[P\(children=\[DocumentationLink\(dri=kotlin/IllegalArgumentException///PointingToDeclaration/, children=\[Text\(body=IllegalArgumentException, children=\[\], params=\{\}\)\], params=\{href=\[IllegalArgumentException\]\}\), Text\(body= if address is invalid\., children=\[\], params=\{\}\)\], params=\{\}\)\], params=\{\}, name=MARKDOWN_FILE\), name=an, exceptionAddress=null\)\.
+WARNING: link to @throws type RemoteException does not resolve\. Is it from a package that the containing file does not import\? Is docs inherited to an un\-documented override function, but the exception class is not in scope in the inheriting class\? The general fix for these is to fully qualify the exception name,  e\.g\.`@throws java\.io\.IOException under some conditions\. This was observed in Throws\(root=CustomDocTag\(children=\[P\(children=\[Text\(body=For any IPC transportation failures\., children=\[\], params=\{\}\)\], params=\{\}\)\], params=\{\}, name=MARKDOWN_FILE\), name=RemoteException, exceptionAddress=null\)\.`
+WARNING: link to @throws type IOException does not resolve\. Is it from a package that the containing file does not import\? Is docs inherited to an un\-documented override function, but the exception class is not in scope in the inheriting class\? The general fix for these is to fully qualify the exception name,  e\.g\.`@throws java\.io\.IOException under some conditions\. This was observed in Throws\(root=CustomDocTag\(children=\[P\(children=\[Text\(body=For any disk I/O issues\., children=\[\], params=\{\}\)\], params=\{\}\)\], params=\{\}, name=MARKDOWN_FILE\), name=IOException, exceptionAddress=null\)\.`
+WARNING: link to @throws type IOException does not resolve\. Is it from a package that the containing file does not import\? Is docs inherited to an un\-documented override function, but the exception class is not in scope in the inheriting class\? The general fix for these is to fully qualify the exception name,  e\.g\.`@throws java\.io\.IOException under some conditions\. This was observed in Throws\(root=CustomDocTag\(children=\[P\(children=\[Text\(body=when an exception is encountered when writing data to disk, children=\[\], params=\{\}\)\], params=\{\}\)\], params=\{\}, name=MARKDOWN_FILE\), name=IOException, exceptionAddress=null\)\.`
+WARNING: link to @throws type ComposeTimeoutException does not resolve\. Is it from a package that the containing file does not import\? Is docs inherited to an un\-documented override function, but the exception class is not in scope in the inheriting class\? The general fix for these is to fully qualify the exception name,  e\.g\.`@throws java\.io\.IOException under some conditions\. This was observed in Throws\(root=CustomDocTag\(children=\[P\(children=\[Text\(body=If the condition is not satisfied after , children=\[\], params=\{\}\), DocumentationLink\(dri=androidx\.compose\.ui\.test\.junit[0-9]+/AndroidComposeTestRule/waitUntil/\#kotlin\.Long\#kotlin\.Function[0-9]+\[kotlin\.Boolean\]/PointingToCallableParameters\([0-9]+\)/, children=\[Text\(body=timeoutMillis, children=\[\], params=\{\}\)\], params=\{href=\[timeoutMillis\]\}\), Text\(body=\., children=\[\], params=\{\}\)\], params=\{\}\)\], params=\{\}, name=MARKDOWN_FILE\), name=ComposeTimeoutException, exceptionAddress=null\)\.`
+WARNING: link to @throws type Renderer\.GlesException does not resolve\. Is it from a package that the containing file does not import\? Is docs inherited to an un\-documented override function, but the exception class is not in scope in the inheriting class\? The general fix for these is to fully qualify the exception name,  e\.g\.`@throws java\.io\.IOException under some conditions\. This was observed in Throws\(root=CustomDocTag\(children=\[P\(children=\[Text\(body=If any GL calls fail during initialization\., children=\[\], params=\{\}\)\], params=\{\}\)\], params=\{\}, name=MARKDOWN_FILE\), name=Renderer\.GlesException, exceptionAddress=null\)\.`
+WARNING: link to @throws type ServiceStartFailureException does not resolve\. Is it from a package that the containing file does not import\? Is docs inherited to an un\-documented override function, but the exception class is not in scope in the inheriting class\? The general fix for these is to fully qualify the exception name,  e\.g\.`@throws java\.io\.IOException under some conditions\. This was observed in Throws\(root=CustomDocTag\(children=\[P\(children=\[Text\(body=if the watchface dies during startup\., children=\[\], params=\{\}\)\], params=\{\}\)\], params=\{\}, name=MARKDOWN_FILE\), name=ServiceStartFailureException, exceptionAddress=null\)\.`
 # Wire proto generation, task :generateDebugProtos
 Writing .* to \$OUT_DIR/.*/build/generated/source/wire
 # > Task :compose:ui:ui-tooling:processDebugAndroidTestManifest
@@ -468,4 +480,15 @@ WARNING: Please consider reporting this to the maintainers of androidx\.compose\
 # > Task :buildSrc-tests:test
 WARNING: Illegal reflective access using Lookup on org\.gradle\.internal\.classloader\.ClassLoaderUtils\$AbstractClassLoaderLookuper .* to class java\.lang\.ClassLoader
 WARNING: Please consider reporting this to the maintainers of org\.gradle\.internal\.classloader\.ClassLoaderUtils\$AbstractClassLoaderLookuper
-
+# AGP warning about API usage we have no control over
+Values of variant API AnnotationProcessorOptions\.arguments are queried and may return non final values, this is unsupported
+# AGP warning that will go away soon
+WARNING:Software Components will not be created automatically for Maven publishing from Android Gradle Plugin 8\.0\. To opt\-in to the future behavior, set the Gradle property android\.disableAutomaticComponentCreation=true in the `gradle\.properties` file or use the new publishing DSL\.
+# > Task :help
+Welcome to Gradle [0-9]+\.[0-9]+\.
+To run a build, run gradlew <task> \.\.\.
+To see a list of available tasks, run gradlew tasks
+To see more detail about a task, run gradlew help \-\-task <task>
+To see a list of command\-line options, run gradlew \-\-help
+For more detail on using Gradle, see https://docs\.gradle\.org/[0-9]+\.[0-9]+/userguide/command_line_interface\.html
+For troubleshooting, visit https://help\.gradle\.org

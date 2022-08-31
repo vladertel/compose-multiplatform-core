@@ -28,7 +28,6 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.os.strictmode.UnsafeIntentLaunchViolation;
 import android.provider.MediaStore;
-import android.util.Log;
 
 import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
@@ -91,7 +90,7 @@ public class IntentSanitizer {
      */
     @NonNull
     public Intent sanitizeByFiltering(@NonNull Intent in) {
-        return sanitize(in, msg -> Log.v(TAG, msg));
+        return sanitize(in, msg -> {});
     }
 
     /**
@@ -110,8 +109,9 @@ public class IntentSanitizer {
     }
 
     /**
-     * This method sanitize the given intent. If dirty members are found, the error is consumed
-     * by the penalty object.
+     * This method sanitizes the given intent. If dirty members are found, the errors are consumed
+     * by the penalty object. The penalty action could be called multiple times if multiple
+     * issues exist.
      *
      * @param in      the given intent.
      * @param penalty consumer of the error message if dirty members are found.

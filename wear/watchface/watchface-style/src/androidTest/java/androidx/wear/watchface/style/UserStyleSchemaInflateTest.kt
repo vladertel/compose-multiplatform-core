@@ -26,6 +26,7 @@ import androidx.test.filters.MediumTest
 import androidx.wear.watchface.complications.IllegalNodeException
 import androidx.wear.watchface.complications.data.ComplicationType
 import androidx.wear.watchface.complications.iterate
+import androidx.wear.watchface.complications.moveToStart
 import androidx.wear.watchface.style.UserStyleSetting.ListUserStyleSetting.ListOption
 import androidx.wear.watchface.style.UserStyleSetting.ComplicationSlotsUserStyleSetting.ComplicationSlotsOption
 import androidx.wear.watchface.style.test.R
@@ -153,7 +154,7 @@ class UserStyleSchemaInflateTest {
             WatchFaceLayer.COMPLICATIONS
         )
         assertThat(setting1.icon).isNull()
-        assertThat(setting1.options.size).isEqualTo(3)
+        assertThat(setting1.options.size).isEqualTo(4)
         val option10 = (setting1.options[0] as ComplicationSlotsOption)
         assertThat(option10.id).isEqualTo(UserStyleSetting.Option.Id("one"))
         assertThat(option10.displayName).isEqualTo("One complication")
@@ -207,6 +208,15 @@ class UserStyleSchemaInflateTest {
                 ComplicationType.LONG_TEXT
             ]
         ).isEqualTo(RectF(0.6f, 0.8f, 0.7f, 0.5f))
+
+        val option13 = (setting1.options[3] as ComplicationSlotsOption)
+        assertThat(option13.id).isEqualTo(UserStyleSetting.Option.Id("four"))
+        assertThat(option13.displayName).isEqualTo("Rename complications")
+        assertThat(option13.complicationSlotOverlays.size).isEqualTo(1)
+        val overlays13 = option13.complicationSlotOverlays.toTypedArray()
+        assertThat(overlays13[0].nameResourceId).isEqualTo(R.string.complication_name)
+        assertThat(overlays13[0].screenReaderNameResourceId)
+            .isEqualTo(R.string.complication_screen_reader_name)
 
         val setting2 = schema.userStyleSettings[2] as UserStyleSetting.DoubleRangeUserStyleSetting
         assertThat(setting2.id.value).isEqualTo("DoubleRange")

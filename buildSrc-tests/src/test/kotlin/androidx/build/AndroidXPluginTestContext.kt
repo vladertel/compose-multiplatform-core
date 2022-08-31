@@ -18,12 +18,12 @@ package androidx.build
 
 import androidx.testutils.gradle.ProjectSetupRule
 import java.io.File
-import java.lang.AssertionError
 import java.util.zip.ZipInputStream
 import net.saff.checkmark.Checkmark.Companion.check
-import net.saff.checkmark.Checkmark.Companion.checks
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.UnexpectedBuildFailure
+import org.junit.AssumptionViolatedException
 import org.junit.rules.TemporaryFolder
 
 /**
@@ -36,11 +36,7 @@ import org.junit.rules.TemporaryFolder
 fun pluginTest(action: AndroidXPluginTestContext.() -> Unit) {
     TemporaryFolder().wrap { tmpFolder ->
         ProjectSetupRule().wrap { setup ->
-            val context = AndroidXPluginTestContext(tmpFolder, setup)
-            // checks: automatically capture context on failure
-            checks {
-                context.action()
-            }
+            AndroidXPluginTestContext(tmpFolder, setup).action()
         }
     }
 }
@@ -74,21 +70,33 @@ data class AndroidXPluginTestContext(val tmpFolder: TemporaryFolder, val setup: 
         env: Map<String, String> = defaultEnv,
         buildAction: GradleRunAction = defaultBuildAction
     ): BuildResult {
-        return GradleRunner.create().withProjectDir(supportRoot)
-            .withArguments(
-                "-Dmaven.repo.local=$mavenLocalDir",
-                "-P$ALLOW_MISSING_LINT_CHECKS_PROJECT=true",
-                *args
-            )
-            .withEnvironment(env).withEnvironment(env).let { buildAction(it) }.also {
-                checkNoClassloaderErrors(it)
-            }
+        try {
+            return GradleRunner.create().withProjectDir(supportRoot)
+                .withArguments(
+                    "-Dmaven.repo.local=$mavenLocalDir",
+                    "-P$ALLOW_MISSING_LINT_CHECKS_PROJECT=true",
+                    *args
+                )
+                .withEnvironment(env).withEnvironment(env).let { buildAction(it) }.also {
+                    assumeNoClassloaderErrors(it)
+                }
+        } catch (e: UnexpectedBuildFailure) {
+            assumeNoClassloaderErrors(e.buildResult)
+            throw e
+        }
     }
 
-    private fun checkNoClassloaderErrors(result: BuildResult) {
-        // We're seeing b/237103195 flakily.  When we do, let's grab additional debugging info.
+    private fun assumeNoClassloaderErrors(result: BuildResult) {
+        // We're seeing b/237103195 flakily.  When we do, let's grab additional debugging info, and
+        // then throw an AssumptionViolatedException, because this is a bug in our test-running
+        // infrastructure, not a bug in the underlying plugins.
         val className = "androidx.build.gradle.ExtensionsKt"
-        if (result.output.contains("java.lang.ClassNotFoundException: $className")) {
+        val classNotFound = "java.lang.ClassNotFoundException: $className"
+
+        val mpe = "groovy.lang.MissingPropertyException"
+        val propertyMissing = "$mpe: Could not get unknown property 'androidx' for root project"
+        val messages = listOf(classNotFound, propertyMissing)
+        if (messages.any { result.output.contains(it) }) {
             buildString {
                 appendLine("classloader error START")
                 append(result.output)
@@ -102,7 +110,13 @@ data class AndroidXPluginTestContext(val tmpFolder: TemporaryFolder, val setup: 
                         }
                     }
                 }
-            }.let { throw AssertionError(it) }
+            }.let {
+                // Log to stderr, which we can find in the test output XML in host-test-reports,
+                // so we can manually debug an instance.
+                val ave = AssumptionViolatedException(it)
+                ave.printStackTrace()
+                throw ave
+            }
         }
     }
 

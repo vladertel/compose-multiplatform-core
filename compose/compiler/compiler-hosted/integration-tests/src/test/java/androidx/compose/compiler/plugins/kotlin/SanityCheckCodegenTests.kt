@@ -90,4 +90,45 @@ class SanityCheckCodegenTests : AbstractCodegenTest() {
         """
         )
     }
+
+    // Regression test for KT-52843
+    fun testParameterInlineCaptureLambda() = ensureSetup {
+        testCompile(
+            """
+            import androidx.compose.runtime.Composable
+            import androidx.compose.ui.graphics.Color
+
+            @Composable
+            inline fun InlineWidget(
+                propagateMinConstraints: Boolean = false,
+                content: () -> Unit
+            ) {
+            }
+
+            @Composable
+            fun DarkThemeSample() {
+                val color = Color.Black
+                InlineWidget {
+                    println(color)
+                }
+            }
+        """
+        )
+    }
+
+    // Regression validating b/237863365
+    fun testComposableAsLastStatementInUnitReturningLambda() {
+        testCompile(
+            """
+            import androidx.compose.runtime.Composable
+
+            fun foo(lambda: ()->Unit){}
+            fun main() {
+                foo {
+                    @Composable {}
+                }
+            }
+            """
+        )
+    }
 }

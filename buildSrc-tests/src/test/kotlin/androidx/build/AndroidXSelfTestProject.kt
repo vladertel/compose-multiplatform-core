@@ -20,16 +20,18 @@ data class AndroidXSelfTestProject(
     val groupId: String,
     val artifactId: String?,
     val version: String?,
-    val buildGradleText: String
+    private val buildGradleTextTemplate: String
 ) {
     val relativePath = artifactId?.let { "$groupId/$artifactId" } ?: groupId
     val gradlePath = ":$groupId:$artifactId"
     val sourceCoordinate get() = "$groupId:$artifactId:${version!!}"
+    val buildGradleText = buildGradleTextTemplate.replace("%GROUP_ID%", groupId)
 
     companion object {
         fun cubaneBuildGradleText(
             plugins: List<String> = listOf("java-library", "kotlin", "AndroidXPlugin"),
-            version: String? = "1.2.3"
+            version: String? = "1.2.3",
+            moreConfig: String = ""
         ): String {
             val mavenVersionLine = if (version != null) {
                 "  mavenVersion = new Version(\"$version\")"
@@ -48,10 +50,12 @@ data class AndroidXSelfTestProject(
                       |  api(libs.kotlinStdlib)
                       |}
                       |
+                      |$moreConfig
+                      |
                       |androidx {
                       |  publish = Publish.SNAPSHOT_AND_RELEASE
                       |$mavenVersionLine
-                      |  mavenGroup = new LibraryGroup("cubane", null)
+                      |  mavenGroup = new LibraryGroup("%GROUP_ID%", null)
                       |}
                       |""".trimMargin()
         }
@@ -66,10 +70,13 @@ data class AndroidXSelfTestProject(
                 groupId = "cubane",
                 artifactId = "cubane",
                 version = "1.2.3",
-                buildGradleText = cubaneBuildGradleText()
+                buildGradleTextTemplate = cubaneBuildGradleText()
             )
 
-        fun buildGradleForKmp(withJava: Boolean = true, addJvmDependency: Boolean = false): String {
+        fun buildGradleForKmp(
+            withJava: Boolean = true,
+            addJvmDependency: Boolean = false
+        ): String {
             val jvmDependency = if (addJvmDependency) {
                 "jvmImplementation(\"androidx.jvmgroup:jvmdep:6.2.9\")"
             } else {
@@ -97,7 +104,7 @@ data class AndroidXSelfTestProject(
                       |androidx {
                       |  type = LibraryType.KMP_LIBRARY
                       |  mavenVersion = new Version("1.2.3")
-                      |  mavenGroup = new LibraryGroup("cubane", null)
+                      |  mavenGroup = new LibraryGroup("%GROUP_ID%", null)
                       |}
                       |""".trimMargin()
         }
@@ -109,7 +116,7 @@ data class AndroidXSelfTestProject(
             groupId = "cubane",
             artifactId = "cubanekmp",
             version = "1.2.3",
-            buildGradleText = buildGradleForKmp(withJava = true)
+            buildGradleTextTemplate = buildGradleForKmp(withJava = true)
         )
 
         /**
@@ -120,7 +127,7 @@ data class AndroidXSelfTestProject(
             groupId = "cubane",
             artifactId = "cubaneNoJava",
             version = "1.2.3",
-            buildGradleText = buildGradleForKmp(withJava = false)
+            buildGradleTextTemplate = buildGradleForKmp(withJava = false)
         )
     }
 }

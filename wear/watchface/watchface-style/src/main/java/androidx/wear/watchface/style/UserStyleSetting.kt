@@ -36,8 +36,11 @@ import androidx.wear.watchface.complications.IllegalNodeException
 import androidx.wear.watchface.complications.NAMESPACE_ANDROID
 import androidx.wear.watchface.complications.NAMESPACE_APP
 import androidx.wear.watchface.complications.data.ComplicationType
+import androidx.wear.watchface.complications.getIntRefAttribute
+import androidx.wear.watchface.complications.getStringRefAttribute
 import androidx.wear.watchface.complications.hasValue
 import androidx.wear.watchface.complications.iterate
+import androidx.wear.watchface.complications.moveToStart
 import androidx.wear.watchface.style.UserStyleSetting.ComplicationSlotsUserStyleSetting.ComplicationSlotOverlay
 import androidx.wear.watchface.style.UserStyleSetting.ComplicationSlotsUserStyleSetting.ComplicationSlotsOption
 import androidx.wear.watchface.style.data.BooleanOptionWireFormat
@@ -57,11 +60,11 @@ import androidx.wear.watchface.style.data.OptionWireFormat
 import androidx.wear.watchface.style.data.PerComplicationTypeMargins
 import androidx.wear.watchface.style.data.UserStyleSettingWireFormat
 import java.io.DataOutputStream
-import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.security.DigestOutputStream
 import java.security.InvalidParameterException
+import org.xmlpull.v1.XmlPullParser
 
 /** Wrapper around either a [CharSequence] or a string resource. */
 internal sealed class DisplayText {
@@ -452,11 +455,11 @@ public sealed class UserStyleSetting private constructor(
     )
 
     /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public abstract fun toWireFormat(): UserStyleSettingWireFormat
 
     /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public fun getWireFormatOptionsList(): List<OptionWireFormat> =
         options.map { it.toWireFormat() }
 
@@ -587,7 +590,7 @@ public sealed class UserStyleSetting private constructor(
 
         public companion object {
             /** @hide */
-            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
             public fun createFromWireFormat(
                 wireFormat: OptionWireFormat
             ): Option =
@@ -619,7 +622,7 @@ public sealed class UserStyleSetting private constructor(
 
         /** @hide */
         @Suppress("HiddenAbstractMethod")
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public abstract fun toWireFormat(): OptionWireFormat
 
         override fun equals(other: Any?): Boolean {
@@ -773,7 +776,7 @@ public sealed class UserStyleSetting private constructor(
         internal constructor(wireFormat: BooleanUserStyleSettingWireFormat) : super(wireFormat)
 
         /** @hide */
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         override fun toWireFormat(): BooleanUserStyleSettingWireFormat =
             BooleanUserStyleSettingWireFormat(
                 id.value,
@@ -832,7 +835,7 @@ public sealed class UserStyleSetting private constructor(
             emptyList()
         ) {
             /** @hide */
-            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
             override fun toWireFormat(): BooleanOptionWireFormat =
                 BooleanOptionWireFormat(id.value)
 
@@ -886,7 +889,7 @@ public sealed class UserStyleSetting private constructor(
     public class ComplicationSlotsUserStyleSetting : UserStyleSetting {
 
         /**
-         * Overrides to be applied to the corresponding androidx.wear.watchface.ComplicationSlot]'s
+         * Overrides to be applied to the corresponding [androidx.wear.watchface.ComplicationSlot]'s
          * initial config (as specified in it's constructor) when the setting is selected.
          *
          * @param complicationSlotId The id of the [androidx.wear.watchface.ComplicationSlot] to
@@ -898,7 +901,16 @@ public sealed class UserStyleSetting private constructor(
          * @param accessibilityTraversalIndex If non null the accessibility traversal index
          * for this configuration. This is used to determine the order in which accessibility labels
          * for the watch face are read to the user.
+         * @param nameResourceId If non null, the string resource identifier for name of the
+         * complication slot, for this configuration. These strings should be short (perhaps 10
+         * characters max) E.g. complication slots named 'left' and 'right' might be shown by the
+         * editor in a list from which the user selects a complication slot for editing.
+         * @param screenReaderNameResourceId If non null, the string resource identifier for
+         * the screen reader name of the complication slot, for this configuration. While similar to
+         * [nameResourceId] this string can be longer and should be more descriptive. E.g. saying
+         * 'left complication' rather than just 'left'.
          */
+
         public class ComplicationSlotOverlay constructor(
             public val complicationSlotId: Int,
             @Suppress("AutoBoxing")
@@ -908,15 +920,49 @@ public sealed class UserStyleSetting private constructor(
             public val complicationSlotBounds: ComplicationSlotBounds? = null,
             @SuppressWarnings("AutoBoxing")
             @get:SuppressWarnings("AutoBoxing")
-            public val accessibilityTraversalIndex: Int? = null
+            public val accessibilityTraversalIndex: Int? = null,
+            @SuppressWarnings("AutoBoxing")
+            @get:Suppress("AutoBoxing")
+            public val nameResourceId: Int? = null,
+            @SuppressWarnings("AutoBoxing")
+            @get:Suppress("AutoBoxing")
+            public val screenReaderNameResourceId: Int? = null
         ) {
+
+            /**
+             * @deprecated This constructor is deprecated in favour of the one that specifies
+             * optional parameters nameResourceId and screenReaderNameResourceId
+             * [ComplicationSlotOverlay(Int, Boolean?, ComplicationSlotBounds?, Int?, Int?, Int?]
+             */
+
+            @Deprecated(
+                message = "This constructor is deprecated in favour of the one that specifies " +
+                    "optional parameters nameResourceId and screenReaderNameResourceId",
+                level = DeprecationLevel.HIDDEN)
+            public constructor(
+                complicationSlotId: Int,
+                @Suppress("AutoBoxing")
+                enabled: Boolean? = null,
+                complicationSlotBounds: ComplicationSlotBounds? = null,
+                @SuppressWarnings("AutoBoxing")
+                accessibilityTraversalIndex: Int? = null
+            ) : this(
+                complicationSlotId,
+                enabled,
+                complicationSlotBounds,
+                accessibilityTraversalIndex,
+                null,
+                null
+            )
+
             internal fun write(dos: DataOutputStream) {
                 dos.write(complicationSlotId)
                 enabled?.let { dos.writeBoolean(it) }
                 complicationSlotBounds?.write(dos)
                 accessibilityTraversalIndex?.let { dos.writeInt(it) }
+                nameResourceId?.let { dos.writeInt(it) }
+                screenReaderNameResourceId?.let { dos.writeInt(it) }
             }
-
             /**
              * Constructs a [ComplicationSlotOverlay].Builder.
              *
@@ -929,6 +975,8 @@ public sealed class UserStyleSetting private constructor(
                 private var enabled: Boolean? = null
                 private var complicationSlotBounds: ComplicationSlotBounds? = null
                 private var accessibilityTraversalIndex: Int? = null
+                private var nameResourceId: Int? = null
+                private var screenReaderNameResourceId: Int? = null
 
                 /** Overrides the complication's enabled flag. */
                 @Suppress("MissingGetterMatchingBuilder")
@@ -955,18 +1003,41 @@ public sealed class UserStyleSetting private constructor(
                     this.accessibilityTraversalIndex = accessibilityTraversalIndex
                 }
 
+                /**
+                 * Overrides the ID of a string resource containing the name of this complication
+                 * slot, for use by a screen reader. This resource should be a short sentence. E.g.
+                 * "Left complication" for the left complication.
+                 */
+                public fun setNameResourceId(nameResourceId: Int): Builder = apply {
+                    this.nameResourceId = nameResourceId
+                }
+
+                /**
+                 * Overrides the ID of a string resource containing the name of this complication
+                 * slot, for use by a screen reader. This resource should be a short sentence. E.g.
+                 * "Left complication" for the left complication.
+                 */
+                public fun setScreenReaderNameResourceId(screenReaderNameResourceId: Int):
+                    Builder = apply {
+                    this.screenReaderNameResourceId = screenReaderNameResourceId
+                }
+
                 public fun build(): ComplicationSlotOverlay =
                     ComplicationSlotOverlay(
                         complicationSlotId,
                         enabled,
                         complicationSlotBounds,
-                        accessibilityTraversalIndex
+                        accessibilityTraversalIndex,
+                        nameResourceId,
+                        screenReaderNameResourceId
                     )
             }
 
             internal constructor(
                 wireFormat: ComplicationOverlayWireFormat,
-                perComplicationTypeMargins: Map<Int, RectF>?
+                perComplicationTypeMargins: Map<Int, RectF>?,
+                nameResourceId: Int? = null,
+                screenReaderNameResourceId: Int? = null
             ) : this(
                 wireFormat.mComplicationSlotId,
                 when (wireFormat.mEnabled) {
@@ -989,7 +1060,9 @@ public sealed class UserStyleSetting private constructor(
                         } ?: emptyMap()
                     )
                 },
-                wireFormat.accessibilityTraversalIndex
+                wireFormat.accessibilityTraversalIndex,
+                nameResourceId,
+                screenReaderNameResourceId
             )
 
             /**
@@ -1048,6 +1121,26 @@ public sealed class UserStyleSetting private constructor(
                         } else {
                             null
                         }
+                    val nameResourceId =
+                        if (parser.hasValue("name")) {
+                            parser.getAttributeResourceValue(
+                                NAMESPACE_APP,
+                                "name",
+                                0
+                            )
+                        } else {
+                            null
+                        }
+                    val screenReaderNameResourceId =
+                        if (parser.hasValue("screenReaderName")) {
+                            parser.getAttributeResourceValue(
+                                NAMESPACE_APP,
+                                "screenReaderName",
+                                0
+                            )
+                        } else {
+                            null
+                        }
                     val bounds = ComplicationSlotBounds.inflate(
                         resources,
                         parser,
@@ -1059,7 +1152,9 @@ public sealed class UserStyleSetting private constructor(
                         complicationSlotId,
                         enabled,
                         bounds,
-                        accessibilityTraversalIndex
+                        accessibilityTraversalIndex,
+                        nameResourceId,
+                        screenReaderNameResourceId
                     )
                 }
             }
@@ -1206,7 +1301,7 @@ public sealed class UserStyleSetting private constructor(
         }
 
         /** @hide */
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         override fun toWireFormat(): ComplicationsUserStyleSettingWireFormat =
             ComplicationsUserStyleSettingWireFormat(
                 id.value,
@@ -1389,7 +1484,9 @@ public sealed class UserStyleSetting private constructor(
                         ComplicationSlotOverlay(
                             value,
                             wireFormat.mComplicationOverlaysMargins?.get(index)
-                                ?.mPerComplicationTypeMargins
+                                ?.mPerComplicationTypeMargins,
+                            wireFormat.mComplicationNameResourceIds?.get(index),
+                            wireFormat.mComplicationScreenReaderNameResourceIds?.get(index)
                         )
                     }
                 displayNameInternal = DisplayText.CharSequenceDisplayText(wireFormat.mDisplayName)
@@ -1426,7 +1523,7 @@ public sealed class UserStyleSetting private constructor(
             }
 
             /** @hide */
-            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
             override fun toWireFormat():
                 ComplicationsOptionWireFormat =
                 ComplicationsOptionWireFormat(
@@ -1441,7 +1538,9 @@ public sealed class UserStyleSetting private constructor(
                                     it.key.toWireComplicationType()
                                 } ?: emptyMap()
                         )
-                    }
+                    },
+                    complicationSlotOverlays.map { it.nameResourceId ?: 0 },
+                    complicationSlotOverlays.map { it.screenReaderNameResourceId ?: 0 },
                 )
 
             override fun write(dos: DataOutputStream) {
@@ -1700,7 +1799,7 @@ public sealed class UserStyleSetting private constructor(
         internal constructor(wireFormat: DoubleRangeUserStyleSettingWireFormat) : super(wireFormat)
 
         /** @hide */
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         override fun toWireFormat(): DoubleRangeUserStyleSettingWireFormat =
             DoubleRangeUserStyleSettingWireFormat(
                 id.value,
@@ -1741,7 +1840,7 @@ public sealed class UserStyleSetting private constructor(
                 DoubleRangeUserStyleSetting::class.java
 
             /** @hide */
-            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
             override fun toWireFormat(): DoubleRangeOptionWireFormat =
                 DoubleRangeOptionWireFormat(id.value)
 
@@ -1912,7 +2011,7 @@ public sealed class UserStyleSetting private constructor(
         }
 
         /** @hide */
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         override fun toWireFormat(): ListUserStyleSettingWireFormat =
             ListUserStyleSettingWireFormat(
                 id.value,
@@ -2130,7 +2229,7 @@ public sealed class UserStyleSetting private constructor(
             }
 
             /** @hide */
-            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
             override fun toWireFormat(): ListOptionWireFormat =
                 ListOptionWireFormat(
                     id.value,
@@ -2396,7 +2495,7 @@ public sealed class UserStyleSetting private constructor(
         internal constructor(wireFormat: LongRangeUserStyleSettingWireFormat) : super(wireFormat)
 
         /** @hide */
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         override fun toWireFormat(): LongRangeUserStyleSettingWireFormat =
             LongRangeUserStyleSettingWireFormat(
                 id.value,
@@ -2439,7 +2538,7 @@ public sealed class UserStyleSetting private constructor(
                 LongRangeUserStyleSetting::class.java
 
             /** @hide */
-            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
             override fun toWireFormat(): LongRangeOptionWireFormat =
                 LongRangeOptionWireFormat(id.value)
 
@@ -2519,7 +2618,7 @@ public sealed class UserStyleSetting private constructor(
         internal constructor(wireFormat: CustomValueUserStyleSettingWireFormat) : super(wireFormat)
 
         /** @hide */
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         override fun toWireFormat(): CustomValueUserStyleSettingWireFormat =
             CustomValueUserStyleSettingWireFormat(
                 id.value,
@@ -2557,7 +2656,7 @@ public sealed class UserStyleSetting private constructor(
                 CustomValueUserStyleSetting::class.java
 
             /** @hide */
-            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+            @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
             override fun toWireFormat(): CustomValueOptionWireFormat =
                 CustomValueOptionWireFormat(id.value)
 
@@ -2704,7 +2803,7 @@ private fun <T> getAttributeChecked(
 }
 
 /** @hide */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 fun getStringRefAttribute(
     resources: Resources,
     parser: XmlResourceParser,
@@ -2721,7 +2820,7 @@ fun getStringRefAttribute(
 }
 
 /** @hide */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 fun getIntRefAttribute(
     resources: Resources,
     parser: XmlResourceParser,
@@ -2738,7 +2837,7 @@ fun getIntRefAttribute(
 }
 
 /** @hide */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 fun XmlPullParser.moveToStart(expectedNode: String) {
     var type: Int
     do {

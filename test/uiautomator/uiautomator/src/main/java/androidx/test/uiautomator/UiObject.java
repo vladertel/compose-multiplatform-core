@@ -26,6 +26,9 @@ import android.view.KeyEvent;
 import android.view.MotionEvent.PointerCoords;
 import android.view.accessibility.AccessibilityNodeInfo;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 /**
  * A UiObject is a representation of a view. It is not in any way directly bound to a
  * view as an object reference. A UiObject contains information to help it
@@ -102,6 +105,7 @@ public class UiObject {
      * @return {@link UiSelector}
      * @since API Level 16
      */
+    @NonNull
     public final UiSelector getSelector() {
         Tracer.trace();
         if (mUiSelector == null) {
@@ -141,7 +145,8 @@ public class UiObject {
      * @return a new UiObject representing the child view
      * @since API Level 16
      */
-    public UiObject getChild(UiSelector selector) throws UiObjectNotFoundException {
+    @NonNull
+    public UiObject getChild(@NonNull UiSelector selector) throws UiObjectNotFoundException {
         Tracer.trace(selector);
         return new UiObject(getSelector().childSelector(selector));
     }
@@ -155,7 +160,8 @@ public class UiObject {
      * @throws UiObjectNotFoundException
      * @since API Level 16
      */
-    public UiObject getFromParent(UiSelector selector) throws UiObjectNotFoundException {
+    @NonNull
+    public UiObject getFromParent(@NonNull UiSelector selector) throws UiObjectNotFoundException {
         Tracer.trace(selector);
         return new UiObject(getSelector().fromParent(selector));
     }
@@ -184,6 +190,7 @@ public class UiObject {
      * @return AccessibilityNodeInfo if found else null
      * @since API Level 16
      */
+    @Nullable
     protected AccessibilityNodeInfo findAccessibilityNodeInfo(long timeout) {
         AccessibilityNodeInfo node = null;
         long startMills = SystemClock.uptimeMillis();
@@ -216,7 +223,7 @@ public class UiObject {
      * @throws UiObjectNotFoundException
      * @since API Level 18
      */
-    public boolean dragTo(UiObject destObj, int steps) throws UiObjectNotFoundException {
+    public boolean dragTo(@NonNull UiObject destObj, int steps) throws UiObjectNotFoundException {
         Rect srcRect = getVisibleBounds();
         Rect dstRect = destObj.getVisibleBounds();
         return getInteractionController().swipe(srcRect.centerX(), srcRect.centerY(),
@@ -560,6 +567,7 @@ public class UiObject {
      * @throws UiObjectNotFoundException if no match could be found
      * @since API Level 16
      */
+    @NonNull
     public String getText() throws UiObjectNotFoundException {
         Tracer.trace();
         AccessibilityNodeInfo node = findAccessibilityNodeInfo(mConfig.getWaitForSelectorTimeout());
@@ -578,6 +586,7 @@ public class UiObject {
      * @throws UiObjectNotFoundException if no match was found
      * @since API Level 18
      */
+    @NonNull
     public String getClassName() throws UiObjectNotFoundException {
         Tracer.trace();
         AccessibilityNodeInfo node = findAccessibilityNodeInfo(mConfig.getWaitForSelectorTimeout());
@@ -596,6 +605,7 @@ public class UiObject {
      * @throws UiObjectNotFoundException
      * @since API Level 16
      */
+    @NonNull
     public String getContentDescription() throws UiObjectNotFoundException {
         Tracer.trace();
         AccessibilityNodeInfo node = findAccessibilityNodeInfo(mConfig.getWaitForSelectorTimeout());
@@ -609,8 +619,12 @@ public class UiObject {
      * Set the text content by sending individual key codes.
      * @hide
      */
-    public void legacySetText(String text) throws UiObjectNotFoundException {
-        Tracer.trace();
+    public void legacySetText(@Nullable String text) throws UiObjectNotFoundException {
+        // Per framework convention, setText(null) means clearing it.
+        if (text == null) {
+            text = "";
+        }
+        Tracer.trace(text);
         // long click left + center
         AccessibilityNodeInfo node = findAccessibilityNodeInfo(mConfig.getWaitForSelectorTimeout());
         if (node == null) {
@@ -655,14 +669,14 @@ public class UiObject {
      * @throws UiObjectNotFoundException
      * @since API Level 16
      */
-    public boolean setText(String text) throws UiObjectNotFoundException {
+    public boolean setText(@Nullable String text) throws UiObjectNotFoundException {
         // per framework convention, setText with null means clearing it
         if (text == null) {
             text = "";
         }
         Tracer.trace(text);
-        if (UiDevice.API_LEVEL_ACTUAL > Build.VERSION_CODES.KITKAT) {
-            // do this for API Level above 19 (exclusive)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            // ACTION_SET_TEXT is added in API 21.
             AccessibilityNodeInfo node = findAccessibilityNodeInfo(
                     mConfig.getWaitForSelectorTimeout());
             if (node == null) {
@@ -698,7 +712,7 @@ public class UiObject {
         CharSequence text = node.getText();
         // do nothing if already empty
         if (text != null && text.length() > 0) {
-            if (UiDevice.API_LEVEL_ACTUAL > Build.VERSION_CODES.KITKAT) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 setText("");
             } else {
                 Bundle selectionArgs = new Bundle();
@@ -870,6 +884,7 @@ public class UiObject {
      * @throws UiObjectNotFoundException
      * @since API Level 16
      */
+    @NonNull
     public String getPackageName() throws UiObjectNotFoundException {
         Tracer.trace();
         AccessibilityNodeInfo node = findAccessibilityNodeInfo(mConfig.getWaitForSelectorTimeout());
@@ -891,6 +906,7 @@ public class UiObject {
      *
      * @since API Level 17
      */
+    @NonNull
     public Rect getVisibleBounds() throws UiObjectNotFoundException {
         Tracer.trace();
         AccessibilityNodeInfo node = findAccessibilityNodeInfo(mConfig.getWaitForSelectorTimeout());
@@ -907,6 +923,7 @@ public class UiObject {
      * @throws UiObjectNotFoundException
      * @since API Level 16
      */
+    @NonNull
     public Rect getBounds() throws UiObjectNotFoundException {
         Tracer.trace();
         AccessibilityNodeInfo node = findAccessibilityNodeInfo(mConfig.getWaitForSelectorTimeout());
@@ -1080,8 +1097,8 @@ public class UiObject {
      *         <code>false</code> otherwise
      * @since API Level 18
      */
-    public boolean performTwoPointerGesture(Point startPoint1, Point startPoint2, Point endPoint1,
-            Point endPoint2, int steps) {
+    public boolean performTwoPointerGesture(@NonNull Point startPoint1, @NonNull Point startPoint2,
+            @NonNull Point endPoint1, @NonNull Point endPoint2, int steps) {
 
         // avoid a divide by zero
         if(steps == 0)
@@ -1164,7 +1181,7 @@ public class UiObject {
      *         <code>false</code> otherwise
      * @since API Level 18
      */
-    public boolean performMultiPointerGesture(PointerCoords[] ...touches) {
+    public boolean performMultiPointerGesture(@NonNull PointerCoords[]... touches) {
         return getInteractionController().performMultiPointerGesture(touches);
     }
 }

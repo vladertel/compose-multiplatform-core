@@ -67,10 +67,9 @@ import androidx.compose.ui.autofill.performAutofill
 import androidx.compose.ui.autofill.populateViewStructure
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusDirection.Companion.Down
-import androidx.compose.ui.focus.FocusDirection.Companion.In
+import androidx.compose.ui.focus.FocusDirection.Companion.Exit
 import androidx.compose.ui.focus.FocusDirection.Companion.Left
 import androidx.compose.ui.focus.FocusDirection.Companion.Next
-import androidx.compose.ui.focus.FocusDirection.Companion.Out
 import androidx.compose.ui.focus.FocusDirection.Companion.Previous
 import androidx.compose.ui.focus.FocusDirection.Companion.Right
 import androidx.compose.ui.focus.FocusDirection.Companion.Up
@@ -122,6 +121,7 @@ import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.LayoutNode.UsageByParent
 import androidx.compose.ui.node.LayoutNodeDrawScope
 import androidx.compose.ui.node.MeasureAndLayoutDelegate
+import androidx.compose.ui.modifier.ModifierLocalManager
 import androidx.compose.ui.node.OwnedLayer
 import androidx.compose.ui.node.Owner
 import androidx.compose.ui.node.OwnerSnapshotObserver
@@ -224,13 +224,13 @@ internal class AndroidComposeView(context: Context) :
 
     override val root = LayoutNode().also {
         it.measurePolicy = RootMeasurePolicy
+        it.density = density
         // Composed modifiers cannot be added here directly
         it.modifier = Modifier
             .then(semanticsModifier)
             .then(rotaryInputModifier)
             .then(_focusManager.modifier)
             .then(keyInputModifier)
-        it.density = density
     }
 
     override val rootForTest: RootForTest = this
@@ -432,6 +432,8 @@ internal class AndroidComposeView(context: Context) :
         }
     )
     override val inputModeManager: InputModeManager get() = _inputModeManager
+
+    override val modifierLocalManager: ModifierLocalManager = ModifierLocalManager(this)
 
     /**
      * Provide textToolbar to the user, for text-related operation. Use the Android version of
@@ -981,8 +983,8 @@ internal class AndroidComposeView(context: Context) :
             DirectionLeft -> Left
             DirectionUp -> Up
             DirectionDown -> Down
-            DirectionCenter, Enter, NumPadEnter -> In
-            Back, Escape -> Out
+            DirectionCenter, Enter, NumPadEnter -> FocusDirection.Enter
+            Back, Escape -> Exit
             else -> null
         }
     }

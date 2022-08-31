@@ -29,15 +29,20 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.tokens.NavigationDrawerTokens
+import androidx.compose.material3.tokens.ScrimTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
@@ -317,37 +322,6 @@ fun ModalNavigationDrawer(
     }
 }
 
-@Composable
-@ExperimentalMaterial3Api
-@Deprecated(
-    "NavigationDrawer has been renamed to ModalNavigationDrawer to better specify " +
-        "its modal nature", replaceWith = ReplaceWith(
-        "ModalNavigationDrawer(drawerContent,\n" +
-            "        modifier,\n" +
-            "        drawerState,\n" +
-            "        gesturesEnabled,\n" +
-            "        scrimColor,\n" +
-            "        content)"
-    )
-)
-fun NavigationDrawer(
-    drawerContent: @Composable () -> Unit,
-    modifier: Modifier = Modifier,
-    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
-    gesturesEnabled: Boolean = true,
-    scrimColor: Color = DrawerDefaults.scrimColor,
-    content: @Composable () -> Unit
-) {
-    ModalNavigationDrawer(
-        drawerContent,
-        modifier,
-        drawerState,
-        gesturesEnabled,
-        scrimColor,
-        content
-    )
-}
-
 /**
  * <a href="https://m3.material.io/components/navigation-drawer/overview" class="external" target="_blank">Material Design navigation drawer</a>.
  *
@@ -469,14 +443,15 @@ fun PermanentNavigationDrawer(
  *
  * @param modifier the [Modifier] to be applied to this drawer's content
  * @param drawerShape defines the shape of this drawer's container
- * @param drawerTonalElevation when [drawerContainerColor] is [ColorScheme.surface], a translucent
- * primary color overlay is applied on top of the container. A higher tonal elevation value will
- * result in a darker color in light theme and lighter color in dark theme. See also: [Surface].
  * @param drawerContainerColor the color used for the background of this drawer. Use
  * [Color.Transparent] to have no color.
  * @param drawerContentColor the preferred color for content inside this drawer. Defaults to either
  * the matching content color for [drawerContainerColor], or to the current [LocalContentColor] if
  * [drawerContainerColor] is not a color from the theme.
+ * @param drawerTonalElevation when [drawerContainerColor] is [ColorScheme.surface], a translucent
+ * primary color overlay is applied on top of the container. A higher tonal elevation value will
+ * result in a darker color in light theme and lighter color in dark theme. See also: [Surface].
+ * @param windowInsets a window insets for the sheet.
  * @param content content inside of a modal navigation drawer
  */
 @ExperimentalMaterial3Api
@@ -484,17 +459,19 @@ fun PermanentNavigationDrawer(
 fun ModalDrawerSheet(
     modifier: Modifier = Modifier,
     drawerShape: Shape = DrawerDefaults.shape,
-    drawerTonalElevation: Dp = DrawerDefaults.ModalDrawerElevation,
     drawerContainerColor: Color = MaterialTheme.colorScheme.surface,
     drawerContentColor: Color = contentColorFor(drawerContainerColor),
+    drawerTonalElevation: Dp = DrawerDefaults.ModalDrawerElevation,
+    windowInsets: WindowInsets = DrawerDefaults.windowInsets,
     content: @Composable ColumnScope.() -> Unit
 ) {
     DrawerSheet(
+        windowInsets,
         modifier,
         drawerShape,
-        drawerTonalElevation,
         drawerContainerColor,
         drawerContentColor,
+        drawerTonalElevation,
         content
     )
 }
@@ -504,14 +481,15 @@ fun ModalDrawerSheet(
  *
  * @param modifier the [Modifier] to be applied to this drawer's content
  * @param drawerShape defines the shape of this drawer's container
- * @param drawerTonalElevation when [drawerContainerColor] is [ColorScheme.surface], a translucent
- * primary color overlay is applied on top of the container. A higher tonal elevation value will
- * result in a darker color in light theme and lighter color in dark theme. See also: [Surface].
  * @param drawerContainerColor the color used for the background of this drawer. Use
  * [Color.Transparent] to have no color.
  * @param drawerContentColor the preferred color for content inside this drawer. Defaults to either
  * the matching content color for [drawerContainerColor], or to the current [LocalContentColor] if
  * [drawerContainerColor] is not a color from the theme.
+ * @param drawerTonalElevation when [drawerContainerColor] is [ColorScheme.surface], a translucent
+ * primary color overlay is applied on top of the container. A higher tonal elevation value will
+ * result in a darker color in light theme and lighter color in dark theme. See also: [Surface].
+ * @param windowInsets a window insets for the sheet.
  * @param content content inside of a dismissible navigation drawer
  */
 @ExperimentalMaterial3Api
@@ -519,17 +497,19 @@ fun ModalDrawerSheet(
 fun DismissibleDrawerSheet(
     modifier: Modifier = Modifier,
     drawerShape: Shape = RectangleShape,
-    drawerTonalElevation: Dp = DrawerDefaults.DismissibleDrawerElevation,
     drawerContainerColor: Color = MaterialTheme.colorScheme.surface,
     drawerContentColor: Color = contentColorFor(drawerContainerColor),
+    drawerTonalElevation: Dp = DrawerDefaults.DismissibleDrawerElevation,
+    windowInsets: WindowInsets = DrawerDefaults.windowInsets,
     content: @Composable ColumnScope.() -> Unit
 ) {
     DrawerSheet(
+        windowInsets,
         modifier,
         drawerShape,
-        drawerTonalElevation,
         drawerContainerColor,
         drawerContentColor,
+        drawerTonalElevation,
         content
     )
 }
@@ -539,14 +519,15 @@ fun DismissibleDrawerSheet(
  *
  * @param modifier the [Modifier] to be applied to this drawer's content
  * @param drawerShape defines the shape of this drawer's container
- * @param drawerTonalElevation when [drawerContainerColor] is [ColorScheme.surface], a translucent
- * primary color overlay is applied on top of the container. A higher tonal elevation value will
- * result in a darker color in light theme and lighter color in dark theme. See also: [Surface].
  * @param drawerContainerColor the color used for the background of this drawer. Use
  * [Color.Transparent] to have no color.
  * @param drawerContentColor the preferred color for content inside this drawer. Defaults to either
  * the matching content color for [drawerContainerColor], or to the current [LocalContentColor] if
  * [drawerContainerColor] is not a color from the theme.
+ * @param drawerTonalElevation when [drawerContainerColor] is [ColorScheme.surface], a translucent
+ * primary color overlay is applied on top of the container. A higher tonal elevation value will
+ * result in a darker color in light theme and lighter color in dark theme. See also: [Surface].
+ * @param windowInsets a window insets for the sheet.
  * @param content content inside a permanent navigation drawer
  */
 @ExperimentalMaterial3Api
@@ -554,20 +535,22 @@ fun DismissibleDrawerSheet(
 fun PermanentDrawerSheet(
     modifier: Modifier = Modifier,
     drawerShape: Shape = RectangleShape,
-    drawerTonalElevation: Dp = DrawerDefaults.PermanentDrawerElevation,
     drawerContainerColor: Color = MaterialTheme.colorScheme.surface,
     drawerContentColor: Color = contentColorFor(drawerContainerColor),
+    drawerTonalElevation: Dp = DrawerDefaults.PermanentDrawerElevation,
+    windowInsets: WindowInsets = DrawerDefaults.windowInsets,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val navigationMenu = getString(Strings.NavigationMenu)
     DrawerSheet(
+        windowInsets,
         modifier.semantics {
             paneTitle = navigationMenu
         },
         drawerShape,
-        drawerTonalElevation,
         drawerContainerColor,
         drawerContentColor,
+        drawerTonalElevation,
         content
     )
 }
@@ -575,11 +558,12 @@ fun PermanentDrawerSheet(
 @ExperimentalMaterial3Api
 @Composable
 private fun DrawerSheet(
+    windowInsets: WindowInsets,
     modifier: Modifier = Modifier,
     drawerShape: Shape = RectangleShape,
-    drawerTonalElevation: Dp = DrawerDefaults.PermanentDrawerElevation,
     drawerContainerColor: Color = MaterialTheme.colorScheme.surface,
     drawerContentColor: Color = contentColorFor(drawerContainerColor),
+    drawerTonalElevation: Dp = DrawerDefaults.PermanentDrawerElevation,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(
@@ -599,7 +583,8 @@ private fun DrawerSheet(
                 .sizeIn(
                     minWidth = MinimumDrawerWidth,
                     maxWidth = DrawerDefaults.MaximumDrawerWidth
-                ),
+                )
+                .windowInsetsPadding(windowInsets),
             content = content
         )
     }
@@ -633,13 +618,21 @@ object DrawerDefaults {
 
     /** Default color of the scrim that obscures content when the drawer is open */
     val scrimColor: Color
-        @Composable get() = MaterialTheme.colorScheme.scrim.copy(.32f)
+        @Composable get() = ScrimTokens.ContainerColor.toColor().copy(ScrimTokens.ContainerOpacity)
 
     /** Default container color for a navigation drawer */
     val containerColor: Color @Composable get() = NavigationDrawerTokens.ContainerColor.toColor()
 
     /** Default and maximum width of a navigation drawer **/
     val MaximumDrawerWidth = NavigationDrawerTokens.ContainerWidth
+
+    /**
+     * Default window insets for drawer sheets
+     */
+    val windowInsets: WindowInsets
+        @Composable
+        get() = WindowInsets.systemBarsForVisualComponents
+            .only(WindowInsetsSides.Vertical + WindowInsetsSides.Start)
 }
 
 /**

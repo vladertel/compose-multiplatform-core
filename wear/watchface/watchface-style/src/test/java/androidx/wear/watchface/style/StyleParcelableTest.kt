@@ -38,16 +38,16 @@ import androidx.wear.watchface.style.data.UserStyleWireFormat
 import com.google.common.truth.Truth.assertThat
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
-import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
+private const val NAME_RESOURCE_ID = 123456
+private const val SCREEN_READER_NAME_RESOURCE_ID = 567890
+
 @RunWith(StyleTestRunner::class)
 @RequiresApi(Build.VERSION_CODES.P)
 public class StyleParcelableTest {
-
     private val icon1 = Icon.createWithContentUri("icon1")
     private val icon2 = Icon.createWithContentUri("icon2")
     private val icon3 = Icon.createWithContentUri("icon3")
@@ -56,6 +56,7 @@ public class StyleParcelableTest {
     private val wfIcon2 = Icon.createWithContentUri("wfIcon2")
     private val wfIcon3 = Icon.createWithContentUri("wfIcon3")
     private val wfIcon4 = Icon.createWithContentUri("wfIcon4")
+
     private val option1 = ListOption(
         Option.Id("1"),
         "one",
@@ -80,11 +81,6 @@ public class StyleParcelableTest {
         icon4,
         watchFaceEditorData = WatchFaceEditorData(wfIcon4)
     )
-
-    @Before
-    public fun setUp() {
-        assumeTrue("These tests require API 28", Build.VERSION.SDK_INT >= 28)
-    }
 
     @Test
     public fun parcelAndUnparcelStyleSettingAndOption() {
@@ -584,6 +580,12 @@ public class StyleParcelableTest {
                         ComplicationSlotsUserStyleSetting.ComplicationSlotOverlay(
                             rightComplicationID,
                             enabled = false
+                        ),
+                        ComplicationSlotsUserStyleSetting.ComplicationSlotOverlay(
+                            leftComplicationID,
+                            enabled = true,
+                            nameResourceId = NAME_RESOURCE_ID,
+                            screenReaderNameResourceId = SCREEN_READER_NAME_RESOURCE_ID
                         )
                     )
                 ),
@@ -645,10 +647,15 @@ public class StyleParcelableTest {
         assertFalse(options1Overlays[1].enabled!!)
 
         assertThat(options[2].id.value.decodeToString()).isEqualTo("LEFT_COMPLICATION")
-        assertThat(options[2].complicationSlotOverlays.size).isEqualTo(1)
+        assertThat(options[2].complicationSlotOverlays.size).isEqualTo(2)
+
         val options2Overlays = ArrayList(options[2].complicationSlotOverlays)
         assertThat(options2Overlays[0].complicationSlotId).isEqualTo(rightComplicationID)
         assertFalse(options2Overlays[0].enabled!!)
+        assertThat(options2Overlays[1].complicationSlotId).isEqualTo(leftComplicationID)
+        assertThat(options2Overlays[1].nameResourceId).isEqualTo(NAME_RESOURCE_ID)
+        assertThat(options2Overlays[1].screenReaderNameResourceId)
+            .isEqualTo(SCREEN_READER_NAME_RESOURCE_ID)
 
         assertThat(options[3].id.value.decodeToString()).isEqualTo("RIGHT_COMPLICATION")
         assertThat(options[3].complicationSlotOverlays.size).isEqualTo(1)

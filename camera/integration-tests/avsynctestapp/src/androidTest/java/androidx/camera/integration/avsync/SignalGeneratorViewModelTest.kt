@@ -49,10 +49,7 @@ import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assume
@@ -89,9 +86,8 @@ class SignalGeneratorViewModelTest {
         android.Manifest.permission.RECORD_AUDIO
     )
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Before
-    fun setUp() = runTest {
+    fun setUp(): Unit = runBlocking {
         // Skip for b/168175357, b/233661493
         Assume.assumeFalse(
             "Skip tests for Cuttlefish MediaCodec issues",
@@ -123,21 +119,17 @@ class SignalGeneratorViewModelTest {
         CameraXUtil.shutdown()[10, TimeUnit.SECONDS]
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun initialRecorder_canMakeRecorderReady() = runTest {
+    fun initialRecorder_canMakeRecorderReady(): Unit = runBlocking {
         viewModel.initialRecorder(context, lifecycleOwner)
-        advanceUntilIdle()
 
         assertThat(viewModel.isRecorderReady).isTrue()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun initialSignalGenerator_canMakeGeneratorReady() = runTest {
+    fun initialSignalGenerator_canMakeGeneratorReady(): Unit = runBlocking {
         val beepFrequency = 1500
-        viewModel.initialSignalGenerator(context, beepFrequency)
-        advanceUntilIdle()
+        viewModel.initialSignalGenerator(context, beepFrequency, true)
 
         assertThat(viewModel.isGeneratorReady).isTrue()
     }
@@ -149,7 +141,7 @@ class SignalGeneratorViewModelTest {
         val latch = CountDownLatch(5)
 
         // Act.
-        viewModel.initialSignalGenerator(context, beepFrequency)
+        viewModel.initialSignalGenerator(context, beepFrequency, true)
         viewModel.startSignalGeneration()
         countActiveFlagChangeBlocking(latch)
 
@@ -164,7 +156,7 @@ class SignalGeneratorViewModelTest {
         val latch = CountDownLatch(5)
 
         // Act.
-        viewModel.initialSignalGenerator(context, beepFrequency)
+        viewModel.initialSignalGenerator(context, beepFrequency, true)
         viewModel.startSignalGeneration()
         viewModel.stopSignalGeneration()
         countActiveFlagChangeBlocking(latch)
@@ -173,12 +165,10 @@ class SignalGeneratorViewModelTest {
         assertThat(latch.count).isNotEqualTo(0)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun startAndStopRecording_canWorkCorrectlyAfterRecorderReady() = runTest {
+    fun startAndStopRecording_canWorkCorrectlyAfterRecorderReady(): Unit = runBlocking {
         // Arrange.
         viewModel.initialRecorder(context, lifecycleOwner)
-        advanceUntilIdle()
 
         assertThat(viewModel.isRecorderReady).isTrue()
 

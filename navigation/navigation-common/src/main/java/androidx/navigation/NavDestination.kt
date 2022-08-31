@@ -24,7 +24,6 @@ import androidx.annotation.CallSuper
 import androidx.annotation.IdRes
 import androidx.annotation.RestrictTo
 import androidx.collection.SparseArrayCompat
-import androidx.collection.forEach
 import androidx.collection.valueIterator
 import androidx.core.content.res.use
 import androidx.navigation.common.R
@@ -71,6 +70,7 @@ public open class NavDestination(
         @get:Suppress("NullableCollection") // Needed for nullable bundle
         public val matchingArgs: Bundle?,
         private val isExactDeepLink: Boolean,
+        private val matchingPathSegments: Int,
         private val hasMatchingAction: Boolean,
         private val mimeTypeMatchLevel: Int
     ) : Comparable<DeepLinkMatch> {
@@ -79,6 +79,13 @@ public open class NavDestination(
             if (isExactDeepLink && !other.isExactDeepLink) {
                 return 1
             } else if (!isExactDeepLink && other.isExactDeepLink) {
+                return -1
+            }
+            // Then prefer most exact match path segments
+            val pathSegmentDifference = matchingPathSegments - other.matchingPathSegments
+            if (pathSegmentDifference > 0) {
+                return 1
+            } else if (pathSegmentDifference < 0) {
                 return -1
             }
             if (matchingArgs != null && other.matchingArgs == null) {
@@ -344,8 +351,10 @@ public open class NavDestination(
         var bestMatch: DeepLinkMatch? = null
         for (deepLink in deepLinks) {
             val uri = navDeepLinkRequest.uri
+            // includes matching args for path, query, and fragment
             val matchingArguments =
                 if (uri != null) deepLink.getMatchingArguments(uri, arguments) else null
+            val matchingPathSegments = deepLink.calculateMatchingPathSegments(uri)
             val requestAction = navDeepLinkRequest.action
             val matchingAction = requestAction != null && requestAction ==
                 deepLink.action
@@ -355,7 +364,8 @@ public open class NavDestination(
             if (matchingArguments != null || matchingAction || mimeTypeMatchLevel > -1) {
                 val newMatch = DeepLinkMatch(
                     this, matchingArguments,
-                    deepLink.isExactDeepLink, matchingAction, mimeTypeMatchLevel
+                    deepLink.isExactDeepLink, matchingPathSegments, matchingAction,
+                    mimeTypeMatchLevel
                 )
                 if (bestMatch == null || newMatch > bestMatch) {
                     bestMatch = newMatch

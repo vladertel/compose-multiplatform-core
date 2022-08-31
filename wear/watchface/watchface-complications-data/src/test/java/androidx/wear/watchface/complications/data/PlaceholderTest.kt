@@ -18,6 +18,7 @@ package androidx.wear.watchface.complications.data
 
 import android.content.ComponentName
 import android.content.Context
+import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.support.wearable.complications.ComplicationData
 import android.support.wearable.complications.ComplicationData.IMAGE_STYLE_ICON
@@ -43,6 +44,7 @@ class PlaceholderTest {
             ShortTextComplicationData.Builder(ComplicationText.PLACEHOLDER, contentDescription)
                 .setTitle(ComplicationText.PLACEHOLDER)
                 .setMonochromaticImage(MonochromaticImage.PLACEHOLDER)
+                .setSmallImage(SmallImage.PLACEHOLDER)
                 .build()
         ).toWireFormatRoundTrip().placeholder as ShortTextComplicationData
 
@@ -50,6 +52,7 @@ class PlaceholderTest {
         assertThat(placeholderShortText.title).isEqualTo(ComplicationText.PLACEHOLDER)
         assertThat(placeholderShortText.monochromaticImage)
             .isEqualTo(MonochromaticImage.PLACEHOLDER)
+        assertThat(placeholderShortText.smallImage).isEqualTo(SmallImage.PLACEHOLDER)
         assertThat(placeholderShortText.contentDescription!!.getTextAt(resources, Instant.EPOCH))
             .isEqualTo("description")
         assertThat(placeholderShortText.hasPlaceholderFields()).isTrue()
@@ -61,6 +64,7 @@ class PlaceholderTest {
             ShortTextComplicationData.Builder(text, contentDescription)
                 .setTitle(title)
                 .setMonochromaticImage(monochromaticImage)
+                .setSmallImage(smallImage)
                 .build()
         ).toWireFormatRoundTrip().placeholder as ShortTextComplicationData
 
@@ -71,6 +75,7 @@ class PlaceholderTest {
             title.getTextAt(resources, Instant.EPOCH)
         )
         assertThat(placeholderShortText.monochromaticImage).isEqualTo(monochromaticImage)
+        assertThat(placeholderShortText.smallImage).isEqualTo(smallImage)
         assertThat(placeholderShortText.hasPlaceholderFields()).isFalse()
     }
 
@@ -83,6 +88,7 @@ class PlaceholderTest {
 
         assertThat(placeholderShortText.title).isNull()
         assertThat(placeholderShortText.monochromaticImage).isNull()
+        assertThat(placeholderShortText.smallImage).isNull()
     }
 
     @Test
@@ -150,6 +156,7 @@ class PlaceholderTest {
                 .setText(ComplicationText.PLACEHOLDER)
                 .setTitle(ComplicationText.PLACEHOLDER)
                 .setMonochromaticImage(MonochromaticImage.PLACEHOLDER)
+                .setSmallImage(SmallImage.PLACEHOLDER)
                 .build()
         ).toWireFormatRoundTrip().placeholder as RangedValueComplicationData
 
@@ -158,6 +165,7 @@ class PlaceholderTest {
         assertThat(placeholderRangedValue.title).isEqualTo(ComplicationText.PLACEHOLDER)
         assertThat(placeholderRangedValue.monochromaticImage)
             .isEqualTo(MonochromaticImage.PLACEHOLDER)
+        assertThat(placeholderRangedValue.smallImage).isEqualTo(SmallImage.PLACEHOLDER)
         assertThat(placeholderRangedValue.contentDescription!!.getTextAt(resources, Instant.EPOCH))
             .isEqualTo("description")
         assertThat(placeholderRangedValue.hasPlaceholderFields()).isTrue()
@@ -170,6 +178,7 @@ class PlaceholderTest {
                 .setText(text)
                 .setTitle(title)
                 .setMonochromaticImage(monochromaticImage)
+                .setSmallImage(smallImage)
                 .build()
         ).toWireFormatRoundTrip().placeholder as RangedValueComplicationData
 
@@ -180,6 +189,7 @@ class PlaceholderTest {
             title.getTextAt(resources, Instant.EPOCH)
         )
         assertThat(placeholderRangedValue.monochromaticImage).isEqualTo(monochromaticImage)
+        assertThat(placeholderRangedValue.smallImage).isEqualTo(smallImage)
         assertThat(placeholderRangedValue.value).isEqualTo(7f)
         assertThat(placeholderRangedValue.min).isEqualTo(1f)
         assertThat(placeholderRangedValue.max).isEqualTo(10f)
@@ -202,6 +212,7 @@ class PlaceholderTest {
         assertThat(placeholderRangedValue.text).isEqualTo(ComplicationText.PLACEHOLDER)
         assertThat(placeholderRangedValue.title).isNull()
         assertThat(placeholderRangedValue.monochromaticImage).isNull()
+        assertThat(placeholderRangedValue.smallImage).isNull()
     }
 
     @OptIn(ComplicationExperimental::class)
@@ -216,6 +227,7 @@ class PlaceholderTest {
                 .setText(ComplicationText.PLACEHOLDER)
                 .setTitle(ComplicationText.PLACEHOLDER)
                 .setMonochromaticImage(MonochromaticImage.PLACEHOLDER)
+                .setSmallImage(SmallImage.PLACEHOLDER)
                 .build()
         ).toWireFormatRoundTrip().placeholder as GoalProgressComplicationData
 
@@ -224,6 +236,7 @@ class PlaceholderTest {
         assertThat(placeholderGoalProgress.title).isEqualTo(ComplicationText.PLACEHOLDER)
         assertThat(placeholderGoalProgress.monochromaticImage)
             .isEqualTo(MonochromaticImage.PLACEHOLDER)
+        assertThat(placeholderGoalProgress.smallImage).isEqualTo(SmallImage.PLACEHOLDER)
         assertThat(placeholderGoalProgress.contentDescription!!.getTextAt(resources, Instant.EPOCH))
             .isEqualTo("description")
         assertThat(placeholderGoalProgress.hasPlaceholderFields()).isTrue()
@@ -241,6 +254,7 @@ class PlaceholderTest {
                 .setText(text)
                 .setTitle(title)
                 .setMonochromaticImage(monochromaticImage)
+                .setSmallImage(smallImage)
                 .build()
         ).toWireFormatRoundTrip().placeholder as GoalProgressComplicationData
 
@@ -251,6 +265,7 @@ class PlaceholderTest {
             title.getTextAt(resources, Instant.EPOCH)
         )
         assertThat(placeholderGoalProgress.monochromaticImage).isEqualTo(monochromaticImage)
+        assertThat(placeholderGoalProgress.smallImage).isEqualTo(smallImage)
         assertThat(placeholderGoalProgress.value).isEqualTo(1200f)
         assertThat(placeholderGoalProgress.targetValue).isEqualTo(10000f)
         assertThat(placeholderGoalProgress.hasPlaceholderFields()).isFalse()
@@ -269,6 +284,7 @@ class PlaceholderTest {
                 .setText(ComplicationText.PLACEHOLDER)
                 .setTitle(ComplicationText.PLACEHOLDER)
                 .setMonochromaticImage(MonochromaticImage.PLACEHOLDER)
+                .setSmallImage(SmallImage.PLACEHOLDER)
                 .build()
         ).toWireFormatRoundTrip().placeholder as DiscreteRangedValueComplicationData
 
@@ -278,6 +294,7 @@ class PlaceholderTest {
         assertThat(placeholderRangedValue.title).isEqualTo(ComplicationText.PLACEHOLDER)
         assertThat(placeholderRangedValue.monochromaticImage)
             .isEqualTo(MonochromaticImage.PLACEHOLDER)
+        assertThat(placeholderRangedValue.smallImage).isEqualTo(SmallImage.PLACEHOLDER)
         assertThat(placeholderRangedValue.contentDescription!!.getTextAt(resources, Instant.EPOCH))
             .isEqualTo("description")
         assertThat(placeholderRangedValue.hasPlaceholderFields()).isTrue()
@@ -296,6 +313,7 @@ class PlaceholderTest {
                 .setText(text)
                 .setTitle(title)
                 .setMonochromaticImage(monochromaticImage)
+                .setSmallImage(smallImage)
                 .build()
         ).toWireFormatRoundTrip().placeholder as DiscreteRangedValueComplicationData
 
@@ -306,10 +324,73 @@ class PlaceholderTest {
             title.getTextAt(resources, Instant.EPOCH)
         )
         assertThat(placeholderRangedValue.monochromaticImage).isEqualTo(monochromaticImage)
+        assertThat(placeholderRangedValue.smallImage).isEqualTo(smallImage)
         assertThat(placeholderRangedValue.value).isEqualTo(7)
         assertThat(placeholderRangedValue.min).isEqualTo(1)
         assertThat(placeholderRangedValue.max).isEqualTo(10)
         assertThat(placeholderRangedValue.hasPlaceholderFields()).isFalse()
+    }
+
+    @OptIn(ComplicationExperimental::class)
+    @Test
+    fun placeholder_weightedElements() {
+        val placeholderWeightedElements = NoDataComplicationData(
+            WeightedElementsComplicationData.Builder(
+                elements = WeightedElementsComplicationData.PLACEHOLDER,
+                contentDescription
+            )
+                .setText(ComplicationText.PLACEHOLDER)
+                .setTitle(ComplicationText.PLACEHOLDER)
+                .setMonochromaticImage(MonochromaticImage.PLACEHOLDER)
+                .setSmallImage(SmallImage.PLACEHOLDER)
+                .build()
+        ).toWireFormatRoundTrip().placeholder as WeightedElementsComplicationData
+
+        assertThat(placeholderWeightedElements.elements)
+            .isEqualTo(WeightedElementsComplicationData.PLACEHOLDER)
+        assertThat(placeholderWeightedElements.text).isEqualTo(ComplicationText.PLACEHOLDER)
+        assertThat(placeholderWeightedElements.title).isEqualTo(ComplicationText.PLACEHOLDER)
+        assertThat(placeholderWeightedElements.monochromaticImage)
+            .isEqualTo(MonochromaticImage.PLACEHOLDER)
+        assertThat(placeholderWeightedElements.smallImage).isEqualTo(SmallImage.PLACEHOLDER)
+        assertThat(placeholderWeightedElements.contentDescription!!
+            .getTextAt(resources, Instant.EPOCH)).isEqualTo("description")
+        assertThat(placeholderWeightedElements.hasPlaceholderFields()).isTrue()
+    }
+
+    @OptIn(ComplicationExperimental::class)
+    @Test
+    fun normal_weightedElements() {
+        val weightedElements = NoDataComplicationData(
+            WeightedElementsComplicationData.Builder(
+                elements = listOf(
+                    WeightedElementsComplicationData.Element(0.5f, Color.RED),
+                    WeightedElementsComplicationData.Element(1f, Color.GREEN),
+                    WeightedElementsComplicationData.Element(2f, Color.BLUE),
+                ),
+                contentDescription
+            )
+                .setText(text)
+                .setTitle(title)
+                .setMonochromaticImage(monochromaticImage)
+                .setSmallImage(smallImage)
+                .build()
+        ).toWireFormatRoundTrip().placeholder as WeightedElementsComplicationData
+
+        assertThat(weightedElements.elements).isEqualTo(
+            listOf(
+                WeightedElementsComplicationData.Element(0.5f, Color.RED),
+                WeightedElementsComplicationData.Element(1f, Color.GREEN),
+                WeightedElementsComplicationData.Element(2f, Color.BLUE),
+            )
+        )
+        assertThat(weightedElements.text).isEqualTo(text)
+        assertThat(weightedElements.title).isEqualTo(title)
+        assertThat(weightedElements.monochromaticImage).isEqualTo(monochromaticImage)
+        assertThat(weightedElements.smallImage).isEqualTo(smallImage)
+        assertThat(weightedElements.contentDescription!!.getTextAt(resources, Instant.EPOCH))
+            .isEqualTo("description")
+        assertThat(weightedElements.hasPlaceholderFields()).isFalse()
     }
 
     @OptIn(ComplicationExperimental::class)
@@ -329,6 +410,7 @@ class PlaceholderTest {
         assertThat(placeholderRangedValue.text).isEqualTo(ComplicationText.PLACEHOLDER)
         assertThat(placeholderRangedValue.title).isNull()
         assertThat(placeholderRangedValue.monochromaticImage).isNull()
+        assertThat(placeholderRangedValue.smallImage).isNull()
     }
 
     @Test

@@ -36,7 +36,6 @@ import androidx.compose.ui.text.font.toFontFamily
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.matchers.assertThat
 import androidx.compose.ui.text.matchers.isZero
-import androidx.compose.ui.text.platform.AndroidParagraph
 import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -1903,6 +1902,7 @@ class ParagraphIntegrationTest {
                 maxLines = maxLines
             )
 
+            assertThat(paragraph.lineCount).isEqualTo(maxLines)
             val expectFirstBaseline = 0.8f * fontSizeInPx
             assertThat(paragraph.firstBaseline).isEqualTo(expectFirstBaseline)
             val expectLastBaseline = (maxLines - 1) * fontSizeInPx + 0.8f * fontSizeInPx
@@ -1945,6 +1945,27 @@ class ParagraphIntegrationTest {
 
             val expectHeight = lineCount * fontSizeInPx
             assertThat(paragraph.height).isEqualTo(expectHeight)
+        }
+    }
+    @Test
+    fun maxLines_withMaxLineGreaterThanTextLines_haveCorrectBaselines() {
+        with(defaultDensity) {
+            val text = "a\na\na"
+            val fontSize = 100.sp
+            val fontSizeInPx = fontSize.toPx()
+            val lineCount = text.lines().size
+            val maxLines = lineCount + 1
+            val paragraph = simpleParagraph(
+                text = text,
+                style = TextStyle(fontSize = fontSize),
+                maxLines = maxLines
+            )
+
+            assertThat(paragraph.lineCount).isEqualTo(lineCount)
+            val expectFirstBaseline = 0.8f * fontSizeInPx
+            assertThat(paragraph.firstBaseline).isEqualTo(expectFirstBaseline)
+            val expectLastBaseline = (lineCount - 1) * fontSizeInPx + 0.8f * fontSizeInPx
+            assertThat(paragraph.lastBaseline).isEqualTo(expectLastBaseline)
         }
     }
 

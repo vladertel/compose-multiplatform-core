@@ -8,38 +8,6 @@ package androidx.window {
 
 }
 
-package androidx.window.area {
-
-  @androidx.window.core.ExperimentalWindowApi public interface WindowAreaController {
-    method public default static androidx.window.area.WindowAreaController getOrCreate();
-    field public static final androidx.window.area.WindowAreaController.Companion Companion;
-  }
-
-  public static final class WindowAreaController.Companion {
-    method public androidx.window.area.WindowAreaController getOrCreate();
-  }
-
-  @androidx.window.core.ExperimentalWindowApi public interface WindowAreaSession {
-    method public void close();
-  }
-
-  @androidx.window.core.ExperimentalWindowApi public interface WindowAreaSessionCallback {
-    method public void onSessionEnded();
-    method public void onSessionStarted(androidx.window.area.WindowAreaSession session);
-  }
-
-  @androidx.window.core.ExperimentalWindowApi public final class WindowAreaStatus {
-    field public static final androidx.window.area.WindowAreaStatus AVAILABLE;
-    field public static final androidx.window.area.WindowAreaStatus.Companion Companion;
-    field public static final androidx.window.area.WindowAreaStatus UNAVAILABLE;
-    field public static final androidx.window.area.WindowAreaStatus UNSUPPORTED;
-  }
-
-  public static final class WindowAreaStatus.Companion {
-  }
-
-}
-
 package androidx.window.core {
 
   @kotlin.RequiresOptIn(level=kotlin.RequiresOptIn.Level.WARNING) @kotlin.annotation.MustBeDocumented @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) public @interface ExperimentalWindowApi {
@@ -51,12 +19,10 @@ package androidx.window.embedding {
 
   @androidx.window.core.ExperimentalWindowApi public final class ActivityFilter {
     ctor public ActivityFilter(android.content.ComponentName componentName, String? intentAction);
-    method public android.content.ComponentName getComponentName();
-    method public String? getIntentAction();
     method public boolean matchesActivity(android.app.Activity activity);
+    method public <T extends android.app.Activity> boolean matchesClassName(Class<T> clazz);
+    method public <T extends android.app.Activity> boolean matchesClassNameOrWildCard(Class<T>? clazz);
     method public boolean matchesIntent(android.content.Intent intent);
-    property public final android.content.ComponentName componentName;
-    property public final String? intentAction;
   }
 
   @androidx.window.core.ExperimentalWindowApi public final class ActivityRule extends androidx.window.embedding.EmbeddingRule {
@@ -248,6 +214,7 @@ package androidx.window.layout {
 
   public final class WindowMetrics {
     method public android.graphics.Rect getBounds();
+    method @RequiresApi(android.os.Build.VERSION_CODES.R) @androidx.window.core.ExperimentalWindowApi public androidx.core.view.WindowInsetsCompat getWindowInsets();
     property public final android.graphics.Rect bounds;
   }
 

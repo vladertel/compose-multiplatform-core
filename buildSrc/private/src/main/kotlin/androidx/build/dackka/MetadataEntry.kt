@@ -16,29 +16,33 @@
 
 package androidx.build.dackka
 
-import java.io.Serializable
+import com.google.gson.annotations.SerializedName
 
 /**
  * Helper data class to store the metadata information for each library/path.
  */
 data class MetadataEntry(
+    @SerializedName("groupId")
     val groupId: String,
-    val artifactId: String,
-    val releaseNotesUrl: String,
-    val sourceDir: String,
-) : Serializable {
 
-    /**
-     * Transforms the contents of this data class into a [Map] for future conversion to JSON
-     *
-     * @return the contents of this data class as a [Map].
-     */
-    fun toMap(): Map<String, String> {
-        return mapOf(
-            "groupId" to groupId,
-            "artifactId" to artifactId,
-            "releaseNotesUrl" to releaseNotesUrl,
-            "sourceDir" to sourceDir
-        )
-    }
-}
+    @SerializedName("artifactId")
+    val artifactId: String,
+
+    @SerializedName("releaseNotesUrl")
+    val releaseNotesUrl: String,
+
+    // TODO (b/243175565): remove @Transient once bug is resolved
+    //
+    // Dackka currently fails if extra keys are present in the JSON file; temporarily omit this
+    // field in the JSON output
+    @Transient
+    @SerializedName("jarContents")
+    val jarContents: List<String>,
+
+    // TODO (b/241582234): Remove when bug is resolved.
+    //
+    // This will no longer be used once Dackka is updated, but is currently needed as Dackka
+    // expects this key to be present.
+    @SerializedName("sourceDir")
+    val sourceDir: String = "TBD/SOURCE/DIR",
+)

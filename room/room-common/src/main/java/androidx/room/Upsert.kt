@@ -16,8 +16,7 @@
 
 package androidx.room
 
-import androidx.annotation.RestrictTo
-import androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP
+import androidx.annotation.RequiresApi
 import kotlin.reflect.KClass
 
 /**
@@ -33,14 +32,50 @@ import kotlin.reflect.KClass
  * Example:
  *
  * ```
- * TODO
+ * @Dao
+ * interface MusicDao {
+ *   @Upsert
+ *   fun upsertSongs(varargs songs: Song)
+ *
+ *   @Upsert
+ *   fun upsertBoth(song1: Song, song2: Song)
+ *
+ *   @Upsert
+ *   fun upsertAlbumWithSongs(album: Album, songs: List<Song>)
+ * }
  * ```
  *
  * If the target entity is specified via [entity] then the parameters can be of arbitrary
  * POJO types that will be interpreted as partial entities. For example:
  *
  * ```
- * TODO
+ * @Entity
+ * data class Playlist (
+ *   @PrimaryKey(autoGenerate = true)
+ *   val playlistId: Long,
+ *   val name: String,
+ *   val description: String?,
+ *
+ *   @ColumnInfo(defaultValue = "normal")
+ *   val category: String,
+ *
+ *   @ColumnInfo(defaultValue = "CURRENT_TIMESTAMP")
+ *   val createdTime: String,
+ *
+ *   @ColumnInfo(defaultValue = "CURRENT_TIMESTAMP")
+ *   val lastModifiedTime: String
+ * )
+ *
+ * data class NameAndDescription (
+ *   val name: String,
+ *   val description: String
+ * )
+ *
+ * @Dao
+ * interface PlaylistDao {
+ *   @Upsert(entity = Playlist::class)
+ *   fun upsertNewPlaylist(nameDescription: NameAndDescription)
+ * }
  * ```
  *
  * @see [Insert]
@@ -48,7 +83,7 @@ import kotlin.reflect.KClass
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)
-@RestrictTo(LIBRARY_GROUP)
+@RequiresApi(16)
 public annotation class Upsert(
 
     /**
