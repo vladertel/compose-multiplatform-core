@@ -80,6 +80,7 @@ import org.jetbrains.skia.paragraph.DecorationLineStyle as SkDecorationLineStyle
 import org.jetbrains.skia.paragraph.DecorationStyle as SkDecorationStyle
 import org.jetbrains.skia.paragraph.Shadow as SkShadow
 import org.jetbrains.skia.FontFeature
+import org.jetbrains.skia.paragraph.Direction
 
 private val DefaultFontSize = 16.sp
 
@@ -336,6 +337,7 @@ internal class SkiaParagraph(
             prevBox == null -> nextBox!!.cursorHorizontalPosition(true)
             nextBox == null -> prevBox.cursorHorizontalPosition()
             nextBox.direction == prevBox.direction -> nextBox.cursorHorizontalPosition(true)
+            text[offset - 1] == '\n' -> nextBox.cursorHorizontalPosition(prevBox.direction != nextBox.direction)
             // BiDi transition offset, we need to resolve ambiguity with usePrimaryDirection
             // for details see comment for MultiParagraph.getHorizontalPosition
             usePrimaryDirection -> prevBox.cursorHorizontalPosition()
@@ -452,13 +454,29 @@ internal class SkiaParagraph(
         // This will make cursor go on the next line (not a line that corresponds `position.y` coordinate).
         // TODO: consider fixing it in skiko
 
-        val lineMetrics = lineMetricsForOffset(glyphPosition) ?: return glyphPosition
-        val expectedLine = getLineForVerticalPosition(position.y)
-        return if (expectedLine == lineMetrics.lineNumber) {
+        val glyphLineMetrics = lineMetricsForOffset(glyphPosition) ?: return glyphPosition
+        val expectedLineNumber = getLineForVerticalPosition(position.y)
+
+        var correctedGlyphPosition = if (expectedLineNumber == glyphLineMetrics.lineNumber) {
             glyphPosition
         } else {
             glyphPosition - 1
         }
+
+        val actualLine = lineMetrics.first { it.lineNumber == expectedLineNumber }
+
+        if (position.x < actualLine.left) {
+            val res = para.getGlyphPositionAtCoordinate(actualLine.left.toFloat() + 1f, position.y).position
+            correctedGlyphPosition = res
+        } else if (position.x > actualLine.right) {
+            val res = para.getGlyphPositionAtCoordinate(actualLine.right.toFloat() - 1f, position.y).position
+            correctedGlyphPosition = res
+            if (getBoxBackwardByOffset(res)?.direction == Direction.RTL) {
+                correctedGlyphPosition = res - 1
+            }
+        }
+
+        return correctedGlyphPosition
     }
 
     override fun getBoundingBox(offset: Int): Rect {
