@@ -17,7 +17,6 @@
 package androidx.asynclayoutinflater.view;
 
 import android.content.Context;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -31,7 +30,6 @@ import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.util.Pools.SynchronizedPool;
 
 import java.util.concurrent.ArrayBlockingQueue;
@@ -69,52 +67,39 @@ import java.util.concurrent.Executor;
  */
 public final class AsyncLayoutInflater {
     private static final String TAG = "AsyncLayoutInflater";
-    private static final boolean IS_POST_LOLLIPOP = Build.VERSION.SDK_INT >= 21;
-    private static boolean sAppCompatPresent;
-    static {
-        try {
-            Class.forName("androidx.appcompat.app.AppCompatActivity");
-            sAppCompatPresent = true;
-        } catch (ClassNotFoundException ex) {
-            sAppCompatPresent = false;
-        }
-    }
-
     LayoutInflater mInflater;
-    LayoutInflater mInflaterDeprecated;
     Handler mHandler;
     InflateThread mInflateThread;
 
     public AsyncLayoutInflater(@NonNull Context context) {
-        mInflaterDeprecated = new BasicInflater(context);
         mInflater = new BasicInflater(context);
         mHandler = new Handler(Looper.myLooper(), mHandlerCallback);
         mInflateThread = InflateThread.getInstance();
-        if (sAppCompatPresent && context instanceof AppCompatActivity && IS_POST_LOLLIPOP) {
-            mInflater.setFactory2(new AppCompatFactory2());
-        }
+    }
+
+    public AsyncLayoutInflater(@NonNull Context context,
+            @NonNull AsyncLayoutFactory asyncLayoutFactory) {
+        mInflater = new BasicInflater(context);
+        mInflater.setFactory2(asyncLayoutFactory);
+        mHandler = new Handler(Looper.myLooper(), mHandlerCallback);
+        mInflateThread = InflateThread.getInstance();
     }
 
     /**
      * Triggers view inflation on background thread.
-     *
-     * @deprecated may initialize incorrect class for AppCompat library. Use
-     * {@link #inflateWithOriginalFactory} instead.
      */
     @UiThread
-    @Deprecated
     public void inflate(@LayoutRes int resid, @Nullable ViewGroup parent,
             @NonNull OnInflateFinishedListener callback) {
-        inflateInternal(resid, parent, callback, mInflaterDeprecated, /* callbackExecutor= */ null);
+        inflateInternal(resid, parent, callback, mInflater, /* callbackExecutor= */ null);
     }
 
     /**
-     * Triggers inflation on a background thread. It uses an underlying
-     * inflater with same {@link LayoutInflater.Factory2} as the inflater for
-     * {@link AppCompatActivity}.
+     * Triggers inflation on a background thread. It triggers the
+     * {@link OnInflateFinishedListener} on the given executor instead of the main thread.
      */
     @UiThread
-    public void inflateWithOriginalFactory(@LayoutRes int resid, @Nullable ViewGroup parent,
+    public void inflate(@LayoutRes int resid, @Nullable ViewGroup parent,
             @Nullable Executor callbackExecutor, @NonNull OnInflateFinishedListener callback) {
         inflateInternal(resid, parent, callback, mInflater, callbackExecutor);
     }

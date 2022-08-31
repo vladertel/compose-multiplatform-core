@@ -16,6 +16,11 @@
 
 package androidx.camera.integration.core;
 
+import static androidx.camera.core.ImageCapture.ERROR_CAMERA_CLOSED;
+import static androidx.camera.core.ImageCapture.ERROR_CAPTURE_FAILED;
+import static androidx.camera.core.ImageCapture.ERROR_FILE_IO;
+import static androidx.camera.core.ImageCapture.ERROR_INVALID_CAMERA;
+import static androidx.camera.core.ImageCapture.ERROR_UNKNOWN;
 import static androidx.camera.core.ImageCapture.FLASH_MODE_AUTO;
 import static androidx.camera.core.ImageCapture.FLASH_MODE_OFF;
 import static androidx.camera.core.ImageCapture.FLASH_MODE_ON;
@@ -160,7 +165,11 @@ public class CameraXActivity extends AppCompatActivity {
     // Possible values for this intent key: "switch_test_case", "preview_test_case" or
     // "default_test_case".
     private static final String INTENT_EXTRA_E2E_TEST_CASE = "e2e_test_case";
+    // Launch the activity with the specified video quality.
+    private static final String INTENT_EXTRA_VIDEO_QUALITY = "video_quality";
     public static final String INTENT_EXTRA_CAMERA_IMPLEMENTATION = "camera_implementation";
+    public static final String INTENT_EXTRA_CAMERA_IMPLEMENTATION_NO_HISTORY =
+            "camera_implementation_no_history";
     // Launch the activity with the specified camera id.
     @VisibleForTesting
     public static final String INTENT_EXTRA_CAMERA_ID = "camera_id";
@@ -314,6 +323,13 @@ public class CameraXActivity extends AppCompatActivity {
             new CountingIdlingResource("imagesaved");
     private final CountingIdlingResource mVideoSavedIdlingResource =
             new CountingIdlingResource("videosaved");
+
+    /**
+     * Saves the error message of the last take picture action if any error occurs. This will be
+     * null which means no error occurs.
+     */
+    @Nullable
+    private String mLastTakePictureErrorMessage = null;
 
     /**
      * Retrieve idling resource that waits for image received by analyzer).
@@ -702,6 +718,7 @@ public class CameraXActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View view) {
                         mImageSavedIdlingResource.increment();
+                        mLastTakePictureErrorMessage = null;
 
                         mStartCaptureTime = SystemClock.elapsedRealtime();
                         createDefaultPictureFolderIfNotExist();
@@ -743,10 +760,45 @@ public class CameraXActivity extends AppCompatActivity {
                                     @Override
                                     public void onError(@NonNull ImageCaptureException exception) {
                                         Log.e(TAG, "Failed to save image.", exception.getCause());
+
+                                        mLastTakePictureErrorMessage =
+                                                getImageCaptureErrorMessage(exception);
+                                        if (!mImageSavedIdlingResource.isIdleNow()) {
+                                            mImageSavedIdlingResource.decrement();
+                                        }
                                     }
                                 });
                     }
                 });
+    }
+
+    private String getImageCaptureErrorMessage(@NonNull ImageCaptureException exception) {
+        String errorCodeString;
+        int errorCode = exception.getImageCaptureError();
+
+        switch (errorCode) {
+            case ERROR_UNKNOWN:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_UNKNOWN";
+                break;
+            case ERROR_FILE_IO:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_FILE_IO";
+                break;
+            case ERROR_CAPTURE_FAILED:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_CAPTURE_FAILED";
+                break;
+            case ERROR_CAMERA_CLOSED:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_CAMERA_CLOSED";
+                break;
+            case ERROR_INVALID_CAMERA:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_INVALID_CAMERA";
+                break;
+            default:
+                errorCodeString = "ImageCaptureErrorCode: " + errorCode;
+                break;
+        }
+
+        return errorCodeString + ", Message: " + exception.getMessage() + ", Cause: "
+                + exception.getCause();
     }
 
     @SuppressWarnings("ObjectToString")
@@ -977,6 +1029,31 @@ public class CameraXActivity extends AppCompatActivity {
         mAnalysisToggle.setChecked((useCaseCombination & BIND_IMAGE_ANALYSIS) != 0L);
     }
 
+    private void updateVideoQualityByIntent(@NonNull Intent intent) {
+        Bundle bundle = intent.getExtras();
+        if (bundle == null) {
+            return;
+        }
+
+        Quality quality = itemIdToQuality(bundle.getInt(INTENT_EXTRA_VIDEO_QUALITY, 0));
+        if (quality == QUALITY_AUTO || !mVideoToggle.isChecked()) {
+            return;
+        }
+
+        if (mCameraProvider == null) {
+            throw new IllegalStateException("Need to obtain mCameraProvider first!");
+        }
+
+        // Check and set specific quality.
+        Camera targetCamera = mCameraProvider.bindToLifecycle(this, mCurrentCameraSelector);
+        List<Quality> supportedQualities =
+                QualitySelector.getSupportedQualities(targetCamera.getCameraInfo());
+        if (supportedQualities.contains(quality)) {
+            mVideoQuality = quality;
+            mRecordUi.getButtonQuality().setText(getQualityIconName(mVideoQuality));
+        }
+    }
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -1083,8 +1160,17 @@ public class CameraXActivity extends AppCompatActivity {
             }
 
             String cameraImplementation = bundle.getString(INTENT_EXTRA_CAMERA_IMPLEMENTATION);
+            Boolean cameraImplementationNoHistory =
+                    bundle.getBoolean(INTENT_EXTRA_CAMERA_IMPLEMENTATION_NO_HISTORY, false);
+            if (cameraImplementationNoHistory) {
+                Intent newIntent = new Intent(getIntent());
+                newIntent.removeExtra(INTENT_EXTRA_CAMERA_IMPLEMENTATION);
+                newIntent.removeExtra(INTENT_EXTRA_CAMERA_IMPLEMENTATION_NO_HISTORY);
+                setIntent(newIntent);
+            }
             if (cameraImplementation != null) {
-                CameraXViewModel.configureCameraProvider(cameraImplementation);
+                CameraXViewModel.configureCameraProvider(
+                        cameraImplementation, cameraImplementationNoHistory);
             }
 
             // Update the app UI according to the e2e test case.
@@ -1101,6 +1187,7 @@ public class CameraXActivity extends AppCompatActivity {
             mInitializationIdlingResource.decrement();
             if (cameraProviderResult.hasProvider()) {
                 mCameraProvider = cameraProviderResult.getProvider();
+                updateVideoQualityByIntent(getIntent());
                 tryBindUseCases();
             } else {
                 Log.e(TAG, "Failed to retrieve ProcessCameraProvider",
@@ -1173,7 +1260,6 @@ public class CameraXActivity extends AppCompatActivity {
                 mLaunchingCameraLensFacing = camera2CameraInfo.getCameraCharacteristic(
                         CameraCharacteristics.LENS_FACING);
             }
-
             List<UseCase> useCases = buildUseCases();
             mCamera = bindToLifecycleSafely(useCases);
 
@@ -1190,12 +1276,16 @@ public class CameraXActivity extends AppCompatActivity {
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
 
             // Restore toggle buttons to the previous state if the bind failed.
-            mPreviewToggle.setChecked(getPreview() != null);
-            mPhotoToggle.setChecked(getImageCapture() != null);
-            mAnalysisToggle.setChecked(getImageAnalysis() != null);
-            mVideoToggle.setChecked(getVideoCapture() != null);
+            if (mUseCases != null) {
+                mPreviewToggle.setChecked(getPreview() != null);
+                mPhotoToggle.setChecked(getImageCapture() != null);
+                mAnalysisToggle.setChecked(getImageAnalysis() != null);
+                mVideoToggle.setChecked(getVideoCapture() != null);
+            }
             // Reset video quality to avoid always fail by quality too large.
             mRecordUi.getButtonQuality().setText(getQualityIconName(mVideoQuality = QUALITY_AUTO));
+
+            reduceUseCaseToFindSupportedCombination();
 
             if (!calledBySelf) {
                 // Only call self if not already calling self to avoid an infinite loop.
@@ -1203,6 +1293,44 @@ public class CameraXActivity extends AppCompatActivity {
             }
         }
         updateButtonsUi();
+    }
+
+    /**
+     * Checks whether currently checked use cases combination can be supported or not.
+     */
+    private boolean isCheckedUseCasesCombinationSupported() {
+        return mCamera.isUseCasesCombinationSupported(buildUseCases().toArray(new UseCase[0]));
+    }
+
+    /**
+     * Unchecks use case to find a supported use cases combination.
+     *
+     * Only VideoCapture or ImageAnalysis will be tried to uncheck. If only Preview and
+     * ImageCapture are remained, the combination should always be supported.
+     */
+    private void reduceUseCaseToFindSupportedCombination() {
+        // Checks whether current combination can be supported
+        if (isCheckedUseCasesCombinationSupported()) {
+            return;
+        }
+
+        // Remove VideoCapture to check whether the new use cases combination can be supported.
+        if (mVideoToggle.isChecked()) {
+            mVideoToggle.setChecked(false);
+            if (isCheckedUseCasesCombinationSupported()) {
+                return;
+            }
+        }
+
+        // Remove ImageAnalysis to check whether the new use cases combination can be supported.
+        if (mAnalysisToggle.isChecked()) {
+            mAnalysisToggle.setChecked(false);
+            if (isCheckedUseCasesCombinationSupported()) {
+                return;
+            }
+        }
+
+        // Preview + ImageCapture should be always supported.
     }
 
     /**
@@ -1679,6 +1807,16 @@ public class CameraXActivity extends AppCompatActivity {
 
     ImageCapture getImageCapture() {
         return findUseCase(ImageCapture.class);
+    }
+
+    /**
+     * Returns the error message of the last take picture action if any error occurs. Returns
+     * null if no error occurs.
+     */
+    @VisibleForTesting
+    @Nullable
+    String getLastTakePictureErrorMessage() {
+        return mLastTakePictureErrorMessage;
     }
 
     @SuppressWarnings("unchecked")

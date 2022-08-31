@@ -28,6 +28,7 @@ class UpsertionMethodProcessor(
     val executableElement: XMethodElement
 ) {
     val context = baseContext.fork(executableElement)
+
     fun process(): UpsertionMethod {
         val delegate = ShortcutMethodProcessor(context, containing, executableElement)
 
@@ -77,12 +78,12 @@ class UpsertionMethodProcessor(
         )
 
         val methodBinder = delegate.findUpsertMethodBinder(returnType, params)
-        // TODO: (b/240491114) Uncomment code below for UpsertMethodAdapter is implemented
-        /*context.checker.check(
+
+        context.checker.check(
             methodBinder.adapter != null,
             executableElement,
             ProcessorErrors.CANNOT_FIND_UPSERT_RESULT_ADAPTER
-        )*/
+        )
 
         return UpsertionMethod(
             element = executableElement,

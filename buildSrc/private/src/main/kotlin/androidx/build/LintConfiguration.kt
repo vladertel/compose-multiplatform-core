@@ -16,7 +16,6 @@
 
 package androidx.build
 
-import androidx.build.dependencyTracker.AffectedModuleDetector
 import com.android.build.api.dsl.Lint
 import com.android.build.gradle.internal.lint.AndroidLintAnalysisTask
 import com.android.build.gradle.internal.lint.AndroidLintTask
@@ -24,6 +23,7 @@ import java.io.File
 import java.util.Locale
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.kotlin.dsl.getByType
@@ -55,18 +55,6 @@ fun Project.configureNonAndroidProjectForLint(extension: AndroidXExtension) {
 
     // Create fake variant tasks since that is what is invoked by developers.
     val lintTask = tasks.named("lint")
-    lintTask.configure { task ->
-        AffectedModuleDetector.configureTaskGuard(task)
-    }
-    afterEvaluate {
-        tasks.named("lintAnalyze").configure { task ->
-            AffectedModuleDetector.configureTaskGuard(task)
-        }
-        /* TODO: uncomment when we upgrade to AGP 7.1.0-alpha04
-        tasks.named("lintReport").configure { task ->
-            AffectedModuleDetector.configureTaskGuard(task)
-        }*/
-    }
     tasks.register("lintDebug") {
         it.dependsOn(lintTask)
         it.enabled = false
@@ -101,28 +89,6 @@ fun Project.configureAndroidProjectForLint(
     tasks.named("lint").configure { task ->
         // We already run lintDebug, we don't need to run lint which lints the release variant
         task.enabled = false
-    }
-    afterEvaluate {
-        for (variant in project.agpVariants) {
-            tasks.named(
-                "lint${variant.name.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString()
-                }}"
-            ).configure { task ->
-                AffectedModuleDetector.configureTaskGuard(task)
-            }
-            tasks.named(
-                "lintAnalyze${variant.name.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString()
-                }}"
-            ).configure { task ->
-                AffectedModuleDetector.configureTaskGuard(task)
-            }
-            /* TODO: uncomment when we upgrade to AGP 7.1.0-alpha04
-            tasks.named("lintReport${variant.name.capitalize(Locale.US)}").configure { task ->
-                AffectedModuleDetector.configureTaskGuard(task)
-            }*/
-        }
     }
 }
 
@@ -290,6 +256,11 @@ fun Project.configureLint(lint: Lint, extension: AndroidXExtension, isLibrary: B
         // Broken in 7.0.0-alpha15 due to b/187343720
         disable.add("UnusedResources")
 
+        // Disable NullAnnotationGroup check for :compose:ui:ui-text (b/233788571)
+        if (isLibrary && project.group == "androidx.compose.ui" && project.name == "ui-text") {
+            disable.add("NullAnnotationGroup")
+        }
+
         if (extension.type == LibraryType.SAMPLES) {
             // TODO: b/190833328 remove if / when AGP will analyze dependencies by default
             //  This is needed because SampledAnnotationDetector uses partial analysis, and
@@ -318,5 +289,5 @@ fun Project.configureLint(lint: Lint, extension: AndroidXExtension, isLibrary: B
     }
 }
 
-val Project.lintBaseline get() =
+val Project.lintBaseline: RegularFileProperty get() =
     project.objects.fileProperty().fileValue(File(projectDir, "/lint-baseline.xml"))

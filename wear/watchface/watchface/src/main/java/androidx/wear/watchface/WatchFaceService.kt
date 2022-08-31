@@ -16,7 +16,6 @@
 
 package androidx.wear.watchface
 
-import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -57,10 +56,10 @@ import androidx.wear.watchface.complications.SystemDataSources.DataSourceId
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationExperimental
 import androidx.wear.watchface.complications.data.ComplicationType
+import androidx.wear.watchface.complications.data.NoDataComplicationData
 import androidx.wear.watchface.complications.data.toApiComplicationData
 import androidx.wear.watchface.complications.data.toWireTypes
 import androidx.wear.watchface.control.HeadlessWatchFaceImpl
-import androidx.wear.watchface.control.IWatchfaceReadyListener
 import androidx.wear.watchface.control.InteractiveInstanceManager
 import androidx.wear.watchface.control.InteractiveWatchFaceImpl
 import androidx.wear.watchface.control.data.CrashInfoParcel
@@ -347,7 +346,7 @@ public abstract class WatchFaceService : WallpaperService() {
             task: (watchFaceImpl: WatchFaceImpl) -> R
         ): R? = TraceEvent(traceName).use {
             if (engine == null) {
-                Log.w(TAG, "Task $traceName posted after close(), ignoring.")
+                Log.w(TAG, "Task $traceName ignored due to null engine.")
                 return null
             }
             runBlocking {
@@ -359,7 +358,7 @@ public abstract class WatchFaceService : WallpaperService() {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e(HeadlessWatchFaceImpl.TAG, "Operation failed", e)
+                    Log.e(TAG, "Operation $traceName failed", e)
                     throw e
                 }
             }
@@ -371,7 +370,7 @@ public abstract class WatchFaceService : WallpaperService() {
             task: (watchFaceInitDetails: WatchFaceService.WatchFaceInitDetails) -> R
         ): R? = TraceEvent(traceName).use {
             if (engine == null) {
-                Log.w(TAG, "Task $traceName posted after close(), ignoring.")
+                Log.w(TAG, "Task $traceName ignored due to null engine.")
                 return null
             }
             runBlocking {
@@ -380,7 +379,7 @@ public abstract class WatchFaceService : WallpaperService() {
                         task(engine.watchFaceInitDetails.await())
                     }
                 } catch (e: Exception) {
-                    Log.e(HeadlessWatchFaceImpl.TAG, "Operation failed", e)
+                    Log.e(HeadlessWatchFaceImpl.TAG, "Operation $traceName failed", e)
                     throw e
                 }
             }
@@ -597,6 +596,9 @@ public abstract class WatchFaceService : WallpaperService() {
             Process.setThreadPriority(Process.myPid(), Process.THREAD_PRIORITY_DISPLAY)
         }
     }
+
+    /** Used for testing calls to invalidate. */
+    internal open fun onInvalidate() {}
 
     /**
      * Returns the lazily constructed background thread [Handler]. During initialization
@@ -966,14 +968,26 @@ public abstract class WatchFaceService : WallpaperService() {
         }
 
         @Suppress("DEPRECATION")
-        fun onComplicationSlotDataUpdate(extras: Bundle) {
+        fun onComplicationSlotDataUpdate(extras: Bundle) = TraceEvent(
+            "EngineWrapper.setComplicationSlotData"
+        ).use {
             extras.classLoader = WireComplicationData::class.java.classLoader
             val complicationData: WireComplicationData =
                 extras.getParcelable(Constants.EXTRA_COMPLICATION_DATA)!!
-            engineWrapper.setComplicationSlotData(
-                extras.getInt(Constants.EXTRA_COMPLICATION_ID),
-                complicationData.toApiComplicationData()
-            )
+
+            val complicationSlotId = extras.getInt(Constants.EXTRA_COMPLICATION_ID)
+            val data = complicationData.toApiComplicationData()
+            val watchFaceImpl = engineWrapper.getWatchFaceImplOrNull()
+            if (watchFaceImpl != null) {
+                watchFaceImpl.onComplicationSlotDataUpdate(complicationSlotId, data)
+                watchFaceImpl.complicationSlotsManager.onComplicationsUpdated()
+            } else {
+                // If the watch face hasn't loaded yet then we append
+                // pendingComplicationDataUpdates so it can be applied later.
+                pendingComplicationDataUpdates.add(
+                    PendingComplicationData(complicationSlotId, data)
+                )
+            }
         }
 
         fun onSetBinder(extras: Bundle) {
@@ -1137,6 +1151,7 @@ public abstract class WatchFaceService : WallpaperService() {
         internal lateinit var ambientUpdateWakelock: PowerManager.WakeLock
 
         private lateinit var choreographer: ChoreographerWrapper
+        internal var instance: InteractiveWatchFaceImpl? = null
 
         /**
          * Whether we already have a [frameCallback] posted and waiting in the [Choreographer]
@@ -1193,11 +1208,8 @@ public abstract class WatchFaceService : WallpaperService() {
 
         private var asyncWatchFaceConstructionPending = false
 
-        // Stores the initial ComplicationSlots which could get updated before they're applied.
-        private var pendingInitialComplications: List<IdAndComplicationDataWireFormat>? = null
-
         private var initialUserStyle: UserStyleWireFormat? = null
-        private lateinit var interactiveInstanceId: String
+        internal lateinit var interactiveInstanceId: String
 
         private var createdBy = "?"
 
@@ -1384,21 +1396,9 @@ public abstract class WatchFaceService : WallpaperService() {
             // list. NB we can't actually serialise complications anyway so that's just as well...
             params.idAndComplicationDataWireFormats = emptyList()
 
-            // Let wallpaper manager know the wallpaper has changed.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                NotifyColorsChangedHelper.notifyColorsChanged(this)
-            }
-
             backgroundThreadCoroutineScope.launch {
                 writeDirectBootPrefs(_context, DIRECT_BOOT_PREFS, params)
             }
-        }
-
-        /** This can be called on any thread. */
-        @UiThread
-        internal suspend fun addWatchfaceReadyListener(listener: IWatchfaceReadyListener) {
-            deferredWatchFaceImpl.await()
-            listener.onWatchfaceReady()
         }
 
         @UiThread
@@ -1417,56 +1417,45 @@ public abstract class WatchFaceService : WallpaperService() {
             }
         }
 
-        @SuppressLint("SyntheticAccessor")
-        internal fun setComplicationSlotData(
-            complicationSlotId: Int,
-            data: ComplicationData
-        ): Unit = TraceEvent("EngineWrapper.setComplicationSlotData").use {
-            val watchFaceImpl = getWatchFaceImplOrNull()
-            if (watchFaceImpl != null) {
-                watchFaceImpl.onComplicationSlotDataUpdate(complicationSlotId, data)
-                watchFaceImpl.complicationSlotsManager.onComplicationsUpdated()
-            } else {
-                // If the watch face hasn't loaded yet then we append
-                // pendingComplicationDataUpdates so it can be applied later.
-                wslFlow.pendingComplicationDataUpdates.add(
-                    WslFlow.PendingComplicationData(complicationSlotId, data)
-                )
-            }
-        }
-
         @UiThread
-        internal fun setComplicationDataList(
-            complicationDataWireFormats: List<IdAndComplicationDataWireFormat>
+        internal fun setComplications(
+            complications: Map<Int, WireComplicationData>
         ): Unit = TraceEvent("EngineWrapper.setComplicationDataList").use {
-            val watchFaceImpl = getWatchFaceImplOrNull()
-            if (watchFaceImpl != null) {
-                for (idAndComplicationData in complicationDataWireFormats) {
-                    watchFaceImpl.onComplicationSlotDataUpdate(
-                        idAndComplicationData.id,
-                        idAndComplicationData.complicationData.toApiComplicationData()
+            getWatchFaceImplOrNull()?.let {
+                for ((id, complicationData) in complications) {
+                    it.onComplicationSlotDataUpdate(
+                        id,
+                        complicationData.toApiComplicationData()
                     )
                 }
-                watchFaceImpl.complicationSlotsManager.onComplicationsUpdated()
-            } else {
-                // If the watchface hasn't been created yet, update pendingInitialComplications so
-                // it can be applied later.
-                pendingInitialComplications = complicationDataWireFormats
+                it.complicationSlotsManager.onComplicationsUpdated()
             }
         }
 
         @UiThread
-        internal suspend fun updateInstance(newInstanceId: String) {
-            val watchFaceImpl = deferredWatchFaceImpl.await()
-            // If the favorite ID has changed then the complications are probably invalid.
-            watchFaceImpl.complicationSlotsManager.clearComplicationData()
-
-            // However we may have valid complications cached.
-            readComplicationDataCache(_context, newInstanceId)?.let {
-                this.setComplicationDataList(it)
-            }
-
+        internal fun updateInstanceAndLoadCachedComplications(
+            newInstanceId: String
+        ): HashMap<Int, WireComplicationData> {
+            InteractiveInstanceManager.renameInstance(interactiveInstanceId, newInstanceId)
+            interactiveInstanceId = newInstanceId
             mutableWatchState.watchFaceInstanceId.value = sanitizeWatchFaceId(newInstanceId)
+
+            // Initial map of complication IDs to NoDataComplicationData.
+            val complications = HashMap<Int, WireComplicationData>()
+            getWatchFaceImplOrNull()?.let {
+                for (complication in it.complicationSlotsManager.complicationSlots) {
+                    complications[complication.key] =
+                        NoDataComplicationData().asWireComplicationData()
+                }
+            }
+            // Apply any cached data.
+            readComplicationDataCache(_context, newInstanceId)?.let {
+                for (complication in it) {
+                    complications[complication.id] = complication.complicationData
+                }
+            }
+            setComplications(complications)
+            return complications
         }
 
         override fun getContext(): Context = _context
@@ -1562,15 +1551,14 @@ public abstract class WatchFaceService : WallpaperService() {
                 mainThreadPriorityDelegate.setNormalPriority()
             }
 
+            instance?.detachEngine()
+
             destroyed = true
             backgroundThreadCoroutineScope.cancel()
             quitBackgroundThreadIfCreated()
             uiThreadHandler.removeCallbacks(invalidateRunnable)
             if (this::choreographer.isInitialized) {
                 choreographer.removeFrameCallback(frameCallback)
-            }
-            if (this::interactiveInstanceId.isInitialized) {
-                InteractiveInstanceManager.deleteInstance(interactiveInstanceId)
             }
             stopListeningForAccessibilityStateChanges()
 
@@ -1872,23 +1860,35 @@ public abstract class WatchFaceService : WallpaperService() {
             mutableWatchState.watchFaceInstanceId.value = sanitizeWatchFaceId(params.instanceId)
             val watchState = mutableWatchState.asWatchState()
 
-            // Store the initial complications, this could be modified by new data before being
-            // applied.
-            pendingInitialComplications = params.idAndComplicationDataWireFormats
-
-            if (pendingInitialComplications == null || pendingInitialComplications!!.isEmpty()) {
-                pendingInitialComplications = readComplicationDataCache(_context, params.instanceId)
-            }
-
             createWatchFaceInternal(
                 watchState,
                 getWallpaperSurfaceHolderOverride(),
                 _createdBy
             )
 
-            val instance = InteractiveWatchFaceImpl(this, params.instanceId)
-            InteractiveInstanceManager.addInstance(instance)
+            val instance = InteractiveInstanceManager.getOrCreateInstance(
+                params.instanceId,
+                // New scope because this needs to outlive EngineWrapper.
+                CoroutineScope(uiThreadHandler.asCoroutineDispatcher().immediate)
+            ) {
+                // Create a map of the initial complications on demand.
+                HashMap<Int, WireComplicationData>().apply {
+                    var initialComplications = params.idAndComplicationDataWireFormats
+                    if (initialComplications == null || initialComplications.isEmpty()) {
+                        initialComplications =
+                            readComplicationDataCache(_context, params.instanceId)
+                    }
+                    initialComplications?.let {
+                        for (complication in initialComplications) {
+                            this[complication.id] = complication.complicationData
+                        }
+                    }
+                }
+            }
+
+            instance.attachEngine(this)
             interactiveInstanceId = params.instanceId
+            this.instance = instance
             return instance
         }
 
@@ -2021,16 +2021,6 @@ public abstract class WatchFaceService : WallpaperService() {
             initStyleAndComplicationsDone: CompletableDeferred<Unit>,
             watchState: WatchState
         ) {
-            pendingInitialComplications?.let {
-                for (idAndData in it) {
-                    complicationSlotsManager.onComplicationDataUpdate(
-                        idAndData.id,
-                        idAndData.complicationData.toApiComplicationData(),
-                        Instant.EPOCH // The value here doesn't matter, will be corrected when drawn
-                    )
-                }
-            }
-
             val broadcastsObserver = BroadcastsObserver(
                 watchState,
                 this,
@@ -2088,6 +2078,8 @@ public abstract class WatchFaceService : WallpaperService() {
                     pendingUserStyle = null
                 }
                 deferredWatchFaceImpl.complete(watchFaceImpl)
+                instance?.onWatchFaceReady()
+
                 asyncWatchFaceConstructionPending = false
                 watchFaceImpl.initComplete = true
 
@@ -2157,6 +2149,7 @@ public abstract class WatchFaceService : WallpaperService() {
                     override fun onInvalidate() {
                         // This could be called on any thread.
                         uiThreadHandler.runOnHandlerWithTracing("onInvalidate") {
+                            this@WatchFaceService.onInvalidate()
                             if (initFinished) {
                                 getWatchFaceImplOrNull()?.invalidateIfNotAnimating()
                             }
@@ -2267,6 +2260,19 @@ public abstract class WatchFaceService : WallpaperService() {
             // as an ambient tick.
             if (mutableWatchState.isAmbient.value == true && !systemHasSentWatchUiState) {
                 ambientTickUpdate()
+            }
+        }
+
+        override fun sendPreviewImageNeedsUpdateRequest() {
+            instance!!.sendPreviewImageNeedsUpdateRequest()
+        }
+
+        override fun onWatchFaceColorsChanged(watchFaceColors: WatchFaceColors?) {
+            val instance = this.instance
+            if (instance != null) {
+                instance.onWatchFaceColorsChanged(watchFaceColors)
+            } else {
+                Log.w(TAG, "onWatchFaceColorsChanged ignored due to null instance")
             }
         }
 
@@ -2491,6 +2497,9 @@ public abstract class WatchFaceService : WallpaperService() {
 
             writer.println("frameCallbackPending=$frameCallbackPending")
             writer.println("destroyed=$destroyed")
+            writer.println("surfaceDestroyed=$surfaceDestroyed")
+
+            instance?.dump(writer)
 
             if (!destroyed) {
                 getWatchFaceImplOrNull()?.dump(writer)
@@ -2524,13 +2533,6 @@ public abstract class WatchFaceService : WallpaperService() {
         @Px
         fun extractFromWindowInsets(insets: WindowInsets?) =
             insets?.getInsets(WindowInsets.Type.systemBars())?.bottom ?: 0
-    }
-
-    @RequiresApi(27)
-    private object NotifyColorsChangedHelper {
-        fun notifyColorsChanged(engine: Engine) {
-            engine.notifyColorsChanged()
-        }
     }
 }
 

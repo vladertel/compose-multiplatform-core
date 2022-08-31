@@ -633,8 +633,7 @@ class EGLManagerTest {
             }
         }
     }
-
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.KITKAT)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Test
     fun testEglDupNativeFenceFDANDROIDawaitForever() {
         testEGLManager {

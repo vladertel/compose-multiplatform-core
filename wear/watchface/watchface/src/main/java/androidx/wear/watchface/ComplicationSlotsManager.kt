@@ -21,6 +21,7 @@ import android.app.PendingIntent.CanceledException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.annotation.Px
 import androidx.annotation.RestrictTo
 import androidx.annotation.UiThread
@@ -30,14 +31,12 @@ import androidx.annotation.WorkerThread
 import androidx.wear.watchface.complications.ComplicationSlotBounds
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationType
-import androidx.wear.watchface.complications.data.NoDataComplicationData
 import androidx.wear.watchface.utility.TraceEvent
 import androidx.wear.watchface.control.data.IdTypeAndDefaultProviderPolicyWireFormat
 import androidx.wear.watchface.style.CurrentUserStyleRepository
 import androidx.wear.watchface.style.UserStyleSetting.ComplicationSlotsUserStyleSetting
 import androidx.wear.watchface.style.UserStyleSetting.ComplicationSlotsUserStyleSetting.ComplicationSlotsOption
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -60,6 +59,10 @@ public class ComplicationSlotsManager(
     complicationSlotCollection: Collection<ComplicationSlot>,
     private val currentUserStyleRepository: CurrentUserStyleRepository
 ) {
+    internal companion object {
+        internal const val TAG = "ComplicationSlotsManager"
+    }
+
     /**
      * Interface used to report user taps on the [ComplicationSlot]. See [addTapListener] and
      * [removeTapListener].
@@ -99,7 +102,9 @@ public class ComplicationSlotsManager(
     private class InitialComplicationConfig(
         val complicationSlotBounds: ComplicationSlotBounds,
         val enabled: Boolean,
-        val accessibilityTraversalIndex: Int
+        val accessibilityTraversalIndex: Int,
+        val nameResourceId: Int?,
+        val screenReaderNameResourceId: Int?
     )
 
     // Copy of the original complication configs. This is necessary because the semantics of
@@ -112,7 +117,9 @@ public class ComplicationSlotsManager(
                 InitialComplicationConfig(
                     it.complicationSlotBounds,
                     it.enabled,
-                    it.accessibilityTraversalIndex
+                    it.accessibilityTraversalIndex,
+                    it.nameResourceId,
+                    it.screenReaderNameResourceId
                 )
             }
         )
@@ -206,6 +213,9 @@ public class ComplicationSlotsManager(
                 override?.enabled ?: initialConfig.enabled
             complication.accessibilityTraversalIndex =
                 override?.accessibilityTraversalIndex ?: initialConfig.accessibilityTraversalIndex
+            complication.nameResourceId = override?.nameResourceId ?: initialConfig.nameResourceId
+            complication.screenReaderNameResourceId =
+                override?.screenReaderNameResourceId ?: initialConfig.screenReaderNameResourceId
         }
         onComplicationsUpdated()
     }
@@ -235,7 +245,9 @@ public class ComplicationSlotsManager(
 
                 labelsDirty =
                     labelsDirty || complication.dataDirty || complication.complicationBoundsDirty ||
-                        complication.accessibilityTraversalIndexDirty
+                        complication.accessibilityTraversalIndexDirty ||
+                        complication.nameResourceIdDirty ||
+                        complication.screenReaderNameResourceIdDirty
 
                 if (complication.defaultDataSourcePolicyDirty ||
                     complication.defaultDataSourceTypeDirty
@@ -255,6 +267,8 @@ public class ComplicationSlotsManager(
                 complication.defaultDataSourcePolicyDirty = false
                 complication.defaultDataSourceTypeDirty = false
                 complication.accessibilityTraversalIndexDirty = false
+                complication.nameResourceIdDirty = false
+                complication.screenReaderNameResourceIdDirty = false
             }
 
             complication.enabledDirty = false
@@ -283,7 +297,15 @@ public class ComplicationSlotsManager(
         data: ComplicationData,
         instant: Instant
     ) {
-        val complication = complicationSlots[complicationSlotId] ?: return
+        val complication = complicationSlots[complicationSlotId]
+        if (complication == null) {
+            Log.e(
+                TAG,
+                "onComplicationDataUpdate failed due to invalid complicationSlotId=" +
+                    "$complicationSlotId with data=$data"
+            )
+            return
+        }
         complication.dataDirty = complication.dataDirty ||
             (complication.renderer.getData() != data)
         complication.setComplicationData(data, true, instant)
@@ -298,15 +320,16 @@ public class ComplicationSlotsManager(
         data: ComplicationData,
         instant: Instant
     ) {
-        val complication = complicationSlots[complicationSlotId] ?: return
-        complication.setComplicationData(data, false, instant)
-    }
-
-    @UiThread
-    internal fun clearComplicationData() {
-        for ((_, complication) in complicationSlots) {
-            complication.setComplicationData(NoDataComplicationData(), false, Instant.EPOCH)
+        val complication = complicationSlots[complicationSlotId]
+        if (complication == null) {
+            Log.e(
+                TAG,
+                "setComplicationDataUpdateSync failed due to invalid complicationSlotId=" +
+                    "$complicationSlotId with data=$data"
+            )
+            return
         }
+        complication.setComplicationData(data, false, instant)
     }
 
     /**

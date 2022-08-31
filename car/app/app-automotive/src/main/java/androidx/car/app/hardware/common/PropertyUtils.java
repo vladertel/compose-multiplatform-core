@@ -25,7 +25,6 @@ import static androidx.car.app.hardware.common.CarUnit.US_GALLON;
 import static java.util.Objects.requireNonNull;
 
 import android.car.Car;
-import android.car.VehicleAreaSeat;
 import android.car.VehicleAreaType;
 import android.car.VehiclePropertyIds;
 import android.car.hardware.CarPropertyValue;
@@ -46,6 +45,7 @@ import com.google.common.collect.ImmutableBiMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +76,10 @@ public final class PropertyUtils {
     // System level permission in car-lib to access car specific communication channel.
     private static final String CAR_PERMISSION_VENDOR_EXTENSION =
             "android.car.permission.CAR_VENDOR_EXTENSION";
+
+    // System level permission in car-lib to access car climate.
+    private static final String CAR_PERMISSION_CLIMATE_CONTROL =
+            "android.car.permission.CONTROL_CAR_CLIMATE";
 
     // Index key is property id, value is the permission to read property.
     private static final SparseArray<String> PERMISSION_READ_PROPERTY = new SparseArray<String>() {
@@ -112,6 +116,21 @@ public final class PropertyUtils {
             append(VehiclePropertyIds.PARKING_BRAKE_ON, Car.PERMISSION_POWERTRAIN);
             append(VehiclePropertyIds.PARKING_BRAKE_AUTO_APPLY, Car.PERMISSION_POWERTRAIN);
             append(VehiclePropertyIds.FUEL_VOLUME_DISPLAY_UNITS, Car.PERMISSION_READ_DISPLAY_UNITS);
+            append(VehiclePropertyIds.HVAC_POWER_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_AC_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_MAX_AC_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_TEMPERATURE_SET, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_FAN_SPEED, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_FAN_DIRECTION, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_SEAT_TEMPERATURE, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_SEAT_VENTILATION, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_STEERING_WHEEL_HEAT, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_RECIRC_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_AUTO_RECIRC_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_AUTO_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_DUAL_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_DEFROSTER, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_MAX_DEFROST_ON, CAR_PERMISSION_CLIMATE_CONTROL);
         }
     };
 
@@ -120,33 +139,33 @@ public final class PropertyUtils {
             new ImmutableBiMap.Builder<CarZone, Integer>()
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_FIRST)
                                     .setColumn(CarZone.CAR_ZONE_COLUMN_LEFT).build(),
-                            VehicleAreaSeat.SEAT_ROW_1_LEFT)
+                            CarZoneAreaIdConstants.VehicleAreaSeat.ROW_1_LEFT)
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_FIRST)
                                     .setColumn(CarZone.CAR_ZONE_COLUMN_CENTER).build(),
-                            VehicleAreaSeat.SEAT_ROW_1_CENTER)
+                            CarZoneAreaIdConstants.VehicleAreaSeat.ROW_1_CENTER)
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_FIRST)
                                     .setColumn(CarZone.CAR_ZONE_COLUMN_RIGHT).build(),
-                            VehicleAreaSeat.SEAT_ROW_1_RIGHT)
+                            CarZoneAreaIdConstants.VehicleAreaSeat.ROW_1_RIGHT)
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_SECOND)
                                     .setColumn(CarZone.CAR_ZONE_COLUMN_LEFT).build(),
-                            VehicleAreaSeat.SEAT_ROW_2_LEFT)
+                            CarZoneAreaIdConstants.VehicleAreaSeat.ROW_2_LEFT)
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_SECOND)
                                     .setColumn(CarZone.CAR_ZONE_COLUMN_CENTER).build(),
-                            VehicleAreaSeat.SEAT_ROW_2_CENTER)
+                            CarZoneAreaIdConstants.VehicleAreaSeat.ROW_2_CENTER)
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_SECOND)
                                     .setColumn(CarZone.CAR_ZONE_COLUMN_RIGHT).build(),
-                            VehicleAreaSeat.SEAT_ROW_2_RIGHT)
+                            CarZoneAreaIdConstants.VehicleAreaSeat.ROW_2_RIGHT)
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_THIRD)
                                     .setColumn(CarZone.CAR_ZONE_COLUMN_LEFT).build(),
-                            VehicleAreaSeat.SEAT_ROW_3_LEFT)
+                            CarZoneAreaIdConstants.VehicleAreaSeat.ROW_3_LEFT)
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_THIRD)
                                     .setColumn(CarZone.CAR_ZONE_COLUMN_CENTER).build(),
-                            VehicleAreaSeat.SEAT_ROW_3_CENTER)
+                            CarZoneAreaIdConstants.VehicleAreaSeat.ROW_3_CENTER)
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_THIRD)
                                     .setColumn(CarZone.CAR_ZONE_COLUMN_RIGHT).build(),
-                            VehicleAreaSeat.SEAT_ROW_3_RIGHT)
+                            CarZoneAreaIdConstants.VehicleAreaSeat.ROW_3_RIGHT)
                     .put(new CarZone.Builder().setRow(CarZone.CAR_ZONE_ROW_ALL)
-                                    .setColumn(CarZone.CAR_ZONE_COLUMN_ALL).build(), 0)
+                            .setColumn(CarZone.CAR_ZONE_COLUMN_ALL).build(), 0)
                     .buildOrThrow();
 
     // Permissions for writing properties. They are system level permissions.
@@ -157,6 +176,21 @@ public final class PropertyUtils {
             append(VehiclePropertyIds.RANGE_REMAINING, CAR_PERMISSION_ADJUST_RANGE_REMAINING);
             append(VehiclePropertyIds.FUEL_VOLUME_DISPLAY_UNITS,
                     Car.PERMISSION_CONTROL_DISPLAY_UNITS + CAR_PERMISSION_VENDOR_EXTENSION);
+            append(VehiclePropertyIds.HVAC_POWER_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_AC_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_MAX_AC_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_TEMPERATURE_SET, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_FAN_SPEED, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_FAN_DIRECTION, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_SEAT_TEMPERATURE, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_SEAT_VENTILATION, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_STEERING_WHEEL_HEAT, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_RECIRC_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_AUTO_RECIRC_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_AUTO_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_DUAL_ON, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_DEFROSTER, CAR_PERMISSION_CLIMATE_CONTROL);
+            append(VehiclePropertyIds.HVAC_MAX_DEFROST_ON, CAR_PERMISSION_CLIMATE_CONTROL);
         }
     };
     private static final Set<Integer> ON_CHANGE_PROPERTIES =
@@ -418,6 +452,43 @@ public final class PropertyUtils {
                     + "their corresponding car zones.");
         }
         return propertyIdWithAreaIds;
+    }
+
+    /** Returns a map of min/max values in Integer corresponding to a set of car zones.
+     *
+     * <p> The method is a utility to convert Pair<?, ?> to Pair<Integer, Integer>.
+     */
+    @NonNull
+    public static Map<Set<CarZone>, Pair<Integer, Integer>> getMinMaxProfileIntegerMap(
+            @NonNull Map<Set<CarZone>, ? extends Pair<?, ?>> minMaxRange) {
+        Map<Set<CarZone>, Pair<Integer, Integer>>
+                carZoneSetsToIntegerValues = new HashMap<>();
+        for (Map.Entry<Set<CarZone>, ? extends Pair<?, ?>> entry : requireNonNull(minMaxRange
+                        .entrySet())) {
+            carZoneSetsToIntegerValues.put(entry.getKey(),
+                    new Pair<>((Integer) entry.getValue().first,
+                            (Integer) entry.getValue().second));
+        }
+        return carZoneSetsToIntegerValues;
+    }
+
+    /** Returns a map of min/max values in Float corresponding to a set of car zones.
+     *
+     * <p> The method is a utility to convert Pair<?, ?> to Pair<Float, Float>.
+     */
+    @NonNull
+    public static Map<Set<CarZone>, Pair<Float, Float>> getMinMaxProfileFloatMap(
+            @NonNull Map<Set<CarZone>, ? extends Pair<?, ?>> minMaxRange) {
+        Map<Set<CarZone>, Pair<Float, Float>>
+                carZoneSetsToFloatValues = new HashMap<>();
+        for (Map.Entry<Set<CarZone>, ? extends Pair<?, ?>> entry : requireNonNull(minMaxRange
+                .entrySet())) {
+            int min = (Integer) entry.getValue().first;
+            int max = (Integer) entry.getValue().second;
+            carZoneSetsToFloatValues.put(entry.getKey(),
+                    new Pair<>((float) min, (float) max));
+        }
+        return carZoneSetsToFloatValues;
     }
 
     private PropertyUtils() {

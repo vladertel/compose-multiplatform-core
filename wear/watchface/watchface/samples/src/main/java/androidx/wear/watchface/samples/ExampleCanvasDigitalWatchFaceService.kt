@@ -37,6 +37,7 @@ import android.view.SurfaceHolder
 import android.view.animation.AnimationUtils
 import android.view.animation.PathInterpolator
 import androidx.annotation.ColorInt
+import androidx.annotation.RequiresApi
 import androidx.wear.watchface.complications.ComplicationSlotBounds
 import androidx.wear.watchface.complications.DefaultComplicationDataSourcePolicy
 import androidx.wear.watchface.complications.SystemDataSources
@@ -48,6 +49,7 @@ import androidx.wear.watchface.ComplicationSlotsManager
 import androidx.wear.watchface.DrawMode
 import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchFace
+import androidx.wear.watchface.WatchFaceColors
 import androidx.wear.watchface.WatchFaceService
 import androidx.wear.watchface.WatchFaceType
 import androidx.wear.watchface.WatchState
@@ -685,6 +687,7 @@ class ExampleCanvasDigitalWatchFaceService : WatchFaceService() {
 }
 
 @Suppress("Deprecation")
+@RequiresApi(27)
 class ExampleDigitalWatchCanvasRenderer(
     surfaceHolder: SurfaceHolder,
     private val context: Context,
@@ -811,6 +814,12 @@ class ExampleDigitalWatchCanvasRenderer(
                         context,
                         userStyle[colorStyleSetting]!!.toString()
                     )
+
+                watchfaceColors = WatchFaceColors(
+                    Color.valueOf(watchFaceColorStyle.activeStyle.primaryColor),
+                    Color.valueOf(watchFaceColorStyle.activeStyle.secondaryColor),
+                    Color.valueOf(Color.DKGRAY)
+                )
 
                 // Apply the userStyle to the complicationSlots. ComplicationDrawables for each
                 // of the styles are defined in XML so we need to replace the complication's

@@ -132,11 +132,35 @@ public class RowTest {
     }
 
     @Test
-    public void setDecoration() {
-        CarIcon decoration = TestUtils.getTestCarIcon(ApplicationProvider.getApplicationContext(),
-                "ic_test_1");
-        Row row = new Row.Builder().setTitle("Title").setDecoration(decoration).build();
-        assertThat(decoration).isEqualTo(row.getDecoration());
+    public void setDecoration_positiveValue() {
+        int decoration = 5;
+        Row row = new Row.Builder().setTitle("Title").setNumericDecoration(decoration).build();
+        assertThat(decoration).isEqualTo(row.getNumericDecoration());
+    }
+
+    @Test
+    public void setDecoration_zero() {
+        int decoration = 0;
+        Row row = new Row.Builder().setTitle("Title").setNumericDecoration(decoration).build();
+        assertThat(decoration).isEqualTo(row.getNumericDecoration());
+    }
+
+    @Test
+    public void setDecoration_noDecoration() {
+        int decoration = Row.NO_DECORATION;
+        Row row = new Row.Builder().setTitle("Title").setNumericDecoration(decoration).build();
+        assertThat(decoration).isEqualTo(row.getNumericDecoration());
+    }
+
+    @Test
+    public void setDecoration_negative_throws() {
+        int decoration = -123;
+        Row.Builder rowBuilder =
+                new Row.Builder().setTitle("Title");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> rowBuilder.setNumericDecoration(decoration)
+        );
     }
 
     @Test
