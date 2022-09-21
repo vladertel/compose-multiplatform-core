@@ -480,7 +480,7 @@ internal class SkiaParagraph(
         if (position.x > expectedLine.left && position.x < expectedLine.right) {
             return glyphPosition
         }
-        
+
         val rects = if (isNotEmptyLine) {
             // expectedLine width doesn't include whitespaces. Therefore we look at the Rectangle representing the line
             para.getRectsForRange(
@@ -496,12 +496,16 @@ internal class SkiaParagraph(
         val leftX = rects?.firstOrNull()?.rect?.left ?: expectedLine.left.toFloat()
         val rightX = rects?.lastOrNull()?.rect?.right ?: expectedLine.right.toFloat()
 
-        if (leftX == rightX) {
+        // Skia might've returned the glyphPosition that belongs to a different line :|
+        val lineMatch = glyphPosition >= expectedLine.startIndex && glyphPosition <= expectedLine.endIndex
+
+        if (leftX == rightX && lineMatch) {
             return glyphPosition
         }
 
         var correctedGlyphPosition = glyphPosition
 
+        // Here we re-request the glyphPosition by the leftmost/rightmost rect in the line
         if (position.x <= leftX) { // when clicked to the left of a text line
             correctedGlyphPosition = para.getGlyphPositionAtCoordinate(leftX + 1f, position.y).position
         } else if (position.x >= rightX) { // when clicked to the right of a text line
