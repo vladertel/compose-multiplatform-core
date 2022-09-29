@@ -14,14 +14,21 @@
  * limitations under the License.
  */
 
-package androidx.sample
+package androidx;
 
-import org.jetbrains.annotations.NotNull
-import org.jetbrains.annotations.Nullable
+import android.app.Notification;
 
-@Suppress("unused", "UNUSED_PARAMETER")
-class NullabilityAnnotationsKotlin {
-    private fun method1(@NotNull arg: String) {}
+import androidx.annotation.RequiresApi;
 
-    private fun method2(@Nullable arg: String?) {}
+/**
+ * Class containing an unsafe constructor reference that uses a qualified type.
+ */
+public class AutofixUnsafeConstructorQualifiedClass {
+    /**
+     * In the generated fix, the constructor call should not be `new DecoratedCustomViewStyle()`.
+     */
+    @RequiresApi(24)
+    public Notification.DecoratedCustomViewStyle callQualifiedConstructor() {
+        return new Notification.DecoratedCustomViewStyle();
+    }
 }

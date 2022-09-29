@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,20 @@
 
 package androidx;
 
+import android.os.Build;
+import android.view.DisplayCutout;
+
 /**
- * Java usage of inline suppression.
+ * Test class containing unsafe reference on cast object.
  */
 @SuppressWarnings("unused")
-public class IdeaSuppressionJava {
-
+public class AutofixUnsafeCallOnCast {
     /**
-     * Call to a deprecated method with an inline suppression.
+     * Method making unsafe reference on cast object.
      */
-    public void callDeprecatedMethod() {
-        //noinspection deprecation
-        deprecatedMethod();
-
-        notDeprecatedMethod();
+    public void unsafeReferenceOnCastObject(Object secretDisplayCutout) {
+        if (Build.VERSION.SDK_INT >= 28) {
+            ((DisplayCutout) secretDisplayCutout).getSafeInsetTop();
+        }
     }
-
-    /**
-     * This method is deprecated.
-     *
-     * @deprecated Replaced with {@link #notDeprecatedMethod()}
-     */
-    @Deprecated
-    public void deprecatedMethod() {}
-
-    /**
-     * This method is not deprecated.
-     */
-    public void notDeprecatedMethod() {}
-
 }
