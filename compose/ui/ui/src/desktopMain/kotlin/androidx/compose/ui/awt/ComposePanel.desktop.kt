@@ -177,8 +177,9 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
                 override fun focusLost(e: FocusEvent) = Unit
             })
         }
-        initContent()
         super.add(layer!!.component, Integer.valueOf(1))
+        layer!!.onAttachToWindow()
+        initContent()
     }
 
     override fun removeNotify() {

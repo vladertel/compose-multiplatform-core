@@ -107,7 +107,10 @@ internal class ComposeWindowDelegate(
             override fun getDefaultComponent(aContainer: Container?) = null
         }
         pane.isFocusCycleRoot = true
-        setContent {}
+    }
+
+    fun onAttachToWindow() {
+        layer.onAttachToWindow()
     }
 
     fun add(component: Component): Component {

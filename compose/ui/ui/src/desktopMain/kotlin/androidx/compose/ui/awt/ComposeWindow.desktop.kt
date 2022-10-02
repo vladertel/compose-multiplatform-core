@@ -62,6 +62,7 @@ class ComposeWindow @ExperimentalComposeUiApi constructor(
 
     init {
         contentPane.add(delegate.pane)
+        delegate.onAttachToWindow()
     }
 
     override fun add(component: Component) = delegate.add(component)

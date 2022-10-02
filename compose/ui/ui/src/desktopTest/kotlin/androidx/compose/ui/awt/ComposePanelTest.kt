@@ -15,12 +15,15 @@
  */
 package androidx.compose.ui.awt
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.density
@@ -128,6 +131,69 @@ class ComposePanelTest {
                 frame.dispose()
             }
         }
+    }
+
+    @Test
+    fun `content should be empty without calling setContent`() = runApplicationTest {
+        val composePanel = ComposePanel()
+        val frame = JFrame()
+        try {
+            frame.contentPane.add(composePanel)
+            frame.isUndecorated = true
+            frame.isVisible = true
+            awaitIdle()
+            assertThat(composePanel.preferredSize).isEqualTo(Dimension(0, 0))
+        } finally {
+            frame.dispose()
+        }
+    }
+
+    @Test
+    fun `there should be only one composition at start`() = runApplicationTest(useDelay = true) {
+        var compositionCount = 0
+
+        val composePanel = ComposePanel()
+        composePanel.setContent {
+            compositionCount++
+            Box(Modifier.requiredSize(200.dp).background(Color.Blue))
+        }
+
+        val frame = JFrame()
+        try {
+            frame.contentPane.add(composePanel)
+            frame.size = Dimension(300, 400)
+            frame.isVisible = true
+            awaitIdle()
+        } finally {
+            frame.dispose()
+        }
+
+        assertThat(compositionCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `first composition should have density of the default display`() = runApplicationTest() {
+        val defaultDevice = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.first()
+        val defaultDensity = defaultDevice.defaultConfiguration.defaultTransform.scaleX.toFloat()
+
+        var density: Float? = null
+
+        val composePanel = ComposePanel()
+        composePanel.setContent {
+            density = LocalDensity.current.density
+        }
+
+        val frame = JFrame()
+        try {
+            frame.contentPane.add(composePanel)
+            frame.size = Dimension(300, 400)
+            frame.isVisible = true
+            awaitIdle()
+        } finally {
+            frame.dispose()
+        }
+
+        assertThat(density).isEqualTo(defaultDensity)
     }
 
     @OptIn(ExperimentalSkikoApi::class, ExperimentalComposeUiApi::class)

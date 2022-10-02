@@ -201,31 +201,34 @@ internal class ComposeLayer(
         }
     }
 
+    fun onAttachToWindow() {
+        _component.onAttachToWindow()
+        setContent { }
+    }
+
     private inner class ComponentImpl :
         SkiaLayer(externalAccessibleFactory = ::makeAccessible, analytics = skiaLayerAnalytics), Accessible, PlatformComponent {
         var currentInputMethodRequests: InputMethodRequests? = null
 
-        private var window: Window? = null
+        var window: Window? = null
         private var windowListener = object : WindowFocusListener {
             override fun windowGainedFocus(e: WindowEvent) = refreshWindowFocus()
             override fun windowLostFocus(e: WindowEvent) = refreshWindowFocus()
         }
 
-        override fun addNotify() {
-            super.addNotify()
+        fun onAttachToWindow() {
             resetDensity()
-            initContent()
             updateSceneSize()
             window = SwingUtilities.getWindowAncestor(this)
             window?.addWindowFocusListener(windowListener)
             refreshWindowFocus()
         }
 
-        override fun removeNotify() {
+        override fun dispose() {
             window?.removeWindowFocusListener(windowListener)
             window = null
             refreshWindowFocus()
-            super.removeNotify()
+            super.dispose()
         }
 
         override fun paint(g: Graphics) {
@@ -406,7 +409,6 @@ internal class ComposeLayer(
         check(!isDisposed)
         scene.close()
         _component.dispose()
-        _initContent = null
         isDisposed = true
     }
 
@@ -417,27 +419,15 @@ internal class ComposeLayer(
         onKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
         content: @Composable () -> Unit
     ) {
-        // If we call it before attaching, everything probably will be fine,
-        // but the first composition will be useless, as we set density=1
-        // (we don't know the real density if we have unattached component)
-        _initContent = {
-            catchExceptions {
-                scene.setContent(
-                    onPreviewKeyEvent = onPreviewKeyEvent,
-                    onKeyEvent = onKeyEvent,
-                    content = content
-                )
-            }
+        checkNotNull(_component.window) {
+            "setContent should be called only after adding layer.component to the window"
         }
-        initContent()
-    }
-
-    private var _initContent: (() -> Unit)? = null
-
-    private fun initContent() {
-        if (_component.isDisplayable) {
-            _initContent?.invoke()
-            _initContent = null
+        catchExceptions {
+            scene.setContent(
+                onPreviewKeyEvent = onPreviewKeyEvent,
+                onKeyEvent = onKeyEvent,
+                content = content
+            )
         }
     }
 }

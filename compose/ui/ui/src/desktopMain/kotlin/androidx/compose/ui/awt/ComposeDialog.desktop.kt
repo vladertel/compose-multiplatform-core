@@ -71,6 +71,7 @@ class ComposeDialog : JDialog {
 
     init {
         contentPane.add(delegate.pane)
+        delegate.onAttachToWindow()
     }
 
     override fun add(component: Component) = delegate.add(component)
