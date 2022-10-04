@@ -22,6 +22,8 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCapture.OnImageCapturedCallback
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.imagecapture.Utils.JPEG_QUALITY
+import androidx.camera.core.imagecapture.Utils.ROTATION_DEGREES
 import androidx.camera.core.impl.CameraCaptureCallback
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor
 import java.util.concurrent.Executor
@@ -90,11 +92,15 @@ class FakeTakePictureRequest() : TakePictureRequest() {
     }
 
     internal override fun getRotationDegrees(): Int {
-        return 0
+        return ROTATION_DEGREES
     }
 
     internal override fun getJpegQuality(): Int {
-        return 100
+        return JPEG_QUALITY
+    }
+
+    internal override fun getCaptureMode(): Int {
+        return ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY
     }
 
     override fun getSessionConfigCameraCaptureCallbacks(): MutableList<CameraCaptureCallback> {

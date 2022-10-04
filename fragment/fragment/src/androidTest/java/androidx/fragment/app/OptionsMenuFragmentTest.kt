@@ -16,6 +16,7 @@
 
 package androidx.fragment.app
 
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
@@ -32,8 +33,10 @@ import androidx.test.espresso.assertion.ViewAssertions
 import androidx.test.espresso.matcher.ViewMatchers
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
+import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import androidx.testutils.withActivity
+import androidx.testutils.withUse
 import com.google.common.truth.Truth.assertWithMessage
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -41,6 +44,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.O) // Previous SDK levels have issues passing
+// null menu that causes leak canary to crash to we don't want to run on those devices
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 class OptionsMenuFragmentTest {
@@ -67,7 +72,7 @@ class OptionsMenuFragmentTest {
     @LargeTest
     @Test
     fun setMenuVisibilityShowHide() {
-        with(ActivityScenario.launch(SimpleContainerActivity::class.java)) {
+       withUse(ActivityScenario.launch(SimpleContainerActivity::class.java)) {
             val fm = withActivity { supportFragmentManager }
 
             val fragment = MenuFragment()

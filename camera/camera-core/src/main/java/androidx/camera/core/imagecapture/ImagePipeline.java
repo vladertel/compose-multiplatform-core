@@ -18,6 +18,7 @@ package androidx.camera.core.imagecapture;
 
 import static androidx.camera.core.CaptureBundles.singleDefaultCaptureBundle;
 import static androidx.camera.core.impl.utils.Threads.checkMainThread;
+import static androidx.camera.core.impl.utils.TransformUtils.hasCropping;
 
 import static java.util.Objects.requireNonNull;
 
@@ -30,6 +31,7 @@ import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
+import androidx.camera.core.ForwardingImageProxy;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.impl.CaptureBundle;
 import androidx.camera.core.impl.CaptureConfig;
@@ -37,6 +39,7 @@ import androidx.camera.core.impl.CaptureStage;
 import androidx.camera.core.impl.ImageCaptureConfig;
 import androidx.camera.core.impl.SessionConfig;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
+import androidx.camera.core.internal.compat.workaround.ExifRotationAvailability;
 import androidx.core.util.Pair;
 
 import java.util.ArrayList;
@@ -51,6 +54,11 @@ import java.util.List;
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class ImagePipeline {
 
+    static final byte JPEG_QUALITY_MAX_QUALITY = 100;
+    static final byte JPEG_QUALITY_MIN_LATENCY = 95;
+
+    static final ExifRotationAvailability EXIF_ROTATION_AVAILABILITY =
+            new ExifRotationAvailability();
     // Use case configs.
     @NonNull
     private final ImageCaptureConfig mUseCaseConfig;
@@ -63,7 +71,7 @@ public class ImagePipeline {
     @NonNull
     private final SingleBundlingNode mBundlingNode;
     @NonNull
-    private ProcessingNode mProcessingNode;
+    private final ProcessingNode mProcessingNode;
     @NonNull
     private final CaptureNode.In mPipelineIn;
 
@@ -97,7 +105,6 @@ public class ImagePipeline {
     public SessionConfig.Builder createSessionConfigBuilder() {
         SessionConfig.Builder builder = SessionConfig.Builder.createFrom(mUseCaseConfig);
         builder.addNonRepeatingSurface(mPipelineIn.getSurface());
-        // TODO(b/242536140): enable ZSL.
         return builder;
     }
 
@@ -113,6 +120,26 @@ public class ImagePipeline {
         mCaptureNode.release();
         mBundlingNode.release();
         mProcessingNode.release();
+    }
+
+    /**
+     * Returns the number of empty slots in the queue.
+     */
+    @MainThread
+    public int getCapacity() {
+        checkMainThread();
+        return mCaptureNode.getCapacity();
+    }
+
+    /**
+     * Sets a listener for close calls on this image.
+     * @param listener to set
+     */
+    @MainThread
+    public void setOnImageCloseListener(
+            @NonNull ForwardingImageProxy.OnImageCloseListener listener) {
+        checkMainThread();
+        mCaptureNode.setOnImageCloseListener(listener);
     }
 
     // ===== protected methods =====
@@ -188,11 +215,14 @@ public class ImagePipeline {
             builder.addSurface(mPipelineIn.getSurface());
 
             // Only sets the JPEG rotation and quality for JPEG format. Some devices do not
-            // handle these configs for non-JPEG images.See b/204375890.
+            // handle these configs for non-JPEG images. See b/204375890.
             if (mPipelineIn.getFormat() == ImageFormat.JPEG) {
-                // TODO(b/242536202): handle ExifRotationAvailability
+                if (EXIF_ROTATION_AVAILABILITY.isRotationOptionSupported()) {
+                    builder.addImplementationOption(CaptureConfig.OPTION_ROTATION,
+                            takePictureRequest.getRotationDegrees());
+                }
                 builder.addImplementationOption(CaptureConfig.OPTION_JPEG_QUALITY,
-                        takePictureRequest.getJpegQuality());
+                        getCameraRequestJpegQuality(takePictureRequest));
             }
 
             // Add the implementation options required by the CaptureStage
@@ -206,6 +236,32 @@ public class ImagePipeline {
         }
 
         return new CameraRequest(captureConfigs, takePictureCallback);
+    }
+
+    /**
+     * Returns the JPEG quality for camera request.
+     *
+     * <p>If there is JPEG encoding in post-processing, use max quality for the camera request to
+     * minimize quality loss.
+     *
+     * <p>However this results in poor performance during cropping than setting 95 (b/206348741).
+     */
+    int getCameraRequestJpegQuality(@NonNull TakePictureRequest request) {
+        boolean isOnDisk = request.getOnDiskCallback() != null;
+        boolean hasCropping = hasCropping(request.getCropRect(), mPipelineIn.getSize());
+        if (isOnDisk && hasCropping) {
+            // For saving to disk, the image is decoded to Bitmap, cropped and encoded to JPEG
+            // again. In that case, use a high JPEG quality for the hardware compression to avoid
+            // quality loss.
+            if (request.getCaptureMode() == ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY) {
+                // The trade-off of using a high quality is poorer performance. So we only do
+                // that if the capture mode is CAPTURE_MODE_MAXIMIZE_QUALITY.
+                return JPEG_QUALITY_MAX_QUALITY;
+            } else {
+                return JPEG_QUALITY_MIN_LATENCY;
+            }
+        }
+        return request.getJpegQuality();
     }
 
     @NonNull

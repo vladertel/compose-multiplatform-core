@@ -152,7 +152,9 @@ class TemplateImageButton(
  * as an ordering, some may only use it to define which elements are most important when showing
  * smaller layouts. Priority number is zero based with smaller numbers being higher priority.
  * If two blocks has the same priority number, the default order (e.g. text before image)
- * is used. Currently only [TextBlock] and [ImageBlock] comparison are supported in the design.
+ * is used. Currently only [TextBlock] and [ImageBlock] comparison are supported in the design. For
+ * example, the Gallery Template layout determines the ordering of mainTextBlock and mainImageBlock
+ * in [GalleryTemplateData] by their corresponding priority number.
  *
  * @param text1 The text displayed first within the block.
  * @param text2 The text displayed second within the block.
@@ -191,7 +193,7 @@ class TextBlock(
 
 /**
  * A block of image sequence by certain size and aspect ratio preferences and display priority
- * relative to other blocks such as a [TextBlock].
+ * relative to other blocks such as a [TextBlock]. Priority is the same as defined in [TextBlock].
  *
  * @param images The sequence of images or just one image for display. Default to empty list.
  * @param aspectRatio The preferred aspect ratio of the images. Default to [AspectRatio.Ratio1x1].
@@ -262,17 +264,14 @@ class ActionBlock(
  *
  * @param text The header text.
  * @param icon The header image icon.
- * @param actionBlock The header action buttons.
  */
 class HeaderBlock(
     val text: TemplateText,
     val icon: TemplateImageWithDescription? = null,
-    val actionBlock: ActionBlock? = null,
 ) {
     override fun hashCode(): Int {
         var result = text.hashCode()
         result = 31 * result + (icon?.hashCode() ?: 0)
-        result = 31 * result + (actionBlock?.hashCode() ?: 0)
         return result
     }
 
@@ -284,7 +283,6 @@ class HeaderBlock(
 
         if (text != other.text) return false
         if (icon != other.icon) return false
-        if (actionBlock != other.actionBlock) return false
 
         return true
     }

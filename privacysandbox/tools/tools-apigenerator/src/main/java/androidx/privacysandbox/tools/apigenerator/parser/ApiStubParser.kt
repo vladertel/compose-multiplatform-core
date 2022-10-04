@@ -17,12 +17,15 @@
 package androidx.privacysandbox.tools.apigenerator.parser
 
 import androidx.privacysandbox.tools.PrivacySandboxService
-import androidx.privacysandbox.tools.core.AnnotatedInterface
-import androidx.privacysandbox.tools.core.Method
-import androidx.privacysandbox.tools.core.Parameter
-import androidx.privacysandbox.tools.core.ParsedApi
-import androidx.privacysandbox.tools.core.Type
-import java.io.File
+import androidx.privacysandbox.tools.core.model.AnnotatedInterface
+import androidx.privacysandbox.tools.core.model.Method
+import androidx.privacysandbox.tools.core.model.Parameter
+import androidx.privacysandbox.tools.core.model.ParsedApi
+import androidx.privacysandbox.tools.core.model.Type
+import java.nio.file.Path
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import kotlinx.metadata.ClassName
 import kotlinx.metadata.Flag
 import kotlinx.metadata.KmClass
 import kotlinx.metadata.KmClassifier
@@ -43,21 +46,33 @@ internal object ApiStubParser {
     /**
      * Parses the API annotated by a Privacy Sandbox SDK from its compiled classes.
      *
-     * @param stubClassPath Set of compiled SDK classes. It's expected that at least one of those
-     *      files should be a valid Kotlin interface annotated with @PrivacySandboxService.
+     * @param sdkInterfaceDescriptors Path to SDK interface descriptors. This should be a jar
+     *      file with a set of compiled SDK classes and at least one of them should be a valid
+     *      Kotlin interface annotated with @PrivacySandboxService.
      */
-    internal fun parse(stubClassPath: Set<File>): ParsedApi {
-        val services = stubClassPath.asSequence()
-            .filter { it.extension == "class" }
-            .map { it.inputStream().use { inputStream -> toClassNode(inputStream.readBytes()) } }
-            .filter { it.visibleAnnotationsWithType<PrivacySandboxService>().isNotEmpty() }
-            .map(this::parseClass)
+    internal fun parse(sdkInterfaceDescriptors: Path): ParsedApi {
+        val services = unzipClasses(sdkInterfaceDescriptors)
+            .filter { it.isPrivacySandboxService }
+            .map(::parseClass)
             .toSet()
         if (services.isEmpty()) throw IllegalArgumentException(
             "Unable to find valid interfaces annotated with @PrivacySandboxService."
         )
         return ParsedApi(services)
     }
+
+    private fun unzipClasses(stubClassPath: Path): List<ClassNode> =
+        ZipInputStream(stubClassPath.toFile().inputStream()).use { zipInputStream ->
+            buildList {
+                var zipEntry: ZipEntry? = zipInputStream.nextEntry
+                while (zipEntry != null) {
+                    if (zipEntry.name.endsWith(".class")) {
+                        add(toClassNode(zipInputStream.readBytes()))
+                    }
+                    zipEntry = zipInputStream.nextEntry
+                }
+            }
+        }
 
     private fun toClassNode(classContents: ByteArray): ClassNode {
         val reader = ClassReader(classContents)
@@ -68,30 +83,24 @@ internal object ApiStubParser {
 
     private fun parseClass(classNode: ClassNode): AnnotatedInterface {
         val kotlinMetadata = parseKotlinMetadata(classNode)
-
-        // Package names are separated with slashes and nested classes are separated with dots.
-        // (e.g com/example/OuterClass.InnerClass).
-        val (packageName, className) = kotlinMetadata.name.split('/').run {
-            dropLast(1).joinToString(separator = ".") to last()
-        }
+        val type = kotlinMetadata.name.parsedType()
 
         if (!Flag.Class.IS_INTERFACE(kotlinMetadata.flags)) {
             throw IllegalArgumentException(
-                "$packageName.$className is not a Kotlin interface but it's annotated with " +
+                "${type.qualifiedName} is not a Kotlin interface but it's annotated with " +
                     "@PrivacySandboxService."
             )
         }
 
-        if (className.contains('.')) {
+        if (type.simpleName.contains('.')) {
             throw IllegalArgumentException(
-                "$packageName.$className is an inner interface so it can't be annotated with " +
+                "${type.qualifiedName} is an inner interface so it can't be annotated with " +
                     "@PrivacySandboxService."
             )
         }
 
         return AnnotatedInterface(
-            className,
-            packageName,
+            type = type,
             kotlinMetadata.functions.map(this::parseMethod),
         )
     }
@@ -131,12 +140,13 @@ internal object ApiStubParser {
             function.name,
             function.valueParameters.map { Parameter(it.name, parseType(it.type)) },
             parseType(function.returnType),
+            Flag.Function.IS_SUSPEND(function.flags)
         )
     }
 
     private fun parseType(type: KmType): Type {
         return when (val classifier = type.classifier) {
-            is KmClassifier.Class -> Type(classifier.name.replace('/', '.'))
+            is KmClassifier.Class -> classifier.name.parsedType()
             else -> throw IllegalArgumentException(
                 "Unsupported type in API description: $type"
             )
@@ -144,14 +154,27 @@ internal object ApiStubParser {
     }
 }
 
-inline fun <reified T> ClassNode.visibleAnnotationsWithType(): List<AnnotationNode> {
+internal val ClassNode.isPrivacySandboxService: Boolean get() {
+    return visibleAnnotationsWithType<PrivacySandboxService>().isNotEmpty()
+}
+
+internal inline fun <reified T> ClassNode.visibleAnnotationsWithType(): List<AnnotationNode> {
     return (visibleAnnotations ?: listOf<AnnotationNode>())
         .filter { getDescriptor(T::class.java) == it?.desc }
         .filterNotNull()
 }
 
+internal fun ClassName.parsedType(): Type {
+    // Package names are separated with slashes and nested classes are separated with dots.
+    // (e.g com/example/OuterClass.InnerClass).
+    val (packageName, className) = split('/').run {
+        dropLast(1).joinToString(separator = ".") to last()
+    }
+    return Type(packageName, className)
+}
+
 /** Map of annotation attributes. This is a convenience wrapper around [AnnotationNode.values]. */
-val AnnotationNode.attributeMap: Map<String, Any>
+internal val AnnotationNode.attributeMap: Map<String, Any>
     get() {
         values ?: return mapOf()
         val attributes = mutableMapOf<String, Any>()

@@ -60,8 +60,6 @@ class ApiValidator(private val logger: KSPLogger, private val resolver: Resolver
             )
         }
         if (interfaceDeclaration.typeParameters.isNotEmpty()) {
-            interfaceDeclaration.typeParameters.map { it.simpleName.getShortName() }.sorted()
-                .joinToString(limit = 3)
             logger.error("Error in $name: annotated interfaces cannot declare type parameters (${
                 interfaceDeclaration.typeParameters.map { it.simpleName.getShortName() }.sorted()
                     .joinToString(limit = 3)
@@ -86,9 +84,6 @@ class ApiValidator(private val logger: KSPLogger, private val resolver: Resolver
                     invalidModifiers.map { it.name.lowercase() }.sorted().joinToString(limit = 3)
                 })."
             )
-        }
-        if (!method.modifiers.contains(Modifier.SUSPEND)) {
-            logger.error("Error in $name: method should be a suspend function.")
         }
     }
 

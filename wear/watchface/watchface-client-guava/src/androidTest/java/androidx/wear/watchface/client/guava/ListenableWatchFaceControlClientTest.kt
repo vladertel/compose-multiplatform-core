@@ -34,7 +34,6 @@ import androidx.wear.watchface.WatchFaceType
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.client.DeviceConfig
 import androidx.wear.watchface.client.ListenableWatchFaceControlClient
-import androidx.wear.watchface.client.WatchFaceControlClient
 import androidx.wear.watchface.client.WatchUiState
 import androidx.wear.watchface.samples.ExampleCanvasAnalogWatchFaceService
 import androidx.wear.watchface.style.CurrentUserStyleRepository
@@ -73,6 +72,7 @@ public class ListenableWatchFaceControlClientTest {
     }
 
     @Test
+    @Suppress("Deprecation") // userStyleSettings
     public fun headlessSchemaSettingIds() {
         val client = ListenableWatchFaceControlClient.createWatchFaceControlClient(
             context,
@@ -130,6 +130,7 @@ public class ListenableWatchFaceControlClientTest {
     }
 
     @Test
+    @Suppress("Deprecation") // userStyleSettings
     public fun listenableGetOrCreateWallpaperServiceBackedInteractiveWatchFaceWcsClient() {
         val client = ListenableWatchFaceControlClient.createWatchFaceControlClient(
             context,
@@ -383,11 +384,7 @@ public class ListenableWatchFaceControlClientTest {
                 null,
                 null,
                 { runnable -> runnable.run() },
-                object : WatchFaceControlClient.PreviewImageUpdateRequestedListener {
-                    override fun onPreviewImageUpdateRequested(instanceId: String) {
-                        lastPreviewImageUpdateRequestedId = instanceId
-                    }
-                }
+                { lastPreviewImageUpdateRequestedId = it }
             )
 
         val service = TestWatchFaceServiceWithPreviewImageUpdateRequest(context, surfaceHolder)

@@ -25,6 +25,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.testutils.withActivity
+import androidx.testutils.withUse
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Test
@@ -40,44 +41,45 @@ class ComponentActivitySavedStateTest {
     }
 
     private fun ActivityScenario<SavedStateActivity>.initializeSavedState() = withActivity {
-        assertThat(lifecycle.currentState.isAtLeast(Lifecycle.State.CREATED)).isTrue()
+        val isLifecycleCreated = lifecycle.currentState.isAtLeast(Lifecycle.State.CREATED)
         val registry = savedStateRegistry
         val savedState = registry.consumeRestoredStateForKey(CALLBACK_KEY)
-        assertThat(savedState).isNull()
+        val savedStateIsNull = savedState == null
         registry.registerSavedStateProvider(CALLBACK_KEY, DefaultProvider())
+        isLifecycleCreated && savedStateIsNull
     }
 
     @Test
     @Throws(Throwable::class)
     fun savedState() {
-        with(ActivityScenario.launch(SavedStateActivity::class.java)) {
-            initializeSavedState()
+       withUse(ActivityScenario.launch(SavedStateActivity::class.java)) {
+            assertThat(initializeSavedState()).isTrue()
             recreate()
             moveToState(Lifecycle.State.CREATED)
-            withActivity {
-                assertThat(lifecycle.currentState.isAtLeast(Lifecycle.State.CREATED)).isTrue()
-                checkDefaultSavedState(savedStateRegistry)
-            }
+            val lifecycle = withActivity { lifecycle }
+            assertThat(lifecycle.currentState.isAtLeast(Lifecycle.State.CREATED)).isTrue()
+
+            val registry = withActivity { savedStateRegistry }
+            assertThat(hasDefaultSavedState(registry)).isTrue()
         }
     }
 
     @Test
     @Throws(Throwable::class)
     fun savedStateLateInit() {
-        with(ActivityScenario.launch(SavedStateActivity::class.java)) {
-            initializeSavedState()
+       withUse(ActivityScenario.launch(SavedStateActivity::class.java)) {
+            assertThat(initializeSavedState()).isTrue()
             recreate()
-            withActivity {
-                checkDefaultSavedState(savedStateRegistry)
-            }
+            val registry = withActivity { savedStateRegistry }
+            assertThat(hasDefaultSavedState(registry)).isTrue()
         }
     }
 
     @Test
     @Throws(Throwable::class)
     fun savedStateEarlyRegisterOnCreate() {
-        with(ActivityScenario.launch(SavedStateActivity::class.java)) {
-            initializeSavedState()
+       withUse(ActivityScenario.launch(SavedStateActivity::class.java)) {
+            assertThat(initializeSavedState()).isTrue()
             SavedStateActivity.checkEnabledInOnCreate = true
             recreate()
         }
@@ -86,8 +88,8 @@ class ComponentActivitySavedStateTest {
     @Test
     @Throws(Throwable::class)
     fun savedStateEarlyRegisterOnContextAvailable() {
-        with(ActivityScenario.launch(SavedStateActivity::class.java)) {
-            initializeSavedState()
+       withUse(ActivityScenario.launch(SavedStateActivity::class.java)) {
+            assertThat(initializeSavedState()).isTrue()
             SavedStateActivity.checkEnabledInOnContextAvailable = true
             recreate()
         }
@@ -96,8 +98,8 @@ class ComponentActivitySavedStateTest {
     @Test
     @Throws(Throwable::class)
     fun savedStateEarlyRegisterInitAddedLifecycleObserver() {
-        with(ActivityScenario.launch(SavedStateActivity::class.java)) {
-            initializeSavedState()
+       withUse(ActivityScenario.launch(SavedStateActivity::class.java)) {
+            assertThat(initializeSavedState()).isTrue()
             SavedStateActivity.checkEnabledInInitAddedLifecycleObserver = true
             recreate()
         }
@@ -112,26 +114,24 @@ private const val KEY = "key"
 private const val VALUE = "value"
 private const val CALLBACK_KEY = "foo"
 
-private fun checkDefaultSavedState(store: SavedStateRegistry) {
+private fun hasDefaultSavedState(store: SavedStateRegistry): Boolean {
     val savedState = store.consumeRestoredStateForKey(CALLBACK_KEY)
-    assertThat(savedState).isNotNull()
-    assertThat(savedState!!.getString(KEY)).isEqualTo(VALUE)
+    return savedState?.getString(KEY) == VALUE
 }
 
 class SavedStateActivity : ComponentActivity() {
 
     init {
         addOnContextAvailableListener {
-            if (checkEnabledInOnContextAvailable) {
-                checkDefaultSavedState(savedStateRegistry)
+            if (checkEnabledInOnContextAvailable && hasDefaultSavedState(savedStateRegistry)) {
                 checkEnabledInOnContextAvailable = false
             }
         }
         lifecycle.addObserver(object : LifecycleEventObserver {
             override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
                 if (event == Lifecycle.Event.ON_CREATE &&
-                    checkEnabledInInitAddedLifecycleObserver) {
-                    checkDefaultSavedState(savedStateRegistry)
+                    checkEnabledInInitAddedLifecycleObserver &&
+                    hasDefaultSavedState(savedStateRegistry)) {
                     checkEnabledInInitAddedLifecycleObserver = false
                     lifecycle.removeObserver(this)
                 }
@@ -141,8 +141,7 @@ class SavedStateActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (checkEnabledInOnCreate) {
-            checkDefaultSavedState(savedStateRegistry)
+        if (checkEnabledInOnCreate && hasDefaultSavedState(savedStateRegistry)) {
             checkEnabledInOnCreate = false
         }
     }

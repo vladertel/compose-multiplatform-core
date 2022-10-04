@@ -694,6 +694,9 @@ package androidx.compose.foundation.lazy.layout {
   public final class LazyLayoutPrefetcher_androidKt {
   }
 
+  public final class LazyLayoutSemanticsKt {
+  }
+
   public final class LazyNearestItemsRangeKt {
   }
 
@@ -729,6 +732,9 @@ package androidx.compose.foundation.lazy.staggeredgrid {
   }
 
   public final class LazyStaggeredGridMeasureResultKt {
+  }
+
+  public final class LazyStaggeredGridSemanticsKt {
   }
 
   public final class LazyStaggeredGridStateKt {
@@ -903,6 +909,9 @@ package androidx.compose.foundation.text {
   public final class CoreTextKt {
   }
 
+  public final class HeightInLinesModifierKt {
+  }
+
   @androidx.compose.runtime.Immutable public final class InlineTextContent {
     ctor public InlineTextContent(androidx.compose.ui.text.Placeholder placeholder, kotlin.jvm.functions.Function1<? super java.lang.String,kotlin.Unit> children);
     method public kotlin.jvm.functions.Function1<java.lang.String,kotlin.Unit> getChildren();
@@ -974,9 +983,6 @@ package androidx.compose.foundation.text {
   }
 
   public final class LongPressTextDragObserverKt {
-  }
-
-  public final class MaxLinesHeightModifierKt {
   }
 
   public final class StringHelpersKt {

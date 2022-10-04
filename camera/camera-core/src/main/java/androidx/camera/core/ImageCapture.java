@@ -44,6 +44,9 @@ import static androidx.camera.core.impl.ImageInputConfig.OPTION_INPUT_FORMAT;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_CAMERA_SELECTOR;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_ZSL_DISABLED;
 import static androidx.camera.core.impl.utils.Threads.checkMainThread;
+import static androidx.camera.core.impl.utils.TransformUtils.is90or270;
+import static androidx.camera.core.internal.utils.ImageUtil.computeCropRectFromAspectRatio;
+import static androidx.camera.core.internal.utils.ImageUtil.isAspectRatioValid;
 import static androidx.core.util.Preconditions.checkNotNull;
 import static androidx.core.util.Preconditions.checkState;
 
@@ -74,6 +77,7 @@ import androidx.annotation.IntRange;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
@@ -274,6 +278,8 @@ public final class ImageCapture extends UseCase {
     private static final int DEFAULT_CAPTURE_MODE = CAPTURE_MODE_MINIMIZE_LATENCY;
     @FlashMode
     private static final int DEFAULT_FLASH_MODE = FLASH_MODE_OFF;
+
+    boolean mUseProcessingPipeline = false;
 
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
     static final ExifRotationAvailability EXIF_ROTATION_AVAILABILITY =
@@ -1483,8 +1489,11 @@ public final class ImageCapture extends UseCase {
         @Override
         public void onImageClose(@NonNull ImageProxy image) {
             synchronized (mLock) {
+                // TODO: mLock can be removed if all methods and callbacks in
+                //  ImageCaptureRequestProcessor are used in the main thread.
+                //  Side note: TakePictureManager already handles the requests in the main thread.
                 mOutstandingImages--;
-                processNextRequest();
+                CameraXExecutors.mainThreadExecutor().execute(this::processNextRequest);
             }
         }
 
@@ -1546,7 +1555,7 @@ public final class ImageCapture extends UseCase {
                             processNextRequest();
                         }
                     }
-                }, CameraXExecutors.directExecutor());
+                }, CameraXExecutors.mainThreadExecutor());
             }
         }
 
@@ -1878,7 +1887,41 @@ public final class ImageCapture extends UseCase {
     @MainThread
     private boolean isNodeEnabled() {
         checkMainThread();
-        return false;
+        ImageCaptureConfig config = (ImageCaptureConfig) getCurrentConfig();
+        if (config.getImageReaderProxyProvider() != null) {
+            // Use old pipeline for custom ImageReader.
+            return false;
+        }
+        if (isSessionProcessorEnabledInCurrentCamera()) {
+            // Use old pipeline for advanced Extensions.
+            return false;
+        }
+        if (mCaptureProcessor != null) {
+            // Use old pipeline for basic Extensions.
+            return false;
+        }
+        if (getCaptureStageSize(config) > 1) {
+            // Use old pipeline for multiple stages capture.
+            return false;
+        }
+        if (requireNonNull(config.retrieveOption(OPTION_INPUT_FORMAT, ImageFormat.JPEG))
+                != ImageFormat.JPEG) {
+            // Use old pipeline for non-JPEG output format.
+            return false;
+        }
+        return mUseProcessingPipeline;
+    }
+
+    private int getCaptureStageSize(@NonNull ImageCaptureConfig config) {
+        CaptureBundle captureBundle = config.getCaptureBundle(null);
+        if (captureBundle == null) {
+            return 1;
+        }
+        List<CaptureStage> captureStages = captureBundle.getCaptureStages();
+        if (captureStages == null) {
+            return 1;
+        }
+        return captureStages.size();
     }
 
     /**
@@ -1886,6 +1929,7 @@ public final class ImageCapture extends UseCase {
      *
      * <p> This is the new {@link #createPipeline}.
      */
+    @OptIn(markerClass = ExperimentalZeroShutterLag.class)
     @MainThread
     private SessionConfig.Builder createPipelineWithNode(@NonNull String cameraId,
             @NonNull ImageCaptureConfig config, @NonNull Size resolution) {
@@ -1898,6 +1942,9 @@ public final class ImageCapture extends UseCase {
         mTakePictureManager = new TakePictureManager(mImageCaptureControl, mImagePipeline);
 
         SessionConfig.Builder sessionConfigBuilder = mImagePipeline.createSessionConfigBuilder();
+        if (Build.VERSION.SDK_INT >= 23 && getCaptureMode() == CAPTURE_MODE_ZERO_SHUTTER_LAG) {
+            getCameraControl().addZslConfig(sessionConfigBuilder);
+        }
         sessionConfigBuilder.addErrorListener((sessionConfig, error) -> {
             // TODO(b/143915543): Ensure this never gets called by a camera that is not attached
             //  to this use case so we don't need to do this check.
@@ -1925,16 +1972,57 @@ public final class ImageCapture extends UseCase {
             @Nullable OutputFileOptions outputFileOptions) {
         checkMainThread();
         Log.d(TAG, "takePictureWithNode");
+        CameraInternal camera = getCamera();
+        if (camera == null) {
+            sendInvalidCameraError(executor, inMemoryCallback, onDiskCallback);
+            return;
+        }
         mTakePictureManager.offerRequest(TakePictureRequest.of(
                 executor,
                 inMemoryCallback,
                 onDiskCallback,
                 outputFileOptions,
-                requireNonNull(getViewPortCropRect()),
+                getTakePictureCropRect(),
                 getSensorToBufferTransformMatrix(),
-                getRelativeRotation(requireNonNull(getCamera())),
+                getRelativeRotation(camera),
                 getJpegQualityInternal(),
+                getCaptureMode(),
                 mSessionConfigBuilder.getSingleCameraCaptureCallbacks()));
+    }
+
+    private void sendInvalidCameraError(@NonNull Executor executor,
+            @Nullable OnImageCapturedCallback inMemoryCallback,
+            @Nullable ImageCapture.OnImageSavedCallback onDiskCallback) {
+        ImageCaptureException exception = new ImageCaptureException(ERROR_INVALID_CAMERA,
+                "Not bound to a valid Camera [" + ImageCapture.this + "]", null);
+        if (inMemoryCallback != null) {
+            inMemoryCallback.onError(exception);
+        } else if (onDiskCallback != null) {
+            onDiskCallback.onError(exception);
+        } else {
+            throw new IllegalArgumentException("Must have either in-memory or on-disk callback.");
+        }
+    }
+
+    /**
+     * Calculates a snapshot of crop rect when app calls {@link #takePicture}.
+     */
+    @NonNull
+    private Rect getTakePictureCropRect() {
+        Rect rect = getViewPortCropRect();
+        Size resolution = requireNonNull(getAttachedSurfaceResolution());
+        if (rect != null) {
+            return rect;
+        } else if (isAspectRatioValid(mCropAspectRatio)) {
+            int rotationDegrees = getRelativeRotation(requireNonNull(getCamera()));
+            Rational rotatedAspectRatio = new Rational(
+                    /* numerator= */ mCropAspectRatio.getDenominator(),
+                    /* denominator= */ mCropAspectRatio.getNumerator());
+            Rational sensorCropRatio = is90or270(rotationDegrees)
+                    ? rotatedAspectRatio : mCropAspectRatio;
+            return requireNonNull(computeCropRectFromAspectRatio(resolution, sensorCropRatio));
+        }
+        return new Rect(0, 0, resolution.getWidth(), resolution.getHeight());
     }
 
     /**
@@ -1949,7 +2037,7 @@ public final class ImageCapture extends UseCase {
         checkMainThread();
         mImagePipeline.close();
         mImagePipeline = null;
-        mTakePictureManager.cancelUnsentRequests();
+        mTakePictureManager.abortRequests();
         mTakePictureManager = null;
     }
 
@@ -1963,6 +2051,11 @@ public final class ImageCapture extends UseCase {
         return Futures.transform(getCameraControl().submitStillCaptureRequests(
                         captureConfigs, mCaptureMode, mFlashType),
                 input -> null, CameraXExecutors.directExecutor());
+    }
+
+    @VisibleForTesting
+    boolean isProcessingPipelineEnabled() {
+        return mImagePipeline != null && mTakePictureManager != null;
     }
 
     // ===== New architecture end =====
@@ -2155,28 +2248,48 @@ public final class ImageCapture extends UseCase {
             mMetadata = metadata == null ? new Metadata() : metadata;
         }
 
+        /**
+         * @hide
+         */
         @Nullable
-        File getFile() {
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public File getFile() {
             return mFile;
         }
 
+        /**
+         * @hide
+         */
         @Nullable
-        ContentResolver getContentResolver() {
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public ContentResolver getContentResolver() {
             return mContentResolver;
         }
 
+        /**
+         * @hide
+         */
         @Nullable
-        Uri getSaveCollection() {
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public Uri getSaveCollection() {
             return mSaveCollection;
         }
 
+        /**
+         * @hide
+         */
         @Nullable
-        ContentValues getContentValues() {
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public ContentValues getContentValues() {
             return mContentValues;
         }
 
+        /**
+         * @hide
+         */
         @Nullable
-        OutputStream getOutputStream() {
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public OutputStream getOutputStream() {
             return mOutputStream;
         }
 

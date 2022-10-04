@@ -16,16 +16,14 @@
 
 package androidx.privacysandbox.tools.apigenerator.parser
 
-import androidx.privacysandbox.tools.core.AnnotatedInterface
-import androidx.privacysandbox.tools.core.Method
-import androidx.privacysandbox.tools.core.Parameter
-import androidx.privacysandbox.tools.core.Type
+import androidx.privacysandbox.tools.apigenerator.compileIntoInterfaceDescriptorsJar
+import androidx.privacysandbox.tools.core.model.AnnotatedInterface
+import androidx.privacysandbox.tools.core.model.Method
+import androidx.privacysandbox.tools.core.model.Parameter
+import androidx.privacysandbox.tools.core.model.Type
 import androidx.room.compiler.processing.util.Source
-import androidx.room.compiler.processing.util.compiler.TestCompilationArguments
-import androidx.room.compiler.processing.util.compiler.compile
 import androidx.testutils.assertThrows
 import com.google.common.truth.Truth.assertThat
-import java.nio.file.Files
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -35,12 +33,12 @@ class ApiStubParserTest {
     @Test
     fun annotatedInterface_isParsed() {
         val source = Source.kotlin(
-            "com/mysdk/MySdk.kt", """
+            "com/mysdk/TestSandboxSdk.kt", """
                     package com.mysdk
                     import androidx.privacysandbox.tools.PrivacySandboxService
                     @PrivacySandboxService
                     interface MySdk {
-                      fun doSomething(magicNumber: Int, awesomeString: String)
+                      suspend fun doSomething(magicNumber: Int, awesomeString: String)
                       fun returnMagicNumber(): Int
                     }
                 """
@@ -49,19 +47,24 @@ class ApiStubParserTest {
         assertThat(compileAndParseApi(source))
             .containsExactly(
                 AnnotatedInterface(
-                    name = "MySdk", packageName = "com.mysdk", methods = listOf(
+                    type = Type(packageName = "com.mysdk", simpleName = "MySdk"), methods = listOf(
                         Method(
                             name = "doSomething",
                             parameters = listOf(
-                                Parameter("magicNumber", Type("kotlin.Int")),
-                                Parameter("awesomeString", Type("kotlin.String"))
+                                Parameter(
+                                    "magicNumber",
+                                    Type(packageName = "kotlin", simpleName = "Int")
+                                ),
+                                Parameter("awesomeString", Type("kotlin", simpleName = "String"))
                             ),
-                            returnType = Type("kotlin.Unit")
+                            returnType = Type(packageName = "kotlin", simpleName = "Unit"),
+                            isSuspend = true,
                         ),
                         Method(
                             name = "returnMagicNumber",
                             parameters = listOf(),
-                            returnType = Type("kotlin.Int")
+                            returnType = Type(packageName = "kotlin", simpleName = "Int"),
+                            isSuspend = false,
                         )
                     )
                 )
@@ -72,7 +75,7 @@ class ApiStubParserTest {
     fun nonAnnotatedClasses_areSafelyIgnored() {
         val interfaces = compileAndParseApi(
             Source.kotlin(
-                "com/mysdk/MySdk.kt", """
+                "com/mysdk/TestSandboxSdk.kt", """
                     package com.mysdk
                     import androidx.privacysandbox.tools.PrivacySandboxService
                     @PrivacySandboxService
@@ -96,20 +99,34 @@ class ApiStubParserTest {
             )
         )
 
-        assertThat(interfaces).containsExactly(AnnotatedInterface("MySdk", "com.mysdk"))
+        assertThat(interfaces).containsExactly(
+            AnnotatedInterface(
+                Type(
+                    packageName = "com.mysdk",
+                    simpleName = "MySdk",
+                )
+            )
+        )
     }
 
     @Test
     fun annotatedInterfaceWithEmptyPackageName_isHandledSafely() {
         val source = Source.kotlin(
-            "MySdk.kt", """
+            "TestSandboxSdk.kt", """
                     import androidx.privacysandbox.tools.PrivacySandboxService
                     @PrivacySandboxService
                     interface MySdk
                 """
         )
 
-        assertThat(compileAndParseApi(source)).containsExactly(AnnotatedInterface("MySdk", ""))
+        assertThat(compileAndParseApi(source)).containsExactly(
+            AnnotatedInterface(
+                Type(
+                    packageName = "",
+                    simpleName = "MySdk"
+                )
+            )
+        )
     }
 
     @Test
@@ -133,7 +150,7 @@ class ApiStubParserTest {
     @Test
     fun annotatedKotlinClass_throws() {
         val source = Source.kotlin(
-            "com/mysdk/MySdk.kt", """
+            "com/mysdk/TestSandboxSdk.kt", """
                     package com.mysdk
                     import androidx.privacysandbox.tools.PrivacySandboxService
                     @PrivacySandboxService
@@ -173,7 +190,7 @@ class ApiStubParserTest {
     @Test
     fun missingAnnotatedInterface_throws() {
         val source = Source.kotlin(
-            "com/mysdk/MySdk.kt", """
+            "com/mysdk/TestSandboxSdk.kt", """
                     package com.mysdk
                     interface MySdk
                 """
@@ -187,13 +204,7 @@ class ApiStubParserTest {
     }
 
     private fun compileAndParseApi(vararg sources: Source): Set<AnnotatedInterface> {
-        val result = compile(
-            Files.createTempDirectory("test").toFile(), TestCompilationArguments(
-                sources = sources.asList(),
-            )
-        )
-        assertThat(result.success).isTrue()
-        val stubClassPath = result.outputClasspath.flatMap { it.walk() }.toSet()
-        return ApiStubParser.parse(stubClassPath).services
+        compileIntoInterfaceDescriptorsJar(*sources)
+        return ApiStubParser.parse(compileIntoInterfaceDescriptorsJar(*sources)).services
     }
 }

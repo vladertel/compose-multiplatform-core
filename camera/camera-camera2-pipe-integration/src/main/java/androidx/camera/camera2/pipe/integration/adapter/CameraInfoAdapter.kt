@@ -20,6 +20,7 @@ package androidx.camera.camera2.pipe.integration.adapter
 
 import android.annotation.SuppressLint
 import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraMetadata
 import android.view.Surface
 import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraPipe
@@ -37,6 +38,7 @@ import androidx.camera.core.impl.CamcorderProfileProvider
 import androidx.camera.core.impl.CameraCaptureCallback
 import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.core.impl.Quirks
+import androidx.camera.core.impl.Timebase
 import androidx.camera.core.impl.utils.CameraOrientationUtil
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -110,6 +112,17 @@ class CameraInfoAdapter @Inject constructor(
             camcorderProfileProviderAdapter = CamcorderProfileProviderAdapter(cameraId)
         }
         return camcorderProfileProviderAdapter
+    }
+
+    override fun getTimebase(): Timebase {
+        val timeSource = cameraProperties.metadata[
+            CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE
+        ]!!
+        return when (timeSource) {
+            CameraMetadata.SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME -> Timebase.REALTIME
+            CameraMetadata.SENSOR_INFO_TIMESTAMP_SOURCE_UNKNOWN -> Timebase.UPTIME
+            else -> Timebase.UPTIME
+        }
     }
 
     override fun toString(): String = "CameraInfoAdapter<$cameraConfig.cameraId>"
