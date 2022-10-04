@@ -16,13 +16,13 @@
 
 package androidx.privacysandbox.tools.apicompiler.parser
 
-import androidx.privacysandbox.tools.core.AnnotatedInterface
-import androidx.privacysandbox.tools.core.Method
-import androidx.privacysandbox.tools.core.Parameter
-import androidx.privacysandbox.tools.core.ParsedApi
-import androidx.privacysandbox.tools.core.Type
 import androidx.privacysandbox.tools.apicompiler.util.checkSourceFails
 import androidx.privacysandbox.tools.apicompiler.util.parseSource
+import androidx.privacysandbox.tools.core.model.AnnotatedInterface
+import androidx.privacysandbox.tools.core.model.Method
+import androidx.privacysandbox.tools.core.model.Parameter
+import androidx.privacysandbox.tools.core.model.ParsedApi
+import androidx.privacysandbox.tools.core.model.Type
 import androidx.room.compiler.processing.util.Source
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -42,7 +42,7 @@ class ApiParserTest {
                     import androidx.privacysandbox.tools.PrivacySandboxService
                     @PrivacySandboxService
                     interface MySdk {
-                        fun doStuff(x: Int, y: Int): String
+                        suspend fun doStuff(x: Int, y: Int): String
                         fun doMoreStuff()
                     }
                 """
@@ -51,33 +51,28 @@ class ApiParserTest {
             ParsedApi(
                 services = mutableSetOf(
                     AnnotatedInterface(
-                        name = "MySdk",
-                        packageName = "com.mysdk",
+                        type = Type(packageName = "com.mysdk", simpleName = "MySdk"),
                         methods = listOf(
                             Method(
                                 name = "doStuff",
                                 parameters = listOf(
                                     Parameter(
                                         name = "x",
-                                        type = Type(
-                                            name = "kotlin.Int",
-                                        )
+                                        type = Type(packageName = "kotlin", simpleName = "Int")
                                     ),
                                     Parameter(
                                         name = "y",
-                                        type = Type(
-                                            name = "kotlin.Int",
-                                        )
+                                        type = Type(packageName = "kotlin", simpleName = "Int")
                                     )
                                 ),
-                                returnType = Type(
-                                    name = "kotlin.String",
-                                )
+                                returnType = Type(packageName = "kotlin", simpleName = "String"),
+                                isSuspend = true,
                             ),
                             Method(
                                 name = "doMoreStuff",
                                 parameters = listOf(),
-                                returnType = Type("kotlin.Unit")
+                                returnType = Type(packageName = "kotlin", simpleName = "Unit"),
+                                isSuspend = false,
                             )
                         )
                     )
@@ -103,5 +98,35 @@ class ApiParserTest {
 
         checkSourceFails(source)
             .containsError("Only interfaces can be annotated with @PrivacySandboxService.")
+    }
+
+    @Test
+    fun multipleServices_fails() {
+        val source =
+            Source.kotlin(
+                "com/mysdk/MySdk.kt",
+                """
+                    package com.mysdk
+                    import androidx.privacysandbox.tools.PrivacySandboxService
+                    @PrivacySandboxService
+                    interface MySdk
+                """
+            )
+        val source2 =
+            Source.kotlin(
+                "com/mysdk/MySdk2.kt",
+                """
+                    package com.mysdk
+                    import androidx.privacysandbox.tools.PrivacySandboxService
+                    @PrivacySandboxService
+                    interface MySdk2
+                """
+            )
+
+        checkSourceFails(source, source2)
+            .containsError(
+                "Multiple interfaces annotated with @PrivacySandboxService are not " +
+                    "supported (MySdk, MySdk2)."
+            )
     }
 }

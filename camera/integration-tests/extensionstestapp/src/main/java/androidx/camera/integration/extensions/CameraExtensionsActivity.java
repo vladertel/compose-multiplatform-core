@@ -15,6 +15,11 @@
  */
 package androidx.camera.integration.extensions;
 
+import static androidx.camera.core.ImageCapture.ERROR_CAMERA_CLOSED;
+import static androidx.camera.core.ImageCapture.ERROR_CAPTURE_FAILED;
+import static androidx.camera.core.ImageCapture.ERROR_FILE_IO;
+import static androidx.camera.core.ImageCapture.ERROR_INVALID_CAMERA;
+import static androidx.camera.core.ImageCapture.ERROR_UNKNOWN;
 import static androidx.camera.integration.extensions.CameraDirection.BACKWARD;
 import static androidx.camera.integration.extensions.CameraDirection.FORWARD;
 import static androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_CAMERA_DIRECTION;
@@ -76,6 +81,7 @@ import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.math.MathUtils;
+import androidx.lifecycle.Lifecycle;
 import androidx.test.espresso.idling.CountingIdlingResource;
 
 import com.google.common.base.Preconditions;
@@ -140,6 +146,15 @@ public class CameraExtensionsActivity extends AppCompatActivity
     TextView mFrameInfo;
 
     String mCurrentCameraId = null;
+
+    /**
+     * Saves the error message of the last take picture action if any error occurs. This will be
+     * null which means no error occurs.
+     */
+    @Nullable
+    private String mLastTakePictureErrorMessage = null;
+
+    private PreviewView.StreamState mCurrentStreamState = null;
 
     void setupButtons() {
         Button btnToggleMode = findViewById(R.id.PhotoToggle);
@@ -215,11 +230,13 @@ public class CameraExtensionsActivity extends AppCompatActivity
                     }
                 });
         mPreview = previewBuilder.build();
+        mCurrentStreamState = null;
         mPreview.setSurfaceProvider(mPreviewView.getSurfaceProvider());
 
         // Observes the stream state for the unit tests to know the preview status.
         mPreviewView.getPreviewStreamState().removeObservers(this);
-        mPreviewView.getPreviewStreamState().observe(this, streamState -> {
+        mPreviewView.getPreviewStreamState().observeForever(streamState -> {
+            mCurrentStreamState = streamState;
             if (streamState == PreviewView.StreamState.STREAMING
                     && !mPreviewViewStreamingStateIdlingResource.isIdleNow()) {
                 mPreviewViewStreamingStateIdlingResource.decrement();
@@ -299,6 +316,8 @@ public class CameraExtensionsActivity extends AppCompatActivity
                                 @NonNull ImageCapture.OutputFileResults outputFileResults) {
                             Log.d(TAG, "Saved image to " + saveFile);
 
+                            mLastTakePictureErrorMessage = null;
+
                             if (!mTakePictureIdlingResource.isIdleNow()) {
                                 mTakePictureIdlingResource.decrement();
                             }
@@ -338,6 +357,11 @@ public class CameraExtensionsActivity extends AppCompatActivity
                         public void onError(@NonNull ImageCaptureException exception) {
                             Log.e(TAG, "Failed to save image - " + exception.getMessage(),
                                     exception.getCause());
+
+                            mLastTakePictureErrorMessage = getImageCaptureErrorMessage(exception);
+                            if (!mTakePictureIdlingResource.isIdleNow()) {
+                                mTakePictureIdlingResource.decrement();
+                            }
                         }
                     });
         });
@@ -474,6 +498,13 @@ public class CameraExtensionsActivity extends AppCompatActivity
                 new FutureCallback<ExtensionsManager>() {
                     @Override
                     public void onSuccess(@Nullable ExtensionsManager extensionsManager) {
+                        // There might be timing issue that the activity has been destroyed when
+                        // the onSuccess callback is received. Skips the afterward flow when the
+                        // situation happens.
+                        if (CameraExtensionsActivity.this.getLifecycle().getCurrentState()
+                                == Lifecycle.State.DESTROYED) {
+                            return;
+                        }
                         mExtensionsManager = extensionsManager;
                         if (!bindUseCasesWithCurrentExtensionMode()) {
                             bindUseCasesWithNextExtensionMode();
@@ -713,5 +744,53 @@ public class CameraExtensionsActivity extends AppCompatActivity
         if (mTakePictureIdlingResource.isIdleNow()) {
             mTakePictureIdlingResource.increment();
         }
+    }
+
+    /**
+     * Returns the error message of the last take picture action if any error occurs. Returns
+     * null if no error occurs.
+     */
+    @VisibleForTesting
+    @Nullable
+    public String getLastTakePictureErrorMessage() {
+        return mLastTakePictureErrorMessage;
+    }
+
+    /**
+     * Returns current stream state value.
+     */
+    @VisibleForTesting
+    @Nullable
+    public PreviewView.StreamState getCurrentStreamState() {
+        return mCurrentStreamState;
+    }
+
+    private String getImageCaptureErrorMessage(@NonNull ImageCaptureException exception) {
+        String errorCodeString;
+        int errorCode = exception.getImageCaptureError();
+
+        switch (errorCode) {
+            case ERROR_UNKNOWN:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_UNKNOWN";
+                break;
+            case ERROR_FILE_IO:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_FILE_IO";
+                break;
+            case ERROR_CAPTURE_FAILED:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_CAPTURE_FAILED";
+                break;
+            case ERROR_CAMERA_CLOSED:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_CAMERA_CLOSED";
+                break;
+            case ERROR_INVALID_CAMERA:
+                errorCodeString = "ImageCaptureErrorCode: ERROR_INVALID_CAMERA";
+                break;
+            default:
+                errorCodeString = "ImageCaptureErrorCode: " + errorCode;
+                break;
+        }
+
+        return errorCodeString + ", Message: " + exception.getMessage() + ", Cause: "
+                + exception.getCause();
     }
 }

@@ -39,10 +39,19 @@ internal var profilerOverride: Profiler? = null
  * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public object Arguments {
-
+object Arguments {
     // public properties are shared by micro + macro benchmarks
-    public val suppressedErrors: Set<String>
+    val suppressedErrors: Set<String>
+
+    /**
+     * Set to true to enable androidx.tracing.perfetto tracepoints (such as composition tracing)
+     *
+     * Note this only affects Macrobenchmarks currently, and only when StartupMode.COLD is not used,
+     * since enabling the tracepoints wakes the target process
+     *
+     * Currently internal/experimental
+     */
+    val fullTracingEnable: Boolean
 
     val enabledRules: Set<RuleType>
 
@@ -56,11 +65,11 @@ public object Arguments {
     val killProcessDelayMillis: Long
     val enableStartupProfiles: Boolean
     val strictStartupProfiles: Boolean
+    val dryRunMode: Boolean
 
     // internal properties are microbenchmark only
     internal val outputEnable: Boolean
     internal val startupMode: Boolean
-    internal val dryRunMode: Boolean
     internal val iterations: Int?
     private val _profiler: Profiler?
     internal val profiler: Profiler?
@@ -111,6 +120,9 @@ public object Arguments {
         iterations =
             arguments.getBenchmarkArgument("iterations")?.toInt()
 
+        fullTracingEnable =
+            (arguments.getBenchmarkArgument("fullTracing.enable")?.toBoolean() ?: false)
+
         // Transform comma-delimited list into set of suppressed errors
         // E.g. "DEBUGGABLE, UNLOCKED" -> setOf("DEBUGGABLE", "UNLOCKED")
         suppressedErrors = arguments.getBenchmarkArgument("suppressErrors", "")
@@ -132,8 +144,9 @@ public object Arguments {
             }
             .toSet()
 
+        // compilation defaults to disabled if dryRunMode is on
         enableCompilation =
-            arguments.getBenchmarkArgument("compilation.enabled")?.toBoolean() ?: true
+            arguments.getBenchmarkArgument("compilation.enabled")?.toBoolean() ?: !dryRunMode
 
         _profiler = arguments.getProfiler(outputEnable)
         profilerSampleFrequency =
@@ -152,6 +165,7 @@ public object Arguments {
             )
         }
         additionalTestOutputDir = arguments.getString("additionalTestOutputDir")
+        Log.d(BenchmarkState.TAG, "additionalTestOutputDir=$additionalTestOutputDir")
 
         killProcessDelayMillis =
             arguments.getBenchmarkArgument("killProcessDelayMillis")?.toLong() ?: 0L

@@ -367,6 +367,14 @@ public class WebViewFeatureInternal {
 
     /**
      * This feature covers
+     * {@link androidx.webkit.ProcessGlobalConfig#setDataDirectorySuffix(String)}.
+     */
+    public static final StartupApiFeature.P SET_DATA_DIRECTORY_SUFFIX =
+            new StartupApiFeature.P(WebViewFeature.SET_DATA_DIRECTORY_SUFFIX,
+                    StartupFeatures.SET_DATA_DIRECTORY_SUFFIX);
+
+    /**
+     * This feature covers
      * {@link WebViewCompat#getWebViewRenderProcessClient()},
      * {@link WebViewCompat#setWebViewRenderProcessClient(WebViewRenderProcessClient)},
      * {@link WebViewRenderProcessClient#onRenderProcessUnresponsive(WebView, WebViewRenderProcess)},
@@ -464,17 +472,6 @@ public class WebViewFeatureInternal {
 
     /**
      * This feature covers
-     * {@link androidx.webkit.WebSettingsCompat#setRequestedWithHeaderMode(WebSettings, int)},
-     * {@link androidx.webkit.WebSettingsCompat#getRequestedWithHeaderMode(WebSettings)},
-     * {@link androidx.webkit.ServiceWorkerWebSettingsCompat#setRequestedWithHeaderMode(int)},
-     * and {@link androidx.webkit.ServiceWorkerWebSettingsCompat#getRequestedWithHeaderMode()}
-     */
-    public static final ApiFeature.NoFramework REQUESTED_WITH_HEADER_CONTROL =
-            new ApiFeature.NoFramework(WebViewFeature.REQUESTED_WITH_HEADER_CONTROL,
-                    Features.REQUESTED_WITH_HEADER_CONTROL);
-
-    /**
-     * This feature covers
      * {@link androidx.webkit.WebSettingsCompat#setEnterpriseAuthenticationAppLinkPolicyEnabled(WebSettings, boolean)} and
      * {@link androidx.webkit.WebSettingsCompat#getEnterpriseAuthenticationAppLinkPolicyEnabled(WebSettings)}.
      */
@@ -503,6 +500,16 @@ public class WebViewFeatureInternal {
     }
 
     /**
+     * Return whether a public startup feature is supported by any internal features defined in
+     * this class.
+     */
+    public static boolean isStartupFeatureSupported(
+            @NonNull @WebViewFeature.WebViewStartupFeature String publicFeatureValue,
+            @NonNull Context context) {
+        return isStartupFeatureSupported(publicFeatureValue, StartupApiFeature.values(), context);
+    }
+
+    /**
      * Return whether a public feature is supported by any {@link ConditionallySupportedFeature}s
      * defined in {@code internalFeatures}.
      *
@@ -524,6 +531,32 @@ public class WebViewFeatureInternal {
         }
         for (ConditionallySupportedFeature feature : matchingFeatures) {
             if (feature.isSupported()) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Return whether a public startup feature is supported by any {@link StartupApiFeature}s
+     * defined in {@code internalFeatures}.
+     *
+     * @throws RuntimeException if {@code publicFeatureValue} is not matched in
+     *      {@code internalFeatures}
+     */
+    @VisibleForTesting
+    public static boolean isStartupFeatureSupported(
+            @NonNull @WebViewFeature.WebViewStartupFeature String publicFeatureValue,
+            @NonNull Collection<StartupApiFeature> internalFeatures, @NonNull Context context) {
+        Set<StartupApiFeature> matchingFeatures = new HashSet<>();
+        for (StartupApiFeature feature : internalFeatures) {
+            if (feature.getPublicFeatureName().equals(publicFeatureValue)) {
+                matchingFeatures.add(feature);
+            }
+        }
+        if (matchingFeatures.isEmpty()) {
+            throw new RuntimeException("Unknown feature " + publicFeatureValue);
+        }
+        for (StartupApiFeature feature : matchingFeatures) {
+            if (feature.isSupported(context)) return true;
         }
         return false;
     }

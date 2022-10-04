@@ -44,7 +44,7 @@ import java.time.ZonedDateTime
 internal class TestWatchFaceService(
     @WatchFaceType private val watchFaceType: Int,
     private val complicationSlots: List<ComplicationSlot>,
-    private val rendererFactory: (
+    private val rendererFactory: suspend (
         surfaceHolder: SurfaceHolder,
         currentUserStyleRepository: CurrentUserStyleRepository,
         watchState: WatchState,
@@ -129,11 +129,6 @@ internal class TestWatchFaceService(
     ): WatchFace {
         renderer = rendererFactory(surfaceHolder, currentUserStyleRepository, watchState)
         val watchFace = WatchFace(watchFaceType, renderer!!)
-            .setSystemTimeProvider(object : WatchFace.SystemTimeProvider {
-                override fun getSystemTimeMillis() = mockSystemTimeMillis
-
-                override fun getSystemTimeZoneId() = mockZoneId
-            })
         tapListener?.let {
             watchFace.setTapListener(it)
         }
@@ -175,6 +170,12 @@ internal class TestWatchFaceService(
     }
 
     override fun isPreAndroidR() = preAndroidR
+
+    override fun getSystemTimeProvider() = object : SystemTimeProvider {
+        override fun getSystemTimeMillis() = mockSystemTimeMillis
+
+        override fun getSystemTimeZoneId() = mockZoneId
+    }
 }
 
 /**
@@ -252,6 +253,7 @@ public open class TestRenderer(
 ) {
     public var lastOnDrawZonedDateTime: ZonedDateTime? = null
     public var lastRenderWasForScreenshot: Boolean? = null
+    public val renderParametersScreenshotFlags = mutableListOf<Boolean>()
 
     override fun render(
         canvas: Canvas,
@@ -263,6 +265,11 @@ public open class TestRenderer(
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime) {
+    }
+
+    public override fun onRenderParametersChanged(renderParameters: RenderParameters) {
+        renderParametersScreenshotFlags.add(renderParameters.isForScreenshot)
+        super.onRenderParametersChanged(renderParameters)
     }
 }
 

@@ -724,14 +724,16 @@ internal class AndroidComposeView(context: Context) :
      * from the hierarchy.
      */
     fun removeAndroidView(view: AndroidViewHolder) {
-        androidViewsHandler.removeView(view)
-        androidViewsHandler.layoutNodeToHolder.remove(
-            androidViewsHandler.holderToLayoutNode.remove(view)
-        )
-        ViewCompat.setImportantForAccessibility(
-            view,
-            ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_AUTO
-        )
+        registerOnEndApplyChangesListener {
+            androidViewsHandler.removeViewInLayout(view)
+            androidViewsHandler.layoutNodeToHolder.remove(
+                androidViewsHandler.holderToLayoutNode.remove(view)
+            )
+            ViewCompat.setImportantForAccessibility(
+                view,
+                ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+            )
+        }
     }
 
     /**
@@ -841,7 +843,7 @@ internal class AndroidComposeView(context: Context) :
                 wasMeasuredWithMultipleConstraints = true
             }
             measureAndLayoutDelegate.updateRootConstraints(constraints)
-            measureAndLayoutDelegate.measureAndLayout(resendMotionEventOnLayout)
+            measureAndLayoutDelegate.measureOnly()
             setMeasuredDimension(root.width, root.height)
             if (_androidViewsHandler != null) {
                 androidViewsHandler.measure(
@@ -864,6 +866,7 @@ internal class AndroidComposeView(context: Context) :
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        measureAndLayoutDelegate.measureAndLayout(resendMotionEventOnLayout)
         onMeasureConstraints = null
         // we postpone onPositioned callbacks until onLayout as LayoutCoordinates
         // are currently wrong if you try to get the global(activity) coordinates -
@@ -1037,7 +1040,10 @@ internal class AndroidComposeView(context: Context) :
         if (!isDirty) {
             // It is correct to remove the layer here regardless of this if, but for performance
             // we are hackily not doing the removal here in order to just do clear() a bit later.
-            if (!isDrawingContent) require(dirtyLayers.remove(layer))
+            if (!isDrawingContent) {
+                dirtyLayers.remove(layer)
+                postponedDirtyLayers?.remove(layer)
+            }
         } else if (!isDrawingContent) {
             dirtyLayers += layer
         } else {

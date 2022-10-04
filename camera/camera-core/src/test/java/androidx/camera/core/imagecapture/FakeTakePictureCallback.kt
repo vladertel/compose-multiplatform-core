@@ -16,7 +16,7 @@
 
 package androidx.camera.core.imagecapture
 
-import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCapture.OutputFileResults
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 
@@ -29,12 +29,15 @@ internal class FakeTakePictureCallback : TakePictureCallback {
     var inMemoryResult: ImageProxy? = null
     var captureFailure: ImageCaptureException? = null
     var processFailure: ImageCaptureException? = null
+    var onDiskResult: OutputFileResults? = null
+    var aborted = false
 
     override fun onImageCaptured() {
         onImageCapturedCalled = true
     }
 
-    override fun onFinalResult(outputFileResults: ImageCapture.OutputFileResults) {
+    override fun onFinalResult(outputFileResults: OutputFileResults) {
+        onDiskResult = outputFileResults
     }
 
     override fun onFinalResult(imageProxy: ImageProxy) {
@@ -47,5 +50,9 @@ internal class FakeTakePictureCallback : TakePictureCallback {
 
     override fun onProcessFailure(imageCaptureException: ImageCaptureException) {
         processFailure = imageCaptureException
+    }
+
+    override fun isAborted(): Boolean {
+        return aborted
     }
 }

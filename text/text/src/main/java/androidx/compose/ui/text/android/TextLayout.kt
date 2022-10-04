@@ -37,6 +37,8 @@ import androidx.compose.ui.text.android.LayoutCompat.ALIGN_NORMAL
 import androidx.compose.ui.text.android.LayoutCompat.ALIGN_OPPOSITE
 import androidx.compose.ui.text.android.LayoutCompat.ALIGN_RIGHT
 import androidx.compose.ui.text.android.LayoutCompat.BreakStrategy
+import androidx.compose.ui.text.android.LayoutCompat.LineBreakStyle
+import androidx.compose.ui.text.android.LayoutCompat.LineBreakWordStyle
 import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_ALIGNMENT
 import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_BREAK_STRATEGY
 import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_HYPHENATION_FREQUENCY
@@ -44,6 +46,8 @@ import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_INCLUDE_PADDING
 import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_JUSTIFICATION_MODE
 import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_LINESPACING_EXTRA
 import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_LINESPACING_MULTIPLIER
+import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_LINE_BREAK_STYLE
+import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_LINE_BREAK_WORD_STYLE
 import androidx.compose.ui.text.android.LayoutCompat.DEFAULT_TEXT_DIRECTION
 import androidx.compose.ui.text.android.LayoutCompat.HyphenationFrequency
 import androidx.compose.ui.text.android.LayoutCompat.JustificationMode
@@ -115,6 +119,8 @@ class TextLayout constructor(
     val fallbackLineSpacing: Boolean = true,
     maxLines: Int = Int.MAX_VALUE,
     @BreakStrategy breakStrategy: Int = DEFAULT_BREAK_STRATEGY,
+    @LineBreakStyle lineBreakStyle: Int = DEFAULT_LINE_BREAK_STYLE,
+    @LineBreakWordStyle lineBreakWordStyle: Int = DEFAULT_LINE_BREAK_WORD_STYLE,
     @HyphenationFrequency hyphenationFrequency: Int = DEFAULT_HYPHENATION_FREQUENCY,
     @JustificationMode justificationMode: Int = DEFAULT_JUSTIFICATION_MODE,
     leftIndents: IntArray? = null,
@@ -201,6 +207,12 @@ class TextLayout constructor(
 
     val lineHeightSpans: Array<LineHeightStyleSpan>
 
+    /**
+     * Android Canvas object that overrides the `getClipBounds` method and delegates the rest
+     * to the Canvas object that it wraps. See [TextAndroidCanvas] for more details.
+     */
+    private val textCanvas = TextAndroidCanvas()
+
     init {
         val end = charSequence.length
         val frameworkTextDir = getTextDirectionHeuristic(textDirectionHeuristic)
@@ -254,6 +266,8 @@ class TextLayout constructor(
                     includePadding = includePadding,
                     useFallbackLineSpacing = fallbackLineSpacing,
                     breakStrategy = breakStrategy,
+                    lineBreakStyle = lineBreakStyle,
+                    lineBreakWordStyle = lineBreakWordStyle,
                     hyphenationFrequency = hyphenationFrequency,
                     leftIndents = leftIndents,
                     rightIndents = rightIndents
@@ -544,11 +558,6 @@ class TextLayout constructor(
     }
 
     /**
-     * @return true if the given line is ellipsized, else false.
-     */
-    fun isEllipsisApplied(lineIndex: Int): Boolean = layout.getEllipsisCount(lineIndex) > 0
-
-    /**
      * Fills the bounding boxes for characters within the [startOffset] (inclusive) and [endOffset]
      * (exclusive). The array is filled starting from [arrayStart] (inclusive). The coordinates are
      * in local text layout coordinates.
@@ -686,7 +695,8 @@ class TextLayout constructor(
             canvas.translate(0f, topPadding.toFloat())
         }
 
-        layout.draw(canvas)
+        textCanvas.setCanvas(canvas)
+        layout.draw(textCanvas)
 
         if (topPadding != 0) {
             canvas.translate(0f, -1 * topPadding.toFloat())

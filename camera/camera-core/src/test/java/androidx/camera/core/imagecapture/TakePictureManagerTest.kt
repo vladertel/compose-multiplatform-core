@@ -19,6 +19,8 @@ package androidx.camera.core.imagecapture
 import android.os.Build
 import android.os.Looper.getMainLooper
 import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCapture.ERROR_CAMERA_CLOSED
+import androidx.camera.core.ImageCapture.ERROR_CAPTURE_FAILED
 import androidx.camera.core.ImageCapture.OutputFileResults
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.impl.CaptureConfig
@@ -49,6 +51,36 @@ class TakePictureManagerTest {
     @After
     fun tearDown() {
         imagePipeline.close()
+    }
+
+    @Test
+    fun abortRequests_receiveErrorCallback() {
+        // Arrange: send 2 request.
+        val request1 = FakeTakePictureRequest(FakeTakePictureRequest.Type.IN_MEMORY)
+        val request2 = FakeTakePictureRequest(FakeTakePictureRequest.Type.IN_MEMORY)
+        takePictureManager.offerRequest(request1)
+        takePictureManager.offerRequest(request2)
+
+        // Act: ab the manage and finish the 1st request.
+        takePictureManager.abortRequests()
+        // Camera returns the image, but it should be ignored.
+        val processingRequest = imagePipeline.getProcessingRequest(request1)
+        processingRequest.onImageCaptured()
+        processingRequest.onFinalResult(FakeImageProxy(FakeImageInfo()))
+        shadowOf(getMainLooper()).idle()
+
+        // Assert: one request is sent.
+        assertThat(imageCaptureControl.actions).containsExactly(
+            FakeImageCaptureControl.Action.LOCK_FLASH,
+            FakeImageCaptureControl.Action.SUBMIT_REQUESTS,
+            FakeImageCaptureControl.Action.UNLOCK_FLASH,
+        ).inOrder()
+        // Both request are aborted.
+        assertThat((request1.exceptionReceived as ImageCaptureException).imageCaptureError)
+            .isEqualTo(ERROR_CAMERA_CLOSED)
+        assertThat((request2.exceptionReceived as ImageCaptureException).imageCaptureError)
+            .isEqualTo(ERROR_CAMERA_CLOSED)
+        assertThat(takePictureManager.mNewRequests).isEmpty()
     }
 
     @Test(expected = IllegalStateException::class)
@@ -112,7 +144,23 @@ class TakePictureManagerTest {
     }
 
     @Test
-    fun submitRequestFails_appGetsErrorCallback() {
+    fun submitRequestFailsWithImageCaptureException_appGetsTheSameException() {
+        // Arrange: configure ImageCaptureControl to always fail.
+        val request = FakeTakePictureRequest(FakeTakePictureRequest.Type.IN_MEMORY)
+        val cause = ImageCaptureException(ERROR_CAMERA_CLOSED, "", null)
+        imageCaptureControl.response = Futures.immediateFailedFuture(cause)
+
+        // Act.
+        takePictureManager.offerRequest(request)
+        shadowOf(getMainLooper()).idle()
+
+        // Assert.
+        assertThat(request.exceptionReceived!!).isEqualTo(cause)
+        assertThat(takePictureManager.hasInFlightRequest()).isFalse()
+    }
+
+    @Test
+    fun submitRequestFailsWithGenericException_appGetsWrappedException() {
         // Arrange: configure ImageCaptureControl to always fail.
         val request = FakeTakePictureRequest(FakeTakePictureRequest.Type.IN_MEMORY)
         val cause = Exception()
@@ -123,6 +171,7 @@ class TakePictureManagerTest {
         shadowOf(getMainLooper()).idle()
 
         // Assert.
+        assertThat(request.exceptionReceived!!.imageCaptureError).isEqualTo(ERROR_CAPTURE_FAILED)
         assertThat(request.exceptionReceived!!.cause).isEqualTo(cause)
         assertThat(takePictureManager.hasInFlightRequest()).isFalse()
     }
@@ -249,5 +298,32 @@ class TakePictureManagerTest {
 
         // Assert.
         assertThat(request.imageReceived).isEqualTo(image)
+    }
+
+    @Test
+    fun takePictureManager_unableToProcessNextWhenOverMaxImages() {
+        // Arrange.
+        imagePipeline.queueCapacity = 0
+
+        // Act: send the request.
+        val request = FakeTakePictureRequest(FakeTakePictureRequest.Type.IN_MEMORY)
+        takePictureManager.offerRequest(request)
+
+        // Assert: the request is blocked.
+        assertThat(takePictureManager.mNewRequests.size).isEqualTo(1)
+        assertThat(imageCaptureControl.actions).isEmpty()
+
+        // Act: increase the capacity and invoke image closed.
+        imagePipeline.queueCapacity = 1
+        takePictureManager.onImageClose(FakeImageProxy(FakeImageInfo()))
+        shadowOf(getMainLooper()).idle()
+
+        // Assert: the request is sent.
+        assertThat(takePictureManager.mNewRequests.size).isEqualTo(0)
+        assertThat(imageCaptureControl.actions).containsExactly(
+            FakeImageCaptureControl.Action.LOCK_FLASH,
+            FakeImageCaptureControl.Action.SUBMIT_REQUESTS,
+            FakeImageCaptureControl.Action.UNLOCK_FLASH,
+        ).inOrder()
     }
 }

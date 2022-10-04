@@ -16,6 +16,7 @@
 
 package androidx.camera.core.imagecapture;
 
+import static androidx.camera.core.ImageCapture.ERROR_CAMERA_CLOSED;
 import static androidx.camera.core.ImageCapture.ERROR_CAPTURE_FAILED;
 import static androidx.camera.core.impl.utils.Threads.checkMainThread;
 import static androidx.camera.core.impl.utils.executor.CameraXExecutors.directExecutor;
@@ -32,12 +33,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
+import androidx.camera.core.ForwardingImageProxy.OnImageCloseListener;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.impl.utils.futures.FutureCallback;
 import androidx.camera.core.impl.utils.futures.Futures;
-import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.core.util.Pair;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -60,7 +61,7 @@ import java.util.Deque;
  * <p>The thread safety is guaranteed by using the main thread.
  */
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-public class TakePictureManager {
+public class TakePictureManager implements OnImageCloseListener {
 
     private static final String TAG = "TakePictureManager";
 
@@ -89,6 +90,7 @@ public class TakePictureManager {
         checkMainThread();
         mImageCaptureControl = imageCaptureControl;
         mImagePipeline = imagePipeline;
+        mImagePipeline.setOnImageCloseListener(this);
     }
 
     /**
@@ -128,9 +130,22 @@ public class TakePictureManager {
      * Clears the requests queue.
      */
     @MainThread
-    public void cancelUnsentRequests() {
+    public void abortRequests() {
         checkMainThread();
+        ImageCaptureException exception =
+                new ImageCaptureException(ERROR_CAMERA_CLOSED, "Camera is closed.", null);
+
+        // Clear pending request first so aborting in-flight request won't trigger another capture.
+        for (TakePictureRequest request : mNewRequests) {
+            request.onError(exception);
+        }
         mNewRequests.clear();
+
+        // Abort the in-flight request after clearing the pending requests.
+        if (mInFlightRequest != null) {
+            // TODO: optimize the performance by aborting early in CaptureNode and BundlingNode
+            mInFlightRequest.abort(exception);
+        }
     }
 
     /**
@@ -146,6 +161,10 @@ public class TakePictureManager {
         }
         if (mPaused) {
             Log.d(TAG, "The class is paused.");
+            return;
+        }
+        if (mImagePipeline.getCapacity() == 0) {
+            Log.d(TAG, "Too many acquire images. Close image to be able to process next.");
             return;
         }
         TakePictureRequest request = mNewRequests.poll();
@@ -199,10 +218,14 @@ public class TakePictureManager {
 
             @Override
             public void onFailure(@NonNull Throwable throwable) {
-                cameraRequest.onCaptureFailure(new ImageCaptureException(
-                        ERROR_CAPTURE_FAILED,
-                        "Failed to submit capture request",
-                        throwable));
+                if (throwable instanceof ImageCaptureException) {
+                    cameraRequest.onCaptureFailure((ImageCaptureException) throwable);
+                } else {
+                    cameraRequest.onCaptureFailure(new ImageCaptureException(
+                            ERROR_CAPTURE_FAILED,
+                            "Failed to submit capture request",
+                            throwable));
+                }
                 mImageCaptureControl.unlockFlashMode();
             }
         }, mainThreadExecutor());
@@ -213,103 +236,8 @@ public class TakePictureManager {
         return mInFlightRequest != null;
     }
 
-    /**
-     * A wrapper of a {@link TakePictureRequest} and its {@link TakePictureCallback}.
-     *
-     * <p>This is the connection between the internal callback and the app callback. This
-     * connection allows us to manipulate the propagation of the callback. For example, failures
-     * might be retried before sent to the app.
-     */
-    private static class RequestWithCallback implements TakePictureCallback {
-
-        private final TakePictureRequest mTakePictureRequest;
-        private final ListenableFuture<Void> mCaptureFuture;
-        private CallbackToFutureAdapter.Completer<Void> mCaptureCompleter;
-        // Tombstone flag that indicates that this callback should not be invoked anymore.
-        private boolean mIsComplete = false;
-
-        RequestWithCallback(@NonNull TakePictureRequest takePictureRequest) {
-            mTakePictureRequest = takePictureRequest;
-            mCaptureFuture = CallbackToFutureAdapter.getFuture(
-                    completer -> {
-                        mCaptureCompleter = completer;
-                        return "CaptureCompleteFuture";
-                    });
-        }
-
-        @MainThread
-        @Override
-        public void onImageCaptured() {
-            checkMainThread();
-            mCaptureCompleter.set(null);
-            // TODO: send early callback to app.
-        }
-
-        @MainThread
-        @Override
-        public void onFinalResult(@NonNull ImageCapture.OutputFileResults outputFileResults) {
-            checkMainThread();
-            checkOnImageCaptured();
-            markComplete();
-            mTakePictureRequest.onResult(outputFileResults);
-        }
-
-        @MainThread
-        @Override
-        public void onFinalResult(@NonNull ImageProxy imageProxy) {
-            checkMainThread();
-            checkOnImageCaptured();
-            markComplete();
-            mTakePictureRequest.onResult(imageProxy);
-        }
-
-
-        @MainThread
-        @Override
-        public void onProcessFailure(@NonNull ImageCaptureException imageCaptureException) {
-            checkMainThread();
-            checkOnImageCaptured();
-            markComplete();
-            onFailure(imageCaptureException);
-        }
-
-        @MainThread
-        @Override
-        public void onCaptureFailure(@NonNull ImageCaptureException imageCaptureException) {
-            checkMainThread();
-            markComplete();
-            mCaptureCompleter.set(null);
-
-            // TODO(b/242683221): Add retry logic.
-            onFailure(imageCaptureException);
-        }
-
-        /**
-         * Gets a {@link ListenableFuture} that finishes when the capture is completed by camera.
-         *
-         * <p>Send the next request after this one completes.
-         */
-        @MainThread
-        @NonNull
-        ListenableFuture<Void> getCaptureFuture() {
-            checkMainThread();
-            return mCaptureFuture;
-        }
-
-        private void checkOnImageCaptured() {
-            checkState(mCaptureFuture.isDone(),
-                    "onImageCaptured() must be called before onFinalResult()");
-        }
-
-        private void markComplete() {
-            checkState(!mIsComplete, "The callback can only complete once.");
-            mIsComplete = true;
-        }
-
-        @MainThread
-        private void onFailure(@NonNull ImageCaptureException imageCaptureException) {
-            checkMainThread();
-            mTakePictureRequest.onError(imageCaptureException);
-        }
+    @Override
+    public void onImageClose(@NonNull ImageProxy image) {
+        mainThreadExecutor().execute(this::issueNextRequest);
     }
 }

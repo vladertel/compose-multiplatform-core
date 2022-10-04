@@ -20,6 +20,8 @@ import static androidx.camera.core.impl.utils.Threads.checkMainThread;
 import static androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor;
 import static androidx.camera.view.CameraController.OutputSize.UNASSIGNED_ASPECT_RATIO;
 
+import static java.util.Collections.emptyList;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Matrix;
@@ -41,11 +43,11 @@ import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraControl;
+import androidx.camera.core.CameraEffect;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraUnavailableException;
-import androidx.camera.core.EffectBundle;
 import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.FocusMeteringResult;
 import androidx.camera.core.ImageAnalysis;
@@ -59,7 +61,6 @@ import androidx.camera.core.Preview;
 import androidx.camera.core.TorchState;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.UseCaseGroup;
-import androidx.camera.core.VideoCapture;
 import androidx.camera.core.ViewPort;
 import androidx.camera.core.ZoomState;
 import androidx.camera.core.impl.ImageOutputConfig;
@@ -80,6 +81,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -106,6 +108,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * {@link UseCase}s freezes the preview for a short period of time. To avoid the glitch, the
  * {@link UseCase}s need to be enabled/disabled before the controller is set on {@link PreviewView}.
  */
+@SuppressWarnings("deprecation")
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public abstract class CameraController {
 
@@ -254,7 +257,7 @@ public abstract class CameraController {
     // Synthetic access
     @SuppressWarnings("WeakerAccess")
     @NonNull
-    VideoCapture mVideoCapture;
+    androidx.camera.core.VideoCapture mVideoCapture;
 
     // Synthetic access
     @SuppressWarnings("WeakerAccess")
@@ -306,8 +309,8 @@ public abstract class CameraController {
     final MutableLiveData<Integer> mTapToFocusState = new MutableLiveData<>(
             TAP_TO_FOCUS_NOT_STARTED);
 
-    @Nullable
-    private EffectBundle mEffectBundle;
+    @NonNull
+    private List<CameraEffect> mEffects = emptyList();
 
     private final Context mAppContext;
 
@@ -319,7 +322,7 @@ public abstract class CameraController {
         mPreview = new Preview.Builder().build();
         mImageCapture = new ImageCapture.Builder().build();
         mImageAnalysis = new ImageAnalysis.Builder().build();
-        mVideoCapture = new VideoCapture.Builder().build();
+        mVideoCapture = new androidx.camera.core.VideoCapture.Builder().build();
 
         // Wait for camera to be initialized before binding use cases.
         mInitializationFuture = Futures.transform(
@@ -1133,10 +1136,11 @@ public abstract class CameraController {
         Preconditions.checkState(isVideoCaptureEnabled(), VIDEO_CAPTURE_DISABLED);
 
         mVideoCapture.startRecording(outputFileOptions.toVideoCaptureOutputFileOptions(), executor,
-                new VideoCapture.OnVideoSavedCallback() {
+                new androidx.camera.core.VideoCapture.OnVideoSavedCallback() {
                     @Override
                     public void onVideoSaved(
-                            @NonNull VideoCapture.OutputFileResults outputFileResults) {
+                            @NonNull androidx.camera.core.VideoCapture.OutputFileResults
+                                    outputFileResults) {
                         mVideoIsRecording.set(false);
                         callback.onVideoSaved(
                                 OutputFileResults.create(outputFileResults.getSavedUri()));
@@ -1218,7 +1222,8 @@ public abstract class CameraController {
         if (isCameraInitialized()) {
             mCameraProvider.unbind(mVideoCapture);
         }
-        VideoCapture.Builder builder = new VideoCapture.Builder();
+        androidx.camera.core.VideoCapture.Builder builder =
+                new androidx.camera.core.VideoCapture.Builder();
         setTargetOutputSize(builder, mVideoCaptureOutputSize);
         mVideoCapture = builder.build();
     }
@@ -1664,13 +1669,13 @@ public abstract class CameraController {
     /**
      * Sets post-processing effects.
      *
-     * @param effectBundle the effects applied to camera output.
+     * @param effects the effects applied to camera output.
      * @hide
-     * @see UseCaseGroup.Builder#getEffectBundle()
+     * @see UseCaseGroup.Builder#addEffect
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public void setEffectBundle(@Nullable EffectBundle effectBundle) {
-        if (mEffectBundle == effectBundle) {
+    public void setEffects(@NonNull List<CameraEffect> effects) {
+        if (Objects.equals(mEffects, effects)) {
             // Same effect. No change needed.
             return;
         }
@@ -1678,7 +1683,7 @@ public abstract class CameraController {
             // Unbind to make sure the pipelines will be recreated.
             mCameraProvider.unbindAll();
         }
-        mEffectBundle = effectBundle;
+        mEffects = effects;
         startCameraAndTrackStates();
     }
 
@@ -1763,8 +1768,8 @@ public abstract class CameraController {
         }
 
         builder.setViewPort(mViewPort);
-        if (mEffectBundle != null) {
-            builder.setEffectBundle(mEffectBundle);
+        for (CameraEffect effect : mEffects) {
+            builder.addEffect(effect);
         }
         return builder.build();
     }

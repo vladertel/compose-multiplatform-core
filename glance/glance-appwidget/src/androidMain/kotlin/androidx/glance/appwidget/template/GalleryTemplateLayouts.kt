@@ -160,8 +160,10 @@ private fun createCardModifier() = GlanceModifier.fillMaxWidth().padding(16.dp).
 private fun HeaderAndTextBlocks(data: GalleryTemplateData, modifier: GlanceModifier) {
     Column(modifier = modifier) {
         HeaderBlockTemplate(data.header)
+        // TODO(b/247613894): Spacing should be conditional
         Spacer(modifier = GlanceModifier.height(16.dp).defaultWeight())
         TextBlockTemplate(data.mainTextBlock)
+        Spacer(modifier = GlanceModifier.height(16.dp))
         ActionBlockTemplate(data.mainActionBlock)
     }
 }
