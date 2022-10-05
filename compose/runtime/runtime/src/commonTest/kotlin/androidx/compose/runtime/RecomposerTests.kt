@@ -41,7 +41,7 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class RecomposerTests {
 
-    private fun runTestUnconfined(block: suspend TestScope.() -> Unit): Unit =
+    private fun runTestUnconfined(block: suspend TestScope.() -> Unit) =
         runTest(UnconfinedTestDispatcher()) {
             block()
         }

@@ -27,6 +27,7 @@ plugins {
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
 dependencies {
+    //kotlinPlugin(projectOrArtifact(":compose:compiler:compiler"))
 
     if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         /*
@@ -62,9 +63,28 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
+        js()
     }
 
     kotlin {
+        targets.js {
+            nodejs {
+                testTask {
+                    useMocha {
+                        timeout = 8000
+                    }
+                }
+            }
+            browser() {
+                testTask {
+                    testLogging.showStandardStreams = true
+                    useKarma {
+                        useChromeHeadless()
+                        useFirefox()
+                    }
+                }
+            }
+        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -100,6 +120,25 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.truth)
                 }
             }
+
+            jsMain {
+                dependencies {
+                    implementation(libs.kotlinStdlibJs)
+                }
+            }
+
+            jsNativeMain.dependsOn(commonMain)
+            jsMain.dependsOn(jsNativeMain)
+
+            jvmTest.dependencies {
+                implementation(libs.kotlinTestJunit)
+                implementation(libs.kotlinCoroutinesTest)
+            }
+            jsTest {
+                dependencies {
+                    implementation(libs.kotlinTestJs)
+                }
+            }
         }
     }
     dependencies {
@@ -128,5 +167,6 @@ tasks.withType(KotlinCompile).configureEach {
         freeCompilerArgs += [
                 "-Xjvm-default=all"
         ]
+        incremental = false
     }
 }
