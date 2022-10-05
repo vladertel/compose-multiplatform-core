@@ -205,7 +205,8 @@ class ComposeComponentRegistrar : ComponentRegistrar {
             project: Project,
             configuration: CompilerConfiguration
         ) {
-            val KOTLIN_VERSION_EXPECTATION = "1.7.20"
+//            val KOTLIN_VERSION_EXPECTATION = "1.7.20"
+            val KOTLIN_VERSION_EXPECTATION = "1.7.255-SNAPSHOT"
             KotlinCompilerVersion.getVersion()?.let { version ->
                 val msgCollector = configuration.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY)
                 val suppressKotlinVersionCheck = configuration.get(

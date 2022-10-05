@@ -568,7 +568,7 @@ class SnapshotStateListTests {
     }
 
     @Test @OptIn(ExperimentalCoroutinesApi::class)
-    fun concurrentGlobalModifications_addAll(): Unit = runTest {
+    fun concurrentGlobalModifications_addAll() = runTest {
         repeat(100) {
             val list = mutableStateListOf<Int>()
             coroutineScope {

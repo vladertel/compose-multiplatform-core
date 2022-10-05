@@ -18,7 +18,7 @@ package androidx.compose.runtime.snapshots
 
 import androidx.compose.runtime.ExperimentalComposeApi
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.ThreadContextElement
+//import kotlinx.coroutines.ThreadContextElement
 
 /**
  * Return a [SnapshotContextElement] that will [enter][Snapshot.enter] this [Snapshot] whenever
@@ -47,14 +47,14 @@ interface SnapshotContextElement : CoroutineContext.Element {
 @ExperimentalComposeApi
 private class SnapshotContextElementImpl(
     private val snapshot: Snapshot
-) : SnapshotContextElement, ThreadContextElement<Snapshot?> {
+) : SnapshotContextElement {
     override val key: CoroutineContext.Key<*>
         get() = SnapshotContextElement
 
-    override fun updateThreadContext(context: CoroutineContext): Snapshot? =
+    fun updateThreadContext(context: CoroutineContext): Snapshot? =
         snapshot.unsafeEnter()
 
-    override fun restoreThreadContext(context: CoroutineContext, oldState: Snapshot?) {
+    fun restoreThreadContext(context: CoroutineContext, oldState: Snapshot?) {
         snapshot.unsafeLeave(oldState)
     }
 }
