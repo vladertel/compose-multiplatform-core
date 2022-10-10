@@ -37,6 +37,8 @@ dependencies {
         )
     )
 
+    def isJBFork = true
+
     // tools.jar required for com.sun.jdi
     def toolsJar
     if (JavaVersion.current().getMajorVersion() == "8") {

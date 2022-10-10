@@ -78,12 +78,12 @@ android {
         main.resources.srcDirs += "src/main/proto"
     }
 
-    externalNativeBuild {
-        cmake {
-            path "src/main/cpp/CMakeLists.txt"
-            version libs.versions.cmake.get()
-        }
-    }
+//    externalNativeBuild {
+//        cmake {
+//            path "src/main/cpp/CMakeLists.txt"
+//            version libs.versions.cmake.get()
+//        }
+//    }
 
     lintOptions {
         // Restriction not important for inspectors, which only runs at dev-time

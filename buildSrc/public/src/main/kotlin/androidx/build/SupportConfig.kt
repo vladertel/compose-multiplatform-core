@@ -20,11 +20,12 @@ import androidx.build.SupportConfig.COMPILE_SDK_VERSION
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 import java.io.File
+import org.gradle.api.GradleException
 
 object SupportConfig {
     const val DEFAULT_MIN_SDK_VERSION = 14
     const val INSTRUMENTATION_RUNNER = "androidx.test.runner.AndroidJUnitRunner"
-    const val BUILD_TOOLS_VERSION = "33.0.0"
+    const val BUILD_TOOLS_VERSION = "30.0.3"
     const val NDK_VERSION = "23.1.7779620"
 
     /**
@@ -33,7 +34,7 @@ object SupportConfig {
      * Either an integer value or a pre-release platform code, prefixed with "android-" (ex.
      * "android-28" or "android-Q") as you would see within the SDK's platforms directory.
      */
-    const val COMPILE_SDK_VERSION = "android-33"
+    const val COMPILE_SDK_VERSION = "android-32"
 
     /**
      * The Android SDK version to use for targetSdkVersion meta-data.
@@ -46,11 +47,19 @@ object SupportConfig {
      * order for tests to run on devices running released versions of the Android OS. If this is
      * set to a pre-release version, tests will only be able to run on pre-release devices.
      */
-    const val TARGET_SDK_VERSION = 33
+    const val TARGET_SDK_VERSION = 32
 }
 
 fun Project.getExternalProjectPath(): File {
-    return File(rootProject.projectDir, "../../external").canonicalFile
+    val path = if (System.getenv("COMPOSE_DESKTOP_GITHUB_BUILD") != null)
+        File(System.getenv("OUT_DIR")).also {
+            if (!File(it, "doclava").isDirectory()) {
+                throw GradleException("Please checkout doclava to $it")
+            }
+        }
+    else
+        File(rootProject.projectDir, "../../external")
+    return path.getCanonicalFile()
 }
 
 fun Project.getKeystore(): File {
