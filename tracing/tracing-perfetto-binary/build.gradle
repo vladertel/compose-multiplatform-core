@@ -64,12 +64,12 @@ android {
             main.jniLibs.srcDirs += new File(unzippedPrebuiltsAarDir, "jni")
         }
     } else { // build .so files from scratch
-        externalNativeBuild {
-            cmake {
-                path "src/main/cpp/CMakeLists.txt"
-                version libs.versions.cmake.get()
-            }
-        }
+//        externalNativeBuild {
+//            cmake {
+//                path "src/main/cpp/CMakeLists.txt"
+//                version libs.versions.cmake.get()
+//            }
+//        }
     }
     namespace "androidx.tracing.perfetto.binary"
 }
