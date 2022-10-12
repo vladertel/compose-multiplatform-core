@@ -37,7 +37,9 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
+import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
+import org.jetbrains.kotlin.ir.declarations.lazy.IrLazyFunction
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrOverridableDeclaration
@@ -45,10 +47,13 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.declarations.copyAttributes
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
+import org.jetbrains.kotlin.ir.declarations.lazy.IrLazyDeclarationBase
+import org.jetbrains.kotlin.ir.declarations.lazy.IrLazyFunctionBase
 import org.jetbrains.kotlin.ir.descriptors.IrBasedDeclarationDescriptor
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
@@ -59,6 +64,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrReturnImpl
+import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrSimpleType
@@ -71,6 +77,7 @@ import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.copyTo
+import org.jetbrains.kotlin.ir.util.copyTypeAndValueArgumentsFrom
 import org.jetbrains.kotlin.ir.util.copyTypeParametersFrom
 import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.ir.util.explicitParameters
@@ -154,6 +161,10 @@ class ComposerParamTransformer(
         return v2
     }
 
+    override fun visitConstructorCall(expression: IrConstructorCall): IrExpression {
+        return super.visitConstructorCall(expression)
+    }
+
     fun IrCall.withComposerParamIfNeeded(composerParam: IrValueParameter): IrCall {
         val isComposableLambda = isComposableLambdaInvoke()
 
@@ -171,7 +182,12 @@ class ComposerParamTransformer(
         if (!ownerFn.externallyTransformed()) {
             if (!isComposableLambda && !transformedFunctionSet.contains(ownerFn))
                 return this
-            if (symbol.owner == ownerFn)
+
+            val alreadyContainsComposerParam =  (0..valueArgumentsCount).any {
+                val param = getValueArgument(it)
+                param is IrGetValue && param.symbol == composerParam.symbol
+            }
+            if (alreadyContainsComposerParam && symbol.owner == ownerFn)
                 return this
         }
 
@@ -321,7 +337,7 @@ class ComposerParamTransformer(
         if (isDecoy()) return this
 
         // some functions were transformed during previous compilations or in other modules
-        if (this.externallyTransformed()) {
+        if (!isNotTransformedLazyNode() && this.externallyTransformed()) {
             return this
         }
 
@@ -477,6 +493,7 @@ class ComposerParamTransformer(
     }
 
     private fun IrFunction.hasDefaultExpressionDefinedForValueParameter(index: Int): Boolean {
+        //return false
         // checking for default value isn't enough, you need to ensure that none of the overrides
         // have it as well...
         if (this !is IrSimpleFunction) return false
@@ -623,14 +640,37 @@ class ComposerParamTransformer(
                 }
 
                 override fun visitCall(expression: IrCall): IrExpression {
-                    val expr = if (!isNestedScope) {
-                        expression.withComposerParamIfNeeded(composerParam)
+                    val owner = expression.symbol.owner.takeIf { it.isNotTransformedLazyNode() }
+                    val patchedOwner = owner?.withComposerParamIfNeeded()
+                    val newCall = if (patchedOwner != null && owner !== patchedOwner) {
+                        IrCallImpl(
+                            symbol = patchedOwner.symbol as IrSimpleFunctionSymbol,
+                            origin = expression.origin,
+                            startOffset = expression.startOffset,
+                            endOffset = expression.endOffset,
+                            type = expression.type,
+                            typeArgumentsCount = owner.typeParameters.size,
+                            valueArgumentsCount = owner.valueParameters.size,
+                            superQualifierSymbol = expression.superQualifierSymbol,
+                        ).apply {
+                            dispatchReceiver = expression.dispatchReceiver
+                            extensionReceiver = expression.extensionReceiver
+                            copyTypeAndValueArgumentsFrom(expression)
+                        }
+                    } else expression
+                    val call = super.visitCall(newCall)
+
+                    return if (!isNestedScope && call is IrCall) {
+                        call.withComposerParamIfNeeded(composerParam)
                     } else
-                        expression
-                    return super.visitCall(expr)
+                        call
                 }
             })
         }
+    }
+
+    private fun IrDeclaration.isNotTransformedLazyNode(): Boolean {
+        return origin !== IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB || parent is IrLazyDeclarationBase
     }
 
     private fun defaultParameterType(param: IrValueParameter): IrType {

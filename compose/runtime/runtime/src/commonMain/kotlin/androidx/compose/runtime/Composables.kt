@@ -17,14 +17,6 @@
 package androidx.compose.runtime
 
 /**
- * Remember the value produced by [calculation]. [calculation] will only be evaluated during the composition.
- * Recomposition will always return the value produced by composition.
- */
-@Composable
-inline fun <T> remember(crossinline calculation: @DisallowComposableCalls () -> T): T =
-    currentComposer.cache(false, calculation)
-
-/**
  * Remember the value returned by [calculation] if [key1] is equal to the previous composition,
  * otherwise produce and remember a new value by calling [calculation].
  */

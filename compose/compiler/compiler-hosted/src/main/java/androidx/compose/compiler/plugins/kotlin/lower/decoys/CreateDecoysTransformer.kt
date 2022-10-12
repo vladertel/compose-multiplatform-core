@@ -38,6 +38,7 @@ import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrExpressionBody
 import org.jetbrains.kotlin.ir.expressions.IrGetValue
@@ -117,12 +118,18 @@ class CreateDecoysTransformer(
     override fun lower(module: IrModuleFragment) {
         module.transformChildrenVoid()
 
-        originalFunctions.forEach { (f, parent) ->
-            (parent as? IrDeclarationContainer)?.addChild(f)
-        }
+        updateParents()
 
         module.patchDeclarationParents()
     }
+
+    fun updateParents() {
+        originalFunctions.forEach { (f, parent) ->
+            (parent as? IrDeclarationContainer)?.addChild(f)
+        }
+        originalFunctions.clear()
+    }
+
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
         if (!declaration.shouldBeRemapped()) {
@@ -189,7 +196,7 @@ class CreateDecoysTransformer(
             newFunction.overriddenSymbols = (original as IrSimpleFunction).overriddenSymbols
             newFunction.correspondingPropertySymbol = null
         }
-        newFunction.origin = IrDeclarationOrigin.DEFINED
+        newFunction.origin = original.origin
 
         // here generic value parameters will be applied
         newFunction.copyTypeParametersFrom(original)
@@ -306,6 +313,8 @@ class CreateDecoysTransformer(
         !isLocalFunction() &&
             !isEnumConstructor() &&
             (hasComposableAnnotation() || hasComposableParameter())
+
+    fun shouldRemapFunction(function: IrFunction): Boolean = function.shouldBeRemapped()
 
     private fun IrFunction.isLocalFunction(): Boolean =
         origin == IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA ||
