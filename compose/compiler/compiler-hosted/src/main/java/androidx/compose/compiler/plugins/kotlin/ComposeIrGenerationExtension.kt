@@ -115,45 +115,13 @@ class ComposeIrGenerationExtension(
 
         CopyDefaultValuesFromExpectLowering().lower(moduleFragment)
 
-        val mangler = when {
-            pluginContext.platform.isJs() -> JsManglerIr
-            else -> null
-        }
-
-        val idSignatureBuilder = when {
-            pluginContext.platform.isJs() -> IdSignatureSerializer(
-                PublicIdSignatureComputer(mangler!!),
-                DeclarationTable(JsGlobalDeclarationTable(pluginContext.irBuiltIns))
-            )
-            else -> null
-        }
-        if (decoysEnabled) {
-            require(idSignatureBuilder != null) {
-                "decoys are not supported for ${pluginContext.platform}"
-            }
-
-            CreateDecoysTransformer(
-                pluginContext,
-                symbolRemapper,
-                idSignatureBuilder,
-                metrics,
-            ).lower(moduleFragment)
-
-            SubstituteDecoyCallsTransformer(
-                pluginContext,
-                symbolRemapper,
-                idSignatureBuilder,
-                metrics,
-            ).lower(moduleFragment)
-        }
-
         // transform all composable functions to have an extra synthetic composer
         // parameter. this will also transform all types and calls to include the extra
         // parameter.
         ComposerParamTransformer(
             pluginContext,
             symbolRemapper,
-            decoysEnabled,
+            false,
             metrics,
         ).lower(moduleFragment)
 
@@ -175,20 +143,6 @@ class ComposeIrGenerationExtension(
             intrinsicRememberEnabled
         ).lower(moduleFragment)
 
-        if (decoysEnabled) {
-            require(idSignatureBuilder != null) {
-                "decoys are not supported for ${pluginContext.platform}"
-            }
-
-            RecordDecoySignaturesTransformer(
-                pluginContext,
-                symbolRemapper,
-                idSignatureBuilder,
-                metrics,
-                mangler!!
-            ).lower(moduleFragment)
-        }
-
         if (isKlibTarget) {
             KlibAssignableParamTransformer(
                 pluginContext,
@@ -202,7 +156,7 @@ class ComposeIrGenerationExtension(
                 pluginContext,
                 symbolRemapper,
                 metrics,
-                idSignatureBuilder!!
+//                idSignatureBuilder!!
             ).lower(moduleFragment)
         }
 

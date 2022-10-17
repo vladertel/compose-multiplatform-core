@@ -26,6 +26,7 @@ import androidx.compose.runtime.collection.IdentityScopeMap
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.observeDerivedStateRecalculations
 import androidx.compose.runtime.structuralEqualityPolicy
+import androidx.compose.runtime.synchronized
 
 /**
  * Helper class to efficiently observe snapshot state reads. See [observeReads] for more details.

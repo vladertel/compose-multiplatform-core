@@ -76,16 +76,19 @@ import org.jetbrains.kotlin.name.SpecialNames
 class WrapJsComposableLambdaLowering(
     context: IrPluginContext,
     symbolRemapper: DeepCopySymbolRemapper,
-    metrics: ModuleMetrics,
-    signatureBuilder: IdSignatureSerializer
-) : AbstractDecoysLowering(context, symbolRemapper, metrics, signatureBuilder) {
+    metrics: ModuleMetrics
+) : AbstractComposeLowering(context, symbolRemapper, metrics) {
 
-    private val composableLambdaSymbol = symbolRemapper.getReferencedSimpleFunction(
-        getTopLevelFunctions(ComposeFqNames.composableLambda).first()
-    )
-    private val composableLambdaInstanceSymbol = symbolRemapper.getReferencedSimpleFunction(
-        getTopLevelFunctions(ComposeFqNames.composableLambdaInstance).first()
-    )
+    private val rememberFunDeclaration by lazy {
+        val originalFunctionSymbol = symbolRemapper.getReferencedSimpleFunction(
+            getTopLevelFunctions(ComposeFqNames.remember).map { it.owner }.first {
+                it.valueParameters.size == 2 && !it.valueParameters.first().isVararg
+            }.symbol
+        )
+
+        val lazyFunctionsTransformer = ComposerParamTransformer(context,  symbolRemapper, false, metrics)
+        lazyFunctionsTransformer.visitSimpleFunction(originalFunctionSymbol.owner) as IrSimpleFunction
+    }
 
     override fun lower(module: IrModuleFragment) {
         module.transformChildrenVoid(this)
@@ -94,11 +97,11 @@ class WrapJsComposableLambdaLowering(
 
     override fun visitCall(expression: IrCall): IrExpression {
         val original = super.visitCall(expression) as IrCall
-        return when (expression.symbol) {
-            composableLambdaSymbol -> {
+        return when (expression.symbol.owner.fqNameForIrSerialization) {
+            ComposeFqNames.composableLambda -> {
                 transformComposableLambdaCall(original)
             }
-            composableLambdaInstanceSymbol -> {
+            ComposeFqNames.composableLambdaInstance -> {
                 transformComposableLambdaInstanceCall(original)
             }
             else -> original
@@ -141,12 +144,6 @@ class WrapJsComposableLambdaLowering(
         val funReference = functionReferenceForComposableLambda(
             lambda, irGet(composableLambdaVar)
         )
-
-        val rememberFunSymbol = symbolRemapper.getReferencedSimpleFunction(
-            getTopLevelFunctions(ComposeFqNames.remember).map { it.owner }.first {
-                it.valueParameters.size == 2 && !it.valueParameters.first().isVararg
-            }.symbol
-        ).owner.getComposableForDecoy() as IrSimpleFunctionSymbol
 
         val calculationFunSymbol = IrSimpleFunctionSymbolImpl()
         val rememberBlock = createLambda0(
