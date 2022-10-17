@@ -18,14 +18,13 @@ package androidx.compose.compiler.plugins.kotlin.lower
 
 import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
 import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.AbstractDecoysLowering
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
-import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
+import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -42,6 +41,7 @@ import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.typeWith
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.SYNTHETIC_OFFSET
+import org.jetbrains.kotlin.ir.util.fqNameForIrSerialization
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.isVararg
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
@@ -76,16 +76,19 @@ import org.jetbrains.kotlin.name.SpecialNames
 class WrapJsComposableLambdaLowering(
     context: IrPluginContext,
     symbolRemapper: DeepCopySymbolRemapper,
-    metrics: ModuleMetrics,
-    signatureBuilder: IdSignatureSerializer
-) : AbstractDecoysLowering(context, symbolRemapper, metrics, signatureBuilder) {
+    metrics: ModuleMetrics
+) : AbstractComposeLowering(context, symbolRemapper, metrics) {
 
-    private val composableLambdaSymbol = symbolRemapper.getReferencedSimpleFunction(
-        getTopLevelFunctions(ComposeFqNames.composableLambda).first()
-    )
-    private val composableLambdaInstanceSymbol = symbolRemapper.getReferencedSimpleFunction(
-        getTopLevelFunctions(ComposeFqNames.composableLambdaInstance).first()
-    )
+    private val rememberFunDeclaration by lazy {
+        val originalFunctionSymbol = symbolRemapper.getReferencedSimpleFunction(
+            getTopLevelFunctions(ComposeFqNames.remember).map { it.owner }.first {
+                it.valueParameters.size == 2 && !it.valueParameters.first().isVararg
+            }.symbol
+        )
+
+        val lazyFunctionsTransformer = ComposerParamTransformer(context,  symbolRemapper, metrics)
+        lazyFunctionsTransformer.visitSimpleFunction(originalFunctionSymbol.owner) as IrSimpleFunction
+    }
 
     override fun lower(module: IrModuleFragment) {
         module.transformChildrenVoid(this)
@@ -94,11 +97,11 @@ class WrapJsComposableLambdaLowering(
 
     override fun visitCall(expression: IrCall): IrExpression {
         val original = super.visitCall(expression) as IrCall
-        return when (expression.symbol) {
-            composableLambdaSymbol -> {
+        return when (expression.symbol.owner.fqNameForIrSerialization) {
+            ComposeFqNames.composableLambda -> {
                 transformComposableLambdaCall(original)
             }
-            composableLambdaInstanceSymbol -> {
+            ComposeFqNames.composableLambdaInstance -> {
                 transformComposableLambdaInstanceCall(original)
             }
             else -> original
@@ -142,12 +145,6 @@ class WrapJsComposableLambdaLowering(
             lambda, irGet(composableLambdaVar)
         )
 
-        val rememberFunSymbol = symbolRemapper.getReferencedSimpleFunction(
-            getTopLevelFunctions(ComposeFqNames.remember).map { it.owner }.first {
-                it.valueParameters.size == 2 && !it.valueParameters.first().isVararg
-            }.symbol
-        ).owner.getComposableForDecoy() as IrSimpleFunctionSymbol
-
         val calculationFunSymbol = IrSimpleFunctionSymbolImpl()
         val rememberBlock = createLambda0(
             returnType = lambda.type,
@@ -160,7 +157,7 @@ class WrapJsComposableLambdaLowering(
             startOffset = SYNTHETIC_OFFSET,
             endOffset = SYNTHETIC_OFFSET,
             type = lambda.type,
-            symbol = rememberFunSymbol,
+            symbol = rememberFunDeclaration.symbol,
             typeArgumentsCount = 1,
             valueArgumentsCount = 4
         ).apply {

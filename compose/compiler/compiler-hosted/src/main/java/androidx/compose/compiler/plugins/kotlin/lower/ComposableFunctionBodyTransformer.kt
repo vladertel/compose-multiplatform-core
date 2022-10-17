@@ -28,7 +28,6 @@ import androidx.compose.compiler.plugins.kotlin.hasExplicitGroupsAnnotation
 import androidx.compose.compiler.plugins.kotlin.hasNonRestartableComposableAnnotation
 import androidx.compose.compiler.plugins.kotlin.hasReadonlyComposableAnnotation
 import androidx.compose.compiler.plugins.kotlin.irTrace
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.DecoyFqNames
 import kotlin.math.abs
 import kotlin.math.absoluteValue
 import kotlin.math.ceil
@@ -2784,7 +2783,6 @@ class ComposableFunctionBodyTransformer(
                 }
             }
             ComposeFqNames.key -> visitKeyCall(expression)
-            DecoyFqNames.key -> visitKeyCall(expression)
             else -> visitNormalComposableCall(expression)
         }
     }

@@ -329,7 +329,6 @@ class ComposeComponentRegistrar : ComponentRegistrar {
                     generateFunctionKeyMetaClasses = generateFunctionKeyMetaClasses,
                     sourceInformationEnabled = sourceInformationEnabled,
                     intrinsicRememberEnabled = intrinsicRememberEnabled,
-                    decoysEnabled = decoysEnabled,
                     metricsDestination = metricsDestination,
                     reportsDestination = reportsDestination,
                 )

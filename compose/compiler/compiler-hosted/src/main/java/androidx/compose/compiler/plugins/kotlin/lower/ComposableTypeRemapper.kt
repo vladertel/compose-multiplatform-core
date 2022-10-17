@@ -17,7 +17,6 @@
 package androidx.compose.compiler.plugins.kotlin.lower
 
 import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.isDecoy
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContextImpl
 import org.jetbrains.kotlin.backend.common.peek
@@ -388,10 +387,6 @@ class ComposerTypeRemapper(
         if (type !is IrSimpleType) return type
         if (!type.isFunction()) return underlyingRemapType(type)
         if (!type.isComposable()) return underlyingRemapType(type)
-        // do not convert types for decoys
-        if (scopeStack.peek()?.isDecoy() == true) {
-            return underlyingRemapType(type)
-        }
 
         val oldIrArguments = type.arguments
         val realParams = oldIrArguments.size - 1

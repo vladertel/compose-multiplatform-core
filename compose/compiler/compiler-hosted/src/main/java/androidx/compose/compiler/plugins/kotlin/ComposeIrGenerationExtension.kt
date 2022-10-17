@@ -30,18 +30,10 @@ import androidx.compose.compiler.plugins.kotlin.lower.KlibAssignableParamTransfo
 import androidx.compose.compiler.plugins.kotlin.lower.DurableFunctionKeyTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.LiveLiteralTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.WrapJsComposableLambdaLowering
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.CreateDecoysTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.RecordDecoySignaturesTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.SubstituteDecoyCallsTransformer
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
-import org.jetbrains.kotlin.backend.common.serialization.DeclarationTable
-import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
-import org.jetbrains.kotlin.backend.common.serialization.signature.PublicIdSignatureComputer
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.JVMConfigurationKeys
-import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsGlobalDeclarationTable
-import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerIr
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
@@ -53,7 +45,6 @@ class ComposeIrGenerationExtension(
     private val generateFunctionKeyMetaClasses: Boolean = false,
     private val sourceInformationEnabled: Boolean = true,
     private val intrinsicRememberEnabled: Boolean = true,
-    private val decoysEnabled: Boolean = false,
     private val metricsDestination: String? = null,
     private val reportsDestination: String? = null
 ) : IrGenerationExtension {
@@ -115,45 +106,12 @@ class ComposeIrGenerationExtension(
 
         CopyDefaultValuesFromExpectLowering().lower(moduleFragment)
 
-        val mangler = when {
-            pluginContext.platform.isJs() -> JsManglerIr
-            else -> null
-        }
-
-        val idSignatureBuilder = when {
-            pluginContext.platform.isJs() -> IdSignatureSerializer(
-                PublicIdSignatureComputer(mangler!!),
-                DeclarationTable(JsGlobalDeclarationTable(pluginContext.irBuiltIns))
-            )
-            else -> null
-        }
-        if (decoysEnabled) {
-            require(idSignatureBuilder != null) {
-                "decoys are not supported for ${pluginContext.platform}"
-            }
-
-            CreateDecoysTransformer(
-                pluginContext,
-                symbolRemapper,
-                idSignatureBuilder,
-                metrics,
-            ).lower(moduleFragment)
-
-            SubstituteDecoyCallsTransformer(
-                pluginContext,
-                symbolRemapper,
-                idSignatureBuilder,
-                metrics,
-            ).lower(moduleFragment)
-        }
-
         // transform all composable functions to have an extra synthetic composer
         // parameter. this will also transform all types and calls to include the extra
         // parameter.
         ComposerParamTransformer(
             pluginContext,
             symbolRemapper,
-            decoysEnabled,
             metrics,
         ).lower(moduleFragment)
 
@@ -165,7 +123,7 @@ class ComposeIrGenerationExtension(
 
         // transform calls to the currentComposer to just use the local parameter from the
         // previous transform
-        ComposerIntrinsicTransformer(pluginContext, decoysEnabled).lower(moduleFragment)
+        ComposerIntrinsicTransformer(pluginContext).lower(moduleFragment)
 
         ComposableFunctionBodyTransformer(
             pluginContext,
@@ -174,20 +132,6 @@ class ComposeIrGenerationExtension(
             sourceInformationEnabled,
             intrinsicRememberEnabled
         ).lower(moduleFragment)
-
-        if (decoysEnabled) {
-            require(idSignatureBuilder != null) {
-                "decoys are not supported for ${pluginContext.platform}"
-            }
-
-            RecordDecoySignaturesTransformer(
-                pluginContext,
-                symbolRemapper,
-                idSignatureBuilder,
-                metrics,
-                mangler!!
-            ).lower(moduleFragment)
-        }
 
         if (isKlibTarget) {
             KlibAssignableParamTransformer(
@@ -202,7 +146,6 @@ class ComposeIrGenerationExtension(
                 pluginContext,
                 symbolRemapper,
                 metrics,
-                idSignatureBuilder!!
             ).lower(moduleFragment)
         }
 

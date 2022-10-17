@@ -47,6 +47,7 @@ import org.jetbrains.kotlin.descriptors.ValueParameterDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.descriptors.impl.AnonymousFunctionDescriptor
 import org.jetbrains.kotlin.descriptors.impl.ValueParameterDescriptorImpl
+import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
@@ -128,9 +129,13 @@ import org.jetbrains.kotlin.ir.types.isPrimitiveType
 import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.types.toKotlinType
 import org.jetbrains.kotlin.ir.types.typeWith
+import org.jetbrains.kotlin.ir.util.DeepCopyIrTreeWithSymbols
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
+import org.jetbrains.kotlin.ir.util.DeepCopyTypeRemapper
 import org.jetbrains.kotlin.ir.util.SYNTHETIC_OFFSET
+import org.jetbrains.kotlin.ir.util.TypeRemapper
 import org.jetbrains.kotlin.ir.util.constructedClass
+import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.fqNameForIrSerialization
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.getArguments
@@ -140,6 +145,7 @@ import org.jetbrains.kotlin.ir.util.isCrossinline
 import org.jetbrains.kotlin.ir.util.isFunction
 import org.jetbrains.kotlin.ir.util.isNoinline
 import org.jetbrains.kotlin.ir.util.primaryConstructor
+import org.jetbrains.kotlin.ir.util.remapTypeParameters
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.load.kotlin.computeJvmDescriptor
 import org.jetbrains.kotlin.name.FqName
@@ -1274,6 +1280,23 @@ abstract class AbstractComposeLowering(
         val name = fqNameForIrSerialization
         val stringKey = "$name$signature"
         return stringKey.hashCode()
+    }
+
+    protected inline fun <reified T : IrElement> T.copyWithNewTypeParams(
+        source: IrFunction,
+        target: IrFunction
+    ): T {
+        return deepCopyWithSymbols(target) { symbolRemapper, typeRemapper ->
+            val typeParamRemapper = object : TypeRemapper by typeRemapper {
+                override fun remapType(type: IrType): IrType {
+                    return typeRemapper.remapType(type.remapTypeParameters(source, target))
+                }
+            }
+
+            val deepCopy = DeepCopyIrTreeWithSymbols(symbolRemapper, typeParamRemapper)
+            (typeRemapper as? DeepCopyTypeRemapper)?.deepCopy = deepCopy
+            deepCopy
+        }
     }
 }
 

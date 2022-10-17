@@ -20,17 +20,12 @@ import androidx.compose.compiler.plugins.kotlin.KtxNameConventions
 import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
 import androidx.compose.compiler.plugins.kotlin.analysis.ComposeWritableSlices
 import androidx.compose.compiler.plugins.kotlin.irTrace
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.copyWithNewTypeParams
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.didDecoyHaveDefaultForValueParameter
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.isDecoy
-import androidx.compose.compiler.plugins.kotlin.lower.decoys.isDecoyImplementation
 import kotlin.math.min
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.moveBodyTo
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.PropertyGetterDescriptor
 import org.jetbrains.kotlin.descriptors.PropertySetterDescriptor
 import org.jetbrains.kotlin.ir.IrStatement
@@ -87,7 +82,6 @@ import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.load.java.JvmAbi
-import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.multiplatform.findCompatibleExpectsForActual
@@ -96,23 +90,14 @@ import org.jetbrains.kotlin.util.OperatorNameConventions
 class ComposerParamTransformer(
     context: IrPluginContext,
     symbolRemapper: DeepCopySymbolRemapper,
-    private val decoysEnabled: Boolean,
     metrics: ModuleMetrics,
 ) :
     AbstractComposeLowering(context, symbolRemapper, metrics),
     ModuleLoweringPass {
 
-    /**
-     * Used to identify module fragment in case of incremental compilation
-     * see [externallyTransformed]
-     */
-    private var currentModule: IrModuleFragment? = null
-
     private var inlineLambdaInfo = ComposeInlineLambdaLocator(context)
 
     override fun lower(module: IrModuleFragment) {
-        currentModule = module
-
         inlineLambdaInfo.scan(module)
 
         module.transformChildrenVoid(this)
@@ -164,15 +149,6 @@ class ComposerParamTransformer(
                 symbol.owner.lambdaInvokeWithComposerParam()
             }
             else -> (symbol.owner).withComposerParamIfNeeded()
-        }
-
-        // externally transformed functions are already remapped from decoys, so we only need to
-        // add the parameters to the call
-        if (!ownerFn.externallyTransformed()) {
-            if (!isComposableLambda && !transformedFunctionSet.contains(ownerFn))
-                return this
-            if (symbol.owner == ownerFn)
-                return this
         }
 
         return IrCallImpl(
@@ -316,14 +292,6 @@ class ComposerParamTransformer(
         // call this with a function that has the synthetic composer parameter, we don't want to
         // transform it further).
         if (transformedFunctionSet.contains(this)) return this
-
-        // if it is a decoy, no need to process
-        if (isDecoy()) return this
-
-        // some functions were transformed during previous compilations or in other modules
-        if (this.externallyTransformed()) {
-            return this
-        }
 
         // if not a composable fn, nothing we need to do
         if (!this.hasComposableAnnotation()) {
@@ -481,10 +449,6 @@ class ComposerParamTransformer(
         // have it as well...
         if (this !is IrSimpleFunction) return false
         if (valueParameters[index].defaultValue != null) return true
-
-        if (context.platform.isJs() && this.isDecoyImplementation()) {
-            if (didDecoyHaveDefaultForValueParameter(index)) return true
-        }
 
         return overriddenSymbols.any {
             it.owner.hasDefaultExpressionDefinedForValueParameter(index)
@@ -659,18 +623,4 @@ class ComposerParamTransformer(
         } else {
             null
         }
-
-    /**
-     * With klibs, composable functions are always deserialized from IR instead of being restored
-     * into stubs.
-     * In this case, we need to avoid transforming those functions twice (because synthetic
-     * parameters are being added). We know however, that all the other modules were compiled
-     * before, so if the function comes from other [IrModuleFragment], we must skip it.
-     *
-     * NOTE: [ModuleDescriptor] will not work here, as incremental compilation of the same module
-     * can contain some functions that were transformed during previous compilation in a
-     * different module fragment with the same [ModuleDescriptor]
-     */
-    private fun IrFunction.externallyTransformed(): Boolean =
-        decoysEnabled && currentModule?.files?.contains(fileOrNull) != true
 }
