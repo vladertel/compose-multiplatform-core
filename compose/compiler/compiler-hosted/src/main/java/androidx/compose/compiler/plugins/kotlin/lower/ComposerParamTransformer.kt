@@ -179,17 +179,17 @@ class ComposerParamTransformer(
 
         // externally transformed functions are already remapped from decoys, so we only need to
         // add the parameters to the call
-        if (!ownerFn.externallyTransformed()) {
-            if (!isComposableLambda && !transformedFunctionSet.contains(ownerFn))
-                return this
-
-            val alreadyContainsComposerParam =  (0..valueArgumentsCount).any {
-                val param = getValueArgument(it)
-                param is IrGetValue && param.symbol == composerParam.symbol
-            }
-            if (alreadyContainsComposerParam && symbol.owner == ownerFn)
-                return this
-        }
+//        if (!ownerFn.externallyTransformed()) {
+//            if (!isComposableLambda && !transformedFunctionSet.contains(ownerFn))
+//                return this
+//
+//            val alreadyContainsComposerParam =  (0..valueArgumentsCount).any {
+//                val param = getValueArgument(it)
+//                param is IrGetValue && param.symbol == composerParam.symbol
+//            }
+//            if (alreadyContainsComposerParam && symbol.owner == ownerFn)
+//                return this
+//        }
 
         return IrCallImpl(
             startOffset,
@@ -337,9 +337,9 @@ class ComposerParamTransformer(
         if (isDecoy()) return this
 
         // some functions were transformed during previous compilations or in other modules
-        if (!isNotTransformedLazyNode() && this.externallyTransformed()) {
-            return this
-        }
+//        if (this.externallyTransformed()) {
+//            return this
+//        }
 
         // if not a composable fn, nothing we need to do
         if (!this.hasComposableAnnotation()) {
@@ -640,37 +640,14 @@ class ComposerParamTransformer(
                 }
 
                 override fun visitCall(expression: IrCall): IrExpression {
-                    val owner = expression.symbol.owner.takeIf { it.isNotTransformedLazyNode() }
-                    val patchedOwner = owner?.withComposerParamIfNeeded()
-                    val newCall = if (patchedOwner != null && owner !== patchedOwner) {
-                        IrCallImpl(
-                            symbol = patchedOwner.symbol as IrSimpleFunctionSymbol,
-                            origin = expression.origin,
-                            startOffset = expression.startOffset,
-                            endOffset = expression.endOffset,
-                            type = expression.type,
-                            typeArgumentsCount = owner.typeParameters.size,
-                            valueArgumentsCount = owner.valueParameters.size,
-                            superQualifierSymbol = expression.superQualifierSymbol,
-                        ).apply {
-                            dispatchReceiver = expression.dispatchReceiver
-                            extensionReceiver = expression.extensionReceiver
-                            copyTypeAndValueArgumentsFrom(expression)
-                        }
-                    } else expression
-                    val call = super.visitCall(newCall)
-
-                    return if (!isNestedScope && call is IrCall) {
-                        call.withComposerParamIfNeeded(composerParam)
+                    val expr = if (!isNestedScope) {
+                        expression.withComposerParamIfNeeded(composerParam)
                     } else
-                        call
+                        expression
+                    return super.visitCall(expr)
                 }
             })
         }
-    }
-
-    private fun IrDeclaration.isNotTransformedLazyNode(): Boolean {
-        return origin !== IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB || parent is IrLazyDeclarationBase
     }
 
     private fun defaultParameterType(param: IrValueParameter): IrType {
@@ -712,5 +689,9 @@ class ComposerParamTransformer(
      * different module fragment with the same [ModuleDescriptor]
      */
     private fun IrFunction.externallyTransformed(): Boolean =
-        decoysEnabled && currentModule?.files?.contains(fileOrNull) != true
+        decoysEnabled && currentModule?.files?.contains(fileOrNull) != true && isNotTransformedLazyNode()
+
+    private fun IrDeclaration.isNotTransformedLazyNode(): Boolean {
+        return origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB || parent is IrLazyDeclarationBase
+    }
 }

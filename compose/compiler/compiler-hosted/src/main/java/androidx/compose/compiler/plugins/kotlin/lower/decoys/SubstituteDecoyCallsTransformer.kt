@@ -17,6 +17,7 @@
 package androidx.compose.compiler.plugins.kotlin.lower.decoys
 
 import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
+import androidx.compose.compiler.plugins.kotlin.lower.ComposerParamTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.ModuleLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
@@ -220,15 +221,23 @@ class SubstituteDecoyCallsTransformer(
         return super.visitFunctionReference(updatedReference)
     }
 
+    private val сomposerParamTransformer = ComposerParamTransformer(context, symbolRemapper, true, metrics)
+
     private val IrFunctionSymbol.decoyOwner: IrFunction
         get() = if (owner is IrLazyFunctionBase && !owner.isDecoy()) {
             lazyDeclarationsCache.getOrPut(this) {
                 val declaration = owner
                 if (decoysTransformer.shouldRemapFunction(declaration)) {
                     when (declaration) {
-                        is IrSimpleFunction -> decoysTransformer.visitSimpleFunction(declaration)
-                        is IrConstructor -> decoysTransformer.visitConstructor(declaration)
-                        else -> decoysTransformer.visitFunction(declaration)
+                        is IrSimpleFunction -> decoysTransformer.visitSimpleFunction(declaration).let {
+                            сomposerParamTransformer.visitSimpleFunction(it as IrSimpleFunction)
+                        }
+                        is IrConstructor -> decoysTransformer.visitConstructor(declaration).let {
+                            сomposerParamTransformer.visitConstructor(it as IrConstructor)
+                        }
+                        else -> decoysTransformer.visitFunction(declaration).let {
+                            сomposerParamTransformer.visitFunction(it as IrSimpleFunction)
+                        }
                     }.also {
                         decoysTransformer.updateParents()
                     } as IrFunction
