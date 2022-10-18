@@ -17,11 +17,15 @@
 package androidx.compose.compiler.plugins.kotlin.lower.decoys
 
 import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
+import androidx.compose.compiler.plugins.kotlin.lower.ComposerParamTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.ModuleLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
 import org.jetbrains.kotlin.ir.IrStatement
+import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
+import org.jetbrains.kotlin.ir.declarations.lazy.IrLazyFunctionBase
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
+import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
@@ -40,6 +44,8 @@ import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.copyTypeAndValueArgumentsFrom
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.util.remapTypeParameters
+import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 
 /**
  * Replaces all decoys references to their implementations created in [CreateDecoysTransformer].
@@ -55,6 +61,8 @@ class SubstituteDecoyCallsTransformer(
     metrics = metrics,
     signatureBuilder = signatureBuilder
 ), ModuleLoweringPass {
+    private val decoysTransformer = CreateDecoysTransformer(pluginContext, symbolRemapper, signatureBuilder, metrics)
+    private val lazyDeclarationsCache = mutableMapOf<IrFunctionSymbol, IrFunction>()
 
     override fun lower(module: IrModuleFragment) {
         module.transformChildrenVoid()
@@ -117,7 +125,7 @@ class SubstituteDecoyCallsTransformer(
     }
 
     override fun visitConstructorCall(expression: IrConstructorCall): IrExpression {
-        val callee = expression.symbol.owner
+        val callee = expression.symbol.decoyOwner
         if (!callee.isDecoy()) {
             return super.visitConstructorCall(expression)
         }
@@ -144,7 +152,7 @@ class SubstituteDecoyCallsTransformer(
     override fun visitDelegatingConstructorCall(
         expression: IrDelegatingConstructorCall
     ): IrExpression {
-        val callee = expression.symbol.owner
+        val callee = expression.symbol.decoyOwner
         if (!callee.isDecoy()) {
             return super.visitDelegatingConstructorCall(expression)
         }
@@ -167,7 +175,7 @@ class SubstituteDecoyCallsTransformer(
     }
 
     override fun visitCall(expression: IrCall): IrExpression {
-        val callee = expression.symbol.owner
+        val callee = expression.symbol.decoyOwner
         if (!callee.isDecoy()) {
             return super.visitCall(expression)
         }
@@ -191,7 +199,7 @@ class SubstituteDecoyCallsTransformer(
     }
 
     override fun visitFunctionReference(expression: IrFunctionReference): IrExpression {
-        val callee = expression.symbol.owner
+        val callee = expression.symbol.decoyOwner
         if (!callee.isDecoy()) {
             return super.visitFunctionReference(expression)
         }
@@ -213,4 +221,62 @@ class SubstituteDecoyCallsTransformer(
         }
         return super.visitFunctionReference(updatedReference)
     }
+
+    private val addComposerParameterInplace = object : IrElementTransformerVoid() {
+        private val сomposerParamTransformer = ComposerParamTransformer(
+            context, symbolRemapper, true, metrics
+        )
+        override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
+            return сomposerParamTransformer.visitSimpleFunction(declaration)
+        }
+    }
+
+    private val IrFunctionSymbol.decoyOwner: IrFunction
+        get() = if (owner is IrLazyFunctionBase && !owner.isDecoy()) {
+            lazyDeclarationsCache.getOrPut(this) {
+                val declaration = owner
+                if (decoysTransformer.shouldRemapFunction(declaration)) {
+                    when (declaration) {
+                        is IrSimpleFunction -> decoysTransformer.visitSimpleFunction(declaration)
+                        is IrConstructor -> decoysTransformer.visitConstructor(declaration)
+                        else -> decoysTransformer.visitFunction(declaration)
+                    }.also {
+                        decoysTransformer.updateParents()
+                        owner.parent.transformChildrenVoid(addComposerParameterInplace)
+                    } as IrFunction
+                } else owner
+            }
+        } else owner
 }
+
+/**
+ * class Boo {
+ *  @Composable
+ *  fun remember() {...}
+ *
+ *  }
+ * moduleB:
+ *
+ *
+ * @Composable
+ * fun Foo() {
+ *  Boo().remember()
+ * }
+ *
+ * ______
+ * moduleA:
+ * @Decoy(idSing = ...)
+ * fun remember() { error("Shoyuld be replaced") }
+ *
+ * @Composable
+ * @DecoyImpl
+ * fun remmebr$composable(...)
+ *
+ * moduleB:
+ *
+ * fun Foo() {
+ *  remember$composable
+ * }
+ *
+ *
+ */
