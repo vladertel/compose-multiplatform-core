@@ -161,10 +161,6 @@ class ComposerParamTransformer(
         return v2
     }
 
-    override fun visitConstructorCall(expression: IrConstructorCall): IrExpression {
-        return super.visitConstructorCall(expression)
-    }
-
     fun IrCall.withComposerParamIfNeeded(composerParam: IrValueParameter): IrCall {
         val isComposableLambda = isComposableLambdaInvoke()
 
@@ -183,11 +179,7 @@ class ComposerParamTransformer(
 //            if (!isComposableLambda && !transformedFunctionSet.contains(ownerFn))
 //                return this
 //
-//            val alreadyContainsComposerParam =  (0..valueArgumentsCount).any {
-//                val param = getValueArgument(it)
-//                param is IrGetValue && param.symbol == composerParam.symbol
-//            }
-//            if (alreadyContainsComposerParam && symbol.owner == ownerFn)
+//            if (symbol.owner == ownerFn)
 //                return this
 //        }
 
@@ -337,9 +329,9 @@ class ComposerParamTransformer(
         if (isDecoy()) return this
 
         // some functions were transformed during previous compilations or in other modules
-//        if (this.externallyTransformed()) {
-//            return this
-//        }
+        if (this.externallyTransformed()) {
+            return this
+        }
 
         // if not a composable fn, nothing we need to do
         if (!this.hasComposableAnnotation()) {
@@ -689,7 +681,7 @@ class ComposerParamTransformer(
      * different module fragment with the same [ModuleDescriptor]
      */
     private fun IrFunction.externallyTransformed(): Boolean =
-        decoysEnabled && currentModule?.files?.contains(fileOrNull) != true && isNotTransformedLazyNode()
+        decoysEnabled && valueParameters.firstOrNull { it.name == KtxNameConventions.COMPOSER_PARAMETER } != null
 
     private fun IrDeclaration.isNotTransformedLazyNode(): Boolean {
         return origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB || parent is IrLazyDeclarationBase

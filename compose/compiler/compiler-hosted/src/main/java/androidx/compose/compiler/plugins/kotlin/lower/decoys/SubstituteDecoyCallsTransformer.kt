@@ -27,7 +27,6 @@ import org.jetbrains.kotlin.ir.declarations.lazy.IrLazyFunctionBase
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
-import org.jetbrains.kotlin.ir.declarations.IrOverridableDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -45,6 +44,8 @@ import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.copyTypeAndValueArgumentsFrom
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.util.remapTypeParameters
+import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 
 /**
  * Replaces all decoys references to their implementations created in [CreateDecoysTransformer].
@@ -221,7 +222,14 @@ class SubstituteDecoyCallsTransformer(
         return super.visitFunctionReference(updatedReference)
     }
 
-    private val сomposerParamTransformer = ComposerParamTransformer(context, symbolRemapper, true, metrics)
+    private val addComposerParameterInplace = object : IrElementTransformerVoid() {
+        private val сomposerParamTransformer = ComposerParamTransformer(
+            context, symbolRemapper, true, metrics
+        )
+        override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
+            return сomposerParamTransformer.visitSimpleFunction(declaration)
+        }
+    }
 
     private val IrFunctionSymbol.decoyOwner: IrFunction
         get() = if (owner is IrLazyFunctionBase && !owner.isDecoy()) {
@@ -229,17 +237,12 @@ class SubstituteDecoyCallsTransformer(
                 val declaration = owner
                 if (decoysTransformer.shouldRemapFunction(declaration)) {
                     when (declaration) {
-                        is IrSimpleFunction -> decoysTransformer.visitSimpleFunction(declaration).let {
-                            сomposerParamTransformer.visitSimpleFunction(it as IrSimpleFunction)
-                        }
-                        is IrConstructor -> decoysTransformer.visitConstructor(declaration).let {
-                            сomposerParamTransformer.visitConstructor(it as IrConstructor)
-                        }
-                        else -> decoysTransformer.visitFunction(declaration).let {
-                            сomposerParamTransformer.visitFunction(it as IrSimpleFunction)
-                        }
+                        is IrSimpleFunction -> decoysTransformer.visitSimpleFunction(declaration)
+                        is IrConstructor -> decoysTransformer.visitConstructor(declaration)
+                        else -> decoysTransformer.visitFunction(declaration)
                     }.also {
                         decoysTransformer.updateParents()
+                        owner.parent.transformChildrenVoid(addComposerParameterInplace)
                     } as IrFunction
                 } else owner
             }

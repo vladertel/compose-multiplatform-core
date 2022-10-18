@@ -85,7 +85,6 @@ class WrapJsComposableLambdaLowering(
 ) : AbstractDecoysLowering(context, symbolRemapper, metrics, signatureBuilder) {
 
     private val rememberFunSymbol by lazy {
-        val composerParamTransformer = ComposerParamTransformer(context, symbolRemapper, true, metrics)
         symbolRemapper.getReferencedSimpleFunction(
             getTopLevelFunctions(ComposeFqNames.remember).map { it.owner }.first {
                 it.valueParameters.size == 2 && !it.valueParameters.first().isVararg
@@ -97,10 +96,16 @@ class WrapJsComposableLambdaLowering(
                 val createDecoysTransformer = CreateDecoysTransformer(context, symbolRemapper, signatureBuilder, metrics)
                 createDecoysTransformer.visitSimpleFunction(it) as IrSimpleFunction
                 createDecoysTransformer.updateParents()
-            }
-            composerParamTransformer.visitSimpleFunction(
+                val composerParamTransformer = ComposerParamTransformer(
+                    context, symbolRemapper, true, metrics
+                )
+                composerParamTransformer.visitSimpleFunction(
+                    it.getComposableForDecoy().owner as IrSimpleFunction
+                ) as IrSimpleFunction
+            } else {
                 it.getComposableForDecoy().owner as IrSimpleFunction
-            ) as IrSimpleFunction
+            }
+
         }.symbol
     }
 

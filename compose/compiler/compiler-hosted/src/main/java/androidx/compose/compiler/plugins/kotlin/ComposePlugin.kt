@@ -205,8 +205,8 @@ class ComposeComponentRegistrar : ComponentRegistrar {
             project: Project,
             configuration: CompilerConfiguration
         ) {
-//            val KOTLIN_VERSION_EXPECTATION = "1.7.20"
-            val KOTLIN_VERSION_EXPECTATION = "1.7.255-SNAPSHOT"
+            val KOTLIN_VERSION_EXPECTATION = "1.7.20"
+//            val KOTLIN_VERSION_EXPECTATION = "1.7.255-SNAPSHOT"
             KotlinCompilerVersion.getVersion()?.let { version ->
                 val msgCollector = configuration.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY)
                 val suppressKotlinVersionCheck = configuration.get(
@@ -283,7 +283,7 @@ class ComposeComponentRegistrar : ComponentRegistrar {
             )
             val decoysEnabled = configuration.get(
                 ComposeConfiguration.DECOYS_ENABLED_KEY,
-                false || true
+                false// || true
             )
             val metricsDestination = configuration.get(
                 ComposeConfiguration.METRICS_DESTINATION_KEY,
