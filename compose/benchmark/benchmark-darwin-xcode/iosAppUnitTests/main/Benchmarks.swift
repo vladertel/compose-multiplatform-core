@@ -16,7 +16,7 @@
 
 import Foundation
 import XCTest
-import AndroidXDarwinSampleBenchmarks
+import AndroidXDarwinBenchmarks
 
 class BenchmarkTest: XCTestCase {
     var testCase: TestCase? = nil
