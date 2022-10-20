@@ -71,6 +71,7 @@ import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.createType
+import org.jetbrains.kotlin.ir.types.isInt
 import org.jetbrains.kotlin.ir.types.isMarkedNullable
 import org.jetbrains.kotlin.ir.types.isPrimitiveType
 import org.jetbrains.kotlin.ir.types.makeNullable
@@ -680,7 +681,11 @@ class ComposerParamTransformer(
      * different module fragment with the same [ModuleDescriptor]
      */
     private fun IrFunction.externallyTransformed(): Boolean =
-        decoysEnabled && valueParameters.firstOrNull { it.name == KtxNameConventions.COMPOSER_PARAMETER } != null
+        decoysEnabled &&
+            valueParameters.firstOrNull { it.name == KtxNameConventions.COMPOSER_PARAMETER } != null &&
+            valueParameters.firstOrNull {
+                it.type.isInt() && it.name.identifier.startsWith(KtxNameConventions.CHANGED_PARAMETER.identifier)
+            } != null
 
     private fun IrDeclaration.isNotTransformedLazyNode(): Boolean {
         return origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB || parent is IrLazyDeclarationBase

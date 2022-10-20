@@ -67,7 +67,6 @@ import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.types.Variance
 
 class DeepCopyIrTreeWithSymbolsPreservingMetadata(
@@ -138,7 +137,6 @@ class DeepCopyIrTreeWithSymbolsPreservingMetadata(
         // types won't be traversed by default by the DeepCopyIrTreeWithSymbols so we have to
         // do it ourself here.
         if (
-            !context.platform.isJs() &&
             ownerFn != null &&
             ownerFn.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
         ) {
@@ -229,7 +227,6 @@ class DeepCopyIrTreeWithSymbolsPreservingMetadata(
         // `getterFun.correspondingPropertySymbol.owner.getter == getterFun`. If we do not
         // maintain this relationship inline class getters will be incorrectly compiled.
         if (
-            !context.platform.isJs() &&
             ownerFn != null &&
             ownerFn.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
         ) {

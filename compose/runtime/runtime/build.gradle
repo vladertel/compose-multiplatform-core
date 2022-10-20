@@ -170,3 +170,15 @@ tasks.withType(KotlinCompile).configureEach {
         incremental = false
     }
 }
+
+tasks.named("compileKotlinJs") {
+    kotlinOptions {
+        freeCompilerArgs += "-Xklib-enable-signature-clash-checks=false"
+    }
+}
+
+tasks.named("compileTestKotlinJs") {
+    kotlinOptions {
+        freeCompilerArgs += "-Xklib-enable-signature-clash-checks=false"
+    }
+}
