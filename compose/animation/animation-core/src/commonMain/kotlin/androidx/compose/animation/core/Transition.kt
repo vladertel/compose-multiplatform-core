@@ -507,10 +507,15 @@ class Transition<S> @PublishedApi internal constructor(
 
         internal fun onPlayTimeChanged(playTimeNanos: Long, durationScale: Float) {
             val playTime =
-                if (durationScale == 0f) {
-                    animation.durationNanos
+                if (durationScale > 0f) {
+                    val scaledTime = (playTimeNanos - offsetTimeNanos) / durationScale
+                    check(!scaledTime.isNaN()) {
+                        "Duration scale adjusted time is NaN. Duration scale: $durationScale," +
+                            "playTimeNanos: $playTimeNanos, offsetTimeNanos: $offsetTimeNanos"
+                    }
+                    scaledTime.toLong()
                 } else {
-                    ((playTimeNanos - offsetTimeNanos) / durationScale).toLong()
+                    animation.durationNanos
                 }
             value = animation.getValueFromNanos(playTime)
             velocityVector = animation.getVelocityVectorFromNanos(playTime)
@@ -647,7 +652,7 @@ class Transition<S> @PublishedApi internal constructor(
         val typeConverter: TwoWayConverter<T, V>,
         val label: String
     ) {
-        internal var data: DeferredAnimationData<T, V>? = null
+        internal var data: DeferredAnimationData<T, V>? by mutableStateOf(null)
 
         internal inner class DeferredAnimationData<T, V : AnimationVector>(
             val animation: Transition<S>.TransitionAnimationState<T, V>,

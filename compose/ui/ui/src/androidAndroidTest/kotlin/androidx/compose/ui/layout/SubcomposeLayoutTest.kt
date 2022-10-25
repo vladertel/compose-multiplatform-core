@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.ReusableContent
 import androidx.compose.runtime.compositionLocalOf
@@ -76,6 +77,7 @@ import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -1997,6 +1999,121 @@ class SubcomposeLayoutTest {
 
         rule.onNodeWithTag("1").assertDoesNotExist()
         rule.onNodeWithTag("0").assertIsNotDisplayed()
+    }
+
+    @Test
+    fun getAlignmentsOnSubcomposeLayoutContent() {
+        var baseline: Int? = null
+        rule.setContent {
+            Layout(
+                {
+                    SubcomposeLayout { constraints ->
+                        val placeable = subcompose("0") {
+                            Layout(content = {}) { _, _ ->
+                                layout(10, 10, mapOf(FirstBaseline to 100)) {}
+                            }
+                        }.first().measure(constraints)
+                        layout(placeable.width, placeable.height) {
+                            placeable.place(0, 0)
+                        }
+                    }
+                }
+            ) { measurables, constraints ->
+                val titlePlaceable = measurables.first().measure(
+                    constraints.copy(minHeight = 0)
+                )
+                baseline = titlePlaceable[FirstBaseline]
+                layout(titlePlaceable.width, titlePlaceable.height) {
+                    titlePlaceable.place(0, 0)
+                }
+            }
+        }
+
+        rule.runOnIdle {
+            assertThat(baseline).isEqualTo(100)
+        }
+    }
+
+    @Test
+    fun noNotMeasuredWrappersInTheHierarchy() {
+        lateinit var coordinates: LayoutCoordinates
+        var size: IntSize? = null
+        rule.setContent {
+            Box {
+                SubcomposeLayout { constraints ->
+                    val placeable = subcompose("0") {
+                        Box(Modifier
+                            .fillMaxSize()
+                            .onGloballyPositioned {
+                                coordinates = it
+                            }
+                            .onSizeChanged {
+                                size = it
+                            }
+                        )
+                    }.first().measure(constraints)
+                    layout(placeable.width, placeable.height) {
+                        placeable.place(0, 0)
+                    }
+                }
+            }
+        }
+
+        rule.runOnIdle {
+            var current: LayoutCoordinates? = coordinates
+            while (current != null) {
+                assertThat(current.isAttached)
+                assertThat(current.size).isEqualTo(size)
+                current = current.parentCoordinates
+            }
+        }
+    }
+
+    @Test
+    @Ignore("b/188320755")
+    fun forceMeasureOfInactiveElementFromLaunchedEffect() {
+        var isActive by mutableStateOf(true)
+        var forceMeasureFromLaunchedEffect by mutableStateOf(false)
+
+        var remeasurer: Remeasurement? = null
+        rule.setContent {
+            SubcomposeLayout(
+                modifier = Modifier.then(object : RemeasurementModifier {
+                    override fun onRemeasurementAvailable(remeasurement: Remeasurement) {
+                        remeasurer = remeasurement
+                    }
+                }),
+                state = remember {
+                    SubcomposeLayoutState(SubcomposeSlotReusePolicy(1))
+                },
+            ) { constraints ->
+                val placeable = if (isActive) {
+                    val measureables = subcompose(null) {
+                        Box(Modifier)
+                    }
+                    measureables.map { it.measure(constraints) }
+                } else {
+                    forceMeasureFromLaunchedEffect = true
+                    emptyList()
+                }
+                layout(0, 0) {
+                    placeable.forEach { it.place(0, 0) }
+                }
+            }
+
+            if (forceMeasureFromLaunchedEffect) {
+                LaunchedEffect(Unit) {
+                    isActive = true
+                    remeasurer?.forceRemeasure()
+                }
+            }
+        }
+
+        rule.runOnIdle {
+            isActive = false
+        }
+
+        rule.waitUntil { isActive }
     }
 
     private fun composeItems(

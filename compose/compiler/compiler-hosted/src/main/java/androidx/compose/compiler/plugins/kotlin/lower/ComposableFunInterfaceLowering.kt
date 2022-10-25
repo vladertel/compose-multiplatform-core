@@ -16,10 +16,8 @@
 
 package androidx.compose.compiler.plugins.kotlin.lower
 
-import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
-import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
@@ -27,33 +25,31 @@ import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
 import org.jetbrains.kotlin.ir.expressions.IrTypeOperatorCall
 import org.jetbrains.kotlin.ir.types.IrTypeSystemContextImpl
 import org.jetbrains.kotlin.ir.types.classOrNull
-import org.jetbrains.kotlin.ir.util.functions
-import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.util.isLambda
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
-import org.jetbrains.kotlin.platform.js.isJs
-import org.jetbrains.kotlin.platform.konan.isNative
+import org.jetbrains.kotlin.platform.jvm.isJvm
 
 @Suppress("PRE_RELEASE_CLASS")
 class ComposableFunInterfaceLowering(private val context: IrPluginContext) :
     IrElementTransformerVoidWithContext(),
     ModuleLoweringPass {
 
-    override fun lower(module: IrModuleFragment) = module.transformChildrenVoid(this)
+    override fun lower(module: IrModuleFragment) {
+        if (context.platform.isJvm()) {
+            module.transformChildrenVoid(this)
+        }
+    }
 
     private fun isFunInterfaceConversion(expression: IrTypeOperatorCall): Boolean {
         val argument = expression.argument
         val operator = expression.operator
         val type = expression.typeOperand
         val functionClass = type.classOrNull
-
         return operator == IrTypeOperator.SAM_CONVERSION &&
             argument is IrFunctionExpression &&
             argument.origin.isLambda &&
             functionClass != null &&
-            functionClass.owner.isFun &&
-            !context.platform.isJs() &&
-            !context.platform.isNative()
+            functionClass.owner.isFun
         // IMPORTANT(b/178663739):
         // We are transforming not just SAM conversions for composable fun interfaces, but ALL
         // fun interfaces temporarily until KT-44622 gets fixed in the version of kotlin we

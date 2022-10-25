@@ -63,6 +63,7 @@ import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.ProcessResult
 import androidx.compose.ui.input.pointer.TestPointerInputEventData
 import androidx.compose.ui.layout.RootMeasurePolicy
+import androidx.compose.ui.modifier.ModifierLocalManager
 import androidx.compose.ui.node.InternalCoreApi
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.LayoutNodeDrawScope
@@ -82,6 +83,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.round
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 
 private typealias Command = () -> Unit
 
@@ -118,7 +120,6 @@ internal class SkiaBasedOwner(
     override val sharedDrawScope = LayoutNodeDrawScope()
 
     private val semanticsModifier = SemanticsModifierCore(
-        id = SemanticsModifierCore.generateSemanticsId(),
         mergeDescendants = false,
         clearAndSetSemantics = false,
         properties = {}
@@ -149,6 +150,8 @@ internal class SkiaBasedOwner(
 
     override val inputModeManager: InputModeManager
         get() = _inputModeManager
+
+    override val modifierLocalManager: ModifierLocalManager = ModifierLocalManager(this)
 
     // TODO(b/177931787) : Consider creating a KeyInputManager like we have for FocusManager so
     //  that this common logic can be used by all owners.
@@ -284,24 +287,45 @@ internal class SkiaBasedOwner(
 
     // Don't use mainOwner.root.width here, as it strictly coerced by [constraints]
     private fun computeContentSize() = IntSize(
-        root.children.maxOfOrNull { it.outerLayoutNodeWrapper.measuredWidth } ?: 0,
-        root.children.maxOfOrNull { it.outerLayoutNodeWrapper.measuredHeight } ?: 0,
+        root.children.maxOfOrNull { it.outerCoordinator.measuredWidth } ?: 0,
+        root.children.maxOfOrNull { it.outerCoordinator.measuredHeight } ?: 0,
     )
 
     override fun forceMeasureTheSubtree(layoutNode: LayoutNode) {
         measureAndLayoutDelegate.forceMeasureTheSubtree(layoutNode)
     }
 
-    override fun onRequestMeasure(layoutNode: LayoutNode, forceRequest: Boolean) {
-        if (measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest)) {
+    override fun onRequestMeasure(
+        layoutNode: LayoutNode,
+        affectsLookahead: Boolean,
+        forceRequest: Boolean
+    ) {
+        if (affectsLookahead) {
+            if (measureAndLayoutDelegate.requestLookaheadRemeasure(layoutNode, forceRequest)) {
+                requestLayout?.invoke()
+            }
+        } else if (measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest)) {
             requestLayout?.invoke()
         }
     }
 
-    override fun onRequestRelayout(layoutNode: LayoutNode, forceRequest: Boolean) {
-        if (measureAndLayoutDelegate.requestRelayout(layoutNode, forceRequest)) {
+    override fun onRequestRelayout(
+        layoutNode: LayoutNode,
+        affectsLookahead: Boolean,
+        forceRequest: Boolean
+    ) {
+        if (affectsLookahead) {
+            if (measureAndLayoutDelegate.requestLookaheadRelayout(layoutNode, forceRequest)) {
+                requestLayout?.invoke()
+            }
+        } else if (measureAndLayoutDelegate.requestRelayout(layoutNode, forceRequest)) {
             requestLayout?.invoke()
         }
+    }
+
+    override fun requestOnPositionedCallback(layoutNode: LayoutNode) {
+        measureAndLayoutDelegate.requestOnPositionedCallback(layoutNode)
+        requestLayout()
     }
 
     override fun createLayer(

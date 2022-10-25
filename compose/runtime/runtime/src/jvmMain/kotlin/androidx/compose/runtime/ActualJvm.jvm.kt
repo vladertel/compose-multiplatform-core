@@ -21,8 +21,6 @@ import androidx.compose.runtime.internal.emptyThreadMap
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotContextElement
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.CoroutineScope
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.ThreadContextElement
 
 internal actual typealias AtomicReference<V> = java.util.concurrent.atomic.AtomicReference<V>
@@ -67,6 +65,11 @@ internal actual class SnapshotThreadLocal<T> {
 
 internal actual fun identityHashCode(instance: Any?): Int = System.identityHashCode(instance)
 
+@PublishedApi
+internal actual inline fun <R> synchronized(lock: Any, block: () -> R): R {
+    return kotlin.synchronized(lock, block)
+}
+
 internal actual typealias TestOnly = org.jetbrains.annotations.TestOnly
 
 internal actual fun invokeComposable(composer: Composer, composable: @Composable () -> Unit) {
@@ -83,8 +86,6 @@ internal actual fun <T> invokeComposableForResult(
     val realFn = composable as Function2<Composer, Int, T>
     return realFn(composer, 1)
 }
-
-actual annotation class CompositionContextLocal {}
 
 internal actual class AtomicInt actual constructor(value: Int) {
     val delegate = java.util.concurrent.atomic.AtomicInteger(value)

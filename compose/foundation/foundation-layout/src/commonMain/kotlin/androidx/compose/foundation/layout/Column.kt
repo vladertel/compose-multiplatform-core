@@ -27,6 +27,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Measured
 import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.platform.debugInspectorInfo
+import androidx.compose.foundation.layout.internal.JvmDefaultWithCompatibility
 
 /**
  * A layout composable that places its children in a vertical sequence. For a layout composable

@@ -21,12 +21,13 @@ import kotlin.test.Test
 import kotlin.test.assertSame
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.test.IgnoreJsAndNative
 
-@OptIn(ExperimentalComposeApi::class)
+@OptIn(ExperimentalComposeApi::class, ExperimentalCoroutinesApi::class)
 class SnapshotContextElementTests {
     @Test
     @IgnoreJsAndNative

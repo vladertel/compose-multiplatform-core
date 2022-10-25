@@ -18,7 +18,6 @@ package androidx.compose.runtime
 
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotContextElement
-import kotlinx.coroutines.CoroutineScope
 
 // TODO(aelias): Mark the typealiases internal when https://youtrack.jetbrains.com/issue/KT-36695 is fixed.
 // Currently, they behave as internal because the actual is internal, even though the expect is public.
@@ -62,6 +61,9 @@ internal expect class SnapshotThreadLocal<T>() {
  */
 internal expect fun identityHashCode(instance: Any?): Int
 
+@PublishedApi
+internal expect inline fun <R> synchronized(lock: Any, block: () -> R): R
+
 expect class AtomicReference<V>(value: V) {
     fun get(): V
     fun set(value: V)
@@ -78,8 +80,6 @@ internal expect class AtomicInt(value: Int) {
 internal fun AtomicInt.postIncrement(): Int = add(1) - 1
 
 internal expect fun ensureMutable(it: Any)
-
-expect annotation class CompositionContextLocal
 
 @MustBeDocumented
 @Retention(AnnotationRetention.SOURCE)

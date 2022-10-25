@@ -15,25 +15,34 @@
  */
 package androidx.compose.ui.text.platform
 
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Canvas
+import org.jetbrains.skia.Font as SkFont
+import org.jetbrains.skia.FontStyle as SkFontStyle
+import org.jetbrains.skia.paragraph.Alignment as SkAlignment
+import org.jetbrains.skia.paragraph.BaselineMode
+import org.jetbrains.skia.paragraph.DecorationLineStyle as SkDecorationLineStyle
+import org.jetbrains.skia.paragraph.DecorationStyle as SkDecorationStyle
+import org.jetbrains.skia.paragraph.Direction as SkDirection
+import org.jetbrains.skia.paragraph.Paragraph as SkParagraph
+import org.jetbrains.skia.paragraph.ParagraphBuilder as SkParagraphBuilder
+import org.jetbrains.skia.paragraph.ParagraphStyle
+import org.jetbrains.skia.paragraph.PlaceholderAlignment
+import org.jetbrains.skia.paragraph.PlaceholderStyle
+import org.jetbrains.skia.paragraph.Shadow as SkShadow
+import org.jetbrains.skia.paragraph.StrutStyle
+import org.jetbrains.skia.paragraph.TextBox
+import org.jetbrains.skia.paragraph.TextStyle as SkTextStyle
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.asSkiaPath
 import androidx.compose.ui.graphics.isSpecified
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.text.AnnotatedString.Range
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.Paragraph
 import androidx.compose.ui.text.ParagraphIntrinsics
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SkiaParagraph
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.ceilToInt
 import androidx.compose.ui.text.font.Font
@@ -52,35 +61,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
+import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.sp
 import org.jetbrains.skia.Paint
-import org.jetbrains.skia.paragraph.Alignment as SkAlignment
-import org.jetbrains.skia.paragraph.BaselineMode
-import org.jetbrains.skia.paragraph.Direction as SkDirection
-import org.jetbrains.skia.paragraph.LineMetrics
-import org.jetbrains.skia.paragraph.ParagraphBuilder
-import org.jetbrains.skia.paragraph.ParagraphStyle
-import org.jetbrains.skia.paragraph.PlaceholderAlignment
-import org.jetbrains.skia.paragraph.PlaceholderStyle
-import org.jetbrains.skia.paragraph.RectHeightMode
-import org.jetbrains.skia.paragraph.RectWidthMode
-import org.jetbrains.skia.paragraph.StrutStyle
-import org.jetbrains.skia.paragraph.TextBox
-import kotlin.math.floor
-import org.jetbrains.skia.Rect as SkRect
-import org.jetbrains.skia.paragraph.Paragraph as SkParagraph
-import org.jetbrains.skia.paragraph.TextStyle as SkTextStyle
-import org.jetbrains.skia.paragraph.TextIndent as SkTextIndent
-import org.jetbrains.skia.FontStyle as SkFontStyle
-import org.jetbrains.skia.Font as SkFont
-import org.jetbrains.skia.paragraph.DecorationLineStyle as SkDecorationLineStyle
-import org.jetbrains.skia.paragraph.DecorationStyle as SkDecorationStyle
-import org.jetbrains.skia.paragraph.Shadow as SkShadow
-import org.jetbrains.skia.FontFeature
-import org.jetbrains.skia.paragraph.Direction
 
 private val DefaultFontSize = 16.sp
 
@@ -480,7 +465,7 @@ internal class SkiaParagraph(
         if (position.x > expectedLine.left && position.x < expectedLine.right) {
             return glyphPosition
         }
-        
+
         val rects = if (isNotEmptyLine) {
             // expectedLine width doesn't include whitespaces. Therefore we look at the Rectangle representing the line
             para.getRectsForRange(
@@ -750,7 +735,7 @@ internal class ParagraphBuilder(
             else -> throw IllegalStateException("Unsupported font loader $platformFontLoader")
         }
 
-        val pb = ParagraphBuilder(ps, fontCollection)
+        val pb = SkParagraphBuilder(ps, fontCollection)
 
         var addText = true
 

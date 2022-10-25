@@ -412,6 +412,19 @@ internal class ComposeLayer(
         }
     }
 
+    private fun KeyEvent.toPointerKeyboardModifiers() = PointerKeyboardModifiers(
+        isCtrlPressed = this.isControlDown,
+        isMetaPressed = this.isMetaDown,
+        isAltPressed = this.isAltDown,
+        isShiftPressed = this.isShiftDown,
+        isAltGraphPressed = this.isAltGraphDown,
+        isSymPressed = false,
+        isFunctionPressed = false,
+        isCapsLockOn = getLockingKeyStateSafe(KeyEvent.VK_CAPS_LOCK),
+        isScrollLockOn = getLockingKeyStateSafe(KeyEvent.VK_SCROLL_LOCK),
+        isNumLockOn = getLockingKeyStateSafe(KeyEvent.VK_NUM_LOCK)
+    )
+
     fun dispose() {
         check(!isDisposed)
         scene.close()

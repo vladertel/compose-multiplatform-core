@@ -476,6 +476,7 @@ internal class SuspendingPointerInputFilter(
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCancel() {
         // Synthesize a cancel event for whatever state we previously saw, if one is applicable.
         // A cancel event is one where all previously down pointers are now up, the change in
@@ -491,6 +492,7 @@ internal class SuspendingPointerInputFilter(
                 position = old.position,
                 uptimeMillis = old.uptimeMillis,
                 pressed = false,
+                pressure = old.pressure,
                 previousPosition = old.position,
                 previousUptimeMillis = old.uptimeMillis,
                 previousPressed = old.pressed,

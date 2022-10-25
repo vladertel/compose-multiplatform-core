@@ -28,13 +28,16 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.modifier.ModifierLocalConsumer
@@ -46,6 +49,9 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.center
+import androidx.compose.ui.unit.toOffset
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -118,7 +124,7 @@ internal fun focusRequesterAndModifier(): Pair<FocusRequester, Modifier> {
  * @param interactionSource [MutableInteractionSource] that will be used to dispatch
  * [PressInteraction.Press] when this clickable is pressed. Only the initial (first) press will be
  * recorded and dispatched with [MutableInteractionSource].
- * @param indication indication to be shown when modified element is pressed. Be default,
+ * @param indication indication to be shown when modified element is pressed. By default,
  * indication from [LocalIndication] will be used. Pass `null` to show no indication, or
  * current value from [LocalIndication] to show theme default
  * @param enabled Controls the enabled state. When `false`, [onClick], and this modifier will
@@ -139,8 +145,13 @@ fun Modifier.clickable(
     factory = {
         val onClickState = rememberUpdatedState(onClick)
         val pressedInteraction = remember { mutableStateOf<PressInteraction.Press?>(null) }
+        val currentKeyPressInteractions = remember { mutableMapOf<Key, PressInteraction.Press>() }
         if (enabled) {
-            PressedInteractionSourceDisposableEffect(interactionSource, pressedInteraction)
+            PressedInteractionSourceDisposableEffect(
+                interactionSource,
+                pressedInteraction,
+                currentKeyPressInteractions
+            )
         }
         val isRootInScrollableContainer = isComposeRootInScrollableContainer()
         val isClickableInScrollableContainer = remember { mutableStateOf(true) }
@@ -148,7 +159,10 @@ fun Modifier.clickable(
             isClickableInScrollableContainer.value || isRootInScrollableContainer()
         }
         val (focusRequester, focusRequesterModifier) = focusRequesterAndModifier()
+        val centreOffset = remember { mutableStateOf(Offset.Zero) }
+
         val gesture = Modifier.pointerInput(interactionSource, enabled) {
+            centreOffset.value = size.center.toOffset()
             detectTapAndPress(
                 onPress = { offset ->
                     if (enabled) {
@@ -188,6 +202,9 @@ fun Modifier.clickable(
                 gestureModifiers = gesture,
                 interactionSource = interactionSource,
                 indication = indication,
+                indicationScope = rememberCoroutineScope(),
+                currentKeyPressInteractions = currentKeyPressInteractions,
+                keyClickOffset = centreOffset,
                 enabled = enabled,
                 onClickLabel = onClickLabel,
                 role = role,
@@ -280,7 +297,7 @@ fun Modifier.combinedClickable(
  * @param interactionSource [MutableInteractionSource] that will be used to emit
  * [PressInteraction.Press] when this clickable is pressed. Only the initial (first) press will be
  * recorded and emitted with [MutableInteractionSource].
- * @param indication indication to be shown when modified element is pressed. Be default,
+ * @param indication indication to be shown when modified element is pressed. By default,
  * indication from [LocalIndication] will be used. Pass `null` to show no indication, or
  * current value from [LocalIndication] to show theme default
  * @param enabled Controls the enabled state. When `false`, [onClick], [onLongClick] or
@@ -312,6 +329,7 @@ fun Modifier.combinedClickable(
         val hasLongClick = onLongClick != null
         val hasDoubleClick = onDoubleClick != null
         val pressedInteraction = remember { mutableStateOf<PressInteraction.Press?>(null) }
+        val currentKeyPressInteractions = remember { mutableMapOf<Key, PressInteraction.Press>() }
         if (enabled) {
             // Handles the case where a long click causes a null onLongClick lambda to be passed,
             // so we can cancel the existing press.
@@ -324,7 +342,11 @@ fun Modifier.combinedClickable(
                     }
                 }
             }
-            PressedInteractionSourceDisposableEffect(interactionSource, pressedInteraction)
+            PressedInteractionSourceDisposableEffect(
+                interactionSource,
+                pressedInteraction,
+                currentKeyPressInteractions
+            )
         }
         val isRootInScrollableContainer = isComposeRootInScrollableContainer()
         val isClickableInScrollableContainer = remember { mutableStateOf(true) }
@@ -332,8 +354,11 @@ fun Modifier.combinedClickable(
             isClickableInScrollableContainer.value || isRootInScrollableContainer()
         }
         val (focusRequester, focusRequesterModifier) = focusRequesterAndModifier()
+        val centreOffset = remember { mutableStateOf(Offset.Zero) }
+
         val gesture =
             Modifier.pointerInput(interactionSource, hasLongClick, hasDoubleClick, enabled) {
+                centreOffset.value = size.center.toOffset()
                 detectTapGestures(
                     onDoubleTap = if (hasDoubleClick && enabled) {
                         {
@@ -386,6 +411,9 @@ fun Modifier.combinedClickable(
                 gestureModifiers = gesture,
                 interactionSource = interactionSource,
                 indication = indication,
+                indicationScope = rememberCoroutineScope(),
+                currentKeyPressInteractions = currentKeyPressInteractions,
+                keyClickOffset = centreOffset,
                 enabled = enabled,
                 onClickLabel = onClickLabel,
                 role = role,
@@ -411,7 +439,8 @@ fun Modifier.combinedClickable(
 @Composable
 internal fun PressedInteractionSourceDisposableEffect(
     interactionSource: MutableInteractionSource,
-    pressedInteraction: MutableState<PressInteraction.Press?>
+    pressedInteraction: MutableState<PressInteraction.Press?>,
+    currentKeyPressInteractions: MutableMap<Key, PressInteraction.Press>
 ) {
     DisposableEffect(interactionSource) {
         onDispose {
@@ -420,6 +449,10 @@ internal fun PressedInteractionSourceDisposableEffect(
                 interactionSource.tryEmit(interaction)
                 pressedInteraction.value = null
             }
+            currentKeyPressInteractions.values.forEach {
+                interactionSource.tryEmit(PressInteraction.Cancel(it))
+            }
+            currentKeyPressInteractions.clear()
         }
     }
 }
@@ -486,8 +519,12 @@ internal expect val TapIndicationDelay: Long
 internal expect fun isComposeRootInScrollableContainer(): () -> Boolean
 
 /**
- * Whether the specified [KeyEvent] represents a user intent to perform a click.
- * (eg. When you press Enter on a focused button, it should perform a click).
+ * Whether the specified [KeyEvent] should trigger a press for a clickable component.
+ */
+internal expect val KeyEvent.isPress: Boolean
+
+/**
+ * Whether the specified [KeyEvent] should trigger a click for a clickable component.
  */
 internal expect val KeyEvent.isClick: Boolean
 
@@ -495,6 +532,9 @@ internal fun Modifier.genericClickableWithoutGesture(
     gestureModifiers: Modifier,
     interactionSource: MutableInteractionSource,
     indication: Indication?,
+    indicationScope: CoroutineScope,
+    currentKeyPressInteractions: MutableMap<Key, PressInteraction.Press>,
+    keyClickOffset: State<Offset>,
     enabled: Boolean = true,
     onClickLabel: String? = null,
     role: Role? = null,
@@ -518,17 +558,36 @@ internal fun Modifier.genericClickableWithoutGesture(
             disabled()
         }
     }
-    fun Modifier.detectClickFromKey() = this.onKeyEvent {
-        if (enabled && it.isClick) {
-            onClick()
-            true
-        } else {
-            false
+
+    fun Modifier.detectPressAndClickFromKey() = this.onKeyEvent { keyEvent ->
+        when {
+            enabled && keyEvent.isPress -> {
+                // If the key already exists in the map, keyEvent is a repeat event.
+                // We ignore it as we only want to emit an interaction for the initial key press.
+                if (!currentKeyPressInteractions.containsKey(keyEvent.key)) {
+                    val press = PressInteraction.Press(keyClickOffset.value)
+                    currentKeyPressInteractions[keyEvent.key] = press
+                    indicationScope.launch { interactionSource.emit(press) }
+                    true
+                } else {
+                    false
+                }
+            }
+            enabled && keyEvent.isClick -> {
+                currentKeyPressInteractions.remove(keyEvent.key)?.let {
+                    indicationScope.launch {
+                        interactionSource.emit(PressInteraction.Release(it))
+                    }
+                }
+                onClick()
+                true
+            }
+            else -> false
         }
     }
     return this
         .clickSemantics()
-        .detectClickFromKey()
+        .detectPressAndClickFromKey()
         .indication(interactionSource, indication)
         .hoverable(enabled = enabled, interactionSource = interactionSource)
         .focusable(enabled = enabled, interactionSource = interactionSource)

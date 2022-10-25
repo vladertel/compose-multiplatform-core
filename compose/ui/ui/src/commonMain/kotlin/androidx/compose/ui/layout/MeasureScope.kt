@@ -16,7 +16,7 @@
 
 package androidx.compose.ui.layout
 
-import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.node.LookaheadCapablePlaceable
 import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 
 /**
@@ -52,14 +52,9 @@ interface MeasureScope : IntrinsicMeasureScope {
             Placeable.PlacementScope.executeWithRtlMirroringValues(
                 width,
                 layoutDirection,
+                this@MeasureScope as? LookaheadCapablePlaceable,
                 placementBlock
             )
         }
     }
 }
-
-/**
- * A function for performing layout measurement.
- */
-@Deprecated("MeasureBlock was deprecated. See MeasurePolicy and the new Layout overloads.")
-internal typealias MeasureBlock = MeasureScope.(List<Measurable>, Constraints) -> MeasureResult
