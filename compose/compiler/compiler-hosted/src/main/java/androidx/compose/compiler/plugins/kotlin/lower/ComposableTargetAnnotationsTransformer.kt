@@ -106,8 +106,10 @@ class ComposableTargetAnnotationsTransformer(
     )
     private val ComposableOpenTargetClass = symbolRemapper.getReferencedClassOrNull(
         getTopLevelClassOrNull(ComposeFqNames.ComposableOpenTarget)
-    private val ComposableInferredTargetClass =
+    )
+    private val ComposableInferredTargetClass = symbolRemapper.getReferencedClassOrNull(
         getTopLevelClassOrNull(ComposeFqNames.ComposableInferredTarget)
+    )
 
     /**
      * A map of element to the owning function of the element.

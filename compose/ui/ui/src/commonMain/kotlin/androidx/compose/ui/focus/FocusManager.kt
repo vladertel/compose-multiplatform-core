@@ -28,7 +28,6 @@ import androidx.compose.ui.focus.FocusStateImpl.Captured
 import androidx.compose.ui.focus.FocusStateImpl.Deactivated
 import androidx.compose.ui.focus.FocusStateImpl.DeactivatedParent
 import androidx.compose.ui.focus.FocusStateImpl.Inactive
-import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 

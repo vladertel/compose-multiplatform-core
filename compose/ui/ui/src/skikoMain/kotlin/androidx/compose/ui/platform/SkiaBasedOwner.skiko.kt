@@ -325,7 +325,7 @@ internal class SkiaBasedOwner(
 
     override fun requestOnPositionedCallback(layoutNode: LayoutNode) {
         measureAndLayoutDelegate.requestOnPositionedCallback(layoutNode)
-        requestLayout()
+        requestLayout?.invoke()
     }
 
     override fun createLayer(

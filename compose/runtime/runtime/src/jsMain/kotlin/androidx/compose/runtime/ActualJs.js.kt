@@ -105,7 +105,9 @@ internal actual fun identityHashCode(instance: Any?): Int {
 
 internal actual fun ensureMutable(it: Any) { /* NOTHING */ }
 
-actual annotation class CompositionContextLocal {}
+internal actual inline fun <R> synchronized(lock: Any, block: () -> R): R {
+    return block()
+}
 
 private var nextHash = 1
 private const val IDENTITY_HASHCODE_FIELD = "kotlinIdentityHashcodeValue$"

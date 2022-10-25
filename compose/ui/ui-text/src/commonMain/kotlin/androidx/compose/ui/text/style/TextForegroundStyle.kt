@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:JvmName("TextDrawStyleKt")
+//@file:JvmName("TextDrawStyleKt")
 
 package androidx.compose.ui.text.style
 

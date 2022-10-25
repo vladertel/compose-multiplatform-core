@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.layout
 
-import androidx.compose.foundation.layout.internal.JvmDefaultWithCompatibility
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable

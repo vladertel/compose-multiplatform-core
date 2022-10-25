@@ -103,8 +103,6 @@ internal actual fun identityHashCode(instance: Any?): Int =
 
 actual annotation class TestOnly
 
-actual typealias CompositionContextLocal = kotlin.native.concurrent.ThreadLocal
-
 actual val DefaultMonotonicFrameClock: MonotonicFrameClock = MonotonicClockImpl()
 
 @OptIn(ExperimentalTime::class)
@@ -155,4 +153,8 @@ internal actual class SnapshotContextElementImpl actual constructor(
 
     override val key: CoroutineContext.Key<*>
         get() = SnapshotContextElement
+}
+
+internal actual inline fun <R> synchronized(lock: Any, block: () -> R): R {
+    return block()
 }

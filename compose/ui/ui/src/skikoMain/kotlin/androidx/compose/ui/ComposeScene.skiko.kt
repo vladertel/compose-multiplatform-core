@@ -646,6 +646,7 @@ private fun pointerInputEvent(
                 position,
                 position,
                 buttons.areAnyPressed,
+                pressure = 0f,
                 type,
                 scrollDelta = scrollDelta
             )

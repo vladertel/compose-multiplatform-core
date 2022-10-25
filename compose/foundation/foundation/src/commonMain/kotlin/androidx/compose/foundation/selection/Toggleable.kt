@@ -243,7 +243,7 @@ fun Modifier.triStateToggleable(
         onClick = onClick
     ).semantics {
         this.toggleableState = state
-    }.then(focusRequesterModifier)
+    }.detectToggleFromKey()
 }
 
 

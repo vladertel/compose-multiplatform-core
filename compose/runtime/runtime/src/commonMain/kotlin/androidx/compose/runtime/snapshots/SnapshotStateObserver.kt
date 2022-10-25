@@ -26,6 +26,8 @@ import androidx.compose.runtime.collection.IdentityScopeMap
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.observeDerivedStateRecalculations
 import androidx.compose.runtime.structuralEqualityPolicy
+import androidx.compose.runtime.createSynchronizedObject
+import androidx.compose.runtime.synchronized
 
 /**
  * Helper class to efficiently observe snapshot state reads. See [observeReads] for more details.
@@ -49,6 +51,8 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
             }
         }
     }
+
+    private val lock = createSynchronizedObject()
 
     /**
      * The observer used by this [SnapshotStateObserver] during [observeReads].
