@@ -29,3 +29,7 @@ internal actual fun NativeKeyEvent.toPointerKeyboardModifiers(): PointerKeyboard
         // TODO: add other modifiers when they are available in SkikoInputModifiers
     )
 }
+
+internal actual fun areObjectsOfSameType(a: Any, b: Any): Boolean {
+    return false
+}
