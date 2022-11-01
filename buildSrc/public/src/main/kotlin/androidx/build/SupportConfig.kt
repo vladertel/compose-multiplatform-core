@@ -46,7 +46,7 @@ object SupportConfig {
      * order for tests to run on devices running released versions of the Android OS. If this is
      * set to a pre-release version, tests will only be able to run on pre-release devices.
      */
-    const val TARGET_SDK_VERSION = 33
+    const val TARGET_SDK_VERSION = 32
 }
 
 fun Project.getExternalProjectPath(): File {
