@@ -25,6 +25,7 @@ import androidx.compose.compiler.plugins.kotlin.analysis.Stability
 import androidx.compose.compiler.plugins.kotlin.analysis.StabilityInferencer
 import androidx.compose.compiler.plugins.kotlin.analysis.knownStable
 import androidx.compose.compiler.plugins.kotlin.irTrace
+import org.jetbrains.kotlin.backend.common.extensions.FirIncompatiblePluginAPI
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
@@ -155,6 +156,7 @@ import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlin.utils.DFS
 
+@OptIn(FirIncompatiblePluginAPI::class)
 abstract class AbstractComposeLowering(
     val context: IrPluginContext,
     val symbolRemapper: DeepCopySymbolRemapper,
@@ -1295,6 +1297,7 @@ fun ValueParameterDescriptor.isComposerParam(): Boolean =
     name == KtxNameConventions.COMPOSER_PARAMETER &&
         type.constructor.declarationDescriptor?.fqNameSafe == ComposeFqNames.Composer
 
+@OptIn(FirIncompatiblePluginAPI::class)
 fun IrPluginContext.function(arity: Int): IrClassSymbol =
     referenceClass(FqName("kotlin.Function$arity"))!!
 

@@ -30,6 +30,20 @@ ext.repos.prebuiltsRoot = new File(checkoutRoot, "prebuilts").absolutePath
  * Adds maven repositories to the given repository handler.
  */
 def addMavenRepositories(RepositoryHandler handler) {
+    def isJBFork = true
+    if (isJBFork) {
+        handler.mavenLocal()
+        handler.mavenCentral()
+        handler.google()
+        handler.gradlePluginPortal()
+        handler.maven {
+            url("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        }
+        handler.maven {
+            url("https://maven.pkg.jetbrains.space/public/p/kotlinx-coroutines/maven")
+        }
+    }
+
     def metalavaRepoOverride = System.getenv("METALAVA_REPO")
     if (metalavaRepoOverride != null) {
         for(extraRepo in metalavaRepoOverride.split(File.pathSeparator)) {
@@ -55,19 +69,6 @@ def addMavenRepositories(RepositoryHandler handler) {
         metadataSources {
             mavenPom()
             artifact()
-        }
-    }
-    def isJBFork = true
-    if (isJBFork) {
-        handler.mavenLocal()
-        handler.mavenCentral()
-        handler.google()
-        handler.gradlePluginPortal()
-        handler.maven {
-               url("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-        }
-        handler.maven {
-               url("https://maven.pkg.jetbrains.space/public/p/kotlinx-coroutines/maven")
         }
     }
     // Ordering appears to be important: b/229733266

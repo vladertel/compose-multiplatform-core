@@ -26,7 +26,7 @@ dependencies {
     implementation(libs.kotlinStdlib)
     testImplementation(libs.junit)
     testImplementation(gradleTestKit())
-    testImplementation(project(":internal-testutils-gradle-plugin"))
+//    testImplementation(project(":internal-testutils-gradle-plugin"))
 }
 
 SdkResourceGenerator.generateForHostTest(project)

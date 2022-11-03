@@ -24,10 +24,10 @@ plugins {
 
 sourceSets {
     // Pull integration test source code in for use by lint testing framework.
-    test.resources.srcDirs(
-            project(":lint-checks:integration-tests")
-                    .projectDir.absolutePath + "/src/main"
-    )
+//    test.resources.srcDirs(
+//            project(":lint-checks:integration-tests")
+//                    .projectDir.absolutePath + "/src/main"
+//    )
 }
 
 dependencies {

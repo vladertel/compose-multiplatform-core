@@ -16,6 +16,7 @@
 
 package androidx.compose.compiler.plugins.kotlin
 
+import org.jetbrains.kotlin.backend.common.extensions.FirIncompatiblePluginAPI
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.expressions.IrConst
@@ -110,6 +111,7 @@ class VersionChecker(val context: IrPluginContext) {
             get() = runtimeVersionToMavenVersionTable[minimumRuntimeVersionInt] ?: "unknown"
     }
 
+    @OptIn(FirIncompatiblePluginAPI::class)
     fun check() {
         // version checker accesses bodies of the functions that are not deserialized in KLIB
         if (!context.platform.isJvm()) return
