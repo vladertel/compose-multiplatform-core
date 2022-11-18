@@ -64,6 +64,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         desktop()
         js()
+        wasm()
         darwin()
     }
 
@@ -99,6 +100,10 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     }
                 }
             }
+        }
+
+        targets.wasm {
+            nodejs()
         }
 
         /*
@@ -144,9 +149,16 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
 
+            wasmMain {
+                dependencies {
+                    implementation(libs.create("kotlinStdlibWasm"))
+                }
+            }
+
             jsNativeMain.dependsOn(commonMain)
             jsMain.dependsOn(jsNativeMain)
             nativeMain.dependsOn(jsNativeMain)
+            wasmMain.dependsOn(jsNativeMain)
 
             linuxX64Main.dependsOn(nativeMain)
             linuxX64Test.dependsOn(nativeTest)
@@ -191,6 +203,12 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             jsTest {
                 dependencies {
                     implementation(libs.kotlinTestJs)
+                }
+            }
+            wasmTest {
+                dependencies {
+                    //implementation(libs.kotlinTestJs)
+                    implementation(libs.create("kotlinTestWasm"))
                 }
             }
             nativeTest {

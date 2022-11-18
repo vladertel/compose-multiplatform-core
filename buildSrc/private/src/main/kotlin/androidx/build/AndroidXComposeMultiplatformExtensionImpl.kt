@@ -73,6 +73,16 @@ open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
         jsMain.dependsOn(commonMain)
     }
 
+    override fun wasm(): Unit = multiplatformExtension.run {
+        wasm {
+            d8()
+        }
+
+        val commonMain = sourceSets.getByName("commonMain")
+        val wasmMain = sourceSets.getByName("wasmMain")
+        wasmMain.dependsOn(commonMain)
+    }
+
     override fun darwin(): Unit = multiplatformExtension.run {
         macosX64()
         macosArm64()
