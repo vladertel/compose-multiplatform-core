@@ -44,6 +44,12 @@ abstract class AndroidXComposeMultiplatformExtension {
 
     /**
       * Provides the default target configuration and source set dependencies
+      * for wasm.
+      */
+    abstract fun wasm(): Unit
+
+    /**
+      * Provides the default target configuration and source set dependencies
       * for all darwin native targets.
       */
     abstract fun darwin(): Unit
