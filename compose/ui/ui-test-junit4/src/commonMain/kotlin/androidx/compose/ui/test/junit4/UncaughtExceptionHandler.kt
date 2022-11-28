@@ -16,10 +16,9 @@
 
 package androidx.compose.ui.test.junit4
 
-internal actual inline fun <T> synchronized(lock: Any, block: () -> T): T = kotlin.synchronized(lock, block)
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.CoroutineExceptionHandler
 
 /**
  * Similar to [TestCoroutineExceptionHandler], but with clearing all thrown exceptions
@@ -77,3 +76,5 @@ internal class UncaughtExceptionHandler :
         }
     }
 }
+
+internal expect inline fun <T> synchronized(lock: Any, block: () -> T): T
