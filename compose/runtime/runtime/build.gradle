@@ -156,9 +156,21 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             jsNativeMain.dependsOn(commonMain)
-            jsMain.dependsOn(jsNativeMain)
+            jsMain {
+                dependsOn(jsNativeMain)
+                dependencies {
+                    implementation(kotlin("stdlib-js"))
+                }
+            }
+
+            wasmMain {
+                dependsOn(jsNativeMain)
+                dependencies {
+                    implementation(kotlin("stdlib-wasm"))
+                }
+            }
+
             nativeMain.dependsOn(jsNativeMain)
-            wasmMain.dependsOn(jsNativeMain)
 
             linuxX64Main.dependsOn(nativeMain)
             linuxX64Test.dependsOn(nativeTest)

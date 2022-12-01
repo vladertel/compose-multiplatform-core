@@ -16,15 +16,15 @@
 
 package androidx.compose.ui.text.intl
 
-internal class JsLocale(val locale: dynamic) : PlatformLocale {
+internal class JsLocale(val locale: Any?) : PlatformLocale {
     override val language: String
-        get() = locale.languageCode!!
+        get() = ""//locale.languageCode!!
 
     override val script: String
-        get() = locale.scriptCode!!
+        get() = ""//locale.scriptCode!!
 
     override val region: String
-        get() = locale.countryCode!!
+        get() = ""//locale.countryCode!!
 
     override fun toLanguageTag(): String = TODO("implement native toLanguageTag") // locale.toLanguageTag()
 }

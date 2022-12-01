@@ -32,6 +32,7 @@ import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
 import org.gradle.api.attributes.Usage
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
+import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
 
 open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
     val project: Project
@@ -285,9 +286,9 @@ private fun Project.publishAndroidxReference(target: KotlinTarget) {
 
                 (rootComponent.usages as MutableSet).add(
                     DefaultKotlinUsageContext(
-                        multiplatformExtension.metadata().compilations.getByName("main"),
-                        objects.named(Usage::class.java, "kotlin-api"),
-                        configurationName
+                        compilation = multiplatformExtension.metadata().compilations.getByName("main"),
+                        //objects.named(Usage::class.java, "kotlin-api"),
+                        dependencyConfigurationName = configurationName
                     )
                 )
 

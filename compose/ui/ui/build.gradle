@@ -123,6 +123,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         desktop()
         darwin()
         js()
+        wasm()
 
         configureDarwinFlags()
     }
@@ -187,9 +188,25 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             jsNativeMain.dependsOn(skikoMain)
-
-            jsMain.dependsOn(jsNativeMain)
             nativeMain.dependsOn(jsNativeMain)
+            jsWasmMain.dependsOn(jsNativeMain)
+
+            jsMain {
+                dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(kotlin("stdlib-js"))
+                    api(libs.skikoCommon)
+                }
+            }
+
+            wasmMain {
+                dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(kotlin("stdlib-wasm"))
+                    implementation(libs.create("skikoWasm"))
+                    implementation(libs.create("skikoWasmWasm"))
+                }
+            }
 
             // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you
             //  need to add Robolectric (which must be kept out of androidAndroidTest), use a top

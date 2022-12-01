@@ -59,6 +59,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         desktop()
         darwin()
         js()
+        wasm()
     }
 
     kotlin {
@@ -94,6 +95,22 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.testRunner)
                 implementation(libs.junit)
                 implementation(libs.truth)
+            }
+
+            jsWasmMain {}
+
+            jsMain {
+                dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(kotlin("stdlib-js"))
+                }
+            }
+
+            wasmMain {
+                dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(kotlin("stdlib-wasm"))
+                }
             }
         }
     }

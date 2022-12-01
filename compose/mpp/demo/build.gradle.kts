@@ -53,6 +53,10 @@ kotlin {
         browser()
         binaries.executable()
     }
+    wasm() {
+        browser()
+        binaries.executable()
+    }
     macosX64() {
         binaries {
             executable() {
@@ -131,6 +135,18 @@ kotlin {
             dependsOn(skikoMain)
             resources.setSrcDirs(resources.srcDirs)
             resources.srcDirs(unzipTask.map { it.destinationDir })
+            dependencies {
+                implementation(kotlin("stdlib-js"))
+            }
+        }
+
+        val wasmMain by getting {
+            dependsOn(skikoMain)
+            resources.setSrcDirs(resources.srcDirs)
+            resources.srcDirs(unzipTask.map { it.destinationDir })
+            dependencies {
+                implementation(kotlin("stdlib-wasm"))
+            }
         }
 
         val nativeMain by creating { dependsOn(skikoMain) }
@@ -205,4 +221,14 @@ if (System.getProperty("os.name") == "Mac OS X") {
             }
         }
     }
+}
+
+project.tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile>().configureEach {
+    kotlinOptions.freeCompilerArgs += listOf(
+//        "-Xklib-enable-signature-clash-checks=false",
+        //"-Xplugin=${project.properties["compose.plugin.path"]}",
+        "-Xir-dce",
+        "-Xwasm-generate-wat",
+        "-Xwasm-enable-array-range-checks"
+    )
 }

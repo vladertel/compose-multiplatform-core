@@ -56,6 +56,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.modifier.ProvidableModifierLocal
 
 /**
  * Configure component to receive clicks via input or accessibility "click" event.
@@ -183,20 +184,18 @@ fun Modifier.clickable(
             )
         }
 
+        // TODO: is it a workaround for k/wasm? Can't use it directly w/o declaring a val?
+        val updaterHandler = object : ModifierLocalConsumer {
+            override fun onModifierLocalsUpdated(scope: ModifierLocalReadScope) {
+                with(scope) {
+                    isClickableInScrollableContainer.value =
+                        ModifierLocalScrollableContainer.current
+                }
+            }
+        }
 
         Modifier
-            .then(
-                remember {
-                    object : ModifierLocalConsumer {
-                        override fun onModifierLocalsUpdated(scope: ModifierLocalReadScope) {
-                            with(scope) {
-                                isClickableInScrollableContainer.value =
-                                    ModifierLocalScrollableContainer.current
-                            }
-                        }
-                    }
-                }
-            )
+            .then(remember { updaterHandler })
             .then(focusRequesterModifier)
             .genericClickableWithoutGesture(
                 gestureModifiers = gesture,

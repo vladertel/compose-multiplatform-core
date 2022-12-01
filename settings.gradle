@@ -481,6 +481,7 @@ if (isMultiplatformEnabled()) {
     includeProject(":compose:mpp", [BuildType.COMPOSE])
     includeProject(":compose:mpp:demo", [BuildType.COMPOSE])
     includeProject(":compose:mpp:demo-uikit", [BuildType.COMPOSE])
+    includeProject(":compose:mpp:falling-balls-mpp", [BuildType.COMPOSE])
 }
 includeProject(":compose:foundation", [BuildType.COMPOSE])
 includeProject(":compose:foundation:foundation", [BuildType.COMPOSE])

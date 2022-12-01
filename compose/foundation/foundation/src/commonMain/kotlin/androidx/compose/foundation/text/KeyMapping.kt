@@ -116,40 +116,40 @@ internal fun commonKeyMapping(
     }
 }
 
+internal class DefaultKeyMapping(private val common: KeyMapping) : KeyMapping {
+    override fun map(event: KeyEvent): KeyCommand? {
+        return when {
+            event.isShiftPressed && event.isCtrlPressed ->
+                when (event.key) {
+                    MappedKeys.DirectionLeft -> KeyCommand.SELECT_LEFT_WORD
+                    MappedKeys.DirectionRight -> KeyCommand.SELECT_RIGHT_WORD
+                    MappedKeys.DirectionUp -> KeyCommand.SELECT_PREV_PARAGRAPH
+                    MappedKeys.DirectionDown -> KeyCommand.SELECT_NEXT_PARAGRAPH
+                    else -> null
+                }
+            event.isCtrlPressed ->
+                when (event.key) {
+                    MappedKeys.DirectionLeft -> KeyCommand.LEFT_WORD
+                    MappedKeys.DirectionRight -> KeyCommand.RIGHT_WORD
+                    MappedKeys.DirectionUp -> KeyCommand.PREV_PARAGRAPH
+                    MappedKeys.DirectionDown -> KeyCommand.NEXT_PARAGRAPH
+                    MappedKeys.H -> KeyCommand.DELETE_PREV_CHAR
+                    MappedKeys.Delete -> KeyCommand.DELETE_NEXT_WORD
+                    MappedKeys.Backspace -> KeyCommand.DELETE_PREV_WORD
+                    MappedKeys.Backslash -> KeyCommand.DESELECT
+                    else -> null
+                }
+            event.isShiftPressed ->
+                when (event.key) {
+                    MappedKeys.MoveHome -> KeyCommand.SELECT_LINE_START
+                    MappedKeys.MoveEnd -> KeyCommand.SELECT_LINE_END
+                    else -> null
+                }
+            else -> null
+        } ?: common.map(event)
+    }
+}
+
 // It's "default" or actually "non macOS" key mapping
 internal val defaultKeyMapping: KeyMapping =
-    commonKeyMapping(KeyEvent::isCtrlPressed).let { common ->
-        object : KeyMapping {
-            override fun map(event: KeyEvent): KeyCommand? {
-                return when {
-                    event.isShiftPressed && event.isCtrlPressed ->
-                        when (event.key) {
-                            MappedKeys.DirectionLeft -> KeyCommand.SELECT_LEFT_WORD
-                            MappedKeys.DirectionRight -> KeyCommand.SELECT_RIGHT_WORD
-                            MappedKeys.DirectionUp -> KeyCommand.SELECT_PREV_PARAGRAPH
-                            MappedKeys.DirectionDown -> KeyCommand.SELECT_NEXT_PARAGRAPH
-                            else -> null
-                        }
-                    event.isCtrlPressed ->
-                        when (event.key) {
-                            MappedKeys.DirectionLeft -> KeyCommand.LEFT_WORD
-                            MappedKeys.DirectionRight -> KeyCommand.RIGHT_WORD
-                            MappedKeys.DirectionUp -> KeyCommand.PREV_PARAGRAPH
-                            MappedKeys.DirectionDown -> KeyCommand.NEXT_PARAGRAPH
-                            MappedKeys.H -> KeyCommand.DELETE_PREV_CHAR
-                            MappedKeys.Delete -> KeyCommand.DELETE_NEXT_WORD
-                            MappedKeys.Backspace -> KeyCommand.DELETE_PREV_WORD
-                            MappedKeys.Backslash -> KeyCommand.DESELECT
-                            else -> null
-                        }
-                    event.isShiftPressed ->
-                        when (event.key) {
-                            MappedKeys.MoveHome -> KeyCommand.SELECT_LINE_START
-                            MappedKeys.MoveEnd -> KeyCommand.SELECT_LINE_END
-                            else -> null
-                        }
-                    else -> null
-                } ?: common.map(event)
-            }
-        }
-    }
+    commonKeyMapping(KeyEvent::isCtrlPressed).let { common -> DefaultKeyMapping(common) }
