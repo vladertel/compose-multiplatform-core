@@ -30,5 +30,5 @@ dependencies {
 androidXComposeMultiplatform {
     desktop()
     js()
-    darwin()
+//    darwin()
 }

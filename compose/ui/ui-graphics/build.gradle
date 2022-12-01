@@ -66,30 +66,30 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         desktop()
         js()
-        darwin()
+//        darwin()
     }
 
     kotlin {
-        targets {
-            def darwinFlags = [
-                "-linker-option", "-framework", "-linker-option", "Metal",
-                "-linker-option", "-framework", "-linker-option", "CoreText",
-                "-linker-option", "-framework", "-linker-option", "CoreGraphics",
-                "-linker-option", "-framework", "-linker-option", "CoreServices"
-            ]
-            configure([macosX64, macosArm64]) {
-                binaries.all {
-                    freeCompilerArgs += darwinFlags
-                }
-            }
-            configure([uikitX64, uikitArm64]) {
-                binaries.all {
-                    freeCompilerArgs += darwinFlags
-                    freeCompilerArgs +=
-                        ["-linker-option", "-framework", "-linker-option", "UIKit"]
-                }
-            }
-        }
+//        targets {
+//            def darwinFlags = [
+//                "-linker-option", "-framework", "-linker-option", "Metal",
+//                "-linker-option", "-framework", "-linker-option", "CoreText",
+//                "-linker-option", "-framework", "-linker-option", "CoreGraphics",
+//                "-linker-option", "-framework", "-linker-option", "CoreServices"
+//            ]
+//            configure([macosX64, macosArm64]) {
+//                binaries.all {
+//                    freeCompilerArgs += darwinFlags
+//                }
+//            }
+//            configure([uikitX64, uikitArm64]) {
+//                binaries.all {
+//                    freeCompilerArgs += darwinFlags
+//                    freeCompilerArgs +=
+//                        ["-linker-option", "-framework", "-linker-option", "UIKit"]
+//                }
+//            }
+//        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -134,7 +134,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
 
-            nativeMain.dependsOn(jsNativeMain)
+//            nativeMain.dependsOn(jsNativeMain)
 
             // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you
             //  need to add Robolectric (which must be kept out of androidAndroidTest), use a top
@@ -148,9 +148,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             androidAndroidTest.dependencies {
-                implementation(project(":compose:ui:ui-graphics:ui-graphics-samples"))
-                implementation(project(":compose:ui:ui-test-junit4"))
-                implementation(project(":compose:test-utils"))
+//                implementation(project(":compose:ui:ui-graphics:ui-graphics-samples"))
+//                implementation(project(":compose:ui:ui-test-junit4"))
+//                implementation(project(":compose:test-utils"))
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
                 implementation(libs.espressoCore)
@@ -160,7 +160,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             desktopTest {
                 resources.srcDirs += "src/desktopTest/res"
                 dependencies {
-                    implementation(project(":compose:ui:ui-test-junit4"))
+//                    implementation(project(":compose:ui:ui-test-junit4"))
                     implementation(libs.junit)
                     implementation(libs.truth)
                     implementation(libs.skikoCurrentOs)
@@ -169,7 +169,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         }
     }
     dependencies {
-        samples(projectOrArtifact(":compose:ui:ui-graphics:ui-graphics-samples"))
+//        samples(projectOrArtifact(":compose:ui:ui-graphics:ui-graphics-samples"))
     }
 }
 

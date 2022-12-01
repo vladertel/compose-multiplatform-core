@@ -84,20 +84,20 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
-        darwin()
+//        darwin()
         js()
     }
 
     kotlin {
         // linker-option need to run tests on macOS
-        macosX64 {
-            binaries.findTest(NativeBuildType.DEBUG).freeCompilerArgs +=
-                    ["-linker-option", "-framework", "-linker-option", "Metal"]
-        }
-        macosArm64 {
-            binaries.findTest(NativeBuildType.DEBUG).freeCompilerArgs +=
-                    ["-linker-option", "-framework", "-linker-option", "Metal"]
-        }
+//        macosX64 {
+//            binaries.findTest(NativeBuildType.DEBUG).freeCompilerArgs +=
+//                    ["-linker-option", "-framework", "-linker-option", "Metal"]
+//        }
+//        macosArm64 {
+//            binaries.findTest(NativeBuildType.DEBUG).freeCompilerArgs +=
+//                    ["-linker-option", "-framework", "-linker-option", "Metal"]
+//        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -132,7 +132,7 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
             jsNativeMain.dependsOn(skikoMain)
             jsMain.dependsOn(jsNativeMain)
-            nativeMain.dependsOn(jsNativeMain)
+//            nativeMain.dependsOn(jsNativeMain)
 
             commonTest {
                 dependencies {
@@ -160,10 +160,10 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             androidAndroidTest.dependencies {
-                implementation(project(":compose:test-utils"))
-                implementation(project(":internal-testutils-fonts"))
-                implementation(project(":test:screenshot:screenshot"))
-                implementation(project(":internal-testutils-runtime"))
+//                implementation(project(":compose:test-utils"))
+//                implementation(project(":internal-testutils-fonts"))
+//                implementation(project(":test:screenshot:screenshot"))
+//                implementation(project(":internal-testutils-runtime"))
                 implementation("androidx.activity:activity-compose:1.3.1")
 
                 implementation(libs.testUiautomator)
@@ -184,7 +184,7 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             desktopTest {
                 dependsOn(skikoTest)
                 dependencies {
-                    implementation(project(":compose:ui:ui-test-junit4"))
+//                    implementation(project(":compose:ui:ui-test-junit4"))
                     implementation(libs.truth)
                     implementation(libs.junit)
                     implementation(libs.skikoCurrentOs)
@@ -194,12 +194,12 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
 
-            nativeTest.dependsOn(skikoTest)
+//            nativeTest.dependsOn(skikoTest)
             jsTest.dependsOn(skikoTest)
         }
     }
     dependencies {
-        samples(project(":compose:foundation:foundation:foundation-samples"))
+//        samples(project(":compose:foundation:foundation:foundation-samples"))
     }
 }
 

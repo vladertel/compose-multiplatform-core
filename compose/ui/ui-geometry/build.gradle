@@ -49,7 +49,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
-        darwin()
+//        darwin()
         js()
     }
 

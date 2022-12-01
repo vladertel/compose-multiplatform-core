@@ -86,7 +86,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
-        darwin()
+//        darwin()
         js()
     }
 
@@ -131,7 +131,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             jsMain.dependsOn(jsNativeMain)
 
-            nativeMain.dependsOn(jsNativeMain)
+//            nativeMain.dependsOn(jsNativeMain)
 
             androidMain {
                 dependsOn(commonMain)
@@ -150,7 +150,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             //  level dependencies block instead:
             //  `dependencies { testImplementation(libs.robolectric) }`
             androidTest.dependencies {
-                implementation(project(":internal-testutils-fonts"))
+//                implementation(project(":internal-testutils-fonts"))
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
                 implementation(libs.junit)
@@ -162,8 +162,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             androidAndroidTest.dependencies {
-                implementation(project(":compose:ui:ui-test-junit4"))
-                implementation(project(":internal-testutils-fonts"))
+//                implementation(project(":compose:ui:ui-test-junit4"))
+//                implementation(project(":internal-testutils-fonts"))
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
                 implementation(libs.espressoCore)
@@ -180,13 +180,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.kotlinTest)
                 implementation(libs.skikoCurrentOs)
                 implementation(project(":compose:foundation:foundation"))
-                implementation(project(":compose:ui:ui-test-junit4"))
-                implementation(project(":internal-testutils-fonts"))
+//                implementation(project(":compose:ui:ui-test-junit4"))
+//                implementation(project(":internal-testutils-fonts"))
             }
         }
     }
     dependencies {
-        samples(projectOrArtifact(":compose:ui:ui-text:ui-text-samples"))
+//        samples(projectOrArtifact(":compose:ui:ui-text:ui-text-samples"))
     }
 }
 

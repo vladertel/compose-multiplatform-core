@@ -64,7 +64,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         desktop()
         js()
-        wasm()
+        //wasm()
 //        darwin()
     }
 
@@ -102,9 +102,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
         }
 
-        targets.wasm {
-            nodejs()
-        }
+//        targets.wasm {
+//            nodejs()
+//        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the

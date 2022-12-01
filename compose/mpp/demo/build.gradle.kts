@@ -53,58 +53,58 @@ kotlin {
         browser()
         binaries.executable()
     }
-    macosX64() {
-        binaries {
-            executable() {
-                entryPoint = "androidx.compose.mpp.demo.main"
-                freeCompilerArgs += listOf(
-                    "-linker-option", "-framework", "-linker-option", "Metal"
-                )
-                // TODO: the current release binary surprises LLVM, so disable checks for now.
-                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
-            }
-        }
-    }
-    macosArm64() {
-        binaries {
-            executable() {
-                entryPoint = "androidx.compose.mpp.demo.main"
-                freeCompilerArgs += listOf(
-                    "-linker-option", "-framework", "-linker-option", "Metal"
-                )
-                // TODO: the current release binary surprises LLVM, so disable checks for now.
-                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
-            }
-        }
-    }
-    iosX64("uikitX64") {
-        binaries {
-            executable() {
-                entryPoint = "androidx.compose.mpp.demo.main"
-                freeCompilerArgs += listOf(
-                    "-linker-option", "-framework", "-linker-option", "Metal",
-                    "-linker-option", "-framework", "-linker-option", "CoreText",
-                    "-linker-option", "-framework", "-linker-option", "CoreGraphics"
-                )
-                // TODO: the current compose binary surprises LLVM, so disable checks for now.
-                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
-            }
-        }
-    }
-    iosSimulatorArm64("uikitSimArm64") {
-        binaries {
-            executable() {
-                entryPoint = "androidx.compose.mpp.demo.main"
-                freeCompilerArgs += listOf(
-                    "-linker-option", "-framework", "-linker-option", "Metal",
-                    "-linker-option", "-framework", "-linker-option", "CoreText",
-                    "-linker-option", "-framework", "-linker-option", "CoreGraphics"
-                )
-                // TODO: the current compose binary surprises LLVM, so disable checks for now.
-                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
-            }
-        }
-    }
+//    macosX64() {
+//        binaries {
+//            executable() {
+//                entryPoint = "androidx.compose.mpp.demo.main"
+//                freeCompilerArgs += listOf(
+//                    "-linker-option", "-framework", "-linker-option", "Metal"
+//                )
+//                // TODO: the current release binary surprises LLVM, so disable checks for now.
+//                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
+//            }
+//        }
+//    }
+//    macosArm64() {
+//        binaries {
+//            executable() {
+//                entryPoint = "androidx.compose.mpp.demo.main"
+//                freeCompilerArgs += listOf(
+//                    "-linker-option", "-framework", "-linker-option", "Metal"
+//                )
+//                // TODO: the current release binary surprises LLVM, so disable checks for now.
+//                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
+//            }
+//        }
+//    }
+//    iosX64("uikitX64") {
+//        binaries {
+//            executable() {
+//                entryPoint = "androidx.compose.mpp.demo.main"
+//                freeCompilerArgs += listOf(
+//                    "-linker-option", "-framework", "-linker-option", "Metal",
+//                    "-linker-option", "-framework", "-linker-option", "CoreText",
+//                    "-linker-option", "-framework", "-linker-option", "CoreGraphics"
+//                )
+//                // TODO: the current compose binary surprises LLVM, so disable checks for now.
+//                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
+//            }
+//        }
+//    }
+//    iosSimulatorArm64("uikitSimArm64") {
+//        binaries {
+//            executable() {
+//                entryPoint = "androidx.compose.mpp.demo.main"
+//                freeCompilerArgs += listOf(
+//                    "-linker-option", "-framework", "-linker-option", "Metal",
+//                    "-linker-option", "-framework", "-linker-option", "CoreText",
+//                    "-linker-option", "-framework", "-linker-option", "CoreGraphics"
+//                )
+//                // TODO: the current compose binary surprises LLVM, so disable checks for now.
+//                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
+//            }
+//        }
+//    }
     sourceSets {
         val commonMain by getting {
              dependencies {
@@ -133,15 +133,15 @@ kotlin {
             resources.srcDirs(unzipTask.map { it.destinationDir })
         }
 
-        val nativeMain by creating { dependsOn(skikoMain) }
-        val darwinMain by creating { dependsOn(nativeMain) }
-        val macosMain by creating { dependsOn(darwinMain) }
-        val macosX64Main by getting { dependsOn(macosMain) }
-        val macosArm64Main by getting { dependsOn(macosMain) }
-        val uikitMain by creating { dependsOn(darwinMain) }
-        val uikitX64Main by getting { dependsOn(uikitMain) }
-        val uikitArm64Main by creating { dependsOn(uikitMain) }
-        val uikitSimArm64Main by getting { dependsOn(uikitMain) }
+//        val nativeMain by creating { dependsOn(skikoMain) }
+//        val darwinMain by creating { dependsOn(nativeMain) }
+//        val macosMain by creating { dependsOn(darwinMain) }
+//        val macosX64Main by getting { dependsOn(macosMain) }
+//        val macosArm64Main by getting { dependsOn(macosMain) }
+//        val uikitMain by creating { dependsOn(darwinMain) }
+//        val uikitX64Main by getting { dependsOn(uikitMain) }
+//        val uikitArm64Main by creating { dependsOn(uikitMain) }
+//        val uikitSimArm64Main by getting { dependsOn(uikitMain) }
     }
 }
 
@@ -149,7 +149,7 @@ enum class Target(val simulator: Boolean, val key: String) {
     UIKIT_X64(true, "uikitX64"), UIKIT_ARM64(false, "uikitArm64"), UIKIT_SIM_ARM64(true, "uikitSimArm64"),
 }
 
-if (System.getProperty("os.name") == "Mac OS X") {
+if (System.getProperty("os.name") == "Mac OS X" && false) {
 // Create Xcode integration tasks.
     val sdkName: String? = System.getenv("SDK_NAME")
 

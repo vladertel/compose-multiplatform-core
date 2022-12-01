@@ -285,7 +285,7 @@ class ComposeComponentRegistrar : ComponentRegistrar {
             )
             val decoysEnabled = configuration.get(
                 ComposeConfiguration.DECOYS_ENABLED_KEY,
-                false
+                false || true
             )
             val metricsDestination = configuration.get(
                 ComposeConfiguration.METRICS_DESTINATION_KEY,

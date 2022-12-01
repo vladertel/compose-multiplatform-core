@@ -58,7 +58,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
-        darwin()
+//        darwin()
         js()
     }
 
@@ -85,7 +85,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             jsNativeMain.dependsOn(commonMain)
             jsMain.dependsOn(jsNativeMain)
-            nativeMain.dependsOn(jsNativeMain)
+//            nativeMain.dependsOn(jsNativeMain)
 
             commonTest.dependencies {
                 implementation(kotlin("test-junit"))
@@ -107,7 +107,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         }
     }
     dependencies {
-        samples(projectOrArtifact(":compose:ui:ui-unit:ui-unit-samples"))
+//        samples(projectOrArtifact(":compose:ui:ui-unit:ui-unit-samples"))
     }
 }
 

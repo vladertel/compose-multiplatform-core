@@ -65,7 +65,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
-        darwin()
+//        darwin()
         js()
     }
 
@@ -96,7 +96,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
             jsNativeMain.dependsOn(commonMain)
             jsMain.dependsOn(jsNativeMain)
-            nativeMain.dependsOn(jsNativeMain)
+//            nativeMain.dependsOn(jsNativeMain)
 
             // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you
             //  need to add Robolectric (which must be kept out of androidAndroidTest), use a top
@@ -113,13 +113,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.testRunner)
                 implementation(libs.junit)
                 implementation(project(":compose:foundation:foundation"))
-                implementation(project(":compose:ui:ui-test-junit4"))
-                implementation(project(":compose:test-utils"))
+//                implementation(project(":compose:ui:ui-test-junit4"))
+//                implementation(project(":compose:test-utils"))
             }
         }
     }
     dependencies {
-        samples(project(":compose:animation:animation:animation-samples"))
+//        samples(project(":compose:animation:animation:animation-samples"))
     }
 }
 

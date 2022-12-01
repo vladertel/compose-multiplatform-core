@@ -20,6 +20,7 @@ import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
 import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.AbstractDecoysLowering
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.CreateDecoysTransformer
+import androidx.compose.compiler.plugins.kotlin.lower.decoys.isDecoy
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
@@ -89,10 +90,23 @@ class WrapJsComposableLambdaLowering(
                 it.valueParameters.size == 2 && !it.valueParameters.first().isVararg
             }.symbol
         ).owner.let {
-            val composerParamTransformer = ComposerParamTransformer(
-                context, symbolRemapper, false, metrics
-            )
-            composerParamTransformer.visitSimpleFunction(it) as IrSimpleFunction
+            if (!it.isDecoy()) {
+                // If a module didn't have any explicit remember calls,
+                // so `fun remember` wasn't transformed yet, then we have to transform it now.
+                val createDecoysTransformer = CreateDecoysTransformer(
+                    context, symbolRemapper, signatureBuilder, metrics
+                )
+                createDecoysTransformer.visitSimpleFunction(it) as IrSimpleFunction
+                createDecoysTransformer.updateParents()
+                val composerParamTransformer = ComposerParamTransformer(
+                    context, symbolRemapper, true, metrics
+                )
+                composerParamTransformer.visitSimpleFunction(
+                    it.getComposableForDecoy().owner as IrSimpleFunction
+                ) as IrSimpleFunction
+            } else {
+                it.getComposableForDecoy().owner as IrSimpleFunction
+            }
         }.symbol
     }
 

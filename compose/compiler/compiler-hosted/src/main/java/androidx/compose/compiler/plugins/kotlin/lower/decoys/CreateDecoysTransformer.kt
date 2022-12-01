@@ -116,12 +116,15 @@ class CreateDecoysTransformer(
 
     override fun lower(module: IrModuleFragment) {
         module.transformChildrenVoid()
+        updateParents()
+        module.patchDeclarationParents()
+    }
 
+    fun updateParents() {
         originalFunctions.forEach { (f, parent) ->
             (parent as? IrDeclarationContainer)?.addChild(f)
         }
-
-        module.patchDeclarationParents()
+        originalFunctions.clear()
     }
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
@@ -301,11 +304,6 @@ class CreateDecoysTransformer(
                 it.putValueArgument(0, irConst(paramsWithDefaultsBitMask))
             }
     }
-
-    private fun IrFunction.shouldBeRemapped(): Boolean =
-        !isLocalFunction() &&
-            !isEnumConstructor() &&
-            (hasComposableAnnotation() || hasComposableParameter())
 
     private fun IrFunction.isLocalFunction(): Boolean =
         origin == IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA ||

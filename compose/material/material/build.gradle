@@ -77,7 +77,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
-        darwin()
+//        darwin()
         js()
     }
 
@@ -118,7 +118,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             jsNativeMain.dependsOn(commonMain)
             jsMain.dependsOn(jsNativeMain)
-            nativeMain.dependsOn(jsNativeMain)
+//            nativeMain.dependsOn(jsNativeMain)
 
             // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you
             //  need to add Robolectric (which must be kept out of androidAndroidTest), use a top
@@ -132,9 +132,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             androidAndroidTest.dependencies {
-                implementation(project(":compose:material:material:material-samples"))
-                implementation(project(":compose:test-utils"))
-                implementation(project(":test:screenshot:screenshot"))
+//                implementation(project(":compose:material:material:material-samples"))
+//                implementation(project(":compose:test-utils"))
+//                implementation(project(":test:screenshot:screenshot"))
 
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
@@ -147,7 +147,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             desktopTest.dependencies {
-                implementation(project(":compose:ui:ui-test-junit4"))
+//                implementation(project(":compose:ui:ui-test-junit4"))
                 implementation(libs.truth)
                 implementation(libs.junit)
                 implementation(libs.skikoCurrentOs)
@@ -155,7 +155,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         }
     }
     dependencies {
-        samples(project(":compose:material:material:material-samples"))
+//        samples(project(":compose:material:material:material-samples"))
     }
 }
 

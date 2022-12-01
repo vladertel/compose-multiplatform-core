@@ -46,7 +46,7 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
-        darwin()
+//        darwin()
         js()
     }
 
@@ -68,7 +68,7 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         }
     }
     dependencies {
-        samples(project(":compose:material:material-icons-core:material-icons-core-samples"))
+//        samples(project(":compose:material:material-icons-core:material-icons-core-samples"))
     }
 }
 

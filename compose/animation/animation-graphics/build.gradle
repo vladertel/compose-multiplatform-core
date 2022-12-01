@@ -65,7 +65,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
         android()
         desktop()
-        darwin()
+//        darwin()
         js()
     }
 
@@ -112,13 +112,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.junit)
                 implementation(libs.truth)
                 implementation(project(":compose:foundation:foundation"))
-                implementation(project(":compose:ui:ui-test-junit4"))
-                implementation(project(":compose:test-utils"))
+//                implementation(project(":compose:ui:ui-test-junit4"))
+//                implementation(project(":compose:test-utils"))
             }
         }
     }
     dependencies {
-        samples(project(":compose:animation:animation-graphics:animation-graphics-samples"))
+//        samples(project(":compose:animation:animation-graphics:animation-graphics-samples"))
     }
 }
 
