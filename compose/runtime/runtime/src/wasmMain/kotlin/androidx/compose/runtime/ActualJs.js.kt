@@ -95,13 +95,14 @@ internal actual fun identityHashCode(instance: Any?): Int {
     if (instance == null) {
         return 0
     }
+    return instance.hashCode()
 
-    return when (jsTypeOf(instance)) {
-        "object", "function" -> getIdentityHashCode(instance)
-        else -> throw IllegalArgumentException(
-            "identity hash code for ${jsTypeOf(instance)} is not supported"
-        )
-    }
+//    return when (jsTypeOf(instance)) {
+//        "object", "function" -> getIdentityHashCode(instance)
+//        else -> throw IllegalArgumentException(
+//            "identity hash code for ${jsTypeOf(instance)} is not supported"
+//        )
+//    }
 }
 
 internal actual fun ensureMutable(it: Any) { /* NOTHING */ }

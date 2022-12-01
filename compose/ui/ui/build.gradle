@@ -123,6 +123,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         desktop()
 //        darwin()
         js()
+        wasm()
     }
 
     kotlin {
@@ -174,7 +175,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 dependencies {
                     api(project(":compose:ui:ui-graphics"))
                     api(project(":compose:ui:ui-text"))
-                    api(libs.skikoCommon)
+                    //api(libs.skikoCommon)
                 }
             }
             desktopMain {
@@ -186,7 +187,25 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             jsNativeMain.dependsOn(skikoMain)
 
-            jsMain.dependsOn(jsNativeMain)
+            jsWasmMain.dependsOn(jsNativeMain)
+
+            jsMain {
+                dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(kotlin("stdlib-js"))
+                    api(libs.skikoCommon)
+                }
+            }
+
+            wasmMain {
+                dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(kotlin("stdlib-wasm"))
+                    implementation(libs.create("skikoWasm"))
+                    implementation(libs.create("skikoWasmWasm"))
+                }
+            }
+
 //            nativeMain.dependsOn(jsNativeMain)
 
             // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you

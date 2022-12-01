@@ -64,7 +64,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         desktop()
         js()
-        //wasm()
+        wasm()
 //        darwin()
     }
 
@@ -102,9 +102,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
         }
 
-//        targets.wasm {
-//            nodejs()
-//        }
+        targets.wasm {
+            nodejs()
+        }
 
         /*
          * When updating dependencies, make sure to make the an an analogous update in the
@@ -156,9 +156,21 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             jsNativeMain.dependsOn(commonMain)
-            jsMain.dependsOn(jsNativeMain)
+            jsMain {
+                dependsOn(jsNativeMain)
+                dependencies {
+                    implementation(kotlin("stdlib-js"))
+                }
+            }
+
+            wasmMain {
+                dependsOn(jsNativeMain)
+                dependencies {
+                    implementation(kotlin("stdlib-wasm"))
+                }
+            }
+
             nativeMain.dependsOn(jsNativeMain)
-            wasmMain.dependsOn(jsNativeMain)
 
 //            linuxX64Main.dependsOn(nativeMain)
 //            linuxX64Test.dependsOn(nativeTest)

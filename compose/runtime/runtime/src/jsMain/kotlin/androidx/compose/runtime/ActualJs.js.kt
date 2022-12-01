@@ -20,7 +20,6 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotContextElement
 import androidx.compose.runtime.snapshots.SnapshotMutableState
 import kotlin.coroutines.CoroutineContext
-import kotlinx.browser.window
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.time.DurationUnit
@@ -134,11 +133,7 @@ private class MonotonicClockImpl : MonotonicFrameClock {
     override suspend fun <R> withFrameNanos(
         onFrame: (Long) -> R
     ): R = suspendCoroutine { continuation ->
-        window.requestAnimationFrame {
-            val duration = it.toDuration(DurationUnit.MILLISECONDS)
-            val result = onFrame(duration.inWholeNanoseconds)
-            continuation.resume(result)
-        }
+        error("")
     }
 }
 

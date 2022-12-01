@@ -330,43 +330,43 @@ private fun Project.replaceBaseMultiplatformPublication(
     componentFactory: SoftwareComponentFactory
 ) {
     withSourcesComponent(componentFactory) { sourcesComponent ->
-        val kotlinComponent = components.findByName("kotlin") as SoftwareComponentInternal
+//        val kotlinComponent = components.findByName("kotlin") as SoftwareComponentInternal
 
-        configure<PublishingExtension> {
-            publications { pubs ->
-                pubs.create<MavenPublication>("androidxKmp") {
-                    // Duplicate behavior from KMP plugin
-                    // (https://cs.github.com/JetBrains/kotlin/blob/0c001cc9939a2ab11815263ed825c1096b3ce087/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/mpp/Publishing.kt#L42)
-                    // Should be able to remove internal API usage once
-                    // https://youtrack.jetbrains.com/issue/KT-36943 is fixed
-                    (this as MavenPublicationInternal).publishWithOriginalFileName()
+//        configure<PublishingExtension> {
+//            publications { pubs ->
+//                pubs.create<MavenPublication>("androidxKmp") {
+//                    // Duplicate behavior from KMP plugin
+//                    // (https://cs.github.com/JetBrains/kotlin/blob/0c001cc9939a2ab11815263ed825c1096b3ce087/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/mpp/Publishing.kt#L42)
+//                    // Should be able to remove internal API usage once
+//                    // https://youtrack.jetbrains.com/issue/KT-36943 is fixed
+//                    (this as MavenPublicationInternal).publishWithOriginalFileName()
+//
+//                    from(object : ComponentWithVariants, SoftwareComponentInternal {
+//                        override fun getName(): String {
+//                            return "androidxKmp"
+//                        }
+//
+//                        override fun getUsages(): MutableSet<out UsageContext> {
+//                            // Include sources artifact we built and root artifacts from kotlin plugin.
+//                            return (sourcesComponent.usages + kotlinComponent.usages).toMutableSet()
+//                        }
+//
+//                        override fun getVariants(): MutableSet<out SoftwareComponent> {
+//                            // Include all target-based variants from kotlin plugin.
+//                            return (kotlinComponent as ComponentWithVariants).variants
+//                        }
+//                    })
+//                }
+//
+//                // mark original publication as an alias, so we do not try to publish it.
+//                pubs.named("kotlinMultiplatform").configure {
+//                    it as MavenPublicationInternal
+//                    it.isAlias = true
+//                }
+//            }
+//        }
 
-                    from(object : ComponentWithVariants, SoftwareComponentInternal {
-                        override fun getName(): String {
-                            return "androidxKmp"
-                        }
-
-                        override fun getUsages(): MutableSet<out UsageContext> {
-                            // Include sources artifact we built and root artifacts from kotlin plugin.
-                            return (sourcesComponent.usages + kotlinComponent.usages).toMutableSet()
-                        }
-
-                        override fun getVariants(): MutableSet<out SoftwareComponent> {
-                            // Include all target-based variants from kotlin plugin.
-                            return (kotlinComponent as ComponentWithVariants).variants
-                        }
-                    })
-                }
-
-                // mark original publication as an alias, so we do not try to publish it.
-                pubs.named("kotlinMultiplatform").configure {
-                    it as MavenPublicationInternal
-                    it.isAlias = true
-                }
-            }
-        }
-
-        disableBaseKmpPublications()
+//        disableBaseKmpPublications()
     }
 }
 

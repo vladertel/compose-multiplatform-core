@@ -30,5 +30,6 @@ dependencies {
 androidXComposeMultiplatform {
     desktop()
     js()
+    wasm()
 //    darwin()
 }

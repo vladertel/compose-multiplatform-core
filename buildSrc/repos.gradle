@@ -42,6 +42,9 @@ def addMavenRepositories(RepositoryHandler handler) {
         handler.maven {
             url("https://maven.pkg.jetbrains.space/public/p/kotlinx-coroutines/maven")
         }
+        handler.maven {
+            url("https://maven.pkg.jetbrains.space/kotlin/p/wasm/experimental")
+        }
     }
 
     def metalavaRepoOverride = System.getenv("METALAVA_REPO")

@@ -67,6 +67,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         desktop()
 //        darwin()
         js()
+        wasm()
     }
 
     kotlin {
@@ -95,7 +96,23 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.kotlinStdlib)
             }
             jsNativeMain.dependsOn(commonMain)
-            jsMain.dependsOn(jsNativeMain)
+
+            jsWasmMain.dependsOn(jsNativeMain)
+
+            jsMain {
+                dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(kotlin("stdlib-js"))
+                }
+            }
+
+            wasmMain {
+                dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(kotlin("stdlib-wasm"))
+                }
+            }
+
 //            nativeMain.dependsOn(jsNativeMain)
 
             // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you
