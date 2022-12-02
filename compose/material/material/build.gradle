@@ -79,6 +79,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         desktop()
         darwin()
         js()
+
+        configureDarwinFlags()
     }
 
     kotlin {
@@ -116,7 +118,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.kotlinStdlib)
             }
 
-            jsNativeMain.dependsOn(commonMain)
+            skikoMain.dependsOn(commonMain)
+            jsNativeMain.dependsOn(skikoMain)
             jsMain.dependsOn(jsNativeMain)
             nativeMain.dependsOn(jsNativeMain)
 
@@ -145,6 +148,17 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.mockitoKotlin)
                 implementation(libs.testUiautomator)
             }
+
+            skikoTest.dependencies {
+                implementation(libs.kotlinTest)
+                implementation(project(":compose:ui:ui-test-junit4"))
+                implementation(libs.skikoCommon)
+            }
+
+            desktopTest.dependsOn(skikoTest)
+            jsNativeTest.dependsOn(skikoTest)
+            jsTest.dependsOn(jsNativeTest)
+            nativeTest.dependsOn(jsNativeTest)
 
             desktopTest.dependencies {
                 implementation(project(":compose:ui:ui-test-junit4"))
