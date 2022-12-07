@@ -133,6 +133,15 @@ abstract class AbstractComposeLowering(
     val symbolRemapper: DeepCopySymbolRemapper,
     val metrics: ModuleMetrics
 ) : IrElementTransformerVoid(), ModuleLoweringPass {
+
+    companion object {
+        var isJvmTarget: Boolean = false
+    }
+
+    init {
+        isJvmTarget = context.platform?.isJvm() ?: false
+    }
+
     protected val builtIns = context.irBuiltIns
 
     private val _composerIrClass =
