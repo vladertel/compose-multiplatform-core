@@ -155,6 +155,15 @@ abstract class AbstractComposeLowering(
     val metrics: ModuleMetrics,
     val stabilityInferencer: StabilityInferencer
 ) : IrElementTransformerVoid(), ModuleLoweringPass {
+
+    companion object {
+        var isJvmTarget: Boolean = false
+    }
+
+    init {
+        isJvmTarget = context.platform?.isJvm() ?: false
+    }
+
     protected val builtIns = context.irBuiltIns
 
     private val _composerIrClass =
