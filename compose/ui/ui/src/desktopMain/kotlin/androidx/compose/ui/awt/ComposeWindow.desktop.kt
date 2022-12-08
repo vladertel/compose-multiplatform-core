@@ -42,7 +42,7 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
  * SkiaLayer is underlying class used internally to draw Compose content.
  * Implementation usually uses third-party solution to send info to some centralized analytics gatherer.
  */
-class ComposeWindow @ExperimentalComposeUiApi constructor(
+open class ComposeWindow @ExperimentalComposeUiApi constructor(
     graphicsConfiguration: GraphicsConfiguration? = null,
     skiaLayerAnalytics: SkiaLayerAnalytics = SkiaLayerAnalytics.Empty,
 ) : JFrame(graphicsConfiguration) {

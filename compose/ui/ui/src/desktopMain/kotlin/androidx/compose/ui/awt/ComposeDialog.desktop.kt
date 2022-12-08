@@ -37,7 +37,7 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
  * ComposeDialog is a dialog for building UI using Compose for Desktop.
  * ComposeDialog inherits javax.swing.JDialog.
  */
-class ComposeDialog : JDialog {
+open class ComposeDialog : JDialog {
     private val skiaLayerAnalytics: SkiaLayerAnalytics
     private val delegate: ComposeWindowDelegate
 
