@@ -93,16 +93,16 @@ class WrapJsComposableLambdaLowering(
             if (!it.isDecoy()) {
                 // If a module didn't have any explicit remember calls,
                 // so `fun remember` wasn't transformed yet, then we have to transform it now.
-                val createDecoysTransformer = CreateDecoysTransformer(
-                    context, symbolRemapper, signatureBuilder, metrics
-                )
-                createDecoysTransformer.visitSimpleFunction(it) as IrSimpleFunction
-                createDecoysTransformer.updateParents()
+//                val createDecoysTransformer = CreateDecoysTransformer(
+//                    context, symbolRemapper, signatureBuilder, metrics
+//                )
+//                createDecoysTransformer.visitSimpleFunction(it) as IrSimpleFunction
+//                createDecoysTransformer.updateParents()
                 val composerParamTransformer = ComposerParamTransformer(
-                    context, symbolRemapper, true, metrics
+                    context, symbolRemapper, false, metrics
                 )
                 composerParamTransformer.visitSimpleFunction(
-                    it.getComposableForDecoy().owner as IrSimpleFunction
+                    it//.getComposableForDecoy().owner as IrSimpleFunction
                 ) as IrSimpleFunction
             } else {
                 it.getComposableForDecoy().owner as IrSimpleFunction
