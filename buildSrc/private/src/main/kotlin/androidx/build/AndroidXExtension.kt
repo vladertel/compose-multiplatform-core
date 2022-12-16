@@ -42,6 +42,9 @@ open class AndroidXExtension(val project: Project) {
 
     val listProjectsService: Provider<ListProjectsService>
 
+    private val composeCustomVersion = project.providers.environmentVariable("COMPOSE_CUSTOM_VERSION")
+    private val composeCustomGroup = project.providers.environmentVariable("COMPOSE_CUSTOM_GROUP")
+
     init {
         val toml = lazyReadFile("libraryversions.toml")
 
@@ -50,8 +53,7 @@ open class AndroidXExtension(val project: Project) {
         // To use them may require specifying specific projects and disabling some checks
         // like this:
         // `./gradlew :compose:compiler:compiler:publishToMavenLocal -Pandroidx.versionExtraCheckEnabled=false`
-        val composeCustomVersion = project.providers.environmentVariable("COMPOSE_CUSTOM_VERSION")
-        val composeCustomGroup = project.providers.environmentVariable("COMPOSE_CUSTOM_GROUP")
+
         val useMultiplatformVersions = project.provider {
             Multiplatform.isKotlinNativeEnabled(project)
         }
@@ -149,7 +151,13 @@ open class AndroidXExtension(val project: Project) {
         val groupIdText = if (projectPath.startsWith(":external")) {
             projectPath.replace(":external:", "")
         } else {
-	    "androidx.${parentPath.substring(1).replace(':', '.')}"
+	        "androidx.${parentPath.substring(1).replace(':', '.')}"
+        }.let {
+            if (it.contains("compose") && composeCustomGroup.isPresent) {
+                it.replace("androidx.compose", composeCustomGroup.get())
+            } else {
+                it
+            }
         }
 
         // get the library group having that text

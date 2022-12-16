@@ -37,7 +37,8 @@ dependencies {
         implementation(project(":lifecycle:lifecycle-common"))
         implementation(project(":lifecycle:lifecycle-livedata"))
         implementation(project(":lifecycle:lifecycle-livedata-core-ktx"))
-        implementation(project(":lifecycle:lifecycle-viewmodel-savedstate"))
+// to fix Could not find lifecycle-runtime.aar (project :lifecycle:lifecycle-runtime) on a clean project
+        //implementation(project(":lifecycle:lifecycle-viewmodel-savedstate"))
     }
 }
 
