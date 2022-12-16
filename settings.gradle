@@ -7,7 +7,9 @@ pluginManagement {
         maven {
             url = new File(buildscript.sourceFile.parent + "/../../prebuilts/androidx/external").getCanonicalFile()
         }
-        if (System.getenv("ALLOW_PUBLIC_REPOS") != null || System.getProperty("ALLOW_PUBLIC_REPOS") != null) {
+        def isJBFork = true
+        if (isJBFork) {
+            mavenLocal()
             mavenCentral()
             google()
             maven {
@@ -37,8 +39,10 @@ buildscript {
 }
 skikoSetup.defineSkikoInVersionCatalog(settings)
 
+def isJBFork = true
+
 // Abort immediately if we're running in Studio, but not a managed instance of Studio.
-if (startParameter.projectProperties.containsKey('android.injected.invoked.from.ide')) {
+if (!isJBFork) {
     def expectedAgpVersion = System.getenv().get("EXPECTED_AGP_VERSION")
     if (expectedAgpVersion == null) {
         throw new Exception("Android Studio must be run from studiow or gradlew studio.")
@@ -149,6 +153,33 @@ dependencyResolutionManagement {
                 logger.warn("Using custom version ${metalavaOverride} of metalava due to METALAVA_VERSION being set.")
                 version('metalava', metalavaOverride)
             }
+            def skikoOverride = System.getenv("SKIKO_VERSION")
+            if (skikoOverride != null) {
+                logger.warn("Using custom version ${skikoOverride} of SKIKO due to SKIKO_VERSION being set.")
+                version('skiko', skikoOverride)
+            }
+            String os = System.getProperty("os.name").toLowerCase(Locale.US)
+            String currentOsArtifact
+            if (os.contains("mac os x") ||  os.contains("darwin") || os.contains("osx")) {
+                def arch = System.getProperty("os.arch")
+                if (arch == "aarch64") {
+                    currentOsArtifact = "skiko-awt-runtime-macos-arm64"
+                } else {
+                    currentOsArtifact = "skiko-awt-runtime-macos-x64"
+                }
+            } else if (os.startsWith("win")) {
+                currentOsArtifact = "skiko-awt-runtime-windows-x64"
+            } else if (os.startsWith("linux") ) {
+                def arch = System.getProperty("os.arch")
+                if (arch == "aarch64") {
+                    currentOsArtifact = "skiko-awt-runtime-linux-arm64"
+                } else {
+                    currentOsArtifact = "skiko-awt-runtime-linux-x64"
+                }
+            } else {
+                throw GradleException("Unsupported operating system $os")
+            }
+            //library("skikoCurrentOs", "org.jetbrains.skiko", currentOsArtifact).versionRef("skiko")
         }
     }
 }
@@ -181,7 +212,7 @@ private String getRequestedProjectSubsetName() {
     if (envProp.isPresent()) {
         return envProp.get().toUpperCase()
     }
-    return null
+    return "COMPOSE"
 }
 
 private String getRequestedProjectPrefix() {
