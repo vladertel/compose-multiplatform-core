@@ -43,6 +43,9 @@ open class AndroidXExtension(val project: Project) {
 
     val listProjectsService: Provider<ListProjectsService>
 
+    private val composeCustomVersion = project.providers.environmentVariable("COMPOSE_CUSTOM_VERSION")
+    private val composeCustomGroup = project.providers.environmentVariable("COMPOSE_CUSTOM_GROUP")
+
     private val versionService: LibraryVersionsService
 
     init {
@@ -179,7 +182,13 @@ open class AndroidXExtension(val project: Project) {
         val groupIdText = if (projectPath.startsWith(":external")) {
             projectPath.replace(":external:", "")
         } else {
-            "androidx.${parentPath.substring(1).replace(':', '.')}"
+	        "androidx.${parentPath.substring(1).replace(':', '.')}"
+        }.let {
+            if (it.contains("compose") && composeCustomGroup.isPresent) {
+                it.replace("androidx.compose", composeCustomGroup.get())
+            } else {
+                it
+            }
         }
 
         // get the library group having that text
