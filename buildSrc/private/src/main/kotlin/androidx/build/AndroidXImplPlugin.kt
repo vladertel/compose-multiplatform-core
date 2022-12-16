@@ -182,8 +182,8 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             it.configureWithAndroidXExtension(extension)
         }
         project.configureConstraintsWithinGroup(extension)
-        project.validateProjectParser(extension)
-        project.validateAllArchiveInputsRecognized()
+//        project.validateProjectParser(extension)
+//        project.validateAllArchiveInputsRecognized()
         project.afterEvaluate {
             if (extension.shouldPublishSbom()) {
                 project.configureSbomPublishing()
@@ -243,7 +243,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         task.maxHeapSize = "3g"
 
         // For non-playground setup use robolectric offline
-        if (!ProjectLayoutType.isPlayground(project)) {
+        if (false) {
             task.systemProperty("robolectric.offline", "true")
             val robolectricDependencies =
                 File(
@@ -478,7 +478,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
         }
         if (plugin is KotlinMultiplatformPluginWrapper) {
-            KonanPrebuiltsSetup.configureKonanDirectory(project)
+           // KonanPrebuiltsSetup.configureKonanDirectory(project)
             KmpLinkTaskWorkaround.serializeLinkTasks(project)
             project.afterEvaluate {
                 val libraryExtension = project.extensions.findByType<LibraryExtension>()

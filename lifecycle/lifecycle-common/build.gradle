@@ -41,6 +41,13 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.mockitoCore4)
+
+    constraints {
+// to fix Could not find lifecycle-runtime.aar (project :lifecycle:lifecycle-runtime) on a clean project
+//        implementation(project(":lifecycle:lifecycle-common-java8"))
+//        implementation(project(":lifecycle:lifecycle-runtime"))
+//        implementation(project(":lifecycle:lifecycle-livedata-core"))
+    }
 }
 
 androidx {

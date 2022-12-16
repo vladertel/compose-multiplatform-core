@@ -221,7 +221,7 @@ class ProjectDependencyGraph {
             // fixed.
             // This option is supported so that development/simplify_build_failure.sh can try
             // deleting entire projects at once to identify the cause of a build failure
-            if (System.getenv("ALLOW_MISSING_PROJECTS") == null) {
+            if (System.getenv("ALLOW_MISSING_PROJECTS") == null && false) {
                 throw new Exception("Path " + buildGradle + " does not exist;" +
                         "cannot include project " + projectPath + " ($projectDir)")
             }
