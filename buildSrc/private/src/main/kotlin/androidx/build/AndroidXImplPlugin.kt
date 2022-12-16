@@ -204,8 +204,8 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             it.configureWithAndroidXExtension(androidXExtension)
         }
         project.configureConstraintsWithinGroup(androidXExtension)
-        project.validateProjectParser(androidXExtension)
-        project.validateAllArchiveInputsRecognized()
+//        project.validateProjectParser(androidXExtension)
+//        project.validateAllArchiveInputsRecognized()
         project.afterEvaluate {
             if (androidXExtension.shouldPublishSbom()) {
                 project.configureSbomPublishing()
@@ -266,7 +266,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         task.maxHeapSize = "3g"
 
         // For non-playground setup use robolectric offline
-        if (!ProjectLayoutType.isPlayground(project)) {
+        if (false) {
             task.systemProperty("robolectric.offline", "true")
             val robolectricDependencies =
                 File(

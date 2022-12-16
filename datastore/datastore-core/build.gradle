@@ -67,9 +67,9 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
-    android()
+//    android()
 
-    defaultPlatform(PlatformIdentifier.ANDROID)
+    defaultPlatform(PlatformIdentifier.JVM)
 
     sourceSets {
         all {
