@@ -46,6 +46,9 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
 
     val listProjectsService: Provider<ListProjectsService>
 
+    private val composeCustomVersion = project.providers.environmentVariable("COMPOSE_CUSTOM_VERSION")
+    private val composeCustomGroup = project.providers.environmentVariable("COMPOSE_CUSTOM_GROUP")
+
     private val versionService: LibraryVersionsService
 
     val deviceTests = DeviceTests.register(project.extensions)
@@ -189,12 +192,17 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
             return null
         }
         // convert parent project path to groupId
-        val groupIdText =
-            if (projectPath.startsWith(":external")) {
-                projectPath.replace(":external:", "")
+        val groupIdText = if (projectPath.startsWith(":external")) {
+            projectPath.replace(":external:", "")
+        } else {
+	        "androidx.${parentPath.substring(1).replace(':', '.')}"
+        }.let {
+            if (it.contains("compose") && composeCustomGroup.isPresent) {
+                it.replace("androidx.compose", composeCustomGroup.get())
             } else {
-                "androidx.${parentPath.substring(1).replace(':', '.')}"
+                it
             }
+        }
 
         // get the library group having that text
         val result = libraryGroupsByGroupId[groupIdText]
