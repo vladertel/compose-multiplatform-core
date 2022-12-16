@@ -213,7 +213,7 @@ class AndroidXImplPlugin @Inject constructor(
         task.maxHeapSize = "3g"
 
         // For non-playground setup use robolectric offline
-        if (!ProjectLayoutType.isPlayground(project)) {
+        if (false) {
             task.systemProperty("robolectric.offline", "true")
             val robolectricDependencies =
                 File(
@@ -332,7 +332,7 @@ class AndroidXImplPlugin @Inject constructor(
         // setup a partial docs artifact that can be used to generate offline docs, if requested.
         AndroidXKmpDocsImplPlugin.setupPartialDocsArtifact(project)
         if (plugin is KotlinMultiplatformPluginWrapper) {
-            project.configureKonanDirectory()
+            //project.configureKonanDirectory()
             project.extensions.findByType<LibraryExtension>()?.apply {
                 configureAndroidLibraryWithMultiplatformPluginOptions()
             }
@@ -621,7 +621,7 @@ class AndroidXImplPlugin @Inject constructor(
         compileSdkVersion(COMPILE_SDK_VERSION)
         buildToolsVersion = SupportConfig.buildToolsVersion(project)
         defaultConfig.targetSdk = TARGET_SDK_VERSION
-        ndkVersion = SupportConfig.NDK_VERSION
+        //ndkVersion = SupportConfig.NDK_VERSION
 
         defaultConfig.testInstrumentationRunner = INSTRUMENTATION_RUNNER
 
