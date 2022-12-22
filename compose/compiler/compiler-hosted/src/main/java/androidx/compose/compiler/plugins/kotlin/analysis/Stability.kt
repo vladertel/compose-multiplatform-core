@@ -66,6 +66,7 @@ import org.jetbrains.kotlin.ir.util.isFunctionOrKFunction
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.util.isTypeParameter
 import org.jetbrains.kotlin.platform.js.isJs
+import org.jetbrains.kotlin.platform.jvm.isJvm
 
 sealed class Stability {
     // class Foo(val bar: Int)
@@ -357,7 +358,7 @@ class StabilityInferencer(val context: IrPluginContext) {
             // Since 1.7.20 K/JS with LazyIr has such an origin, but the `stabilityOf` logic that relies on it
             // doesn't work properly (no access to StabilityInferred annotations in LazyIr of dependency modules).
             // So we can rely on calculating `stabilityOf` using the logic that was used prior to 1.7.20
-            !context.platform.isJs() && declaration.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
+            context.platform.isJvm() && declaration.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
     }
 
     fun stabilityOf(
