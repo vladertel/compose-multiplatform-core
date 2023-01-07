@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -314,6 +315,50 @@ class ScrollbarTest {
             // finding the box node, as it may have not scrolled into view.
             // Last box should be at containerSize - bottomPadding - boxSize
             rule.onNodeWithTag("box19").assertTopPositionInRootIsEqualTo(100.dp - 25.dp - 10.dp)
+        }
+    }
+
+    @Test
+    fun `thumb size on scrollbar smaller than viewport`() {
+        runBlocking(Dispatchers.Main) {
+            val scrollState = ScrollState(0)
+            rule.setContent {
+                TestBox(
+                    state = scrollState,
+                    size = 200.dp,
+                    childSize = 20.dp,
+                    childCount = 20,
+                    scrollbarWidth = 10.dp,
+                    scrollbarHeight = 100.dp,
+                )
+            }
+            rule.awaitIdle()
+
+            // Thumb should be half the height of the scrollbar, as the viewport (200.dp) is half the height of the
+            // content (400.dp). So clicking on the top half of the scrollbar should do nothing.
+            for (offset in 1..50){
+                // Use moveTo -> press -> awaitIdle -> test -> release because click doesn't appear to work
+                rule.onNodeWithTag("scrollbar").performMouseInput {
+                    moveTo(position = Offset(0f, offset.toFloat()))
+                    press()
+                }
+                rule.awaitIdle()
+                assertEquals(0, scrollState.value)
+                rule.onNodeWithTag("scrollbar").performMouseInput {
+                    release()
+                }
+            }
+
+            // Clicking one pixel below the thumb should scroll the content by one viewport
+            rule.onNodeWithTag("scrollbar").performMouseInput {
+                moveTo(position = Offset(0f, 51f))
+                press()
+            }
+            rule.awaitIdle()
+            assertEquals(200, scrollState.value)
+            rule.onNodeWithTag("scrollbar").performMouseInput {
+                release()
+            }
         }
     }
 
@@ -634,14 +679,14 @@ class ScrollbarTest {
 
     @Composable
     private fun TestBox(
+        state: ScrollState = rememberScrollState(),
         size: Dp,
         childSize: Dp,
         childCount: Int,
         scrollbarWidth: Dp,
+        scrollbarHeight: Dp = size
     ) = withTestEnvironment {
         Box(Modifier.size(size)) {
-            val state = rememberScrollState()
-
             Column(
                 Modifier.fillMaxSize().testTag("column").verticalScroll(state)
             ) {
@@ -650,11 +695,12 @@ class ScrollbarTest {
                 }
             }
 
+            @Suppress("DEPRECATION")
             VerticalScrollbar(
                 adapter = rememberScrollbarAdapter(state),
                 modifier = Modifier
                     .width(scrollbarWidth)
-                    .fillMaxHeight()
+                    .height(scrollbarHeight)
                     .testTag("scrollbar")
             )
         }
@@ -674,6 +720,7 @@ class ScrollbarTest {
                 content = scrollableContent
             )
 
+            @Suppress("DEPRECATION")
             VerticalScrollbar(
                 adapter = rememberScrollbarAdapter(state),
                 modifier = Modifier
@@ -708,6 +755,7 @@ class ScrollbarTest {
                 }
             }
 
+            @Suppress("DEPRECATION")
             VerticalScrollbar(
                 adapter = rememberScrollbarAdapter(state),
                 reverseLayout = reverseLayout,
@@ -736,6 +784,7 @@ class ScrollbarTest {
                 content = content
             )
 
+            @Suppress("DEPRECATION")
             VerticalScrollbar(
                 adapter = rememberScrollbarAdapter(state),
                 reverseLayout = reverseLayout,
