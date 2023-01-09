@@ -29,34 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.Application
+import com.tmm.listsample.components.MainUiNoImageUseModel
 
 fun getViewControllerWithCompose() = Application("Compose/Native sample") {
-    val textState1 = remember { mutableStateOf("text field 1") }
-    val textState2 = remember { mutableStateOf("text field 2") }
-    Column {
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text("Hello, UIKit")
-        TextField(value = textState1.value, onValueChange = {
-            textState1.value = it
-        })
-        TextField(value = textState2.value, onValueChange = {
-            textState2.value = it
-        })
-        Image(
-            painter = object : Painter() {
-                override val intrinsicSize: Size = Size(16f, 16f)
-                override fun DrawScope.onDraw() {
-                    drawRect(color = Color.Blue)
-                }
-            },
-            contentDescription = "image sample"
-        )
-    }
+    MainUiNoImageUseModel()
 }

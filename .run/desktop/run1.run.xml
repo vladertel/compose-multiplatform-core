@@ -1,6 +1,11 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="run1" type="GradleRunConfiguration" factoryName="Gradle" folderName="desktop">
     <ExternalSystemSettings>
+      <option name="env">
+        <map>
+          <entry key="DEVELOPER_DIR" value="/Applications/Xcode.app/Contents/Developer" />
+        </map>
+      </option>
       <option name="executionName" />
       <option name="externalProjectPath" value="$PROJECT_DIR$/compose/desktop/desktop" />
       <option name="externalSystemIdString" value="GRADLE" />
