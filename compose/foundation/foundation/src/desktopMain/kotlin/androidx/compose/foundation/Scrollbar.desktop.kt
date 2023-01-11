@@ -301,17 +301,17 @@ private class OldAdapterAsNew(
     private val trackSize: Int
 ) : NewScrollbarAdapter {
 
-    override val scrollOffset: Float
-        get() = oldAdapter.scrollOffset
+    override val scrollOffset: Double
+        get() = oldAdapter.scrollOffset.toDouble()
 
-    override val contentSize: Float
-        get() = oldAdapter.maxScrollOffset(trackSize) + trackSize
+    override val contentSize: Double
+        get() = (oldAdapter.maxScrollOffset(trackSize) + trackSize).toDouble()
 
-    override val viewportSize: Float
-        get() = trackSize.toFloat()
+    override val viewportSize: Double
+        get() = trackSize.toDouble()
 
-    override suspend fun scrollTo(scrollOffset: Float) {
-        oldAdapter.scrollTo(trackSize, scrollOffset)
+    override suspend fun scrollTo(scrollOffset: Double) {
+        oldAdapter.scrollTo(trackSize, scrollOffset.toFloat())
     }
 
 }
@@ -338,14 +338,14 @@ private class NewAdapterAsOld(
 ): ScrollbarAdapter {
 
     override val scrollOffset: Float
-        get() = newAdapter.scrollOffset
+        get() = newAdapter.scrollOffset.toFloat()
 
     override suspend fun scrollTo(containerSize: Int, scrollOffset: Float) {
-        newAdapter.scrollTo(scrollOffset)
+        newAdapter.scrollTo(scrollOffset.toDouble())
     }
 
     override fun maxScrollOffset(containerSize: Int): Float {
-        return newAdapter.maxScrollOffset
+        return newAdapter.maxScrollOffset.toFloat()
     }
 
 }

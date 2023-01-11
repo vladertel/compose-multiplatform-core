@@ -177,21 +177,24 @@ fun rememberScrollbarAdapter(
  */
 interface ScrollbarAdapter {
 
+    // We use `Double` values here in order to allow scrolling both very large (think LazyList with millions of items)
+    // and very small (think something whose natural coordinates are less than 1) content.
+
     /**
      * Scroll offset of the content inside the scrollable component.
      * Offset "100" means that the content is scrolled by 100 pixels from the start.
      */
-    val scrollOffset: Float
+    val scrollOffset: Double
 
     /**
      * The size of the scrollable content, on the scrollable axis.
      */
-    val contentSize: Float
+    val contentSize: Double
 
     /**
      * The size of the viewport, on the scrollable axis.
      */
-    val viewportSize: Float
+    val viewportSize: Double
 
     /**
      * Instantly jump to [scrollOffset] in pixels
@@ -199,15 +202,15 @@ interface ScrollbarAdapter {
      * @param scrollOffset target value in pixels to jump to,
      *  value will be coerced to the valid scroll range.
      */
-    suspend fun scrollTo(scrollOffset: Float)
+    suspend fun scrollTo(scrollOffset: Double)
 
 }
 
 /**
  * The maximum scroll offset of the scrollable content.
  */
-val ScrollbarAdapter.maxScrollOffset: Float
-    get() = (contentSize - viewportSize).coerceAtLeast(0f)
+val ScrollbarAdapter.maxScrollOffset: Double
+    get() = (contentSize - viewportSize).coerceAtLeast(0.0)
 
 /**
  * ScrollbarAdapter for Modifier.verticalScroll and Modifier.horizontalScroll
@@ -236,21 +239,21 @@ private class ScrollableScrollbarAdapter(
     private val scrollState: ScrollState
 ) : ScrollbarAdapter {
 
-    override val scrollOffset: Float get() = scrollState.value.toFloat()
+    override val scrollOffset: Double get() = scrollState.value.toDouble()
 
-    override suspend fun scrollTo(scrollOffset: Float) {
+    override suspend fun scrollTo(scrollOffset: Double) {
         scrollState.scrollTo(scrollOffset.roundToInt())
     }
 
-    override val contentSize: Float
+    override val contentSize: Double
         // This isn't strictly correct, as the actual content can be smaller
         // than the viewport when scrollState.maxValue is 0, but the scrollbar
         // doesn't really care as long as contentSize <= viewportSize; it's
         // just not showing itself
         get() = scrollState.maxValue + viewportSize
 
-    override val viewportSize: Float
-        get() = scrollState.viewportSize.toFloat()
+    override val viewportSize: Double
+        get() = scrollState.viewportSize.toDouble()
 
 }
 
@@ -285,26 +288,26 @@ private class LazyScrollbarAdapter(
     private val scrollState: LazyListState
 ) : ScrollbarAdapter {
 
-    override val scrollOffset: Float
+    override val scrollOffset: Double
         get() = scrollState.firstVisibleItemIndex * averageItemSize +
             scrollState.firstVisibleItemScrollOffset
 
-    override val viewportSize: Float
+    override val viewportSize: Double
         get() = with(scrollState.layoutInfo){
             if (orientation == Orientation.Vertical)
                 viewportSize.height
             else
                 viewportSize.width
-        }.toFloat()
+        }.toDouble()
 
-    override val contentSize: Float
+    override val contentSize: Double
         get() {
             return averageItemSize * itemCount +
                 scrollState.layoutInfo.beforeContentPadding +
                 scrollState.layoutInfo.afterContentPadding
         }
 
-    override suspend fun scrollTo(scrollOffset: Float) {
+    override suspend fun scrollTo(scrollOffset: Double) {
         val distance = scrollOffset - this@LazyScrollbarAdapter.scrollOffset
 
         // if we scroll less than viewport we need to use scrollBy function to avoid
@@ -313,24 +316,14 @@ private class LazyScrollbarAdapter(
         // if we scroll more than viewport we should immediately jump to this position
         // without recreating all items between the current and the new position
         if (abs(distance) <= viewportSize) {
-            scrollState.scrollBy(distance)
+            scrollState.scrollBy(distance.toFloat())
         } else {
             snapTo(scrollOffset)
         }
     }
 
-    private suspend fun snapTo(scrollOffset: Float) {
-        // In case of very big values, we can catch an overflow, so convert values to double and
-        // coerce them
-//        val averageItemSize = 26.000002f
-//        val scrollOffsetCoerced = 2.54490608E8.toFloat()
-//        val index = (scrollOffsetCoerced / averageItemSize).toInt() // 9788100
-//        val offset = (scrollOffsetCoerced - index * averageItemSize) // -16.0
-//        println(offset)
-
-        val maximumValue = maxScrollOffset.toDouble()
-        val scrollOffsetCoerced = scrollOffset.toDouble().coerceIn(0.0, maximumValue)
-        val averageItemSize = averageItemSize.toDouble()
+    private suspend fun snapTo(scrollOffset: Double) {
+        val scrollOffsetCoerced = scrollOffset.coerceIn(0.0, maxScrollOffset)
 
         val index = (scrollOffsetCoerced / averageItemSize)
             .toInt()
@@ -353,7 +346,6 @@ private class LazyScrollbarAdapter(
             .asSequence()
             .map { it.size }
             .average()
-            .toFloat()
     }
 
 }
@@ -367,21 +359,19 @@ internal class SliderAdapter(
 ) {
 
     private val contentSize get() = adapter.contentSize
-    private val visiblePart get() = adapter.viewportSize / contentSize
+    private val visiblePart get() = (adapter.viewportSize / contentSize).coerceAtMost(1.0)
 
     val thumbSize
-        get() = (trackSize * visiblePart)
-            .coerceAtLeast(minHeight)
-            .coerceAtMost(trackSize.toFloat())
+        get() = (trackSize * visiblePart).coerceAtLeast(minHeight.toDouble())
 
-    private val scrollScale: Float
+    private val scrollScale: Double
         get() {
             val extraScrollbarSpace = trackSize - thumbSize
             val extraContentSpace = adapter.maxScrollOffset  // == contentSize - viewportSize
-            return if (extraContentSpace == 0f) 1f else extraScrollbarSpace / extraContentSpace
+            return if (extraContentSpace == 0.0) 1.0 else extraScrollbarSpace / extraContentSpace
         }
 
-    private var rawPosition: Float
+    private var rawPosition: Double
         get() = scrollScale * adapter.scrollOffset
         set(value) {
             runBlocking {
@@ -389,7 +379,7 @@ internal class SliderAdapter(
             }
         }
 
-    var position: Float
+    var position: Double
         get() = if (reverseLayout) trackSize - thumbSize - rawPosition else rawPosition
         set(value) {
             rawPosition = if (reverseLayout) {
@@ -402,7 +392,7 @@ internal class SliderAdapter(
     val bounds get() = position..position + thumbSize
 
     // Stores the unrestricted position during a dragging gesture
-    private var positionDuringDrag = 0f
+    private var positionDuringDrag = 0.0
 
     /** Called when the thumb dragging starts */
     fun onDragStarted() {
@@ -414,8 +404,8 @@ internal class SliderAdapter(
         val dragDelta = if (isVertical) offset.y else offset.x
         val maxScrollPosition = adapter.maxScrollOffset * scrollScale
         val sliderDelta =
-            (positionDuringDrag + dragDelta).coerceIn(0f, maxScrollPosition) -
-                positionDuringDrag.coerceIn(0f, maxScrollPosition)
+            (positionDuringDrag + dragDelta).coerceIn(0.0, maxScrollPosition) -
+                positionDuringDrag.coerceIn(0.0, maxScrollPosition)
         position += sliderDelta  // Have to add to position for smooth content scroll if the items are of different size
         positionDuringDrag += dragDelta
     }
