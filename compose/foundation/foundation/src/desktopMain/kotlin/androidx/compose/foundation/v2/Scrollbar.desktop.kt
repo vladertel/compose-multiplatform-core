@@ -174,6 +174,9 @@ fun rememberScrollbarAdapter(
 
 /**
  * Defines how to scroll the scrollable component and how to display a scrollbar for it.
+ *
+ * The values of this interface are typically in pixels, but do not have to be.
+ * It's possible to create an adapter with any scroll range of `Double` values.
  */
 interface ScrollbarAdapter {
 
@@ -182,7 +185,8 @@ interface ScrollbarAdapter {
 
     /**
      * Scroll offset of the content inside the scrollable component.
-     * Offset "100" means that the content is scrolled by 100 pixels from the start.
+     *
+     * For example, a value of `100` could mean the content is scrolled by 100 pixels from the start.
      */
     val scrollOffset: Double
 
@@ -197,10 +201,10 @@ interface ScrollbarAdapter {
     val viewportSize: Double
 
     /**
-     * Instantly jump to [scrollOffset] in pixels
+     * Instantly jump to [scrollOffset].
      *
-     * @param scrollOffset target value in pixels to jump to,
-     *  value will be coerced to the valid scroll range.
+     * @param scrollOffset target offset to jump to, value will be coerced to the valid
+     * scroll range.
      */
     suspend fun scrollTo(scrollOffset: Double)
 
