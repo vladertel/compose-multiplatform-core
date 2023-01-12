@@ -16,7 +16,9 @@
 
 package androidx.tv.material.carousel
 
+import android.view.KeyEvent.KEYCODE_BACK
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -52,12 +54,18 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.input.key.KeyEventType.Companion.KeyDown
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyCode
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material.ExperimentalTvMaterialApi
+import androidx.tv.material.bringIntoViewIfChildrenAreFocused
 import java.lang.Math.floorMod
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -65,6 +73,10 @@ import kotlinx.coroutines.yield
 
 /**
  * Composes a hero card rotator to highlight a piece of content.
+ *
+ * Examples:
+ * @sample androidx.tv.samples.SimpleCarousel
+ * @sample androidx.tv.samples.CarouselIndicatorWithRectangleShape
  *
  * @param slideCount total number of slides present in the carousel.
  * @param carouselState state associated with this carousel.
@@ -89,12 +101,13 @@ fun Carousel(
     exitTransition: ExitTransition = CarouselDefaults.ExitTransition,
     carouselIndicator:
     @Composable BoxScope.() -> Unit = {
-        CarouselDefaults.Indicator(
+        CarouselDefaults.IndicatorRow(
+            slideCount = slideCount,
+            activeSlideIndex = carouselState.activeSlideIndex,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
-            carouselState = carouselState,
-            slideCount = slideCount)
+        )
     },
     content: @Composable (index: Int) -> Unit
 ) {
@@ -102,7 +115,7 @@ fun Carousel(
     var focusState: FocusState? by remember { mutableStateOf(null) }
     val focusManager = LocalFocusManager.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
-    val focusRequester = remember { FocusRequester() }
+    val carouselOuterBoxFocusRequester = remember { FocusRequester() }
     var isAutoScrollActive by remember { mutableStateOf(false) }
 
     AutoScrollSideEffect(
@@ -111,75 +124,47 @@ fun Carousel(
         carouselState,
         focusState,
         onAutoScrollChange = { isAutoScrollActive = it })
+
     Box(modifier = modifier
-        .focusRequester(focusRequester)
+        .bringIntoViewIfChildrenAreFocused()
+        .focusRequester(carouselOuterBoxFocusRequester)
+        .onKeyEvent {
+            if (it.key.nativeKeyCode == KEYCODE_BACK && it.type == KeyDown) {
+                focusManager.moveFocus(FocusDirection.Exit)
+            }
+            false
+        }
         .onFocusChanged {
             focusState = it
             if (it.isFocused && isAutoScrollActive) {
                 focusManager.moveFocus(FocusDirection.Enter)
             }
         }
-        .focusProperties {
-            exit = {
-                val showPreviousSlideAndGetFocusRequester = {
-                    if (carouselState
-                            .isFirstSlide()
-                            .not()
-                    ) {
-                        carouselState.moveToPreviousSlide(slideCount)
-                        focusRequester
-                    } else {
-                        FocusRequester.Default
-                    }
-                }
-                val showNextSlideAndGetFocusRequester = {
-                    if (carouselState
-                            .isLastSlide(slideCount)
-                            .not()
-                    ) {
-                        carouselState.moveToNextSlide(slideCount)
-                        focusRequester
-                    } else {
-                        FocusRequester.Default
-                    }
-                }
-                when (it) {
-                    FocusDirection.Left -> {
-                        if (isLtr) {
-                            showPreviousSlideAndGetFocusRequester()
-                        } else {
-                            showNextSlideAndGetFocusRequester()
-                        }
-                    }
-                    FocusDirection.Right -> {
-                        if (isLtr) {
-                            showNextSlideAndGetFocusRequester()
-                        } else {
-                            showPreviousSlideAndGetFocusRequester()
-                        }
-                    }
-                    else -> FocusRequester.Default
-                }
-            }
-        }
+        .manualScrolling(carouselState, slideCount, isLtr)
         .focusable()) {
         AnimatedContent(
-            targetState = carouselState.slideIndex,
+            targetState = carouselState.activeSlideIndex,
             transitionSpec = { enterTransition.with(exitTransition) }
         ) {
-            Box(
-                modifier = Modifier
-                    .onPlaced {
-                        if (isAutoScrollActive.not()) {
-                            focusManager.moveFocus(FocusDirection.Enter)
-                        }
+            LaunchedEffect(Unit) {
+                this@AnimatedContent.onAnimationCompletion {
+                    if (isAutoScrollActive.not()) {
+                        carouselOuterBoxFocusRequester.requestFocus()
+                        focusManager.moveFocus(FocusDirection.Enter)
                     }
-            ) {
-                content.invoke(it)
+                }
             }
+            content.invoke(it)
         }
         this.carouselIndicator()
     }
+}
+
+@Suppress("IllegalExperimentalApiUsage")
+@OptIn(ExperimentalAnimationApi::class)
+private suspend fun AnimatedVisibilityScope.onAnimationCompletion(action: suspend () -> Unit) {
+    snapshotFlow { transition.currentState == transition.targetState }.first { it }
+    action.invoke()
 }
 
 @OptIn(ExperimentalTvMaterialApi::class)
@@ -213,12 +198,59 @@ private fun AutoScrollSideEffect(
     onAutoScrollChange(doAutoScroll)
 }
 
+@Suppress("IllegalExperimentalApiUsage")
+@OptIn(ExperimentalTvMaterialApi::class, ExperimentalComposeUiApi::class)
+private fun Modifier.manualScrolling(
+    carouselState: CarouselState,
+    slideCount: Int,
+    isLtr: Boolean
+): Modifier =
+    this.focusProperties {
+        exit = {
+            val showPreviousSlideAndGetFocusRequester = {
+                if (carouselState.isFirstSlide().not()) {
+                    carouselState.moveToPreviousSlide(slideCount)
+                    FocusRequester.Cancel
+                } else {
+                    FocusRequester.Default
+                }
+            }
+            val showNextSlideAndGetFocusRequester = {
+                if (carouselState.isLastSlide(slideCount).not()) {
+                    carouselState.moveToNextSlide(slideCount)
+                    FocusRequester.Cancel
+                } else {
+                    FocusRequester.Default
+                }
+            }
+            when (it) {
+                FocusDirection.Left -> {
+                    if (isLtr) {
+                        showPreviousSlideAndGetFocusRequester()
+                    } else {
+                        showNextSlideAndGetFocusRequester()
+                    }
+                }
+
+                FocusDirection.Right -> {
+                    if (isLtr) {
+                        showNextSlideAndGetFocusRequester()
+                    } else {
+                        showPreviousSlideAndGetFocusRequester()
+                    }
+                }
+
+                else -> FocusRequester.Default
+            }
+        }
+    }
+
 @OptIn(ExperimentalTvMaterialApi::class)
 @Composable
 private fun CarouselStateUpdater(carouselState: CarouselState, slideCount: Int) {
     LaunchedEffect(carouselState, slideCount) {
         if (slideCount != 0) {
-            carouselState.slideIndex = floorMod(carouselState.slideIndex, slideCount)
+            carouselState.activeSlideIndex = floorMod(carouselState.activeSlideIndex, slideCount)
         }
     }
 }
@@ -229,17 +261,17 @@ private fun CarouselStateUpdater(carouselState: CarouselState, slideCount: Int) 
  *
  * It also provides the user with support to pause and resume the auto-scroll behaviour of the
  * Carousel.
- * @param initialSlideIndex the index of the first slide that is displayed.
+ * @param initialActiveSlideIndex the index of the first active slide
  */
 @Stable
 @ExperimentalTvMaterialApi
-class CarouselState(initialSlideIndex: Int = 0) {
+class CarouselState(initialActiveSlideIndex: Int = 0) {
     internal var activePauseHandlesCount by mutableStateOf(0)
 
     /**
      * The index of the slide that is currently displayed by the carousel
      */
-    var slideIndex by mutableStateOf(initialSlideIndex)
+    var activeSlideIndex by mutableStateOf(initialActiveSlideIndex)
         internal set
 
     /**
@@ -248,22 +280,22 @@ class CarouselState(initialSlideIndex: Int = 0) {
      * Returns a [ScrollPauseHandle] that can be used to resume
      */
     fun pauseAutoScroll(slideIndex: Int): ScrollPauseHandle {
-        if (this.slideIndex != slideIndex) {
+        if (this.activeSlideIndex != slideIndex) {
             return NoOpScrollPauseHandle
         }
         return ScrollPauseHandleImpl(this)
     }
 
-    internal fun isFirstSlide() = slideIndex == 0
+    internal fun isFirstSlide() = activeSlideIndex == 0
 
-    internal fun isLastSlide(slideCount: Int) = slideIndex == slideCount - 1
+    internal fun isLastSlide(slideCount: Int) = activeSlideIndex == slideCount - 1
 
     internal fun moveToPreviousSlide(slideCount: Int) {
         // No slides available for carousel
         if (slideCount == 0) return
 
         // Go to previous slide
-        slideIndex = floorMod(slideIndex - 1, slideCount)
+        activeSlideIndex = floorMod(activeSlideIndex - 1, slideCount)
     }
 
     internal fun moveToNextSlide(slideCount: Int) {
@@ -271,7 +303,7 @@ class CarouselState(initialSlideIndex: Int = 0) {
         if (slideCount == 0) return
 
         // Go to next slide
-        slideIndex = floorMod(slideIndex + 1, slideCount)
+        activeSlideIndex = floorMod(activeSlideIndex + 1, slideCount)
     }
 }
 
@@ -316,58 +348,56 @@ object CarouselDefaults {
     /**
      * Default time for which the slide is visible to the user.
      */
-    val TimeToDisplaySlideMillis: Long = 5000
+    const val TimeToDisplaySlideMillis: Long = 5000
 
     /**
      * Default transition used to bring the slide into view
      */
-    val EnterTransition: EnterTransition = fadeIn(animationSpec = tween(900))
+    val EnterTransition: EnterTransition = fadeIn(animationSpec = tween(100))
 
     /**
      * Default transition used to remove the slide from view
      */
-    val ExitTransition: ExitTransition = fadeOut(animationSpec = tween(900))
+    val ExitTransition: ExitTransition = fadeOut(animationSpec = tween(100))
 
     /**
-     * An indicator showing the position of the current slide among the slides of the carousel.
+     * An indicator showing the position of the current active slide among the slides of the
+     * carousel.
      *
-     * @param carouselState is the state associated with the carousel of which this indicator is a
-     * part.
      * @param slideCount total number of slides in the carousel
+     * @param activeSlideIndex the current active slide index
+     * @param modifier Modifier applied to the indicators' container
+     * @param spacing spacing between the indicator dots
+     * @param indicator indicator dot representing each slide in the carousel
      */
     @ExperimentalTvMaterialApi
     @Composable
-    fun Indicator(
-        carouselState: CarouselState,
+    fun IndicatorRow(
         slideCount: Int,
-        modifier: Modifier = Modifier
-    ) {
-        if (slideCount <= 0) {
-            Box(modifier = modifier)
-        } else {
-            val defaultSize = 8.dp
-            val inactiveColor = Color.LightGray
+        activeSlideIndex: Int,
+        modifier: Modifier = Modifier,
+        spacing: Dp = 8.dp,
+        indicator: @Composable (isActive: Boolean) -> Unit = { isActive ->
             val activeColor = Color.White
-            val shape = CircleShape
-            val indicatorModifier = Modifier.size(defaultSize)
-
-            Box(modifier = modifier) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(defaultSize),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    repeat(slideCount) {
-                        Box(indicatorModifier.background(
-                            color =
-                              if (it == carouselState.slideIndex) {
-                                  activeColor
-                              } else {
-                                  inactiveColor
-                              },
-                            shape = shape
-                        ))
-                    }
-                }
+            val inactiveColor = activeColor.copy(alpha = 0.5f)
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(
+                        color = if (isActive) activeColor else inactiveColor,
+                        shape = CircleShape,
+                    ),
+            )
+        }
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(spacing),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = modifier,
+        ) {
+            repeat(slideCount) {
+                val isActive = it == activeSlideIndex
+                indicator(isActive = isActive)
             }
         }
     }

@@ -38,7 +38,7 @@ public class CyclingPedalingCadenceRecord(
 ) : SeriesRecord<CyclingPedalingCadenceRecord.Sample> {
 
     init {
-        require(startTime.isBefore(endTime)) { "startTime must be before endTime." }
+        require(!startTime.isAfter(endTime)) { "startTime must not be after endTime." }
     }
 
     /*
@@ -74,6 +74,7 @@ public class CyclingPedalingCadenceRecord(
     companion object {
         private const val TYPE = "CyclingPedalingCadenceSeries"
         private const val RPM_FIELD = "rpm"
+        private val MAX_RPM = 10_000.0
 
         /**
          * Metric identifier to retrieve average cycling pedaling cadence from
@@ -109,6 +110,7 @@ public class CyclingPedalingCadenceRecord(
 
         init {
             requireNonNegative(value = revolutionsPerMinute, name = "revolutionsPerMinute")
+            revolutionsPerMinute.requireNotMore(MAX_RPM, name = "revolutionsPerMinute")
         }
 
         /*

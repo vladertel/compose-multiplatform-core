@@ -25,7 +25,7 @@ import androidx.compose.foundation.EdgeEffectCompat.onAbsorbCompat
 import androidx.compose.foundation.EdgeEffectCompat.onPullDistanceCompat
 import androidx.compose.foundation.EdgeEffectCompat.onReleaseWithOppositeDelta
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.forEachGesture
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.neverEqualPolicy
@@ -252,21 +252,6 @@ internal class AndroidEdgeEffectOverscrollEffect(
 
     private var containerSize = Size.Zero
 
-    private val isEnabledState = mutableStateOf(false)
-    override var isEnabled: Boolean = false
-        get() = isEnabledState.value
-        set(value) {
-            // Use field instead of isEnabledState to avoid a state read
-            val enabledChanged = field != value
-            isEnabledState.value = value
-            field = value
-
-            if (enabledChanged) {
-                scrollCycleInProgress = false
-                animateToRelease()
-            }
-        }
-
     override val isInProgress: Boolean
         get() {
             return allEffects.fastAny { it.distanceCompat != 0f }
@@ -319,27 +304,25 @@ internal class AndroidEdgeEffectOverscrollEffect(
     override val effectModifier: Modifier = Modifier
         .then(StretchOverscrollNonClippingLayer)
         .pointerInput(Unit) {
-            forEachGesture {
-                awaitPointerEventScope {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    pointerId = down.id
-                    pointerPosition = down.position
-                    do {
-                        val pressedChanges = awaitPointerEvent().changes.fastFilter { it.pressed }
-                        // If the same ID we are already tracking is down, use that. Otherwise, use
-                        // the next down, to move the overscroll to the next pointer.
-                        val change = pressedChanges
-                            .fastFirstOrNull { it.id == pointerId } ?: pressedChanges.firstOrNull()
-                        if (change != null) {
-                            // Update the id if we are now tracking a new down
-                            pointerId = change.id
-                            pointerPosition = change.position
-                        }
-                    } while (pressedChanges.isNotEmpty())
-                    pointerId = null
-                    // Explicitly not resetting the pointer position until the next down, so we
-                    // don't change any existing effects
-                }
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                pointerId = down.id
+                pointerPosition = down.position
+                do {
+                    val pressedChanges = awaitPointerEvent().changes.fastFilter { it.pressed }
+                    // If the same ID we are already tracking is down, use that. Otherwise, use
+                    // the next down, to move the overscroll to the next pointer.
+                    val change = pressedChanges
+                        .fastFirstOrNull { it.id == pointerId } ?: pressedChanges.firstOrNull()
+                    if (change != null) {
+                        // Update the id if we are now tracking a new down
+                        pointerId = change.id
+                        pointerPosition = change.position
+                    }
+                } while (pressedChanges.isNotEmpty())
+                pointerId = null
+                // Explicitly not resetting the pointer position until the next down, so we
+                // don't change any existing effects
             }
         }
         .onSizeChanged(onNewSize)
@@ -524,8 +507,6 @@ private val NoOpOverscrollEffect = object : OverscrollEffect {
     override suspend fun consumePreFling(velocity: Velocity): Velocity = Velocity.Zero
 
     override suspend fun consumePostFling(velocity: Velocity) {}
-
-    override var isEnabled: Boolean = false
 
     override val isInProgress: Boolean
         get() = false

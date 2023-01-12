@@ -17,7 +17,9 @@
 package androidx.webkit.internal;
 
 import android.content.Context;
+import android.content.pm.PackageInfo;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
@@ -26,6 +28,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
 import androidx.webkit.ProxyConfig;
 import androidx.webkit.ProxyController;
@@ -48,6 +51,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Enum representing a WebView feature, this provides functionality for determining whether a
@@ -304,6 +309,15 @@ public class WebViewFeatureInternal {
 
     /**
      * This feature covers
+     * {@link WebMessagePortCompat#postMessage(WebMessageCompat)} with ArrayBuffer type, and
+     * {@link WebViewCompat#postWebMessage(WebView, WebMessageCompat, Uri)} with ArrayBuffer type.
+     */
+    public static final ApiFeature.NoFramework WEB_MESSAGE_GET_MESSAGE_PAYLOAD =
+            new ApiFeature.NoFramework(WebViewFeature.WEB_MESSAGE_GET_MESSAGE_PAYLOAD,
+                    Features.WEB_MESSAGE_GET_MESSAGE_PAYLOAD);
+
+    /**
+     * This feature covers
      * {@link WebMessagePortCompat#setWebMessageCallback(
      *WebMessagePortCompat.WebMessageCallbackCompat)}, and
      * {@link WebMessagePortCompat#setWebMessageCallback(Handler,
@@ -369,9 +383,9 @@ public class WebViewFeatureInternal {
      * This feature covers
      * {@link androidx.webkit.ProcessGlobalConfig#setDataDirectorySuffix(String)}.
      */
-    public static final StartupApiFeature.P SET_DATA_DIRECTORY_SUFFIX =
-            new StartupApiFeature.P(WebViewFeature.SET_DATA_DIRECTORY_SUFFIX,
-                    StartupFeatures.SET_DATA_DIRECTORY_SUFFIX);
+    public static final StartupApiFeature.P STARTUP_FEATURE_SET_DATA_DIRECTORY_SUFFIX =
+            new StartupApiFeature.P(WebViewFeature.STARTUP_FEATURE_SET_DATA_DIRECTORY_SUFFIX,
+                    StartupFeatures.STARTUP_FEATURE_SET_DATA_DIRECTORY_SUFFIX);
 
     /**
      * This feature covers
@@ -383,6 +397,31 @@ public class WebViewFeatureInternal {
     public static final ApiFeature.Q WEB_VIEW_RENDERER_CLIENT_BASIC_USAGE =
             new ApiFeature.Q(WebViewFeature.WEB_VIEW_RENDERER_CLIENT_BASIC_USAGE,
                     Features.WEB_VIEW_RENDERER_CLIENT_BASIC_USAGE);
+
+    /**
+     * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#setAlgorithmicDarkeningAllowed(WebSettings, boolean)} and
+     * {@link androidx.webkit.WebSettingsCompat#isAlgorithmicDarkeningAllowed(WebSettings)}.
+     */
+    public static final ApiFeature.T ALGORITHMIC_DARKENING =
+            new ApiFeature.T(WebViewFeature.ALGORITHMIC_DARKENING, Features.ALGORITHMIC_DARKENING) {
+                private final Pattern mVersionPattern = Pattern.compile("\\A\\d+");
+                @Override
+                public boolean isSupportedByWebView() {
+                    boolean supported = super.isSupportedByWebView();
+                    if (!supported || Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        return supported;
+                    }
+                    //Since version 105, WebView has supported the algorithmic darkening for
+                    // pre-Q Android platform.
+                    // WebView should have been loaded.
+                    PackageInfo info = WebViewCompat.getCurrentLoadedWebViewPackage();
+                    if (info == null) return false;
+                    Matcher m = mVersionPattern.matcher(info.versionName);
+                    return m.find() && Integer.parseInt(info.versionName.substring(m.start(),
+                                m.end())) >= 105;
+                }
+            };
 
     /**
      * This feature covers
@@ -425,15 +464,6 @@ public class WebViewFeatureInternal {
     public static final ApiFeature.NoFramework FORCE_DARK_STRATEGY =
             new ApiFeature.NoFramework(WebViewFeature.FORCE_DARK_STRATEGY,
                     Features.FORCE_DARK_BEHAVIOR);
-
-    /**
-     * This feature covers
-     * {@link androidx.webkit.WebSettingsCompat#setAlgorithmicDarkeningAllowed(WebSettings, boolean)} and
-     * {@link androidx.webkit.WebSettingsCompat#isAlgorithmicDarkeningAllowed(WebSettings)}.
-     */
-    public static final ApiFeature.NoFramework ALGORITHMIC_DARKENING =
-            new ApiFeature.NoFramework(WebViewFeature.ALGORITHMIC_DARKENING,
-                    Features.ALGORITHMIC_DARKENING);
 
     /**
      * This feature covers
@@ -485,6 +515,20 @@ public class WebViewFeatureInternal {
      */
     public static final ApiFeature.NoFramework GET_COOKIE_INFO =
             new ApiFeature.NoFramework(WebViewFeature.GET_COOKIE_INFO, Features.GET_COOKIE_INFO);
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}.
+     * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#getRequestedWithHeaderOriginAllowList(WebSettings)],
+     * {@link androidx.webkit.WebSettingsCompat#setRequestedWithHeaderAllowList(WebSettings, Set)},
+     * {@link androidx.webkit.ServiceWorkerWebSettingsCompat#getRequestedWithHeaderAllowList(WebSettings)}, and
+     * {@link androidx.webkit.ServiceWorkerWebSettingsCompat#setRequestedWithHeaderAllowList(WebSettings, Set)}.
+     * @hide
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public static final ApiFeature.NoFramework REQUESTED_WITH_HEADER_ALLOW_LIST =
+            new ApiFeature.NoFramework(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST,
+                    Features.REQUESTED_WITH_HEADER_ALLOW_LIST);
     // --- Add new feature constants above this line ---
 
     private WebViewFeatureInternal() {

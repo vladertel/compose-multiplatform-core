@@ -19,8 +19,11 @@ package androidx.glance.appwidget.template
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.LocalSize
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.appwidget.template.GlanceTemplateAppWidget.Companion.sizeMin
+import androidx.glance.appwidget.template.GlanceTemplateAppWidget.Companion.sizeS
 import androidx.glance.background
 import androidx.glance.layout.Column
 import androidx.glance.layout.ContentScale
@@ -32,7 +35,6 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.template.LocalTemplateColors
 import androidx.glance.template.LocalTemplateMode
 import androidx.glance.template.SingleEntityTemplateData
 import androidx.glance.template.TemplateMode
@@ -87,10 +89,13 @@ private fun WidgetLayoutVertical(data: SingleEntityTemplateData) {
         }
         Row(modifier = GlanceModifier.fillMaxWidth()) {
             data.textBlock?.let { AppWidgetTextSection(textList(it.text1, it.text2)) }
-            data.actionBlock?.let {
-                Spacer(modifier = GlanceModifier.width(16.dp))
-                Spacer(modifier = GlanceModifier.defaultWeight())
-                ActionBlockTemplate(it)
+            // TODO(b/247613894): Fix for multiple actions
+            if (LocalSize.current.width > sizeMin) {
+                data.actionBlock?.let {
+                    Spacer(modifier = GlanceModifier.width(16.dp))
+                    Spacer(modifier = GlanceModifier.defaultWeight())
+                    ActionBlockTemplate(it)
+                }
             }
         }
     }
@@ -108,14 +113,15 @@ private fun WidgetLayoutHorizontal(data: SingleEntityTemplateData) {
             }
             Spacer(modifier = GlanceModifier.defaultWeight())
 
-            // TODO: Extract small height as template constant
             data.textBlock?.let {
-                val body = if (LocalSize.current.height > 240.dp) it.text3 else null
+                val body = if (LocalSize.current.height >= sizeS) it.text3 else null
                 AppWidgetTextSection(textList(it.text1, it.text2, body))
             }
-            data.actionBlock?.let {
-                Spacer(modifier = GlanceModifier.height(16.dp))
-                ActionBlockTemplate(it)
+            if (LocalSize.current.height > sizeMin) {
+                data.actionBlock?.let {
+                    Spacer(modifier = GlanceModifier.height(16.dp))
+                    ActionBlockTemplate(it)
+                }
             }
         }
 
@@ -146,7 +152,7 @@ private fun createTopLevelModifier(
 ): GlanceModifier {
     var modifier = GlanceModifier
         .fillMaxSize().padding(16.dp).cornerRadius(16.dp)
-        .background(LocalTemplateColors.current.primaryContainer)
+        .background(GlanceTheme.colors.primaryContainer)
     if (isImmersive && data.imageBlock?.images?.isNotEmpty() == true) {
         val mainImage = data.imageBlock!!.images[0]
         modifier = modifier.background(mainImage.image, ContentScale.Crop)

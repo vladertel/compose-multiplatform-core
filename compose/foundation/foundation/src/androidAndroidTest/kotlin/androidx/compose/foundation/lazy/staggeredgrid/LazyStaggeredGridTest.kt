@@ -19,9 +19,11 @@ package androidx.compose.foundation.lazy.staggeredgrid
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.list.setContentWithTestViewConfiguration
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,9 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -91,7 +95,29 @@ class LazyStaggeredGridTest(
                 "Visible items MUST BE sorted: ${state.layoutInfo.visibleItemsInfo}",
                 isSorted
             )
+
+            assertThat(state.layoutInfo.orientation == orientation)
         }
+    }
+
+    @Test
+    fun showsZeroItems() {
+        rule.setContent {
+            state = rememberLazyStaggeredGridState()
+
+            LazyStaggeredGrid(
+                lanes = 3,
+                state = state,
+                modifier = Modifier.testTag(LazyStaggeredGridTag)
+            ) { }
+        }
+
+        rule.onNodeWithTag(LazyStaggeredGridTag)
+            .onChildren()
+            .assertCountEquals(0)
+
+        assertThat(state.firstVisibleItemIndex).isEqualTo(0)
+        assertThat(state.firstVisibleItemScrollOffset).isEqualTo(0)
     }
 
     @Test
@@ -99,8 +125,11 @@ class LazyStaggeredGridTest(
         val itemTestTag = "itemTestTag"
 
         rule.setContent {
+            state = rememberLazyStaggeredGridState()
+
             LazyStaggeredGrid(
                 lanes = 3,
+                state = state,
             ) {
                 item {
                     Spacer(
@@ -114,6 +143,9 @@ class LazyStaggeredGridTest(
 
         rule.onNodeWithTag(itemTestTag)
             .assertIsDisplayed()
+
+        assertThat(state.firstVisibleItemIndex).isEqualTo(0)
+        assertThat(state.firstVisibleItemScrollOffset).isEqualTo(0)
     }
 
     @Test
@@ -230,7 +262,7 @@ class LazyStaggeredGridTest(
         }
 
         rule.onNodeWithTag("3")
-            .assertIsNotDisplayed()
+            .assertDoesNotExist()
 
         state.scrollBy(itemSizeDp * 3)
 
@@ -253,6 +285,74 @@ class LazyStaggeredGridTest(
             .assertCrossAxisStartPositionInRootIsEqualTo(itemSizeDp * 2)
 
         // [item x 4, item x 7, item x 9]
+    }
+
+    @Test
+    fun itemSizeInLayoutInfo() {
+        rule.setContent {
+            state = rememberLazyStaggeredGridState()
+            LazyStaggeredGrid(
+                lanes = 3,
+                state = state,
+                modifier = Modifier.axisSize(itemSizeDp * 3, itemSizeDp),
+            ) {
+                items(6) {
+                    Spacer(
+                        Modifier
+                            .axisSize(
+                                crossAxis = itemSizeDp,
+                                mainAxis = itemSizeDp * (it + 1)
+                            )
+                            .testTag("$it")
+                            .debugBorder()
+                    )
+                }
+            }
+        }
+
+        state.scrollBy(itemSizeDp * 3)
+
+        val items = state.layoutInfo.visibleItemsInfo
+
+        assertThat(items.size).isEqualTo(3)
+        with(items[0]) {
+            assertThat(index).isEqualTo(3)
+            assertThat(size).isEqualTo(axisSize(itemSizePx, itemSizePx * 4))
+            assertThat(offset).isEqualTo(axisOffset(0, -itemSizePx * 2))
+        }
+
+        with(items[1]) {
+            assertThat(index).isEqualTo(4)
+            assertThat(size).isEqualTo(axisSize(itemSizePx, itemSizePx * 5))
+            assertThat(offset).isEqualTo(axisOffset(itemSizePx, -itemSizePx))
+        }
+
+        with(items[2]) {
+            assertThat(index).isEqualTo(5)
+            assertThat(size).isEqualTo(axisSize(itemSizePx, itemSizePx * 6))
+            assertThat(offset).isEqualTo(axisOffset(itemSizePx * 2, 0))
+        }
+    }
+
+    @Test
+    fun itemCanEmitZeroNodes() {
+        rule.setContent {
+            state = rememberLazyStaggeredGridState()
+            LazyStaggeredGrid(
+                lanes = 3,
+                state = state,
+                modifier = Modifier
+                    .axisSize(itemSizeDp * 3, itemSizeDp)
+                    .testTag(LazyStaggeredGridTag),
+            ) {
+                items(6) { }
+            }
+        }
+
+        rule.onNodeWithTag(LazyStaggeredGridTag)
+            .assertIsDisplayed()
+            .onChildren()
+            .assertCountEquals(0)
     }
 
     @Test
@@ -988,6 +1088,120 @@ class LazyStaggeredGridTest(
     }
 
     @Test
+    fun screenRotate_oneItem_withAdaptiveCells_fillsContentCorrectly() {
+        var rotated by mutableStateOf(false)
+
+        rule.setContent {
+            state = rememberLazyStaggeredGridState()
+
+            val crossAxis = if (!rotated) itemSizeDp * 6 else itemSizeDp * 9
+            val mainAxis = if (!rotated) itemSizeDp * 9 else itemSizeDp * 6
+
+            LazyStaggeredGrid(
+                cells = StaggeredGridCells.Adaptive(itemSizeDp * 3),
+                state = state,
+                modifier = Modifier
+                    .mainAxisSize(mainAxis)
+                    .crossAxisSize(crossAxis)
+                    .testTag(LazyStaggeredGridTag)
+            ) {
+                item {
+                    Spacer(
+                        Modifier
+                            .mainAxisSize(itemSizeDp)
+                            .testTag("0")
+                    )
+                }
+            }
+        }
+
+        fun verifyState() {
+            assertThat(state.firstVisibleItemIndex).isEqualTo(0)
+            assertThat(state.firstVisibleItemScrollOffset).isEqualTo(0)
+        }
+
+        rule.runOnIdle {
+            rotated = true
+        }
+
+        rule.runOnIdle {
+            verifyState()
+        }
+
+        rule.runOnIdle {
+            rotated = false
+        }
+
+        rule.runOnIdle {
+            verifyState()
+        }
+
+        rule.runOnIdle {
+            rotated = true
+        }
+
+        rule.runOnIdle {
+            verifyState()
+        }
+    }
+
+    @Test
+    fun screenRotate_twoItems_withAdaptiveCells_fillsContentCorrectly() {
+        var rotated by mutableStateOf(false)
+
+        rule.setContent {
+            state = rememberLazyStaggeredGridState()
+
+            val crossAxis = if (!rotated) itemSizeDp * 6 else itemSizeDp * 9
+            val mainAxis = if (!rotated) itemSizeDp * 9 else itemSizeDp * 6
+
+            LazyStaggeredGrid(
+                cells = StaggeredGridCells.Adaptive(itemSizeDp * 3),
+                state = state,
+                modifier = Modifier
+                    .mainAxisSize(mainAxis)
+                    .crossAxisSize(crossAxis)
+                    .testTag(LazyStaggeredGridTag)
+            ) {
+                items(2) {
+                    Spacer(
+                        Modifier
+                            .mainAxisSize(itemSizeDp)
+                            .testTag("$it")
+                    )
+                }
+            }
+        }
+
+        fun verifyState() {
+            rule.runOnIdle {
+                assertThat(state.firstVisibleItemIndex).isEqualTo(0)
+                assertThat(state.firstVisibleItemScrollOffset).isEqualTo(0)
+            }
+            rule.onNodeWithTag("0").assertIsDisplayed()
+            rule.onNodeWithTag("1").assertIsDisplayed()
+        }
+
+        rule.runOnIdle {
+            rotated = true
+        }
+
+        verifyState()
+
+        rule.runOnIdle {
+            rotated = false
+        }
+
+        verifyState()
+
+        rule.runOnIdle {
+            rotated = true
+        }
+
+        verifyState()
+    }
+
+    @Test
     fun scrollingALot_layoutIsNotRecomposed() {
         var recomposed = 0
         rule.setContent {
@@ -1046,5 +1260,38 @@ class LazyStaggeredGridTest(
 
         rule.waitForIdle()
         assertThat(state.measurePassCount).isEqualTo(1)
+    }
+
+    @Test
+    fun fillingFullSize_nextItemIsNotComposed() {
+        val state = LazyStaggeredGridState()
+        state.prefetchingEnabled = false
+        val itemSizePx = 5f
+        val itemSize = with(rule.density) { itemSizePx.toDp() }
+        rule.setContentWithTestViewConfiguration {
+            LazyStaggeredGrid(
+                1,
+                Modifier
+                    .testTag(LazyStaggeredGridTag)
+                    .mainAxisSize(itemSize),
+                state
+            ) {
+                items(3) { index ->
+                    Box(Modifier.size(itemSize).testTag("$index"))
+                }
+            }
+        }
+
+        repeat(3) { index ->
+            rule.onNodeWithTag("$index")
+                .assertIsDisplayed()
+            rule.onNodeWithTag("${index + 1}")
+                .assertDoesNotExist()
+            rule.runOnIdle {
+                runBlocking {
+                    state.scrollBy(itemSizePx)
+                }
+            }
+        }
     }
 }

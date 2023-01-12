@@ -16,29 +16,29 @@
 
 package androidx.window.embedding
 
+import androidx.window.extensions.embedding.SplitInfo as OEMSplitInfo
 import android.app.Activity
+import android.content.Context
 import android.util.Log
 import androidx.window.core.ConsumerAdapter
-import androidx.window.core.ExperimentalWindowApi
 import androidx.window.embedding.EmbeddingInterfaceCompat.EmbeddingCallbackInterface
 import androidx.window.extensions.WindowExtensionsProvider
 import androidx.window.extensions.embedding.ActivityEmbeddingComponent
 import java.lang.reflect.Proxy
-import androidx.window.extensions.embedding.SplitInfo as OEMSplitInfo
 
 /**
  * Adapter implementation for different historical versions of activity embedding OEM interface in
  * [ActivityEmbeddingComponent]. Only supports the single current version in this implementation.
  */
-@ExperimentalWindowApi
 internal class EmbeddingCompat constructor(
     private val embeddingExtension: ActivityEmbeddingComponent,
     private val adapter: EmbeddingAdapter,
-    private val consumerAdapter: ConsumerAdapter
+    private val consumerAdapter: ConsumerAdapter,
+    private val applicationContext: Context
 ) : EmbeddingInterfaceCompat {
 
-    override fun setSplitRules(rules: Set<EmbeddingRule>) {
-        val r = adapter.translate(rules)
+    override fun setRules(rules: Set<EmbeddingRule>) {
+        val r = adapter.translate(applicationContext, rules)
         embeddingExtension.setEmbeddingRules(r)
     }
 

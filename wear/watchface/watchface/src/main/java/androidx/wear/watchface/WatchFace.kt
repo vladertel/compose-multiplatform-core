@@ -60,6 +60,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.security.InvalidParameterException
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -610,9 +611,6 @@ public class WatchFaceImpl @UiThread constructor(
     internal var lastDrawTimeMillis: Long = 0
     internal var nextDrawTimeMillis: Long = 0
 
-    private val pendingUpdateTime: CancellableUniqueTask =
-        CancellableUniqueTask(watchFaceHostApi.getUiThreadHandler())
-
     internal val componentName =
         ComponentName(
             watchFaceHostApi.getContext().packageName,
@@ -665,7 +663,6 @@ public class WatchFaceImpl @UiThread constructor(
             }
         )
 
-    private var inOnSetStyle = false
     internal var initComplete = false
 
     private fun interruptionFilter(it: Int) {
@@ -859,17 +856,7 @@ public class WatchFaceImpl @UiThread constructor(
         }
     }
 
-    /** Called by the system in response to remote configuration. */
-    @UiThread
-    internal fun onSetStyleInternal(style: UserStyle) {
-        // No need to echo the userStyle back.
-        inOnSetStyle = true
-        currentUserStyleRepository.updateUserStyle(style)
-        inOnSetStyle = false
-    }
-
     internal fun onDestroy() {
-        pendingUpdateTime.cancel()
         renderer.onDestroyInternal()
         if (!watchState.isHeadless) {
             WatchFace.unregisterEditorDelegate(componentName)
@@ -908,9 +895,7 @@ public class WatchFaceImpl @UiThread constructor(
         }
 
         if (renderer.shouldAnimate()) {
-            pendingUpdateTime.postUnique {
-                watchFaceHostApi.invalidate()
-            }
+            watchFaceHostApi.postInvalidate()
         }
     }
 
@@ -944,9 +929,8 @@ public class WatchFaceImpl @UiThread constructor(
         }
     }
 
-    /** @hide */
     @UiThread
-    internal fun onDraw() {
+    fun onDraw() {
         val startTime = getZonedDateTime()
         val startInstant = startTime.toInstant()
         val startTimeMillis = systemTimeProvider.getSystemTimeMillis()
@@ -957,18 +941,19 @@ public class WatchFaceImpl @UiThread constructor(
 
         if (renderer.shouldAnimate()) {
             val currentTimeMillis = systemTimeProvider.getSystemTimeMillis()
-            var delay = computeDelayTillNextFrame(startTimeMillis, currentTimeMillis, Instant.now())
-            nextDrawTimeMillis = currentTimeMillis + delay
+            var delayMillis =
+                computeDelayTillNextFrame(startTimeMillis, currentTimeMillis, Instant.now())
+            nextDrawTimeMillis = currentTimeMillis + delayMillis
 
             // We want to post our delayed task to post the choreographer frame a bit earlier than
             // the deadline because if we post it too close to the deadline we'll miss it. If we're
             // close to the deadline we post the choreographer frame immediately.
-            delay -= POST_CHOREOGRAPHER_FRAME_MILLIS_BEFORE_DEADLINE
+            delayMillis -= POST_CHOREOGRAPHER_FRAME_MILLIS_BEFORE_DEADLINE
 
-            if (delay <= 0) {
+            if (delayMillis <= 0) {
                 watchFaceHostApi.invalidate()
             } else {
-                pendingUpdateTime.postDelayedUnique(delay) { watchFaceHostApi.invalidate() }
+                watchFaceHostApi.postInvalidate(Duration.ofMillis(delayMillis))
             }
         }
     }
@@ -1091,7 +1076,9 @@ public class WatchFaceImpl @UiThread constructor(
         val instant = Instant.ofEpochMilli(params.calendarTimeMillis)
 
         params.userStyle?.let {
-            onSetStyleInternal(UserStyle(UserStyleData(it), currentUserStyleRepository.schema))
+            currentUserStyleRepository.updateUserStyle(
+                UserStyle(UserStyleData(it), currentUserStyleRepository.schema)
+            )
         }
 
         val oldComplicationData =
@@ -1115,7 +1102,7 @@ public class WatchFaceImpl @UiThread constructor(
 
         // Restore previous style & complicationSlots if required.
         if (params.userStyle != null) {
-            onSetStyleInternal(oldStyle)
+            currentUserStyleRepository.updateUserStyle(oldStyle)
         }
 
         if (params.idAndComplicationDatumWireFormats != null) {
@@ -1143,7 +1130,7 @@ public class WatchFaceImpl @UiThread constructor(
 
             val newStyle = params.userStyle
             if (newStyle != null) {
-                onSetStyleInternal(
+                currentUserStyleRepository.updateUserStyle(
                     UserStyle(UserStyleData(newStyle), currentUserStyleRepository.schema)
                 )
             }
@@ -1182,7 +1169,7 @@ public class WatchFaceImpl @UiThread constructor(
             }
 
             if (newStyle != null) {
-                onSetStyleInternal(oldStyle)
+                currentUserStyleRepository.updateUserStyle(oldStyle)
             }
 
             SharedMemoryImage.ashmemWriteImageBundle(complicationBitmap)
@@ -1199,7 +1186,6 @@ public class WatchFaceImpl @UiThread constructor(
         writer.println("lastDrawTimeMillis=$lastDrawTimeMillis")
         writer.println("nextDrawTimeMillis=$nextDrawTimeMillis")
         writer.println("muteMode=$muteMode")
-        writer.println("pendingUpdateTime=${pendingUpdateTime.isPending()}")
         writer.println("lastTappedComplicationId=$lastTappedComplicationId")
         writer.println(
             "currentUserStyleRepository.userStyle=${currentUserStyleRepository.userStyle.value}"

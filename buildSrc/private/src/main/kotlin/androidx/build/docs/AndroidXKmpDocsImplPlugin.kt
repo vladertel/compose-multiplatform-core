@@ -18,12 +18,14 @@ package androidx.build.docs
 
 import androidx.build.dokka.kmpDocs.DokkaCombinedDocsTask
 import androidx.build.dokka.kmpDocs.DokkaPartialDocsTask
+import androidx.build.getDistributionDirectory
 import javax.inject.Inject
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.tasks.bundling.Zip
 import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.the
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
@@ -38,16 +40,28 @@ class AndroidXKmpDocsImplPlugin @Inject constructor(
         val config = project.configurations.register(CONSUMER_CONFIGURATION_NAME) { config ->
             config.configureKmpDocsAttributes(objectFactory)
         }
-        DokkaCombinedDocsTask.register(
+        val combinedDocsTask = DokkaCombinedDocsTask.register(
             project,
             config
         )
+        project.tasks.register(ZIP_COMBINED_DOCS_TASK_NAME, Zip::class.java) {
+            it.from(
+                combinedDocsTask.map { it.outputDir }
+            )
+            it.destinationDirectory.set(
+                project.getDistributionDirectory().resolve("kmp-docs")
+            )
+            it.archiveBaseName.set(
+                "kmpDocs"
+            )
+        }
     }
 
     companion object {
         private const val CONSUMER_CONFIGURATION_NAME = "kmpDocs"
         private const val PRODUCER_CONFIGURATION_NAME = "partialKmpDocs"
         private const val ATTRIBUTE_NAME = "partial-docs"
+        private const val ZIP_COMBINED_DOCS_TASK_NAME = "zipCombinedKmpDocs"
 
         /**
          * Adds ability to generates partial dokka docs artifact for the Kotlin project.
@@ -56,7 +70,7 @@ class AndroidXKmpDocsImplPlugin @Inject constructor(
             project: Project
         ) {
             val kotlinExtension = project.the<KotlinProjectExtension>()
-            val docsTask = DokkaPartialDocsTask.register(
+            val docsWithPlaceholderSourceLinks = DokkaPartialDocsTask.register(
                 project,
                 kotlinExtension
             )
@@ -66,9 +80,11 @@ class AndroidXKmpDocsImplPlugin @Inject constructor(
                 config.isCanBeConsumed = true
             }
             project.artifacts { artifactHandler ->
-                artifactHandler.add(PRODUCER_CONFIGURATION_NAME, docsTask.map {
-                    it.outputDir
-                })
+                artifactHandler.add(
+                    PRODUCER_CONFIGURATION_NAME,
+                    docsWithPlaceholderSourceLinks.map {
+                        it.outputDir
+                    })
             }
         }
 

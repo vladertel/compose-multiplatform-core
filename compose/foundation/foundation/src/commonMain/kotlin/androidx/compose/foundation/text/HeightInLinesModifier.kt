@@ -34,12 +34,16 @@ import androidx.compose.ui.unit.Dp
 
 /**
  * The default minimum height in terms of minimum number of visible lines.
+ *
+ * Should not be used in public API and samples unless it's public, too.
  */
-internal const val DefaultMinLines: Int = 1
+internal const val DefaultMinLines = 1
 
 /**
- * Constraint the height of the text field so that it vertically occupies at least [minLines]
- * number of lines and at most [maxLines] number of lines.
+ * Constraint the height of the TextField or BasicText so that it vertically occupies at least
+ * [minLines] number of lines and at most [maxLines] number of lines. BasicText should not use this
+ * function for calculating maxLines constraints since MultiParagraph computation already handles
+ * that.
  */
 internal fun Modifier.heightInLines(
     textStyle: TextStyle,
@@ -53,15 +57,7 @@ internal fun Modifier.heightInLines(
         properties["textStyle"] = textStyle
     }
 ) {
-    require(minLines > 0) {
-        "minLines must be greater than 0"
-    }
-    require(maxLines > 0) {
-        "maxLines must be greater than 0"
-    }
-    require(minLines <= maxLines) {
-        "minLines $minLines must be lower than or equal to maxLines $maxLines"
-    }
+    validateMinMaxLines(minLines, maxLines)
     if (minLines == DefaultMinLines && maxLines == Int.MAX_VALUE) return@composed Modifier
 
     val density = LocalDensity.current
@@ -125,5 +121,14 @@ internal fun Modifier.heightInLines(
             min = precomputedMinLinesHeight?.toDp() ?: Dp.Unspecified,
             max = precomputedMaxLinesHeight?.toDp() ?: Dp.Unspecified
         )
+    }
+}
+
+internal fun validateMinMaxLines(minLines: Int, maxLines: Int) {
+    require(minLines > 0 && maxLines > 0) {
+        "both minLines $minLines and maxLines $maxLines must be greater than zero"
+    }
+    require(minLines <= maxLines) {
+        "minLines $minLines must be less than or equal to maxLines $maxLines"
     }
 }

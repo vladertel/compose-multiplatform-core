@@ -29,6 +29,8 @@ import androidx.testutils.withUse
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import java.util.concurrent.TimeUnit
+import leakcanary.DetectLeaksAfterTestSuccess
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -37,9 +39,13 @@ import org.junit.runner.RunWith
 @MediumTest
 class OnBackPressedCallbackTest {
 
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
+
     @Test
     fun testBackPressFinishesActivity() {
-       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+        // Since this activity finishes manually, we do not want to use withUse here
+        with(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val countDownLatch = withActivity {
                 onBackPressed()
                 finishCountDownLatch
@@ -169,7 +175,8 @@ class OnBackPressedCallbackTest {
 
     @Test
     fun testBackPressFinishesActivityAfterFragmentPop() {
-       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+        // Since this activity finishes manually, we do not want to use withUse here
+       with(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val fragmentManager = withActivity { supportFragmentManager }
             val fragment = StrictFragment()
             fragmentManager.beginTransaction()

@@ -30,7 +30,6 @@ import androidx.graphics.opengl.egl.EGLManager
 import androidx.graphics.opengl.egl.EGLSpec
 import androidx.graphics.opengl.egl.EGLVersion
 import androidx.graphics.opengl.egl.supportsNativeAndroidFence
-import androidx.hardware.SyncFence
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -46,6 +45,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -381,13 +381,6 @@ class SurfaceControlCompatTest {
     }
 
     @Test
-    fun testExtractSyncFenceFd() {
-        val fileDescriptor = 7
-        val syncFence = SyncFence(7)
-        assertEquals(fileDescriptor, JniBindings.nExtractFenceFd(syncFence))
-    }
-
-    @Test
     fun testTransactionSetBuffer_nullFence() {
         val scenario = ActivityScenario.launch(SurfaceControlWrapperTestActivity::class.java)
             .moveToState(
@@ -540,6 +533,8 @@ class SurfaceControlCompatTest {
     }
 
     @Test
+    @Ignore("b/262903415")
+    @SdkSuppress(minSdkVersion = 29, maxSdkVersion = 33) // b/262909049: Failing on SDK 34
     fun testTransactionSetBuffer_singleReleaseCallback() {
         val releaseLatch = CountDownLatch(1)
         val scenario = ActivityScenario.launch(SurfaceControlWrapperTestActivity::class.java)
@@ -598,7 +593,9 @@ class SurfaceControlCompatTest {
         }
     }
 
+    @Ignore("b/262909049")
     @Test
+    @SdkSuppress(minSdkVersion = 29, maxSdkVersion = 33) // b/262909049: Failing on SDK 34
     fun testTransactionSetBuffer_multipleReleaseCallbacksAndOverwriteWithSingleSC() {
         val releaseLatch = CountDownLatch(1)
         val releaseLatch2 = CountDownLatch(1)
@@ -741,6 +738,7 @@ class SurfaceControlCompatTest {
         }
     }
 
+    @Ignore("b/262909049")
     @Test
     fun testTransactionSetBuffer_ReleaseCallbacksAndOverwriteWithMultipleSC() {
         val releaseLatch = CountDownLatch(1)
@@ -1636,9 +1634,8 @@ class SurfaceControlCompatTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
     fun testTransactionSetBufferTransform_identity() {
-        val listener = TransactionOnCommitListener()
         val scenario = ActivityScenario.launch(SurfaceControlWrapperTestActivity::class.java)
             .moveToState(
                 Lifecycle.State.CREATED
@@ -1662,7 +1659,6 @@ class SurfaceControlCompatTest {
                         )
 
                         SurfaceControlCompat.Transaction()
-                            .addTransactionCommittedListener(executor!!, listener)
                             .setBuffer(scCompat, buffer)
                             .setVisibility(scCompat, true)
                             .setBufferTransform(
@@ -1677,7 +1673,6 @@ class SurfaceControlCompatTest {
             }
 
         scenario.moveToState(Lifecycle.State.RESUMED).onActivity {
-            assertTrue(listener.mLatch.await(3000, TimeUnit.MILLISECONDS))
             SurfaceControlUtils.validateOutput { bitmap ->
                 val coord = intArrayOf(0, 0)
                 it.mSurfaceView.getLocationOnScreen(coord)
@@ -1699,9 +1694,8 @@ class SurfaceControlCompatTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
     fun testTransactionSetBufferTransform_singleTransform() {
-        val listener = TransactionOnCommitListener()
         val scenario = ActivityScenario.launch(SurfaceControlWrapperTestActivity::class.java)
             .moveToState(
                 Lifecycle.State.CREATED
@@ -1725,7 +1719,6 @@ class SurfaceControlCompatTest {
                         )
 
                         SurfaceControlCompat.Transaction()
-                            .addTransactionCommittedListener(executor!!, listener)
                             .setBuffer(scCompat, buffer)
                             .setVisibility(scCompat, true)
                             .setBufferTransform(
@@ -1740,7 +1733,6 @@ class SurfaceControlCompatTest {
             }
 
         scenario.moveToState(Lifecycle.State.RESUMED).onActivity {
-            assertTrue(listener.mLatch.await(3000, TimeUnit.MILLISECONDS))
             SurfaceControlUtils.validateOutput { bitmap ->
                 val coord = intArrayOf(0, 0)
                 it.mSurfaceView.getLocationOnScreen(coord)

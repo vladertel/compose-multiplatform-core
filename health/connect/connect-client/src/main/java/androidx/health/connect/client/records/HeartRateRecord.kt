@@ -32,7 +32,7 @@ public class HeartRateRecord(
 ) : SeriesRecord<HeartRateRecord.Sample> {
 
     init {
-        require(startTime.isBefore(endTime)) { "startTime must be before endTime." }
+        require(!startTime.isAfter(endTime)) { "startTime must not be after endTime." }
     }
 
     /*
@@ -119,7 +119,8 @@ public class HeartRateRecord(
     ) {
 
         init {
-            requireNonNegative(value = beatsPerMinute, name = "beatsPerMinute")
+            beatsPerMinute.requireNotLess(other = 1, name = "beatsPerMinute")
+            beatsPerMinute.requireNotMore(other = 300, name = "beatsPerMinute")
         }
 
         /*

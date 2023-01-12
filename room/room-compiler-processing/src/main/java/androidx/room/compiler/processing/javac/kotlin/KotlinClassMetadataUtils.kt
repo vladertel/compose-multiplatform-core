@@ -42,8 +42,13 @@ import kotlinx.metadata.jvm.JvmPropertyExtensionVisitor
 import kotlinx.metadata.jvm.JvmTypeExtensionVisitor
 import kotlinx.metadata.jvm.KotlinClassMetadata
 
-// represents a function or constructor
-internal interface KmExecutable {
+/** Represents the kotlin metadata for a given element. */
+internal interface KmElement {
+    val flags: Flags
+}
+
+/** Represents a function or constructor. */
+internal interface KmExecutable : KmElement {
     val parameters: List<KmValueParameter>
 }
 
@@ -60,11 +65,12 @@ internal data class KmFunction(
      */
     val name: String,
     val descriptor: String,
-    private val flags: Flags,
-    val typeArguments: List<KmType>,
+    override val flags: Flags,
+    val typeParameters: List<KmTypeParameter>,
     override val parameters: List<KmValueParameter>,
     val returnType: KmType,
-    val receiverType: KmType?
+    val receiverType: KmType?,
+    val isPropertyFunction: Boolean = false
 ) : KmExecutable {
     fun isSuspend() = Flag.Function.IS_SUSPEND(flags)
     fun isExtension() = receiverType != null
@@ -75,7 +81,7 @@ internal data class KmFunction(
  */
 internal data class KmConstructor(
     val descriptor: String,
-    private val flags: Flags,
+    override val flags: Flags,
     override val parameters: List<KmValueParameter>
 ) : KmExecutable {
     fun isPrimary() = !Flag.Constructor.IS_SECONDARY(flags)
@@ -83,10 +89,11 @@ internal data class KmConstructor(
 
 internal data class KmProperty(
     val name: String,
+    override val flags: Flags,
     val type: KmType,
     val getter: KmFunction?,
     val setter: KmFunction?
-) {
+) : KmElement {
     val typeParameters
         get() = type.typeArguments
 
@@ -94,24 +101,34 @@ internal data class KmProperty(
 }
 
 internal data class KmType(
-    val flags: Flags,
+    override val flags: Flags,
     val typeArguments: List<KmType>,
-    val extendsBound: KmType?,
+    /** The extends bounds are only non-null for wildcard (i.e. in/out variant) types. */
+    val extendsBound: KmType? = null,
+    /** The upper bounds are only non-null for type variable types with upper bounds. */
+    val upperBounds: List<KmType>? = null,
     val isExtensionType: Boolean
-) {
+) : KmElement {
     fun isNullable() = Flag.Type.IS_NULLABLE(flags)
-    fun erasure(): KmType = KmType(flags, emptyList(), extendsBound?.erasure(), isExtensionType)
+    fun erasure(): KmType = KmType(
+        flags,
+        emptyList(),
+        extendsBound?.erasure(),
+        // The erasure of a type variable is equal to the erasure of the first upper bound.
+        upperBounds?.firstOrNull()?.erasure()?.let { listOf(it) },
+        isExtensionType
+    )
 }
 
-private data class KmTypeParameter(
+internal data class KmTypeParameter(
     val name: String,
-    val flags: Flags,
-    val extendsBound: KmType?
-) {
+    override val flags: Flags,
+    val upperBounds: List<KmType>
+) : KmElement {
     fun asKmType() = KmType(
         flags = flags,
         typeArguments = emptyList(),
-        extendsBound = extendsBound,
+        upperBounds = upperBounds,
         isExtensionType = false
     )
 }
@@ -122,15 +139,16 @@ private data class KmTypeParameter(
 internal data class KmValueParameter(
     val name: String,
     val type: KmType,
-    private val flags: Int
-) {
+    override val flags: Flags
+) : KmElement {
     fun isNullable() = type.isNullable()
     fun hasDefault() = Flag.ValueParameter.DECLARES_DEFAULT_VALUE(flags)
 }
 
 internal data class KmClassTypeInfo(
     val kmType: KmType,
-    val superType: KmType?
+    val superType: KmType?,
+    val typeParameters: List<KmTypeParameter>
 )
 
 internal fun KotlinClassMetadata.Class.readFunctions(): List<KmFunction> =
@@ -196,7 +214,7 @@ private class FunctionReader(val result: MutableList<KmFunction>) : KmClassVisit
                         jvmName = methodSignature.name,
                         descriptor = methodSignature.asString(),
                         flags = flags,
-                        typeArguments = typeParameters.map { it.asKmType() },
+                        typeParameters = typeParameters,
                         parameters = parameters,
                         returnType = returnType,
                         receiverType = receiverType
@@ -301,6 +319,7 @@ private class PropertyReader(
                     KmProperty(
                         type = returnType,
                         name = name,
+                        flags = flags,
                         setter = setter?.let { setterSignature ->
                             // setter parameter visitor may not be invoked when not declared
                             // explicitly
@@ -315,11 +334,12 @@ private class PropertyReader(
                                 jvmName = setterSignature.name,
                                 name = JvmAbi.computeSetterName(name),
                                 descriptor = setterSignature.asString(),
-                                flags = 0,
-                                typeArguments = emptyList(),
+                                flags = setterFlags,
+                                typeParameters = emptyList(),
                                 parameters = listOf(param),
                                 returnType = KM_VOID_TYPE,
-                                receiverType = null
+                                receiverType = null,
+                                isPropertyFunction = true
                             )
                         },
                         getter = getter?.let { getterSignature ->
@@ -327,11 +347,12 @@ private class PropertyReader(
                                 jvmName = getterSignature.name,
                                 name = JvmAbi.computeGetterName(name),
                                 descriptor = getterSignature.asString(),
-                                flags = flags,
-                                typeArguments = emptyList(),
+                                flags = getterFlags,
+                                typeParameters = emptyList(),
                                 parameters = emptyList(),
                                 returnType = returnType,
-                                receiverType = null
+                                receiverType = null,
+                                isPropertyFunction = true
                             )
                         }
                     )
@@ -485,12 +506,10 @@ internal class ClassAsKmTypeReader(
             KmClassTypeInfo(
                 kmType = KmType(
                     flags = flags,
-                    typeArguments = typeParameters.map {
-                        it.asKmType()
-                    },
-                    extendsBound = null,
+                    typeArguments = typeParameters.map(KmTypeParameter::asKmType),
                     isExtensionType = false
                 ),
+                typeParameters = typeParameters,
                 superType = superType
             )
         )
@@ -502,20 +521,20 @@ private class TypeParameterReader(
     private val flags: Flags,
     private val output: (KmTypeParameter) -> Unit
 ) : KmTypeParameterVisitor() {
-    private var upperBound: KmType? = null
+    private var upperBounds: MutableList<KmType> = mutableListOf()
     override fun visitEnd() {
         output(
             KmTypeParameter(
                 name = name,
                 flags = flags,
-                extendsBound = upperBound
+                upperBounds = upperBounds
             )
         )
     }
 
     override fun visitUpperBound(flags: Flags): KmTypeVisitor {
         return TypeReader(flags) {
-            upperBound = it
+            upperBounds.add(it)
         }
     }
 }

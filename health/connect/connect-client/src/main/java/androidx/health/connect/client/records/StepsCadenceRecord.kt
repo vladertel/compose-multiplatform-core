@@ -36,7 +36,7 @@ class StepsCadenceRecord(
 ) : SeriesRecord<StepsCadenceRecord.Sample> {
 
     init {
-        require(startTime.isBefore(endTime)) { "startTime must be before endTime." }
+        require(!startTime.isAfter(endTime)) { "startTime must not be after endTime." }
     }
 
     /*
@@ -105,6 +105,7 @@ class StepsCadenceRecord(
 
         init {
             requireNonNegative(value = rate, name = "rate")
+            rate.requireNotMore(other = 10_000.0, name = "rate")
         }
 
         /*

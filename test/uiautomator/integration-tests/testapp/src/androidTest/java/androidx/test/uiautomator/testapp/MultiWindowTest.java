@@ -36,9 +36,11 @@ import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.BySelector;
+import androidx.test.uiautomator.Configurator;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -48,16 +50,35 @@ import java.util.List;
 @LargeTest
 public class MultiWindowTest extends BaseTest {
 
-    private static final long TIMEOUT_MS = 30_000;
-    private static final long DELAY_MS = 5_000;
+    private static final long LONG_TIMEOUT_MS = 30_000;
+    private static final long SHORT_TIMEOUT_MS = 5_000;
+    private static final long TRANSITION_DELAY_MS = 5_000;
+
+    private static final BySelector STATUS_BAR = By.res("com.android.systemui", "status_bar");
 
     @Test
     @SdkSuppress(minSdkVersion = 21)
     public void testMultiWindow_statusBar() {
         // Can locate objects outside of current context.
-        assertTrue(mDevice.hasObject(By.res("com.android.systemui", "status_bar")));
+        assertTrue(mDevice.hasObject(STATUS_BAR));
     }
 
+    @Ignore // b/260647289
+    @Test
+    @SdkSuppress(minSdkVersion = 21)
+    public void testMultiWindow_reconnected() {
+        Configurator configurator = Configurator.getInstance();
+        int initialFlags = configurator.getUiAutomationFlags();
+        // Update the UiAutomation flags to force the underlying connection to be recreated.
+        configurator.setUiAutomationFlags(5);
+        try {
+            assertTrue(mDevice.wait(Until.hasObject(STATUS_BAR), SHORT_TIMEOUT_MS));
+        } finally {
+            configurator.setUiAutomationFlags(initialFlags);
+        }
+    }
+
+    @Ignore // b/264940470
     @Test
     @SdkSuppress(minSdkVersion = 24)
     public void testMultiWindow_pictureInPicture() {
@@ -68,17 +89,17 @@ public class MultiWindowTest extends BaseTest {
         launchTestActivity(PictureInPictureTestActivity.class);
         assertTrue(mDevice.hasObject(defaultMode));
         mDevice.pressHome();
-        SystemClock.sleep(DELAY_MS); // Wait for the PiP window to settle.
+        SystemClock.sleep(TRANSITION_DELAY_MS); // Wait for the PiP window to settle.
         int width = mDevice.getDisplayWidth();
         int height = mDevice.getDisplayHeight();
         Rect bottomHalf = new Rect(0, height / 2, width, height);
-        UiObject2 pipWindow = mDevice.wait(Until.findObject(pipMode), TIMEOUT_MS);
+        UiObject2 pipWindow = mDevice.wait(Until.findObject(pipMode), LONG_TIMEOUT_MS);
         assertNotNull("Timed out waiting for PiP window", pipWindow);
         assertTrue(bottomHalf.contains(pipWindow.getVisibleBounds()));
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 31)
+    @SdkSuppress(minSdkVersion = 31, maxSdkVersion = 33) // b/262909049: Failing on SDK 34
     public void testMultiWindow_splitScreen() {
         // Launch two split-screen activities with different IDs.
         launchTestActivity(SplitScreenTestActivity.class,
@@ -88,7 +109,7 @@ public class MultiWindowTest extends BaseTest {
         launchTestActivity(SplitScreenTestActivity.class,
                 new Intent().setFlags(FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_LAUNCH_ADJACENT
                         | FLAG_ACTIVITY_MULTIPLE_TASK).putExtra(WINDOW_ID, "second"));
-        SystemClock.sleep(DELAY_MS); // Wait for the windows to settle.
+        SystemClock.sleep(TRANSITION_DELAY_MS); // Wait for the windows to settle.
 
         // Both split screen windows are present and searchable.
         UiObject2 firstWindow = mDevice.findObject(By.res(TEST_APP, "window_id").text("first"));
@@ -107,7 +128,7 @@ public class MultiWindowTest extends BaseTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 31)
+    @SdkSuppress(minSdkVersion = 31, maxSdkVersion = 33) // b/262909049: Failing on SDK 34
     public void testMultiWindow_click() {
         // Launch two split-screen activities with buttons.
         launchTestActivity(UiDeviceTestClickActivity.class);
@@ -116,7 +137,7 @@ public class MultiWindowTest extends BaseTest {
         launchTestActivity(UiDeviceTestClickActivity.class,
                 new Intent().setFlags(FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_LAUNCH_ADJACENT
                         | FLAG_ACTIVITY_MULTIPLE_TASK));
-        SystemClock.sleep(DELAY_MS); // Wait for the windows to settle.
+        SystemClock.sleep(TRANSITION_DELAY_MS); // Wait for the windows to settle.
 
         // Click a button in the middle of each activity.
         int width = mDevice.getDisplayWidth();

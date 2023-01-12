@@ -24,7 +24,7 @@ import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
 import org.junit.Test
 
-class ComposerParamTransformTests : ComposeIrTransformTest() {
+class ComposerParamTransformTests : AbstractIrTransformTest() {
     private fun composerParam(
         @Language("kotlin")
         source: String,
@@ -249,7 +249,7 @@ class ComposerParamTransformTests : ComposeIrTransformTest() {
                 traceEventEnd()
               }
               %composer.endRestartGroup()?.updateScope { %composer: Composer?, %force: Int ->
-                VarArgsFirst(*foo, %composer, %changed or 0b0001)
+                VarArgsFirst(*foo, %composer, updateChangedFlags(%changed or 0b0001))
               }
             }
             @Composable
@@ -271,7 +271,7 @@ class ComposerParamTransformTests : ComposeIrTransformTest() {
                 %composer.skipToGroupEnd()
               }
               %composer.endRestartGroup()?.updateScope { %composer: Composer?, %force: Int ->
-                VarArgsCaller(%composer, %changed or 0b0001)
+                VarArgsCaller(%composer, updateChangedFlags(%changed or 0b0001))
               }
             }
         """
@@ -379,7 +379,7 @@ class ComposerParamTransformTests : ComposeIrTransformTest() {
             @ComposableInferredTarget(scheme = "[0[0]]")
             fun Example(content: Function2<Composer, Int, Unit>, %composer: Composer?, %changed: Int) {
               %composer.startReplaceableGroup(<>)
-              sourceInformation(%composer, "C(Example)<conten...>:Test.kt#2487m")
+              sourceInformation(%composer, "CC(Example)<conten...>:Test.kt#2487m")
               content(%composer, 0b1110 and %changed)
               %composer.endReplaceableGroup()
             }
@@ -515,7 +515,7 @@ class ComposerParamTransformTests : ComposeIrTransformTest() {
                     %composer.skipToGroupEnd()
                   }
                   %composer.endRestartGroup()?.updateScope { %composer: Composer?, %force: Int ->
-                    Wrapper(block, %composer, %changed or 0b0001)
+                    Wrapper(block, %composer, updateChangedFlags(%changed or 0b0001))
                   }
                 }
                 @Composable
@@ -538,7 +538,7 @@ class ComposerParamTransformTests : ComposeIrTransformTest() {
                     %composer.skipToGroupEnd()
                   }
                   %composer.endRestartGroup()?.updateScope { %composer: Composer?, %force: Int ->
-                    Leaf(text, %composer, %changed or 0b0001)
+                    Leaf(text, %composer, updateChangedFlags(%changed or 0b0001))
                   }
                 }
                 @Composable
@@ -577,7 +577,7 @@ class ComposerParamTransformTests : ComposeIrTransformTest() {
                     %composer.skipToGroupEnd()
                   }
                   %composer.endRestartGroup()?.updateScope { %composer: Composer?, %force: Int ->
-                    Test(value, %composer, %changed or 0b0001)
+                    Test(value, %composer, updateChangedFlags(%changed or 0b0001))
                   }
                 }
             """,
@@ -680,14 +680,14 @@ class ComposerParamTransformTests : ComposeIrTransformTest() {
                     %composer.skipToGroupEnd()
                   }
                   %composer.endRestartGroup()?.updateScope { %composer: Composer?, %force: Int ->
-                    composeVector(composable, %composer, %changed or 0b0001)
+                    composeVector(composable, %composer, updateChangedFlags(%changed or 0b0001))
                   }
                 }
                 @Composable
                 @ComposableInferredTarget(scheme = "[0[0]]")
                 fun emit(composable: Function2<Composer, Int, Unit>, %composer: Composer?, %changed: Int) {
                   %composer.startReplaceableGroup(<>)
-                  sourceInformation(%composer, "C(emit)<compos...>:Test.kt#2487m")
+                  sourceInformation(%composer, "CC(emit)<compos...>:Test.kt#2487m")
                   composable(%composer, 0b1110 and %changed)
                   %composer.endReplaceableGroup()
                 }

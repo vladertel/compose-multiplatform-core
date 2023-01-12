@@ -171,7 +171,7 @@ constructor(
     public open operator fun <T : ViewModel> get(key: String, modelClass: Class<T>): T {
         val viewModel = store[key]
         if (modelClass.isInstance(viewModel)) {
-            (factory as? OnRequeryFactory)?.onRequery(viewModel)
+            (factory as? OnRequeryFactory)?.onRequery(viewModel!!)
             return viewModel as T
         } else {
             @Suppress("ControlFlowWithEmptyBody")
@@ -199,7 +199,9 @@ constructor(
         @Suppress("DocumentExceptions")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return try {
-                modelClass.newInstance()
+                modelClass.getDeclaredConstructor().newInstance()
+            } catch (e: NoSuchMethodException) {
+                throw RuntimeException("Cannot create an instance of $modelClass", e)
             } catch (e: InstantiationException) {
                 throw RuntimeException("Cannot create an instance of $modelClass", e)
             } catch (e: IllegalAccessException) {
