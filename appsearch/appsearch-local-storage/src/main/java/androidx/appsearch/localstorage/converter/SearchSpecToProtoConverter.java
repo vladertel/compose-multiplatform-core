@@ -35,12 +35,14 @@ import androidx.collection.ArrayMap;
 import androidx.collection.ArraySet;
 import androidx.core.util.Preconditions;
 
+import com.google.android.icing.proto.PropertyWeight;
 import com.google.android.icing.proto.ResultSpecProto;
 import com.google.android.icing.proto.SchemaTypeConfigProto;
 import com.google.android.icing.proto.ScoringSpecProto;
 import com.google.android.icing.proto.SearchSpecProto;
 import com.google.android.icing.proto.TermMatchType;
 import com.google.android.icing.proto.TypePropertyMask;
+import com.google.android.icing.proto.TypePropertyWeights;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -187,18 +189,29 @@ public final class SearchSpecToProtoConverter {
 
         // Rewrites the typePropertyMasks that exist in {@code prefixes}.
         int groupingType = mSearchSpec.getResultGroupingTypeFlags();
-        if ((groupingType & SearchSpec.GROUPING_TYPE_PER_PACKAGE) != 0
-                && (groupingType & SearchSpec.GROUPING_TYPE_PER_NAMESPACE) != 0) {
-            addPerPackagePerNamespaceResultGroupings(mPrefixes,
-                    mSearchSpec.getResultGroupingLimit(),
-                    namespaceMap, resultSpecBuilder);
-        } else if ((groupingType & SearchSpec.GROUPING_TYPE_PER_PACKAGE) != 0) {
-            addPerPackageResultGroupings(mPrefixes, mSearchSpec.getResultGroupingLimit(),
-                    namespaceMap, resultSpecBuilder);
-        } else if ((groupingType & SearchSpec.GROUPING_TYPE_PER_NAMESPACE) != 0) {
-            addPerNamespaceResultGroupings(mPrefixes, mSearchSpec.getResultGroupingLimit(),
-                    namespaceMap, resultSpecBuilder);
+        ResultSpecProto.ResultGroupingType resultGroupingType =
+                ResultSpecProto.ResultGroupingType.NONE;
+        switch (groupingType) {
+            case SearchSpec.GROUPING_TYPE_PER_PACKAGE :
+                addPerPackageResultGroupings(mPrefixes, mSearchSpec.getResultGroupingLimit(),
+                        namespaceMap, resultSpecBuilder);
+                resultGroupingType = ResultSpecProto.ResultGroupingType.NAMESPACE;
+                break;
+            case SearchSpec.GROUPING_TYPE_PER_NAMESPACE:
+                addPerNamespaceResultGroupings(mPrefixes, mSearchSpec.getResultGroupingLimit(),
+                        namespaceMap, resultSpecBuilder);
+                resultGroupingType = ResultSpecProto.ResultGroupingType.NAMESPACE;
+                break;
+            case SearchSpec.GROUPING_TYPE_PER_PACKAGE | SearchSpec.GROUPING_TYPE_PER_NAMESPACE:
+                addPerPackagePerNamespaceResultGroupings(mPrefixes,
+                        mSearchSpec.getResultGroupingLimit(),
+                        namespaceMap, resultSpecBuilder);
+                resultGroupingType = ResultSpecProto.ResultGroupingType.NAMESPACE;
+                break;
+            default:
+                break;
         }
+        resultSpecBuilder.setResultGroupType(resultGroupingType);
 
         List<TypePropertyMask.Builder> typePropertyMaskBuilders =
                 TypePropertyPathToProtoConverter
@@ -236,6 +249,10 @@ public final class SearchSpecToProtoConverter {
         protoBuilder.setOrderBy(orderCodeProto).setRankBy(
                 toProtoRankingStrategy(mSearchSpec.getRankingStrategy()));
 
+        addTypePropertyWeights(mSearchSpec.getPropertyWeights(), protoBuilder);
+
+        protoBuilder.setAdvancedScoringExpression(mSearchSpec.getAdvancedRankingExpression());
+
         return protoBuilder.build();
     }
 
@@ -258,12 +275,13 @@ public final class SearchSpecToProtoConverter {
                 return ScoringSpecProto.RankingStrategy.Code.USAGE_TYPE2_COUNT;
             case SearchSpec.RANKING_STRATEGY_SYSTEM_USAGE_LAST_USED_TIMESTAMP:
                 return ScoringSpecProto.RankingStrategy.Code.USAGE_TYPE2_LAST_USED_TIMESTAMP;
+            case SearchSpec.RANKING_STRATEGY_ADVANCED_RANKING_EXPRESSION:
+                return ScoringSpecProto.RankingStrategy.Code.ADVANCED_SCORING_EXPRESSION;
             default:
                 throw new IllegalArgumentException("Invalid result ranking strategy: "
                         + rankingStrategyCode);
         }
     }
-
 
     /**
      * Adds result groupings for each namespace in each package being queried for.
@@ -312,10 +330,17 @@ public final class SearchSpecToProtoConverter {
             }
         }
 
-        for (List<String> namespaces : packageAndNamespaceToNamespaces.values()) {
+        for (List<String> prefixedNamespaces : packageAndNamespaceToNamespaces.values()) {
+            List<ResultSpecProto.ResultGrouping.Entry> entries =
+                    new ArrayList<>(prefixedNamespaces.size());
+            for (String namespace : prefixedNamespaces) {
+                entries.add(
+                        ResultSpecProto.ResultGrouping.Entry.newBuilder()
+                                .setNamespace(namespace).build());
+            }
             resultSpecBuilder.addResultGroupings(
                     ResultSpecProto.ResultGrouping.newBuilder()
-                            .addAllNamespaces(namespaces).setMaxResults(maxNumResults));
+                            .addAllEntryGroupings(entries).setMaxResults(maxNumResults));
         }
     }
 
@@ -349,9 +374,16 @@ public final class SearchSpecToProtoConverter {
         }
 
         for (List<String> prefixedNamespaces : packageToNamespacesMap.values()) {
+            List<ResultSpecProto.ResultGrouping.Entry> entries =
+                    new ArrayList<>(prefixedNamespaces.size());
+            for (String namespace : prefixedNamespaces) {
+                entries.add(
+                        ResultSpecProto.ResultGrouping.Entry.newBuilder()
+                                .setNamespace(namespace).build());
+            }
             resultSpecBuilder.addResultGroupings(
                     ResultSpecProto.ResultGrouping.newBuilder()
-                            .addAllNamespaces(prefixedNamespaces).setMaxResults(maxNumResults));
+                            .addAllEntryGroupings(entries).setMaxResults(maxNumResults));
         }
     }
 
@@ -397,10 +429,55 @@ public final class SearchSpecToProtoConverter {
             }
         }
 
-        for (List<String> namespaces : namespaceToPrefixedNamespaces.values()) {
+        for (List<String> prefixedNamespaces : namespaceToPrefixedNamespaces.values()) {
+            List<ResultSpecProto.ResultGrouping.Entry> entries =
+                    new ArrayList<>(prefixedNamespaces.size());
+            for (String namespace : prefixedNamespaces) {
+                entries.add(
+                        ResultSpecProto.ResultGrouping.Entry.newBuilder()
+                                .setNamespace(namespace).build());
+            }
             resultSpecBuilder.addResultGroupings(
                     ResultSpecProto.ResultGrouping.newBuilder()
-                            .addAllNamespaces(namespaces).setMaxResults(maxNumResults));
+                            .addAllEntryGroupings(entries).setMaxResults(maxNumResults));
+        }
+    }
+
+    /**
+     * Adds {@link TypePropertyWeights} to {@link ScoringSpecProto}.
+     *
+     * <p>{@link TypePropertyWeights} are added to the {@link ScoringSpecProto} with database and
+     * package prefixing added to the schema type.
+     *
+     * @param typePropertyWeightsMap a map from unprefixed schema type to an inner-map of property
+     *                               paths to weight.
+     * @param scoringSpecBuilder     scoring spec to add weights to.
+     */
+    private void addTypePropertyWeights(
+            @NonNull Map<String, Map<String, Double>> typePropertyWeightsMap,
+            @NonNull ScoringSpecProto.Builder scoringSpecBuilder) {
+        Preconditions.checkNotNull(scoringSpecBuilder);
+        Preconditions.checkNotNull(typePropertyWeightsMap);
+
+        for (Map.Entry<String, Map<String, Double>> typePropertyWeight :
+                typePropertyWeightsMap.entrySet()) {
+            for (String prefix : mPrefixes) {
+                String prefixedSchemaType = prefix + typePropertyWeight.getKey();
+                if (mTargetPrefixedSchemaFilters.contains(prefixedSchemaType)) {
+                    TypePropertyWeights.Builder typePropertyWeightsBuilder =
+                            TypePropertyWeights.newBuilder().setSchemaType(prefixedSchemaType);
+
+                    for (Map.Entry<String, Double> propertyWeight :
+                            typePropertyWeight.getValue().entrySet()) {
+                        typePropertyWeightsBuilder.addPropertyWeights(
+                                PropertyWeight.newBuilder().setPath(
+                                        propertyWeight.getKey()).setWeight(
+                                        propertyWeight.getValue()));
+                    }
+
+                    scoringSpecBuilder.addTypePropertyWeights(typePropertyWeightsBuilder);
+                }
+            }
         }
     }
 }

@@ -226,6 +226,7 @@ public class WindowInsetsControllerCompatActivityTest {
         testShow(WindowInsetsCompat.Type.statusBars())
     }
 
+    @Ignore // b/244445899
     @Test
     public fun toggle_NavBar() {
         testHide(WindowInsetsCompat.Type.navigationBars())
@@ -449,11 +450,11 @@ public class WindowInsetsControllerCompatActivityTest {
         try {
             thread {
                 while (loop) {
-                    val rootWindowInsets = scenario.withActivity {
-                        ViewCompat
-                            .getRootWindowInsets(this@assertInsetsVisibility)!!
+                    var rootWindowInsets: WindowInsetsCompat? = null
+                    scenario.onActivity {
+                        rootWindowInsets = ViewCompat.getRootWindowInsets(this)
                     }
-                    lastVisibility = rootWindowInsets.isVisible(type)
+                    lastVisibility = rootWindowInsets?.isVisible(type)
                     if (lastVisibility == expectedVisibility) {
                         latch.countDown()
                     }

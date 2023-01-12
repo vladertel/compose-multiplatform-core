@@ -19,6 +19,7 @@ package androidx.health.connect.client.records
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import java.time.Instant
+import kotlin.reflect.typeOf
 import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,20 +31,20 @@ class SleepStageRecordTest {
     fun validRecord_equals() {
         assertThat(
                 SleepStageRecord(
-                    SleepStageRecord.StageType.AWAKE,
-                    Instant.ofEpochMilli(1234L),
-                    null,
-                    Instant.ofEpochMilli(1236L),
-                    null,
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1236L),
+                    endZoneOffset = null,
+                    stage = SleepStageRecord.STAGE_TYPE_AWAKE,
                 )
             )
             .isEqualTo(
                 SleepStageRecord(
-                    SleepStageRecord.StageType.AWAKE,
-                    Instant.ofEpochMilli(1234L),
-                    null,
-                    Instant.ofEpochMilli(1236L),
-                    null,
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1236L),
+                    endZoneOffset = null,
+                    stage = SleepStageRecord.STAGE_TYPE_AWAKE,
                 )
             )
     }
@@ -52,12 +53,29 @@ class SleepStageRecordTest {
     fun invalidTimes_throws() {
         assertFailsWith<IllegalArgumentException> {
             SleepStageRecord(
-                SleepStageRecord.StageType.AWAKE,
-                Instant.ofEpochMilli(1234L),
-                null,
-                Instant.ofEpochMilli(1234L),
-                null,
+                startTime = Instant.ofEpochMilli(1234L),
+                startZoneOffset = null,
+                endTime = Instant.ofEpochMilli(1234L),
+                endZoneOffset = null,
+                stage = SleepStageRecord.STAGE_TYPE_AWAKE,
             )
         }
+    }
+
+    @Test
+    fun allSleepStageRecord_hasMapping() {
+        val allEnums =
+            SleepStageRecord.Companion::class
+                .members
+                .asSequence()
+                .filter { it -> it.name.startsWith("STAGE_TYPE") }
+                .filter { it -> it.returnType == typeOf<Int>() }
+                .map { it -> it.call(ExerciseSessionRecord.Companion) }
+                .toHashSet()
+
+        assertThat(SleepStageRecord.STAGE_TYPE_STRING_TO_INT_MAP.values)
+            .containsExactlyElementsIn(allEnums)
+        assertThat(SleepStageRecord.STAGE_TYPE_INT_TO_STRING_MAP.keys)
+            .containsExactlyElementsIn(allEnums)
     }
 }

@@ -26,12 +26,12 @@ import androidx.camera.camera2.pipe.CameraSurfaceManager
 import androidx.camera.camera2.pipe.StreamId
 import androidx.camera.camera2.pipe.core.Debug
 import androidx.camera.camera2.pipe.core.Log
+import androidx.camera.camera2.pipe.core.TimeSource
 import androidx.camera.camera2.pipe.core.TimestampNs
 import androidx.camera.camera2.pipe.core.Timestamps
 import androidx.camera.camera2.pipe.core.Timestamps.formatMs
 import androidx.camera.camera2.pipe.graph.GraphListener
 import androidx.camera.camera2.pipe.graph.GraphRequestProcessor
-import java.io.Closeable
 import java.util.Collections.synchronizedMap
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineScope
@@ -56,11 +56,13 @@ internal val captureSessionDebugIds = atomic(0)
  *
  * This class is thread safe.
  */
+@RequiresApi(21)
 internal class CaptureSessionState(
     private val graphListener: GraphListener,
     private val captureSessionFactory: CaptureSessionFactory,
     private val captureSequenceProcessorFactory: Camera2CaptureSequenceProcessorFactory,
     private val cameraSurfaceManager: CameraSurfaceManager,
+    private val timeSource: TimeSource,
     private val scope: CoroutineScope
 ) : CameraCaptureSessionWrapper.StateCallback {
     private val debugId = captureSessionDebugIds.incrementAndGet()
@@ -109,7 +111,7 @@ internal class CaptureSessionState(
     private var _surfaceMap: Map<StreamId, Surface>? = null
 
     @GuardedBy("lock")
-    private val _surfaceTokenMap: MutableMap<Surface, Closeable> = mutableMapOf()
+    private val _surfaceTokenMap: MutableMap<Surface, AutoCloseable> = mutableMapOf()
     fun configureSurfaceMap(surfaces: Map<StreamId, Surface>) {
         synchronized(lock) {
             if (state == State.CLOSING || state == State.CLOSED) {
@@ -223,7 +225,7 @@ internal class CaptureSessionState(
         synchronized(lock) {
             captureSession?.let {
                 Log.info {
-                    val duration = Timestamps.now() - sessionCreatingTimestamp!!
+                    val duration = Timestamps.now(timeSource) - sessionCreatingTimestamp!!
                     "Configured $this in ${duration.formatMs()}"
                 }
 
@@ -288,9 +290,18 @@ internal class CaptureSessionState(
             Debug.traceStop()
         }
 
+        var shouldFinalizeSession: Boolean
         synchronized(lock) {
+            // If the CameraDevice is never opened, the session will never be created. For cleanup
+            // reasons, make sure the session is finalized after shutdown if the cameraDevice was
+            // never set.
+            shouldFinalizeSession = _cameraDevice == null
             _cameraDevice = null
             state = State.CLOSED
+        }
+
+        if (shouldFinalizeSession) {
+            finalizeSession()
         }
     }
 
@@ -315,7 +326,7 @@ internal class CaptureSessionState(
 
         if (captureSession != null && pendingOutputs != null && pendingSurfaces != null) {
             Debug.traceStart { "$this#finalizeOutputConfigurations" }
-            val finalizedStartTime = Timestamps.now()
+            val finalizedStartTime = Timestamps.now(timeSource)
             for ((streamId, outputConfig) in pendingOutputs) {
                 // TODO: Consider adding support for experimental libraries on older devices.
 
@@ -334,7 +345,7 @@ internal class CaptureSessionState(
                 if (state == State.CREATED) {
                     activeSurfaceMap.putAll(pendingSurfaces)
                     Log.info {
-                        val finalizationTime = Timestamps.now() - finalizedStartTime
+                        val finalizationTime = Timestamps.now(timeSource) - finalizedStartTime
                         "Finalized ${pendingOutputs.map { it.key }} for $this in " +
                             finalizationTime.formatMs()
                     }
@@ -364,7 +375,7 @@ internal class CaptureSessionState(
             }
 
             state = State.CREATING
-            sessionCreatingTimestamp = Timestamps.now()
+            sessionCreatingTimestamp = Timestamps.now(timeSource)
         }
 
         // Create the capture session and return a Map of StreamId -> OutputConfiguration for any

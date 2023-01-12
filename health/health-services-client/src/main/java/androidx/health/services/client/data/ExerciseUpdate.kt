@@ -17,8 +17,8 @@
 package androidx.health.services.client.data
 
 import androidx.health.services.client.proto.DataProto.ExerciseUpdate.LatestMetricsEntry as LatestMetricsEntryProto
-import android.os.Parcelable
 import androidx.annotation.RestrictTo
+import androidx.annotation.RestrictTo.Scope
 import androidx.health.services.client.data.ExerciseEndReason.Companion.toProto
 import androidx.health.services.client.data.ExerciseUpdate.ActiveDurationCheckpoint
 import androidx.health.services.client.proto.DataProto
@@ -28,16 +28,7 @@ import java.time.Instant
 
 /** Contains the latest updated state and metrics for the current exercise. */
 @Suppress("ParcelCreator")
-public class ExerciseUpdate(
-    /**
-     * Returns the time at which the exercise was started or `null` if the exercise is in prepare
-     * phase and hasn't started yet.
-     */
-    public val startTime: Instant?,
-
-    /** The duration since boot when this ExerciseUpdate was created. */
-    private val updateDurationFromBoot: Duration?,
-
+public class ExerciseUpdate internal constructor(
     /** Returns the list of the latest [DataPoint]s. */
     public val latestMetrics: DataPointContainer,
 
@@ -52,10 +43,16 @@ public class ExerciseUpdate(
     public val latestMilestoneMarkerSummaries: Set<MilestoneMarkerSummary>,
 
     /**
+     * Returns the [ExerciseStateInfo] containing the current [ExerciseState] and
+     * [ExerciseEndReason], if applicable.
+     */
+    public val exerciseStateInfo: ExerciseStateInfo,
+
+    /**
      * Returns the [ExerciseConfig] used by the exercise when the [ExerciseUpdate] was dispatched
      * and returns `null` if the exercise is in prepare phase and hasn't been started yet.
      */
-    public val exerciseConfig: ExerciseConfig?,
+    public val exerciseConfig: ExerciseConfig? = null,
 
     /**
      * Returns the [ActiveDurationCheckpoint] which can be used to determine the active duration of
@@ -63,39 +60,42 @@ public class ExerciseUpdate(
      * application timers against this to ensure their view of the active duration matches the view
      * of Health Services.
      */
-    public val activeDurationCheckpoint: ActiveDurationCheckpoint?,
+    public val activeDurationCheckpoint: ActiveDurationCheckpoint? = null,
+
+    /** The duration since boot when this ExerciseUpdate was created. */
+    private val updateDurationFromBoot: Duration? = null,
 
     /**
-     * Returns the [ExerciseStateInfo] containing the current [ExerciseState] and
-     * [ExerciseEndReason], if applicable.
+     * Returns the time at which the exercise was started or `null` if the exercise is in prepare
+     * phase and hasn't started yet.
      */
-    public val exerciseStateInfo: ExerciseStateInfo,
-) : ProtoParcelable<DataProto.ExerciseUpdate>() {
+    public val startTime: Instant? = null,
+) {
     /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @RestrictTo(Scope.LIBRARY)
     public constructor(
         proto: DataProto.ExerciseUpdate
     ) : this(
-        if (proto.hasStartTimeEpochMs()) Instant.ofEpochMilli(proto.startTimeEpochMs) else null,
-        if (proto.hasUpdateDurationFromBootMs()) {
-            Duration.ofMillis(proto.updateDurationFromBootMs)
-        } else {
-            null
-        },
         exerciseUpdateProtoToDataPointContainer(proto),
         proto.latestAchievedGoalsList.map { ExerciseGoal.fromProto(it.exerciseGoal) }.toSet(),
         proto.mileStoneMarkerSummariesList.map { MilestoneMarkerSummary(it) }.toSet(),
+        ExerciseStateInfo(
+            ExerciseState.fromProto(proto.state)
+                ?: throw IllegalArgumentException("Invalid ExerciseState: ${proto.state}"),
+            ExerciseEndReason.fromProto(proto.exerciseEndReason)
+        ),
         if (proto.hasExerciseConfig()) ExerciseConfig(proto.exerciseConfig) else null,
         if (proto.hasActiveDurationCheckpoint()) {
             ActiveDurationCheckpoint.fromProto(proto.activeDurationCheckpoint)
         } else {
             null
         },
-        ExerciseStateInfo(
-            ExerciseState.fromProto(proto.state)
-                ?: throw IllegalStateException("Invalid ExerciseState: ${proto.state}"),
-            ExerciseEndReason.fromProto(proto.exerciseEndReason)
-        ),
+        if (proto.hasUpdateDurationFromBootMs()) {
+            Duration.ofMillis(proto.updateDurationFromBootMs)
+        } else {
+            null
+        },
+        if (proto.hasStartTimeEpochMs()) Instant.ofEpochMilli(proto.startTimeEpochMs) else null,
     )
 
     /**
@@ -124,7 +124,7 @@ public class ExerciseUpdate(
     ) {
 
         /** @hide */
-        @RestrictTo(RestrictTo.Scope.LIBRARY)
+        @RestrictTo(Scope.LIBRARY)
         internal fun toProto(): DataProto.ExerciseUpdate.ActiveDurationCheckpoint =
             DataProto.ExerciseUpdate.ActiveDurationCheckpoint.newBuilder()
                 .setTimeEpochMs(time.toEpochMilli())
@@ -154,7 +154,7 @@ public class ExerciseUpdate(
 
         internal companion object {
             /** @hide */
-            @RestrictTo(RestrictTo.Scope.LIBRARY)
+            @RestrictTo(Scope.LIBRARY)
             internal fun fromProto(
                 proto: DataProto.ExerciseUpdate.ActiveDurationCheckpoint
             ): ActiveDurationCheckpoint? =
@@ -165,8 +165,7 @@ public class ExerciseUpdate(
         }
     }
 
-    /** @hide */
-    override val proto: DataProto.ExerciseUpdate = getExerciseUpdateProto()
+    internal val proto: DataProto.ExerciseUpdate = getExerciseUpdateProto()
 
     private fun getExerciseUpdateProto(): DataProto.ExerciseUpdate {
         val builder =
@@ -326,12 +325,6 @@ public class ExerciseUpdate(
     }
 
     public companion object {
-        @JvmField
-        public val CREATOR: Parcelable.Creator<ExerciseUpdate> = newCreator { bytes ->
-            val proto = DataProto.ExerciseUpdate.parseFrom(bytes)
-            ExerciseUpdate(proto)
-        }
-
         internal fun exerciseUpdateProtoToDataPointContainer(
             proto: DataProto.ExerciseUpdate
         ): DataPointContainer {

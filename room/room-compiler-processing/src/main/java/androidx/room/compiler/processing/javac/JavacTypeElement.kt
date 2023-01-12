@@ -21,11 +21,9 @@ import androidx.room.compiler.codegen.XTypeName
 import androidx.room.compiler.processing.XEnumEntry
 import androidx.room.compiler.processing.XEnumTypeElement
 import androidx.room.compiler.processing.XFieldElement
-import androidx.room.compiler.processing.XHasModifiers
 import androidx.room.compiler.processing.XMemberContainer
 import androidx.room.compiler.processing.XMethodElement
 import androidx.room.compiler.processing.XNullability
-import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeElement
 import androidx.room.compiler.processing.XTypeParameterElement
 import androidx.room.compiler.processing.collectAllMethods
@@ -36,7 +34,6 @@ import androidx.room.compiler.processing.util.MemoizedSequence
 import com.google.auto.common.MoreElements
 import com.google.auto.common.MoreTypes
 import com.squareup.javapoet.ClassName
-import com.squareup.javapoet.TypeName
 import com.squareup.kotlinpoet.javapoet.JClassName
 import javax.lang.model.element.ElementKind
 import javax.lang.model.element.TypeElement
@@ -46,7 +43,7 @@ import javax.lang.model.util.ElementFilter
 internal sealed class JavacTypeElement(
     env: JavacProcessingEnv,
     override val element: TypeElement
-) : JavacElement(env, element), XTypeElement, XHasModifiers by JavacHasModifiers(element) {
+) : JavacElement(env, element), XTypeElement {
 
     override val name: String
         get() = element.simpleName.toString()
@@ -55,7 +52,7 @@ internal sealed class JavacTypeElement(
     override val packageName: String
         get() = MoreElements.getPackage(element).qualifiedName.toString()
 
-    val kotlinMetadata by lazy {
+    override val kotlinMetadata by lazy {
         KotlinMetadataElement.createFor(element)
     }
 
@@ -63,6 +60,13 @@ internal sealed class JavacTypeElement(
         element.qualifiedName.toString()
     }
 
+    @Deprecated(
+        "Use asClassName().toJavaPoet() to be clear the name is for JavaPoet.",
+        replaceWith = ReplaceWith(
+            "asClassName().toJavaPoet()",
+            "androidx.room.compiler.codegen.toJavaPoet"
+        )
+    )
     override val className: ClassName by lazy {
         xClassName.java
     }
@@ -82,8 +86,8 @@ internal sealed class JavacTypeElement(
 
     override val typeParameters: List<XTypeParameterElement> by lazy {
         element.typeParameters.mapIndexed { index, typeParameter ->
-            val typeArgument = kotlinMetadata?.kmType?.typeArguments?.get(index)
-            JavacTypeParameterElement(env, this, typeParameter, typeArgument)
+            val typeParameterMetadata = kotlinMetadata?.typeParameters?.get(index)
+            JavacTypeParameterElement(env, this, typeParameter, typeParameterMetadata)
         }
     }
 
@@ -193,17 +197,6 @@ internal sealed class JavacTypeElement(
             kotlinType = kotlinMetadata?.kmType,
             elementNullability = element.nullability
         )
-    }
-
-    override val superTypes: List<XType> by lazy {
-        buildList {
-            if (isInterface() && superInterfaces.isEmpty()) {
-                add(env.requireType(TypeName.OBJECT))
-            } else {
-                superClass?.let { add(it) }
-                addAll(superInterfaces)
-            }
-        }
     }
 
     override val superClass: JavacType? by lazy {

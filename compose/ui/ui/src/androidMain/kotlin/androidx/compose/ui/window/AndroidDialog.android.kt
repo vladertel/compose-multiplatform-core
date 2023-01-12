@@ -58,8 +58,9 @@ import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMaxBy
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.ViewTreeLifecycleOwner
 import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.findViewTreeSavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import java.util.UUID
@@ -83,18 +84,14 @@ import kotlin.math.roundToInt
  * set to `false` for Android [R][Build.VERSION_CODES.R] and earlier.
  */
 @Immutable
-class DialogProperties @ExperimentalComposeUiApi constructor(
+class DialogProperties constructor(
     val dismissOnBackPress: Boolean = true,
     val dismissOnClickOutside: Boolean = true,
     val securePolicy: SecureFlagPolicy = SecureFlagPolicy.Inherit,
     val usePlatformDefaultWidth: Boolean = true,
-    decorFitsSystemWindows: Boolean = true
+    val decorFitsSystemWindows: Boolean = true
 ) {
-    @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET", "CanBePrimaryConstructorProperty")
-    @get:ExperimentalComposeUiApi
-    @ExperimentalComposeUiApi
-    val decorFitsSystemWindows: Boolean = decorFitsSystemWindows
-    @OptIn(ExperimentalComposeUiApi::class)
+
     constructor(
         dismissOnBackPress: Boolean = true,
         dismissOnClickOutside: Boolean = true,
@@ -107,7 +104,6 @@ class DialogProperties @ExperimentalComposeUiApi constructor(
         decorFitsSystemWindows = true
     )
 
-    @OptIn(ExperimentalComposeUiApi::class)
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DialogProperties) return false
@@ -121,7 +117,6 @@ class DialogProperties @ExperimentalComposeUiApi constructor(
         return true
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     override fun hashCode(): Int {
         var result = dismissOnBackPress.hashCode()
         result = 31 * result + dismissOnClickOutside.hashCode()
@@ -141,7 +136,7 @@ class DialogProperties @ExperimentalComposeUiApi constructor(
  *
  * The dialog is visible as long as it is part of the composition hierarchy.
  * In order to let the user dismiss the Dialog, the implementation of [onDismissRequest] should
- * contain a way to remove to remove the dialog from the composition hierarchy.
+ * contain a way to remove the dialog from the composition hierarchy.
  *
  * Example usage:
  *
@@ -286,7 +281,8 @@ private class DialogWrapper(
      * [Window.setClipToOutline] is only available from 22+, but the style attribute exists on 21.
      * So use a wrapped context that sets this attribute for compatibility back to 21.
      */
-    ContextThemeWrapper(composeView.context,
+    ContextThemeWrapper(
+        composeView.context,
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || properties.decorFitsSystemWindows) {
             R.style.DialogWindowTheme
         } else {
@@ -352,7 +348,7 @@ private class DialogWrapper(
         // Turn of all clipping so shadows can be drawn outside the window
         (window.decorView as? ViewGroup)?.disableClipping()
         setContentView(dialogLayout)
-        ViewTreeLifecycleOwner.set(dialogLayout, ViewTreeLifecycleOwner.get(composeView))
+        dialogLayout.setViewTreeLifecycleOwner(composeView.findViewTreeLifecycleOwner())
         ViewTreeViewModelStoreOwner.set(dialogLayout, ViewTreeViewModelStoreOwner.get(composeView))
         dialogLayout.setViewTreeSavedStateRegistryOwner(
             composeView.findViewTreeSavedStateRegistryOwner()

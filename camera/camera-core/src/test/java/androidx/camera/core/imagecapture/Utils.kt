@@ -29,6 +29,7 @@ import androidx.camera.core.impl.CaptureBundle
 import androidx.camera.core.impl.ImageCaptureConfig
 import androidx.camera.core.impl.ImageInputConfig
 import androidx.camera.core.impl.TagBundle
+import androidx.camera.core.impl.utils.futures.Futures
 import androidx.camera.core.internal.CameraCaptureResultImageInfo
 import androidx.camera.testing.fakes.FakeCameraCaptureResult
 import androidx.camera.testing.fakes.FakeCaptureStage
@@ -51,6 +52,7 @@ object Utils {
     internal const val TIMESTAMP = 9999L
     internal val SENSOR_TO_BUFFER = Matrix().also { it.setScale(-1F, 1F, 320F, 240F) }
     internal val SIZE = Size(WIDTH, HEIGHT)
+    // The crop rect is the lower half of the image.
     internal val CROP_RECT = Rect(0, 240, WIDTH, HEIGHT)
     internal val FULL_RECT = Rect(0, 0, WIDTH, HEIGHT)
     internal val TEMP_FILE = File.createTempFile(
@@ -73,7 +75,8 @@ object Utils {
             ROTATION_DEGREES,
             /*jpegQuality=*/100,
             SENSOR_TO_BUFFER,
-            takePictureCallback
+            takePictureCallback,
+            Futures.immediateFuture(null)
         )
     }
 

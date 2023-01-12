@@ -42,7 +42,8 @@ internal object DokkaInputModels {
         val moduleName: String,
         val pluginsClasspath: FileCollection,
         val modules: List<Module>,
-        val pluginsConfiguration: List<PluginsConfiguration>
+        val pluginsConfiguration: List<PluginsConfiguration>,
+        val includes: Set<File>
     )
 
     class Module(
@@ -82,6 +83,12 @@ internal object DokkaInputModels {
         @get:InputFiles
         @PathSensitive(PathSensitivity.RELATIVE)
         val sourceRoots: FileCollection,
+        @get:InputFiles
+        @PathSensitive(PathSensitivity.RELATIVE)
+        val samples: FileCollection,
+        @get:InputFiles
+        @PathSensitive(PathSensitivity.RELATIVE)
+        val includes: FileCollection,
         @get:Input
         val analysisPlatform: String,
         @get:Input
@@ -162,7 +169,7 @@ internal object DokkaInputModels {
             /**
              * File name used when this is serialized into a gradle artifact.
              */
-            val FILE_NAME = "androidXPartialDocsMetadata.json"
+            const val FILE_NAME = "androidXPartialDocsMetadata.json"
         }
     }
 }

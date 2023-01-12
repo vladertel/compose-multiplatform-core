@@ -25,6 +25,7 @@ import androidx.annotation.RestrictTo
 import androidx.annotation.UiThread
 import androidx.wear.watchface.complications.SystemDataSources.DataSourceId
 import androidx.wear.watchface.style.data.UserStyleWireFormat
+import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -124,15 +125,13 @@ public interface WatchFaceHostApi {
     @UiThread
     public fun invalidate()
 
+    public fun postInvalidate(delay: Duration = Duration.ZERO)
+
     /** Intent to launch the complication permission denied activity. */
     public fun getComplicationDeniedIntent(): Intent?
 
     /** Intent to launch the complication permission rationale activity. */
     public fun getComplicationRationaleIntent(): Intent?
-
-    /** Schedules a call to serialize [ComplicationSlotsManager]'s [ComplicationData]. */
-    @UiThread
-    public fun scheduleWriteComplicationDataCache()
 
     /**
      * Sent by the system at the top of the minute. This may trigger rendering if SysUI hasn't sent

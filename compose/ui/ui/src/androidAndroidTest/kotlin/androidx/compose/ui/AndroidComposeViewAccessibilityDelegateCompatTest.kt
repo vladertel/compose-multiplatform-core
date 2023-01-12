@@ -66,6 +66,7 @@ import androidx.compose.ui.semantics.horizontalScrollAxisRange
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.password
 import androidx.compose.ui.semantics.pasteText
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.role
@@ -344,6 +345,30 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
                 AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_SCROLL_RIGHT
             )
         )
+        assertFalse(
+            containsAction(
+                info,
+                AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_PAGE_UP
+            )
+        )
+        assertFalse(
+            containsAction(
+                info,
+                AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_PAGE_DOWN
+            )
+        )
+        assertFalse(
+            containsAction(
+                info,
+                AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_PAGE_LEFT
+            )
+        )
+        assertFalse(
+            containsAction(
+                info,
+                AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_PAGE_RIGHT
+            )
+        )
     }
 
     @Test
@@ -361,7 +386,16 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
             role = Role.Switch
         }
         accessibilityDelegate.populateAccessibilityNodeInfoProperties(1, info, semanticsNode)
-        assertEquals("android.widget.Switch", info.className)
+        assertEquals("android.view.View", info.className)
+    }
+
+    @Test
+    fun testPopulateAccessibilityNodeInfoProperties_switchRoleDescription() {
+        val semanticsNode = createSemanticsNodeWithProperties(1, true) {
+            role = Role.Switch
+        }
+        accessibilityDelegate.populateAccessibilityNodeInfoProperties(1, info, semanticsNode)
+        assertEquals("Switch", info.roleDescription)
     }
 
     @Test
@@ -1261,6 +1295,124 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
                 position = Offset(100f, 100f)
             )
         )
+    }
+
+    @Test
+    fun passwordVisibilityToggle_fromInvisibleToVisible_doNotSendTextChangeEvent() {
+        sendTextSemanticsChangeEvent(oldNodePassword = true, newNodePassword = false)
+
+        verify(container, never()).requestSendAccessibilityEvent(
+            eq(androidComposeView),
+            argThat(
+                ArgumentMatcher {
+                    it.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+                }
+            )
+        )
+    }
+
+    @Test
+    fun passwordVisibilityToggle_fromVisibleToInvisible_doNotSendTextChangeEvent() {
+        sendTextSemanticsChangeEvent(oldNodePassword = false, newNodePassword = true)
+
+        verify(container, never()).requestSendAccessibilityEvent(
+            eq(androidComposeView),
+            argThat(
+                ArgumentMatcher {
+                    it.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+                }
+            )
+        )
+    }
+
+    @Test
+    fun passwordVisibilityToggle_fromInvisibleToVisible_sendTwoSelectionEvents() {
+        sendTextSemanticsChangeEvent(oldNodePassword = true, newNodePassword = false)
+
+        verify(container, times(2)).requestSendAccessibilityEvent(
+            eq(androidComposeView),
+            argThat(
+                ArgumentMatcher {
+                    it.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED
+                }
+            )
+        )
+    }
+
+    @Test
+    fun passwordVisibilityToggle_fromVisibleToInvisible_sendTwoSelectionEvents() {
+        sendTextSemanticsChangeEvent(oldNodePassword = false, newNodePassword = true)
+
+        verify(container, times(2)).requestSendAccessibilityEvent(
+            eq(androidComposeView),
+            argThat(
+                ArgumentMatcher {
+                    it.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED
+                }
+            )
+        )
+    }
+
+    @Test
+    fun textChanged_sendTextChangeEvent() {
+        sendTextSemanticsChangeEvent(oldNodePassword = false, newNodePassword = false)
+
+        verify(container, times(1)).requestSendAccessibilityEvent(
+            eq(androidComposeView),
+            argThat(
+                ArgumentMatcher {
+                    it.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+                }
+            )
+        )
+    }
+
+    @Test
+    fun textChanged_passwordNode_sendTextChangeEvent() {
+        sendTextSemanticsChangeEvent(oldNodePassword = true, newNodePassword = true)
+
+        verify(container, times(1)).requestSendAccessibilityEvent(
+            eq(androidComposeView),
+            argThat(
+                ArgumentMatcher {
+                    it.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+                }
+            )
+        )
+    }
+
+    private fun sendTextSemanticsChangeEvent(oldNodePassword: Boolean, newNodePassword: Boolean) {
+        val nodeId = 1
+        val oldTextNode = createSemanticsNodeWithProperties(nodeId, true) {
+            setText { true }
+            if (oldNodePassword) password()
+            textSelectionRange = TextRange(4)
+            editableText = AnnotatedString(
+                when {
+                    oldNodePassword && !newNodePassword -> "****"
+                    !oldNodePassword && newNodePassword -> "1234"
+                    !oldNodePassword && !newNodePassword -> "1234"
+                    else -> "1234"
+                }
+            )
+        }
+        accessibilityDelegate.previousSemanticsNodes[nodeId] =
+            AndroidComposeViewAccessibilityDelegateCompat.SemanticsNodeCopy(oldTextNode, mapOf())
+
+        val newTextNode = createSemanticsNodeWithAdjustedBoundsWithProperties(nodeId, true) {
+            setText { true }
+            if (newNodePassword) password()
+            textSelectionRange = TextRange(4)
+            editableText = AnnotatedString(
+                when {
+                    oldNodePassword && !newNodePassword -> "1234"
+                    !oldNodePassword && newNodePassword -> "****"
+                    !oldNodePassword && !newNodePassword -> "1235"
+                    else -> "1235"
+                }
+            )
+        }
+        accessibilityDelegate.sendSemanticsPropertyChangeEvents(mapOf(nodeId to newTextNode))
     }
 
     @OptIn(ExperimentalComposeUiApi::class)

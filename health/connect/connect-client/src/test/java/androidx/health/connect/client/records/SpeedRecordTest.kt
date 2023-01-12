@@ -30,20 +30,42 @@ class SpeedRecordTest {
     fun validRecord_equals() {
         assertThat(
                 SpeedRecord(
-                    Instant.ofEpochMilli(1234L),
-                    null,
-                    Instant.ofEpochMilli(1236L),
-                    null,
-                    listOf<SpeedRecord.Sample>()
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1236L),
+                    endZoneOffset = null,
+                    samples = listOf()
                 )
             )
             .isEqualTo(
                 SpeedRecord(
-                    Instant.ofEpochMilli(1234L),
-                    null,
-                    Instant.ofEpochMilli(1236L),
-                    null,
-                    listOf<SpeedRecord.Sample>()
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1236L),
+                    endZoneOffset = null,
+                    samples = listOf()
+                )
+            )
+    }
+
+    @Test
+    fun sameStartEndTime_validRecord_equals() {
+        assertThat(
+                SpeedRecord(
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1234L),
+                    endZoneOffset = null,
+                    samples = listOf()
+                )
+            )
+            .isEqualTo(
+                SpeedRecord(
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1234L),
+                    endZoneOffset = null,
+                    samples = listOf()
                 )
             )
     }
@@ -52,11 +74,11 @@ class SpeedRecordTest {
     fun invalidTimes_throws() {
         assertFailsWith<IllegalArgumentException> {
             SpeedRecord(
-                Instant.ofEpochMilli(1234L),
-                null,
-                Instant.ofEpochMilli(1234L),
-                null,
-                listOf<SpeedRecord.Sample>()
+                startTime = Instant.ofEpochMilli(1235L),
+                startZoneOffset = null,
+                endTime = Instant.ofEpochMilli(1234L),
+                endZoneOffset = null,
+                samples = listOf()
             )
         }
     }

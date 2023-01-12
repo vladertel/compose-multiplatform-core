@@ -1,4 +1,46 @@
 // Signature format: 4.0
+package androidx.tv.material {
+
+  public final class BringIntoViewIfChildrenAreFocusedKt {
+  }
+
+  public final class ContentColorKt {
+    method public static androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.ui.graphics.Color> getLocalContentColor();
+    property public static final androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.ui.graphics.Color> LocalContentColor;
+  }
+
+  public final class ImmersiveListKt {
+  }
+
+  public final class TabColors {
+  }
+
+  public final class TabDefaults {
+    method @androidx.compose.runtime.Composable public androidx.tv.material.TabColors pillIndicatorTabColors(optional long activeContentColor, optional long selectedContentColor, optional long focusedContentColor, optional long disabledActiveContentColor, optional long disabledSelectedContentColor);
+    method @androidx.compose.runtime.Composable public androidx.tv.material.TabColors underlinedIndicatorTabColors(optional long activeContentColor, optional long selectedContentColor, optional long focusedContentColor, optional long disabledActiveContentColor, optional long disabledSelectedContentColor);
+    field public static final androidx.tv.material.TabDefaults INSTANCE;
+  }
+
+  public final class TabKt {
+    method @androidx.compose.runtime.Composable public static void Tab(boolean selected, kotlin.jvm.functions.Function0<kotlin.Unit> onFocus, optional androidx.compose.ui.Modifier modifier, optional kotlin.jvm.functions.Function0<kotlin.Unit> onClick, optional boolean enabled, optional androidx.tv.material.TabColors colors, optional androidx.compose.foundation.interaction.MutableInteractionSource interactionSource, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.RowScope,kotlin.Unit> content);
+  }
+
+  public final class TabRowDefaults {
+    method @androidx.compose.runtime.Composable public void PillIndicator(androidx.compose.ui.unit.DpRect currentTabPosition, optional androidx.compose.ui.Modifier modifier, optional long activeColor, optional long inactiveColor);
+    method @androidx.compose.runtime.Composable public void TabSeparator();
+    method @androidx.compose.runtime.Composable public void UnderlinedIndicator(androidx.compose.ui.unit.DpRect currentTabPosition, optional androidx.compose.ui.Modifier modifier, optional long activeColor, optional long inactiveColor);
+    method @androidx.compose.runtime.Composable public long contentColor();
+    method public long getContainerColor();
+    property public final long ContainerColor;
+    field public static final androidx.tv.material.TabRowDefaults INSTANCE;
+  }
+
+  public final class TabRowKt {
+    method @androidx.compose.runtime.Composable public static void TabRow(int selectedTabIndex, optional androidx.compose.ui.Modifier modifier, optional long containerColor, optional long contentColor, optional kotlin.jvm.functions.Function0<kotlin.Unit> separator, optional kotlin.jvm.functions.Function1<? super java.util.List<androidx.compose.ui.unit.DpRect>,kotlin.Unit> indicator, kotlin.jvm.functions.Function0<kotlin.Unit> tabs);
+  }
+
+}
+
 package androidx.tv.material.carousel {
 
   public final class CarouselItemKt {
@@ -9,9 +51,51 @@ package androidx.tv.material.carousel {
 
 }
 
-package androidx.tv.material.immersivelist {
+package androidx.tv.material3 {
 
-  public final class ImmersiveListKt {
+  public final class ColorSchemeKt {
+  }
+
+  public final class MaterialTheme {
+    method @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable public androidx.tv.material3.ColorScheme getColorScheme();
+    method @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable public androidx.tv.material3.Shapes getShapes();
+    property @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable public final androidx.tv.material3.Shapes shapes;
+    field public static final androidx.tv.material3.MaterialTheme INSTANCE;
+  }
+
+  public final class MaterialThemeKt {
+  }
+
+  public final class ShapeDefaults {
+    method public androidx.compose.foundation.shape.CornerBasedShape getExtraLarge();
+    method public androidx.compose.foundation.shape.CornerBasedShape getExtraSmall();
+    method public androidx.compose.foundation.shape.CornerBasedShape getLarge();
+    method public androidx.compose.foundation.shape.CornerBasedShape getMedium();
+    method public androidx.compose.foundation.shape.CornerBasedShape getSmall();
+    property public final androidx.compose.foundation.shape.CornerBasedShape ExtraLarge;
+    property public final androidx.compose.foundation.shape.CornerBasedShape ExtraSmall;
+    property public final androidx.compose.foundation.shape.CornerBasedShape Large;
+    property public final androidx.compose.foundation.shape.CornerBasedShape Medium;
+    property public final androidx.compose.foundation.shape.CornerBasedShape Small;
+    field public static final androidx.tv.material3.ShapeDefaults INSTANCE;
+  }
+
+  @androidx.compose.runtime.Immutable public final class Shapes {
+    ctor public Shapes(optional androidx.compose.foundation.shape.CornerBasedShape extraSmall, optional androidx.compose.foundation.shape.CornerBasedShape small, optional androidx.compose.foundation.shape.CornerBasedShape medium, optional androidx.compose.foundation.shape.CornerBasedShape large, optional androidx.compose.foundation.shape.CornerBasedShape extraLarge);
+    method public androidx.tv.material3.Shapes copy(optional androidx.compose.foundation.shape.CornerBasedShape extraSmall, optional androidx.compose.foundation.shape.CornerBasedShape small, optional androidx.compose.foundation.shape.CornerBasedShape medium, optional androidx.compose.foundation.shape.CornerBasedShape large, optional androidx.compose.foundation.shape.CornerBasedShape extraLarge);
+    method public androidx.compose.foundation.shape.CornerBasedShape getExtraLarge();
+    method public androidx.compose.foundation.shape.CornerBasedShape getExtraSmall();
+    method public androidx.compose.foundation.shape.CornerBasedShape getLarge();
+    method public androidx.compose.foundation.shape.CornerBasedShape getMedium();
+    method public androidx.compose.foundation.shape.CornerBasedShape getSmall();
+    property public final androidx.compose.foundation.shape.CornerBasedShape extraLarge;
+    property public final androidx.compose.foundation.shape.CornerBasedShape extraSmall;
+    property public final androidx.compose.foundation.shape.CornerBasedShape large;
+    property public final androidx.compose.foundation.shape.CornerBasedShape medium;
+    property public final androidx.compose.foundation.shape.CornerBasedShape small;
+  }
+
+  public final class ShapesKt {
   }
 
 }

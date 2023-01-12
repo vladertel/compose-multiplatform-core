@@ -847,7 +847,7 @@ public open class NavController(
                         val matchingDeepLink = _graph!!.matchDeepLink(
                             NavDeepLinkRequest(activity!!.intent)
                         )
-                        if (matchingDeepLink != null) {
+                        if (matchingDeepLink?.matchingArgs != null) {
                             val destinationArgs = matchingDeepLink.destination.addInDefaultArgs(
                                 matchingDeepLink.matchingArgs
                             )
@@ -1206,7 +1206,16 @@ public open class NavController(
             return false
         }
         val extras = intent.extras
-        var deepLink = extras?.getIntArray(KEY_DEEP_LINK_IDS)
+        var deepLink = try {
+            extras?.getIntArray(KEY_DEEP_LINK_IDS)
+        } catch (e: Exception) {
+            Log.e(
+                TAG,
+                "handleDeepLink() could not extract deepLink from $intent",
+                e
+            )
+            null
+        }
         var deepLinkArgs = extras?.getParcelableArrayList<Bundle>(KEY_DEEP_LINK_ARGS)
         val globalArgs = Bundle()
         val deepLinkExtras = extras?.getBundle(KEY_DEEP_LINK_EXTRAS)
@@ -1707,26 +1716,16 @@ public open class NavController(
         if (navOptions?.shouldRestoreState() == true && backStackMap.containsKey(node.id)) {
             navigated = restoreStateInternal(node.id, finalArgs, navOptions, navigatorExtras)
         } else {
-            val currentBackStackEntry = currentBackStackEntry
-            val navigator = _navigatorProvider.getNavigator<Navigator<NavDestination>>(
-                node.navigatorName
-            )
-            if (navOptions?.shouldLaunchSingleTop() == true &&
-                node.id == currentBackStackEntry?.destination?.id
-            ) {
-                unlinkChildFromParent(backQueue.removeLast())
-                val newEntry = NavBackStackEntry(currentBackStackEntry, finalArgs)
-                backQueue.addLast(newEntry)
-                val parent = newEntry.destination.parent
-                if (parent != null) {
-                    linkChildToParent(newEntry, getBackStackEntry(parent.id))
-                }
-                navigator.onLaunchSingleTop(newEntry)
-                launchSingleTop = true
-            } else {
+            launchSingleTop = navOptions?.shouldLaunchSingleTop() == true &&
+                launchSingleTopInternal(node, args)
+
+            if (!launchSingleTop) {
                 // Not a single top operation, so we're looking to add the node to the back stack
                 val backStackEntry = NavBackStackEntry.create(
                     context, node, finalArgs, hostLifecycleState, viewModel
+                )
+                val navigator = _navigatorProvider.getNavigator<Navigator<NavDestination>>(
+                    node.navigatorName
                 )
                 navigator.navigateInternal(listOf(backStackEntry), navOptions, navigatorExtras) {
                     navigated = true
@@ -1743,6 +1742,49 @@ public open class NavController(
         } else {
             updateBackStackLifecycle()
         }
+    }
+
+    private fun launchSingleTopInternal(
+        node: NavDestination,
+        args: Bundle?
+    ): Boolean {
+        val currentBackStackEntry = currentBackStackEntry
+        val nodeId = if (node is NavGraph) node.findStartDestination().id else node.id
+        if (nodeId != currentBackStackEntry?.destination?.id) return false
+
+        val tempBackQueue: ArrayDeque<NavBackStackEntry> = ArrayDeque()
+        // pop from startDestination back to original node and create a new entry for each
+        backQueue.indexOfLast { it.destination === node }.let { nodeIndex ->
+            while (backQueue.lastIndex >= nodeIndex) {
+                val oldEntry = backQueue.removeLast()
+                unlinkChildFromParent(oldEntry)
+                val newEntry = NavBackStackEntry(
+                    oldEntry,
+                    oldEntry.destination.addInDefaultArgs(args)
+                )
+                tempBackQueue.addFirst(newEntry)
+            }
+        }
+
+        // add each new entry to backQueue starting from original node to startDestination
+        tempBackQueue.forEach { newEntry ->
+            val parent = newEntry.destination.parent
+            if (parent != null) {
+                val newParent = getBackStackEntry(parent.id)
+                linkChildToParent(newEntry, newParent)
+            }
+            backQueue.add(newEntry)
+        }
+
+        // we replace NavState entries here only after backQueue has been finalized
+        tempBackQueue.forEach { newEntry ->
+            val navigator = _navigatorProvider.getNavigator<Navigator<*>>(
+                newEntry.destination.navigatorName
+            )
+            navigator.onLaunchSingleTop(newEntry)
+        }
+
+        return true
     }
 
     private fun restoreStateInternal(
@@ -1866,9 +1908,11 @@ public open class NavController(
         }
 
         // Now collect the set of all intermediate NavGraphs that need to be put onto
-        // the back stack
+        // the back stack. Destinations can have multiple parents, so we check referential
+        // equality to ensure that same destinations with a parent that is not this _graph
+        // will also have their parents added to the hierarchy.
         destination = if (hierarchy.isEmpty()) newDest else hierarchy.first().destination
-        while (destination != null && findDestination(destination.id) == null) {
+        while (destination != null && findDestination(destination.id) !== destination) {
             val parent = destination.parent
             if (parent != null) {
                 val entry = restoredEntries.lastOrNull { restoredEntry ->

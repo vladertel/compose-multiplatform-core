@@ -30,20 +30,42 @@ class HeartRateRecordTest {
     fun validRecord_equals() {
         assertThat(
                 HeartRateRecord(
-                    Instant.ofEpochMilli(1234L),
-                    null,
-                    Instant.ofEpochMilli(1236L),
-                    null,
-                    listOf<HeartRateRecord.Sample>()
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1236L),
+                    endZoneOffset = null,
+                    samples = listOf()
                 )
             )
             .isEqualTo(
                 HeartRateRecord(
-                    Instant.ofEpochMilli(1234L),
-                    null,
-                    Instant.ofEpochMilli(1236L),
-                    null,
-                    listOf<HeartRateRecord.Sample>()
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1236L),
+                    endZoneOffset = null,
+                    samples = listOf()
+                )
+            )
+    }
+
+    @Test
+    fun sameStartEndTime_validRecord_equals() {
+        assertThat(
+                HeartRateRecord(
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1234L),
+                    endZoneOffset = null,
+                    samples = listOf()
+                )
+            )
+            .isEqualTo(
+                HeartRateRecord(
+                    startTime = Instant.ofEpochMilli(1234L),
+                    startZoneOffset = null,
+                    endTime = Instant.ofEpochMilli(1234L),
+                    endZoneOffset = null,
+                    samples = listOf()
                 )
             )
     }
@@ -52,11 +74,31 @@ class HeartRateRecordTest {
     fun invalidTimes_throws() {
         assertFailsWith<IllegalArgumentException> {
             HeartRateRecord(
-                Instant.ofEpochMilli(1234L),
-                null,
-                Instant.ofEpochMilli(1234L),
-                null,
-                listOf<HeartRateRecord.Sample>()
+                startTime = Instant.ofEpochMilli(1235L),
+                startZoneOffset = null,
+                endTime = Instant.ofEpochMilli(1234L),
+                endZoneOffset = null,
+                samples = listOf()
+            )
+        }
+    }
+
+    @Test
+    fun invalidBeatsPerMinute_lessThan1_throws() {
+        assertFailsWith<IllegalArgumentException> {
+            HeartRateRecord.Sample(
+                time = Instant.ofEpochMilli(1235L),
+                beatsPerMinute = 0L,
+            )
+        }
+    }
+
+    @Test
+    fun invalidBeatsPerMinute_moreThan300_throws() {
+        assertFailsWith<IllegalArgumentException> {
+            HeartRateRecord.Sample(
+                time = Instant.ofEpochMilli(1235L),
+                beatsPerMinute = 301L,
             )
         }
     }

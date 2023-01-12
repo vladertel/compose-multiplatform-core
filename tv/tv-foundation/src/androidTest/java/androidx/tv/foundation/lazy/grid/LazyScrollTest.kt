@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -241,6 +242,34 @@ class LazyScrollTest { // (private val orientation: Orientation)
     @Test
     fun animatePerFrameBackwardWithInitialOffset() {
         assertSpringAnimation(toIndex = 0, toOffset = 40, fromIndex = 8)
+    }
+
+    @Test
+    fun canScrollForward() = runBlocking {
+        assertThat(state.firstVisibleItemScrollOffset).isEqualTo(0)
+        assertThat(state.canScrollForward).isTrue()
+        assertThat(state.canScrollBackward).isFalse()
+    }
+
+    @Ignore("b/259608530")
+    @Test
+    fun canScrollBackward() = runBlocking {
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.scrollToItem(itemsCount)
+        }
+        assertThat(state.firstVisibleItemIndex).isEqualTo(itemsCount - 6)
+        assertThat(state.canScrollForward).isFalse()
+        assertThat(state.canScrollBackward).isTrue()
+    }
+
+    @Test
+    fun canScrollForwardAndBackward() = runBlocking {
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.scrollToItem(10)
+        }
+        assertThat(state.firstVisibleItemIndex).isEqualTo(10)
+        assertThat(state.canScrollForward).isTrue()
+        assertThat(state.canScrollBackward).isTrue()
     }
 
     private fun assertSpringAnimation(

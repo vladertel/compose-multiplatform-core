@@ -255,7 +255,7 @@ public final class CameraUseCaseAdapter implements Camera {
             // Do all attaching related work
             for (UseCase useCase : newUseCases) {
                 ConfigPair configPair = configs.get(useCase);
-                useCase.onAttach(mCameraInternal, configPair.mExtendedConfig,
+                useCase.bindToCamera(mCameraInternal, configPair.mExtendedConfig,
                         configPair.mCameraConfig);
                 useCase.updateSuggestedResolution(
                         Preconditions.checkNotNull(suggestedResolutionsMap.get(useCase)));
@@ -458,7 +458,10 @@ public final class CameraUseCaseAdapter implements Camera {
                 }
                 preview.setProcessor(new SurfaceProcessorWithExecutor(
                         requireNonNull(effect.getSurfaceProcessor()),
-                        effect.getProcessorExecutor()));
+                        effect.getExecutor()));
+            } else if (useCase instanceof ImageCapture) {
+                ImageCapture imageCapture = ((ImageCapture) useCase);
+                imageCapture.setEffect(effectsByTargets.get(CameraEffect.IMAGE_CAPTURE));
             }
         }
     }
@@ -705,7 +708,7 @@ public final class CameraUseCaseAdapter implements Camera {
 
                 for (UseCase useCase : unnecessaryUseCases) {
                     if (mUseCases.contains(useCase)) {
-                        useCase.onDetach(mCameraInternal);
+                        useCase.unbindFromCamera(mCameraInternal);
                     } else {
                         Logger.e(TAG, "Attempting to detach non-attached UseCase: " + useCase);
                     }

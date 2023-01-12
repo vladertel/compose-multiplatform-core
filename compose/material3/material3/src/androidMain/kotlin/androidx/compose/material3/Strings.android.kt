@@ -36,6 +36,32 @@ internal actual fun getString(string: Strings): String {
         Strings.Dialog -> resources.getString(androidx.compose.material3.R.string.dialog)
         Strings.MenuExpanded -> resources.getString(androidx.compose.material3.R.string.expanded)
         Strings.MenuCollapsed -> resources.getString(androidx.compose.material3.R.string.collapsed)
+        Strings.SnackbarDismiss -> resources.getString(
+            androidx.compose.material3.R.string.snackbar_dismiss
+        )
+        Strings.SearchBarSearch -> resources.getString(
+            androidx.compose.material3.R.string.search_bar_search
+        )
+        Strings.SuggestionsAvailable ->
+            resources.getString(androidx.compose.material3.R.string.suggestions_available)
+        Strings.DatePickerTitle -> resources.getString(
+            androidx.compose.material3.R.string.date_picker_title
+        )
+        Strings.DatePickerHeadline -> resources.getString(
+            androidx.compose.material3.R.string.date_picker_headline
+        )
+        Strings.DatePickerSwitchToYearSelection -> resources.getString(
+            androidx.compose.material3.R.string.date_picker_switch_to_year_selection
+        )
+        Strings.DatePickerSwitchToDaySelection -> resources.getString(
+            androidx.compose.material3.R.string.date_picker_switch_to_day_selection
+        )
+        Strings.DatePickerSwitchToNextMonth -> resources.getString(
+            androidx.compose.material3.R.string.date_picker_switch_to_next_month
+        )
+        Strings.DatePickerSwitchToPreviousMonth -> resources.getString(
+            androidx.compose.material3.R.string.date_picker_switch_to_previous_month
+        )
         else -> ""
     }
 }

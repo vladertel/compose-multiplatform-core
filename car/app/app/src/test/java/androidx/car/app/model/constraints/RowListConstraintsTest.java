@@ -18,12 +18,19 @@ package androidx.car.app.model.constraints;
 
 import static org.junit.Assert.assertThrows;
 
+import androidx.annotation.NonNull;
 import androidx.car.app.TestUtils;
+import androidx.car.app.messaging.model.ConversationCallback;
+import androidx.car.app.messaging.model.ConversationItem;
+import androidx.car.app.model.CarText;
+import androidx.car.app.model.ItemList;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.internal.DoNotInstrument;
+
+import java.util.ArrayList;
 
 /** Tests for {@link RowListConstraints}. */
 @RunWith(RobolectricTestRunner.class)
@@ -82,5 +89,33 @@ public class RowListConstraintsTest {
 
         // Positive case
         constraints.validateOrThrow(TestUtils.createPane(5, 2));
+    }
+
+    @Test
+    public void validate_conversationItem_isAlwaysValid() {
+        RowListConstraints constraints = new RowListConstraints.Builder().build();
+        ItemList itemList = new ItemList.Builder()
+                .addItem(new ConversationItem.Builder()
+                        .setId("id")
+                        .setTitle(CarText.create("title"))
+                        .setMessages(new ArrayList<>())
+                        .setConversationCallback(new ConversationCallback() {
+                            @Override
+                            public void onMarkAsRead() {
+                                // do nothing
+                            }
+
+                            @Override
+                            public void onTextReply(@NonNull String replyText) {
+                                // do nothing
+                            }
+                        })
+                        .build()
+                )
+                .build();
+
+        constraints.validateOrThrow(itemList);
+
+        // Verify no exception was thrown.
     }
 }

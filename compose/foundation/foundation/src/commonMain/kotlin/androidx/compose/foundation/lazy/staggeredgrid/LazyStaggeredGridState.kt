@@ -29,9 +29,11 @@ import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState.PrefetchH
 import androidx.compose.foundation.lazy.layout.animateScrollToItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.Remeasurement
 import androidx.compose.ui.layout.RemeasurementModifier
 import androidx.compose.ui.unit.Constraints
@@ -93,7 +95,11 @@ class LazyStaggeredGridState private constructor(
      * each scroll, potentially causing performance issues.
      */
     val firstVisibleItemIndex: Int
-        get() = scrollPosition.indices.minOrNull() ?: 0
+        get() = scrollPosition.indices.minOfOrNull {
+            // index array can contain -1, indicating lane being empty (cell number > itemCount)
+            // if any of the lanes are empty, we always on 0th item index
+            if (it == -1) 0 else it
+        } ?: 0
 
     /**
      * Current offset of the item with [firstVisibleItemIndex] relative to the container start.
@@ -129,8 +135,10 @@ class LazyStaggeredGridState private constructor(
     /** storage for lane assignments for each item for consistent scrolling in both directions **/
     internal val spans = LazyStaggeredGridSpans()
 
-    internal var canScrollForward = true
-    private var canScrollBackward = true
+    override var canScrollForward: Boolean by mutableStateOf(false)
+        private set
+    override var canScrollBackward: Boolean by mutableStateOf(false)
+        private set
 
     /** implementation of [LazyAnimateScrollScope] scope required for [animateScrollToItem] **/
     private val animateScrollScope = LazyStaggeredGridAnimateScrollScope(this)
@@ -142,6 +150,12 @@ class LazyStaggeredGridState private constructor(
             this@LazyStaggeredGridState.remeasurement = remeasurement
         }
     }
+
+    /**
+     * Only used for testing to disable prefetching when needed to test the main logic.
+     */
+    /*@VisibleForTesting*/
+    internal var prefetchingEnabled: Boolean = true
 
     /** prefetch state used for precomputing items in the direction of scroll **/
     internal val prefetchState: LazyLayoutPrefetchState = LazyLayoutPrefetchState()
@@ -214,7 +228,9 @@ class LazyStaggeredGridState private constructor(
         if (abs(scrollToBeConsumed) > 0.5f) {
             val preScrollToBeConsumed = scrollToBeConsumed
             remeasurement?.forceRemeasure()
-            notifyPrefetch(preScrollToBeConsumed - scrollToBeConsumed)
+            if (prefetchingEnabled) {
+                notifyPrefetch(preScrollToBeConsumed - scrollToBeConsumed)
+            }
         }
 
         // here scrollToBeConsumed is already consumed during the forceRemeasure invocation

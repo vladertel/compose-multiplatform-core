@@ -81,7 +81,9 @@ internal fun LazyLayoutMeasureScope.measureStaggeredGrid(
                 IntArray(resolvedSlotSums.size).apply {
                     // Try to adjust indices in case grid got resized
                     for (lane in indices) {
-                        this[lane] = if (lane < firstVisibleIndices.size) {
+                        this[lane] = if (
+                            lane < firstVisibleIndices.size && firstVisibleIndices[lane] != -1
+                        ) {
                             firstVisibleIndices[lane]
                         } else {
                             if (lane == 0) {
@@ -175,13 +177,14 @@ private fun LazyStaggeredGridMeasureContext.measure(
                 measureResult = layout(constraints.minWidth, constraints.minHeight) {},
                 canScrollForward = false,
                 canScrollBackward = false,
+                isVertical = isVertical,
                 visibleItemsInfo = emptyList(),
                 totalItemsCount = itemCount,
                 viewportSize = IntSize(constraints.minWidth, constraints.minHeight),
                 viewportStartOffset = -beforeContentPadding,
                 viewportEndOffset = mainAxisAvailableSize + afterContentPadding,
                 beforeContentPadding = beforeContentPadding,
-                afterContentPadding = afterContentPadding
+                afterContentPadding = afterContentPadding,
             )
         }
 
@@ -331,7 +334,10 @@ private fun LazyStaggeredGridMeasureContext.measure(
         // we want to have at least one item in visibleItems even if in fact all the items are
         // offscreen, this can happen if the content padding is larger than the available size.
         while (
-            currentItemOffsets.any { it <= maxOffset } || measuredItems.all { it.isEmpty() }
+            currentItemOffsets.any {
+                it < maxOffset ||
+                    it <= 0 // filling beforeContentPadding area
+            } || measuredItems.all { it.isEmpty() }
         ) {
             val currentLaneIndex = currentItemOffsets.indexOfMinValue()
             val nextItemIndex =
@@ -540,7 +546,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
         // only scroll backward if the first item is not on screen or fully visible
         val canScrollBackward = !(firstItemIndices[0] == 0 && firstItemOffsets[0] <= 0)
         // only scroll forward if the last item is not on screen or fully visible
-        val canScrollForward = currentItemOffsets.any { it > mainAxisAvailableSize }
+        val canScrollForward = currentItemOffsets.any { it > mainAxisAvailableSize } ||
+            currentItemIndices.all { it < itemCount - 1 }
 
         @Suppress("UNCHECKED_CAST")
         return LazyStaggeredGridMeasureResult(
@@ -554,6 +561,7 @@ private fun LazyStaggeredGridMeasureContext.measure(
             },
             canScrollForward = canScrollForward,
             canScrollBackward = canScrollBackward,
+            isVertical = isVertical,
             visibleItemsInfo = positionedItems.asMutableList(),
             totalItemsCount = itemCount,
             viewportSize = IntSize(layoutWidth, layoutHeight),
@@ -691,7 +699,7 @@ private class LazyStaggeredGridMeasuredItem(
 
     val crossAxisSize: Int = placeables.fastMaxOfOrNull {
         if (isVertical) it.width else it.height
-    }!!
+    } ?: 0
 
     fun position(
         lane: Int,
@@ -707,7 +715,11 @@ private class LazyStaggeredGridMeasuredItem(
             lane = lane,
             index = index,
             key = key,
-            size = IntSize(sizeWithSpacings, crossAxisSize),
+            size = if (isVertical) {
+                IntSize(crossAxisSize, sizeWithSpacings)
+            } else {
+                IntSize(sizeWithSpacings, crossAxisSize)
+            },
             placeables = placeables,
             contentOffset = contentOffset,
             isVertical = isVertical

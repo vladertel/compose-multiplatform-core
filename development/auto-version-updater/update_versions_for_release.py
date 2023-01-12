@@ -18,12 +18,17 @@ import sys
 import os
 import argparse
 from datetime import date
+import glob
+import pathlib
+import re
+import shutil
 import subprocess
 import toml
 
 # Import the JetpadClient from the parent directory
 sys.path.append("..")
 from JetpadClient import *
+from update_tracing_perfetto import update_tracing_perfetto
 
 # cd into directory of script
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -245,6 +250,29 @@ def increment_version_within_minor_version(version):
     return new_version
 
 
+def get_library_constants_in_library_versions_toml(group_id, artifact_id):
+    """Gets the constants for a library in libraryversions.toml.
+
+    Args:
+        group_id: group_id of the existing library
+        artifact_id: artifact_id of the existing library
+
+    Returns:
+        A touple of the group_id constant and the artifact_id constant
+    """
+    group_id_variable_name = group_id.replace("androidx.","").replace(".","_").upper()
+    artifact_id_variable_name = artifact_id.replace("androidx.","").replace("-","_").upper()
+    # Special case Compose because it uses the same version variable.
+    if (group_id_variable_name.startswith("COMPOSE") and
+        group_id_variable_name != "COMPOSE_MATERIAL3"):
+            group_id_variable_name = "COMPOSE"
+    # Special case Compose runtime tracing
+    if group_id == "androidx.compose.runtime" and artifact_id == "runtime-tracing":
+        group_id_variable_name = "COMPOSE_RUNTIME_TRACING"
+        artifact_id_variable_name = "COMPOSE_RUNTIME_TRACING"
+    return (group_id_variable_name, artifact_id_variable_name)
+
+
 def update_versions_in_library_versions_toml(group_id, artifact_id, old_version):
     """Updates the versions in the libraryversions.toml file.
 
@@ -259,13 +287,9 @@ def update_versions_in_library_versions_toml(group_id, artifact_id, old_version)
     Returns:
         True if the version was updated, false otherwise.
     """
-    group_id_variable_name = group_id.replace("androidx.","").replace(".","_").upper()
-    artifact_id_variable_name = artifact_id.replace("androidx.","").replace("-","_").upper()
+    (group_id_variable_name, artifact_id_variable_name
+    ) = get_library_constants_in_library_versions_toml(group_id, artifact_id)
     new_version = increment_version(old_version)
-    # Special case Compose because it uses the same version variable.
-    if (group_id_variable_name.startswith("COMPOSE") and
-        group_id_variable_name != "COMPOSE_MATERIAL3"):
-            group_id_variable_name = "COMPOSE"
 
     # Open toml file
     library_versions = toml.load(LIBRARY_VERSIONS_FP)
@@ -436,23 +460,6 @@ def update_compose_runtime_version(group_id, artifact_id, old_version):
 
     return
 
-def update_tracing_perfetto_version(old_version):
-    """Updates tracing-perfetto version and artifacts (including building new binaries)
-
-    Args:
-        old_version: old version of the existing library
-    Returns:
-        Nothing
-    """
-    new_version = increment_version(old_version)
-    cmd = "./update_tracing_perfetto.sh %s %s %s" % (FRAMEWORKS_SUPPORT_FP, old_version, new_version)
-    try:
-        print("Updating tracing-perfetto, this can take a while...")
-        subprocess.check_output(cmd, cwd=VERSION_UPDATER_FP, stderr=subprocess.STDOUT, shell=True)
-        print("Updated tracing-perfetto.")
-    except subprocess.CalledProcessError as e:
-        print_e("FAIL: Error '%s' while running: '%s'" % (e.output, cmd))
-        sys.exit(1)
 
 def commit_updates(release_date):
     for dir in [FRAMEWORKS_SUPPORT_FP, PREBUILTS_ANDROIDX_INTERNAL_FP]:
@@ -461,9 +468,11 @@ def commit_updates(release_date):
         staged_changes = subprocess.check_output(["git", "diff", "--cached"], cwd=dir, stderr=subprocess.STDOUT)
         if not staged_changes:
             continue
-        msg = "Update versions for release id %s\n\nThis commit was generated from the command:\n%s\n\n%s" % (release_date, " ".join(sys.argv), "Test: ./gradlew checkApi")
+        msg = "Update versions for release id %s\n\nThis commit was generated from the command:\n%s\n\n%s" % (
+            release_date, " ".join(sys.argv), "Test: ./gradlew checkApi")
         subprocess.check_call(["git", "commit", "-m", msg], cwd=dir, stderr=subprocess.STDOUT)
-        subprocess.check_call(["repo", "upload", ".", "--cbr", "-t", "-y", "--label", "Presubmit-Ready+1"], cwd=dir, stderr=subprocess.STDOUT)
+        subprocess.check_call(["repo", "upload", ".", "--cbr", "-t", "-y", "--label", "Presubmit-Ready+1"], cwd=dir,
+                              stderr=subprocess.STDOUT)
 
 def main(args):
     # Parse arguments and check for existence of build ID or file
@@ -493,7 +502,9 @@ def main(args):
                 if tracing_perfetto_updated:
                     updated = True
                 else:
-                    update_tracing_perfetto_version(artifact["version"])
+                    current_version = artifact["version"]
+                    target_version = increment_version(current_version)
+                    update_tracing_perfetto(current_version, target_version, FRAMEWORKS_SUPPORT_FP)
                     tracing_perfetto_updated = True
 
             if not updated:
