@@ -118,6 +118,7 @@ import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.parentAsClass
 import org.jetbrains.kotlin.ir.util.parentClassOrNull
 import org.jetbrains.kotlin.ir.util.primaryConstructor
+import org.jetbrains.kotlin.ir.util.properties
 import org.jetbrains.kotlin.ir.util.statements
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.load.kotlin.computeJvmDescriptor
@@ -274,6 +275,13 @@ abstract class AbstractComposeLowering(
             } else {
                 val primaryValueParameter = klass.primaryConstructor?.valueParameters?.get(0)
                     ?: error("Expected a value parameter")
+                if (klass.properties.filter {
+                        it.name == primaryValueParameter.name && it.getter != null
+                }.count() == 0) {
+                    // K/JS and K/Native don't show a getter of an internal/private property,
+                    // So we can't unbox the value
+                    return this
+                }
                 val fieldGetter = klass.getPropertyGetter(primaryValueParameter.name.identifier)
                     ?: error("Expected a getter")
                 return irCall(
