@@ -25,16 +25,25 @@ import androidx.compose.compiler.plugins.kotlin.analysis.normalize
 import androidx.compose.compiler.plugins.kotlin.analysis.stabilityOf
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
+import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.descriptors.findClassAcrossModuleDependencies
 import org.jetbrains.kotlin.ir.IrStatement
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
+import org.jetbrains.kotlin.ir.backend.js.utils.isJsNativeGetter
+import org.jetbrains.kotlin.ir.builders.declarations.buildFun
+import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrGetFieldImpl
+import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.constructors
@@ -46,6 +55,9 @@ import org.jetbrains.kotlin.ir.util.isEnumEntry
 import org.jetbrains.kotlin.ir.util.isFileClass
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
+import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.jvm.isJvm
 
 enum class StabilityBits(val bits: Int) {
@@ -70,7 +82,14 @@ class ClassStabilityTransformer(
     private val UNSTABLE = StabilityBits.UNSTABLE.bitsForSlot(0)
     private val STABLE = StabilityBits.STABLE.bitsForSlot(0)
 
+    // For k/js and k/native to mark $stableprop
+    private var kotlinxSerializationTransientAnnotation: ClassDescriptor? = null
+
+    @OptIn(ObsoleteDescriptorBasedAPI::class)
     override fun lower(module: IrModuleFragment) {
+        kotlinxSerializationTransientAnnotation = module.descriptor.findClassAcrossModuleDependencies(
+            ClassId.topLevel(FqName("kotlinx.serialization.Transient"))
+        )
         module.transformChildrenVoid(this)
     }
 
@@ -81,6 +100,7 @@ class ClassStabilityTransformer(
         irFile.transformChildrenVoid(this)
     }
 
+    @OptIn(ObsoleteDescriptorBasedAPI::class)
     override fun visitClass(declaration: IrClass): IrStatement {
         val result = super.visitClass(declaration)
         val cls = result as? IrClass ?: return result
@@ -175,11 +195,22 @@ class ClassStabilityTransformer(
             cls.declarations += stabilityField
         } else {
             // This ensures proper mangles in k/js and k/native (since kotlin 1.6.0-rc2)
-            val stabilityProp = makeStabilityProp().also {
-                it.parent = cls
-                it.backingField = stabilityField
+            val stabilityProp = makeStabilityProp(stabilityField, cls).also {
+                if (kotlinxSerializationTransientAnnotation != null) {
+                    val constrSymbol = context.symbolTable.referenceConstructor(
+                        kotlinxSerializationTransientAnnotation!!.constructors.first()
+                    )
+                    it.annotations = it.annotations + IrConstructorCallImpl(
+                        type = kotlinxSerializationTransientAnnotation!!.defaultType.toIrType(),
+                        symbol = constrSymbol,
+                        constructorTypeArgumentsCount = 0,
+                        valueArgumentsCount = 0,
+                        startOffset = UNDEFINED_OFFSET,
+                        endOffset = UNDEFINED_OFFSET,
+                        typeArgumentsCount = 0
+                    )
+                }
             }
-            stabilityField.correspondingPropertySymbol = stabilityProp.symbol
             cls.declarations += stabilityProp
         }
 

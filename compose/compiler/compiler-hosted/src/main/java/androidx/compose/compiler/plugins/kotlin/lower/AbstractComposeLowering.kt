@@ -28,6 +28,7 @@ import androidx.compose.compiler.plugins.kotlin.analysis.knownStable
 import androidx.compose.compiler.plugins.kotlin.analysis.stabilityOf
 import androidx.compose.compiler.plugins.kotlin.irTrace
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
@@ -38,6 +39,7 @@ import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
 import org.jetbrains.kotlin.ir.builders.declarations.buildField
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.declarations.buildProperty
+import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.declarations.IrAnnotationContainer
 import org.jetbrains.kotlin.ir.declarations.IrAttributeContainer
 import org.jetbrains.kotlin.ir.declarations.IrClass
@@ -125,7 +127,9 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.platform.jvm.isJvm
+import org.jetbrains.kotlin.psi2ir.generators.TypeTranslatorImpl
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
+import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlin.utils.DFS
 
@@ -134,6 +138,13 @@ abstract class AbstractComposeLowering(
     val symbolRemapper: DeepCopySymbolRemapper,
     val metrics: ModuleMetrics
 ) : IrElementTransformerVoid(), ModuleLoweringPass {
+    @ObsoleteDescriptorBasedAPI
+    protected val typeTranslator =
+        TypeTranslatorImpl(
+            context.symbolTable,
+            context.languageVersionSettings,
+            context.moduleDescriptor
+        )
 
     companion object {
         var isJvmTarget: Boolean = false
@@ -205,6 +216,9 @@ abstract class AbstractComposeLowering(
                 metrics
             }
         } ?: metrics.makeFunctionMetrics(function)
+
+    @OptIn(ObsoleteDescriptorBasedAPI::class)
+    fun KotlinType.toIrType(): IrType = typeTranslator.translateType(this)
 
     fun IrType.unboxInlineClass() = unboxType() ?: this
 
@@ -847,12 +861,29 @@ abstract class AbstractComposeLowering(
         }
     }
 
-    protected fun makeStabilityProp(): IrProperty {
+    protected fun makeStabilityProp(backingField: IrField, parent: IrClass): IrProperty {
         return context.irFactory.buildProperty {
             startOffset = SYNTHETIC_OFFSET
             endOffset = SYNTHETIC_OFFSET
             name = KtxNameConventions.STABILITY_PROP_FLAG
             visibility = DescriptorVisibilities.PRIVATE
+        }.also {
+            backingField.correspondingPropertySymbol = it.symbol
+            it.backingField = backingField
+            it.getter = context.irFactory.buildFun {
+                name = Name.special("<get-${it.name}>")
+                returnType = backingField.type
+            }.also {
+                val getField = IrGetFieldImpl(
+                    UNDEFINED_OFFSET,
+                    UNDEFINED_OFFSET,
+                    backingField.symbol,
+                    backingField.type
+                )
+                it.body = DeclarationIrBuilder(context, it.symbol)
+                    .irBlockBody { + irReturn(it.symbol, getField) }
+                it.parent = parent
+            }
         }
     }
 

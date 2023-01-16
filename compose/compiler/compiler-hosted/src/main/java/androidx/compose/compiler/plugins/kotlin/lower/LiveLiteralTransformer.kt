@@ -184,7 +184,8 @@ open class LiveLiteralTransformer(
         getTopLevelClass(ComposeClassIds.NoLiveLiterals)
 
     private fun IrAnnotationContainer.hasNoLiveLiteralsAnnotation(): Boolean = annotations.any {
-        it.symbol.owner == NoLiveLiteralsAnnotation.owner.primaryConstructor
+        // Unbound in k/js and k/native for @kotlinx.serialization.Transient added via IR transformation
+        it.symbol.isBound && it.symbol.owner == NoLiveLiteralsAnnotation.owner.primaryConstructor
     }
 
     private fun <T> enter(key: String, block: () -> T) = keyVisitor.enter(key, block)
