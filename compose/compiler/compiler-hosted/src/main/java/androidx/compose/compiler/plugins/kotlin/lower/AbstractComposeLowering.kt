@@ -29,6 +29,7 @@ import androidx.compose.compiler.plugins.kotlin.analysis.stabilityOf
 import androidx.compose.compiler.plugins.kotlin.irTrace
 import com.intellij.openapi.progress.ProcessCanceledException
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
@@ -857,12 +858,28 @@ abstract class AbstractComposeLowering(
         }
     }
 
-    protected fun makeStabilityProp(): IrProperty {
+    protected fun makeStabilityProp(
+        backingField: IrField,
+        stabilityExpression: IrExpression,
+        parent: IrClass
+    ): IrProperty {
         return context.irFactory.buildProperty {
             startOffset = SYNTHETIC_OFFSET
             endOffset = SYNTHETIC_OFFSET
             name = KtxNameConventions.STABILITY_PROP_FLAG
             visibility = DescriptorVisibilities.PRIVATE
+        }.also { property ->
+            backingField.correspondingPropertySymbol = property.symbol
+            property.backingField = backingField
+            property.parent = parent
+            property.getter = context.irFactory.buildFun {
+                name = Name.special("<get-${property.name}>")
+                returnType = backingField.type
+            }.also { getter ->
+                getter.body = DeclarationIrBuilder(context, getter.symbol)
+                    .irBlockBody { + irReturn(getter.symbol, stabilityExpression) }
+                getter.parent = parent
+            }
         }
     }
 
