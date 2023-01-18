@@ -438,13 +438,14 @@ class ComposeScene internal constructor(
      * is platform-dependent.
      * @param type The device type that produced the event, such as [mouse][PointerType.Mouse],
      * or [touch][PointerType.Touch].
-     * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons).
+     * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons) after the event.
      * @param keyboardModifiers Contains the state of modifier keys, such as Shift, Control,
      * and Alt, as well as the state of the lock keys, such as Caps Lock and Num Lock.
      * @param nativeEvent The original native event.
      * @param button Represents the index of a button which state changed in this event. It's null
      * when there was no change of the buttons state or when button is not applicable (e.g. touch event).
      */
+    @OptIn(ExperimentalComposeUiApi::class)
     fun sendPointerEvent(
         eventType: PointerEventType,
         position: Offset,
@@ -455,23 +456,68 @@ class ComposeScene internal constructor(
         keyboardModifiers: PointerKeyboardModifiers? = null,
         nativeEvent: Any? = null,
         button: PointerButton? = null
-    ): Unit = postponeInvalidation {
+    ) {
         defaultPointerStateTracker.onPointerEvent(button, eventType)
 
         val actualButtons = buttons ?: defaultPointerStateTracker.buttons
         val actualKeyboardModifiers =
             keyboardModifiers ?: defaultPointerStateTracker.keyboardModifiers
 
-        val event = pointerInputEvent(
+        sendPointerEvent(
             eventType,
-            position,
-            timeMillis,
-            nativeEvent,
-            type,
-            scrollDelta,
+            listOf(Pointer(position, actualButtons.areAnyPressed, type)),
             actualButtons,
             actualKeyboardModifiers,
+            scrollDelta,
+            timeMillis,
+            nativeEvent,
             button
+        )
+    }
+
+    // TODO(demin): return Boolean (when it is consumed)
+    // TODO(demin) verify that pressure is the same on Android and iOS
+    /**
+     * Send pointer event to the content. The more detailed version of [sendPointerEvent] that can accept
+     * multiple pointers.
+     *
+     * @param eventType Indicates the primary reason that the event was sent.
+     * @param pointers The current pointers with position relative to the content.
+     * There can be multiple pointers, for example, if we use Touch and touch screen with multiple fingers.
+     * Contains only the state of the active pointers.
+     * Touch that is released still considered as active on PointerEventType.Release event (but with pressed=false). It
+     * is no longer active after that, and shouldn't be passed to the scene.
+     * @param buttons Contains the state of pointer buttons (e.g. mouse and stylus buttons) after the event.
+     * @param keyboardModifiers Contains the state of modifier keys, such as Shift, Control,
+     * and Alt, as well as the state of the lock keys, such as Caps Lock and Num Lock.
+     * @param scrollDelta scroll delta for the PointerEventType.Scroll event
+     * @param timeMillis The time of the current pointer event, in milliseconds. The start (`0`) time
+     * is platform-dependent.
+     * @param nativeEvent The original native event.
+     * @param button Represents the index of a button which state changed in this event. It's null
+     * when there was no change of the buttons state or when button is not applicable (e.g. touch event).
+     */
+    @ExperimentalComposeUiApi
+    fun sendPointerEvent(
+        eventType: PointerEventType,
+        pointers: List<Pointer>,
+        buttons: PointerButtons = PointerButtons(),
+        keyboardModifiers: PointerKeyboardModifiers = PointerKeyboardModifiers(),
+        scrollDelta: Offset = Offset(0f, 0f),
+        timeMillis: Long = (currentNanoTime() / 1E6).toLong(),
+        nativeEvent: Any? = null,
+        button: PointerButton? = null,
+    ): Unit = postponeInvalidation {
+        println("$eventType ${pointers.getOrNull(0)?.position} ${pointers.getOrNull(0)?.id} ${pointers.getOrNull(1)?.position} ${pointers.getOrNull(0)?.pressed} ${pointers.getOrNull(1)?.pressed}")
+        val event = pointerInputEvent(
+            eventType,
+            pointers,
+            timeMillis,
+            nativeEvent,
+            scrollDelta,
+            buttons,
+            keyboardModifiers,
+            button,
         )
         needLayout = false
         forEachOwner { it.measureAndLayout() }
@@ -488,7 +534,6 @@ class ComposeScene internal constructor(
         processPointerInput(createMoveEvent(nativeEvent, sourceEvent, positionSourceEvent))
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     private fun processPointerInput(event: PointerInputEvent) {
         when (event.eventType) {
             PointerEventType.Press -> processPress(event)
@@ -600,6 +645,42 @@ class ComposeScene internal constructor(
     @ExperimentalComposeUiApi
     fun moveFocus(focusDirection: FocusDirection): Boolean =
         list.lastOrNull()?.focusManager?.moveFocus(focusDirection) ?: false
+
+    /**
+     * Represents pointer such as mouse cursor, or touch/stylus press.
+     * There can be multiple pointers on the screen at the same time.
+     */
+    @ExperimentalComposeUiApi
+    class Pointer(
+        /**
+         * The [Offset] of the pointer.
+         */
+        val position: Offset,
+
+        /**
+         * `true` if the pointer event is considered "pressed." For example, finger
+         *  touching the screen or a mouse button is pressed [pressed] would be `true`.
+         *  During the up event, pointer is considered not pressed.
+         */
+        val pressed: Boolean,
+
+        /**
+         * The device type associated with the pointer, such as [mouse][PointerType.Mouse],
+         * or [touch][PointerType.Touch].
+         */
+        val type: PointerType = PointerType.Mouse,
+
+        /**
+         * Unique id associated with the pointer. Used to distinguish between multiple pointers that can exist
+         * at the same time (i.e. multiple pressed touches).
+         */
+        val id: PointerId = PointerId(0),
+
+        /**
+         * Pressure of the pointer. 0.0 - no pressure, 1.0 - average pressure
+         */
+        val pressure: Float = 1.0f,
+    )
 }
 
 private class DefaultPointerStateTracker {
@@ -624,10 +705,9 @@ private class DefaultPointerStateTracker {
 @OptIn(ExperimentalComposeUiApi::class)
 private fun pointerInputEvent(
     eventType: PointerEventType,
-    position: Offset,
+    pointers: List<ComposeScene.Pointer>,
     timeMillis: Long,
     nativeEvent: Any?,
-    type: PointerType,
     scrollDelta: Offset,
     buttons: PointerButtons,
     keyboardModifiers: PointerKeyboardModifiers,
@@ -636,18 +716,18 @@ private fun pointerInputEvent(
     return PointerInputEvent(
         eventType,
         timeMillis,
-        listOf(
+        pointers.map {
             PointerInputEventData(
-                PointerId(0),
+                it.id,
                 timeMillis,
-                position,
-                position,
-                buttons.areAnyPressed,
-                pressure = 1f,
-                type,
+                it.position,
+                it.position,
+                it.pressed,
+                it.pressure,
+                it.type,
                 scrollDelta = scrollDelta
             )
-        ),
+        },
         buttons,
         keyboardModifiers,
         nativeEvent,
@@ -662,10 +742,11 @@ private fun createMoveEvent(
     positionSourceEvent: PointerInputEvent
 ) = pointerInputEvent(
     eventType = PointerEventType.Move,
-    position = positionSourceEvent.pointers.first().position,
+    pointers = positionSourceEvent.pointers.map {
+        ComposeScene.Pointer(it.position, it.down, it.type, it.id, it.pressure)
+    },
     timeMillis = sourceEvent.uptime,
     nativeEvent = nativeEvent,
-    type = sourceEvent.pointers.first().type,
     scrollDelta = Offset(0f, 0f),
     buttons = sourceEvent.buttons,
     keyboardModifiers = sourceEvent.keyboardModifiers,

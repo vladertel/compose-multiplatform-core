@@ -17,11 +17,7 @@
 package androidx.compose.ui.input.pointer
 
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
+import org.jetbrains.skiko.SkikoPointerDevice
 import org.jetbrains.skiko.SkikoPointerEventKind
 import org.jetbrains.skiko.SkikoTouchEventKind
 
@@ -37,12 +33,10 @@ fun SkikoPointerEventKind.toCompose() = when(this) {
     else -> PointerEventType.Unknown
 }
 
-fun SkikoTouchEventKind.toCompose() = when(this) {
-    SkikoTouchEventKind.STARTED -> PointerEventType.Press
-    SkikoTouchEventKind.ENDED -> PointerEventType.Release
-    SkikoTouchEventKind.MOVED -> PointerEventType.Move
-    SkikoTouchEventKind.CANCELLED -> PointerEventType.Release
-    else -> PointerEventType.Unknown
+fun SkikoPointerDevice.toCompose() = when(this) {
+    SkikoPointerDevice.MOUSE -> PointerType.Mouse
+    SkikoPointerDevice.TOUCH -> PointerType.Touch
+    else -> PointerType.Unknown
 }
 
 // TODO(https://github.com/JetBrains/compose-jb/issues/2184) support more buttons

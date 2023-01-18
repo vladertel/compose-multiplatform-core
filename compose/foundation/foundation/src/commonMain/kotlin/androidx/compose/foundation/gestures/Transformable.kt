@@ -68,7 +68,8 @@ fun Modifier.transformable(
         val updatePanZoomLock = rememberUpdatedState(lockRotationOnZoomPan)
         val block: suspend PointerInputScope.() -> Unit = remember {
             {
-                forEachGesture {
+                while(true) {
+                    println("QQQHJHJGJ")
                     detectZoom(updatePanZoomLock, updatedState)
                 }
             }
@@ -103,6 +104,7 @@ private suspend fun PointerInputScope.detectZoom(
             awaitPointerEventScope {
                 do {
                     val event = awaitPointerEvent()
+                    println("HHH ${event.changes.first()}")
                     val canceled = event.changes.fastAny { it.isConsumed }
                     if (!canceled) {
                         val zoomChange = event.calculateZoom()

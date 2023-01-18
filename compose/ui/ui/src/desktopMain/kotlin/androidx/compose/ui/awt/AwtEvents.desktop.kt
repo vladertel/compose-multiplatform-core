@@ -38,7 +38,7 @@ val KeyEvent.awtEvent: java.awt.event.KeyEvent get() {
  *
  * Null if:
  * - the native event is sent by another framework (when Compose UI is embed into it)
- * - there no native event (in tests, for example)
+ * - there is no native event (in tests, for example)
  * - there was a synthetic move event sent by compose on relayout
  * - there was a synthetic move event sent by compose when move is missing between two non-move events
  */
@@ -53,7 +53,7 @@ val PointerEvent.awtEventOrNull: java.awt.event.MouseEvent? get() {
  *
  * Null if:
  * - the native event is sent by another framework (when Compose UI is embed into it)
- * - there no native event (in tests, for example)
+ * - there is no native event (in tests, for example)
  */
 val KeyEvent.awtEventOrNull: java.awt.event.KeyEvent? get() {
     return nativeKeyEvent as? java.awt.event.KeyEvent

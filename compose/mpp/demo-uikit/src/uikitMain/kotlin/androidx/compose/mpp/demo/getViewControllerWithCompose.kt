@@ -25,38 +25,91 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.Application
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.animateZoomBy
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
-fun getViewControllerWithCompose() = Application("Compose/Native sample") {
-    val textState1 = remember { mutableStateOf("text field 1") }
-    val textState2 = remember { mutableStateOf("text field 2") }
-    Column {
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text(".")
-        Text("Hello, UIKit")
-        TextField(value = textState1.value, onValueChange = {
-            textState1.value = it
-        })
-        TextField(value = textState2.value, onValueChange = {
-            textState2.value = it
-        })
-        Image(
-            painter = object : Painter() {
-                override val intrinsicSize: Size = Size(16f, 16f)
-                override fun DrawScope.onDraw() {
-                    drawRect(color = Color.Blue)
+@Composable
+private fun TransformableSample() {
+    Box(
+        Modifier.fillMaxSize().clipToBounds().background(Color.LightGray)
+    ) {
+        // set up all transformation states
+        var scale by remember { mutableStateOf(1f) }
+        var rotation by remember { mutableStateOf(0f) }
+        var offset by remember { mutableStateOf(Offset.Zero) }
+        val coroutineScope = rememberCoroutineScope()
+        // let's create a modifier state to specify how to update our UI state defined above
+        val state = rememberTransformableState { zoomChange, offsetChange, rotationChange ->
+            // note: scale goes by factor, not an absolute difference, so we need to multiply it
+            scale *= zoomChange
+            rotation += rotationChange
+            offset += offsetChange
+
+            println("QQQ $scale $offset")
+        }
+        CircularProgressIndicator()
+        Box(
+            Modifier
+                // apply pan offset state as a layout transformation before other modifiers
+                .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
+                // add transformable to listen to multitouch transformation events after offset
+                .transformable(state = state)
+                // optional for example: add double click to zoom
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            coroutineScope.launch { state.animateZoomBy(4f) }
+                        }
+                    )
                 }
-            },
-            contentDescription = "image sample"
-        )
+                .fillMaxSize()
+                .border(1.dp, Color.Green),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "\uD83C\uDF55",
+                fontSize = 32.sp,
+                // apply other transformations like rotation and zoom on the pizza slice emoji
+                modifier = Modifier.graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    rotationZ = rotation
+                )
+            )
+        }
     }
+}
+fun getViewControllerWithCompose() = Application("Compose/Native sample") {
+    TransformableSample()
 }
