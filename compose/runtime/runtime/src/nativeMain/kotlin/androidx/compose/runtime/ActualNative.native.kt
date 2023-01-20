@@ -134,13 +134,10 @@ internal actual fun <T> createSnapshotMutableState(
 ): SnapshotMutableState<T> =
     SnapshotMutableStateImpl(value, policy)
 
-// fixme: not actually thread local
 internal actual class SnapshotThreadLocal<T> actual constructor() {
-    private var value: T? = null
-
-    actual fun get(): T? = value
+    actual fun get(): T? = threadLocalStorage.get(this) as T
     actual fun set(value: T?) {
-        this.value = value
+        threadLocalStorage.set(this, value)
     }
 }
 
