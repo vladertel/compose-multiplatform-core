@@ -26,54 +26,12 @@ import kotlinx.coroutines.ThreadContextElement
 
 internal actual typealias AtomicReference<V> = java.util.concurrent.atomic.AtomicReference<V>
 
-internal actual open class ThreadLocal<T> actual constructor(
-    private val initialValue: () -> T
-) : java.lang.ThreadLocal<T>() {
-    @Suppress("UNCHECKED_CAST")
-    actual override fun get(): T {
-        return super.get() as T
-    }
-
-    actual override fun set(value: T) {
-        super.set(value)
-    }
-
-    override fun initialValue(): T? {
-        return initialValue.invoke()
-    }
-
-    actual override fun remove() {
-        super.remove()
-    }
-}
-
-internal actual class SnapshotThreadLocal<T> {
-    private val map = AtomicReference<ThreadMap>(emptyThreadMap)
-    private val writeMutex = Any()
-
-    @Suppress("UNCHECKED_CAST")
-    actual fun get(): T? = map.get().get(Thread.currentThread().id) as T?
-
-    actual fun set(value: T?) {
-        val key = Thread.currentThread().id
-        synchronized(writeMutex) {
-            val current = map.get()
-            if (current.trySet(key, value)) return
-            map.set(current.newWith(key, value))
-        }
-    }
-}
+internal actual fun getCurrentThreadId(): Long = Thread.currentThread().id
 
 @InternalComposeApi
 actual fun identityHashCode(instance: Any?): Int = System.identityHashCode(instance)
 
 actual typealias TestOnly = org.jetbrains.annotations.TestOnly
-@PublishedApi
-internal actual inline fun <R> synchronized(lock: Any, block: () -> R): R {
-    return kotlin.synchronized(lock, block)
-}
-
-internal actual typealias TestOnly = org.jetbrains.annotations.TestOnly
 
 internal actual fun invokeComposable(composer: Composer, composable: @Composable () -> Unit) {
     @Suppress("UNCHECKED_CAST")
@@ -90,14 +48,14 @@ internal actual fun <T> invokeComposableForResult(
     return realFn(composer, 1)
 }
 
+actual annotation class CompositionContextLocal {}
+
 internal actual class AtomicInt actual constructor(value: Int) {
     val delegate = java.util.concurrent.atomic.AtomicInteger(value)
     actual fun get(): Int = delegate.get()
     actual fun set(value: Int) = delegate.set(value)
     actual fun add(amount: Int): Int = delegate.addAndGet(amount)
 }
-
-internal actual fun ensureMutable(it: Any) { /* NOTHING */ }
 
 internal actual class WeakReference<T : Any> actual constructor(reference: T) :
     java.lang.ref.WeakReference<T>(reference)

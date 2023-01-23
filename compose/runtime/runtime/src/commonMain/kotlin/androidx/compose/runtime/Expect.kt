@@ -20,30 +20,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotContextElement
 import kotlinx.coroutines.CancellationException
 
-// TODO(aelias): Mark the typealiases internal when https://youtrack.jetbrains.com/issue/KT-36695 is fixed.
-// Currently, they behave as internal because the actual is internal, even though the expect is public.
-
-internal expect open class ThreadLocal<T>(initialValue: () -> T) {
-    fun get(): T
-    fun set(value: T)
-    fun remove()
-}
-
-internal fun <T> ThreadLocal() = ThreadLocal<T?> { null }
-
-/**
- * This is similar to a [ThreadLocal] but has lower overhead because it avoids a weak reference.
- * This should only be used when the writes are delimited by a try...finally call that will clean
- * up the reference such as [androidx.compose.runtime.snapshots.Snapshot.enter] else the reference
- * could get pinned by the thread local causing a leak.
- *
- * [ThreadLocal] can be used to implement the actual for platforms that do not exhibit the same
- * overhead for thread locals as the JVM and ART.
- */
-internal expect class SnapshotThreadLocal<T>() {
-    fun get(): T?
-    fun set(value: T?)
-}
+internal expect fun getCurrentThreadId(): Long
 
 /**
  * Returns the hash code for the given object that is unique across all currently allocated objects.
@@ -78,9 +55,8 @@ internal expect class AtomicInt(value: Int) {
 
 internal fun AtomicInt.postIncrement(): Int = add(1) - 1
 
-internal expect fun ensureMutable(it: Any)
-
 expect annotation class CompositionContextLocal
+
 internal expect class WeakReference<T : Any>(reference: T) {
     fun get(): T?
 }
