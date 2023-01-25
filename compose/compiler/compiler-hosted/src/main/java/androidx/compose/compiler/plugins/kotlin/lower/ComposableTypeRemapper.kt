@@ -70,6 +70,7 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance
 
 internal fun IrFunction.needsComposableRemapping(): Boolean {
+    if (this.isDecoy()) return false // to preserve the original signature for decoys
     if (
         needsComposableRemapping(dispatchReceiverParameter?.type) ||
         needsComposableRemapping(extensionReceiverParameter?.type) ||
