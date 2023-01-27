@@ -72,6 +72,9 @@ def addMavenRepositories(RepositoryHandler handler) {
         handler.maven {
             url("https://maven.pkg.jetbrains.space/kotlin/p/wasm/experimental")
         }
+        handler.maven {
+            url("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev")
+        }
     }
     // Ordering appears to be important: b/229733266
     def androidPluginRepoOverride = System.getenv("GRADLE_PLUGIN_REPO")

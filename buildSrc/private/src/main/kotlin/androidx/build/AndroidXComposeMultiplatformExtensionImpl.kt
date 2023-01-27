@@ -284,13 +284,13 @@ private fun Project.publishAndroidxReference(target: KotlinTarget) {
                 val rootComponent : KotlinSoftwareComponent = target.project.components.withType(KotlinSoftwareComponent::class.java)
                     .getByName("kotlin")
 
-                (rootComponent.usages as MutableSet).add(
-                    DefaultKotlinUsageContext(
-                        compilation = multiplatformExtension.metadata().compilations.getByName("main"),
-                        //objects.named(Usage::class.java, "kotlin-api"),
-                        dependencyConfigurationName = configurationName
-                    )
-                )
+//                (rootComponent.usages as MutableSet).add(
+//                    DefaultKotlinUsageContext(
+//                        compilation = multiplatformExtension.metadata().compilations.getByName("main"),
+//                        objects.named(Usage::class.java, "kotlin-api"),
+//                        dependencyConfigurationName = configurationName
+//                    )
+//                )
 
             }
         }

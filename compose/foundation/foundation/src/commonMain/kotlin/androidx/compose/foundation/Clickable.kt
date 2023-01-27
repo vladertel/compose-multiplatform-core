@@ -184,8 +184,8 @@ fun Modifier.clickable(
             )
         }
 
-        // TODO: is it a workaround for k/wasm? Can't use it directly w/o declaring a val?
-        val updaterHandler = object : ModifierLocalConsumer {
+        // TODO: it's a workaround for k/wasm. Can't declare it in remember {} right away
+        fun createUpdateHandler() = object : ModifierLocalConsumer {
             override fun onModifierLocalsUpdated(scope: ModifierLocalReadScope) {
                 with(scope) {
                     isClickableInScrollableContainer.value =
@@ -195,7 +195,7 @@ fun Modifier.clickable(
         }
 
         Modifier
-            .then(remember { updaterHandler })
+            .then(remember { createUpdateHandler() })
             .then(focusRequesterModifier)
             .genericClickableWithoutGesture(
                 gestureModifiers = gesture,

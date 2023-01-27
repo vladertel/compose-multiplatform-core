@@ -35,6 +35,19 @@ class AndroidXPlugin : Plugin<Project> {
                 "from" to "$supportRoot/buildSrc/apply/applyAndroidXImplPlugin.gradle"
             )
         )
+
+        project.configurations.all {
+            val conf = it
+            conf.resolutionStrategy.eachDependency {
+                val replace = (it.requested.module.name.contains("coroutines") ||
+                    it.requested.module.name.contains("atomicfu")) &&
+                    conf.name.contains("wasm", true) &&
+                    !conf.name.contains("js", true)
+                if (replace && !it.requested.version!!.contains("-wasm0")) {
+                    it.useVersion(it.requested.version!! + "-wasm0")
+                }
+            }
+        }
     }
 
     companion object {
