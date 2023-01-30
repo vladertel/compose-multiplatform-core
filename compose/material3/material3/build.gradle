@@ -81,6 +81,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         android()
         desktop()
         darwin()
+        wasm()
         js()
     }
 
@@ -123,6 +124,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             jsNativeMain.dependsOn(skikoMain)
 
             jsMain.dependsOn(jsNativeMain)
+            wasmMain.dependsOn(jsNativeMain)
             nativeMain.dependsOn(jsNativeMain)
 
             // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you

@@ -139,7 +139,8 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
             project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
                 compile.kotlinOptions.freeCompilerArgs += listOf(
-//                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true"
+                    // TODO: consider disabling decoys for k/wasm
+                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true",
                     "-Xklib-enable-signature-clash-checks=false",
                 )
             }

@@ -189,3 +189,10 @@ android {
             project.rootDir.absolutePath + "/../../golden/compose/material/material"
     namespace "androidx.compose.material"
 }
+
+project.afterEvaluate {
+    //Disable jsWasmMain intermediate sourceset publication
+    tasks.named("compileJsWasmMainKotlinMetadata") {
+        enabled = false
+    }
+}

@@ -97,7 +97,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.truth)
             }
 
-            jsWasmMain {}
+            jsWasmMain {
+                dependsOn(commonMain)
+            }
 
             jsMain {
                 dependsOn(jsWasmMain)
@@ -137,5 +139,13 @@ tasks.withType(KotlinCompile).configureEach {
         freeCompilerArgs += [
                 "-Xjvm-default=all",
         ]
+    }
+}
+
+
+project.afterEvaluate {
+    //Disable jsWasmMain intermediate sourceset publication
+    tasks.named("compileJsWasmMainKotlinMetadata") {
+        enabled = false
     }
 }

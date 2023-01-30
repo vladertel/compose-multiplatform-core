@@ -18,20 +18,14 @@ package androidx.compose.ui.platform
 
 //internal actual typealias AtomicInt = kotlin.native.concurrent.AtomicInt
 
-actual class AtomicInt actual constructor(value_: Int) {
-    private var delegate: Int = value_
+actual class AtomicInt actual constructor(value: Int) {
+    private val delegate: kotlinx.atomicfu.AtomicInt = kotlinx.atomicfu.atomic(value)
 
     actual fun addAndGet(delta: Int): Int {
-        delegate += delta
-        return delegate
+        return delegate.addAndGet(delta)
     }
     actual fun compareAndSet(expected: Int, new: Int): Boolean {
-        return if (delegate == expected) {
-            delegate = new
-            true
-        } else {
-            false
-        }
+        return delegate.compareAndSet(expected, new)
     }
 }
 

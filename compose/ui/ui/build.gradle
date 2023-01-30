@@ -352,3 +352,10 @@ if (!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         verifyKotlinModule(variant)
     }
 }
+
+project.afterEvaluate {
+    //Disable jsWasmMain intermediate sourceset publication
+    tasks.named("compileJsWasmMainKotlinMetadata") {
+        enabled = false
+    }
+}
