@@ -29,9 +29,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material.LocalContentColor
-import androidx.tv.material.Tab
-import androidx.tv.material.TabRow
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.LocalContentColor
+import androidx.tv.material3.Tab
+import androidx.tv.material3.TabRow
 import kotlinx.coroutines.delay
 
 enum class Navigation(val displayName: String, val action: @Composable () -> Unit) {
@@ -39,6 +40,7 @@ enum class Navigation(val displayName: String, val action: @Composable () -> Uni
   FeaturedCarousel("Featured Carousel", { FeaturedCarouselContent() }),
   ImmersiveList("Immersive List", { ImmersiveListContent() }),
   StickyHeader("Sticky Header", { StickyHeaderContent() }),
+  TextField("Text Field", { TextFieldContent() }),
 }
 
 @Composable
@@ -66,6 +68,7 @@ internal fun TopNavigation(
 /**
  * Pill indicator tab row for reference
  */
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun PillIndicatorTabRow(
   tabs: List<String>,

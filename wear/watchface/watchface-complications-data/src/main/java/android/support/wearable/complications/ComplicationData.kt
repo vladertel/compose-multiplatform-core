@@ -30,12 +30,11 @@ import androidx.annotation.ColorInt
 import androidx.annotation.IntDef
 import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicFloat
 import androidx.wear.watchface.complications.data.ComplicationDisplayPolicies
 import androidx.wear.watchface.complications.data.ComplicationDisplayPolicy
 import androidx.wear.watchface.complications.data.ComplicationPersistencePolicies
 import androidx.wear.watchface.complications.data.ComplicationPersistencePolicy
-import androidx.wear.watchface.complications.data.FloatExpression
-import androidx.wear.watchface.complications.data.toFloatExpression
 import androidx.wear.watchface.utility.iconEquals
 import androidx.wear.watchface.utility.iconHashCode
 import java.io.IOException
@@ -43,6 +42,7 @@ import java.io.InvalidObjectException
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.io.Serializable
+import java.util.Arrays
 import java.util.Objects
 
 /**
@@ -179,7 +179,7 @@ class ComplicationData : Parcelable, Serializable {
             }
             if (isFieldValidForType(FIELD_VALUE_EXPRESSION, type)) {
                 oos.writeNullable(complicationData.rangedValueExpression) {
-                    oos.writeByteArray(it.asByteArray())
+                    oos.writeByteArray(it.toDynamicFloatByteArray())
                 }
             }
             if (isFieldValidForType(FIELD_VALUE_TYPE, type)) {
@@ -607,10 +607,11 @@ class ComplicationData : Parcelable, Serializable {
      * Valid only if the type of this complication data is [TYPE_RANGED_VALUE] and
      * [TYPE_GOAL_PROGRESS].
      */
-    val rangedValueExpression: FloatExpression?
+    val rangedValueExpression: DynamicFloat?
         get() {
             checkFieldValidForTypeWithoutThrowingException(FIELD_VALUE_EXPRESSION, type)
-            return fields.getByteArray(FIELD_VALUE_EXPRESSION)?.toFloatExpression()
+            return fields.getByteArray(FIELD_VALUE_EXPRESSION)
+                ?.let { DynamicFloat.fromByteArray(it) }
         }
 
     /**
@@ -1185,7 +1186,8 @@ class ComplicationData : Parcelable, Serializable {
             equalsWithoutExpressions(other) &&
             (!isFieldValidForType(FIELD_VALUE, type) || rangedValue == other.rangedValue) &&
             (!isFieldValidForType(FIELD_VALUE_EXPRESSION, type) ||
-                rangedValueExpression == other.rangedValueExpression) &&
+                rangedValueExpression?.toDynamicFloatByteArray() contentEquals
+                other.rangedValueExpression?.toDynamicFloatByteArray()) &&
             (!isFieldValidForType(FIELD_SHORT_TITLE, type) || shortTitle == other.shortTitle) &&
             (!isFieldValidForType(FIELD_SHORT_TEXT, type) || shortText == other.shortText) &&
             (!isFieldValidForType(FIELD_LONG_TITLE, type) || longTitle == other.longTitle) &&
@@ -1202,7 +1204,8 @@ class ComplicationData : Parcelable, Serializable {
             ) {
                 !isFieldValidForType(FIELD_VALUE, type) || rangedValue == other.rangedValue
             } else {
-                rangedValueExpression == other.rangedValueExpression
+                rangedValueExpression?.toDynamicFloatByteArray() contentEquals
+                    other.rangedValueExpression?.toDynamicFloatByteArray()
             } &&
             (!isFieldValidForType(FIELD_SHORT_TITLE, type) ||
                 shortTitle equalsUnevaluated other.shortTitle) &&
@@ -1219,11 +1222,14 @@ class ComplicationData : Parcelable, Serializable {
                     ((placeholder != null && other.placeholder != null) &&
                         placeholder!! equalsUnevaluated other.placeholder!!)))
 
-    private infix fun ComplicationText?.equalsUnevaluated(other: ComplicationText?): Boolean =
-        (this == null && other == null) ||
-            ((this != null && other != null) &&
-                if (stringExpression == null) equals(other)
-                else stringExpression == other.stringExpression)
+    private infix fun ComplicationText?.equalsUnevaluated(other: ComplicationText?): Boolean {
+        if (this == null && other == null) return true
+        if (this == null || other == null) return false
+        // Both are non-null.
+        if (stringExpression == null) return equals(other)
+        return stringExpression?.toDynamicStringByteArray() contentEquals
+            other.stringExpression?.toDynamicStringByteArray()
+    }
 
     private fun equalsWithoutExpressions(other: ComplicationData): Boolean =
         this === other || (
@@ -1305,7 +1311,11 @@ class ComplicationData : Parcelable, Serializable {
         if (isFieldValidForType(EXP_FIELD_LIST_ENTRIES, type)) listEntries else null,
         if (isFieldValidForType(FIELD_DATA_SOURCE, type)) dataSource else null,
         if (isFieldValidForType(FIELD_VALUE, type)) rangedValue else null,
-        if (isFieldValidForType(FIELD_VALUE_EXPRESSION, type)) rangedValueExpression else null,
+        if (isFieldValidForType(FIELD_VALUE_EXPRESSION, type)) {
+            Arrays.hashCode(rangedValueExpression?.toDynamicFloatByteArray())
+        } else {
+            null
+        },
         if (isFieldValidForType(FIELD_VALUE_TYPE, type)) rangedValueType else null,
         if (isFieldValidForType(FIELD_MIN_VALUE, type)) rangedMinValue else null,
         if (isFieldValidForType(FIELD_MAX_VALUE, type)) rangedMaxValue else null,
@@ -1467,8 +1477,8 @@ class ComplicationData : Parcelable, Serializable {
          *
          * @throws IllegalStateException if this field is not valid for the complication type
          */
-        fun setRangedValueExpression(value: FloatExpression?) =
-            apply { putOrRemoveField(FIELD_VALUE_EXPRESSION, value?.asByteArray()) }
+        fun setRangedValueExpression(value: DynamicFloat?) =
+            apply { putOrRemoveField(FIELD_VALUE_EXPRESSION, value?.toDynamicFloatByteArray()) }
 
         /**
          * Sets the *value type* field which provides meta data about the value. This is
@@ -2199,38 +2209,45 @@ class ComplicationData : Parcelable, Serializable {
             TYPE_WEIGHTED_ELEMENTS to setOf(),
         )
 
+        private val COMMON_OPTIONAL_FIELDS: Array<String> = arrayOf(
+            FIELD_TAP_ACTION,
+            FIELD_CONTENT_DESCRIPTION,
+            FIELD_DATA_SOURCE,
+            FIELD_PERSISTENCE_POLICY,
+            FIELD_DISPLAY_POLICY,
+            FIELD_TIMELINE_START_TIME,
+            FIELD_TIMELINE_END_TIME,
+            FIELD_START_TIME,
+            FIELD_END_TIME,
+            FIELD_TIMELINE_ENTRIES,
+            FIELD_TIMELINE_ENTRY_TYPE,
+        )
+
         // Used for validation. OPTIONAL_FIELDS[i] is a list containing all the fields which are
         // valid but not required for type i.
         private val OPTIONAL_FIELDS: Map<Int, Set<String>> = mapOf(
             TYPE_NOT_CONFIGURED to setOf(),
             TYPE_EMPTY to setOf(),
             TYPE_SHORT_TEXT to setOf(
+                *COMMON_OPTIONAL_FIELDS,
                 FIELD_SHORT_TITLE,
                 FIELD_ICON,
                 FIELD_ICON_BURN_IN_PROTECTION,
                 FIELD_SMALL_IMAGE,
                 FIELD_SMALL_IMAGE_BURN_IN_PROTECTION,
                 FIELD_IMAGE_STYLE,
-                FIELD_TAP_ACTION,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
             ),
             TYPE_LONG_TEXT to setOf(
+                *COMMON_OPTIONAL_FIELDS,
                 FIELD_LONG_TITLE,
                 FIELD_ICON,
                 FIELD_ICON_BURN_IN_PROTECTION,
                 FIELD_SMALL_IMAGE,
                 FIELD_SMALL_IMAGE_BURN_IN_PROTECTION,
                 FIELD_IMAGE_STYLE,
-                FIELD_TAP_ACTION,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
             ),
             TYPE_RANGED_VALUE to setOf(
+                *COMMON_OPTIONAL_FIELDS,
                 FIELD_SHORT_TEXT,
                 FIELD_SHORT_TITLE,
                 FIELD_ICON,
@@ -2238,39 +2255,23 @@ class ComplicationData : Parcelable, Serializable {
                 FIELD_SMALL_IMAGE,
                 FIELD_SMALL_IMAGE_BURN_IN_PROTECTION,
                 FIELD_IMAGE_STYLE,
-                FIELD_TAP_ACTION,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
                 FIELD_COLOR_RAMP,
                 FIELD_COLOR_RAMP_INTERPOLATED,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
                 FIELD_VALUE_TYPE,
             ),
             TYPE_ICON to setOf(
-                FIELD_TAP_ACTION,
+                *COMMON_OPTIONAL_FIELDS,
                 FIELD_ICON_BURN_IN_PROTECTION,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
             ),
             TYPE_SMALL_IMAGE to setOf(
-                FIELD_TAP_ACTION,
+                *COMMON_OPTIONAL_FIELDS,
                 FIELD_SMALL_IMAGE_BURN_IN_PROTECTION,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
             ),
             TYPE_LARGE_IMAGE to setOf(
-                FIELD_TAP_ACTION,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
+                *COMMON_OPTIONAL_FIELDS,
             ),
             TYPE_NO_PERMISSION to setOf(
+                *COMMON_OPTIONAL_FIELDS,
                 FIELD_SHORT_TEXT,
                 FIELD_SHORT_TITLE,
                 FIELD_ICON,
@@ -2278,20 +2279,14 @@ class ComplicationData : Parcelable, Serializable {
                 FIELD_SMALL_IMAGE,
                 FIELD_SMALL_IMAGE_BURN_IN_PROTECTION,
                 FIELD_IMAGE_STYLE,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
             ),
             TYPE_NO_DATA to setOf(
+                *COMMON_OPTIONAL_FIELDS,
                 FIELD_COLOR_RAMP,
                 FIELD_COLOR_RAMP_INTERPOLATED,
-                FIELD_DATA_SOURCE,
-                FIELD_DISPLAY_POLICY,
                 FIELD_ELEMENT_BACKGROUND_COLOR,
                 FIELD_ELEMENT_COLORS,
                 FIELD_ELEMENT_WEIGHTS,
-                FIELD_END_TIME,
                 FIELD_ICON,
                 FIELD_ICON_BURN_IN_PROTECTION,
                 FIELD_IMAGE_STYLE,
@@ -2300,21 +2295,14 @@ class ComplicationData : Parcelable, Serializable {
                 FIELD_LONG_TEXT,
                 FIELD_MAX_VALUE,
                 FIELD_MIN_VALUE,
-                FIELD_PERSISTENCE_POLICY,
                 FIELD_PLACEHOLDER_FIELDS,
                 FIELD_PLACEHOLDER_TYPE,
                 FIELD_SMALL_IMAGE,
                 FIELD_SMALL_IMAGE_BURN_IN_PROTECTION,
                 FIELD_SHORT_TITLE,
                 FIELD_SHORT_TEXT,
-                FIELD_START_TIME,
-                FIELD_TAP_ACTION,
                 FIELD_TAP_ACTION_LOST,
                 FIELD_TARGET_VALUE,
-                FIELD_TIMELINE_START_TIME,
-                FIELD_TIMELINE_END_TIME,
-                FIELD_TIMELINE_ENTRIES,
-                FIELD_TIMELINE_ENTRY_TYPE,
                 FIELD_VALUE,
                 FIELD_VALUE_EXPRESSION,
                 FIELD_VALUE_TYPE,
@@ -2324,24 +2312,16 @@ class ComplicationData : Parcelable, Serializable {
                 EXP_FIELD_PROTO_LAYOUT_AMBIENT,
                 EXP_FIELD_PROTO_LAYOUT_INTERACTIVE,
                 EXP_FIELD_PROTO_LAYOUT_RESOURCES,
-                FIELD_CONTENT_DESCRIPTION,
             ),
             EXP_TYPE_PROTO_LAYOUT to setOf(
-                FIELD_TAP_ACTION,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
+                *COMMON_OPTIONAL_FIELDS,
             ),
             EXP_TYPE_LIST to setOf(
-                FIELD_TAP_ACTION,
+                *COMMON_OPTIONAL_FIELDS,
                 EXP_FIELD_LIST_STYLE_HINT,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
             ),
             TYPE_GOAL_PROGRESS to setOf(
+                *COMMON_OPTIONAL_FIELDS,
                 FIELD_SHORT_TEXT,
                 FIELD_SHORT_TITLE,
                 FIELD_ICON,
@@ -2349,15 +2329,11 @@ class ComplicationData : Parcelable, Serializable {
                 FIELD_SMALL_IMAGE,
                 FIELD_SMALL_IMAGE_BURN_IN_PROTECTION,
                 FIELD_IMAGE_STYLE,
-                FIELD_TAP_ACTION,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
                 FIELD_COLOR_RAMP,
                 FIELD_COLOR_RAMP_INTERPOLATED,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
             ),
             TYPE_WEIGHTED_ELEMENTS to setOf(
+                *COMMON_OPTIONAL_FIELDS,
                 FIELD_SHORT_TEXT,
                 FIELD_SHORT_TITLE,
                 FIELD_ICON,
@@ -2365,11 +2341,6 @@ class ComplicationData : Parcelable, Serializable {
                 FIELD_SMALL_IMAGE,
                 FIELD_SMALL_IMAGE_BURN_IN_PROTECTION,
                 FIELD_IMAGE_STYLE,
-                FIELD_TAP_ACTION,
-                FIELD_CONTENT_DESCRIPTION,
-                FIELD_DATA_SOURCE,
-                FIELD_PERSISTENCE_POLICY,
-                FIELD_DISPLAY_POLICY,
             ),
         )
 

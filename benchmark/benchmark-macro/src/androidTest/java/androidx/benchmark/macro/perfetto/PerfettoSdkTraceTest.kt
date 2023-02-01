@@ -20,12 +20,12 @@ import android.os.Build
 import androidx.benchmark.junit4.PerfettoTraceRule
 import androidx.benchmark.perfetto.ExperimentalPerfettoCaptureApi
 import androidx.benchmark.perfetto.PerfettoHelper
-import androidx.test.filters.FlakyTest
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.tracing.trace
 import com.google.common.truth.Truth.assertThat
 import org.junit.Assume.assumeTrue
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -62,10 +62,14 @@ class PerfettoSdkTraceTest(enableAppTagTracing: Boolean, enableUserspaceTracing:
         assertThat(actualSlices).containsExactlyElementsIn(expectedSlices)
     }
 
-    @FlakyTest(bugId = 260715950)
+    @Ignore // b/260715950
     @Test
     @SdkSuppress(maxSdkVersion = 33) // b/262909049: Failing on SDK 34
     fun test_endToEnd() {
+        if (Build.VERSION.SDK_INT == 33 && Build.VERSION.CODENAME != "REL") {
+            return // b/262909049: Do not run this test on pre-release Android U.
+        }
+
         assumeTrue(PerfettoHelper.isAbiSupported())
         StringSource.appTagTraceStrings.forEach { trace(it) { } }
         StringSource.userspaceTraceStrings.forEachIndexed { ix, str ->

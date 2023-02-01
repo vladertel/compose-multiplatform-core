@@ -65,7 +65,7 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
@@ -575,7 +575,7 @@ internal class ComposeViewAdapter : FrameLayout {
         // ComposeView and lifecycle initialization
         setViewTreeLifecycleOwner(FakeSavedStateRegistryOwner)
         setViewTreeSavedStateRegistryOwner(FakeSavedStateRegistryOwner)
-        ViewTreeViewModelStoreOwner.set(this, FakeViewModelStoreOwner)
+        setViewTreeViewModelStoreOwner(FakeViewModelStoreOwner)
         addView(composeView)
 
         val composableName = attrs.getAttributeValue(TOOLS_NS_URI, "composableName") ?: return
@@ -642,24 +642,25 @@ internal class ComposeViewAdapter : FrameLayout {
         override val savedStateRegistry: SavedStateRegistry
             get() = controller.savedStateRegistry
 
-        override fun getLifecycle(): Lifecycle = lifecycleRegistry
+        override val lifecycle: LifecycleRegistry
+            get() = lifecycleRegistry
     }
 
     private val FakeViewModelStoreOwner = object : ViewModelStoreOwner {
-        private val viewModelStore = ViewModelStore()
+        private val vmStore = ViewModelStore()
 
-        override fun getViewModelStore() = viewModelStore
+        override val viewModelStore = vmStore
     }
 
     private val FakeOnBackPressedDispatcherOwner = object : OnBackPressedDispatcherOwner {
-        private val onBackPressedDispatcher = OnBackPressedDispatcher()
+        override val onBackPressedDispatcher = OnBackPressedDispatcher()
 
-        override fun getOnBackPressedDispatcher() = onBackPressedDispatcher
-        override fun getLifecycle() = FakeSavedStateRegistryOwner.lifecycleRegistry
+        override val lifecycle: LifecycleRegistry
+            get() = FakeSavedStateRegistryOwner.lifecycleRegistry
     }
 
     private val FakeActivityResultRegistryOwner = object : ActivityResultRegistryOwner {
-        private val activityResultRegistry = object : ActivityResultRegistry() {
+        override val activityResultRegistry = object : ActivityResultRegistry() {
             override fun <I : Any?, O : Any?> onLaunch(
                 requestCode: Int,
                 contract: ActivityResultContract<I, O>,
@@ -669,7 +670,5 @@ internal class ComposeViewAdapter : FrameLayout {
                 throw IllegalStateException("Calling launch() is not supported in Preview")
             }
         }
-
-        override fun getActivityResultRegistry(): ActivityResultRegistry = activityResultRegistry
     }
 }

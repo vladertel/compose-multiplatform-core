@@ -44,6 +44,9 @@ val TextDemos = DemoCategory(
                         ComposableDemo("Ellipsize and letterspacing") {
                             EllipsizeWithLetterSpacing()
                         },
+                        ComposableDemo("Letterspacing") {
+                            LetterSpacingDemo()
+                        }
                     )
                 ),
                 DemoCategory(
@@ -114,13 +117,14 @@ val TextDemos = DemoCategory(
             listOf(
                 ComposableDemo("Text selection") { TextSelectionDemo() },
                 ComposableDemo("Text selection sample") { TextSelectionSample() },
+                ComposableDemo("Overflowed Selection") { TextOverflowedSelectionDemo() },
             )
         ),
         DemoCategory(
-            "⚠️️ Memory benchmark ⚠️️",
+            "\uD83D\uDD75️️️ Memory allocs",
             listOf(
-                ComposableDemo("SetText") { MemoryAllocsSetText() },
-                ComposableDemo("IfNotEmptyText") { MemoryAllocsIfNotEmptyText() }
+                ComposableDemo("\uD83D\uDD75️ SetText") { MemoryAllocsSetText() },
+                ComposableDemo("\uD83D\uDD75️ IfNotEmptyText") { MemoryAllocsIfNotEmptyText() }
             )
         )
     )

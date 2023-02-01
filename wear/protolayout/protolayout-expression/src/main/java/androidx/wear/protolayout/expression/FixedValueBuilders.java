@@ -26,8 +26,9 @@ import androidx.wear.protolayout.expression.proto.DynamicProto;
 import androidx.wear.protolayout.expression.proto.FixedProto;
 import androidx.wear.protolayout.expression.proto.StateEntryProto;
 
-/** Builders for fixed value primitive types that can be used in dynamic expressions and in for
- * state state valuess
+/**
+ * Builders for fixed value primitive types that can be used in dynamic expressions and in for state
+ * state values.
  */
 final class FixedValueBuilders {
   private FixedValueBuilders() {}
@@ -88,6 +89,12 @@ final class FixedValueBuilders {
     @NonNull
     public StateEntryProto.StateEntryValue toStateEntryValueProto() {
       return StateEntryProto.StateEntryValue.newBuilder().setInt32Val(mImpl).build();
+    }
+
+    @Override
+    @NonNull
+    public String toString() {
+      return "FixedInt32{" + "value=" + getValue() + "}";
     }
 
     /** Builder for {@link FixedInt32}. */
@@ -178,6 +185,12 @@ final class FixedValueBuilders {
       return StateEntryProto.StateEntryValue.newBuilder().setStringVal(mImpl).build();
     }
 
+    @Override
+    @NonNull
+    public String toString() {
+      return "FixedString{" + "value=" + getValue() + "}";
+    }
+
     /** Builder for {@link FixedString}. */
     public static final class Builder
         implements DynamicBuilders.DynamicString.Builder,
@@ -263,6 +276,12 @@ final class FixedValueBuilders {
     @NonNull
     public StateEntryProto.StateEntryValue toStateEntryValueProto() {
       return StateEntryProto.StateEntryValue.newBuilder().setFloatVal(mImpl).build();
+    }
+
+    @Override
+    @NonNull
+    public String toString() {
+      return "FixedFloat{" + "value=" + getValue() + "}";
     }
 
     /** Builder for {@link FixedFloat}. */
@@ -352,6 +371,12 @@ final class FixedValueBuilders {
       return StateEntryProto.StateEntryValue.newBuilder().setBoolVal(mImpl).build();
     }
 
+    @Override
+    @NonNull
+    public String toString() {
+      return "FixedBool{" + "value=" + getValue() + "}";
+    }
+
     /** Builder for {@link FixedBool}. */
     public static final class Builder
         implements DynamicBuilders.DynamicBool.Builder, StateEntryBuilders.StateEntryValue.Builder {
@@ -438,6 +463,12 @@ final class FixedValueBuilders {
     @NonNull
     public StateEntryProto.StateEntryValue toStateEntryValueProto() {
       return StateEntryProto.StateEntryValue.newBuilder().setColorVal(mImpl).build();
+    }
+
+    @Override
+    @NonNull
+    public String toString() {
+      return "FixedColor{" + "argb=" + getArgb() + "}";
     }
 
     /** Builder for {@link FixedColor}. */

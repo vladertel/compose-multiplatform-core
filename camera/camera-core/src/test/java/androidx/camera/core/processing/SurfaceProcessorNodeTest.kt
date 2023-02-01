@@ -20,12 +20,14 @@ import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.os.Build
 import android.os.Looper.getMainLooper
+import android.util.Range
 import android.util.Size
 import android.view.Surface
 import androidx.camera.core.CameraEffect.PREVIEW
 import androidx.camera.core.CameraEffect.VIDEO_CAPTURE
 import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.SurfaceRequest.TransformationInfo
+import androidx.camera.core.impl.StreamSpec
 import androidx.camera.core.impl.utils.TransformUtils.is90or270
 import androidx.camera.core.impl.utils.TransformUtils.rectToSize
 import androidx.camera.core.impl.utils.TransformUtils.rotateSize
@@ -141,13 +143,15 @@ class SurfaceProcessorNodeTest {
             // Assert: with transformation, the output size is cropped/rotated and the rotation
             // degrees is reset.
             val previewOutput = nodeOutput[previewOutConfig]!!
-            assertThat(previewOutput.size).isEqualTo(rectToSize(expectedCropRect))
+            assertThat(previewOutput.streamSpec.resolution).isEqualTo(rectToSize(expectedCropRect))
             assertThat(previewOutput.cropRect).isEqualTo(expectedCropRect)
             assertThat(previewOutput.rotationDegrees).isEqualTo(0)
+            assertThat(previewOutput.mirroring).isFalse()
             val videoOutput = nodeOutput[videoOutConfig]!!
-            assertThat(videoOutput.size).isEqualTo(videoOutputSize)
+            assertThat(videoOutput.streamSpec.resolution).isEqualTo(videoOutputSize)
             assertThat(videoOutput.cropRect).isEqualTo(sizeToRect(videoOutputSize))
             assertThat(videoOutput.rotationDegrees).isEqualTo(0)
+            assertThat(videoOutput.mirroring).isTrue()
 
             // Clean up.
             nodeInput.surfaceEdge.close()
@@ -166,23 +170,20 @@ class SurfaceProcessorNodeTest {
     }
 
     @Test
-    fun transformInput_applyCropRotateAndMirroring_outputHasNoMirroring() {
-        for (mirroring in arrayOf(false, true)) {
-            // Arrange.
-            createSurfaceProcessorNode()
-            createInputEdge(mirroring = mirroring)
-
-            // Act.
-            val nodeOutput = node.transform(nodeInput)
-
-            // Assert: the mirroring of output is always false.
-            assertThat(nodeOutput[previewOutConfig]!!.mirroring).isFalse()
-            assertThat(nodeOutput[videoOutConfig]!!.mirroring).isFalse()
-
-            // Clean up.
-            nodeInput.surfaceEdge.close()
-            node.release()
-        }
+    fun transformInputWithFrameRate_propagatesToChildren() {
+        // Arrange: create input edge with frame rate.
+        val frameRateRange = Range.create(30, 30)
+        createSurfaceProcessorNode()
+        createInputEdge(
+            frameRateRange = frameRateRange
+        )
+        // Act.
+        val nodeOutput = node.transform(nodeInput)
+        // Assert: all outputs have the same frame rate.
+        assertThat(nodeOutput[previewOutConfig]!!.streamSpec.expectedFrameRateRange)
+            .isEqualTo(frameRateRange)
+        assertThat(nodeOutput[videoOutConfig]!!.streamSpec.expectedFrameRateRange)
+            .isEqualTo(frameRateRange)
     }
 
     @Test
@@ -206,6 +207,7 @@ class SurfaceProcessorNodeTest {
         assertThat(previewTransformInfo.cropRect).isEqualTo(Rect(0, 0, 400, 600))
         assertThat(previewTransformInfo.rotationDegrees).isEqualTo(0)
         assertThat(previewSurfaceOutput.inputSize).isEqualTo(INPUT_SIZE)
+        assertThat(previewSurfaceOutput.mirroring).isFalse()
 
         val videoSurfaceOutput =
             surfaceProcessorInternal.surfaceOutputs[VIDEO_CAPTURE]!! as SurfaceOutputImpl
@@ -215,6 +217,7 @@ class SurfaceProcessorNodeTest {
         assertThat(videoTransformInfo.cropRect).isEqualTo(sizeToRect(VIDEO_SIZE))
         assertThat(videoTransformInfo.rotationDegrees).isEqualTo(0)
         assertThat(videoSurfaceOutput.inputSize).isEqualTo(INPUT_SIZE)
+        assertThat(videoSurfaceOutput.mirroring).isTrue()
     }
 
     @Test
@@ -227,7 +230,7 @@ class SurfaceProcessorNodeTest {
         provideSurfaces(nodeOutput)
         shadowOf(getMainLooper()).idle()
 
-        // Act.
+        // Act: update rotation degrees
         inputSurface.rotationDegrees = 270
         shadowOf(getMainLooper()).idle()
 
@@ -238,11 +241,20 @@ class SurfaceProcessorNodeTest {
         assertThat(previewSurfaceOutput.rotationDegrees).isEqualTo(90)
         assertThat(previewTransformInfo.rotationDegrees).isEqualTo(180)
         assertThat(previewSurfaceOutput.inputSize).isEqualTo(INPUT_SIZE)
+        assertThat(previewSurfaceOutput.mirroring).isFalse()
         val videoSurfaceOutput =
             surfaceProcessorInternal.surfaceOutputs[VIDEO_CAPTURE]!! as SurfaceOutputImpl
         assertThat(videoSurfaceOutput.rotationDegrees).isEqualTo(90)
         assertThat(videoTransformInfo.rotationDegrees).isEqualTo(180)
         assertThat(videoSurfaceOutput.inputSize).isEqualTo(INPUT_SIZE)
+        assertThat(videoSurfaceOutput.mirroring).isTrue()
+
+        // Act: update rotation degrees
+        inputSurface.rotationDegrees = 180
+        shadowOf(getMainLooper()).idle()
+        // Assert: video rotation degrees is opposite of preview because it's not mirrored.
+        assertThat(previewTransformInfo.rotationDegrees).isEqualTo(90)
+        assertThat(videoTransformInfo.rotationDegrees).isEqualTo(270)
     }
 
     @Test
@@ -291,25 +303,27 @@ class SurfaceProcessorNodeTest {
         previewCropRect: Rect = PREVIEW_CROP_RECT,
         previewRotationDegrees: Int = ROTATION_DEGREES,
         mirroring: Boolean = MIRRORING,
-        videoOutputSize: Size = VIDEO_SIZE
+        videoOutputSize: Size = VIDEO_SIZE,
+        frameRateRange: Range<Int> = StreamSpec.FRAME_RATE_RANGE_UNSPECIFIED
     ) {
-        val surface = SurfaceEdge(
+        val inputEdge = SurfaceEdge(
             previewTarget,
-            previewSize,
+            StreamSpec.builder(previewSize).setExpectedFrameRateRange(frameRateRange).build(),
             sensorToBufferTransform,
             hasCameraTransform,
             previewCropRect,
             previewRotationDegrees,
-            mirroring
+            mirroring,
         )
         videoOutConfig = OutConfig.of(
             VIDEO_CAPTURE,
             VIDEO_CROP_RECT,
-            videoOutputSize
+            videoOutputSize,
+            true
         )
-        previewOutConfig = OutConfig.of(surface)
+        previewOutConfig = OutConfig.of(inputEdge)
         nodeInput = SurfaceProcessorNode.In.of(
-            surface,
+            inputEdge,
             listOf(previewOutConfig, videoOutConfig)
         )
     }

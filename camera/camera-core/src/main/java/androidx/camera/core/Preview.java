@@ -78,6 +78,7 @@ import androidx.camera.core.impl.MutableOptionsBundle;
 import androidx.camera.core.impl.OptionsBundle;
 import androidx.camera.core.impl.PreviewConfig;
 import androidx.camera.core.impl.SessionConfig;
+import androidx.camera.core.impl.StreamSpec;
 import androidx.camera.core.impl.UseCaseConfig;
 import androidx.camera.core.impl.UseCaseConfigFactory;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
@@ -209,11 +210,11 @@ public final class Preview extends UseCase {
     @MainThread
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
     SessionConfig.Builder createPipeline(@NonNull String cameraId, @NonNull PreviewConfig config,
-            @NonNull Size resolution) {
+            @NonNull StreamSpec streamSpec) {
         // Build pipeline with node if processor is set. Eventually we will move all the code to
         // createPipelineWithNode.
         if (mSurfaceProcessor != null) {
-            return createPipelineWithNode(cameraId, config, resolution);
+            return createPipelineWithNode(cameraId, config, streamSpec);
         }
 
         checkMainThread();
@@ -222,8 +223,8 @@ public final class Preview extends UseCase {
         // Close previous session's deferrable surface before creating new one
         clearPipeline();
 
-        final SurfaceRequest surfaceRequest = new SurfaceRequest(resolution, getCamera(),
-                this::notifyReset);
+        final SurfaceRequest surfaceRequest = new SurfaceRequest(streamSpec.getResolution(),
+                getCamera(), this::notifyReset);
         mCurrentSurfaceRequest = surfaceRequest;
 
         if (mSurfaceProvider != null) {
@@ -232,7 +233,7 @@ public final class Preview extends UseCase {
         }
 
         mSessionDeferrableSurface = surfaceRequest.getDeferrableSurface();
-        addCameraSurfaceAndErrorListener(sessionConfigBuilder, cameraId, config, resolution);
+        addCameraSurfaceAndErrorListener(sessionConfigBuilder, cameraId, config, streamSpec);
         return sessionConfigBuilder;
     }
 
@@ -247,7 +248,7 @@ public final class Preview extends UseCase {
     private SessionConfig.Builder createPipelineWithNode(
             @NonNull String cameraId,
             @NonNull PreviewConfig config,
-            @NonNull Size resolution) {
+            @NonNull StreamSpec streamSpec) {
         // Check arguments
         checkMainThread();
         checkNotNull(mSurfaceProcessor);
@@ -262,12 +263,12 @@ public final class Preview extends UseCase {
         checkState(mCameraEdge == null);
         mCameraEdge = new SurfaceEdge(
                 PREVIEW,
-                resolution,
+                streamSpec,
                 new Matrix(),
-                /*hasCameraTransform=*/true,
-                requireNonNull(getCropRect(resolution)),
+                getHasCameraTransform(),
+                requireNonNull(getCropRect(streamSpec.getResolution())),
                 getRelativeRotation(camera),
-                /*mirroring=*/isFrontCamera(camera));
+                shouldMirror());
         mCameraEdge.addOnInvalidatedListener(this::notifyReset);
         SurfaceProcessorNode.OutConfig outConfig = SurfaceProcessorNode.OutConfig.of(mCameraEdge);
         SurfaceProcessorNode.In nodeInput = SurfaceProcessorNode.In.of(mCameraEdge,
@@ -286,7 +287,7 @@ public final class Preview extends UseCase {
 
         // Send the camera Surface to the camera2.
         SessionConfig.Builder sessionConfigBuilder = SessionConfig.Builder.createFrom(config);
-        addCameraSurfaceAndErrorListener(sessionConfigBuilder, cameraId, config, resolution);
+        addCameraSurfaceAndErrorListener(sessionConfigBuilder, cameraId, config, streamSpec);
         return sessionConfigBuilder;
     }
 
@@ -300,9 +301,13 @@ public final class Preview extends UseCase {
         }
     }
 
-    private static boolean isFrontCamera(@NonNull CameraInternal camera) {
-        Integer lensFacing = camera.getCameraInfoInternal().getLensFacing();
-        return lensFacing != null && lensFacing == CameraSelector.LENS_FACING_FRONT;
+    private boolean shouldMirror() {
+        boolean isFrontCamera = requireNonNull(getCamera()).getCameraInfoInternal().getLensFacing()
+                == CameraSelector.LENS_FACING_FRONT;
+        // Since PreviewView cannot mirror, we will always mirror preview stream during buffer
+        // copy. If there has been a buffer copy, it means it's already mirrored. Otherwise,
+        // mirror it for the front camera.
+        return getHasCameraTransform() && isFrontCamera;
     }
 
     /**
@@ -356,7 +361,7 @@ public final class Preview extends UseCase {
             @NonNull SessionConfig.Builder sessionConfigBuilder,
             @NonNull String cameraId,
             @NonNull PreviewConfig config,
-            @NonNull Size resolution) {
+            @NonNull StreamSpec streamSpec) {
         // TODO(b/245309800): Add the Surface if post-processing pipeline is used. Post-processing
         //  pipeline always provide a Surface.
 
@@ -375,7 +380,7 @@ public final class Preview extends UseCase {
             if (isCurrentCamera(cameraId)) {
                 // Only reset the pipeline when the bound camera is the same.
                 SessionConfig.Builder sessionConfigBuilder1 = createPipeline(cameraId, config,
-                        resolution);
+                        streamSpec);
 
                 updateSessionConfig(sessionConfigBuilder1.build());
                 notifyReset();
@@ -424,7 +429,7 @@ public final class Preview extends UseCase {
                         cropRect,
                         getRelativeRotation(cameraInternal),
                         getAppTargetRotation(),
-                        /*hasCameraTransform=*/true));
+                        getHasCameraTransform()));
             } else {
                 mCameraEdge.setRotationDegrees(getRelativeRotation(cameraInternal));
             }
@@ -479,7 +484,7 @@ public final class Preview extends UseCase {
             // config and let createPipeline() sends a new SurfaceRequest.
             if (getAttachedSurfaceResolution() != null) {
                 updateConfigAndOutput(getCameraId(), (PreviewConfig) getCurrentConfig(),
-                        getAttachedSurfaceResolution());
+                        getAttachedStreamSpec());
                 notifyReset();
             }
         }
@@ -511,8 +516,8 @@ public final class Preview extends UseCase {
     }
 
     private void updateConfigAndOutput(@NonNull String cameraId, @NonNull PreviewConfig config,
-            @NonNull Size resolution) {
-        updateSessionConfig(createPipeline(cameraId, config, resolution).build());
+            @NonNull StreamSpec streamSpec) {
+        updateSessionConfig(createPipeline(cameraId, config, streamSpec).build());
     }
 
     /**
@@ -643,11 +648,11 @@ public final class Preview extends UseCase {
     @Override
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
-    protected Size onSuggestedResolutionUpdated(@NonNull Size suggestedResolution) {
-        mSurfaceSize = suggestedResolution;
+    protected StreamSpec onSuggestedStreamSpecUpdated(@NonNull StreamSpec suggestedStreamSpec) {
+        mSurfaceSize = suggestedStreamSpec.getResolution();
         updateConfigAndOutput(getCameraId(), (PreviewConfig) getCurrentConfig(),
-                mSurfaceSize);
-        return suggestedResolution;
+                suggestedStreamSpec);
+        return suggestedStreamSpec;
     }
 
     /**

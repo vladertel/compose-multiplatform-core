@@ -9,6 +9,8 @@ package androidx.lifecycle {
   public interface HasDefaultViewModelProviderFactory {
     method public default androidx.lifecycle.viewmodel.CreationExtras getDefaultViewModelCreationExtras();
     method public androidx.lifecycle.ViewModelProvider.Factory getDefaultViewModelProviderFactory();
+    property public default androidx.lifecycle.viewmodel.CreationExtras defaultViewModelCreationExtras;
+    property public abstract androidx.lifecycle.ViewModelProvider.Factory defaultViewModelProviderFactory;
   }
 
   public abstract class ViewModel {
@@ -78,15 +80,16 @@ package androidx.lifecycle {
 
   public interface ViewModelStoreOwner {
     method public androidx.lifecycle.ViewModelStore getViewModelStore();
+    property public abstract androidx.lifecycle.ViewModelStore viewModelStore;
   }
 
   public final class ViewTreeViewModelKt {
-    method public static androidx.lifecycle.ViewModelStoreOwner? findViewTreeViewModelStoreOwner(android.view.View);
+    method @Deprecated public static androidx.lifecycle.ViewModelStoreOwner? findViewTreeViewModelStoreOwner(android.view.View view);
   }
 
-  public class ViewTreeViewModelStoreOwner {
+  public final class ViewTreeViewModelStoreOwner {
     method public static androidx.lifecycle.ViewModelStoreOwner? get(android.view.View);
-    method public static void set(android.view.View, androidx.lifecycle.ViewModelStoreOwner?);
+    method public static void set(android.view.View, androidx.lifecycle.ViewModelStoreOwner? viewModelStoreOwner);
   }
 
 }

@@ -40,7 +40,9 @@ import kotlinx.coroutines.launch
  */
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @Camera2ControllerScope
-internal class Camera2CameraController @Inject constructor(
+internal class Camera2CameraController
+@Inject
+constructor(
     private val scope: CoroutineScope,
     private val config: CameraGraph.Config,
     private val graphListener: GraphListener,
@@ -56,11 +58,10 @@ internal class Camera2CameraController @Inject constructor(
     private var currentSurfaceMap: Map<StreamId, Surface>? = null
 
     override fun start() {
-        val camera = virtualCameraManager.open(
-            config.camera,
-            config.flags.allowMultipleActiveCameras,
-            graphListener
-        )
+        val camera =
+            virtualCameraManager.open(
+                config.camera, config.flags.allowMultipleActiveCameras, graphListener
+            )
         synchronized(this) {
             if (closed) {
                 return
@@ -70,14 +71,15 @@ internal class Camera2CameraController @Inject constructor(
             check(currentSession == null)
 
             currentCamera = camera
-            val session = CaptureSessionState(
-                graphListener,
-                captureSessionFactory,
-                captureSequenceProcessorFactory,
-                cameraSurfaceManager,
-                timeSource,
-                scope
-            )
+            val session =
+                CaptureSessionState(
+                    graphListener,
+                    captureSessionFactory,
+                    captureSequenceProcessorFactory,
+                    cameraSurfaceManager,
+                    timeSource,
+                    scope
+                )
             currentSession = session
 
             val surfaces: Map<StreamId, Surface>? = currentSurfaceMap
@@ -138,7 +140,8 @@ internal class Camera2CameraController @Inject constructor(
             }
             currentSurfaceMap = surfaceMap
             currentSession
-        }?.configureSurfaceMap(surfaceMap)
+        }
+            ?.configureSurfaceMap(surfaceMap)
     }
 
     private suspend fun bindSessionToCamera() {

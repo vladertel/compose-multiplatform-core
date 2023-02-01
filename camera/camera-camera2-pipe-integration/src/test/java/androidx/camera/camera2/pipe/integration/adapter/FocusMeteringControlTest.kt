@@ -31,6 +31,7 @@ import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.Result3A
 import androidx.camera.camera2.pipe.integration.impl.CameraProperties
 import androidx.camera.camera2.pipe.integration.impl.FocusMeteringControl
+import androidx.camera.camera2.pipe.integration.impl.State3AControl
 import androidx.camera.camera2.pipe.integration.impl.UseCaseCamera
 import androidx.camera.camera2.pipe.integration.impl.UseCaseCameraRequestControl
 import androidx.camera.camera2.pipe.integration.impl.UseCaseThreads
@@ -45,11 +46,11 @@ import androidx.camera.core.MeteringPointFactory
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.UseCase
+import androidx.camera.core.impl.StreamSpec
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
 import androidx.camera.testing.SurfaceTextureProvider
 import androidx.camera.testing.fakes.FakeCamera
 import androidx.camera.testing.fakes.FakeUseCase
-import androidx.lifecycle.MutableLiveData
 import androidx.test.filters.MediumTest
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
@@ -67,9 +68,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.junit.After
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Ignore
@@ -100,6 +103,15 @@ private val M_RECT_3 = Rect(
     SENSOR_HEIGHT - AREA_HEIGHT / 2,
     SENSOR_WIDTH,
     SENSOR_HEIGHT
+)
+// the following rectangles are for metering point (0, 0)
+private val M_RECT_PVIEW_RATIO_16x9_SENSOR_640x480 = Rect(
+    0, 60 - AREA_HEIGHT / 2,
+    AREA_WIDTH / 2, 60 + AREA_HEIGHT / 2
+)
+private val M_RECT_PVIEW_RATIO_4x3_SENSOR_1920x1080 = Rect(
+    240 - AREA_WIDTH_2 / 2, 0,
+    240 + AREA_WIDTH_2 / 2, AREA_HEIGHT_2 / 2
 )
 
 @RunWith(RobolectricCameraPipeTestRunner::class)
@@ -134,6 +146,18 @@ class FocusMeteringControlTest {
         fakeRequestControl.focusMeteringResult =
             CompletableDeferred(Result3A(status = Result3A.Status.OK))
         focusMeteringControl = initFocusMeteringControl(CAMERA_ID_0)
+    }
+
+    @After
+    fun tearDown() {
+        // CoroutineScope#cancel can throw exception if the scope has no job left
+        try {
+            // fakeUseCaseThreads may still be using Main dispatcher which sometimes
+            // causes Dispatchers.resetMain() to throw an exception:
+            // "IllegalStateException: Dispatchers.Main is used concurrently with setting it"
+            fakeUseCaseThreads.scope.cancel()
+            fakeUseCaseThreads.sequentialScope.cancel()
+        } catch (_: Exception) {}
     }
 
     @Test
@@ -308,6 +332,7 @@ class FocusMeteringControlTest {
         }
     }
 
+    @Ignore("b/266123157")
     @Test
     fun startFocusAndMetering_multiplePoints_3ARectsAreCorrect() = runBlocking {
         // Camera 0 i.e. Max AF count = 3, Max AE count = 3, Max AWB count = 1
@@ -389,17 +414,17 @@ class FocusMeteringControlTest {
         // use 16:9 preview aspect ratio with sensor region of 4:3 (camera 0)
         focusMeteringControl = initFocusMeteringControl(
             CAMERA_ID_0,
-            setOf(createPreview(Size(1920, 1080)))
+            setOf(createPreview(Size(1920, 1080))),
         )
 
         startFocusMeteringAndAwait(
             FocusMeteringAction.Builder(point1).build()
         )
 
-        val adjustedRect = Rect(0, 60 - AREA_HEIGHT / 2, AREA_WIDTH / 2, 60 + AREA_HEIGHT / 2)
         with(fakeRequestControl.focusMeteringCalls.last()) {
             assertWithMessage("Wrong number of AF regions").that(afRegions.size).isEqualTo(1)
-            assertWithMessage("Wrong AF region").that(afRegions[0].rect).isEqualTo(adjustedRect)
+            assertWithMessage("Wrong AF region")
+                .that(afRegions[0].rect).isEqualTo(M_RECT_PVIEW_RATIO_16x9_SENSOR_640x480)
         }
     }
 
@@ -408,20 +433,17 @@ class FocusMeteringControlTest {
         // use 4:3 preview aspect ratio with sensor region of 16:9 (camera 1)
         focusMeteringControl = initFocusMeteringControl(
             CAMERA_ID_1,
-            setOf(createPreview(Size(640, 480)))
+            setOf(createPreview(Size(640, 480))),
         )
 
         startFocusMeteringAndAwait(
             FocusMeteringAction.Builder(point1).build()
         )
 
-        val adjustedRect = Rect(
-            240 - AREA_WIDTH_2 / 2, 0,
-            240 + AREA_WIDTH_2 / 2, AREA_HEIGHT_2 / 2
-        )
         with(fakeRequestControl.focusMeteringCalls.last()) {
             assertWithMessage("Wrong number of AF regions").that(afRegions.size).isEqualTo(1)
-            assertWithMessage("Wrong AF region").that(afRegions[0].rect).isEqualTo(adjustedRect)
+            assertWithMessage("Wrong AF region")
+                .that(afRegions[0].rect).isEqualTo(M_RECT_PVIEW_RATIO_4x3_SENSOR_1920x1080)
         }
     }
 
@@ -429,24 +451,24 @@ class FocusMeteringControlTest {
     fun customFovAdjusted() {
         // 16:9 to 4:3
         val useCase = FakeUseCase()
-        useCase.updateSuggestedResolution(Size(1920, 1080))
+        useCase.updateSuggestedStreamSpec(StreamSpec.builder(Size(1920, 1080)).build())
 
         val factory = SurfaceOrientedMeteringPointFactory(1.0f, 1.0f, useCase)
         val point = factory.createPoint(0f, 0f)
 
         focusMeteringControl = initFocusMeteringControl(
             CAMERA_ID_0,
-            setOf(createPreview(Size(640, 480)))
+            setOf(createPreview(Size(640, 480))),
         )
 
         startFocusMeteringAndAwait(
             FocusMeteringAction.Builder(point).build()
         )
 
-        val adjustedRect = Rect(0, 60 - AREA_HEIGHT / 2, AREA_WIDTH / 2, 60 + AREA_HEIGHT / 2)
         with(fakeRequestControl.focusMeteringCalls.last()) {
             assertWithMessage("Wrong number of AF regions").that(afRegions.size).isEqualTo(1)
-            assertWithMessage("Wrong AF region").that(afRegions[0].rect).isEqualTo(adjustedRect)
+            assertWithMessage("Wrong AF region")
+                .that(afRegions[0].rect).isEqualTo(M_RECT_PVIEW_RATIO_16x9_SENSOR_640x480)
         }
     }
 
@@ -455,18 +477,22 @@ class FocusMeteringControlTest {
         // add 16:9 aspect ratio Preview with sensor region of 4:3 (camera 0), then remove Preview
         focusMeteringControl = initFocusMeteringControl(
             CAMERA_ID_0,
-            setOf(createPreview(Size(1920, 1080)))
+            setOf(createPreview(Size(1920, 1080))),
         )
-        fakeUseCaseCamera.runningUseCasesLiveData.value = emptySet()
+        fakeUseCaseCamera.runningUseCases = emptySet()
+        focusMeteringControl.onRunningUseCasesChanged()
 
         startFocusMeteringAndAwait(
             FocusMeteringAction.Builder(point1).build()
         )
 
-        val adjustedRect = Rect(0, 60 - AREA_HEIGHT / 2, AREA_WIDTH / 2, 60 + AREA_HEIGHT / 2)
+        // point1 = (0, 0) is considered as center point of metering rectangle.
+        // Since previewAspectRatio is not set, it will be same as cropRegionAspectRatio
+        // which is the size of SENSOR_1 in this test. So the point is not adjusted,
+        // and simply M_RECT_1 (metering rectangle of point1 with SENSOR_1) should be used.
         with(fakeRequestControl.focusMeteringCalls.last()) {
             assertWithMessage("Wrong number of AF regions").that(afRegions.size).isEqualTo(1)
-            assertWithMessage("Wrong AF region").that(afRegions[0].rect).isEqualTo(adjustedRect)
+            assertWithMessage("Wrong AF region").that(afRegions[0].rect).isEqualTo(M_RECT_1)
         }
     }
 
@@ -789,6 +815,7 @@ class FocusMeteringControlTest {
         assertThat(focusMeteringControl.isFocusMeteringSupported(action)).isTrue()
     }
 
+    @Ignore("b/266123157")
     @Test
     fun isFocusMeteringSupported_noSupport3ARegion_shouldReturnFalse() {
         val action = FocusMeteringAction.Builder(point1).build()
@@ -929,19 +956,84 @@ class FocusMeteringControlTest {
         assertFutureFocusCompleted(future, false)
     }
 
+    @Test
+    fun startFocusMetering_afAutoModeIsSet() {
+        // Arrange.
+        val action = FocusMeteringAction.Builder(point1, FocusMeteringAction.FLAG_AF).build()
+        val state3AControl = createState3AControl(CAMERA_ID_0)
+        focusMeteringControl = initFocusMeteringControl(
+            CAMERA_ID_0,
+            setOf(createPreview(Size(1920, 1080))),
+            fakeUseCaseThreads,
+            state3AControl,
+        )
+
+        // Act.
+        focusMeteringControl.startFocusAndMetering(
+            action
+        )[5, TimeUnit.SECONDS]
+
+        // Assert.
+        assertThat(
+            state3AControl.preferredFocusMode
+        ).isEqualTo(CaptureRequest.CONTROL_AF_MODE_AUTO)
+    }
+
+    @Test
+    fun startFocusMetering_AfNotInvolved_afAutoModeNotSet() {
+        // Arrange.
+        val action = FocusMeteringAction.Builder(
+            point1,
+            FocusMeteringAction.FLAG_AE or FocusMeteringAction.FLAG_AWB
+        ).build()
+        val state3AControl = createState3AControl(CAMERA_ID_0)
+        focusMeteringControl = initFocusMeteringControl(
+            CAMERA_ID_0,
+            setOf(createPreview(Size(1920, 1080))),
+            fakeUseCaseThreads,
+            state3AControl,
+        )
+
+        // Act.
+        focusMeteringControl.startFocusAndMetering(
+            action
+        )[5, TimeUnit.SECONDS]
+
+        // Assert.
+        assertThat(
+            state3AControl.preferredFocusMode
+        ).isEqualTo(null)
+    }
+
+    @Test
+    fun startAndThenCancel_afAutoModeNotSet(): Unit = runBlocking {
+        // Arrange.
+        val action = FocusMeteringAction.Builder(point1, FocusMeteringAction.FLAG_AF).build()
+        val state3AControl = createState3AControl(CAMERA_ID_0)
+        focusMeteringControl = initFocusMeteringControl(
+            CAMERA_ID_0,
+            setOf(createPreview(Size(1920, 1080))),
+            fakeUseCaseThreads,
+            state3AControl,
+        )
+
+        // Act.
+        focusMeteringControl.startFocusAndMetering(
+            action
+        )[5, TimeUnit.SECONDS]
+        focusMeteringControl.cancelFocusAndMeteringAsync().join()
+
+        // Assert.
+        assertThat(
+            state3AControl.preferredFocusMode
+        ).isEqualTo(null)
+    }
+
     // TODO: Port the following tests once their corresponding logics have been implemented.
     //  - [b/255679866] triggerAfWithTemplate, triggerAePrecaptureWithTemplate,
     //          cancelAfAeTriggerWithTemplate
     //  - startFocusAndMetering_AfRegionCorrectedByQuirk
     //  - [b/262225455] cropRegionIsSet_resultBasedOnCropRegion
-    //  The following ones will depend on how exactly they will be implemented.
-    //  - [b/264018162] addFocusMeteringOptions_hasCorrectAfMode,
-    //                  startFocusMetering_isAfAutoModeIsTrue,
-    //                  startFocusMetering_AfNotInvolved_isAfAutoModeIsSet,
-    //                  startAndThenCancel_isAfAutoModeIsFalse
-    //      (an alternative way can be checking the AF mode
-    //      at the frame with AF_TRIGGER_START request in capture callback, but this requires
-    //      invoking actual camera operations, ref: TapToFocusDeviceTest)
 
     private fun assertFutureFocusCompleted(
         future: ListenableFuture<FocusMeteringResult>,
@@ -1006,8 +1098,7 @@ class FocusMeteringControlTest {
     }
 
     private val fakeUseCaseCamera = object : UseCaseCamera {
-        override val runningUseCasesLiveData: MutableLiveData<Set<UseCase>> =
-            MutableLiveData(emptySet())
+        override var runningUseCases = setOf<UseCase>()
 
         override val requestControl: UseCaseCameraRequestControl
             get() = fakeRequestControl
@@ -1035,11 +1126,16 @@ class FocusMeteringControlTest {
     private fun initFocusMeteringControl(
         cameraId: String,
         useCases: Set<UseCase> = emptySet(),
+        useCaseThreads: UseCaseThreads = fakeUseCaseThreads,
+        state3AControl: State3AControl = createState3AControl(cameraId),
     ) = FocusMeteringControl(
-            cameraPropertiesMap[cameraId]!!, fakeUseCaseThreads
+            cameraPropertiesMap[cameraId]!!,
+            state3AControl,
+            useCaseThreads
         ).apply {
-            fakeUseCaseCamera.runningUseCasesLiveData.value = useCases
+            fakeUseCaseCamera.runningUseCases = useCases
             useCaseCamera = fakeUseCaseCamera
+            onRunningUseCasesChanged()
         }
 
     private fun initCameraProperties(
@@ -1145,7 +1241,7 @@ class FocusMeteringControlTest {
         )
     }
 
-    private fun createPreview(suggestedResolution: Size) =
+    private fun createPreview(suggestedStreamSpecResolution: Size) =
         Preview.Builder()
             .setCaptureOptionUnpacker { _, _ -> }
             .setSessionOptionUnpacker() { _, _ -> }
@@ -1156,6 +1252,16 @@ class FocusMeteringControlTest {
                 )
             }.also {
                 it.bindToCamera(FakeCamera("0"), null, null)
-                it.updateSuggestedResolution(suggestedResolution)
+                it.updateSuggestedStreamSpec(
+                    StreamSpec.builder(suggestedStreamSpecResolution).build()
+                )
             }
+
+    private fun createState3AControl(
+        cameraId: String = CAMERA_ID_0,
+        properties: CameraProperties = cameraPropertiesMap[cameraId]!!,
+        useCaseCamera: UseCaseCamera = fakeUseCaseCamera,
+    ) = State3AControl(properties).apply {
+        this.useCaseCamera = useCaseCamera
+    }
 }

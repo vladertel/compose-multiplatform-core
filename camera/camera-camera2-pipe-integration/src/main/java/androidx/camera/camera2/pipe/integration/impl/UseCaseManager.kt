@@ -31,8 +31,6 @@ import androidx.camera.camera2.pipe.integration.interop.ExperimentalCamera2Inter
 import androidx.camera.core.UseCase
 import androidx.camera.core.impl.DeferrableSurface
 import androidx.camera.core.impl.SessionConfig.ValidatingBuilder
-import androidx.camera.core.impl.utils.Threads
-import androidx.lifecycle.MutableLiveData
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.joinAll
@@ -116,6 +114,11 @@ class UseCaseManager @Inject constructor(
             !attachedUseCases.contains(useCase)
         }
 
+        // Notify state attached to use cases
+        for (useCase in unattachedUseCases) {
+            useCase.onStateAttached()
+        }
+
         if (attachedUseCases.addAll(useCases)) {
             if (shouldAddRepeatingUseCase(getRunningUseCases())) {
                 addRepeatingUseCase()
@@ -124,9 +127,9 @@ class UseCaseManager @Inject constructor(
             }
         }
 
-        // Notify state attached to use cases that weren't attached before
-        for (useCase in unattachedUseCases) {
-            useCase.onStateAttached()
+        unattachedUseCases.forEach { useCase ->
+            // Notify CameraControl is ready after the UseCaseCamera is created
+            useCase.onCameraControlReady()
         }
     }
 
@@ -220,7 +223,7 @@ class UseCaseManager @Inject constructor(
         when {
             shouldAddRepeatingUseCase(runningUseCases) -> addRepeatingUseCase()
             shouldRemoveRepeatingUseCase(runningUseCases) -> removeRepeatingUseCase()
-            else -> camera?.runningUseCasesLiveData?.setLiveDataValue(runningUseCases)
+            else -> camera?.runningUseCases = runningUseCases
         }
     }
 
@@ -325,13 +328,5 @@ class UseCaseManager @Inject constructor(
         val sessionConfig = validatingBuilder.build()
         val captureConfig = sessionConfig.repeatingCaptureConfig
         return predicate(captureConfig.surfaces, sessionConfig.surfaces)
-    }
-
-    private fun <T> MutableLiveData<T>.setLiveDataValue(value: T?) {
-        if (Threads.isMainThread()) {
-            this.value = value
-        } else {
-            this.postValue(value)
-        }
     }
 }

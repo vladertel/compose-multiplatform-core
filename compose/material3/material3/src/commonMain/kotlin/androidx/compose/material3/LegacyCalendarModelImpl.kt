@@ -61,13 +61,14 @@ internal class LegacyCalendarModelImpl : CalendarModel {
         add(Pair(weekdays[1], shortWeekdays[1]))
     }
 
-    override val dateInputFormat: DateInputFormat
-        get() = datePatternAsInputFormat(
+    override fun getDateInputFormat(locale: Locale): DateInputFormat {
+        return datePatternAsInputFormat(
             (DateFormat.getDateInstance(
                 DateFormat.SHORT,
-                Locale.getDefault()
+                locale
             ) as SimpleDateFormat).toPattern()
         )
+    }
 
     override fun getCanonicalDate(timeInMillis: Long): CalendarDate {
         val calendar = Calendar.getInstance(utcTimeZone)
@@ -124,19 +125,8 @@ internal class LegacyCalendarModelImpl : CalendarModel {
         return getMonth(earlierMonth)
     }
 
-    override fun format(month: CalendarMonth, pattern: String): String {
-        val dateFormat = SimpleDateFormat(pattern, Locale.getDefault())
-        dateFormat.timeZone = utcTimeZone
-        dateFormat.isLenient = false
-        return dateFormat.format(month.toCalendar().timeInMillis)
-    }
-
-    override fun format(date: CalendarDate, pattern: String): String {
-        val dateFormat = SimpleDateFormat(pattern, Locale.getDefault())
-        dateFormat.timeZone = utcTimeZone
-        dateFormat.isLenient = false
-        return dateFormat.format(date.toCalendar(utcTimeZone).timeInMillis)
-    }
+    override fun formatWithPattern(utcTimeMillis: Long, pattern: String, locale: Locale): String =
+        LegacyCalendarModelImpl.formatWithPattern(utcTimeMillis, pattern, locale)
 
     override fun parse(date: String, pattern: String): CalendarDate? {
         val dateFormat = SimpleDateFormat(pattern)
@@ -155,6 +145,29 @@ internal class LegacyCalendarModelImpl : CalendarModel {
         } catch (pe: ParseException) {
             null
         }
+    }
+
+    companion object {
+
+        /**
+         * Formats a UTC timestamp into a string with a given date format pattern.
+         *
+         * @param utcTimeMillis a UTC timestamp to format (milliseconds from epoch)
+         * @param pattern a date format pattern
+         * @param locale the [Locale] to use when formatting the given timestamp
+         */
+        fun formatWithPattern(utcTimeMillis: Long, pattern: String, locale: Locale): String {
+            val dateFormat = SimpleDateFormat(pattern, locale)
+            dateFormat.timeZone = utcTimeZone
+            val calendar = Calendar.getInstance(utcTimeZone)
+            calendar.timeInMillis = utcTimeMillis
+            return dateFormat.format(calendar.timeInMillis)
+        }
+
+        /**
+         * Holds a UTC [TimeZone].
+         */
+        internal val utcTimeZone: TimeZone = TimeZone.getTimeZone("UTC")
     }
 
     /**
@@ -196,6 +209,4 @@ internal class LegacyCalendarModelImpl : CalendarModel {
         calendar[Calendar.DAY_OF_MONTH] = this.dayOfMonth
         return calendar
     }
-
-    private var utcTimeZone = TimeZone.getTimeZone("UTC")
 }

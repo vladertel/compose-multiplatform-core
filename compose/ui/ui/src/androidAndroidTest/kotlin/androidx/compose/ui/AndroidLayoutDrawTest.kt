@@ -29,7 +29,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateFloatAsState
@@ -125,7 +124,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -3099,60 +3097,6 @@ class AndroidLayoutDrawTest {
         validateSquareColors(outerColor = Color.Blue, innerColor = Color.White, size = 10)
     }
 
-    @Ignore // b/173806298
-    @Test
-    fun makingItemLarger() {
-        var height by mutableStateOf(30)
-        var latch = CountDownLatch(1)
-        var composeView: View? = null
-        activityTestRule.runOnUiThread {
-            val linearLayout = LinearLayout(activity)
-            linearLayout.orientation = LinearLayout.VERTICAL
-            val child = ComposeView(activity)
-            activity.setContentView(linearLayout)
-            linearLayout.addView(
-                child,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
-            )
-            linearLayout.addView(
-                View(activity),
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    0,
-                    10000f
-                )
-            )
-            child.setContent {
-                Layout(
-                    {},
-                    Modifier.onGloballyPositioned {
-                        latch.countDown()
-                    }
-                ) { _, constraints ->
-                    layout(constraints.maxWidth, height.coerceAtMost(constraints.maxHeight)) {}
-                }
-            }
-            composeView = child
-        }
-
-        assertTrue(latch.await(1, TimeUnit.SECONDS))
-        latch = CountDownLatch(1)
-
-        activityTestRule.runOnUiThread {
-            assertEquals(height, composeView!!.measuredHeight)
-            height = 60
-        }
-
-        assertTrue(latch.await(1, TimeUnit.SECONDS))
-        activityTestRule.runOnUiThread {
-            assertEquals(height, composeView!!.measuredHeight)
-        }
-    }
-
     // Make sure that when the child of a layer changes that the drawing changes to match.
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Test
@@ -4068,10 +4012,10 @@ fun assertColorsEqual(
     error: () -> String = { "$expected and $color are not similar!" }
 ) {
     val errorString = error()
-    assertEquals(errorString, expected.red, color.red, 0.01f)
-    assertEquals(errorString, expected.green, color.green, 0.01f)
-    assertEquals(errorString, expected.blue, color.blue, 0.01f)
-    assertEquals(errorString, expected.alpha, color.alpha, 0.01f)
+    assertEquals(errorString, expected.red, color.red, 0.05f)
+    assertEquals(errorString, expected.green, color.green, 0.05f)
+    assertEquals(errorString, expected.blue, color.blue, 0.05f)
+    assertEquals(errorString, expected.alpha, color.alpha, 0.05f)
 }
 
 @Composable

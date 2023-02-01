@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
-import androidx.tv.material.ExperimentalTvMaterialApi
 
 /**
  * Material Theming refers to the customization of your Material Design app to better reflect your
@@ -42,13 +41,15 @@ import androidx.tv.material.ExperimentalTvMaterialApi
  *
  * @param colorScheme A complete definition of the Material Color theme for this hierarchy
  * @param shapes A set of corner shapes to be used as this hierarchy's shape system
+ * @param typography A set of text styles to be used as this hierarchy's typography system
  * @param content The composable content that will be displayed with this theme
  */
-@ExperimentalTvMaterialApi
+@ExperimentalTvMaterial3Api
 @Composable
 fun MaterialTheme(
     colorScheme: ColorScheme = MaterialTheme.colorScheme,
     shapes: Shapes = MaterialTheme.shapes,
+    typography: Typography = MaterialTheme.typography,
     content: @Composable () -> Unit
 ) {
     val rememberedColorScheme = remember {
@@ -63,8 +64,10 @@ fun MaterialTheme(
         LocalColorScheme provides rememberedColorScheme,
         LocalShapes provides shapes,
         LocalTextSelectionColors provides selectionColors,
-        content = content
-    )
+        LocalTypography provides typography
+    ) {
+        ProvideTextStyle(value = typography.bodyLarge, content = content)
+    }
 }
 
 /**
@@ -75,12 +78,20 @@ object MaterialTheme {
     /**
      * Retrieves the current [ColorScheme] at the call site's position in the hierarchy.
      */
-    @ExperimentalTvMaterialApi
+    @ExperimentalTvMaterial3Api
     val colorScheme: ColorScheme
         @Composable
         @ReadOnlyComposable
         @SuppressWarnings("HiddenTypeParameter", "UnavailableSymbol")
         get() = LocalColorScheme.current
+
+    /**
+     * Retrieves the current [Typography] at the call site's position in the hierarchy.
+     */
+    val typography: Typography
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalTypography.current
 
     /**
      * Retrieves the current [Shapes] at the call site's position in the hierarchy.
@@ -91,7 +102,7 @@ object MaterialTheme {
         get() = LocalShapes.current
 }
 
-@OptIn(ExperimentalTvMaterialApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 /*@VisibleForTesting*/
 internal fun rememberTextSelectionColors(colorScheme: ColorScheme): TextSelectionColors {

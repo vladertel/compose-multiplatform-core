@@ -161,7 +161,7 @@ private class OverscrollTestCase : LayeredComposeTestCase(), ToggleableTestCase 
             motionEventHelper.sendEvent(MotionEvent.ACTION_MOVE, Offset(x = 0f, y = height / 8f))
             showingOverscroll = true
         } else {
-            motionEventHelper.sendEvent(MotionEvent.ACTION_UP, Offset.Zero)
+            motionEventHelper.sendEvent(MotionEvent.ACTION_UP, Offset.Zero, 1000L)
             showingOverscroll = false
         }
     }

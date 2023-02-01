@@ -29,10 +29,10 @@ import androidx.camera.camera2.pipe.integration.impl.CameraCallbackMap
 import androidx.camera.camera2.pipe.integration.impl.CameraProperties
 import androidx.camera.camera2.pipe.integration.impl.EvCompControl
 import androidx.camera.camera2.pipe.integration.impl.FocusMeteringControl
+import androidx.camera.camera2.pipe.integration.impl.State3AControl
 import androidx.camera.camera2.pipe.integration.impl.TorchControl
 import androidx.camera.camera2.pipe.integration.impl.UseCaseThreads
 import androidx.camera.camera2.pipe.integration.impl.ZoomControl
-import androidx.camera.camera2.pipe.integration.interop.ExperimentalCamera2Interop
 import androidx.camera.camera2.pipe.testing.FakeCameraMetadata
 import androidx.camera.core.impl.ImageFormatConstants
 import com.google.common.util.concurrent.MoreExecutors
@@ -45,7 +45,7 @@ import org.robolectric.shadows.StreamConfigurationMapBuilder
 object FakeCameraInfoAdapterCreator {
     private val CAMERA_ID_0 = CameraId("0")
 
-    private val useCaseThreads by lazy {
+    val useCaseThreads by lazy {
         val executor = MoreExecutors.directExecutor()
         val dispatcher = executor.asCoroutineDispatcher()
         val cameraScope = CoroutineScope(
@@ -68,7 +68,8 @@ object FakeCameraInfoAdapterCreator {
         CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE to Rect(0, 0, 640, 480)
     )
 
-    @OptIn(ExperimentalCamera2Interop::class)
+    private val zoomControl = ZoomControl(useCaseThreads, FakeZoomCompat())
+
     fun createCameraInfoAdapter(
         cameraId: CameraId = CAMERA_ID_0,
         cameraProperties: CameraProperties = FakeCameraProperties(
@@ -77,22 +78,30 @@ object FakeCameraInfoAdapterCreator {
                 characteristics = cameraCharacteristics
             ),
             cameraId
-        )
-    ) = CameraInfoAdapter(
-        cameraProperties,
-        CameraConfig(cameraId),
-        CameraStateAdapter(),
-        CameraControlStateAdapter(
-            ZoomControl(FakeZoomCompat()),
-            EvCompControl(FakeEvCompCompat()),
-            TorchControl(cameraProperties, useCaseThreads),
         ),
-        CameraCallbackMap(),
-        FocusMeteringControl(
-            cameraProperties,
-            useCaseThreads
-        ).apply {
-            useCaseCamera = FakeUseCaseCamera()
+        zoomControl: ZoomControl = this.zoomControl,
+    ): CameraInfoAdapter {
+        val fakeUseCaseCamera = FakeUseCaseCamera()
+        val state3AControl = State3AControl(cameraProperties).apply {
+            useCaseCamera = fakeUseCaseCamera
         }
-    )
+        return CameraInfoAdapter(
+            cameraProperties,
+            CameraConfig(cameraId),
+            CameraStateAdapter(),
+            CameraControlStateAdapter(
+                zoomControl,
+                EvCompControl(FakeEvCompCompat()),
+                TorchControl(cameraProperties, state3AControl, useCaseThreads),
+            ),
+            CameraCallbackMap(),
+            FocusMeteringControl(
+                cameraProperties,
+                state3AControl,
+                useCaseThreads
+            ).apply {
+                useCaseCamera = fakeUseCaseCamera
+            }
+        )
+    }
 }

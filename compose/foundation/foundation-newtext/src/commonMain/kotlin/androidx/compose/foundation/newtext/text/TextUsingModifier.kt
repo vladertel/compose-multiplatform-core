@@ -18,10 +18,11 @@ package androidx.compose.foundation.newtext.text
 
 import androidx.compose.foundation.newtext.text.copypasta.selection.LocalSelectionRegistrar
 import androidx.compose.foundation.newtext.text.copypasta.selection.LocalTextSelectionColors
-import androidx.compose.foundation.newtext.text.modifiers.SelectableStaticTextModifier
-import androidx.compose.foundation.newtext.text.modifiers.StaticTextSelectionModifierController
-import androidx.compose.foundation.newtext.text.modifiers.StaticTextLayoutDrawParams
-import androidx.compose.foundation.newtext.text.modifiers.StaticTextModifier
+import androidx.compose.foundation.newtext.text.modifiers.SelectableTextAnnotatedStringElement
+import androidx.compose.foundation.newtext.text.modifiers.TextAnnotatedStringElement
+import androidx.compose.foundation.newtext.text.modifiers.SelectionController
+import androidx.compose.foundation.newtext.text.modifiers.TextStringSimpleElement
+import androidx.compose.foundation.newtext.text.modifiers.validateMinMaxLines
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -35,9 +36,7 @@ import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.Placeable
-import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalFontFamilyResolver
-import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.Placeholder
@@ -54,24 +53,25 @@ import kotlin.math.roundToInt
 /**
  * Rewrite of BasicText
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @ExperimentalTextApi
 @Composable
 fun TextUsingModifier(
     text: String,
     modifier: Modifier = Modifier,
     style: TextStyle = TextStyle.Default,
-    onTextLayout: (TextLayoutResult) -> Unit = {},
+    onTextLayout: ((TextLayoutResult) -> Unit)? = null,
     overflow: TextOverflow = TextOverflow.Clip,
     softWrap: Boolean = true,
     maxLines: Int = Int.MAX_VALUE,
     minLines: Int = 1,
 ) {
-
+    validateMinMaxLines(minLines, maxLines)
     val selectionRegistrar = LocalSelectionRegistrar.current
     val selectionController = if (selectionRegistrar != null) {
         val backgroundSelectionColor = LocalTextSelectionColors.current.backgroundColor
         remember(selectionRegistrar, backgroundSelectionColor) {
-            StaticTextSelectionModifierController(
+            SelectionController(
                 selectionRegistrar,
                 backgroundSelectionColor
             )
@@ -79,8 +79,8 @@ fun TextUsingModifier(
     } else {
         null
     }
-    Layout(
-        modifier = modifier.textModifier(
+    val finalModifier = if (selectionController != null || onTextLayout != null) {
+        modifier.textModifier(
             AnnotatedString(text),
             style = style,
             onTextLayout = onTextLayout,
@@ -92,9 +92,19 @@ fun TextUsingModifier(
             placeholders = null,
             onPlaceholderLayout = null,
             selectionController = selectionController
-        ),
-        EmptyMeasurePolicy
-    )
+        )
+    } else {
+        modifier then TextStringSimpleElement(
+            text,
+            style,
+            LocalFontFamilyResolver.current,
+            overflow,
+            softWrap,
+            maxLines,
+            minLines
+        )
+    }
+    Layout(finalModifier, EmptyMeasurePolicy)
 }
 
 /**
@@ -113,11 +123,12 @@ fun TextUsingModifier(
     minLines: Int = 1,
     inlineContent: Map<String, InlineTextContent>? = null,
 ) {
+    validateMinMaxLines(minLines, maxLines)
     val selectionRegistrar = LocalSelectionRegistrar.current
     val selectionController = if (selectionRegistrar != null) {
         val backgroundSelectionColor = LocalTextSelectionColors.current.backgroundColor
         remember(selectionRegistrar, backgroundSelectionColor) {
-            StaticTextSelectionModifierController(
+            SelectionController(
                 selectionRegistrar,
                 backgroundSelectionColor
             )
@@ -225,46 +236,37 @@ private fun Modifier.textModifier(
     fontFamilyResolver: FontFamily.Resolver,
     placeholders: List<AnnotatedString.Range<Placeholder>>?,
     onPlaceholderLayout: ((List<Rect?>) -> Unit)?,
-    selectionController: StaticTextSelectionModifierController?
+    selectionController: SelectionController?
 ): Modifier {
-    val params = StaticTextLayoutDrawParams(
-        text,
-        style,
-        fontFamilyResolver,
-        onTextLayout,
-        overflow,
-        softWrap,
-        maxLines,
-        minLines,
-        placeholders,
-        onPlaceholderLayout,
-        selectionController
-    )
     if (selectionController == null) {
-        val staticTextModifier = object : ModifierNodeElement<StaticTextModifier>(
-            params,
-            false,
-            debugInspectorInfo {}
-        ) {
-            override fun create(): StaticTextModifier = StaticTextModifier(params)
-            override fun update(node: StaticTextModifier): StaticTextModifier =
-                node.also { it.params = params }
-        }
+        val staticTextModifier = TextAnnotatedStringElement(
+            text,
+            style,
+            fontFamilyResolver,
+            onTextLayout,
+            overflow,
+            softWrap,
+            maxLines,
+            minLines,
+            placeholders,
+            onPlaceholderLayout,
+            null
+        )
         return this then Modifier /* selection position */ then staticTextModifier
     } else {
-        val selectableTextModifier =
-            object : ModifierNodeElement<SelectableStaticTextModifier>(
-                params,
-                false,
-                debugInspectorInfo {}
-            ) {
-                override fun create(): SelectableStaticTextModifier =
-                    SelectableStaticTextModifier(params)
-
-                override fun update(
-                    node: SelectableStaticTextModifier
-                ): SelectableStaticTextModifier = node.also { it.params = params }
-            }
+        val selectableTextModifier = SelectableTextAnnotatedStringElement(
+            text,
+            style,
+            fontFamilyResolver,
+            onTextLayout,
+            overflow,
+            softWrap,
+            maxLines,
+            minLines,
+            placeholders,
+            onPlaceholderLayout,
+            selectionController
+        )
         return this then selectionController.modifier then selectableTextModifier
     }
 }

@@ -69,15 +69,16 @@ internal class CalendarModelImpl : CalendarModel {
             }
         }
 
-    override val dateInputFormat: DateInputFormat
-        get() = datePatternAsInputFormat(
+    override fun getDateInputFormat(locale: Locale): DateInputFormat {
+        return datePatternAsInputFormat(
             DateTimeFormatterBuilder.getLocalizedDateTimePattern(
                 /* dateStyle = */ FormatStyle.SHORT,
                 /* timeStyle = */ null,
-                /* chrono = */ Chronology.ofLocale(Locale.getDefault()),
-                /* locale = */ Locale.getDefault()
+                /* chrono = */ Chronology.ofLocale(locale),
+                /* locale = */ locale
             )
         )
+    }
 
     override fun getCanonicalDate(timeInMillis: Long): CalendarDate {
         val localDate =
@@ -128,17 +129,8 @@ internal class CalendarModelImpl : CalendarModel {
         return getMonth(earlierMonth)
     }
 
-    override fun format(month: CalendarMonth, pattern: String): String {
-        val formatter: DateTimeFormatter =
-            DateTimeFormatter.ofPattern(pattern).withDecimalStyle(DecimalStyle.ofDefaultLocale())
-        return month.toLocalDate().format(formatter)
-    }
-
-    override fun format(date: CalendarDate, pattern: String): String {
-        val formatter: DateTimeFormatter =
-            DateTimeFormatter.ofPattern(pattern).withDecimalStyle(DecimalStyle.ofDefaultLocale())
-        return date.toLocalDate().format(formatter)
-    }
+    override fun formatWithPattern(utcTimeMillis: Long, pattern: String, locale: Locale): String =
+        CalendarModelImpl.formatWithPattern(utcTimeMillis, pattern, locale)
 
     override fun parse(date: String, pattern: String): CalendarDate? {
         // TODO: A DateTimeFormatter can be reused.
@@ -155,6 +147,32 @@ internal class CalendarModelImpl : CalendarModel {
         } catch (pe: DateTimeParseException) {
             null
         }
+    }
+
+    companion object {
+
+        /**
+         * Formats a UTC timestamp into a string with a given date format pattern.
+         *
+         * @param utcTimeMillis a UTC timestamp to format (milliseconds from epoch)
+         * @param pattern a date format pattern
+         * @param locale the [Locale] to use when formatting the given timestamp
+         */
+        fun formatWithPattern(utcTimeMillis: Long, pattern: String, locale: Locale): String {
+            val formatter: DateTimeFormatter =
+                DateTimeFormatter.ofPattern(pattern, locale)
+                    .withDecimalStyle(DecimalStyle.of(locale))
+            return Instant
+                .ofEpochMilli(utcTimeMillis)
+                .atZone(utcTimeZoneId)
+                .toLocalDate()
+                .format(formatter)
+        }
+
+        /**
+         * Holds a UTC [ZoneId].
+         */
+        internal val utcTimeZoneId: ZoneId = ZoneId.of("UTC")
     }
 
     private fun getMonth(firstDayLocalDate: LocalDate): CalendarMonth {
@@ -187,6 +205,4 @@ internal class CalendarModelImpl : CalendarModel {
             this.dayOfMonth
         )
     }
-
-    private val utcTimeZoneId = ZoneId.of("UTC")
 }

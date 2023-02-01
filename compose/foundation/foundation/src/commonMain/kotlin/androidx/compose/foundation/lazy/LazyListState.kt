@@ -24,11 +24,11 @@ import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState
+import androidx.compose.foundation.lazy.layout.LazyLayoutPinnedItemList
 import androidx.compose.foundation.lazy.layout.animateScrollToItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
@@ -222,9 +222,9 @@ class LazyListState constructor(
     internal var premeasureConstraints by mutableStateOf(Constraints())
 
     /**
-     * List of extra items to compose during the measure pass.
+     * Stores currently pinned items which are always composed.
      */
-    internal val pinnedItems = mutableStateListOf<LazyListPinnedItem>()
+    internal val pinnedItems = LazyLayoutPinnedItemList()
 
     /**
      * Instantly brings the item at [index] to the top of the viewport, offset by [scrollOffset]
@@ -432,6 +432,7 @@ private object EmptyLazyListLayoutInfo : LazyListLayoutInfo {
     override val reverseLayout = false
     override val beforeContentPadding = 0
     override val afterContentPadding = 0
+    override val mainAxisItemSpacing = 0
 }
 
 internal class AwaitFirstLayoutModifier : OnGloballyPositionedModifier {

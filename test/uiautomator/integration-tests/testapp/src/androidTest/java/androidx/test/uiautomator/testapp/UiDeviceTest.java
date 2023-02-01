@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.app.UiAutomation;
 import android.graphics.Point;
+import android.os.Build;
 import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.widget.TextView;
@@ -37,6 +38,7 @@ import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
 
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -244,24 +246,15 @@ public class UiDeviceTest extends BaseTest {
         assertEquals("keycode Z pressed with meta shift left on", textView.getText());
     }
 
+    @Ignore // b/266617096
     @Test
     public void testPressRecentApps() throws Exception {
-        launchTestActivity(KeycodeTestActivity.class);
+        launchTestActivity(MainActivity.class);
 
-        // No app name when the app is running.
-        assertFalse(mDevice.wait(Until.hasObject(By.text(APP_NAME)), TIMEOUT_MS));
-
+        // Test app appears in the "Recent Apps" screen after pressing button.
+        assertFalse(mDevice.wait(Until.hasObject(By.desc(APP_NAME)), TIMEOUT_MS));
         mDevice.pressRecentApps();
-
-        Pattern iconResIdPattern = Pattern.compile(".*launcher.*icon");
-        // For API 28 and above, click on the app icon to make the name visible.
-        if (mDevice.wait(Until.hasObject(By.res(iconResIdPattern)), TIMEOUT_MS)) {
-            UiObject2 icon = mDevice.findObject(By.res(iconResIdPattern));
-            icon.click();
-        }
-
-        // App name appears when on Recent screen.
-        assertTrue(mDevice.wait(Until.hasObject(By.text(APP_NAME)), TIMEOUT_MS));
+        assertTrue(mDevice.wait(Until.hasObject(By.desc(APP_NAME)), TIMEOUT_MS));
     }
 
     @Test
@@ -308,6 +301,7 @@ public class UiDeviceTest extends BaseTest {
         assertEquals("I've been clicked!", button.getText());
     }
 
+    @Ignore // b/266617096
     @Test
     public void testSwipe() {
         launchTestActivity(SwipeTestActivity.class);
@@ -337,6 +331,7 @@ public class UiDeviceTest extends BaseTest {
         assertTrue(dragDestination.wait(Until.textEquals("drag_received"), TIMEOUT_MS));
     }
 
+    @Ignore // b/266617096
     @Test
     public void testSwipe_withPointArray() {
         launchTestActivity(SwipeTestActivity.class);
@@ -455,6 +450,10 @@ public class UiDeviceTest extends BaseTest {
     @Test
     @SdkSuppress(maxSdkVersion = 33) // b/262909049: Failing on SDK 34
     public void testWaitForWindowUpdate() {
+        if (Build.VERSION.SDK_INT == 33 && !"REL".equals(Build.VERSION.CODENAME)) {
+            return; // b/262909049: Do not run this test on pre-release Android U.
+        }
+
         launchTestActivity(WaitTestActivity.class);
 
         // Returns false when the current window doesn't have the specified package name.

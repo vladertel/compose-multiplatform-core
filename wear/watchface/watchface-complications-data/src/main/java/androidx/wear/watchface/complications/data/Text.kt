@@ -16,6 +16,11 @@
 
 package androidx.wear.watchface.complications.data
 
+import android.support.wearable.complications.ComplicationData as WireComplicationData
+import android.support.wearable.complications.ComplicationText as WireComplicationText
+import android.support.wearable.complications.ComplicationText.TimeDifferenceBuilder as WireComplicationTextTimeDifferenceBuilder
+import android.support.wearable.complications.ComplicationText.TimeFormatBuilder as WireComplicationTextTimeFormatBuilder
+import android.support.wearable.complications.TimeDependentText as WireTimeDependentText
 import android.content.res.Resources
 import android.icu.util.TimeZone
 import android.support.wearable.complications.TimeDependentText
@@ -29,19 +34,9 @@ import android.text.style.SuperscriptSpan
 import android.text.style.TypefaceSpan
 import android.text.style.UnderlineSpan
 import androidx.annotation.RestrictTo
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-
-/** The wire format for [ComplicationText]. */
-internal typealias WireComplicationText = android.support.wearable.complications.ComplicationText
-
-private typealias WireComplicationTextTimeDifferenceBuilder =
-    android.support.wearable.complications.ComplicationText.TimeDifferenceBuilder
-
-private typealias WireComplicationTextTimeFormatBuilder =
-    android.support.wearable.complications.ComplicationText.TimeFormatBuilder
-
-private typealias WireTimeDependentText = android.support.wearable.complications.TimeDependentText
 
 @JvmDefaultWithCompatibility
 /**
@@ -634,43 +629,15 @@ public fun WireTimeDependentText.toApiComplicationText(): ComplicationText =
     DelegatingTimeDependentText(this)
 
 /**
- * This is a placeholder for the tiles StringExpression which isn't currently available. We'll
- * remove this later in favor of the real thing.
- * @hide
- */
-// TODO(b/260065006): Remove this in favor of the real thing when available.
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public class StringExpression(private val expression: ByteArray) {
-    fun asByteArray() = expression
-
-    override fun toString(): String {
-        return "StringExpression(expression=${expression.contentToString()})"
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as StringExpression
-
-        if (!expression.contentEquals(other.expression)) return false
-
-        return true
-    }
-
-    override fun hashCode() = expression.contentHashCode()
-}
-
-/**
- * A [ComplicationText] where the system evaluates a [StringExpression] on behalf of the watch face.
+ * A [ComplicationText] where the system evaluates a [DynamicString] on behalf of the watch face.
  * By the time this reaches the watch face's Renderer, it'll have been converted to a plain
  * ComplicationText.
  *
  * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public class StringExpressionComplicationText(
-    public val expression: StringExpression
+public class ComplicationTextExpression(
+    public val expression: DynamicString
 ) : ComplicationText {
     private val delegate = DelegatingComplicationText(WireComplicationText(expression))
 
@@ -701,7 +668,7 @@ public class StringExpressionComplicationText(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as StringExpressionComplicationText
+        other as ComplicationTextExpression
 
         if (delegate != other.delegate) return false
 

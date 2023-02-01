@@ -32,6 +32,7 @@ import androidx.camera.core.impl.CameraThreadConfig
 import androidx.camera.core.impl.OptionsBundle
 import androidx.camera.core.impl.PreviewConfig
 import androidx.camera.core.impl.SessionConfig
+import androidx.camera.core.impl.StreamSpec
 import androidx.camera.core.impl.UseCaseConfig
 import androidx.camera.core.impl.UseCaseConfigFactory
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
@@ -354,6 +355,39 @@ class PreviewTest {
     }
 
     @Test
+    fun setNoCameraTransform_propagatesToCameraEdge() {
+        // Act: create preview with hasCameraTransform == false
+        val preview = createPreview(
+            FakeSurfaceProcessorInternal(mainThreadExecutor()),
+            hasCameraTransform = false
+        )
+        // Assert
+        assertThat(preview.cameraEdge.hasCameraTransform()).isFalse()
+        assertThat(preview.cameraEdge.mirroring).isFalse()
+    }
+
+    @Test
+    fun frontCameraWithoutCameraTransform_noMirroring() {
+        // Act: create preview with hasCameraTransform == false
+        val preview = createPreview(
+            FakeSurfaceProcessorInternal(mainThreadExecutor()),
+            frontCamera,
+            hasCameraTransform = false
+        )
+        // Assert
+        assertThat(preview.cameraEdge.mirroring).isFalse()
+    }
+
+    @Test
+    fun cameraEdgeHasTransformByDefault() {
+        assertThat(
+            createPreview(
+                FakeSurfaceProcessorInternal(mainThreadExecutor())
+            ).cameraEdge.hasCameraTransform()
+        ).isTrue()
+    }
+
+    @Test
     fun bindAndUnbindPreview_surfacesPropagated() {
         // Arrange.
         val processor = FakeSurfaceProcessorInternal(
@@ -605,11 +639,13 @@ class PreviewTest {
 
     private fun createPreview(
         surfaceProcessor: SurfaceProcessorInternal? = null,
-        camera: FakeCamera = backCamera
+        camera: FakeCamera = backCamera,
+        hasCameraTransform: Boolean = true
     ): Preview {
         previewToDetach = Preview.Builder()
             .setTargetRotation(Surface.ROTATION_0)
             .build()
+        previewToDetach.hasCameraTransform = hasCameraTransform
         previewToDetach.processor = surfaceProcessor
         previewToDetach.setSurfaceProvider(CameraXExecutors.directExecutor()) {}
         val previewConfig = PreviewConfig(
@@ -620,7 +656,8 @@ class PreviewTest {
         )
         previewToDetach.bindToCamera(camera, null, previewConfig)
 
-        previewToDetach.onSuggestedResolutionUpdated(Size(640, 480))
+        val streamSpec = StreamSpec.builder(Size(640, 480)).build()
+        previewToDetach.onSuggestedStreamSpecUpdated(streamSpec)
         return previewToDetach
     }
 }

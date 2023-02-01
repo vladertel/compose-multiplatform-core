@@ -489,7 +489,8 @@ public open class NavController(
     /**
      * Attempts to pop the controller's back stack back to a specific destination.
      *
-     * @param route The topmost destination to retain
+     * @param route The topmost destination to retain. May contain filled in arguments as long as
+     * it is exact match with route used to navigate.
      * @param inclusive Whether the given destination should also be popped.
      * @param saveState Whether the back stack and the state of all destinations between the
      * current destination and the [route] should be saved for later
@@ -506,7 +507,12 @@ public open class NavController(
         route: String,
         inclusive: Boolean,
         saveState: Boolean = false
-    ): Boolean = popBackStack(createRoute(route).hashCode(), inclusive, saveState)
+    ): Boolean {
+        val popped = popBackStackInternal(route, inclusive, saveState)
+        // Only return true if the pop succeeded and we've dispatched
+        // the change to a new destination
+        return popped && dispatchOnDestinationChanged()
+    }
 
     /**
      * Attempts to pop the controller's back stack back to a specific destination. This does
@@ -561,6 +567,64 @@ public open class NavController(
             )
             return false
         }
+        return executePopOperations(popOperations, foundDestination, inclusive, saveState)
+    }
+
+    /**
+     * Attempts to pop the controller's back stack back to a specific destination. This does
+     * **not** handle calling [dispatchOnDestinationChanged]
+     *
+     * @param route The topmost destination with this route to retain
+     * @param inclusive Whether the given destination should also be popped.
+     * @param saveState Whether the back stack and the state of all destinations between the
+     * current destination and the destination with [route] should be saved for later to be
+     * restored via [NavOptions.Builder.setRestoreState] or the `restoreState` attribute using
+     * the [NavDestination.id] of the destination with this route (note: this matching ID
+     * is true whether [inclusive] is true or false).
+     *
+     * @return true if the stack was popped at least once, false otherwise
+     */
+    private fun popBackStackInternal(
+        route: String,
+        inclusive: Boolean,
+        saveState: Boolean,
+    ): Boolean {
+        if (backQueue.isEmpty()) {
+            // Nothing to pop if the back stack is empty
+            return false
+        }
+
+        val popOperations = mutableListOf<Navigator<*>>()
+        val foundDestination = backQueue.lastOrNull { entry ->
+            val hasRoute = entry.destination.hasRoute(route, entry.arguments)
+            if (inclusive || !hasRoute) {
+                val navigator = _navigatorProvider.getNavigator<Navigator<*>>(
+                    entry.destination.navigatorName
+                )
+                popOperations.add(navigator)
+            }
+            hasRoute
+        }?.destination
+
+        if (foundDestination == null) {
+            // We were passed a route that doesn't exist on our back stack.
+            // Better to ignore the popBackStack than accidentally popping the entire stack
+            Log.i(
+                TAG,
+                "Ignoring popBackStack to route $route as it was not found " +
+                    "on the current back stack"
+            )
+            return false
+        }
+        return executePopOperations(popOperations, foundDestination, inclusive, saveState)
+    }
+
+    private fun executePopOperations(
+        popOperations: List<Navigator<*>>,
+        foundDestination: NavDestination,
+        inclusive: Boolean,
+        saveState: Boolean,
+    ): Boolean {
         var popped = false
         val savedState = ArrayDeque<NavBackStackEntryState>()
         for (navigator in popOperations) {
@@ -699,14 +763,18 @@ public open class NavController(
      * via [popBackStack] when using a `saveState` value of `true`.
      *
      * @param route The route of the destination previously used with [popBackStack] with a
-     * `saveState` value of `true`
+     * `saveState` value of `true`. May contain filled in arguments as long as
+     * it is exact match with route used with [popBackStack].
      *
      * @return true if the saved state of the stack associated with [route] was cleared.
      */
     @MainThread
-    public fun clearBackStack(
-        route: String
-    ): Boolean = clearBackStack(createRoute(route).hashCode())
+    public fun clearBackStack(route: String): Boolean {
+        val cleared = clearBackStackInternal(route)
+        // Only return true if the clear succeeded and we've dispatched
+        // the change to a new destination
+        return cleared && dispatchOnDestinationChanged()
+    }
 
     /**
      * Clears any saved state associated with [destinationId] that was previously saved
@@ -735,6 +803,18 @@ public open class NavController(
             state.isNavigating = false
         }
         return restored && popBackStackInternal(destinationId, inclusive = true, saveState = false)
+    }
+
+    @MainThread
+    private fun clearBackStackInternal(route: String): Boolean {
+        navigatorState.values.forEach { state ->
+            state.isNavigating = true
+        }
+        val restored = restoreStateInternal(route)
+        navigatorState.values.forEach { state ->
+            state.isNavigating = false
+        }
+        return restored && popBackStackInternal(route, inclusive = true, saveState = false)
     }
 
     /**
@@ -1430,16 +1510,17 @@ public open class NavController(
 
     /** @suppress */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public fun findDestination(destinationRoute: String): NavDestination? {
+    public fun findDestination(route: String): NavDestination? {
         if (_graph == null) {
             return null
         }
-        if (_graph!!.route == destinationRoute) {
+        // if not matched by routePattern, try matching with route args
+        if (_graph!!.route == route || _graph!!.matchDeepLink(route) != null) {
             return _graph
         }
         val currentNode = backQueue.lastOrNull()?.destination ?: _graph!!
         val currentGraph = if (currentNode is NavGraph) currentNode else currentNode.parent!!
-        return currentGraph.findNode(destinationRoute)
+        return currentGraph.findNode(route)
     }
 
     /**
@@ -1802,6 +1883,47 @@ public open class NavController(
         val backStackState = backStackStates.remove(backStackId)
         // Now restore the back stack from its saved state
         val entries = instantiateBackStack(backStackState)
+        return executeRestoreState(entries, args, navOptions, navigatorExtras)
+    }
+
+    private fun restoreStateInternal(route: String): Boolean {
+        var id = createRoute(route).hashCode()
+        // try to match based on routePattern
+        return if (backStackMap.containsKey(id)) {
+            restoreStateInternal(id, null, null, null)
+        } else {
+            // if it didn't match, it means the route contains filled in arguments and we need
+            // to find the destination that matches this route's general pattern
+            val matchingDestination = findDestination(route)
+            check(matchingDestination != null) {
+                "Restore State failed: route $route cannot be found from the current " +
+                    "destination $currentDestination"
+            }
+
+            id = matchingDestination.id
+            val backStackId = backStackMap[id]
+            // Clear out the state we're going to restore so that it isn't restored a second time
+            backStackMap.values.removeAll { it == backStackId }
+            val backStackState = backStackStates.remove(backStackId)
+
+            val matchingDeepLink = matchingDestination.matchDeepLink(route)
+            // check if the topmost NavBackStackEntryState contains the arguments in this
+            // matchingDeepLink. If not, we didn't find the correct stack.
+            val isCorrectStack = matchingDeepLink!!.hasMatchingArgs(
+                backStackState?.firstOrNull()?.args
+            )
+            if (!isCorrectStack) return false
+            val entries = instantiateBackStack(backStackState)
+            executeRestoreState(entries, null, null, null)
+        }
+    }
+
+    private fun executeRestoreState(
+        entries: List<NavBackStackEntry>,
+        args: Bundle?,
+        navOptions: NavOptions?,
+        navigatorExtras: Navigator.Extras?
+    ): Boolean {
         // Split up the entries by Navigator so we can restore them as an atomic operation
         val entriesGroupedByNavigator = mutableListOf<MutableList<NavBackStackEntry>>()
         entries.filterNot { entry ->
@@ -2276,12 +2398,13 @@ public open class NavController(
      * [its parent][NavDestination.parent] or grandparent navigation graphs as these
      * destinations are guaranteed to be on the back stack.
      *
-     * @param route route of a destination that exists on the back stack
+     * @param route route of a destination that exists on the back stack. May contain filled in
+     * arguments as long as it is exact match with route used to navigate.
      * @throws IllegalArgumentException if the destination is not on the back stack
      */
     public fun getBackStackEntry(route: String): NavBackStackEntry {
         val lastFromBackStack: NavBackStackEntry? = backQueue.lastOrNull { entry ->
-            entry.destination.route == route
+            entry.destination.hasRoute(route, entry.arguments)
         }
         requireNotNull(lastFromBackStack) {
             "No destination with route $route is on the NavController's back stack. The " +

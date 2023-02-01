@@ -16,15 +16,15 @@
 
 package androidx.build
 
+import androidx.build.buildInfo.CreateLibraryBuildInfoFileTask.Companion.getFrameworksSupportCommitShaAtHead
 import androidx.build.checkapi.shouldConfigureApiTasks
 import androidx.build.transform.configureAarAsJarForConfiguration
-import com.android.build.gradle.internal.crash.afterEvaluate
 import groovy.lang.Closure
+import java.io.File
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import java.io.File
 
 /**
  * Extension for [AndroidXImplPlugin] that's responsible for holding configuration options.
@@ -32,6 +32,7 @@ import java.io.File
 open class AndroidXExtension(val project: Project) {
     @JvmField
     val LibraryVersions: Map<String, Version>
+
     @JvmField
     val AllLibraryGroups: List<LibraryGroup>
 
@@ -42,8 +43,11 @@ open class AndroidXExtension(val project: Project) {
 
     val listProjectsService: Provider<ListProjectsService>
 
+    private val versionService: LibraryVersionsService
+
     init {
-        val toml = lazyReadFile("libraryversions.toml")
+        val tomlFileName = "libraryversions.toml"
+        val toml = lazyReadFile(tomlFileName)
 
         // These parameters are used when building pre-release binaries for androidxdev.
         // These parameters are only expected to be compatible with :compose:compiler:compiler .
@@ -52,21 +56,19 @@ open class AndroidXExtension(val project: Project) {
         // `./gradlew :compose:compiler:compiler:publishToMavenLocal -Pandroidx.versionExtraCheckEnabled=false`
         val composeCustomVersion = project.providers.environmentVariable("COMPOSE_CUSTOM_VERSION")
         val composeCustomGroup = project.providers.environmentVariable("COMPOSE_CUSTOM_GROUP")
-        val useMultiplatformVersions = project.provider {
-            Multiplatform.isKotlinNativeEnabled(project)
-        }
-
         // service that can compute group/version for a project
-        val versionServiceProvider = project.gradle.sharedServices.registerIfAbsent(
+        versionService = project.gradle.sharedServices.registerIfAbsent(
             "libraryVersionsService",
             LibraryVersionsService::class.java
         ) { spec ->
-            spec.parameters.tomlFile = toml
+            spec.parameters.tomlFileName = tomlFileName
+            spec.parameters.tomlFileContents = toml
             spec.parameters.composeCustomVersion = composeCustomVersion
             spec.parameters.composeCustomGroup = composeCustomGroup
-            spec.parameters.useMultiplatformGroupVersions = useMultiplatformVersions
-        }
-        val versionService = versionServiceProvider.get()
+            spec.parameters.useMultiplatformGroupVersions = project.provider {
+                Multiplatform.isKotlinNativeEnabled(project)
+            }
+        }.get()
         AllLibraryGroups = versionService.libraryGroups.values.toList()
         LibraryVersions = versionService.libraryVersions
         libraryGroupsByGroupId = versionService.libraryGroupsByGroupId
@@ -86,8 +88,36 @@ open class AndroidXExtension(val project: Project) {
     }
 
     var name: Property<String?> = project.objects.property(String::class.java)
-    fun setName(newName: String) { name.set(newName) }
+    fun setName(newName: String) {
+        name.set(newName)
+    }
+
+    /**
+     * Maven version of the library.
+     *
+     * Note that, setting this is an error if the library group sets an atomic version.
+     * If the build is a multiplatform build, this value will be overridden by
+     * the [mavenMultiplatformVersion] property when it is provided.
+     *
+     * @see mavenMultiplatformVersion
+     */
     var mavenVersion: Version? = null
+        set(value) {
+            field = value
+            chooseProjectVersion()
+        }
+        get() = if (versionService.useMultiplatformGroupVersions) {
+            mavenMultiplatformVersion ?: field
+        } else {
+            field
+        }
+
+    /**
+     * If set, this will override the [mavenVersion] property in multiplatform builds.
+     *
+     * @see mavenVersion
+     */
+    var mavenMultiplatformVersion: Version? = null
         set(value) {
             field = value
             chooseProjectVersion()
@@ -149,7 +179,7 @@ open class AndroidXExtension(val project: Project) {
         val groupIdText = if (projectPath.startsWith(":external")) {
             projectPath.replace(":external:", "")
         } else {
-	    "androidx.${parentPath.substring(1).replace(':', '.')}"
+            "androidx.${parentPath.substring(1).replace(':', '.')}"
         }
 
         // get the library group having that text
@@ -231,8 +261,10 @@ open class AndroidXExtension(val project: Project) {
     fun isVersionSet(): Boolean {
         return versionIsSet
     }
+
     var description: String? = null
     var inceptionYear: String? = null
+
     /**
      * targetsJavaConsumers = true, if project is intended to be accessed from Java-language
      * source code.
@@ -285,7 +317,7 @@ open class AndroidXExtension(val project: Project) {
     }
 
     internal fun isPublishConfigured(): Boolean = (
-            publish != Publish.UNSET ||
+        publish != Publish.UNSET ||
             type.publish != Publish.UNSET
         )
 
@@ -308,6 +340,8 @@ open class AndroidXExtension(val project: Project) {
 
     var metalavaK2UastEnabled = false
 
+    var disableDeviceTests = false
+
     fun shouldEnforceKotlinStrictApiMode(): Boolean {
         return !legacyDisableKotlinStrictApiMode &&
             shouldConfigureApiTasks()
@@ -325,6 +359,12 @@ open class AndroidXExtension(val project: Project) {
 
     fun configureAarAsJarForConfiguration(name: String) {
         configureAarAsJarForConfiguration(project, name)
+    }
+
+    fun getReferenceSha(): Provider<String> {
+        return project.providers.provider {
+            project.getFrameworksSupportCommitShaAtHead()
+        }
     }
 
     companion object {

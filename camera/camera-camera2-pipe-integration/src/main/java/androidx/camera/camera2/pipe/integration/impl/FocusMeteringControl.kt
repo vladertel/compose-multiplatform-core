@@ -19,6 +19,7 @@ package androidx.camera.camera2.pipe.integration.impl
 import android.graphics.PointF
 import android.graphics.Rect
 import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.params.MeteringRectangle
 import android.util.Rational
@@ -49,32 +50,37 @@ import kotlinx.coroutines.withTimeoutOrNull
 @CameraScope
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class FocusMeteringControl @Inject constructor(
-    val cameraProperties: CameraProperties,
-    val threads: UseCaseThreads,
-) : UseCaseCameraControl {
+    private val cameraProperties: CameraProperties,
+    private val state3AControl: State3AControl,
+    private val threads: UseCaseThreads,
+) : UseCaseCameraControl, UseCaseCamera.RunningUseCasesChangeListener {
     private var _useCaseCamera: UseCaseCamera? = null
+
     override var useCaseCamera: UseCaseCamera?
         get() = _useCaseCamera
         set(value) {
             _useCaseCamera = value
+        }
 
-            // reset to null since preview ratio may not be applicable for current runningUseCases
-            previewAspectRatio = null
-            _useCaseCamera?.runningUseCasesLiveData?.observeForever { useCases ->
-                useCases.forEach { useCase ->
-                    if (useCase is Preview) {
-                        useCase.attachedSurfaceResolution?.apply {
-                            previewAspectRatio = Rational(width, height)
-                        }
-                    }
+    override fun onRunningUseCasesChanged() {
+        // reset to null since preview use case may not be active for current runningUseCases
+        previewAspectRatio = null
+
+        _useCaseCamera?.runningUseCases?.forEach { useCase ->
+            if (useCase is Preview) {
+                useCase.attachedSurfaceResolution?.apply {
+                    previewAspectRatio = Rational(width, height)
                 }
             }
         }
+    }
 
     override fun reset() {
+        previewAspectRatio = null
         cancelFocusAndMeteringAsync()
     }
 
+    @Volatile
     private var previewAspectRatio: Rational? = null
     private val sensorRect by lazy {
         // TODO("b/262225455"): use the actual crop sensor region like in camera-camera2
@@ -131,6 +137,9 @@ class FocusMeteringControl @Inject constructor(
                         )
                     )
                     return@launch
+                }
+                if (afRectangles.isNotEmpty()) {
+                    state3AControl.preferredFocusMode = CaptureRequest.CONTROL_AF_MODE_AUTO
                 }
                 val (isCancelEnabled, timeout) = if (action.isAutoCancelEnabled &&
                     action.autoCancelDurationInMillis < autoFocusTimeoutMs
@@ -236,6 +245,7 @@ class FocusMeteringControl @Inject constructor(
         signalToCancel: CompletableDeferred<FocusMeteringResult>?,
     ): Result3A {
         signalToCancel?.setCancelException("Cancelled by cancelFocusAndMetering()")
+        state3AControl.preferredFocusMode = null
         return useCaseCamera.requestControl.cancelFocusAndMeteringAsync().await()
     }
 

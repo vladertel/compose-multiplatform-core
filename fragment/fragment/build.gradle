@@ -32,7 +32,7 @@ dependencies {
     api("androidx.activity:activity:1.5.1")
     api(projectOrArtifact(":lifecycle:lifecycle-runtime"))
     api("androidx.lifecycle:lifecycle-livedata-core:2.5.1")
-    api("androidx.lifecycle:lifecycle-viewmodel:2.5.1")
+    api(projectOrArtifact(":lifecycle:lifecycle-viewmodel"))
     api("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.5.1")
     api("androidx.savedstate:savedstate:1.2.0")
     api("androidx.annotation:annotation-experimental:1.0.0")
@@ -57,8 +57,9 @@ dependencies {
     androidTestImplementation(project(":internal-testutils-runtime"), {
         exclude group: "androidx.fragment", module: "fragment"
     })
+    androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-viewmodel"))
 
-    testImplementation(project(":fragment:fragment"))
+    testImplementation(projectOrArtifact(":fragment:fragment"))
     testImplementation(libs.kotlinStdlib)
     testImplementation(libs.testExtJunit)
     testImplementation(libs.testCore)

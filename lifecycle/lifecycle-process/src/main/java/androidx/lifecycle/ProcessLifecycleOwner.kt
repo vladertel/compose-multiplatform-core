@@ -24,6 +24,7 @@ import android.os.Handler
 import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
+import androidx.lifecycle.ReportFragment.Companion.reportFragment
 
 /**
  * Class that provides lifecycle for the whole application process.
@@ -170,7 +171,7 @@ class ProcessLifecycleOwner private constructor() : LifecycleOwner {
                 // onActivityPostStarted and onActivityPostResumed callbacks registered in
                 // onActivityPreCreated()
                 if (Build.VERSION.SDK_INT < 29) {
-                    ReportFragment.get(activity).setProcessListener(initializationListener)
+                    activity.reportFragment.setProcessListener(initializationListener)
                 }
             }
 
@@ -184,9 +185,8 @@ class ProcessLifecycleOwner private constructor() : LifecycleOwner {
         })
     }
 
-    override fun getLifecycle(): Lifecycle {
-        return registry
-    }
+    override val lifecycle: Lifecycle
+        get() = registry
 
     @RequiresApi(29)
     internal object Api29Impl {

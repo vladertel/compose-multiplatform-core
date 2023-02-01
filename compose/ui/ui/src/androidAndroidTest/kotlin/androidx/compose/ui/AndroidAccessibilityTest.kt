@@ -86,8 +86,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toAndroidRect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.AndroidComposeView
 import androidx.compose.ui.platform.AndroidComposeViewAccessibilityDelegateCompat
@@ -639,7 +639,7 @@ class AndroidAccessibilityTest {
     }
 
     @Test
-    fun testCreateAccessibilityNodeInfo_forTraversalOrder_layout() {
+    fun testCreateAccessibilityNodeInfo_forTraversalBefore_layout() {
         val overlaidText = "Overlaid node text"
         val text1 = "Lorem1 ipsum dolor sit amet, consectetur adipiscing elit.\n"
         val text2 = "Lorem2 ipsum dolor sit amet, consectetur adipiscing elit.\n"
@@ -669,13 +669,46 @@ class AndroidAccessibilityTest {
         // comparison (like SemanticsSort), the third text node should come before the overlaid node
         // — OverlaidNode should be read last
         assertNotEquals(ani3TraversalBeforeVal, 0)
-        if (ani3TraversalBeforeVal != null) {
-            assertEquals(ani3TraversalBeforeVal, overlaidNode.id)
-        }
+        assertEquals(ani3TraversalBeforeVal!!, overlaidNode.id)
     }
 
     @Test
-    fun testCreateAccessibilityNodeInfo_forTraversalOrder_layoutTestTags() {
+    fun testCreateAccessibilityNodeInfo_forTraversalAfter_layout() {
+        val overlaidText = "Overlaid node text"
+        val text1 = "Lorem1 ipsum dolor sit amet, consectetur adipiscing elit.\n"
+        val text2 = "Lorem2 ipsum dolor sit amet, consectetur adipiscing elit.\n"
+        val text3 = "Lorem3 ipsum dolor sit amet, consectetur adipiscing elit.\n"
+        container.setContent {
+            LastElementOverLaidColumn(modifier = Modifier.padding(8.dp)) {
+                Row {
+                    Column {
+                        Row { Text(text1) }
+                        Row { Text(text2) }
+                        Row { Text(text3) }
+                    }
+                }
+                Row {
+                    Text(overlaidText)
+                }
+            }
+        }
+
+        val node3 = rule.onNodeWithText(text3).fetchSemanticsNode()
+        val overlaidNode = rule.onNodeWithText(overlaidText).fetchSemanticsNode()
+
+        val overlaidANI = provider.createAccessibilityNodeInfo(overlaidNode.id)
+        val overlaidTraversalAfterValue =
+            overlaidANI?.extras?.getInt(EXTRA_DATA_TEST_TRAVERSALAFTER_VAL)
+
+        // Nodes 1, 2, and 3 are all children of a larger column; this means with a hierarchy
+        // comparison (like SemanticsSort), the third text node should come before the overlaid node
+        // — OverlaidNode should be read last
+        assertNotEquals(overlaidTraversalAfterValue, 0)
+        assertEquals(overlaidTraversalAfterValue!!, node3.id)
+    }
+
+    @Test
+    fun testCreateAccessibilityNodeInfo_forTraversalBefore_layoutTestTags() {
         val overlaidText = "Overlaid node text"
         val text1 = "Lorem1 ipsum dolor sit amet, consectetur adipiscing elit.\n"
         val text2 = "Lorem2 ipsum dolor sit amet, consectetur adipiscing elit.\n"
@@ -711,14 +744,15 @@ class AndroidAccessibilityTest {
         // comparison (like SemanticsSort), the third text node should come before the overlaid node
         // — OverlaidNode and its row should be read last
         assertNotEquals(ani3TraversalBeforeVal, 0)
-        if (ani3TraversalBeforeVal != null) {
-            assertTrue(ani3TraversalBeforeVal < row2.id)
-        }
+        assertTrue(ani3TraversalBeforeVal!! < row2.id)
     }
 
     companion object {
         private const val EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL =
             "android.view.accessibility.extra.EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL"
+
+        private const val EXTRA_DATA_TEST_TRAVERSALAFTER_VAL =
+            "android.view.accessibility.extra.EXTRA_DATA_TEST_TRAVERSALAFTER_VAL"
     }
 
     @Test
@@ -1116,7 +1150,7 @@ class AndroidAccessibilityTest {
             textFieldNode.positionInWindow
         )
         val expectedTopLeftInScreenCoords = androidComposeView.localToScreen(
-            expectedRectInLocalCoords.toAndroidRect().topLeftToOffset()
+            expectedRectInLocalCoords.topLeft
         )
         assertEquals(expectedTopLeftInScreenCoords.x, rectF.left)
         assertEquals(expectedTopLeftInScreenCoords.y, rectF.top)
@@ -2315,6 +2349,72 @@ class AndroidAccessibilityTest {
     }
 
     @Test
+    fun testMultiPanesDisappear() {
+        val firstPaneTag = "Pane 1"
+        val secondPaneTag = "Pane 2"
+        var isPaneVisible by mutableStateOf(false)
+        val firstPaneTestTitle by mutableStateOf("first pane title")
+        val secondPaneTestTitle by mutableStateOf("second pane title")
+
+        container.setContent {
+            if (isPaneVisible) {
+                Column {
+                    with(LocalDensity.current) {
+                        Box(
+                            Modifier
+                                .size(100.toDp())
+                                .testTag(firstPaneTag)
+                                .semantics { paneTitle = firstPaneTestTitle }) {}
+                        Box(
+                            Modifier
+                                .size(100.toDp())
+                                .testTag(secondPaneTag)
+                                .semantics { paneTitle = secondPaneTestTitle }) {}
+                    }
+                }
+            }
+        }
+
+        rule.onNodeWithTag(firstPaneTag).assertDoesNotExist()
+        rule.onNodeWithTag(secondPaneTag).assertDoesNotExist()
+
+        isPaneVisible = true
+        rule.onNodeWithTag(firstPaneTag)
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.PaneTitle,
+                    "first pane title"
+                )
+            )
+            .assertIsDisplayed()
+        rule.onNodeWithTag(secondPaneTag)
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.PaneTitle,
+                    "second pane title"
+                )
+            )
+            .assertIsDisplayed()
+        waitForSubtreeEventToSend()
+
+        isPaneVisible = false
+        rule.onNodeWithTag(firstPaneTag).assertDoesNotExist()
+        rule.onNodeWithTag(secondPaneTag).assertDoesNotExist()
+        rule.runOnIdle {
+            verify(container, times(2)).requestSendAccessibilityEvent(
+                eq(androidComposeView),
+                argThat(
+                    ArgumentMatcher {
+                        it.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+                            it.contentChangeTypes ==
+                            AccessibilityEvent.CONTENT_CHANGE_TYPE_PANE_DISAPPEARED
+                    }
+                )
+            )
+        }
+    }
+
+    @Test
     fun testEventForPasswordTextField() {
         val tag = "TextField"
         container.setContent {
@@ -2832,7 +2932,7 @@ class AndroidAccessibilityTest {
         accessibilityNodeInfo.getBoundsInScreen(rect)
         val resultWidth = rect.right - rect.left
         val resultHeight = rect.bottom - rect.top
-        val resultInLocalCoords = androidComposeView.screenToLocal(rect.topLeftToOffset())
+        val resultInLocalCoords = androidComposeView.screenToLocal(rect.toComposeRect().topLeft)
 
         assertEquals(size, resultWidth)
         assertEquals(size, resultHeight)
@@ -3366,5 +3466,3 @@ class AndroidAccessibilityTest {
             )
     }
 }
-
-private fun Rect.topLeftToOffset() = Offset(this.left.toFloat(), this.top.toFloat())
