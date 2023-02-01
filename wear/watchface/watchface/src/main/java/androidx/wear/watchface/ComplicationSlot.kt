@@ -16,6 +16,7 @@
 
 package androidx.wear.watchface
 
+import android.support.wearable.complications.ComplicationData as WireComplicationData
 import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.RectF
@@ -28,32 +29,32 @@ import androidx.annotation.Px
 import androidx.annotation.RestrictTo
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
+import androidx.wear.watchface.RenderParameters.HighlightedElement
 import androidx.wear.watchface.complications.ComplicationSlotBounds
 import androidx.wear.watchface.complications.DefaultComplicationDataSourcePolicy
 import androidx.wear.watchface.complications.data.ComplicationData
+import androidx.wear.watchface.complications.data.ComplicationDisplayPolicies
+import androidx.wear.watchface.complications.data.ComplicationExperimental
 import androidx.wear.watchface.complications.data.ComplicationType
 import androidx.wear.watchface.complications.data.EmptyComplicationData
 import androidx.wear.watchface.complications.data.NoDataComplicationData
-import androidx.wear.watchface.RenderParameters.HighlightedElement
-import androidx.wear.watchface.complications.data.ComplicationDisplayPolicies
-import androidx.wear.watchface.complications.data.ComplicationExperimental
 import androidx.wear.watchface.complications.data.toApiComplicationData
 import androidx.wear.watchface.data.BoundingArcWireFormat
 import androidx.wear.watchface.style.UserStyleSetting
 import androidx.wear.watchface.style.UserStyleSetting.ComplicationSlotsUserStyleSetting
 import androidx.wear.watchface.style.UserStyleSetting.ComplicationSlotsUserStyleSetting.ComplicationSlotOverlay
 import java.lang.Integer.min
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.Objects
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Interface for rendering complicationSlots onto a [Canvas]. These should be created by
@@ -884,8 +885,10 @@ public class ComplicationSlot
     /**
      * The default [ComplicationType] to use alongside [defaultDataSourcePolicy].
      */
-    @Deprecated("Use DefaultComplicationDataSourcePolicy." +
-        "systemDataSourceFallbackDefaultType instead")
+    @Deprecated(
+        "Use DefaultComplicationDataSourcePolicy." +
+            "systemDataSourceFallbackDefaultType instead"
+    )
     public var defaultDataSourceType: ComplicationType = defaultDataSourceType
         @UiThread
         get
@@ -991,9 +994,7 @@ public class ComplicationSlot
         lastComplicationUpdate = instant
         complicationHistory?.push(ComplicationDataHistoryEntry(complicationData, instant))
         timelineComplicationData = complicationData
-        timelineEntries = complicationData.asWireComplicationData().timelineEntries?.map {
-            it
-        }
+        timelineEntries = complicationData.asWireComplicationData().timelineEntries?.toList()
         selectComplicationDataForInstant(instant, loadDrawablesAsynchronous, true)
     }
 
@@ -1034,10 +1035,9 @@ public class ComplicationSlot
             best = screenLockedFallback // This is NoDataComplicationData.
         }
 
-        if (forceUpdate || complicationData.value != best) {
-            renderer.loadData(best, loadDrawablesAsynchronous)
-            (complicationData as MutableStateFlow).value = best
-        }
+        if (!forceUpdate && complicationData.value == best) return
+        renderer.loadData(best, loadDrawablesAsynchronous)
+        (complicationData as MutableStateFlow).value = best
     }
 
     /**
@@ -1202,20 +1202,26 @@ public class ComplicationSlot
         writer.println(
             "defaultDataSourcePolicy.primaryDataSource=${defaultDataSourcePolicy.primaryDataSource}"
         )
-        writer.println("defaultDataSourcePolicy.primaryDataSourceDefaultDataSourceType=" +
-            defaultDataSourcePolicy.primaryDataSourceDefaultType)
+        writer.println(
+            "defaultDataSourcePolicy.primaryDataSourceDefaultDataSourceType=" +
+                defaultDataSourcePolicy.primaryDataSourceDefaultType
+        )
         writer.println(
             "defaultDataSourcePolicy.secondaryDataSource=" +
                 defaultDataSourcePolicy.secondaryDataSource
         )
-        writer.println("defaultDataSourcePolicy.secondaryDataSourceDefaultDataSourceType=" +
-            defaultDataSourcePolicy.secondaryDataSourceDefaultType)
+        writer.println(
+            "defaultDataSourcePolicy.secondaryDataSourceDefaultDataSourceType=" +
+                defaultDataSourcePolicy.secondaryDataSourceDefaultType
+        )
         writer.println(
             "defaultDataSourcePolicy.systemDataSourceFallback=" +
                 defaultDataSourcePolicy.systemDataSourceFallback
         )
-        writer.println("defaultDataSourcePolicy.systemDataSourceFallbackDefaultType=" +
-            defaultDataSourcePolicy.systemDataSourceFallbackDefaultType)
+        writer.println(
+            "defaultDataSourcePolicy.systemDataSourceFallbackDefaultType=" +
+                defaultDataSourcePolicy.systemDataSourceFallbackDefaultType
+        )
         writer.println("timelineComplicationData=$timelineComplicationData")
         writer.println("timelineEntries=" + timelineEntries?.joinToString())
         writer.println("data=${renderer.getData()}")
@@ -1245,8 +1251,10 @@ public class ComplicationSlot
         if (accessibilityTraversalIndex != other.accessibilityTraversalIndex) return false
         if (boundsType != other.boundsType) return false
         if (complicationSlotBounds != other.complicationSlotBounds) return false
-        if (supportedTypes.size != other.supportedTypes.size ||
-            !supportedTypes.containsAll(other.supportedTypes)) return false
+        if (
+            supportedTypes.size != other.supportedTypes.size ||
+            !supportedTypes.containsAll(other.supportedTypes)
+        ) return false
         if (defaultDataSourcePolicy != other.defaultDataSourcePolicy) return false
         if (initiallyEnabled != other.initiallyEnabled) return false
         if (fixedComplicationDataSource != other.fixedComplicationDataSource) return false
@@ -1260,9 +1268,11 @@ public class ComplicationSlot
 
     override fun hashCode(): Int {
         @OptIn(ComplicationExperimental::class)
-        return Objects.hash(id, accessibilityTraversalIndex, boundsType, complicationSlotBounds,
+        return Objects.hash(
+            id, accessibilityTraversalIndex, boundsType, complicationSlotBounds,
             supportedTypes.sorted(),
             defaultDataSourcePolicy, initiallyEnabled, fixedComplicationDataSource,
-            nameResourceId, screenReaderNameResourceId, boundingArc)
+            nameResourceId, screenReaderNameResourceId, boundingArc
+        )
     }
 }

@@ -69,7 +69,9 @@ import androidx.wear.compose.material.samples.SimpleSwipeToDismissBox
 import androidx.wear.compose.material.samples.SplitToggleChipWithCheckbox
 import androidx.wear.compose.material.samples.StatefulSwipeToDismissBox
 import androidx.wear.compose.material.samples.StepperSample
+import androidx.wear.compose.material.samples.StepperWithCustomSemanticsSample
 import androidx.wear.compose.material.samples.StepperWithIntegerSample
+import androidx.wear.compose.material.samples.StepperWithoutRangeSemanticsSample
 import androidx.wear.compose.material.samples.TextPlaceholder
 import androidx.wear.compose.material.samples.TimeTextAnimation
 import androidx.wear.compose.material.samples.TimeTextWithFullDateAndTimeFormat
@@ -182,7 +184,28 @@ val WearMaterialDemos = DemoCategory(
                                 params.navigateBack()
                             },
                             date = datePickerDate
-
+                        )
+                    },
+                    ComposableDemo("From Date Picker") { params ->
+                        var datePickerDate by remember { mutableStateOf(LocalDate.now()) }
+                        DatePicker(
+                            onDateConfirm = {
+                                datePickerDate = it
+                                params.navigateBack()
+                            },
+                            date = datePickerDate,
+                            fromDate = datePickerDate
+                        )
+                    },
+                    ComposableDemo("To Date Picker") { params ->
+                        var datePickerDate by remember { mutableStateOf(LocalDate.now()) }
+                        DatePicker(
+                            onDateConfirm = {
+                                datePickerDate = it
+                                params.navigateBack()
+                            },
+                            date = datePickerDate,
+                            toDate = datePickerDate
                         )
                     },
                     ComposableDemo("Simple Picker") { SimplePicker() },
@@ -241,6 +264,12 @@ val WearMaterialDemos = DemoCategory(
                         ComposableDemo("Integer Stepper") {
                             Centralize { StepperWithIntegerSample() }
                         },
+                        ComposableDemo("Stepper without RangeSemantics") {
+                            Centralize { StepperWithoutRangeSemanticsSample() }
+                        },
+                        ComposableDemo("Stepper with customSemantics") {
+                            Centralize { StepperWithCustomSemanticsSample() }
+                        }
                     )
                 ),
                 DemoCategory(

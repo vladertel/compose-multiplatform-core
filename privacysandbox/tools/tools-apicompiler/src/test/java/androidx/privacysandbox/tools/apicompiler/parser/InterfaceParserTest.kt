@@ -93,6 +93,64 @@ class InterfaceParserTest {
     }
 
     @Test
+    fun parseInterfaceInheritance_ok() {
+        val serviceSource =
+            Source.kotlin(
+                "com/mysdk/MySdk.kt",
+                """
+                    package com.mysdk
+                    import androidx.privacysandbox.tools.PrivacySandboxService
+                    @PrivacySandboxService
+                    interface MySdk {
+                        suspend fun doStuff(): MyUiInterface
+                    }
+                """
+            )
+        val interfaceSource =
+            Source.kotlin(
+                "com/mysdk/MyUiInterface.kt",
+                """
+                    |package com.mysdk
+                    |import androidx.privacysandbox.tools.PrivacySandboxInterface
+                    |import androidx.privacysandbox.ui.core.SandboxedUiAdapter as SUiAdapter
+                    |
+                    |@PrivacySandboxInterface
+                    |interface MyUiInterface : SUiAdapter {
+                    |}
+                """.trimMargin()
+            )
+        assertThat(parseSources(serviceSource, interfaceSource)).isEqualTo(
+            ParsedApi(
+                services = setOf(
+                    AnnotatedInterface(
+                        type = Type(packageName = "com.mysdk", simpleName = "MySdk"),
+                        methods = listOf(
+                            Method(
+                                name = "doStuff",
+                                parameters = listOf(),
+                                returnType = Type(
+                                    packageName = "com.mysdk",
+                                    simpleName = "MyUiInterface"
+                                ),
+                                isSuspend = true,
+                            ),
+                        )
+                    )
+                ),
+                interfaces = setOf(
+                    AnnotatedInterface(
+                        type = Type(packageName = "com.mysdk", simpleName = "MyUiInterface"),
+                        superTypes = listOf(
+                            Types.sandboxedUiAdapter,
+                        ),
+                        methods = listOf()
+                    )
+                )
+            )
+        )
+    }
+
+    @Test
     fun serviceAnnotatedClass_fails() {
         val source = Source.kotlin(
             "com/mysdk/MySdk.kt", """
@@ -202,6 +260,49 @@ class InterfaceParserTest {
     }
 
     @Test
+    fun interfaceInheritance_fails() {
+        val source = Source.kotlin(
+            "com/mysdk/MySdk.kt", """
+                    package com.mysdk
+                    import androidx.privacysandbox.tools.PrivacySandboxService
+
+                    interface FooInterface {}
+
+                    @PrivacySandboxService
+                    interface MySdk : FooInterface {
+                        suspend fun foo(): Int
+                    }"""
+        )
+        checkSourceFails(source).containsExactlyErrors(
+            "Error in com.mysdk.MySdk: annotated interface inherits prohibited types (" +
+                "FooInterface)."
+        )
+    }
+
+    @Test
+    fun interfaceInheritsManyInterfaces_fails() {
+        val source = Source.kotlin(
+            "com/mysdk/MySdk.kt", """
+                    package com.mysdk
+                    import androidx.privacysandbox.tools.PrivacySandboxService
+
+                    interface A {}
+                    interface B {}
+                    interface C {}
+                    interface D {}
+
+                    @PrivacySandboxService
+                    interface MySdk : B, C, D, A {
+                        suspend fun foo(): Int
+                    }"""
+        )
+        checkSourceFails(source).containsExactlyErrors(
+            "Error in com.mysdk.MySdk: annotated interface inherits prohibited types (A, B, C, " +
+                "...)."
+        )
+    }
+
+    @Test
     fun methodWithImplementation_fails() {
         checkSourceFails(serviceMethod("suspend fun foo(): Int = 1")).containsExactlyErrors(
             "Error in com.mysdk.MySdk.foo: method cannot have default implementation."
@@ -223,7 +324,7 @@ class InterfaceParserTest {
     }
 
     @Test
-    fun parameterWitDefaultValue_fails() {
+    fun parameterWithDefaultValue_fails() {
         checkSourceFails(serviceMethod("suspend fun foo(x: Int = 5)")).containsExactlyErrors(
             "Error in com.mysdk.MySdk.foo: parameters cannot have default values."
         )

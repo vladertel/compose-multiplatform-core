@@ -49,7 +49,6 @@ import androidx.compose.ui.R
 import androidx.compose.ui.fastJoinToString
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.toAndroidRect
 import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInWindow
@@ -284,8 +283,11 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         }
     private var paneDisplayed = ArraySet<Int>()
     private var idToBeforeMap = HashMap<Int, Int>()
+    private var idToAfterMap = HashMap<Int, Int>()
     private val EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL =
         "android.view.accessibility.extra.EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL"
+    private val EXTRA_DATA_TEST_TRAVERSALAFTER_VAL =
+        "android.view.accessibility.extra.EXTRA_DATA_TEST_TRAVERSALAFTER_VAL"
 
     /**
      * A snapshot of the semantics node. The children here is fixed and are taken from the time
@@ -444,6 +446,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
 
     private fun setTraversalValues() {
         idToBeforeMap.clear()
+        idToAfterMap.clear()
         var idToCoordinatesList = mutableListOf<Pair<Int, Rect>>()
 
         fun depthFirstSearch(currNode: SemanticsNode) {
@@ -464,10 +467,11 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             }
         }
 
-        currentSemanticsNodes[AccessibilityNodeProviderCompat.HOST_VIEW_ID]?.semanticsNode
-            ?.replacedChildrenSortedByBounds?.fastForEach { node ->
-                depthFirstSearch(node)
-            }
+        currentSemanticsNodes[AccessibilityNodeProviderCompat.HOST_VIEW_ID]?.semanticsNode?.let {
+            depthFirstSearch(
+                it
+            )
+        }
 
         // Iterate through our ordered list, and creating a mapping of current node to next node ID
         // We'll later read through this and set traversal order with IdToBeforeMap
@@ -475,6 +479,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             val prevId = idToCoordinatesList[i - 1].first
             val currId = idToCoordinatesList[i].first
             idToBeforeMap[prevId] = currId
+            idToAfterMap[currId] = prevId
         }
 
         return
@@ -1035,6 +1040,12 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             addExtraDataToAccessibilityNodeInfoHelper(
                 virtualViewId, info.unwrap(), EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL, null)
         }
+
+        if (idToAfterMap[virtualViewId] != null) {
+            idToAfterMap[virtualViewId]?.let { info.setTraversalAfter(view, it) }
+            addExtraDataToAccessibilityNodeInfoHelper(
+                virtualViewId, info.unwrap(), EXTRA_DATA_TEST_TRAVERSALAFTER_VAL, null)
+        }
     }
 
     /** Set the error text for this node */
@@ -1532,10 +1543,14 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         val node = currentSemanticsNodes[virtualViewId]?.semanticsNode ?: return
         val text = getIterableTextForAccessibility(node)
 
-        // This extra is just for testing: needed a way to retrieve `traversalBefore` from
-        // non-sealed instance of ANI
+        // This extra is just for testing: needed a way to retrieve `traversalBefore` and
+        // `traversalAfter` from a non-sealed instance of an ANI
         if (extraDataKey == EXTRA_DATA_TEST_TRAVERSALBEFORE_VAL) {
             idToBeforeMap[virtualViewId]?.let {
+                info.extras.putInt(extraDataKey, it)
+            }
+        } else if (extraDataKey == EXTRA_DATA_TEST_TRAVERSALAFTER_VAL) {
+            idToAfterMap[virtualViewId]?.let {
                 info.extras.putInt(extraDataKey, it)
             }
         } else if (node.unmergedConfig.contains(SemanticsActions.GetTextLayoutResult) &&
@@ -1891,10 +1906,11 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
 
     private fun updateSemanticsNodesCopyAndPanes() {
         // TODO(b/172606324): removed this compose specific fix when talkback has a proper solution.
+        val toRemove = ArraySet<Int>()
         for (id in paneDisplayed) {
             val currentNode = currentSemanticsNodes[id]?.semanticsNode
             if (currentNode == null || !currentNode.hasPaneTitle()) {
-                paneDisplayed.remove(id)
+                toRemove.add(id)
                 sendPaneChangeEvents(
                     id,
                     AccessibilityEventCompat.CONTENT_CHANGE_TYPE_PANE_DISAPPEARED,
@@ -1904,6 +1920,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                 )
             }
         }
+        paneDisplayed.removeAll(toRemove)
         previousSemanticsNodes.clear()
         for (entry in currentSemanticsNodes.entries) {
             if (entry.value.semanticsNode.hasPaneTitle() && paneDisplayed.add(entry.key)) {
@@ -2261,7 +2278,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     }
 
     private fun sendScrollEventIfNeeded(scrollObservationScope: ScrollObservationScope) {
-        if (!scrollObservationScope.isValid) {
+        if (!scrollObservationScope.isValidOwnerScope) {
             return
         }
         view.snapshotObserver.observeReads(scrollObservationScope, sendScrollEventIfNeededLambda) {
@@ -2779,7 +2796,18 @@ internal fun SemanticsOwner
     if (!root.layoutNode.isPlaced || !root.layoutNode.isAttached) {
         return nodes
     }
-    val unaccountedSpace = Region().also { it.set(root.boundsInRoot.toAndroidRect()) }
+    val unaccountedSpace = Region().also {
+        it.set(
+            root.boundsInRoot.run {
+                android.graphics.Rect(
+                    left.roundToInt(),
+                    top.roundToInt(),
+                    right.roundToInt(),
+                    bottom.roundToInt()
+                )
+            }
+        )
+    }
 
     fun findAllSemanticNodesRecursive(currentNode: SemanticsNode) {
         val notAttachedOrPlaced =
@@ -2789,7 +2817,12 @@ internal fun SemanticsOwner
         ) {
             return
         }
-        val boundsInRoot = currentNode.touchBoundsInRoot.toAndroidRect()
+        val boundsInRoot = android.graphics.Rect(
+            currentNode.touchBoundsInRoot.left.roundToInt(),
+            currentNode.touchBoundsInRoot.top.roundToInt(),
+            currentNode.touchBoundsInRoot.right.roundToInt(),
+            currentNode.touchBoundsInRoot.bottom.roundToInt(),
+        )
         val region = Region().also { it.set(boundsInRoot) }
         val virtualViewId = if (currentNode.id == root.id) {
             AccessibilityNodeProviderCompat.HOST_VIEW_ID
@@ -2818,7 +2851,12 @@ internal fun SemanticsOwner
                 }
                 nodes[virtualViewId] = SemanticsNodeWithAdjustedBounds(
                     currentNode,
-                    boundsForFakeNode.toAndroidRect()
+                    android.graphics.Rect(
+                        boundsForFakeNode.left.roundToInt(),
+                        boundsForFakeNode.top.roundToInt(),
+                        boundsForFakeNode.right.roundToInt(),
+                        boundsForFakeNode.bottom.roundToInt(),
+                    )
                 )
             } else if (virtualViewId == AccessibilityNodeProviderCompat.HOST_VIEW_ID) {
                 // Root view might have WRAP_CONTENT layout params in which case it will have zero
@@ -2861,7 +2899,7 @@ internal class ScrollObservationScope(
     var horizontalScrollAxisRange: ScrollAxisRange?,
     var verticalScrollAxisRange: ScrollAxisRange?
 ) : OwnerScope {
-    override val isValid get() = allScopes.contains(this)
+    override val isValidOwnerScope get() = allScopes.contains(this)
 }
 
 internal fun List<ScrollObservationScope>.findById(id: Int): ScrollObservationScope? {

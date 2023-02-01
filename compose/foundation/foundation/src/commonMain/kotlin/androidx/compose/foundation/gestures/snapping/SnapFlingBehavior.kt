@@ -115,9 +115,7 @@ class SnapFlingBehavior(
         initialVelocity: Float,
         onSettlingDistanceUpdated: (Float) -> Unit
     ): Float {
-        val (remainingOffset, remainingState) = withContext(motionScaleDuration) {
-            fling(initialVelocity, onSettlingDistanceUpdated)
-        }
+        val (remainingOffset, remainingState) = fling(initialVelocity, onSettlingDistanceUpdated)
 
         debugLog { "Post Settling Offset=$remainingOffset" }
         // No remaining offset means we've used everything, no need to propagate velocity. Otherwise
@@ -355,6 +353,8 @@ internal fun findClosestOffset(
         density.calculateSnappingOffsetBounds()
     }
 
+    debugLog { "Proposed Bounds: Lower=$lowerBound Upper=$upperBound" }
+
     val finalDistance = when (sign(velocity)) {
         0f -> {
             if (abs(upperBound) <= abs(lowerBound)) {
@@ -412,11 +412,16 @@ private suspend fun ScrollScope.animateDecay(
             val finalDelta = finalValue - previousValue
             consumeDelta(finalDelta)
             cancelAnimation()
+            previousValue = finalValue
         } else {
             val delta = value - previousValue
             consumeDelta(delta)
             previousValue = value
         }
+    }
+
+    debugLog {
+        "Decay Animation: Proposed Offset=$targetOffset Achieved Offset=$previousValue"
     }
     return AnimationResult(
         targetOffset - previousValue,

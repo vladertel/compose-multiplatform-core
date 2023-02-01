@@ -16,6 +16,8 @@
 
 package androidx.car.app.messaging.model;
 
+import static androidx.core.util.Preconditions.checkState;
+
 import static java.util.Objects.requireNonNull;
 
 import android.annotation.SuppressLint;
@@ -29,9 +31,11 @@ import androidx.car.app.annotations.RequiresCarApi;
 import androidx.car.app.model.CarIcon;
 import androidx.car.app.model.CarText;
 import androidx.car.app.model.Item;
+import androidx.car.app.utils.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /** Represents a conversation */
 @ExperimentalCarApi
@@ -51,12 +55,43 @@ public class ConversationItem implements Item {
     @NonNull
     private final ConversationCallbackDelegate mConversationCallbackDelegate;
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(
+                mId,
+                mTitle,
+                mIcon,
+                mIsGroupConversation,
+                mMessages
+        );
+    }
+
+    @Override
+    public boolean equals(@Nullable Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof ConversationItem)) {
+            return false;
+        }
+        ConversationItem otherConversationItem = (ConversationItem) other;
+
+        return
+                Objects.equals(mId, otherConversationItem.mId)
+                        && Objects.equals(mTitle, otherConversationItem.mTitle)
+                        && Objects.equals(mIcon, otherConversationItem.mIcon)
+                        && mIsGroupConversation == otherConversationItem.mIsGroupConversation
+                        && Objects.equals(mMessages, otherConversationItem.mMessages)
+                ;
+    }
+
     ConversationItem(@NonNull Builder builder) {
         this.mId = requireNonNull(builder.mId);
         this.mTitle = requireNonNull(builder.mTitle);
         this.mIcon = builder.mIcon;
         this.mIsGroupConversation = builder.mIsGroupConversation;
-        this.mMessages = requireNonNull(builder.mMessages);
+        this.mMessages = requireNonNull(CollectionUtils.unmodifiableCopy(builder.mMessages));
+        checkState(!mMessages.isEmpty(), "Message list cannot be empty.");
         this.mConversationCallbackDelegate = new ConversationCallbackDelegateImpl(
                 requireNonNull(builder.mConversationCallback));
     }

@@ -16,6 +16,7 @@
 
 package androidx.wear.compose.foundation.lazy
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -963,6 +965,56 @@ public class ScalingLazyColumnTest {
         state.layoutInfo.assertVisibleItems(count = 3, startIndex = 22)
         assertThat(state.centerItemIndex).isEqualTo(24)
         assertThat(state.centerItemScrollOffset).isEqualTo(0)
+    }
+
+    @Test
+    fun centerItemIndexPublishesUpdatesOnChangeOnly() {
+        lateinit var state: ScalingLazyListState
+        var recompositionCount = 0
+
+        rule.setContent {
+            state = rememberScalingLazyListState(initialCenterItemIndex = 0)
+
+            WithTouchSlop(0f) {
+                state.centerItemIndex
+                recompositionCount++
+
+                ScalingLazyColumn(
+                    state = state,
+                    modifier = Modifier.testTag(TEST_TAG).requiredSize(
+                        itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                    ),
+                    autoCentering = AutoCenteringParams(itemIndex = 0)
+                ) {
+                    items(5) {
+                        Box(Modifier.requiredSize(itemSizeDp))
+                    }
+                }
+            }
+        }
+        // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
+        rule.waitUntil { state.initialized.value }
+
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
+            swipeUp(endY = bottom - (itemSizePx.toFloat() + defaultItemSpacingPx.toFloat()))
+        }
+
+        rule.waitForIdle()
+        assertThat(recompositionCount).isEqualTo(2)
+    }
+
+    @Test
+    fun scalingLazyColumnCanBeNestedOnHorizontalScrollingComponent() {
+        rule.setContent {
+            val horizontalScrollState = rememberScrollState()
+            Box(
+                modifier = Modifier.horizontalScroll(horizontalScrollState),
+            ) {
+                ScalingLazyColumn {
+                    item { Box(Modifier.size(10.dp)) }
+                }
+            }
+        }
     }
 }
 

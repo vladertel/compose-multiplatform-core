@@ -39,6 +39,7 @@ import androidx.camera.core.impl.ImageFormatConstants
 import androidx.camera.core.impl.ImageOutputConfig
 import androidx.camera.core.impl.MutableStateObservable
 import androidx.camera.core.impl.Observable
+import androidx.camera.core.impl.StreamSpec
 import androidx.camera.core.impl.Timebase
 import androidx.camera.core.impl.utils.CompareSizesByArea
 import androidx.camera.core.impl.utils.TransformUtils.rectToSize
@@ -138,6 +139,36 @@ class VideoCaptureTest {
             it.willNotProvideSurface()
         }
         CameraXUtil.shutdown().get(10, TimeUnit.SECONDS)
+    }
+
+    @Test
+    fun setNoCameraTransform_propagatesToCameraEdge() {
+        // Arrange.
+        setupCamera()
+        val processor = createFakeSurfaceProcessor()
+        val videoCapture = createVideoCapture(createVideoOutput(), processor = processor)
+        // Act: set no transform and create pipeline.
+        videoCapture.hasCameraTransform = false
+        videoCapture.bindToCamera(camera, null, null)
+        videoCapture.updateSuggestedStreamSpec(StreamSpec.builder(Size(640, 480)).build())
+        videoCapture.onStateAttached()
+        // Assert: camera edge does not have transform.
+        assertThat(videoCapture.cameraEdge!!.hasCameraTransform()).isFalse()
+        videoCapture.onStateDetached()
+        videoCapture.unbindFromCamera(camera)
+    }
+
+    @Test
+    fun cameraEdgeHasTransformByDefault() {
+        // Arrange.
+        setupCamera()
+        createCameraUseCaseAdapter()
+        val processor = createFakeSurfaceProcessor()
+        val videoCapture = createVideoCapture(createVideoOutput(), processor = processor)
+        // Act.
+        addAndAttachUseCases(videoCapture)
+        // Assert.
+        assertThat(videoCapture.cameraEdge!!.hasCameraTransform()).isTrue()
     }
 
     @Test
@@ -273,7 +304,7 @@ class VideoCaptureTest {
             Surface.ROTATION_270
         ).forEach { targetRotation ->
             // Arrange.
-            setSuggestedResolution(quality)
+            setSuggestedStreamSpec(quality)
             var surfaceRequest: SurfaceRequest? = null
             val videoOutput = createVideoOutput(
                 mediaSpec = MediaSpec.builder().configureVideo {
@@ -377,7 +408,7 @@ class VideoCaptureTest {
 
         // Camera 0 support 2160P(UHD) and 720P(HD)
         arrayOf(UHD, HD, HIGHEST, LOWEST).forEach { quality ->
-            setSuggestedResolution(quality)
+            setSuggestedStreamSpec(quality)
 
             val videoOutput = createVideoOutput(
                 mediaSpec = MediaSpec.builder().configureVideo {
@@ -412,7 +443,7 @@ class VideoCaptureTest {
             )
         )
         createCameraUseCaseAdapter()
-        setSuggestedResolution(RESOLUTION_480P)
+        setSuggestedStreamSpec(StreamSpec.builder(RESOLUTION_480P).build())
 
         val videoOutput = createVideoOutput(
             mediaSpec = MediaSpec.builder().configureVideo {
@@ -525,7 +556,7 @@ class VideoCaptureTest {
         // Arrange.
         setupCamera()
         createCameraUseCaseAdapter()
-        setSuggestedResolution(Size(639, 479))
+        setSuggestedStreamSpec(StreamSpec.builder(Size(639, 479)).build())
 
         val videoOutput = createVideoOutput()
         val videoCapture = createVideoCapture(
@@ -857,7 +888,7 @@ class VideoCaptureTest {
         // Arrange.
         setupCamera()
         createCameraUseCaseAdapter()
-        setSuggestedResolution(quality)
+        setSuggestedStreamSpec(quality)
         var surfaceRequest: SurfaceRequest? = null
         val videoOutput = createVideoOutput(
             mediaSpec = MediaSpec.builder().configureVideo {
@@ -963,6 +994,7 @@ class VideoCaptureTest {
 
     private fun createVideoCapture(
         videoOutput: VideoOutput = createVideoOutput(),
+        hasCameraTransform: Boolean = true,
         targetRotation: Int? = null,
         targetResolution: Size? = null,
         processor: SurfaceProcessorInternal? = null,
@@ -976,19 +1008,20 @@ class VideoCaptureTest {
             setVideoEncoderInfoFinder(videoEncoderInfoFinder)
         }.build().apply {
             setProcessor(processor)
+            setHasCameraTransform(hasCameraTransform)
         }
 
     private fun createFakeSurfaceProcessor() = FakeSurfaceProcessorInternal(mainThreadExecutor())
 
-    private fun setSuggestedResolution(quality: Quality) {
-        setSuggestedResolution(CAMERA_0_QUALITY_SIZE[quality]!!)
+    private fun setSuggestedStreamSpec(quality: Quality) {
+        setSuggestedStreamSpec(StreamSpec.builder(CAMERA_0_QUALITY_SIZE[quality]!!).build())
     }
 
-    private fun setSuggestedResolution(resolution: Size) {
-        surfaceManager.setSuggestedResolution(
+    private fun setSuggestedStreamSpec(streamSpec: StreamSpec) {
+        surfaceManager.setSuggestedStreamSpec(
             CAMERA_ID_0,
             VideoCaptureConfig::class.java,
-            resolution
+            streamSpec
         )
     }
 

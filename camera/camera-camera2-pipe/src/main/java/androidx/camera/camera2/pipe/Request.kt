@@ -28,14 +28,14 @@ import androidx.annotation.RequiresApi
  * A [Request] is an immutable package of outputs and parameters needed to issue a [CaptureRequest]
  * to a Camera2 [CameraCaptureSession].
  *
- * [Request] objects are handled by camera2 via the [RequestProcessor] interface, and will
- * translate each [Request] object into a corresponding [CaptureRequest] object using the active
+ * [Request] objects are handled by camera2 via the [RequestProcessor] interface, and will translate
+ * each [Request] object into a corresponding [CaptureRequest] object using the active
  * [CameraDevice], [CameraCaptureSession], and [CameraGraph.Config]. Requests may be queued up and
  * submitted after a delay, or reused (in the case of repeating requests) if the
  * [CameraCaptureSession] is reconfigured or recreated.
  *
- * Depending on the [CameraGraph.Config], it is possible that not all parameters that are set on
- * the [Request] will be honored when a [Request] is sent to the camera. Specifically, Camera2
+ * Depending on the [CameraGraph.Config], it is possible that not all parameters that are set on the
+ * [Request] will be honored when a [Request] is sent to the camera. Specifically, Camera2
  * parameters related to 3A State and any required parameters specified on the [CameraGraph.Config]
  * will override parameters specified in a [Request]
  *
@@ -63,11 +63,10 @@ public data class Request(
          * exposure time depending on the device, and may be in a different timebase from the
          * timestamps that are returned from the underlying buffers.
          *
-         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureStarted
-         *
          * @param requestMetadata the data about the camera2 request that was sent to the camera.
          * @param frameNumber the android frame number for this exposure
          * @param timestamp the android timestamp in nanos for this exposure
+         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureStarted
          */
         public fun onStarted(
             requestMetadata: RequestMetadata,
@@ -81,11 +80,10 @@ public data class Request(
          * associated with this Request. This method may be invoked 0 or more times before the frame
          * receives onComplete.
          *
-         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureStarted
-         *
          * @param requestMetadata the data about the camera2 request that was sent to the camera.
          * @param frameNumber the android frame number for this exposure
          * @param captureResult the current android capture result for this exposure
+         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureStarted
          */
         public fun onPartialCaptureResult(
             requestMetadata: RequestMetadata,
@@ -96,15 +94,14 @@ public data class Request(
 
         /**
          * This event indicates that all of the metadata associated with this frame has been
-         * produced. If [onPartialCaptureResult] was invoked, the values returned in
-         * the totalCaptureResult map be a superset of the values produced from the
+         * produced. If [onPartialCaptureResult] was invoked, the values returned in the
+         * totalCaptureResult map be a superset of the values produced from the
          * [onPartialCaptureResult] calls.
-         *
-         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureStarted
          *
          * @param requestMetadata the data about the camera2 request that was sent to the camera.
          * @param frameNumber the android frame number for this exposure
          * @param totalCaptureResult the final android capture result for this exposure
+         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureStarted
          */
         public fun onTotalCaptureResult(
             requestMetadata: RequestMetadata,
@@ -114,11 +111,11 @@ public data class Request(
         }
 
         /**
-         * This is an artificial event that will be invoked after onTotalCaptureResult. This may
-         * be invoked several frames after onTotalCaptureResult due to incorrect HAL implementations
-         * that return metadata that get shifted several frames in the future. See b/154568653
-         * for real examples of this. The actual amount of shifting and required transformations
-         * may vary per device.
+         * This is an artificial event that will be invoked after onTotalCaptureResult. This may be
+         * invoked several frames after onTotalCaptureResult due to incorrect HAL implementations
+         * that return metadata that get shifted several frames in the future. See b/154568653 for
+         * real examples of this. The actual amount of shifting and required transformations may
+         * vary per device.
          *
          * @param requestMetadata the data about the camera2 request that was sent to the camera.
          * @param frameNumber the android frame number for this exposure
@@ -137,11 +134,10 @@ public data class Request(
          *
          * Surfaces may not received images if "wasImagesCaptured" is set to false.
          *
-         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureFailed
-         *
          * @param requestMetadata the data about the camera2 request that was sent to the camera.
          * @param frameNumber the android frame number for this exposure
          * @param captureFailure the android [CaptureFailure] data
+         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureFailed
          */
         public fun onFailed(
             requestMetadata: RequestMetadata,
@@ -155,11 +151,10 @@ public data class Request(
          * stream. This method may be invoked multiple times per frame if multiple buffers were
          * lost. This method may not be invoked when an image is lost in some situations.
          *
-         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureBufferLost
-         *
          * @param requestMetadata the data about the camera2 request that was sent to the camera.
          * @param frameNumber the android frame number for this exposure
          * @param stream the internal stream that will not receive a buffer for this frame.
+         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureBufferLost
          */
         public fun onBufferLost(
             requestMetadata: RequestMetadata,
@@ -171,23 +166,21 @@ public data class Request(
         /**
          * This is an artificial callback that will be invoked if a specific request was pending or
          * had already been submitted to when an abort was requested. The behavior of the request is
-         * undefined if this method is invoked and images or metadata may or may not be produced
-         * for this request. Repeating requests will not receive onAborted.
+         * undefined if this method is invoked and images or metadata may or may not be produced for
+         * this request. Repeating requests will not receive onAborted.
          *
          * @param request information about this specific request.
          */
-        public fun onAborted(request: Request) {
-        }
+        public fun onAborted(request: Request) {}
 
         /**
          * Invoked after the CaptureRequest(s) have been created, but before the request is
-         * submitted to the Camera. This method may be invoked multiple times if the request
-         * fails to submit or if this is a repeating request.
+         * submitted to the Camera. This method may be invoked multiple times if the request fails
+         * to submit or if this is a repeating request.
          *
          * @param requestMetadata information about this specific request.
          */
-        public fun onRequestSequenceCreated(requestMetadata: RequestMetadata) {
-        }
+        public fun onRequestSequenceCreated(requestMetadata: RequestMetadata) {}
 
         /**
          * Invoked after the CaptureRequest(s) has been submitted. This method may be invoked
@@ -195,29 +188,27 @@ public data class Request(
          *
          * @param requestMetadata the data about the camera2 request that was sent to the camera.
          */
-        public fun onRequestSequenceSubmitted(requestMetadata: RequestMetadata) {
-        }
+        public fun onRequestSequenceSubmitted(requestMetadata: RequestMetadata) {}
 
         /**
-         * Invoked by Camera2 if the request was aborted after having been submitted. This method
-         * is distinct from onAborted, which is directly invoked when aborting captures.
-         *
-         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureSequenceAborted
+         * Invoked by Camera2 if the request was aborted after having been submitted. This method is
+         * distinct from onAborted, which is directly invoked when aborting captures.
          *
          * @param requestMetadata the data about the camera2 request that was sent to the camera.
+         * @see
+         *   android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureSequenceAborted
          */
-        public fun onRequestSequenceAborted(requestMetadata: RequestMetadata) {
-        }
+        public fun onRequestSequenceAborted(requestMetadata: RequestMetadata) {}
 
         /**
          * Invoked by Camera2 if the request was completed after having been submitted. This method
          * is distinct from onCompleted which is invoked for each frame when used with a repeating
          * request.
          *
-         * @see android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureSequenceCompleted
-         *
          * @param requestMetadata the data about the camera2 request that was sent to the camera.
          * @param frameNumber the final frame number of this sequence.
+         * @see
+         *   android.hardware.camera2.CameraCaptureSession.CaptureCallback.onCaptureSequenceCompleted
          */
         public fun onRequestSequenceCompleted(
             requestMetadata: RequestMetadata,
@@ -230,8 +221,7 @@ public data class Request(
     public operator fun <T> get(key: Metadata.Key<T>): T? = getUnchecked(key)
 
     @Suppress("UNCHECKED_CAST")
-    private fun <T> Request.getUnchecked(key: Metadata.Key<T>): T? =
-        this.extras[key] as T?
+    private fun <T> Request.getUnchecked(key: Metadata.Key<T>): T? = this.extras[key] as T?
 
     @Suppress("UNCHECKED_CAST")
     private fun <T> Request.getUnchecked(key: CaptureRequest.Key<T>): T? =
@@ -239,6 +229,7 @@ public data class Request(
 }
 
 public fun <T> Request.getOrDefault(key: Metadata.Key<T>, default: T): T = this[key] ?: default
+
 public fun <T> Request.getOrDefault(key: CaptureRequest.Key<T>, default: T): T =
     this[key] ?: default
 

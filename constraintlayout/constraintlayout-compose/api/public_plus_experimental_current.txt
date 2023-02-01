@@ -173,10 +173,15 @@ package androidx.constraintlayout.compose {
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.VerticalAnchor createAbsoluteLeftBarrier(androidx.constraintlayout.compose.LayoutReference![] elements, optional float margin);
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.VerticalAnchor createAbsoluteRightBarrier(androidx.constraintlayout.compose.LayoutReference![] elements, optional float margin);
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.HorizontalAnchor createBottomBarrier(androidx.constraintlayout.compose.LayoutReference![] elements, optional float margin);
+    method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createColumn(androidx.constraintlayout.compose.LayoutReference![] elements, optional int[] rowWeights, optional float verticalGap, optional float padding);
+    method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createColumn(androidx.constraintlayout.compose.LayoutReference![] elements, optional float verticalGap, optional int[] rowWeights, optional float paddingHorizontal, optional float paddingVertical);
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.VerticalAnchor createEndBarrier(androidx.constraintlayout.compose.LayoutReference![] elements, optional float margin);
     method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createFlow(androidx.constraintlayout.compose.LayoutReference![]? elements, optional boolean flowVertically, optional float verticalGap, optional float horizontalGap, optional int maxElement, optional float padding, optional androidx.constraintlayout.compose.Wrap wrapMode, optional androidx.constraintlayout.compose.VerticalAlign verticalAlign, optional androidx.constraintlayout.compose.HorizontalAlign horizontalAlign, optional float horizontalFlowBias, optional float verticalFlowBias, optional androidx.constraintlayout.compose.FlowStyle verticalStyle, optional androidx.constraintlayout.compose.FlowStyle horizontalStyle);
     method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createFlow(androidx.constraintlayout.compose.LayoutReference![]? elements, optional boolean flowVertically, optional float verticalGap, optional float horizontalGap, optional int maxElement, optional float paddingHorizontal, optional float paddingVertical, optional androidx.constraintlayout.compose.Wrap wrapMode, optional androidx.constraintlayout.compose.VerticalAlign verticalAlign, optional androidx.constraintlayout.compose.HorizontalAlign horizontalAlign, optional float horizontalFlowBias, optional float verticalFlowBias, optional androidx.constraintlayout.compose.FlowStyle verticalStyle, optional androidx.constraintlayout.compose.FlowStyle horizontalStyle);
     method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createFlow(androidx.constraintlayout.compose.LayoutReference![]? elements, optional boolean flowVertically, optional float verticalGap, optional float horizontalGap, optional int maxElement, optional float paddingLeft, optional float paddingTop, optional float paddingRight, optional float paddingBottom, optional androidx.constraintlayout.compose.Wrap wrapMode, optional androidx.constraintlayout.compose.VerticalAlign verticalAlign, optional androidx.constraintlayout.compose.HorizontalAlign horizontalAlign, optional float horizontalFlowBias, optional float verticalFlowBias, optional androidx.constraintlayout.compose.FlowStyle verticalStyle, optional androidx.constraintlayout.compose.FlowStyle horizontalStyle);
+    method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createGrid(androidx.constraintlayout.compose.LayoutReference![] elements, optional int orientation, optional int rows, optional int columns, optional float verticalGap, optional float horizontalGap, optional int[] rowWeights, optional int[] columnWeights, optional String skips, optional String spans, optional float padding);
+    method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createGrid(androidx.constraintlayout.compose.LayoutReference![] elements, optional int orientation, optional int rows, optional int columns, optional float verticalGap, optional float horizontalGap, optional int[] rowWeights, optional int[] columnWeights, optional String skips, optional String spans, optional float paddingHorizontal, optional float paddingVertical);
+    method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createGrid(androidx.constraintlayout.compose.LayoutReference![] elements, optional int orientation, optional int rows, optional int columns, optional float verticalGap, optional float horizontalGap, optional int[] rowWeights, optional int[] columnWeights, optional String skips, optional String spans, optional float paddingLeft, optional float paddingTop, optional float paddingRight, optional float paddingBottom);
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.VerticalAnchor createGuidelineFromAbsoluteLeft(float offset);
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.VerticalAnchor createGuidelineFromAbsoluteLeft(float fraction);
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.VerticalAnchor createGuidelineFromAbsoluteRight(float offset);
@@ -190,6 +195,8 @@ package androidx.constraintlayout.compose {
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.HorizontalAnchor createGuidelineFromTop(float offset);
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.HorizontalAnchor createGuidelineFromTop(float fraction);
     method public final androidx.constraintlayout.compose.HorizontalChainReference createHorizontalChain(androidx.constraintlayout.compose.LayoutReference![] elements, optional androidx.constraintlayout.compose.ChainStyle chainStyle);
+    method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createRow(androidx.constraintlayout.compose.LayoutReference![] elements, optional float horizontalGap, optional int[] columnWeights, optional float padding);
+    method public final androidx.constraintlayout.compose.ConstrainedLayoutReference createRow(androidx.constraintlayout.compose.LayoutReference![] elements, optional float horizontalGap, optional int[] columnWeights, optional float paddingHorizontal, optional float paddingVertical);
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.VerticalAnchor createStartBarrier(androidx.constraintlayout.compose.LayoutReference![] elements, optional float margin);
     method public final androidx.constraintlayout.compose.ConstraintLayoutBaseScope.HorizontalAnchor createTopBarrier(androidx.constraintlayout.compose.LayoutReference![] elements, optional float margin);
     method public final androidx.constraintlayout.compose.VerticalChainReference createVerticalChain(androidx.constraintlayout.compose.LayoutReference![] elements, optional androidx.constraintlayout.compose.ChainStyle chainStyle);
@@ -586,9 +593,6 @@ package androidx.constraintlayout.compose {
   public final class MotionDragHandlerKt {
   }
 
-  @kotlin.DslMarker public @interface MotionDslScope {
-  }
-
   public interface MotionItemsProvider {
     method public int count();
     method public kotlin.jvm.functions.Function0<kotlin.Unit> getContent(int index);
@@ -597,9 +601,6 @@ package androidx.constraintlayout.compose {
   }
 
   public final class MotionKt {
-    method @androidx.compose.runtime.Composable @androidx.constraintlayout.compose.ExperimentalMotionApi public static void Motion(optional androidx.compose.ui.Modifier modifier, kotlin.jvm.functions.Function1<? super androidx.constraintlayout.compose.MotionScope,kotlin.Unit> content);
-    method @androidx.compose.runtime.Composable @androidx.constraintlayout.compose.ExperimentalMotionApi public static kotlin.jvm.functions.Function1<androidx.constraintlayout.compose.MotionScope,kotlin.Unit> rememberMotionContent(kotlin.jvm.functions.Function1<? super androidx.constraintlayout.compose.MotionScope,kotlin.Unit> content);
-    method @androidx.compose.runtime.Composable @androidx.constraintlayout.compose.ExperimentalMotionApi public static java.util.List<kotlin.jvm.functions.Function2<androidx.constraintlayout.compose.MotionScope,java.lang.Integer,kotlin.Unit>> rememberMotionListItems(int count, kotlin.jvm.functions.Function2<? super androidx.constraintlayout.compose.MotionScope,? super java.lang.Integer,kotlin.Unit> content);
   }
 
   public enum MotionLayoutDebugFlags {
@@ -732,12 +733,6 @@ package androidx.constraintlayout.compose {
 
   public final class MotionSceneScopeKt {
     method @androidx.constraintlayout.compose.ExperimentalMotionApi public static androidx.constraintlayout.compose.MotionScene MotionScene(kotlin.jvm.functions.Function1<? super androidx.constraintlayout.compose.MotionSceneScope,kotlin.Unit> motionSceneContent);
-  }
-
-  @androidx.constraintlayout.compose.ExperimentalMotionApi @androidx.constraintlayout.compose.MotionDslScope public final class MotionScope implements androidx.compose.ui.layout.LookaheadLayoutScope {
-    ctor public MotionScope(androidx.compose.ui.layout.LookaheadLayoutScope lookaheadLayoutScope);
-    method @androidx.compose.runtime.Composable public void emit(java.util.List<? extends kotlin.jvm.functions.Function2<? super androidx.constraintlayout.compose.MotionScope,? super java.lang.Integer,kotlin.Unit>>);
-    method public androidx.compose.ui.Modifier motion(androidx.compose.ui.Modifier, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> animationSpec, optional boolean ignoreAxisChanges, optional kotlin.jvm.functions.Function1<? super androidx.constraintlayout.compose.MotionModifierScope,kotlin.Unit> motionDescription);
   }
 
   @androidx.constraintlayout.compose.ExperimentalMotionApi public final class OnSwipe {

@@ -499,9 +499,9 @@ fun ModalBottomSheetLayout(
                     when (state) {
                         Hidden -> fullHeight
                         HalfExpanded -> when {
-                            sheetSize.height < fullHeight / 2 -> null
+                            sheetSize.height < fullHeight / 2f -> null
                             sheetState.isSkipHalfExpanded -> null
-                            else -> sheetSize.height / 2f
+                            else -> fullHeight / 2f
                         }
 
                         Expanded -> if (sheetSize.height != 0) {
@@ -656,7 +656,7 @@ private fun ModalBottomSheetAnchorChangeHandler(
     animateTo: (target: ModalBottomSheetValue, velocity: Float) -> Unit,
     snapTo: (target: ModalBottomSheetValue) -> Unit,
 ) = AnchorChangeHandler<ModalBottomSheetValue> { previousTarget, previousAnchors, newAnchors ->
-    val previousTargetOffset = previousAnchors.getValue(previousTarget)
+    val previousTargetOffset = previousAnchors[previousTarget]
     val newTarget = when (previousTarget) {
         Hidden -> Hidden
         HalfExpanded, Expanded -> {

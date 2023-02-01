@@ -24,7 +24,8 @@ plugins {
 
 dependencies {
     api(libs.kotlinStdlib)
-    // Add dependencies here
+    implementation project(path: ':privacysandbox:ui:ui-core')
+    implementation project(path: ':annotation:annotation')
 }
 
 android {

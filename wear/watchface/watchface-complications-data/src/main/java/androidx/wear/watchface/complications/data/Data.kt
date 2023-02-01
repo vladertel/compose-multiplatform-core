@@ -18,6 +18,8 @@
 
 package androidx.wear.watchface.complications.data
 
+import android.support.wearable.complications.ComplicationData as WireComplicationData
+import android.support.wearable.complications.ComplicationData.Builder as WireComplicationDataBuilder
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.graphics.Color
@@ -29,6 +31,7 @@ import androidx.annotation.FloatRange
 import androidx.annotation.IntDef
 import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicFloat
 import androidx.wear.watchface.complications.data.GoalProgressComplicationData.Companion.PLACEHOLDER
 import androidx.wear.watchface.complications.data.RangedValueComplicationData.Companion.PLACEHOLDER
 import androidx.wear.watchface.complications.data.RangedValueComplicationData.Companion.TYPE_RATING
@@ -36,13 +39,6 @@ import androidx.wear.watchface.complications.data.WeightedElementsComplicationDa
 import androidx.wear.watchface.complications.data.WeightedElementsComplicationData.Companion.getMaxElements
 import androidx.wear.watchface.complications.data.WeightedElementsComplicationData.Element
 import java.time.Instant
-
-/** The wire format for [ComplicationData]. */
-internal typealias WireComplicationData = android.support.wearable.complications.ComplicationData
-
-/** The builder for [WireComplicationData]. */
-internal typealias WireComplicationDataBuilder =
-    android.support.wearable.complications.ComplicationData.Builder
 
 internal const val TAG = "Data.kt"
 
@@ -141,18 +137,23 @@ public sealed class ComplicationData constructor(
      * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public abstract fun asWireComplicationData(): WireComplicationData
+    public fun asWireComplicationData(): WireComplicationData {
+        cachedWireComplicationData?.let { return it }
+        return createWireComplicationDataBuilder()
+            .apply { fillWireComplicationDataBuilder(this) }
+            .build()
+            .also { cachedWireComplicationData = it }
+    }
 
     internal fun createWireComplicationDataBuilder(): WireComplicationDataBuilder =
         cachedWireComplicationData?.let {
             WireComplicationDataBuilder(it)
-        } ?: WireComplicationDataBuilder(type.toWireComplicationType()).apply {
-            setDataSource(dataSource)
-            setPersistencePolicy(persistencePolicy)
-            setDisplayPolicy(displayPolicy)
-        }
+        } ?: WireComplicationDataBuilder(type.toWireComplicationType())
 
     internal open fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        builder.setDataSource(dataSource)
+        builder.setPersistencePolicy(persistencePolicy)
+        builder.setDisplayPolicy(displayPolicy)
     }
 
     /**
@@ -177,6 +178,13 @@ public sealed class ComplicationData constructor(
         other is ComplicationData &&
             asWireComplicationData() == other.asWireComplicationData()
 
+    /**
+     * Similar to [equals], but avoids comparing evaluated fields (if expressions exist).
+     * @hide
+     */
+    infix fun equalsUnevaluated(other: ComplicationData): Boolean =
+        asWireComplicationData() equalsUnevaluated other.asWireComplicationData()
+
     override fun hashCode(): Int = asWireComplicationData().hashCode()
 
     /**
@@ -188,6 +196,14 @@ public sealed class ComplicationData constructor(
         internal var dataSource: ComponentName? = null
         internal var persistencePolicy = ComplicationPersistencePolicies.CACHING_ALLOWED
         internal var displayPolicy = ComplicationDisplayPolicies.ALWAYS_DISPLAY
+
+        @Suppress("NewApi")
+        internal fun setCommon(data: WireComplicationData) = apply {
+            setCachedWireComplicationData(data)
+            setDataSource(data.dataSource)
+            setPersistencePolicy(data.persistencePolicy)
+            setDisplayPolicy(data.displayPolicy)
+        }
 
         /**
          * Sets the [ComponentName] of the ComplicationDataSourceService that provided this
@@ -292,21 +308,15 @@ public class NoDataComplicationData internal constructor(
             else -> null
         }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
+    override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
+        if (placeholder == null) {
+            builder.setPlaceholder(null)
+        } else {
+            val placeholderBuilder = placeholder.createWireComplicationDataBuilder()
+            placeholder.fillWireComplicationDataBuilder(placeholderBuilder)
+            builder.setPlaceholder(placeholderBuilder.build())
         }
-        return createWireComplicationDataBuilder().apply {
-            if (placeholder == null) {
-                setPlaceholder(null)
-            } else {
-                val builder = placeholder.createWireComplicationDataBuilder()
-                placeholder.fillWireComplicationDataBuilder(builder)
-                setPlaceholder(builder.build())
-            }
-        }.build().also { cachedWireComplicationData = it }
     }
 
     override fun toString(): String {
@@ -338,9 +348,8 @@ public class EmptyComplicationData : ComplicationData(
     persistencePolicy = ComplicationPersistencePolicies.CACHING_ALLOWED,
     displayPolicy = ComplicationDisplayPolicies.ALWAYS_DISPLAY
 ) {
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    override fun asWireComplicationData(): WireComplicationData = asPlainWireComplicationData(type)
+    // Always empty.
+    override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {}
 
     override fun toString(): String {
         return "EmptyComplicationData()"
@@ -368,9 +377,8 @@ public class NotConfiguredComplicationData : ComplicationData(
     persistencePolicy = ComplicationPersistencePolicies.CACHING_ALLOWED,
     displayPolicy = ComplicationDisplayPolicies.ALWAYS_DISPLAY
 ) {
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    override fun asWireComplicationData(): WireComplicationData = asPlainWireComplicationData(type)
+    // Always empty.
+    override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {}
 
     override fun toString(): String {
         return "NotConfiguredComplicationData()"
@@ -508,18 +516,8 @@ public class ShortTextComplicationData internal constructor(
             )
     }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
-        }
-        return createWireComplicationDataBuilder().apply {
-            fillWireComplicationDataBuilder(this)
-        }.build().also { cachedWireComplicationData = it }
-    }
-
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
         builder.setShortText(text.toWireComplicationText())
         builder.setShortTitle(title?.toWireComplicationText())
         builder.setContentDescription(
@@ -689,18 +687,8 @@ public class LongTextComplicationData internal constructor(
             )
     }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
-        }
-        return createWireComplicationDataBuilder().apply {
-            fillWireComplicationDataBuilder(this)
-        }.build().also { cachedWireComplicationData = it }
-    }
-
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
         builder.setLongText(text.toWireComplicationText())
         builder.setLongTitle(title?.toWireComplicationText())
         monochromaticImage?.addToWireComplicationData(builder)
@@ -860,7 +848,7 @@ public class ColorRamp(
 public class RangedValueComplicationData internal constructor(
     public val value: Float,
     @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-    valueExpression: FloatExpression?,
+    valueExpression: DynamicFloat?,
     public val min: Float,
     public val max: Float,
     public val monochromaticImage: MonochromaticImage?,
@@ -886,13 +874,13 @@ public class RangedValueComplicationData internal constructor(
     displayPolicy = displayPolicy
 ) {
     /**
-     * The [FloatExpression] optionally set by the data source. If present the system will
+     * The [DynamicFloat] optionally set by the data source. If present the system will
      * dynamically evaluate this and store the result in [value]. Watch faces can typically ignore
      * this field.
      * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val valueExpression: FloatExpression? = valueExpression
+    public val valueExpression: DynamicFloat? = valueExpression
 
     /** @hide */
     @IntDef(value = [TYPE_UNDEFINED, TYPE_RATING, TYPE_PERCENTAGE])
@@ -909,7 +897,7 @@ public class RangedValueComplicationData internal constructor(
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public constructor(
         private val value: Float,
-        private val valueExpression: FloatExpression?,
+        private val valueExpression: DynamicFloat?,
         private val min: Float,
         private val max: Float,
         private var contentDescription: ComplicationText
@@ -933,9 +921,9 @@ public class RangedValueComplicationData internal constructor(
         ) : this(value, valueExpression = null, min, max, contentDescription)
 
         /**
-         * Creates a [Builder] for a [RangedValueComplicationData] with a [FloatExpression] value.
+         * Creates a [Builder] for a [RangedValueComplicationData] with a [DynamicFloat] value.
          *
-         * @param valueExpression The [FloatExpression] of the ranged complication which will be
+         * @param valueExpression The [DynamicFloat] of the ranged complication which will be
          * evaluated into a value dynamically, and should be in the range [[min]] .. [[max]]. The
          * semantic meaning of value can be specified via [setValueType].
          * @param min The minimum value. For [TYPE_PERCENTAGE] this must be 0f.
@@ -947,7 +935,7 @@ public class RangedValueComplicationData internal constructor(
          */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public constructor(
-            valueExpression: FloatExpression,
+            valueExpression: DynamicFloat,
             min: Float,
             max: Float,
             contentDescription: ComplicationText
@@ -1055,18 +1043,8 @@ public class RangedValueComplicationData internal constructor(
         }
     }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
-        }
-        return createWireComplicationDataBuilder().apply {
-            fillWireComplicationDataBuilder(this)
-        }.build().also { cachedWireComplicationData = it }
-    }
-
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
         builder.setRangedValue(value)
         builder.setRangedValueExpression(valueExpression)
         builder.setRangedMinValue(min)
@@ -1226,7 +1204,7 @@ public class GoalProgressComplicationData
 internal constructor(
     public val value: Float,
     @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-    valueExpression: FloatExpression?,
+    valueExpression: DynamicFloat?,
     public val targetValue: Float,
     public val monochromaticImage: MonochromaticImage?,
     public val smallImage: SmallImage?,
@@ -1250,13 +1228,13 @@ internal constructor(
     displayPolicy = displayPolicy
 ) {
     /**
-     * The [FloatExpression] optionally set by the data source. If present the system will
+     * The [DynamicFloat] optionally set by the data source. If present the system will
      * dynamically evaluate this and store the result in [value]. Watch faces can typically ignore
      * this field.
      * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val valueExpression: FloatExpression? = valueExpression
+    public val valueExpression: DynamicFloat? = valueExpression
 
     /**
      * Builder for [GoalProgressComplicationData].
@@ -1270,7 +1248,7 @@ internal constructor(
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public constructor(
         private val value: Float,
-        private val valueExpression: FloatExpression?,
+        private val valueExpression: DynamicFloat?,
         private val targetValue: Float,
         private var contentDescription: ComplicationText
     ) : BaseBuilder<Builder, GoalProgressComplicationData>() {
@@ -1289,9 +1267,9 @@ internal constructor(
         ) : this(value, valueExpression = null, targetValue, contentDescription)
 
         /**
-         * Creates a [Builder] for a [GoalProgressComplicationData] with a [FloatExpression] value.
+         * Creates a [Builder] for a [GoalProgressComplicationData] with a [DynamicFloat] value.
          *
-         * @param valueExpression The [FloatExpression] of the goal complication which will be
+         * @param valueExpression The [DynamicFloat] of the goal complication which will be
          * evaluated into a value dynamically, and should be >= 0.
          * @param targetValue The target value. This must be less than [Float.MAX_VALUE].
          * @param contentDescription Localized description for use by screen readers. Please do not
@@ -1300,7 +1278,7 @@ internal constructor(
          */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public constructor(
-            valueExpression: FloatExpression,
+            valueExpression: DynamicFloat,
             targetValue: Float,
             contentDescription: ComplicationText
         ) : this(
@@ -1390,18 +1368,8 @@ internal constructor(
         }
     }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
-        }
-        return createWireComplicationDataBuilder().apply {
-            fillWireComplicationDataBuilder(this)
-        }.build().also { cachedWireComplicationData = it }
-    }
-
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
         builder.setRangedValue(value)
         builder.setRangedValueExpression(valueExpression)
         builder.setTargetValue(targetValue)
@@ -1707,18 +1675,8 @@ internal constructor(
         }
     }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
-        }
-        return createWireComplicationDataBuilder().apply {
-            fillWireComplicationDataBuilder(this)
-        }.build().also { cachedWireComplicationData = it }
-    }
-
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
         builder.setElementWeights(elements.map { it.weight }.toFloatArray())
         builder.setElementColors(elements.map { it.color }.toIntArray())
         builder.setElementBackgroundColor(elementBackgroundColor)
@@ -1787,7 +1745,7 @@ internal constructor(
          * large  number of elements we likely won't be able to render them properly because the
          * individual elements will be too small on screen. */
         @JvmStatic
-        public fun getMaxElements() = 20
+        public fun getMaxElements() = 7
     }
 }
 
@@ -1865,18 +1823,8 @@ public class MonochromaticImageComplicationData internal constructor(
             )
     }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
-        }
-        return createWireComplicationDataBuilder().apply {
-            fillWireComplicationDataBuilder(this)
-        }.build().also { cachedWireComplicationData = it }
-    }
-
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
         monochromaticImage.addToWireComplicationData(builder)
         builder.setContentDescription(
             when (contentDescription) {
@@ -1981,18 +1929,8 @@ public class SmallImageComplicationData internal constructor(
             )
     }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
-        }
-        return createWireComplicationDataBuilder().apply {
-            fillWireComplicationDataBuilder(this)
-        }.build().also { cachedWireComplicationData = it }
-    }
-
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
         smallImage.addToWireComplicationData(builder)
         builder.setContentDescription(
             when (contentDescription) {
@@ -2103,18 +2041,8 @@ public class PhotoImageComplicationData internal constructor(
             )
     }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
-        }
-        return createWireComplicationDataBuilder().apply {
-            fillWireComplicationDataBuilder(this)
-        }.build().also { cachedWireComplicationData = it }
-    }
-
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
         builder.setLargeImage(photoImage)
         builder.setContentDescription(
             when (contentDescription) {
@@ -2243,18 +2171,12 @@ public class NoPermissionComplicationData internal constructor(
             )
     }
 
-    /** @hide */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    override fun asWireComplicationData(): WireComplicationData {
-        cachedWireComplicationData?.let {
-            return it
-        }
-        return createWireComplicationDataBuilder().apply {
-            setShortText(text?.toWireComplicationText())
-            setShortTitle(title?.toWireComplicationText())
-            monochromaticImage?.addToWireComplicationData(this)
-            smallImage?.addToWireComplicationData(this)
-        }.build().also { cachedWireComplicationData = it }
+    override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
+        super.fillWireComplicationDataBuilder(builder)
+        builder.setShortText(text?.toWireComplicationText())
+        builder.setShortTitle(title?.toWireComplicationText())
+        monochromaticImage?.addToWireComplicationData(builder)
+        smallImage?.addToWireComplicationData(builder)
     }
 
     override fun toString(): String {
@@ -2453,16 +2375,11 @@ internal fun WireComplicationData.toPlaceholderComplicationData(): ComplicationD
 @Suppress("NewApi")
 public fun WireComplicationData.toApiComplicationData(): ComplicationData {
     try {
-        // Make sure we use the correct dataSource, persistencePolicy & displayPolicy.
-        val dataSourceCopy = dataSource
-        val persistencePolicyCopy = persistencePolicy
-        val displayPolicyCopy = displayPolicy
-        val wireComplicationData = this
         return when (type) {
             NoDataComplicationData.TYPE.toWireComplicationType() -> {
                 placeholder?.toPlaceholderComplicationData()?.let {
-                    NoDataComplicationData(it)
-                } ?: NoDataComplicationData()
+                    NoDataComplicationData(it, this@toApiComplicationData)
+                } ?: NoDataComplicationData(null, this@toApiComplicationData)
             }
 
             EmptyComplicationData.TYPE.toWireComplicationType() -> EmptyComplicationData()
@@ -2475,15 +2392,12 @@ public fun WireComplicationData.toApiComplicationData(): ComplicationData {
                     shortText!!.toApiComplicationText(),
                     contentDescription?.toApiComplicationText() ?: ComplicationText.EMPTY
                 ).apply {
+                    setCommon(this@toApiComplicationData)
                     setTapAction(tapAction)
                     setValidTimeRange(parseTimeRange())
                     setTitle(shortTitle?.toApiComplicationText())
                     setMonochromaticImage(parseIcon())
                     setSmallImage(parseSmallImage())
-                    setCachedWireComplicationData(wireComplicationData)
-                    setDataSource(dataSourceCopy)
-                    setPersistencePolicy(persistencePolicyCopy)
-                    setDisplayPolicy(displayPolicyCopy)
                 }.build()
 
             LongTextComplicationData.TYPE.toWireComplicationType() ->
@@ -2491,15 +2405,12 @@ public fun WireComplicationData.toApiComplicationData(): ComplicationData {
                     longText!!.toApiComplicationText(),
                     contentDescription?.toApiComplicationText() ?: ComplicationText.EMPTY
                 ).apply {
+                    setCommon(this@toApiComplicationData)
                     setTapAction(tapAction)
                     setValidTimeRange(parseTimeRange())
                     setTitle(longTitle?.toApiComplicationText())
                     setMonochromaticImage(parseIcon())
                     setSmallImage(parseSmallImage())
-                    setCachedWireComplicationData(wireComplicationData)
-                    setDataSource(dataSourceCopy)
-                    setPersistencePolicy(persistencePolicyCopy)
-                    setDisplayPolicy(displayPolicyCopy)
                 }.build()
 
             RangedValueComplicationData.TYPE.toWireComplicationType() ->
@@ -2511,19 +2422,16 @@ public fun WireComplicationData.toApiComplicationData(): ComplicationData {
                     contentDescription = contentDescription?.toApiComplicationText()
                         ?: ComplicationText.EMPTY
                 ).apply {
+                    setCommon(this@toApiComplicationData)
                     setTapAction(tapAction)
                     setValidTimeRange(parseTimeRange())
                     setMonochromaticImage(parseIcon())
                     setSmallImage(parseSmallImage())
                     setTitle(shortTitle?.toApiComplicationText())
                     setText(shortText?.toApiComplicationText())
-                    setCachedWireComplicationData(wireComplicationData)
                     colorRamp?.let {
                         setColorRamp(ColorRamp(it, isColorRampInterpolated!!))
                     }
-                    setDataSource(dataSourceCopy)
-                    setPersistencePolicy(persistencePolicyCopy)
-                    setDisplayPolicy(displayPolicyCopy)
                     setValueType(rangedValueType)
                 }.build()
 
@@ -2532,12 +2440,9 @@ public fun WireComplicationData.toApiComplicationData(): ComplicationData {
                     parseIcon()!!,
                     contentDescription?.toApiComplicationText() ?: ComplicationText.EMPTY
                 ).apply {
+                    setCommon(this@toApiComplicationData)
                     setTapAction(tapAction)
                     setValidTimeRange(parseTimeRange())
-                    setCachedWireComplicationData(wireComplicationData)
-                    setDataSource(dataSourceCopy)
-                    setPersistencePolicy(persistencePolicyCopy)
-                    setDisplayPolicy(displayPolicyCopy)
                 }.build()
 
             SmallImageComplicationData.TYPE.toWireComplicationType() ->
@@ -2545,12 +2450,9 @@ public fun WireComplicationData.toApiComplicationData(): ComplicationData {
                     parseSmallImage()!!,
                     contentDescription?.toApiComplicationText() ?: ComplicationText.EMPTY
                 ).apply {
+                    setCommon(this@toApiComplicationData)
                     setTapAction(tapAction)
                     setValidTimeRange(parseTimeRange())
-                    setCachedWireComplicationData(wireComplicationData)
-                    setDataSource(dataSourceCopy)
-                    setPersistencePolicy(persistencePolicyCopy)
-                    setDisplayPolicy(displayPolicyCopy)
                 }.build()
 
             PhotoImageComplicationData.TYPE.toWireComplicationType() ->
@@ -2558,24 +2460,18 @@ public fun WireComplicationData.toApiComplicationData(): ComplicationData {
                     largeImage!!,
                     contentDescription?.toApiComplicationText() ?: ComplicationText.EMPTY
                 ).apply {
+                    setCommon(this@toApiComplicationData)
                     setTapAction(tapAction)
                     setValidTimeRange(parseTimeRange())
-                    setCachedWireComplicationData(wireComplicationData)
-                    setDataSource(dataSourceCopy)
-                    setPersistencePolicy(persistencePolicyCopy)
-                    setDisplayPolicy(displayPolicyCopy)
                 }.build()
 
             NoPermissionComplicationData.TYPE.toWireComplicationType() ->
                 NoPermissionComplicationData.Builder().apply {
+                    setCommon(this@toApiComplicationData)
                     setMonochromaticImage(parseIcon())
                     setSmallImage(parseSmallImage())
                     setTitle(shortTitle?.toApiComplicationText())
                     setText(shortText?.toApiComplicationText())
-                    setCachedWireComplicationData(wireComplicationData)
-                    setDataSource(dataSourceCopy)
-                    setPersistencePolicy(persistencePolicyCopy)
-                    setDisplayPolicy(displayPolicyCopy)
                 }.build()
 
             GoalProgressComplicationData.TYPE.toWireComplicationType() ->
@@ -2586,19 +2482,16 @@ public fun WireComplicationData.toApiComplicationData(): ComplicationData {
                     contentDescription = contentDescription?.toApiComplicationText()
                         ?: ComplicationText.EMPTY
                 ).apply {
+                    setCommon(this@toApiComplicationData)
                     setTapAction(tapAction)
                     setValidTimeRange(parseTimeRange())
                     setMonochromaticImage(parseIcon())
                     setSmallImage(parseSmallImage())
                     setTitle(shortTitle?.toApiComplicationText())
                     setText(shortText?.toApiComplicationText())
-                    setCachedWireComplicationData(wireComplicationData)
                     colorRamp?.let {
                         setColorRamp(ColorRamp(it, isColorRampInterpolated!!))
                     }
-                    setDataSource(dataSourceCopy)
-                    setPersistencePolicy(persistencePolicyCopy)
-                    setDisplayPolicy(displayPolicyCopy)
                 }.build()
 
             WeightedElementsComplicationData.TYPE.toWireComplicationType() -> {
@@ -2613,6 +2506,7 @@ public fun WireComplicationData.toApiComplicationData(): ComplicationData {
                     }.toList(),
                     contentDescription?.toApiComplicationText() ?: ComplicationText.EMPTY
                 ).apply {
+                    setCommon(this@toApiComplicationData)
                     setElementBackgroundColor(elementBackgroundColor)
                     setTapAction(tapAction)
                     setValidTimeRange(parseTimeRange())
@@ -2620,10 +2514,6 @@ public fun WireComplicationData.toApiComplicationData(): ComplicationData {
                     setSmallImage(parseSmallImage())
                     setTitle(shortTitle?.toApiComplicationText())
                     setText(shortText?.toApiComplicationText())
-                    setCachedWireComplicationData(wireComplicationData)
-                    setDataSource(dataSourceCopy)
-                    setPersistencePolicy(persistencePolicyCopy)
-                    setDisplayPolicy(displayPolicyCopy)
                 }.build()
             }
 

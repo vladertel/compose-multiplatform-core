@@ -28,8 +28,8 @@ import androidx.camera.camera2.pipe.compat.Camera2CameraOpener
 import androidx.camera.camera2.pipe.compat.Camera2CaptureSequenceProcessorFactory
 import androidx.camera.camera2.pipe.compat.Camera2CaptureSessionsModule
 import androidx.camera.camera2.pipe.compat.Camera2MetadataCache
+import androidx.camera.camera2.pipe.compat.Camera2MetadataProvider
 import androidx.camera.camera2.pipe.compat.CameraAvailabilityMonitor
-import androidx.camera.camera2.pipe.compat.CameraMetadataProvider
 import androidx.camera.camera2.pipe.compat.CameraOpener
 import androidx.camera.camera2.pipe.compat.StandardCamera2CaptureSequenceProcessorFactory
 import androidx.camera.camera2.pipe.core.Threads
@@ -44,11 +44,7 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-@Module(
-    subcomponents = [
-        Camera2ControllerComponent::class
-    ]
-)
+@Module(subcomponents = [Camera2ControllerComponent::class])
 internal abstract class Camera2Module {
     @Binds
     @DefaultCameraBackend
@@ -60,7 +56,7 @@ internal abstract class Camera2Module {
     @Binds
     abstract fun bindCameraMetadataProvider(
         camera2MetadataCache: Camera2MetadataCache
-    ): CameraMetadataProvider
+    ): Camera2MetadataProvider
 
     @Binds
     abstract fun bindCameraAvailabilityMonitor(
@@ -74,11 +70,11 @@ internal annotation class Camera2ControllerScope
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @Camera2ControllerScope
 @Subcomponent(
-    modules = [
+    modules =
+    [
         Camera2ControllerConfig::class,
         Camera2ControllerModule::class,
-        Camera2CaptureSessionsModule::class
-    ]
+        Camera2CaptureSessionsModule::class]
 )
 internal interface Camera2ControllerComponent {
     fun cameraController(): CameraController

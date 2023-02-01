@@ -73,7 +73,8 @@ internal fun measureLazyGrid(
             totalItemsCount = 0,
             reverseLayout = reverseLayout,
             orientation = if (isVertical) Orientation.Vertical else Orientation.Horizontal,
-            afterContentPadding = afterContentPadding
+            afterContentPadding = afterContentPadding,
+            mainAxisItemSpacing = spaceBetweenLines
         )
     } else {
         var currentFirstLineIndex = firstVisibleLineIndex
@@ -250,10 +251,12 @@ internal fun measureLazyGrid(
             spanLayoutProvider = spanLayoutProvider
         )
 
+        val lastVisibleItemIndex = visibleLines.lastOrNull()?.items?.lastOrNull()?.index?.value ?: 0
         return TvLazyGridMeasureResult(
             firstVisibleLine = firstLine,
             firstVisibleLineScrollOffset = currentFirstLineScrollOffset,
-            canScrollForward = index.value < itemsCount || currentMainAxisOffset > maxOffset,
+            canScrollForward =
+            lastVisibleItemIndex != itemsCount - 1 || currentMainAxisOffset > maxOffset,
             consumedScroll = consumedScroll,
             measureResult = layout(layoutWidth, layoutHeight) {
                 positionedItems.fastForEach { it.place(this) }
@@ -264,7 +267,8 @@ internal fun measureLazyGrid(
             totalItemsCount = itemsCount,
             reverseLayout = reverseLayout,
             orientation = if (isVertical) Orientation.Vertical else Orientation.Horizontal,
-            afterContentPadding = afterContentPadding
+            afterContentPadding = afterContentPadding,
+            mainAxisItemSpacing = spaceBetweenLines
         )
     }
 }

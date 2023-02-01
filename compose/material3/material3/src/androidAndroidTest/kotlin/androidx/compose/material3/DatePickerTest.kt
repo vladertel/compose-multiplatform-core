@@ -16,10 +16,16 @@
 
 package androidx.compose.material3
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher.Companion.expectValue
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -31,6 +37,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import com.google.common.truth.Truth.assertThat
 import java.util.Calendar
+import java.util.Locale
 import java.util.TimeZone
 import org.junit.Rule
 import org.junit.Test
@@ -54,11 +61,11 @@ class DatePickerTest {
                 initialSelectedDateMillis = initialDateMillis,
                 initialDisplayedMonthMillis = monthInUtcMillis
             )
-            DatePicker(datePickerState = datePickerState)
+            DatePicker(state = datePickerState)
         }
 
         // Select the 11th day of the displayed month is selected.
-        rule.onNodeWithText("11").assertIsOn()
+        rule.onNodeWithText("11").assertIsSelected()
         rule.onNodeWithText("May 11, 2010").assertExists()
     }
 
@@ -72,13 +79,13 @@ class DatePickerTest {
             datePickerState = rememberDatePickerState(
                 initialDisplayedMonthMillis = monthInUtcMillis
             )
-            DatePicker(datePickerState = datePickerState)
+            DatePicker(state = datePickerState)
         }
 
         rule.onNodeWithText(defaultHeadline).assertExists()
 
         // Select the 27th day of the displayed month.
-        rule.onNodeWithText("27").assertIsOff()
+        rule.onNodeWithText("27").assertIsNotSelected()
         rule.onNodeWithText("27").performClick()
 
         rule.runOnIdle {
@@ -93,7 +100,7 @@ class DatePickerTest {
 
         rule.onNodeWithText(defaultHeadline).assertDoesNotExist()
         rule.onNodeWithText("Jan 27, 2019").assertExists()
-        rule.onNodeWithText("27").assertIsOn()
+        rule.onNodeWithText("27").assertIsSelected()
     }
 
     @Test
@@ -106,7 +113,7 @@ class DatePickerTest {
             datePickerState = rememberDatePickerState(
                 initialDisplayedMonthMillis = monthInUtcMillis
             )
-            DatePicker(datePickerState = datePickerState,
+            DatePicker(state = datePickerState,
                 // All dates are invalid for the sake of this test.
                 dateValidator = { false }
             )
@@ -132,11 +139,11 @@ class DatePickerTest {
             datePickerState = rememberDatePickerState(
                 initialDisplayedMonthMillis = monthInUtcMillis
             )
-            DatePicker(datePickerState = datePickerState)
+            DatePicker(state = datePickerState)
         }
 
         rule.onNodeWithText("January 2019").performClick()
-        rule.onNodeWithText("2019").assertIsOn()
+        rule.onNodeWithText("2019").assertIsSelected()
         rule.onNodeWithText("2020").performClick()
         // Select the 15th day of the displayed month in 2020.
         rule.onAllNodesWithText("15").onFirst().performClick()
@@ -153,8 +160,8 @@ class DatePickerTest {
 
         // Check that if the years are opened again, the last selected year is still marked as such
         rule.onNodeWithText("January 2020").performClick()
-        rule.onNodeWithText("2019").assertIsOff()
-        rule.onNodeWithText("2020").assertIsOn()
+        rule.onNodeWithText("2019").assertIsNotSelected()
+        rule.onNodeWithText("2020").assertIsSelected()
     }
 
     @Test
@@ -162,7 +169,7 @@ class DatePickerTest {
         rule.setMaterialContent(lightColorScheme()) {
             val monthInUtcMillis = dayInUtcMilliseconds(year = 2019, month = 1, dayOfMonth = 1)
             DatePicker(
-                datePickerState = rememberDatePickerState(
+                state = rememberDatePickerState(
                     initialDisplayedMonthMillis = monthInUtcMillis,
                     // Limit the years selection to 2018-2023
                     yearRange = IntRange(2018, 2023)
@@ -183,7 +190,7 @@ class DatePickerTest {
         rule.setMaterialContent(lightColorScheme()) {
             val monthInUtcMillis = dayInUtcMilliseconds(year = 2018, month = 1, dayOfMonth = 1)
             DatePicker(
-                datePickerState = rememberDatePickerState(
+                state = rememberDatePickerState(
                     initialDisplayedMonthMillis = monthInUtcMillis
                 )
             )
@@ -214,7 +221,7 @@ class DatePickerTest {
         rule.setMaterialContent(lightColorScheme()) {
             val monthInUtcMillis = dayInUtcMilliseconds(year = 2018, month = 1, dayOfMonth = 1)
             DatePicker(
-                datePickerState = rememberDatePickerState(
+                state = rememberDatePickerState(
                     initialDisplayedMonthMillis = monthInUtcMillis,
                     // Limit the years to just 2018
                     yearRange = IntRange(2018, 2018)
@@ -242,6 +249,27 @@ class DatePickerTest {
     }
 
     @Test
+    fun switchToDateInput() {
+        lateinit var switchToInputDescription: String
+        lateinit var dateInputLabel: String
+        rule.setMaterialContent(lightColorScheme()) {
+            switchToInputDescription = getString(string = Strings.DatePickerSwitchToInputMode)
+            dateInputLabel = getString(string = Strings.DateInputLabel)
+            DatePicker(state = rememberDatePickerState())
+        }
+
+        // Click to switch to DateInput.
+        rule.onNodeWithContentDescription(label = switchToInputDescription).performClick()
+
+        rule.waitForIdle()
+        rule.onNodeWithText(dateInputLabel).assertIsDisplayed()
+        rule.onNodeWithContentDescription(label = "next", substring = true, ignoreCase = true)
+            .assertDoesNotExist()
+        rule.onNodeWithContentDescription(label = "previous", substring = true, ignoreCase = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
     fun state_initWithSelectedDate() {
         lateinit var datePickerState: DatePickerState
         rule.setMaterialContent(lightColorScheme()) {
@@ -250,8 +278,8 @@ class DatePickerTest {
         }
         with(datePickerState) {
             assertThat(selectedDateMillis).isEqualTo(1649721600000L)
-            assertThat(displayedMonth).isEqualTo(
-                calendarModel.getMonth(year = 2022, month = 4)
+            assertThat(stateData.displayedMonth).isEqualTo(
+                stateData.calendarModel.getMonth(year = 2022, month = 4)
             )
         }
     }
@@ -268,8 +296,8 @@ class DatePickerTest {
             // Assert that the actual selectedDateMillis was rounded down to the start of day
             // timestamp
             assertThat(selectedDateMillis).isEqualTo(1649721600000L)
-            assertThat(displayedMonth).isEqualTo(
-                calendarModel.getMonth(year = 2022, month = 4)
+            assertThat(stateData.displayedMonth).isEqualTo(
+                stateData.calendarModel.getMonth(year = 2022, month = 4)
             )
         }
     }
@@ -288,8 +316,8 @@ class DatePickerTest {
         with(datePickerState) {
             assertThat(selectedDateMillis).isEqualTo(1649721600000L)
             // Assert that the displayed month is the current month as of today.
-            assertThat(displayedMonth).isEqualTo(
-                calendarModel.getMonth(calendarModel.today.utcTimeMillis)
+            assertThat(stateData.displayedMonth).isEqualTo(
+                stateData.calendarModel.getMonth(stateData.calendarModel.today.utcTimeMillis)
             )
         }
     }
@@ -308,8 +336,8 @@ class DatePickerTest {
         with(datePickerState) {
             assertThat(selectedDateMillis).isNull()
             // Assert that the displayed month is the current month as of today.
-            assertThat(displayedMonth).isEqualTo(
-                calendarModel.getMonth(calendarModel.today.utcTimeMillis)
+            assertThat(stateData.displayedMonth).isEqualTo(
+                stateData.calendarModel.getMonth(stateData.calendarModel.today.utcTimeMillis)
             )
         }
     }
@@ -322,34 +350,35 @@ class DatePickerTest {
             datePickerState = rememberDatePickerState()
         }
 
-        val date = datePickerState!!.calendarModel.getCanonicalDate(1649721600000L) // 04/12/2022
-        val displayedMonth = datePickerState!!.calendarModel.getMonth(date)
-        rule.runOnIdle {
-            datePickerState!!.selectedDate = date
-            datePickerState!!.displayedMonth = displayedMonth
-        }
+        with(datePickerState!!) {
+            val date =
+                stateData.calendarModel.getCanonicalDate(1649721600000L) // 04/12/2022
+            val displayedMonth = stateData.calendarModel.getMonth(date)
+            rule.runOnIdle {
+                stateData.selectedStartDate = date
+                stateData.displayedMonth = displayedMonth
+            }
 
-        datePickerState = null
+            datePickerState = null
 
-        restorationTester.emulateSavedInstanceStateRestore()
+            restorationTester.emulateSavedInstanceStateRestore()
 
-        rule.runOnIdle {
-            assertThat(datePickerState!!.selectedDate).isEqualTo(date)
-            assertThat(datePickerState!!.displayedMonth).isEqualTo(displayedMonth)
-            assertThat(datePickerState!!.selectedDateMillis).isEqualTo(1649721600000L)
+            rule.runOnIdle {
+                assertThat(stateData.selectedStartDate).isEqualTo(date)
+                assertThat(stateData.displayedMonth).isEqualTo(displayedMonth)
+                assertThat(datePickerState!!.selectedDateMillis).isEqualTo(1649721600000L)
+            }
         }
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun initialDateOutObBounds() {
-        lateinit var datePickerState: DatePickerState
+    fun initialDateOutOfBounds() {
         rule.setMaterialContent(lightColorScheme()) {
             val initialDateMillis = dayInUtcMilliseconds(year = 2051, month = 5, dayOfMonth = 11)
-            datePickerState = rememberDatePickerState(
+            rememberDatePickerState(
                 initialSelectedDateMillis = initialDateMillis,
                 yearRange = IntRange(2000, 2050)
             )
-            DatePicker(datePickerState = datePickerState)
         }
     }
 
@@ -362,8 +391,45 @@ class DatePickerTest {
                 initialDisplayedMonthMillis = monthInUtcMillis,
                 yearRange = IntRange(2000, 2050)
             )
-            DatePicker(datePickerState = datePickerState)
+            DatePicker(state = datePickerState)
         }
+    }
+
+    @Test
+    fun defaultSemantics() {
+        val selectedDateInUtcMillis = dayInUtcMilliseconds(year = 2010, month = 5, dayOfMonth = 11)
+        val monthInUtcMillis = dayInUtcMilliseconds(year = 2010, month = 5, dayOfMonth = 1)
+        lateinit var expectedHeadlineStringFormat: String
+        rule.setMaterialContent(lightColorScheme()) {
+            // e.g. "Current selection: %1$s"
+            expectedHeadlineStringFormat = getString(Strings.DatePickerHeadlineDescription)
+            DatePicker(
+                state = rememberDatePickerState(
+                    initialSelectedDateMillis = selectedDateInUtcMillis,
+                    initialDisplayedMonthMillis = monthInUtcMillis
+                )
+            )
+        }
+
+        val fullDateDescription = formatWithSkeleton(
+            selectedDateInUtcMillis,
+            DatePickerDefaults.YearMonthWeekdayDaySkeleton,
+            Locale.US
+        )
+
+        rule.onNodeWithContentDescription(label = "next", substring = true, ignoreCase = true)
+            .assert(expectValue(SemanticsProperties.Role, Role.Button))
+        rule.onNodeWithContentDescription(label = "previous", substring = true, ignoreCase = true)
+            .assert(expectValue(SemanticsProperties.Role, Role.Button))
+        rule.onNodeWithText("May 2010")
+            .assert(expectValue(SemanticsProperties.Role, Role.Button))
+        rule.onNodeWithText("11")
+            .assert(expectValue(SemanticsProperties.Role, Role.Button))
+            .assertContentDescriptionEquals(fullDateDescription)
+        rule.onNodeWithText("May 11, 2010")
+            .assertContentDescriptionEquals(
+                expectedHeadlineStringFormat.format(fullDateDescription)
+            )
     }
 
     // Returns the given date's day as milliseconds from epoch. The returned value is for the day's

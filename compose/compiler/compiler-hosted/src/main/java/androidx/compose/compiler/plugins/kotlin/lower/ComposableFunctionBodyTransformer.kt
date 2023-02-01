@@ -390,12 +390,12 @@ interface IrChangedBitMaskVariable : IrChangedBitMaskValue {
  *     }
  *
  * Note that this makes use of bitmasks for the $changed and $dirty values. These bitmasks work
- * in a different bit-space than the $default bitmask because two bits are needed to hold the
- * four different possible states of each parameter. Additionally, the lowest bit of the bitmask
+ * in a different bit-space than the $default bitmask because three bits are needed to hold the
+ * six different possible states of each parameter. Additionally, the lowest bit of the bitmask
  * is a special bit which forces execution of the function.
  *
- * This means that for the ith parameter of a composable function, the bit range of i*2 + 1 to
- * i*2 + 2 are used to store the state of the parameter.
+ * This means that for the ith parameter of a composable function, the bit range of i*3 + 1 to
+ * i*3 + 3 are used to store the state of the parameter.
  *
  * The states are outlines by the [ParamState] class.
  *
@@ -860,7 +860,10 @@ class ComposableFunctionBodyTransformer(
 
         val emitTraceMarkers = traceEventMarkersEnabled && !scope.function.isInline
 
-        scope.updateIntrinsiceRememberSafety(!mightUseDefaultGroup(false, scope, defaultParam))
+        scope.updateIntrinsiceRememberSafety(
+            !mightUseDefaultGroup(false, scope, defaultParam) &&
+                !mightUseVarArgsGroup(false, scope)
+        )
 
         transformed = transformed.apply {
             transformChildrenVoid()
@@ -958,14 +961,24 @@ class ComposableFunctionBodyTransformer(
         val sourceInformationPreamble = mutableStatementContainer()
         val skipPreamble = mutableStatementContainer()
         val bodyPreamble = mutableStatementContainer()
+        val bodyEpilogue = mutableStatementContainer()
 
         // First generate the source information call
-        if (collectSourceInformation && !scope.isInlinedLambda) {
-            sourceInformationPreamble.statements.add(irSourceInformation(scope))
+        val isInlineLambda = scope.isInlinedLambda
+        if (collectSourceInformation) {
+            if (isInlineLambda) {
+                sourceInformationPreamble.statements.add(
+                    irSourceInformationMarkerStart(body, scope)
+                )
+                bodyEpilogue.statements.add(irSourceInformationMarkerEnd(body))
+            } else {
+                sourceInformationPreamble.statements.add(irSourceInformation(scope))
+            }
         }
 
         // we start off assuming that we *can* skip execution of the function
         var canSkipExecution = declaration.returnType.isUnit() &&
+            !isInlineLambda &&
             scope.allTrackedParams.none { stabilityOf(it.type).knownUnstable() }
 
         // if the function can never skip, or there are no parameters to test, then we
@@ -991,7 +1004,10 @@ class ComposableFunctionBodyTransformer(
 
         val emitTraceMarkers = traceEventMarkersEnabled && !scope.isInlinedLambda
 
-        scope.updateIntrinsiceRememberSafety(!mightUseDefaultGroup(canSkipExecution, scope, null))
+        scope.updateIntrinsiceRememberSafety(
+            !mightUseDefaultGroup(canSkipExecution, scope, null) &&
+                !mightUseVarArgsGroup(canSkipExecution, scope)
+        )
 
         // we must transform the body first, since that will allow us to see whether or not we
         // are using the dispatchReceiverParameter or the extensionReceiverParameter
@@ -1001,7 +1017,6 @@ class ComposableFunctionBodyTransformer(
                 wrapWithTraceEvents(irFunctionSourceKey(), scope)
             }
         }
-
         canSkipExecution = buildPreambleStatementsAndReturnIfSkippingPossible(
             body,
             skipPreamble,
@@ -1073,6 +1088,7 @@ class ComposableFunctionBodyTransformer(
                     *skipPreamble.statements.toTypedArray(),
                     *bodyPreamble.statements.toTypedArray(),
                     transformed,
+                    *bodyEpilogue.statements.toTypedArray(),
                     returnVar?.let { irReturn(declaration.symbol, irGet(it)) }
                 )
             )
@@ -1147,7 +1163,8 @@ class ComposableFunctionBodyTransformer(
         val defaultScope = transformDefaults(scope)
 
         scope.updateIntrinsiceRememberSafety(
-            !mightUseDefaultGroup(true, scope, defaultParam)
+            !mightUseDefaultGroup(true, scope, defaultParam) &&
+                !mightUseVarArgsGroup(true, scope)
         )
 
         // we must transform the body first, since that will allow us to see whether or not we
@@ -1325,6 +1342,13 @@ class ComposableFunctionBodyTransformer(
         return parameters.any { it.defaultValue?.expression?.isStatic() == false }
     }
 
+    // Like mightUseDefaultGroup(), this is an intentionally conservative value that must be true
+    // when ever a varargs group could be generated but can be true when it is not.
+    private fun mightUseVarArgsGroup(
+        isSkippableDeclaration: Boolean,
+        scope: Scope.FunctionScope
+    ) = isSkippableDeclaration && scope.allTrackedParams.any { it.isVararg }
+
     private fun buildPreambleStatementsAndReturnIfSkippingPossible(
         sourceElement: IrElement,
         skipPreamble: IrStatementContainer,
@@ -1460,7 +1484,7 @@ class ComposableFunctionBodyTransformer(
                     val defaultValueIsStatic = defaultExprIsStatic[slotIndex]
                     val callChanged = irChanged(irGet(param))
                     val isChanged = if (defaultParam != null && !defaultValueIsStatic)
-                        irAndAnd(irIsProvided(defaultParam, slotIndex), callChanged)
+                        irAndAnd(irIsProvided(defaultParam, defaultIndex), callChanged)
                     else
                         callChanged
                     val modifyDirtyFromChangedResult = dirty.irOrSetBitsAtSlot(
@@ -1525,6 +1549,7 @@ class ComposableFunctionBodyTransformer(
                     irGet(param),
                     param.type.classOrNull!!.getPropertyGetter("size")!!.owner
                 )
+
                 // TODO(lmr): verify this works with default vararg expressions!
                 skipPreamble.statements.add(
                     irStartMovableGroup(

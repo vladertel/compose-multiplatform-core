@@ -32,12 +32,7 @@ import dagger.Provides
 import dagger.Subcomponent
 
 @CameraGraphScope
-@Subcomponent(
-    modules = [
-        SharedCameraGraphModules::class,
-        ExternalCameraGraphConfigModule::class
-    ]
-)
+@Subcomponent(modules = [SharedCameraGraphModules::class, ExternalCameraGraphConfigModule::class])
 internal interface ExternalCameraGraphComponent {
     fun cameraGraph(): CameraGraph
 
@@ -63,9 +58,5 @@ internal class ExternalCameraGraphConfigModule(
     @CameraGraphScope
     @Provides
     fun provideGraphController(graphListener: GraphListener): CameraController =
-        ExternalCameraController(
-            config,
-            graphListener,
-            requestProcessor
-        )
+        ExternalCameraController(config, graphListener, requestProcessor)
 }

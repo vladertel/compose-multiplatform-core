@@ -99,7 +99,7 @@ package androidx.compose.foundation {
     method @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static void Image(androidx.compose.ui.graphics.ImageBitmap bitmap, String? contentDescription, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.Alignment alignment, optional androidx.compose.ui.layout.ContentScale contentScale, optional float alpha, optional androidx.compose.ui.graphics.ColorFilter? colorFilter, optional int filterQuality);
     method @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static void Image(androidx.compose.ui.graphics.vector.ImageVector imageVector, String? contentDescription, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.Alignment alignment, optional androidx.compose.ui.layout.ContentScale contentScale, optional float alpha, optional androidx.compose.ui.graphics.ColorFilter? colorFilter);
     method @androidx.compose.runtime.Composable public static void Image(androidx.compose.ui.graphics.painter.Painter painter, String? contentDescription, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.Alignment alignment, optional androidx.compose.ui.layout.ContentScale contentScale, optional float alpha, optional androidx.compose.ui.graphics.ColorFilter? colorFilter);
-    method @Deprecated @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static void Image(androidx.compose.ui.graphics.ImageBitmap bitmap, String contentDescription, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.Alignment alignment, optional androidx.compose.ui.layout.ContentScale contentScale, optional float alpha, optional androidx.compose.ui.graphics.ColorFilter? colorFilter);
+    method @Deprecated @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static void Image(androidx.compose.ui.graphics.ImageBitmap bitmap, String? contentDescription, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.Alignment alignment, optional androidx.compose.ui.layout.ContentScale contentScale, optional float alpha, optional androidx.compose.ui.graphics.ColorFilter? colorFilter);
   }
 
   @androidx.compose.runtime.Stable public interface Indication {
@@ -185,10 +185,8 @@ package androidx.compose.foundation {
   }
 
   @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Stable public interface OverscrollEffect {
-    method public suspend Object? consumePostFling(long velocity, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-    method public void consumePostScroll(long initialDragDelta, long overscrollDelta, int source);
-    method public suspend Object? consumePreFling(long velocity, kotlin.coroutines.Continuation<? super androidx.compose.ui.unit.Velocity>);
-    method public long consumePreScroll(long scrollDelta, int source);
+    method public suspend Object? applyToFling(long velocity, kotlin.jvm.functions.Function2<? super androidx.compose.ui.unit.Velocity,? super kotlin.coroutines.Continuation<? super androidx.compose.ui.unit.Velocity>,?> performFling, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+    method public long applyToScroll(long delta, int source, kotlin.jvm.functions.Function1<? super androidx.compose.ui.geometry.Offset,androidx.compose.ui.geometry.Offset> performScroll);
     method public androidx.compose.ui.Modifier getEffectModifier();
     method public boolean isInProgress();
     property public abstract androidx.compose.ui.Modifier effectModifier;
@@ -580,6 +578,7 @@ package androidx.compose.foundation.lazy {
   @kotlin.jvm.JvmDefaultWithCompatibility public interface LazyListLayoutInfo {
     method public default int getAfterContentPadding();
     method public default int getBeforeContentPadding();
+    method public default int getMainAxisItemSpacing();
     method public default androidx.compose.foundation.gestures.Orientation getOrientation();
     method public default boolean getReverseLayout();
     method public int getTotalItemsCount();
@@ -589,6 +588,7 @@ package androidx.compose.foundation.lazy {
     method public java.util.List<androidx.compose.foundation.lazy.LazyListItemInfo> getVisibleItemsInfo();
     property public default int afterContentPadding;
     property public default int beforeContentPadding;
+    property public default int mainAxisItemSpacing;
     property public default androidx.compose.foundation.gestures.Orientation orientation;
     property public default boolean reverseLayout;
     property public abstract int totalItemsCount;
@@ -599,9 +599,6 @@ package androidx.compose.foundation.lazy {
   }
 
   public final class LazyListMeasureKt {
-  }
-
-  public final class LazyListPinnableContainerProviderKt {
   }
 
   @androidx.compose.foundation.lazy.LazyScopeMarker @kotlin.jvm.JvmDefaultWithCompatibility public interface LazyListScope {
@@ -726,6 +723,7 @@ package androidx.compose.foundation.lazy.grid {
   public sealed interface LazyGridLayoutInfo {
     method public int getAfterContentPadding();
     method public int getBeforeContentPadding();
+    method public int getMainAxisItemSpacing();
     method public androidx.compose.foundation.gestures.Orientation getOrientation();
     method public boolean getReverseLayout();
     method public int getTotalItemsCount();
@@ -735,6 +733,7 @@ package androidx.compose.foundation.lazy.grid {
     method public java.util.List<androidx.compose.foundation.lazy.grid.LazyGridItemInfo> getVisibleItemsInfo();
     property public abstract int afterContentPadding;
     property public abstract int beforeContentPadding;
+    property public abstract int mainAxisItemSpacing;
     property public abstract androidx.compose.foundation.gestures.Orientation orientation;
     property public abstract boolean reverseLayout;
     property public abstract int totalItemsCount;
@@ -857,6 +856,19 @@ package androidx.compose.foundation.lazy.layout {
     method @androidx.compose.runtime.Stable public default long toSp(float);
   }
 
+  public final class LazyLayoutPinnableItemKt {
+    method @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Composable public static void LazyLayoutPinnableItem(int index, androidx.compose.foundation.lazy.layout.LazyLayoutPinnedItemList pinnedItemList, kotlin.jvm.functions.Function0<kotlin.Unit> content);
+  }
+
+  @androidx.compose.foundation.ExperimentalFoundationApi public final class LazyLayoutPinnedItemList implements kotlin.jvm.internal.markers.KMappedMarker java.util.List<androidx.compose.foundation.lazy.layout.LazyLayoutPinnedItemList.PinnedItem> {
+    ctor public LazyLayoutPinnedItemList();
+  }
+
+  @androidx.compose.foundation.ExperimentalFoundationApi public static sealed interface LazyLayoutPinnedItemList.PinnedItem {
+    method public int getIndex();
+    property public abstract int index;
+  }
+
   @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Stable public final class LazyLayoutPrefetchState {
     ctor public LazyLayoutPrefetchState();
     method public androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState.PrefetchHandle schedulePrefetch(int index, long constraints);
@@ -902,10 +914,10 @@ package androidx.compose.foundation.lazy.staggeredgrid {
   public final class LazyStaggeredGridDslKt {
     method @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Composable public static void LazyHorizontalStaggeredGrid(androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells rows, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState state, optional androidx.compose.foundation.layout.PaddingValues contentPadding, optional androidx.compose.foundation.layout.Arrangement.Vertical verticalArrangement, optional androidx.compose.foundation.layout.Arrangement.Horizontal horizontalArrangement, optional androidx.compose.foundation.gestures.FlingBehavior flingBehavior, optional boolean userScrollEnabled, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope,kotlin.Unit> content);
     method @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Composable public static void LazyVerticalStaggeredGrid(androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells columns, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState state, optional androidx.compose.foundation.layout.PaddingValues contentPadding, optional androidx.compose.foundation.layout.Arrangement.Vertical verticalArrangement, optional androidx.compose.foundation.layout.Arrangement.Horizontal horizontalArrangement, optional androidx.compose.foundation.gestures.FlingBehavior flingBehavior, optional boolean userScrollEnabled, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope,kotlin.Unit> content);
-    method @androidx.compose.foundation.ExperimentalFoundationApi public static <T> void items(androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope, java.util.List<? extends T> items, optional kotlin.jvm.functions.Function1<? super T,?>? key, optional kotlin.jvm.functions.Function1<? super T,?> contentType, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super T,kotlin.Unit> itemContent);
-    method @androidx.compose.foundation.ExperimentalFoundationApi public static <T> void items(androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope, T![] items, optional kotlin.jvm.functions.Function1<? super T,?>? key, optional kotlin.jvm.functions.Function1<? super T,?> contentType, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super T,kotlin.Unit> itemContent);
-    method @androidx.compose.foundation.ExperimentalFoundationApi public static <T> void itemsIndexed(androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope, java.util.List<? extends T> items, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,?>? key, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,?> contentType, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super java.lang.Integer,? super T,kotlin.Unit> itemContent);
-    method @androidx.compose.foundation.ExperimentalFoundationApi public static <T> void itemsIndexed(androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope, T![] items, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,?>? key, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,?> contentType, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super java.lang.Integer,? super T,kotlin.Unit> itemContent);
+    method @androidx.compose.foundation.ExperimentalFoundationApi public static inline <T> void items(androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope, java.util.List<? extends T> items, optional kotlin.jvm.functions.Function1<? super T,?>? key, optional kotlin.jvm.functions.Function1<? super T,?> contentType, optional kotlin.jvm.functions.Function1<? super T,androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan>? span, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super T,kotlin.Unit> itemContent);
+    method @androidx.compose.foundation.ExperimentalFoundationApi public static inline <T> void items(androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope, T![] items, optional kotlin.jvm.functions.Function1<? super T,?>? key, optional kotlin.jvm.functions.Function1<? super T,?> contentType, optional kotlin.jvm.functions.Function1<? super T,androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan>? span, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super T,kotlin.Unit> itemContent);
+    method @androidx.compose.foundation.ExperimentalFoundationApi public static inline <T> void itemsIndexed(androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope, java.util.List<? extends T> items, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,?>? key, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,?> contentType, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan>? span, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super java.lang.Integer,? super T,kotlin.Unit> itemContent);
+    method @androidx.compose.foundation.ExperimentalFoundationApi public static inline <T> void itemsIndexed(androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope, T![] items, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,?>? key, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,?> contentType, optional kotlin.jvm.functions.Function2<? super java.lang.Integer,? super T,androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan>? span, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super java.lang.Integer,? super T,kotlin.Unit> itemContent);
   }
 
   @androidx.compose.foundation.ExperimentalFoundationApi public sealed interface LazyStaggeredGridItemInfo {
@@ -933,6 +945,7 @@ package androidx.compose.foundation.lazy.staggeredgrid {
   @androidx.compose.foundation.ExperimentalFoundationApi public sealed interface LazyStaggeredGridLayoutInfo {
     method public int getAfterContentPadding();
     method public int getBeforeContentPadding();
+    method public int getMainAxisItemSpacing();
     method public androidx.compose.foundation.gestures.Orientation getOrientation();
     method public int getTotalItemsCount();
     method public int getViewportEndOffset();
@@ -941,6 +954,7 @@ package androidx.compose.foundation.lazy.staggeredgrid {
     method public java.util.List<androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemInfo> getVisibleItemsInfo();
     property public abstract int afterContentPadding;
     property public abstract int beforeContentPadding;
+    property public abstract int mainAxisItemSpacing;
     property public abstract androidx.compose.foundation.gestures.Orientation orientation;
     property public abstract int totalItemsCount;
     property public abstract int viewportEndOffset;
@@ -959,8 +973,8 @@ package androidx.compose.foundation.lazy.staggeredgrid {
   }
 
   @androidx.compose.foundation.ExperimentalFoundationApi public sealed interface LazyStaggeredGridScope {
-    method @androidx.compose.foundation.ExperimentalFoundationApi public void item(optional Object? key, optional Object? contentType, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,kotlin.Unit> content);
-    method public void items(int count, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?>? key, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?> contentType, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super java.lang.Integer,kotlin.Unit> itemContent);
+    method @androidx.compose.foundation.ExperimentalFoundationApi public void item(optional Object? key, optional Object? contentType, optional androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan? span, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,kotlin.Unit> content);
+    method public void items(int count, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?>? key, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?> contentType, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan>? span, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope,? super java.lang.Integer,kotlin.Unit> itemContent);
   }
 
   public final class LazyStaggeredGridSemanticsKt {
@@ -1008,6 +1022,17 @@ package androidx.compose.foundation.lazy.staggeredgrid {
   public static final class StaggeredGridCells.Fixed implements androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells {
     ctor public StaggeredGridCells.Fixed(int count);
     method public java.util.List<java.lang.Integer> calculateCrossAxisCellSizes(androidx.compose.ui.unit.Density, int availableSize, int spacing);
+  }
+
+  @androidx.compose.foundation.ExperimentalFoundationApi public final class StaggeredGridItemSpan {
+    field public static final androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan.Companion Companion;
+  }
+
+  public static final class StaggeredGridItemSpan.Companion {
+    method public androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan getFullLine();
+    method public androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan getSingleLane();
+    property public final androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan FullLine;
+    property public final androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan SingleLane;
   }
 
 }

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -49,9 +50,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun DatePickerSample() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Pre-select a date with January 4, 2020
+        // Pre-select a date for January 4, 2020
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = 1578096000000)
-        DatePicker(datePickerState = datePickerState, modifier = Modifier.padding(16.dp))
+        DatePicker(state = datePickerState, modifier = Modifier.padding(16.dp))
+
         Text("Selected date timestamp: ${datePickerState.selectedDateMillis ?: "no selection"}")
     }
 }
@@ -102,7 +104,7 @@ fun DatePickerDialogSample() {
                 }
             }
         ) {
-            DatePicker(datePickerState = datePickerState)
+            DatePicker(state = datePickerState)
         }
     }
 }
@@ -116,7 +118,7 @@ fun DatePickerWithDateValidatorSample() {
     val datePickerState = rememberDatePickerState()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         DatePicker(
-            datePickerState = datePickerState,
+            state = datePickerState,
             // Blocks Sunday and Saturday from being selected.
             dateValidator = { utcDateInMills ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -132,5 +134,18 @@ fun DatePickerWithDateValidatorSample() {
             }
         )
         Text("Selected date timestamp: ${datePickerState.selectedDateMillis ?: "no selection"}")
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Sampled
+@Composable
+fun DateInputSample() {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val state = rememberDatePickerState(initialDisplayMode = DisplayMode.Input)
+        DatePicker(state = state, modifier = Modifier.padding(16.dp))
+
+        Text("Entered date timestamp: ${state.selectedDateMillis ?: "no input"}")
     }
 }

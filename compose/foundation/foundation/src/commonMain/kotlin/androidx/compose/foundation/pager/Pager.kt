@@ -18,7 +18,7 @@ package androidx.compose.foundation.pager
 
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.DecayAnimationSpec
-import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.calculateTargetValue
 import androidx.compose.animation.core.spring
@@ -64,9 +64,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastSumBy
+import kotlin.math.absoluteValue
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.roundToInt
+import kotlin.math.sign
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -458,7 +463,10 @@ object PagerDefaults {
     fun flingBehavior(
         state: PagerState,
         pagerSnapDistance: PagerSnapDistance = PagerSnapDistance.atMost(1),
-        lowVelocityAnimationSpec: AnimationSpec<Float> = tween(easing = LinearOutSlowInEasing),
+        lowVelocityAnimationSpec: AnimationSpec<Float> = tween(
+            easing = LinearEasing,
+            durationMillis = LowVelocityAnimationDefaultDuration
+        ),
         highVelocityAnimationSpec: DecayAnimationSpec<Float> = rememberSplineBasedDecay(),
         snapAnimationSpec: AnimationSpec<Float> = spring(stiffness = Spring.StiffnessMediumLow),
     ): SnapFlingBehavior {
@@ -593,12 +601,12 @@ private fun SnapLayoutInfoProvider(
                     SnapAlignmentStartToStart
                 )
 
-                // Find item that is closest to the center
+                // Find item that is closest to the snap position, but before it
                 if (offset <= 0 && offset > lowerBoundOffset) {
                     lowerBoundOffset = offset
                 }
 
-                // Find item that is closest to center, but after it
+                // Find item that is closest to the snap position, but after it
                 if (offset >= 0 && offset < upperBoundOffset) {
                     upperBoundOffset = offset
                 }
@@ -616,18 +624,34 @@ private fun SnapLayoutInfoProvider(
         }
 
         override fun Density.calculateApproachOffset(initialVelocity: Float): Float {
-            val effectivePageSize = pagerState.pageSize + pagerState.pageSpacing
-            val initialOffset = pagerState.currentPageOffsetFraction * effectivePageSize
-            val animationOffset =
+            val effectivePageSizePx = pagerState.pageSize + pagerState.pageSpacing
+            val animationOffsetPx =
                 decayAnimationSpec.calculateTargetValue(0f, initialVelocity)
+            val startPage = pagerState.firstVisiblePage?.let {
+                if (initialVelocity < 0) it.index + 1 else it.index
+            } ?: pagerState.currentPage
 
-            val startPage = pagerState.currentPage
-            val startPageOffset = startPage * effectivePageSize
+            val scrollOffset =
+                layoutInfo.visibleItemsInfo.fastFirstOrNull { it.index == startPage }?.offset ?: 0
 
-            val targetOffset =
-                (startPageOffset + initialOffset + animationOffset) / effectivePageSize
+            debugLog {
+                "Initial Offset=$scrollOffset " +
+                    "\nAnimation Offset=$animationOffsetPx " +
+                    "\nFling Start Page=$startPage " +
+                    "\nEffective Page Size=$effectivePageSizePx"
+            }
 
-            val targetPage = targetOffset.toInt()
+            val targetOffsetPx = startPage * effectivePageSizePx + animationOffsetPx
+
+            val targetPageValue = targetOffsetPx / effectivePageSizePx
+            val targetPage = if (initialVelocity > 0) {
+                ceil(targetPageValue)
+            } else {
+                floor(targetPageValue)
+            }.toInt().coerceIn(0, pagerState.pageCount)
+
+            debugLog { "Fling Target Page=$targetPage" }
+
             val correctedTargetPage = pagerSnapDistance.calculateTargetPage(
                 startPage,
                 targetPage,
@@ -636,9 +660,22 @@ private fun SnapLayoutInfoProvider(
                 pagerState.pageSpacing
             ).coerceIn(0, pagerState.pageCount)
 
-            val finalOffset = (correctedTargetPage - startPage) * effectivePageSize
+            debugLog { "Fling Corrected Target Page=$correctedTargetPage" }
 
-            return (finalOffset - initialOffset)
+            val proposedFlingOffset = (correctedTargetPage - startPage) * effectivePageSizePx
+
+            debugLog { "Proposed Fling Approach Offset=$proposedFlingOffset" }
+
+            val flingApproachOffsetPx =
+                (proposedFlingOffset.absoluteValue - scrollOffset.absoluteValue).coerceAtLeast(0)
+
+            return if (flingApproachOffsetPx == 0) {
+                flingApproachOffsetPx.toFloat()
+            } else {
+                flingApproachOffsetPx * initialVelocity.sign
+            }.also {
+                debugLog { "Fling Approach Offset=$it" }
+            }
         }
     }
 }
@@ -733,3 +770,12 @@ private fun Modifier.pagerSemantics(state: PagerState, isVertical: Boolean): Mod
         }
     })
 }
+
+private const val DEBUG = false
+private inline fun debugLog(generateMsg: () -> String) {
+    if (DEBUG) {
+        println("Pager: ${generateMsg()}")
+    }
+}
+
+private const val LowVelocityAnimationDefaultDuration = 500

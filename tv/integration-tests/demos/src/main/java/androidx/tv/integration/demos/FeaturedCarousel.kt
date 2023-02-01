@@ -16,6 +16,7 @@
 
 package androidx.tv.integration.demos
 
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -42,11 +43,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.tv.material.ExperimentalTvMaterialApi
-import androidx.tv.material.carousel.Carousel
-import androidx.tv.material.carousel.CarouselDefaults
-import androidx.tv.material.carousel.CarouselItem
-import androidx.tv.material.carousel.CarouselState
+import androidx.tv.material3.Carousel
+import androidx.tv.material3.CarouselDefaults
+import androidx.tv.material3.CarouselState
+import androidx.tv.material3.ExperimentalTvMaterial3Api
 
 @Composable
 fun FeaturedCarouselContent() {
@@ -66,7 +66,21 @@ fun FeaturedCarouselContent() {
                         )
                     }
                 }
-                FeaturedCarousel()
+
+                FeaturedCarousel(Modifier.weight(1f))
+
+                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                    repeat(3) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color.Magenta.copy(alpha = 0.3f))
+                                .width(50.dp)
+                                .height(50.dp)
+                                .drawBorderOnFocus()
+                                .focusable()
+                        )
+                    }
+                }
             }
         }
         items(2) { SampleLazyRow() }
@@ -81,20 +95,25 @@ fun Modifier.drawBorderOnFocus(borderColor: Color = Color.White): Modifier {
         .onFocusChanged { isFocused = it.isFocused }
 }
 
-@OptIn(ExperimentalTvMaterialApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-internal fun FeaturedCarousel() {
+internal fun FeaturedCarousel(modifier: Modifier = Modifier) {
     val backgrounds = listOf(
         Color.Red.copy(alpha = 0.3f),
         Color.Yellow.copy(alpha = 0.3f),
-        Color.Green.copy(alpha = 0.3f)
+        Color.Green.copy(alpha = 0.3f),
+        Color.Blue.copy(alpha = 0.3f),
+        Color.LightGray.copy(alpha = 0.3f),
+        Color.Magenta.copy(alpha = 0.3f),
+        Color.DarkGray.copy(alpha = 0.3f),
+        Color.LightGray.copy(alpha = 0.3f),
     )
 
     val carouselState = remember { CarouselState() }
     Carousel(
         slideCount = backgrounds.size,
         carouselState = carouselState,
-        modifier = Modifier
+        modifier = modifier
             .height(300.dp)
             .fillMaxWidth(),
         carouselIndicator = {
@@ -108,28 +127,30 @@ internal fun FeaturedCarousel() {
         }
     ) { itemIndex ->
         CarouselItem(
-            overlayEnterTransitionStartDelayMillis = 0,
             background = {
                 Box(
                     modifier = Modifier
                         .background(backgrounds[itemIndex])
-                        .border(2.dp, Color.White.copy(alpha = 0.5f))
                         .fillMaxSize()
                 )
             }
         ) {
-            OverlayButton()
+            Box(modifier = Modifier) {
+                OverlayButton(
+                    modifier = Modifier
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun OverlayButton() {
+private fun OverlayButton(modifier: Modifier = Modifier) {
     var isFocused by remember { mutableStateOf(false) }
 
     Button(
         onClick = { },
-        modifier = Modifier
+        modifier = modifier
             .onFocusChanged { isFocused = it.isFocused }
             .padding(40.dp)
             .border(

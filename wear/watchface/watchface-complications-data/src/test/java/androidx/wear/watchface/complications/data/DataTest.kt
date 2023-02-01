@@ -18,6 +18,8 @@
 
 package androidx.wear.watchface.complications.data
 
+import android.support.wearable.complications.ComplicationData as WireComplicationData
+import android.support.wearable.complications.ComplicationText as WireComplicationText
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.ComponentName
@@ -30,6 +32,8 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.test.core.app.ApplicationProvider
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicFloat
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
 import com.google.common.truth.Truth.assertThat
 import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterInjector
@@ -66,7 +70,7 @@ public class AsWireComplicationDataTest {
         val data = NoDataComplicationData()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(null)
                     .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
                     .setDisplayPolicy(ComplicationDisplayPolicies.ALWAYS_DISPLAY)
@@ -90,7 +94,7 @@ public class AsWireComplicationDataTest {
         val data = EmptyComplicationData()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_EMPTY).build()
+                WireComplicationData.Builder(WireComplicationData.TYPE_EMPTY).build()
             )
         testRoundTripConversions(data)
         assertThat(serializeAndDeserialize(data)).isInstanceOf(EmptyComplicationData::class.java)
@@ -105,7 +109,7 @@ public class AsWireComplicationDataTest {
         val data = NotConfiguredComplicationData()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NOT_CONFIGURED).build()
+                WireComplicationData.Builder(WireComplicationData.TYPE_NOT_CONFIGURED).build()
             )
         testRoundTripConversions(data)
         assertThat(serializeAndDeserialize(data))
@@ -129,7 +133,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_SHORT_TEXT)
+                WireComplicationData.Builder(WireComplicationData.TYPE_SHORT_TEXT)
                     .setShortText(WireComplicationText.plainText("text"))
                     .setShortTitle(WireComplicationText.plainText("title"))
                     .setContentDescription(WireComplicationText.plainText("content description"))
@@ -149,11 +153,11 @@ public class AsWireComplicationDataTest {
 
         assertThat(data.toString()).isEqualTo(
             "ShortTextComplicationData(text=ComplicationText{mSurroundingText=text, " +
-                "mTimeDependentText=null, mStringExpression=null}, title=ComplicationText{" +
-                "mSurroundingText=title, mTimeDependentText=null, mStringExpression=null}, " +
+                "mTimeDependentText=null, mExpression=null}, title=ComplicationText{" +
+                "mSurroundingText=title, mTimeDependentText=null, mExpression=null}, " +
                 "monochromaticImage=null, smallImage=null, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}, tapActionLostDueToSerialization=false, tapAction=null, " +
+                "mExpression=null}, tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, persistencePolicy=1, displayPolicy=1)"
@@ -174,7 +178,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_SHORT_TEXT)
+                WireComplicationData.Builder(WireComplicationData.TYPE_SHORT_TEXT)
                     .setShortText(WireComplicationText.plainText("text"))
                     .setShortTitle(WireComplicationText.plainText("title"))
                     .setIcon(monochromaticImageIcon)
@@ -202,13 +206,13 @@ public class AsWireComplicationDataTest {
 
         assertThat(data.toString()).isEqualTo(
             "ShortTextComplicationData(text=ComplicationText{mSurroundingText=text, " +
-                "mTimeDependentText=null, mStringExpression=null}, title=ComplicationText{" +
-                "mSurroundingText=title, mTimeDependentText=null, mStringExpression=null}, " +
+                "mTimeDependentText=null, mExpression=null}, title=ComplicationText{" +
+                "mSurroundingText=title, mTimeDependentText=null, mExpression=null}, " +
                 "monochromaticImage=MonochromaticImage(image=Icon(typ=URI uri=someuri), " +
                 "ambientImage=null), smallImage=SmallImage(image=Icon(typ=URI uri=someuri2), " +
                 "type=PHOTO, ambientImage=null), contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}, tapActionLostDueToSerialization=false, tapAction=null, " +
+                "mExpression=null}, tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, persistencePolicy=0, displayPolicy=0)"
@@ -226,7 +230,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_LONG_TEXT)
+                WireComplicationData.Builder(WireComplicationData.TYPE_LONG_TEXT)
                     .setLongText(WireComplicationText.plainText("text"))
                     .setLongTitle(WireComplicationText.plainText("title"))
                     .setContentDescription(WireComplicationText.plainText("content description"))
@@ -246,11 +250,11 @@ public class AsWireComplicationDataTest {
 
         assertThat(data.toString()).isEqualTo(
             "LongTextComplicationData(text=ComplicationText{mSurroundingText=text, " +
-                "mTimeDependentText=null, mStringExpression=null}, title=ComplicationText{" +
-                "mSurroundingText=title, mTimeDependentText=null, mStringExpression=null}, " +
+                "mTimeDependentText=null, mExpression=null}, title=ComplicationText{" +
+                "mSurroundingText=title, mTimeDependentText=null, mExpression=null}, " +
                 "monochromaticImage=null, smallImage=null, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, persistencePolicy=0, displayPolicy=0)"
@@ -271,7 +275,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_LONG_TEXT)
+                WireComplicationData.Builder(WireComplicationData.TYPE_LONG_TEXT)
                     .setLongText(WireComplicationText.plainText("text"))
                     .setLongTitle(WireComplicationText.plainText("title"))
                     .setIcon(monochromaticImageIcon)
@@ -299,13 +303,13 @@ public class AsWireComplicationDataTest {
 
         assertThat(data.toString()).isEqualTo(
             "LongTextComplicationData(text=ComplicationText{mSurroundingText=text, " +
-                "mTimeDependentText=null, mStringExpression=null}, " +
+                "mTimeDependentText=null, mExpression=null}, " +
                 "title=ComplicationText{mSurroundingText=title, mTimeDependentText=null, " +
-                "mStringExpression=null}, monochromaticImage=MonochromaticImage(" +
+                "mExpression=null}, monochromaticImage=MonochromaticImage(" +
                 "image=Icon(typ=URI uri=someuri), ambientImage=null), smallImage=SmallImage(" +
                 "image=Icon(typ=URI uri=someuri2), type=PHOTO, ambientImage=null), " +
                 "contentDescription=ComplicationText{mSurroundingText=content description, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -324,7 +328,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                     .setRangedValue(95f)
                     .setRangedValueType(RangedValueComplicationData.TYPE_UNDEFINED)
                     .setRangedMinValue(0f)
@@ -351,9 +355,9 @@ public class AsWireComplicationDataTest {
             "RangedValueComplicationData(value=95.0, valueExpression=null, valueType=0, " +
                 "min=0.0, max=100.0, monochromaticImage=null, smallImage=null, " +
                 "title=ComplicationText{mSurroundingText=battery, mTimeDependentText=null, " +
-                "mStringExpression=null}, text=null, contentDescription=ComplicationText{" +
+                "mExpression=null}, text=null, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, colorRamp=null, persistencePolicy=0, " +
@@ -364,7 +368,7 @@ public class AsWireComplicationDataTest {
     @Test
     public fun rangedValueComplicationData_withValueExpression() {
         val data = RangedValueComplicationData.Builder(
-            valueExpression = byteArrayOf(42, 107).toFloatExpression(),
+            valueExpression = DynamicFloat.constant(20f),
             min = 5f,
             max = 100f,
             contentDescription = "content description".complicationText
@@ -374,8 +378,8 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
-                    .setRangedValueExpression(byteArrayOf(42, 107).toFloatExpression())
+                WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
+                    .setRangedValueExpression(DynamicFloat.constant(20f))
                     .setRangedValue(5f) // min as a sensible default
                     .setRangedValueType(RangedValueComplicationData.TYPE_UNDEFINED)
                     .setRangedMinValue(5f)
@@ -391,7 +395,8 @@ public class AsWireComplicationDataTest {
         val deserialized = serializeAndDeserialize(data) as RangedValueComplicationData
         assertThat(deserialized.max).isEqualTo(100f)
         assertThat(deserialized.min).isEqualTo(5f)
-        assertThat(deserialized.valueExpression!!.asByteArray()).isEqualTo(byteArrayOf(42, 107))
+        assertThat(deserialized.valueExpression?.toDynamicFloatByteArray())
+            .isEqualTo(DynamicFloat.constant(20f).toDynamicFloatByteArray())
         assertThat(deserialized.value).isEqualTo(5f) // min as a sensible default
         assertThat(deserialized.contentDescription!!.getTextAt(resources, Instant.EPOCH))
             .isEqualTo("content description")
@@ -400,12 +405,12 @@ public class AsWireComplicationDataTest {
 
         assertThat(data.toString()).isEqualTo(
             "RangedValueComplicationData(value=5.0, " +
-                "valueExpression=FloatExpressionPlaceholder[42, 107], valueType=0, min=5.0, " +
+                "valueExpression=FixedFloat{value=20.0}, valueType=0, min=5.0, " +
                 "max=100.0, monochromaticImage=null, smallImage=null, title=ComplicationText{" +
-                "mSurroundingText=battery, mTimeDependentText=null, mStringExpression=null}, " +
+                "mSurroundingText=battery, mTimeDependentText=null, mExpression=null}, " +
                 "text=null, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), dataSource=" +
                 "ComponentInfo{com.pkg_a/com.a}, colorRamp=null, persistencePolicy=0, " +
@@ -419,21 +424,17 @@ public class AsWireComplicationDataTest {
             value = 95f, min = 0f, max = 100f,
             contentDescription = "content description".complicationText
         )
-            .setTitle(
-                StringExpressionComplicationText(StringExpression(byteArrayOf(1, 2, 3, 4, 5)))
-            )
+            .setTitle(ComplicationTextExpression(DynamicString.constant("title")))
             .setDataSource(dataSource)
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                     .setRangedValue(95f)
                     .setRangedValueType(RangedValueComplicationData.TYPE_UNDEFINED)
                     .setRangedMinValue(0f)
                     .setRangedMaxValue(100f)
-                    .setShortTitle(
-                        WireComplicationText(StringExpression(byteArrayOf(1, 2, 3, 4, 5)))
-                    )
+                    .setShortTitle(WireComplicationText(DynamicString.constant("title")))
                     .setContentDescription(WireComplicationText.plainText("content description"))
                     .setDataSource(dataSource)
                     .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
@@ -452,9 +453,9 @@ public class AsWireComplicationDataTest {
             "RangedValueComplicationData(value=95.0, valueExpression=null, valueType=0, " +
                 "min=0.0, max=100.0, monochromaticImage=null, smallImage=null, " +
                 "title=ComplicationText{mSurroundingText=(null), mTimeDependentText=null, " +
-                "mStringExpression=StringExpression(expression=[1, 2, 3, 4, 5])}, text=null, " +
+                "mExpression=FixedString{value=title}}, text=null, " +
                 "contentDescription=ComplicationText{mSurroundingText=content description, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -478,7 +479,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                     .setRangedValue(95f)
                     .setRangedMinValue(0f)
                     .setRangedMaxValue(100f)
@@ -514,9 +515,9 @@ public class AsWireComplicationDataTest {
                 "monochromaticImage=MonochromaticImage(image=Icon(typ=URI uri=someuri), " +
                 "ambientImage=null), smallImage=SmallImage(image=Icon(typ=URI uri=someuri2), " +
                 "type=PHOTO, ambientImage=null), title=ComplicationText{mSurroundingText=battery," +
-                " mTimeDependentText=null, mStringExpression=null}, text=null, " +
+                " mTimeDependentText=null, mExpression=null}, text=null, " +
                 "contentDescription=ComplicationText{mSurroundingText=content description, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -536,7 +537,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
+                WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
                     .setRangedValue(1200f)
                     .setTargetValue(10000f)
                     .setShortTitle(WireComplicationText.plainText("steps"))
@@ -560,9 +561,9 @@ public class AsWireComplicationDataTest {
             "GoalProgressComplicationData(value=1200.0, valueExpression=null, " +
                 "targetValue=10000.0, monochromaticImage=null, smallImage=null, " +
                 "title=ComplicationText{mSurroundingText=steps, mTimeDependentText=null, " +
-                "mStringExpression=null}, text=null, contentDescription=ComplicationText{" +
+                "mExpression=null}, text=null, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, colorRamp=null, persistencePolicy=0, " +
@@ -573,7 +574,7 @@ public class AsWireComplicationDataTest {
     @Test
     public fun goalProgressComplicationData_withValueExpression() {
         val data = GoalProgressComplicationData.Builder(
-            valueExpression = byteArrayOf(42, 107).toFloatExpression(),
+            valueExpression = DynamicFloat.constant(10f),
             targetValue = 10000f,
             contentDescription = "content description".complicationText
         )
@@ -582,8 +583,8 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
-                    .setRangedValueExpression(byteArrayOf(42, 107).toFloatExpression())
+                WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
+                    .setRangedValueExpression(DynamicFloat.constant(10f))
                     .setRangedValue(0f) // sensible default
                     .setTargetValue(10000f)
                     .setShortTitle(WireComplicationText.plainText("steps"))
@@ -595,7 +596,8 @@ public class AsWireComplicationDataTest {
             )
         testRoundTripConversions(data)
         val deserialized = serializeAndDeserialize(data) as GoalProgressComplicationData
-        assertThat(deserialized.valueExpression!!.asByteArray()).isEqualTo(byteArrayOf(42, 107))
+        assertThat(deserialized.valueExpression?.toDynamicFloatByteArray())
+            .isEqualTo(DynamicFloat.constant(10f).toDynamicFloatByteArray())
         assertThat(deserialized.value).isEqualTo(0f) // sensible default
         assertThat(deserialized.targetValue).isEqualTo(10000f)
         assertThat(deserialized.contentDescription!!.getTextAt(resources, Instant.EPOCH))
@@ -605,11 +607,11 @@ public class AsWireComplicationDataTest {
 
         assertThat(data.toString()).isEqualTo(
             "GoalProgressComplicationData(value=0.0, valueExpression=" +
-                "FloatExpressionPlaceholder[42, 107], targetValue=10000.0, " +
+                "FixedFloat{value=10.0}, targetValue=10000.0, " +
                 "monochromaticImage=null, smallImage=null, title=ComplicationText{" +
-                "mSurroundingText=steps, mTimeDependentText=null, mStringExpression=null}, " +
+                "mSurroundingText=steps, mTimeDependentText=null, mExpression=null}, " +
                 "text=null, contentDescription=ComplicationText{mSurroundingText=content " +
-                "description, mTimeDependentText=null, mStringExpression=null}), " +
+                "description, mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, validTimeRange=TimeRange(" +
                 "startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -630,7 +632,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
+                WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
                     .setRangedValue(1200f)
                     .setTargetValue(10000f)
                     .setShortTitle(WireComplicationText.plainText("steps"))
@@ -655,9 +657,9 @@ public class AsWireComplicationDataTest {
             "GoalProgressComplicationData(value=1200.0, valueExpression=null, " +
                 "targetValue=10000.0, monochromaticImage=null, smallImage=null, " +
                 "title=ComplicationText{mSurroundingText=steps, mTimeDependentText=null, " +
-                "mStringExpression=null}, text=null, contentDescription=ComplicationText{" +
+                "mExpression=null}, text=null, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, colorRamp=ColorRamp(colors=[-65536, " +
@@ -680,7 +682,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
+                WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
                     .setRangedValue(1200f)
                     .setTargetValue(10000f)
                     .setIcon(monochromaticImageIcon)
@@ -715,9 +717,9 @@ public class AsWireComplicationDataTest {
                 "monochromaticImage=MonochromaticImage(image=Icon(typ=URI uri=someuri), " +
                 "ambientImage=null), smallImage=SmallImage(image=Icon(typ=URI uri=someuri2), " +
                 "type=PHOTO, ambientImage=null), title=ComplicationText{mSurroundingText=steps, " +
-                "mTimeDependentText=null, mStringExpression=null}, text=null, " +
+                "mTimeDependentText=null, mExpression=null}, text=null, " +
                 "contentDescription=ComplicationText{mSurroundingText=content description, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -738,7 +740,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                     .setRangedValue(95f)
                     .setRangedValueType(RangedValueComplicationData.TYPE_UNDEFINED)
                     .setRangedMinValue(0f)
@@ -766,9 +768,9 @@ public class AsWireComplicationDataTest {
             "RangedValueComplicationData(value=95.0, valueExpression=null, " +
                 "valueType=0, min=0.0, max=100.0, " +
                 "monochromaticImage=null, smallImage=null, title=ComplicationText{" +
-                "mSurroundingText=battery, mTimeDependentText=null, mStringExpression=null}, " +
+                "mSurroundingText=battery, mTimeDependentText=null, mExpression=null}, " +
                 "text=null, contentDescription=ComplicationText{mSurroundingText=content " +
-                "description, mTimeDependentText=null, mStringExpression=null}), " +
+                "description, mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -807,7 +809,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
+                WireComplicationData.Builder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
                     .setElementWeights(floatArrayOf(0.5f, 1f, 2f))
                     .setElementColors(intArrayOf(Color.RED, Color.GREEN, Color.BLUE))
                     .setElementBackgroundColor(Color.GRAY)
@@ -837,9 +839,9 @@ public class AsWireComplicationDataTest {
                 " Element(color=-16711936, weight=1.0), Element(color=-16776961, weight=2.0), " +
                 "elementBackgroundColor=-7829368, monochromaticImage=null, smallImage=null, " +
                 "title=ComplicationText{mSurroundingText=calories, mTimeDependentText=null, " +
-                "mStringExpression=null}, text=null, contentDescription=ComplicationText{" +
+                "mExpression=null}, text=null, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, persistencePolicy=0, displayPolicy=0)"
@@ -864,7 +866,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
+                WireComplicationData.Builder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
                     .setElementWeights(floatArrayOf(0.5f, 1f, 2f))
                     .setElementColors(intArrayOf(Color.RED, Color.GREEN, Color.BLUE))
                     .setElementBackgroundColor(Color.TRANSPARENT)
@@ -904,9 +906,9 @@ public class AsWireComplicationDataTest {
                 "image=Icon(typ=URI uri=someuri), ambientImage=null), " +
                 "smallImage=SmallImage(image=Icon(typ=URI uri=someuri2), type=PHOTO, " +
                 "ambientImage=null), title=ComplicationText{mSurroundingText=calories, " +
-                "mTimeDependentText=null, mStringExpression=null}, text=null, " +
+                "mTimeDependentText=null, mExpression=null}, text=null, " +
                 "contentDescription=ComplicationText{mSurroundingText=content description, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -922,7 +924,7 @@ public class AsWireComplicationDataTest {
         ).setDataSource(dataSource).build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_ICON)
+                WireComplicationData.Builder(WireComplicationData.TYPE_ICON)
                     .setIcon(icon)
                     .setContentDescription(WireComplicationText.plainText("content description"))
                     .setDataSource(dataSource)
@@ -941,7 +943,7 @@ public class AsWireComplicationDataTest {
             "MonochromaticImageComplicationData(monochromaticImage=MonochromaticImage(" +
                 "image=Icon(typ=URI uri=someuri), ambientImage=null), contentDescription=" +
                 "ComplicationText{mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, persistencePolicy=0, displayPolicy=0)"
@@ -957,7 +959,7 @@ public class AsWireComplicationDataTest {
         ).setDataSource(dataSource).build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_SMALL_IMAGE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_SMALL_IMAGE)
                     .setSmallImage(icon)
                     .setSmallImageStyle(WireComplicationData.IMAGE_STYLE_PHOTO)
                     .setContentDescription(WireComplicationText.plainText("content description"))
@@ -978,7 +980,7 @@ public class AsWireComplicationDataTest {
             "SmallImageComplicationData(smallImage=SmallImage(image=Icon(" +
                 "typ=URI uri=someuri), type=PHOTO, ambientImage=null), " +
                 "contentDescription=ComplicationText{mSurroundingText=content description, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -997,7 +999,7 @@ public class AsWireComplicationDataTest {
         ).setDataSource(dataSource).build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_SMALL_IMAGE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_SMALL_IMAGE)
                     .setSmallImage(bitmapIcon)
                     .setSmallImageStyle(WireComplicationData.IMAGE_STYLE_PHOTO)
                     .setContentDescription(WireComplicationText.plainText("content description"))
@@ -1028,7 +1030,7 @@ public class AsWireComplicationDataTest {
         ).setDataSource(dataSource).build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_LARGE_IMAGE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_LARGE_IMAGE)
                     .setLargeImage(photoImage)
                     .setContentDescription(WireComplicationText.plainText("content description"))
                     .setDataSource(dataSource)
@@ -1046,7 +1048,7 @@ public class AsWireComplicationDataTest {
         assertThat(data.toString()).isEqualTo(
             "PhotoImageComplicationData(photoImage=Icon(typ=URI uri=someuri), " +
                 "contentDescription=ComplicationText{mSurroundingText=content description, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -1062,7 +1064,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_PERMISSION)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_PERMISSION)
                     .setShortText(WireComplicationText.plainText("needs location"))
                     .setDataSource(dataSource)
                     .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
@@ -1076,7 +1078,7 @@ public class AsWireComplicationDataTest {
 
         assertThat(data.toString()).isEqualTo(
             "NoPermissionComplicationData(text=ComplicationText{mSurroundingText=needs location, " +
-                "mTimeDependentText=null, mStringExpression=null}, title=null, " +
+                "mTimeDependentText=null, mExpression=null}, title=null, " +
                 "monochromaticImage=null, smallImage=null, tapActionLostDueToSerialization=false," +
                 " tapAction=null, validTimeRange=TimeRange(startDateTimeMillis=" +
                 "-1000000000-01-01T00:00:00Z, endDateTimeMillis=" +
@@ -1095,7 +1097,7 @@ public class AsWireComplicationDataTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_PERMISSION)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_PERMISSION)
                     .setShortText(WireComplicationText.plainText("needs location"))
                     .setIcon(monochromaticImageIcon)
                     .setSmallImage(smallImageIcon)
@@ -1113,7 +1115,7 @@ public class AsWireComplicationDataTest {
         assertThat(data.toString()).isEqualTo(
             "NoPermissionComplicationData(text=ComplicationText{" +
                 "mSurroundingText=needs location, mTimeDependentText=null, " +
-                "mStringExpression=null}, title=null, monochromaticImage=MonochromaticImage(" +
+                "mExpression=null}, title=null, monochromaticImage=MonochromaticImage(" +
                 "image=Icon(typ=URI uri=someuri), ambientImage=null), smallImage=SmallImage(" +
                 "image=Icon(typ=URI uri=someuri2), type=PHOTO, ambientImage=null), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, validTimeRange=TimeRange(" +
@@ -1137,9 +1139,9 @@ public class AsWireComplicationDataTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_SHORT_TEXT)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_SHORT_TEXT)
                             .setShortText(ComplicationText.PLACEHOLDER.toWireComplicationText())
                             .setShortTitle(ComplicationText.PLACEHOLDER.toWireComplicationText())
                             .setIcon(createPlaceholderIcon())
@@ -1163,13 +1165,13 @@ public class AsWireComplicationDataTest {
         assertThat(data.toString()).isEqualTo(
             "NoDataComplicationData(placeholder=ShortTextComplicationData(text=" +
                 "ComplicationText{mSurroundingText=__placeholder__, mTimeDependentText=null, " +
-                "mStringExpression=null}, title=ComplicationText{" +
+                "mExpression=null}, title=ComplicationText{" +
                 "mSurroundingText=__placeholder__, mTimeDependentText=null, " +
-                "mStringExpression=null}, monochromaticImage=MonochromaticImage(" +
+                "mExpression=null}, monochromaticImage=MonochromaticImage(" +
                 "image=Icon(typ=RESOURCE pkg= id=0xffffffff), ambientImage=null), " +
                 "smallImage=null, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}, tapActionLostDueToSerialization=false, tapAction=null, " +
+                "mExpression=null}, tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, persistencePolicy=0, " +
@@ -1190,9 +1192,9 @@ public class AsWireComplicationDataTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_LONG_TEXT)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_LONG_TEXT)
                             .setLongText(WireComplicationText.plainText("text"))
                             .setContentDescription(
                                 WireComplicationText.plainText("content description")
@@ -1214,9 +1216,9 @@ public class AsWireComplicationDataTest {
         assertThat(data.toString()).isEqualTo(
             "NoDataComplicationData(placeholder=LongTextComplicationData(" +
                 "text=ComplicationText{mSurroundingText=text, mTimeDependentText=null, " +
-                "mStringExpression=null}, title=null, monochromaticImage=null, smallImage=null, " +
+                "mExpression=null}, title=null, monochromaticImage=null, smallImage=null, " +
                 "contentDescription=ComplicationText{mSurroundingText=content description, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -1243,9 +1245,9 @@ public class AsWireComplicationDataTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                             .setRangedValue(RangedValueComplicationData.PLACEHOLDER)
                             .setRangedValueType(RangedValueComplicationData.TYPE_UNDEFINED)
                             .setRangedMinValue(0f)
@@ -1273,9 +1275,9 @@ public class AsWireComplicationDataTest {
                 "value=3.4028235E38, valueExpression=null, valueType=0, min=0.0, max=100.0, " +
                 "monochromaticImage=null, smallImage=null, title=null, text=ComplicationText{" +
                 "mSurroundingText=__placeholder__, mTimeDependentText=null, " +
-                "mStringExpression=null}, contentDescription=ComplicationText{" +
+                "mExpression=null}, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, colorRamp=null, persistencePolicy=0, " +
@@ -1301,9 +1303,9 @@ public class AsWireComplicationDataTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
                             .setRangedValue(GoalProgressComplicationData.PLACEHOLDER)
                             .setTargetValue(10000f)
                             .setShortText(ComplicationText.PLACEHOLDER.toWireComplicationText())
@@ -1331,9 +1333,9 @@ public class AsWireComplicationDataTest {
                 "value=3.4028235E38, valueExpression=null, targetValue=10000.0, " +
                 "monochromaticImage=null, smallImage=null, title=null, text=ComplicationText{" +
                 "mSurroundingText=__placeholder__, mTimeDependentText=null, " +
-                "mStringExpression=null}, contentDescription=ComplicationText{" +
+                "mExpression=null}, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, " +
@@ -1364,9 +1366,9 @@ public class AsWireComplicationDataTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
                             .setElementWeights(floatArrayOf(0.5f, 1f, 2f))
                             .setElementColors(intArrayOf(Color.RED, Color.GREEN, Color.BLUE))
                             .setElementBackgroundColor(Color.GRAY)
@@ -1394,9 +1396,9 @@ public class AsWireComplicationDataTest {
                 "weight=1.0), Element(color=-16776961, weight=2.0), " +
                 "elementBackgroundColor=-7829368, monochromaticImage=null, smallImage=null, " +
                 "title=ComplicationText{mSurroundingText=calories, mTimeDependentText=null, " +
-                "mStringExpression=null}, text=null, contentDescription=ComplicationText{" +
+                "mExpression=null}, text=null, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, persistencePolicy=0, " +
@@ -1424,9 +1426,9 @@ public class AsWireComplicationDataTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                             .setRangedValue(RangedValueComplicationData.PLACEHOLDER)
                             .setRangedValueType(RangedValueComplicationData.TYPE_RATING)
                             .setRangedMinValue(0f)
@@ -1456,9 +1458,9 @@ public class AsWireComplicationDataTest {
                 "value=3.4028235E38, valueExpression=null, valueType=1, min=0.0, max=100.0, " +
                 "monochromaticImage=null, smallImage=null, title=null, text=ComplicationText{" +
                 "mSurroundingText=__placeholder__, mTimeDependentText=null, " +
-                "mStringExpression=null}, contentDescription=ComplicationText{" +
+                "mExpression=null}, contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, colorRamp=ColorRamp(colors=[-65536, " +
@@ -1480,9 +1482,9 @@ public class AsWireComplicationDataTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_ICON)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_ICON)
                             .setIcon(createPlaceholderIcon())
                             .setContentDescription(
                                 WireComplicationText.plainText("content description")
@@ -1506,7 +1508,7 @@ public class AsWireComplicationDataTest {
                 "monochromaticImage=MonochromaticImage(image=Icon(typ=RESOURCE pkg= " +
                 "id=0xffffffff), ambientImage=null), contentDescription=ComplicationText{" +
                 "mSurroundingText=content description, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
                 "dataSource=ComponentInfo{com.pkg_a/com.a}, persistencePolicy=0, " +
@@ -1527,9 +1529,9 @@ public class AsWireComplicationDataTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_SMALL_IMAGE)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_SMALL_IMAGE)
                             .setSmallImage(createPlaceholderIcon())
                             .setSmallImageStyle(WireComplicationData.IMAGE_STYLE_ICON)
                             .setContentDescription(
@@ -1553,7 +1555,7 @@ public class AsWireComplicationDataTest {
             "NoDataComplicationData(placeholder=SmallImageComplicationData(smallImage=" +
                 "SmallImage(image=Icon(typ=RESOURCE pkg= id=0xffffffff), type=ICON, " +
                 "ambientImage=null), contentDescription=ComplicationText{mSurroundingText=" +
-                "content description, mTimeDependentText=null, mStringExpression=null}), " +
+                "content description, mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, validTimeRange=TimeRange(" +
                 "startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -1575,9 +1577,9 @@ public class AsWireComplicationDataTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_LARGE_IMAGE)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_LARGE_IMAGE)
                             .setLargeImage(createPlaceholderIcon())
                             .setContentDescription(
                                 WireComplicationText.plainText("content description")
@@ -1600,7 +1602,7 @@ public class AsWireComplicationDataTest {
             "NoDataComplicationData(placeholder=PhotoImageComplicationData(" +
                 "photoImage=Icon(typ=RESOURCE pkg= id=0xffffffff), " +
                 "contentDescription=ComplicationText{mSurroundingText=content description, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(startDateTimeMillis=-1000000000-01-01T00:00:00Z, " +
                 "endDateTimeMillis=+1000000000-12-31T23:59:59.999999999Z), " +
@@ -1639,7 +1641,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun noDataComplicationData() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                 .setPlaceholder(null)
                 .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
                 .setDisplayPolicy(ComplicationDisplayPolicies.ALWAYS_DISPLAY)
@@ -1651,7 +1653,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun emptyComplicationData() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_EMPTY).build(),
+            WireComplicationData.Builder(WireComplicationData.TYPE_EMPTY).build(),
             ComplicationType.EMPTY
         )
     }
@@ -1659,7 +1661,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun notConfiguredComplicationData() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NOT_CONFIGURED).build(),
+            WireComplicationData.Builder(WireComplicationData.TYPE_NOT_CONFIGURED).build(),
             ComplicationType.NOT_CONFIGURED
         )
     }
@@ -1667,7 +1669,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun shortTextComplicationData() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_SHORT_TEXT)
+            WireComplicationData.Builder(WireComplicationData.TYPE_SHORT_TEXT)
                 .setShortText(WireComplicationText.plainText("text"))
                 .setShortTitle(WireComplicationText.plainText("title"))
                 .setContentDescription(WireComplicationText.plainText("content description"))
@@ -1681,7 +1683,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun longTextComplicationData() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_LONG_TEXT)
+            WireComplicationData.Builder(WireComplicationData.TYPE_LONG_TEXT)
                 .setLongText(WireComplicationText.plainText("text"))
                 .setLongTitle(WireComplicationText.plainText("title"))
                 .setContentDescription(WireComplicationText.plainText("content description"))
@@ -1695,7 +1697,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun rangedValueComplicationData_withFixedValue() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+            WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                 .setRangedValue(95f)
                 .setRangedMinValue(0f)
                 .setRangedMaxValue(100f)
@@ -1711,8 +1713,8 @@ public class FromWireComplicationDataTest {
     @Test
     public fun rangedValueComplicationData_withValueExpression() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
-                .setRangedValueExpression(byteArrayOf(42, 107).toFloatExpression())
+            WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
+                .setRangedValueExpression(DynamicFloat.constant(10f))
                 .setRangedMinValue(0f)
                 .setRangedMaxValue(100f)
                 .setShortTitle(WireComplicationText.plainText("battery"))
@@ -1727,7 +1729,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun rangedValueComplicationData_drawSegmented() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+            WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                 .setRangedValue(95f)
                 .setRangedMinValue(0f)
                 .setRangedMaxValue(100f)
@@ -1743,7 +1745,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun goalProgressComplicationData_withFixedValue() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
+            WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
                 .setRangedValue(1200f)
                 .setTargetValue(10000f)
                 .setShortTitle(WireComplicationText.plainText("steps"))
@@ -1760,8 +1762,8 @@ public class FromWireComplicationDataTest {
     @Test
     public fun goalProgressComplicationData_withValueExpression() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
-                .setRangedValueExpression(byteArrayOf(42, 107).toFloatExpression())
+            WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
+                .setRangedValueExpression(DynamicFloat.constant(10f))
                 .setTargetValue(10000f)
                 .setShortTitle(WireComplicationText.plainText("steps"))
                 .setContentDescription(WireComplicationText.plainText("content description"))
@@ -1777,7 +1779,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun weightedElementsComplicationData() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
+            WireComplicationData.Builder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
                 .setElementWeights(floatArrayOf(0.5f, 1f, 2f))
                 .setElementColors(intArrayOf(Color.RED, Color.GREEN, Color.BLUE))
                 .setElementBackgroundColor(Color.DKGRAY)
@@ -1794,7 +1796,7 @@ public class FromWireComplicationDataTest {
     public fun monochromaticImageComplicationData() {
         val icon = Icon.createWithContentUri("someuri")
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_ICON)
+            WireComplicationData.Builder(WireComplicationData.TYPE_ICON)
                 .setIcon(icon)
                 .setContentDescription(WireComplicationText.plainText("content description"))
                 .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
@@ -1808,7 +1810,7 @@ public class FromWireComplicationDataTest {
     public fun smallImageComplicationData() {
         val icon = Icon.createWithContentUri("someuri")
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_SMALL_IMAGE)
+            WireComplicationData.Builder(WireComplicationData.TYPE_SMALL_IMAGE)
                 .setSmallImage(icon)
                 .setSmallImageStyle(WireComplicationData.IMAGE_STYLE_PHOTO)
                 .setContentDescription(WireComplicationText.plainText("content description"))
@@ -1823,7 +1825,7 @@ public class FromWireComplicationDataTest {
     public fun photoImageComplicationData() {
         val icon = Icon.createWithContentUri("someuri")
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_LARGE_IMAGE)
+            WireComplicationData.Builder(WireComplicationData.TYPE_LARGE_IMAGE)
                 .setLargeImage(icon)
                 .setContentDescription(WireComplicationText.plainText("content description"))
                 .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
@@ -1836,7 +1838,7 @@ public class FromWireComplicationDataTest {
     @Test
     public fun noPermissionComplicationData() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NO_PERMISSION)
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_PERMISSION)
                 .setShortText(WireComplicationText.plainText("needs location"))
                 .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
                 .setDisplayPolicy(ComplicationDisplayPolicies.ALWAYS_DISPLAY)
@@ -1849,9 +1851,9 @@ public class FromWireComplicationDataTest {
     public fun noDataComplicationData_shortText() {
         val icon = Icon.createWithContentUri("someuri")
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                 .setPlaceholder(
-                    WireComplicationDataBuilder(WireComplicationData.TYPE_SHORT_TEXT)
+                    WireComplicationData.Builder(WireComplicationData.TYPE_SHORT_TEXT)
                         .setContentDescription(
                             WireComplicationText.plainText("content description")
                         )
@@ -1873,9 +1875,9 @@ public class FromWireComplicationDataTest {
     public fun noDataComplicationData_longText() {
         val icon = Icon.createWithContentUri("someuri")
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                 .setPlaceholder(
-                    WireComplicationDataBuilder(WireComplicationData.TYPE_LONG_TEXT)
+                    WireComplicationData.Builder(WireComplicationData.TYPE_LONG_TEXT)
                         .setContentDescription(
                             WireComplicationText.plainText("content description")
                         )
@@ -1897,9 +1899,9 @@ public class FromWireComplicationDataTest {
     public fun noDataComplicationData_rangedValue() {
         val icon = Icon.createWithContentUri("someuri")
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                 .setPlaceholder(
-                    WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+                    WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                         .setContentDescription(
                             WireComplicationText.plainText("content description")
                         )
@@ -1924,9 +1926,9 @@ public class FromWireComplicationDataTest {
     public fun noDataComplicationData_goalProgress() {
         val icon = Icon.createWithContentUri("someuri")
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                 .setPlaceholder(
-                    WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
+                    WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
                         .setRangedValue(1200f)
                         .setTargetValue(10000f)
                         .setShortTitle(WireComplicationText.plainText("steps"))
@@ -1950,9 +1952,9 @@ public class FromWireComplicationDataTest {
     @Test
     public fun noDataComplicationData_weightedElementsComplicationData() {
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                 .setPlaceholder(
-                    WireComplicationDataBuilder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
+                    WireComplicationData.Builder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
                         .setElementWeights(floatArrayOf(0.5f, 1f, 2f))
                         .setElementColors(intArrayOf(Color.RED, Color.GREEN, Color.BLUE))
                         .setElementBackgroundColor(Color.DKGRAY)
@@ -1975,9 +1977,9 @@ public class FromWireComplicationDataTest {
     public fun noDataComplicationData_smallImage() {
         val icon = Icon.createWithContentUri("someuri")
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                 .setPlaceholder(
-                    WireComplicationDataBuilder(WireComplicationData.TYPE_SMALL_IMAGE)
+                    WireComplicationData.Builder(WireComplicationData.TYPE_SMALL_IMAGE)
                         .setSmallImage(icon)
                         .setSmallImageStyle(WireComplicationData.IMAGE_STYLE_PHOTO)
                         .setContentDescription(
@@ -1998,9 +2000,9 @@ public class FromWireComplicationDataTest {
     public fun noDataComplicationData_monochromaticImage() {
         val icon = Icon.createWithContentUri("someuri")
         assertRoundtrip(
-            WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                 .setPlaceholder(
-                    WireComplicationDataBuilder(WireComplicationData.TYPE_ICON)
+                    WireComplicationData.Builder(WireComplicationData.TYPE_ICON)
                         .setIcon(icon)
                         .setContentDescription(
                             WireComplicationText.plainText("content description")
@@ -2285,7 +2287,7 @@ public class ValidTimeRangeTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_SHORT_TEXT)
+                WireComplicationData.Builder(WireComplicationData.TYPE_SHORT_TEXT)
                     .setShortText(WireComplicationText.plainText("text"))
                     .setStartDateTimeMillis(testStartInstant.toEpochMilli())
                     .setEndDateTimeMillis(testEndDateInstant.toEpochMilli())
@@ -2302,7 +2304,7 @@ public class ValidTimeRangeTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_LONG_TEXT)
+                WireComplicationData.Builder(WireComplicationData.TYPE_LONG_TEXT)
                     .setLongText(WireComplicationText.plainText("text"))
                     .setStartDateTimeMillis(testStartInstant.toEpochMilli())
                     .setEndDateTimeMillis(testEndDateInstant.toEpochMilli())
@@ -2323,7 +2325,7 @@ public class ValidTimeRangeTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                     .setRangedValue(95f)
                     .setRangedValueType(RangedValueComplicationData.TYPE_UNDEFINED)
                     .setRangedMinValue(0f)
@@ -2349,7 +2351,7 @@ public class ValidTimeRangeTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
+                WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
                     .setRangedValue(1200f)
                     .setTargetValue(10000f)
                     .setShortTitle(WireComplicationText.plainText("steps"))
@@ -2379,7 +2381,7 @@ public class ValidTimeRangeTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
+                WireComplicationData.Builder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
                     .setElementWeights(floatArrayOf(0.5f, 1f, 2f))
                     .setElementColors(intArrayOf(Color.RED, Color.GREEN, Color.BLUE))
                     .setElementBackgroundColor(Color.TRANSPARENT)
@@ -2402,7 +2404,7 @@ public class ValidTimeRangeTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_ICON)
+                WireComplicationData.Builder(WireComplicationData.TYPE_ICON)
                     .setIcon(icon)
                     .setStartDateTimeMillis(testStartInstant.toEpochMilli())
                     .setEndDateTimeMillis(testEndDateInstant.toEpochMilli())
@@ -2421,7 +2423,7 @@ public class ValidTimeRangeTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_SMALL_IMAGE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_SMALL_IMAGE)
                     .setSmallImage(icon)
                     .setSmallImageStyle(WireComplicationData.IMAGE_STYLE_PHOTO)
                     .setStartDateTimeMillis(testStartInstant.toEpochMilli())
@@ -2440,7 +2442,7 @@ public class ValidTimeRangeTest {
             .build()
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_LARGE_IMAGE)
+                WireComplicationData.Builder(WireComplicationData.TYPE_LARGE_IMAGE)
                     .setLargeImage(photoImage)
                     .setStartDateTimeMillis(testStartInstant.toEpochMilli())
                     .setEndDateTimeMillis(testEndDateInstant.toEpochMilli())
@@ -2458,9 +2460,9 @@ public class ValidTimeRangeTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_SHORT_TEXT)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_SHORT_TEXT)
                             .setShortText(WireComplicationText.plainText("text"))
                             .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
                             .setDisplayPolicy(ComplicationDisplayPolicies.ALWAYS_DISPLAY)
@@ -2480,9 +2482,9 @@ public class ValidTimeRangeTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_LONG_TEXT)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_LONG_TEXT)
                             .setLongText(WireComplicationText.plainText("text"))
                             .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
                             .setDisplayPolicy(ComplicationDisplayPolicies.ALWAYS_DISPLAY)
@@ -2508,9 +2510,9 @@ public class ValidTimeRangeTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_RANGED_VALUE)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_RANGED_VALUE)
                             .setRangedValue(95f)
                             .setRangedValueType(RangedValueComplicationData.TYPE_UNDEFINED)
                             .setRangedMinValue(0f)
@@ -2539,9 +2541,9 @@ public class ValidTimeRangeTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_GOAL_PROGRESS)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_GOAL_PROGRESS)
                             .setRangedValue(1200f)
                             .setTargetValue(10000f)
                             .setShortTitle(WireComplicationText.plainText("steps"))
@@ -2576,9 +2578,9 @@ public class ValidTimeRangeTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_WEIGHTED_ELEMENTS)
                             .setElementWeights(floatArrayOf(0.5f, 1f, 2f))
                             .setElementColors(intArrayOf(Color.RED, Color.GREEN, Color.BLUE))
                             .setElementBackgroundColor(Color.TRANSPARENT)
@@ -2605,9 +2607,9 @@ public class ValidTimeRangeTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_ICON)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_ICON)
                             .setIcon(icon)
                             .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
                             .setDisplayPolicy(ComplicationDisplayPolicies.ALWAYS_DISPLAY)
@@ -2628,9 +2630,9 @@ public class ValidTimeRangeTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_SMALL_IMAGE)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_SMALL_IMAGE)
                             .setSmallImage(icon)
                             .setSmallImageStyle(WireComplicationData.IMAGE_STYLE_PHOTO)
                             .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
@@ -2651,9 +2653,9 @@ public class ValidTimeRangeTest {
         )
         ParcelableSubject.assertThat(data.asWireComplicationData())
             .hasSameSerializationAs(
-                WireComplicationDataBuilder(WireComplicationData.TYPE_NO_DATA)
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                     .setPlaceholder(
-                        WireComplicationDataBuilder(WireComplicationData.TYPE_LARGE_IMAGE)
+                        WireComplicationData.Builder(WireComplicationData.TYPE_LARGE_IMAGE)
                             .setLargeImage(icon)
                             .setPersistencePolicy(ComplicationPersistencePolicies.CACHING_ALLOWED)
                             .setDisplayPolicy(ComplicationDisplayPolicies.ALWAYS_DISPLAY)
@@ -2693,10 +2695,10 @@ public class RedactionTest {
 
         assertThat(data.toString()).isEqualTo(
             "ShortTextComplicationData(text=ComplicationText{mSurroundingText=REDACTED, " +
-                "mTimeDependentText=null, mStringExpression=null}, title=ComplicationText{" +
-                "mSurroundingText=REDACTED, mTimeDependentText=null, mStringExpression=null}, " +
+                "mTimeDependentText=null, mExpression=null}, title=ComplicationText{" +
+                "mSurroundingText=REDACTED, mTimeDependentText=null, mExpression=null}, " +
                 "monochromaticImage=null, smallImage=null, contentDescription=ComplicationText{" +
-                "mSurroundingText=REDACTED, mTimeDependentText=null, mStringExpression=null}, " +
+                "mSurroundingText=REDACTED, mTimeDependentText=null, mExpression=null}, " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(REDACTED), dataSource=null, persistencePolicy=0, " +
                 "displayPolicy=0)"
@@ -2717,10 +2719,10 @@ public class RedactionTest {
 
         assertThat(data.toString()).isEqualTo(
             "LongTextComplicationData(text=ComplicationText{mSurroundingText=REDACTED, " +
-                "mTimeDependentText=null, mStringExpression=null}, title=ComplicationText{" +
-                "mSurroundingText=REDACTED, mTimeDependentText=null, mStringExpression=null}, " +
+                "mTimeDependentText=null, mExpression=null}, title=ComplicationText{" +
+                "mSurroundingText=REDACTED, mTimeDependentText=null, mExpression=null}, " +
                 "monochromaticImage=null, smallImage=null, contentDescription=ComplicationText{" +
-                "mSurroundingText=REDACTED, mTimeDependentText=null, mStringExpression=null}), " +
+                "mSurroundingText=REDACTED, mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(REDACTED), dataSource=null, persistencePolicy=0, " +
                 "displayPolicy=0)"
@@ -2746,10 +2748,10 @@ public class RedactionTest {
             "RangedValueComplicationData(value=REDACTED, valueExpression=REDACTED, " +
                 "valueType=0, min=0.0, max=100.0, monochromaticImage=null, smallImage=null, " +
                 "title=ComplicationText{mSurroundingText=REDACTED, mTimeDependentText=null, " +
-                "mStringExpression=null}, text=ComplicationText{mSurroundingText=REDACTED, " +
-                "mTimeDependentText=null, mStringExpression=null}, contentDescription=" +
+                "mExpression=null}, text=ComplicationText{mSurroundingText=REDACTED, " +
+                "mTimeDependentText=null, mExpression=null}, contentDescription=" +
                 "ComplicationText{mSurroundingText=REDACTED, mTimeDependentText=null, " +
-                "mStringExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
+                "mExpression=null}), tapActionLostDueToSerialization=false, tapAction=null," +
                 " validTimeRange=TimeRange(REDACTED), dataSource=null, colorRamp=null, " +
                 "persistencePolicy=0, displayPolicy=0)"
         )
@@ -2773,8 +2775,8 @@ public class RedactionTest {
             "GoalProgressComplicationData(value=REDACTED, valueExpression=REDACTED, " +
                 "targetValue=10000.0, monochromaticImage=null, smallImage=null, " +
                 "title=ComplicationText{mSurroundingText=REDACTED, mTimeDependentText=null, " +
-                "mStringExpression=null}, text=null, contentDescription=ComplicationText{" +
-                "mSurroundingText=REDACTED, mTimeDependentText=null, mStringExpression=null}), " +
+                "mExpression=null}, text=null, contentDescription=ComplicationText{" +
+                "mSurroundingText=REDACTED, mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, validTimeRange=" +
                 "TimeRange(REDACTED), dataSource=null, colorRamp=ColorRamp(colors=[-65536, " +
                 "-16711936, -16776961], interpolated=true), persistencePolicy=0, displayPolicy=0)"
@@ -2796,9 +2798,9 @@ public class RedactionTest {
         assertThat(data.toString()).isEqualTo(
             "NoDataComplicationData(placeholder=LongTextComplicationData(" +
                 "text=ComplicationText{mSurroundingText=__placeholder__, mTimeDependentText=null," +
-                " mStringExpression=null}, title=null, monochromaticImage=null, smallImage=null, " +
+                " mExpression=null}, title=null, monochromaticImage=null, smallImage=null, " +
                 "contentDescription=ComplicationText{mSurroundingText=REDACTED, " +
-                "mTimeDependentText=null, mStringExpression=null}), " +
+                "mTimeDependentText=null, mExpression=null}), " +
                 "tapActionLostDueToSerialization=false, tapAction=null, " +
                 "validTimeRange=TimeRange(REDACTED), dataSource=null, persistencePolicy=0, " +
                 "displayPolicy=0), tapActionLostDueToSerialization=false, tapAction=null, " +

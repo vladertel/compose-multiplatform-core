@@ -31,6 +31,7 @@ import androidx.camera.camera2.pipe.integration.adapter.CameraStateAdapter
 import androidx.camera.camera2.pipe.integration.adapter.SessionConfigAdapter
 import androidx.camera.camera2.pipe.integration.adapter.SessionConfigAdapter.Companion.toCamera2ImplConfig
 import androidx.camera.camera2.pipe.integration.impl.CameraCallbackMap
+import androidx.camera.camera2.pipe.integration.impl.CameraInteropStateCallbackRepository
 import androidx.camera.camera2.pipe.integration.impl.CapturePipelineImpl
 import androidx.camera.camera2.pipe.integration.impl.ComboRequestListener
 import androidx.camera.camera2.pipe.integration.impl.UseCaseCamera
@@ -42,6 +43,7 @@ import androidx.camera.core.impl.DeferrableSurface
 import dagger.Module
 import dagger.Provides
 import dagger.Subcomponent
+import java.util.concurrent.CancellationException
 import javax.inject.Scope
 
 @Scope
@@ -84,6 +86,7 @@ class UseCaseCameraConfig(
         cameraPipe: CameraPipe,
         requestListener: ComboRequestListener,
         useCaseSurfaceManager: UseCaseSurfaceManager,
+        cameraInteropStateCallbackRepository: CameraInteropStateCallbackRepository
     ): UseCaseGraphConfig {
         val streamConfigMap = mutableMapOf<CameraStream.Config, DeferrableSurface>()
 
@@ -91,6 +94,7 @@ class UseCaseCameraConfig(
         //  imageReader or surface.
         val sessionConfigAdapter = SessionConfigAdapter(useCases)
         sessionConfigAdapter.getValidSessionConfigOrNull()?.let { sessionConfig ->
+            cameraInteropStateCallbackRepository.updateCallbacks(sessionConfig)
             sessionConfig.surfaces.forEach { deferrableSurface ->
                 val outputConfig = CameraStream.Config.create(
                     streamUseCase = getStreamUseCase(
@@ -135,11 +139,15 @@ class UseCaseCameraConfig(
 
         if (sessionConfigAdapter.isSessionConfigValid()) {
             useCaseSurfaceManager.setupAsync(graph, sessionConfigAdapter, surfaceToStreamMap)
-                .invokeOnCompletion {
-                    it?.let { Log.error(it) { "Surface setup error!" } }
+                .invokeOnCompletion { throwable ->
+                    // Only show logs for error cases, ignore CancellationException since the task
+                    // could be cancelled by UseCaseSurfaceManager#stopAsync().
+                    if (throwable != null && throwable !is CancellationException) {
+                        Log.error(throwable) { "Surface setup error!" }
+                    }
                 }
         } else {
-            Log.debug {
+            Log.error {
                 "Unable to create capture session due to conflicting configurations"
             }
         }

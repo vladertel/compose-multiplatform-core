@@ -41,6 +41,7 @@ import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.CameraEffect;
 import androidx.camera.core.SurfaceOutput;
 import androidx.camera.core.SurfaceProcessor;
@@ -50,6 +51,7 @@ import androidx.camera.core.UseCase;
 import androidx.camera.core.impl.CameraInternal;
 import androidx.camera.core.impl.DeferrableSurface;
 import androidx.camera.core.impl.SessionConfig;
+import androidx.camera.core.impl.StreamSpec;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
 
@@ -101,7 +103,7 @@ public class SurfaceEdge {
     private final boolean mMirroring;
     @CameraEffect.Targets
     private final int mTargets;
-    private final Size mSize;
+    private final StreamSpec mStreamSpec;
     // Guarded by main thread.
     private int mRotationDegrees;
 
@@ -123,25 +125,30 @@ public class SurfaceEdge {
     @NonNull
     private final Set<Runnable> mOnInvalidatedListeners = new HashSet<>();
 
+    // Guarded by main thread.
+    // Tombstone flag indicates whether the edge has been closed. Once closed, the edge should
+    // never be used again.
+    private boolean mIsClosed = false;
+
     /**
      * Please see the getters to understand the parameters.
      */
     public SurfaceEdge(
             @CameraEffect.Targets int targets,
-            @NonNull Size size,
+            @NonNull StreamSpec streamSpec,
             @NonNull Matrix sensorToBufferTransform,
             boolean hasCameraTransform,
             @NonNull Rect cropRect,
             int rotationDegrees,
             boolean mirroring) {
         mTargets = targets;
-        mSize = size;
+        mStreamSpec = streamSpec;
         mSensorToBufferTransform = sensorToBufferTransform;
         mHasCameraTransform = hasCameraTransform;
         mCropRect = cropRect;
         mRotationDegrees = rotationDegrees;
         mMirroring = mirroring;
-        mSettableSurface = new SettableSurface(size);
+        mSettableSurface = new SettableSurface(streamSpec.getResolution());
     }
 
     /**
@@ -155,6 +162,7 @@ public class SurfaceEdge {
     @MainThread
     public void addOnInvalidatedListener(@NonNull Runnable onInvalidated) {
         checkMainThread();
+        checkNotClosed();
         mOnInvalidatedListeners.add(onInvalidated);
     }
 
@@ -169,6 +177,7 @@ public class SurfaceEdge {
     @MainThread
     public DeferrableSurface getDeferrableSurface() {
         checkMainThread();
+        checkNotClosed();
         checkAndSetHasConsumer();
         return mSettableSurface;
     }
@@ -208,6 +217,7 @@ public class SurfaceEdge {
     public void setProvider(@NonNull DeferrableSurface provider)
             throws DeferrableSurface.SurfaceClosedException {
         checkMainThread();
+        checkNotClosed();
         mSettableSurface.setProvider(provider);
     }
 
@@ -247,9 +257,15 @@ public class SurfaceEdge {
     public SurfaceRequest createSurfaceRequest(@NonNull CameraInternal cameraInternal,
             @Nullable Range<Integer> expectedFpsRange) {
         checkMainThread();
+        checkNotClosed();
         // TODO(b/238230154) figure out how to support HDR.
-        SurfaceRequest surfaceRequest = new SurfaceRequest(getSize(), cameraInternal,
-                expectedFpsRange, () -> mainThreadExecutor().execute(this::invalidate));
+        SurfaceRequest surfaceRequest = new SurfaceRequest(mStreamSpec.getResolution(),
+                cameraInternal, expectedFpsRange,
+                () -> mainThreadExecutor().execute(() -> {
+                    if (!mIsClosed) {
+                        invalidate();
+                    }
+                }));
         try {
             DeferrableSurface deferrableSurface = surfaceRequest.getDeferrableSurface();
             if (mSettableSurface.setProvider(deferrableSurface)) {
@@ -297,6 +313,7 @@ public class SurfaceEdge {
     public ListenableFuture<SurfaceOutput> createSurfaceOutputFuture(@NonNull Size inputSize,
             @NonNull Rect cropRect, int rotationDegrees, boolean mirroring) {
         checkMainThread();
+        checkNotClosed();
         checkAndSetHasConsumer();
         SettableSurface settableSurface = mSettableSurface;
         return transformAsync(mSettableSurface.getSurface(),
@@ -308,8 +325,8 @@ public class SurfaceEdge {
                         return immediateFailedFuture(e);
                     }
                     SurfaceOutputImpl surfaceOutputImpl = new SurfaceOutputImpl(surface,
-                            getTargets(), getSize(), inputSize, cropRect, rotationDegrees,
-                            mirroring);
+                            getTargets(), mStreamSpec.getResolution(), inputSize, cropRect,
+                            rotationDegrees, mirroring);
                     surfaceOutputImpl.getCloseFuture().addListener(
                             settableSurface::decrementUseCount,
                             directExecutor());
@@ -319,7 +336,7 @@ public class SurfaceEdge {
     }
 
     /**
-     * Closes the current connection and notifies that a new connection is ready.
+     * Resets connection and notifies that a new connection is ready.
      *
      * <p>Call this method to notify that the {@link Surface} previously provided via
      * {@link #createSurfaceRequest} or {@link #setProvider} should no longer be used. The
@@ -335,29 +352,55 @@ public class SurfaceEdge {
     @MainThread
     public void invalidate() {
         checkMainThread();
-        close();
+        checkNotClosed();
+        if (mSettableSurface.canSetProvider()) {
+            // If the edge is still connectable, no-ops.
+            return;
+        }
+        disconnectWithoutCheckingClosed();
         mHasConsumer = false;
-        mSettableSurface = new SettableSurface(mSize);
+        mSettableSurface = new SettableSurface(mStreamSpec.getResolution());
         for (Runnable onInvalidated : mOnInvalidatedListeners) {
             onInvalidated.run();
         }
     }
 
     /**
-     * Closes the current connection.
+     * Closes the edge.
      *
-     * <p>This method uses the mechanism in {@link DeferrableSurface} and/or
-     * {@link SurfaceOutputImpl} to notify the upstream pipeline that the {@link Surface}
-     * previously provided via {@link #createSurfaceRequest} or {@link #setProvider} should no
-     * longer be used. The upstream pipeline will stops writing to the {@link Surface}, and the
-     * downstream pipeline can choose to release the {@link Surface} once the writing stops.
+     * <p> Disconnects the edge and sets a tombstone so it will never be used again. This method
+     * is idempotent.
+     *
+     * @see #disconnect()
+     */
+    @MainThread
+    public final void close() {
+        checkMainThread();
+        disconnectWithoutCheckingClosed();
+        mIsClosed = true;
+    }
+
+    /**
+     * Disconnects the edge.
+     *
+     * <p> Once disconnected, upstream should stop sending images to the edge, and downstream
+     * should stop expecting images from the edge.
+     *
+     * <p> This method notifies the upstream via {@link SettableSurface#close()}/
+     * {@link SurfaceOutputImpl}. By calling {@link SettableSurface#close()}, it also decrements the
+     * ref-count on downstream Surfaces so they can be released.
      *
      * @see DeferrableSurface#close().
      * @see #invalidate()
      */
     @MainThread
-    public final void close() {
+    public final void disconnect() {
         checkMainThread();
+        checkNotClosed();
+        disconnectWithoutCheckingClosed();
+    }
+
+    private void disconnectWithoutCheckingClosed() {
         mSettableSurface.close();
         if (mConsumerToNotify != null) {
             mConsumerToNotify.requestClose();
@@ -371,14 +414,6 @@ public class SurfaceEdge {
     @CameraEffect.Targets
     public int getTargets() {
         return mTargets;
-    }
-
-    /**
-     * The allocated size of the {@link Surface}.
-     */
-    @NonNull
-    public Size getSize() {
-        return mSize;
     }
 
     /**
@@ -475,6 +510,24 @@ public class SurfaceEdge {
     }
 
     /**
+     * Returns {@link StreamSpec} associated with this edge.
+     */
+    @NonNull
+    public StreamSpec getStreamSpec() {
+        return mStreamSpec;
+    }
+
+    private void checkNotClosed() {
+        checkState(!mIsClosed, "Edge is already closed.");
+    }
+
+    @VisibleForTesting
+    @NonNull
+    DeferrableSurface getDeferrableSurfaceForTesting() {
+        return mSettableSurface;
+    }
+
+    /**
      * A {@link DeferrableSurface} that sets another {@link DeferrableSurface} as the source.
      *
      * <p>This class provides mechanisms to link an {@link DeferrableSurface}, and propagates
@@ -500,6 +553,12 @@ public class SurfaceEdge {
         @Override
         protected ListenableFuture<Surface> provideSurface() {
             return mSurfaceFuture;
+        }
+
+        @MainThread
+        boolean canSetProvider() {
+            checkMainThread();
+            return mProvider == null && !isClosed();
         }
 
         /**
