@@ -53,8 +53,8 @@ import platform.UIKit.UIScreen
 import platform.UIKit.UIViewController
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 import platform.UIKit.reloadInputViews
-import platform.UIKit.setClipsToBounds
-import platform.UIKit.setNeedsDisplay
+//import platform.UIKit.setClipsToBounds
+//import platform.UIKit.setNeedsDisplay
 import platform.UIKit.window
 import platform.darwin.NSObject
 
@@ -96,7 +96,7 @@ internal actual class ComposeWindow : UIViewController {
                 if (hiddenPartOfFocusedElement > 0) {
                     // If focused element hidden by keyboard, then change UIView bounds.
                     // Focused element will be visible
-                    view.setClipsToBounds(true)
+//                    view.setClipsToBounds(true)
                     val (width, height) = getViewFrameSize()
                     view.layer.setBounds(
                         CGRectMake(
@@ -120,7 +120,7 @@ internal actual class ComposeWindow : UIViewController {
         @Suppress("unused")
         @ObjCAction
         fun keyboardDidHide(arg: NSNotification) {
-            view.setClipsToBounds(false)
+//            view.setClipsToBounds(false)
         }
     }
 
