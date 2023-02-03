@@ -40,19 +40,26 @@ class AndroidXPlugin : Plugin<Project> {
             // TODO: remove these HACKS for deleted versions references when possible
             val conf = it
             conf.resolutionStrategy.eachDependency {
-                val replace = (it.requested.module.name.contains("coroutines") ||
-                    it.requested.module.name.contains("atomicfu")) &&
-                    conf.name.contains("wasm", true)
-                if (replace && !it.requested.version!!.contains("-wasm0")) {
-                    it.useVersion(it.requested.version!! + "-wasm0")
-                }
-                if (it.requested.version == "1.8.20-dev-3308") {
-                    it.useVersion("1.8.20-dev-6044")
-                }
-                val keep = conf.name.contains("wasm", true)
+//                val replace = (it.requested.module.name.contains("coroutines") ||
+//                    it.requested.module.name.contains("atomicfu")) &&
+//                    conf.name.contains("wasm", true)
+//                if (replace && !it.requested.version!!.contains("-wasm0")) {
+//                    it.useVersion(it.requested.version!! + "-wasm0")
+//                }
+//                if (it.requested.version == "1.8.20-dev-3308") {
+//                    it.useVersion("1.8.20-dev-6044")
+//                }
+                val isWasmConf = conf.name.contains("wasm", true)
                 if (it.requested.module.group == "org.jetbrains.skiko") {
-                    if (!keep) {
+                    if (!isWasmConf) {
                         it.useVersion("0.7.50")
+                    }
+                } else if (it.requested.module.group == "org.jetbrains.kotlinx") {
+                    if (!isWasmConf && it.requested.module.name.contains("kotlinx-coroutines")) {
+                        it.useVersion("1.6.4")
+                    }
+                    if (isWasmConf && it.requested.module.name.contains("atomicfu")) {
+                        it.useVersion("0.18.5-wasm0")
                     }
                 }
             }
