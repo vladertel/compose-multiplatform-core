@@ -78,6 +78,7 @@ import com.example.androidx.mediarouting.providers.SampleMediaRouteProvider;
 import com.example.androidx.mediarouting.session.SessionManager;
 import com.example.androidx.mediarouting.ui.LibraryAdapter;
 import com.example.androidx.mediarouting.ui.PlaylistAdapter;
+import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
 
@@ -103,103 +104,8 @@ public class MainActivity extends AppCompatActivity {
             };
     private final SessionManager mSessionManager = new SessionManager("app");
     private final MediaRouter.OnPrepareTransferListener mOnPrepareTransferListener =
-            (fromRoute, toRoute) -> {
-                Log.d(TAG, "onPrepareTransfer: from=" + fromRoute.getId()
-                        + ", to=" + toRoute.getId());
-                return CallbackToFutureAdapter.getFuture(completer -> {
-                    mHandler.postDelayed(() -> completer.set(null), 3000);
-                    return "onPrepareTransfer";
-                });
-            };
-    private final MediaRouter.Callback mMediaRouterCB = new MediaRouter.Callback() {
-        // Return a custom callback that will simply log all of the route events
-        // for demonstration purposes.
-        @Override
-        public void onRouteAdded(@NonNull MediaRouter router, @NonNull RouteInfo route) {
-            Log.d(TAG, "onRouteAdded: route=" + route);
-        }
-
-        @Override
-        public void onRouteChanged(@NonNull MediaRouter router, @NonNull RouteInfo route) {
-            Log.d(TAG, "onRouteChanged: route=" + route);
-        }
-
-        @Override
-        public void onRouteRemoved(@NonNull MediaRouter router, @NonNull RouteInfo route) {
-            Log.d(TAG, "onRouteRemoved: route=" + route);
-        }
-
-        @Override
-        public void onRouteSelected(@NonNull MediaRouter router,
-                @NonNull RouteInfo selectedRoute, int reason, @NonNull RouteInfo requestedRoute) {
-            Log.d(TAG, "onRouteSelected: requestedRoute=" + requestedRoute
-                    + ", route=" + selectedRoute + ", reason=" + reason);
-
-            mPlayer = Player.create(MainActivity.this, selectedRoute, mMediaSession);
-            if (isPresentationApiSupported()) {
-                mPlayer.updatePresentation();
-            }
-            mSessionManager.setPlayer(mPlayer);
-            if (reason != MediaRouter.UNSELECT_REASON_ROUTE_CHANGED) {
-                mSessionManager.stop();
-            } else {
-                mSessionManager.unsuspend();
-            }
-
-            updateUi();
-        }
-
-        @Override
-        public void onRouteUnselected(@NonNull MediaRouter router, @NonNull RouteInfo route,
-                int reason) {
-            Log.d(TAG, "onRouteUnselected: route=" + route);
-            mMediaSession.setActive(false);
-
-            PlaylistItem item = getCheckedPlaylistItem();
-            if (item != null) {
-                long pos = item.getPosition() + (mSessionManager.isPaused()
-                        ? 0 : (SystemClock.elapsedRealtime() - item.getTimestamp()));
-                mSessionManager.suspend(pos);
-            }
-            if (isPresentationApiSupported()) {
-                mPlayer.updatePresentation();
-            }
-            mPlayer.release();
-        }
-
-        @Override
-        public void onRouteVolumeChanged(@NonNull MediaRouter router, @NonNull RouteInfo route) {
-            Log.d(TAG, "onRouteVolumeChanged: route=" + route);
-        }
-
-        @Override
-        public void onRoutePresentationDisplayChanged(
-                @NonNull MediaRouter router, @NonNull RouteInfo route) {
-            Log.d(TAG, "onRoutePresentationDisplayChanged: route=" + route);
-            if (isPresentationApiSupported()) {
-                mPlayer.updatePresentation();
-            }
-        }
-
-        @Override
-        public void onProviderAdded(@NonNull MediaRouter router, @NonNull ProviderInfo provider) {
-            Log.d(TAG, "onRouteProviderAdded: provider=" + provider);
-        }
-
-        @Override
-        public void onProviderRemoved(@NonNull MediaRouter router, @NonNull ProviderInfo provider) {
-            Log.d(TAG, "onRouteProviderRemoved: provider=" + provider);
-        }
-
-        @Override
-        public void onProviderChanged(@NonNull MediaRouter router, @NonNull ProviderInfo provider) {
-            Log.d(TAG, "onRouteProviderChanged: provider=" + provider);
-        }
-
-        private boolean isPresentationApiSupported() {
-            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1;
-        }
-    };
+            new TransferListener();
+    private final MediaRouter.Callback mMediaRouterCB = new SampleMediaRouterCallback();
 
     private MediaRouter mMediaRouter;
     private MediaRouteSelector mSelector;
@@ -333,27 +239,7 @@ public class MainActivity extends AppCompatActivity {
         stopButton.setOnClickListener(v -> mSessionManager.stop());
 
         mSeekBar = findViewById(R.id.seekbar);
-        mSeekBar.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                PlaylistItem item = getCheckedPlaylistItem();
-                if (fromUser && item != null && item.getDuration() > 0) {
-                    long pos = progress * item.getDuration() / 100;
-                    mSessionManager.seek(item.getItemId(), pos);
-                    item.setPosition(pos);
-                    item.setTimestamp(SystemClock.elapsedRealtime());
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                updateUi();
-            }
-        });
+        mSeekBar.setOnSeekBarChangeListener(new SampleOnSeekBarChangeListener());
 
         // Schedule Ui update
         mHandler.postDelayed(mUpdateSeekRunnable, 1000);
@@ -379,16 +265,7 @@ public class MainActivity extends AppCompatActivity {
                 mMediaRouter.getSelectedRoute(), mMediaSession);
 
         mSessionManager.setPlayer(mPlayer);
-        mSessionManager.setCallback(new SessionManager.Callback() {
-            @Override
-            public void onStatusChanged() {
-                updateUi();
-            }
-
-            @Override
-            public void onItemChanged(@NonNull PlaylistItem item) {
-            }
-        });
+        mSessionManager.setCallback(new SampleSessionManagerCallback());
 
         updateUi();
     }
@@ -486,27 +363,7 @@ public class MainActivity extends AppCompatActivity {
         // Create the MediaSession
         mMediaSession = new MediaSessionCompat(this, "SampleMediaRouter", mEventReceiver,
                 mMediaPendingIntent);
-        mMediaSession.setCallback(new MediaSessionCompat.Callback() {
-            @Override
-            public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
-                if (mediaButtonEvent != null) {
-                    return handleMediaKey(
-                            mediaButtonEvent.getParcelableExtra(Intent.EXTRA_KEY_EVENT));
-                }
-                return super.onMediaButtonEvent(null);
-            }
-
-            @Override
-            public void onPlay() {
-                mSessionManager.resume();
-            }
-
-            @Override
-            public void onPause() {
-                mSessionManager.pause();
-            }
-        });
-
+        mMediaSession.setCallback(new SampleMediaSessionCompatCallback());
         SampleMediaButtonReceiver.setActivity(MainActivity.this);
     }
 
@@ -677,10 +534,154 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private final class SampleOnSeekBarChangeListener implements OnSeekBarChangeListener {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            PlaylistItem item = getCheckedPlaylistItem();
+            if (fromUser && item != null && item.getDuration() > 0) {
+                long pos = progress * item.getDuration() / 100;
+                mSessionManager.seek(item.getItemId(), pos);
+                item.setPosition(pos);
+                item.setTimestamp(SystemClock.elapsedRealtime());
+            }
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+            updateUi();
+        }
+    }
+
+    private final class SampleSessionManagerCallback implements SessionManager.Callback {
+        @Override
+        public void onStatusChanged() {
+            updateUi();
+        }
+
+        @Override
+        public void onItemChanged(@NonNull PlaylistItem item) {
+        }
+    }
+
+    private final class SampleMediaSessionCompatCallback extends MediaSessionCompat.Callback {
+        @Override
+        public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
+            if (mediaButtonEvent != null) {
+                return handleMediaKey(
+                        mediaButtonEvent.getParcelableExtra(Intent.EXTRA_KEY_EVENT));
+            }
+            return super.onMediaButtonEvent(null);
+        }
+
+        @Override
+        public void onPlay() {
+            mSessionManager.resume();
+        }
+
+        @Override
+        public void onPause() {
+            mSessionManager.pause();
+        }
+    };
+
+    private final class SampleMediaRouterCallback extends MediaRouter.Callback {
+        // Return a custom callback that will simply log all of the route events
+        // for demonstration purposes.
+        @Override
+        public void onRouteAdded(@NonNull MediaRouter router, @NonNull RouteInfo route) {
+            Log.d(TAG, "onRouteAdded: route=" + route);
+        }
+
+        @Override
+        public void onRouteChanged(@NonNull MediaRouter router, @NonNull RouteInfo route) {
+            Log.d(TAG, "onRouteChanged: route=" + route);
+        }
+
+        @Override
+        public void onRouteRemoved(@NonNull MediaRouter router, @NonNull RouteInfo route) {
+            Log.d(TAG, "onRouteRemoved: route=" + route);
+        }
+
+        @Override
+        public void onRouteSelected(@NonNull MediaRouter router,
+                @NonNull RouteInfo selectedRoute, int reason, @NonNull RouteInfo requestedRoute) {
+            Log.d(TAG, "onRouteSelected: requestedRoute=" + requestedRoute
+                    + ", route=" + selectedRoute + ", reason=" + reason);
+
+            mPlayer = Player.create(MainActivity.this, selectedRoute, mMediaSession);
+            if (isPresentationApiSupported()) {
+                mPlayer.updatePresentation();
+            }
+            mSessionManager.setPlayer(mPlayer);
+            if (reason != MediaRouter.UNSELECT_REASON_ROUTE_CHANGED) {
+                mSessionManager.stop();
+            } else {
+                mSessionManager.unsuspend();
+            }
+
+            updateUi();
+        }
+
+        @Override
+        public void onRouteUnselected(@NonNull MediaRouter router, @NonNull RouteInfo route,
+                int reason) {
+            Log.d(TAG, "onRouteUnselected: route=" + route);
+            mMediaSession.setActive(false);
+
+            PlaylistItem item = getCheckedPlaylistItem();
+            if (item != null) {
+                long pos = item.getPosition() + (mSessionManager.isPaused()
+                        ? 0 : (SystemClock.elapsedRealtime() - item.getTimestamp()));
+                mSessionManager.suspend(pos);
+            }
+            if (isPresentationApiSupported()) {
+                mPlayer.updatePresentation();
+            }
+            mPlayer.release();
+        }
+
+        @Override
+        public void onRouteVolumeChanged(@NonNull MediaRouter router, @NonNull RouteInfo route) {
+            Log.d(TAG, "onRouteVolumeChanged: route=" + route);
+        }
+
+        @Override
+        public void onRoutePresentationDisplayChanged(
+                @NonNull MediaRouter router, @NonNull RouteInfo route) {
+            Log.d(TAG, "onRoutePresentationDisplayChanged: route=" + route);
+            if (isPresentationApiSupported()) {
+                mPlayer.updatePresentation();
+            }
+        }
+
+        @Override
+        public void onProviderAdded(@NonNull MediaRouter router, @NonNull ProviderInfo provider) {
+            Log.d(TAG, "onRouteProviderAdded: provider=" + provider);
+        }
+
+        @Override
+        public void onProviderRemoved(@NonNull MediaRouter router, @NonNull ProviderInfo provider) {
+            Log.d(TAG, "onRouteProviderRemoved: provider=" + provider);
+        }
+
+        @Override
+        public void onProviderChanged(@NonNull MediaRouter router, @NonNull ProviderInfo provider) {
+            Log.d(TAG, "onRouteProviderChanged: provider=" + provider);
+        }
+
+        private boolean isPresentationApiSupported() {
+            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1;
+        }
+    }
+
     /**
      * Controller Dialog Fragment for the media router dialog.
      */
-    public static class ControllerDialogFragment extends MediaRouteControllerDialogFragment {
+    private static class ControllerDialogFragment extends MediaRouteControllerDialogFragment {
         private MainActivity mMainActivity;
         private MediaRouteControllerDialog mControllerDialog;
         private CheckBox mUseDefaultControlCheckBox;
@@ -716,7 +717,7 @@ public class MainActivity extends AppCompatActivity {
      * remote route volume in lock screen. It routes media key events back
      * to main app activity.
      */
-    public static class SampleMediaButtonReceiver extends BroadcastReceiver {
+    private static class SampleMediaButtonReceiver extends BroadcastReceiver {
         private static MainActivity sActivity;
 
         public static void setActivity(@NonNull MainActivity activity) {
@@ -732,7 +733,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @RequiresApi(23)
-    static class Api23Impl {
+    private static class Api23Impl {
         private Api23Impl() {
             // This class is not instantiable.
         }
@@ -750,6 +751,21 @@ public class MainActivity extends AppCompatActivity {
         @DoNotInline
         static void requestPermissions(Activity activity, String[] permissions, int requestCode) {
             activity.requestPermissions(permissions, requestCode);
+        }
+    }
+
+    private class TransferListener implements
+            MediaRouter.OnPrepareTransferListener {
+        @Nullable
+        @Override
+        public ListenableFuture<Void> onPrepareTransfer(@NonNull RouteInfo fromRoute,
+                @NonNull RouteInfo toRoute) {
+            Log.d(TAG, "onPrepareTransfer: from=" + fromRoute.getId()
+                    + ", to=" + toRoute.getId());
+            return CallbackToFutureAdapter.getFuture(completer -> {
+                mHandler.postDelayed(() -> completer.set(null), 3000);
+                return "onPrepareTransfer";
+            });
         }
     }
 }
