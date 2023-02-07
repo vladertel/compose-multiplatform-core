@@ -141,6 +141,24 @@ class ComposeSceneInputTest {
     }
 
     @Test
+    fun `enter then press should generate synthetic move`() =
+        ImageComposeScene(100, 100).use { scene ->
+            val content = FillBox()
+            scene.setContent {
+                content.Content()
+            }
+
+            val position = Offset(10f, 10f)
+            scene.sendPointerEvent(PointerEventType.Enter, position)
+            scene.sendPointerEvent(PointerEventType.Press, position)
+
+            content.events.assertReceived(PointerEventType.Enter, position)
+            // synthetic event
+            content.events.assertReceived(PointerEventType.Move, position)
+            content.events.assertReceivedLast(PointerEventType.Press, position)
+        }
+
+    @Test
     fun `pressed popup should own received moves outside popup`() = ImageComposeScene(
         100,
         100

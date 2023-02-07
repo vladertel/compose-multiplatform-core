@@ -29,24 +29,31 @@ internal class PointerPositionUpdater(
     ) -> Unit,
 ) {
     private var lastEvent: PointerInputEvent? = null
+    private var lastUpdatingEvent: PointerInputEvent? = null
 
     var needUpdate: Boolean = false
         private set
 
     fun reset() {
         lastEvent = null
+        lastUpdatingEvent = null
         needUpdate = false
     }
 
     fun beforeEvent(event: PointerInputEvent) {
-        if (isMoveEventMissing(lastEvent, event) || needUpdate) {
-            needUpdate = false
-            if (!event.isMove()) {
-                lastEvent?.sendAsUpdate(pointersSource = event)
-            }
+        if (event.requiresMoveEventBefore() &&
+            (needUpdate || (lastUpdatingEvent?.isSamePosition(event) != true))
+        ) {
+            lastEvent?.sendAsUpdate(pointersSource = event)
+            lastUpdatingEvent = event
         }
+
+        needUpdate = false
         lastEvent = event
+        if (event.eventType == PointerEventType.Move)
+            lastUpdatingEvent = event
     }
+
 
     @JsName("setNeedUpdate")
     fun needUpdate() {
@@ -57,7 +64,7 @@ internal class PointerPositionUpdater(
     fun update() {
         if (needUpdate) {
             needUpdate = false
-            lastEvent?.also { it.sendAsUpdate(pointersSource = it) }
+            lastEvent?.let { it.sendAsUpdate(pointersSource = it) }
         }
     }
 
@@ -93,15 +100,10 @@ internal class PointerPositionUpdater(
  *
  * You can see that box1 loses the Exit event (instead it receives Scroll event)
  */
-private fun isMoveEventMissing(
-    previousEvent: PointerInputEvent?,
-    currentEvent: PointerInputEvent,
-) = !currentEvent.isMove() && previousEvent?.isSamePosition(currentEvent) == false
-
-private fun PointerInputEvent.isMove() =
-    eventType == PointerEventType.Move ||
-        eventType == PointerEventType.Enter ||
-        eventType == PointerEventType.Exit
+private fun PointerInputEvent.requiresMoveEventBefore() =
+    (eventType != PointerEventType.Move) &&
+        (eventType != PointerEventType.Enter) &&
+        (eventType != PointerEventType.Exit)
 
 private fun PointerInputEvent.isSamePosition(event: PointerInputEvent): Boolean =
     pointers.associate { it.id to it.position } == event.pointers.associate { it.id to it.position }
