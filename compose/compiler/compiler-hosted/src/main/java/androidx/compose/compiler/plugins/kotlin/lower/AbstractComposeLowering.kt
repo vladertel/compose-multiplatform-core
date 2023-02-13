@@ -225,8 +225,7 @@ abstract class AbstractComposeLowering(
                 ).unboxValueIfInline()
             } else {
                 val primaryValueParameter = klass.primaryConstructor?.valueParameters?.get(0)
-                    ?: error("Expected a value parameter")
-                if (klass.properties.filter {
+                if (primaryValueParameter == null || klass.properties.filter {
                         it.name == primaryValueParameter.name && it.getter != null
                 }.count() == 0) {
                     // K/JS and K/Native don't show a getter of an internal/private property,
