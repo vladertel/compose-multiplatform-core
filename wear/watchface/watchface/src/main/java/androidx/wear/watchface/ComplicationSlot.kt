@@ -130,6 +130,7 @@ public interface CanvasComplication {
      * @param zonedDateTime The [ZonedDateTime] to render the highlight with
      * @param color The color to render the highlight with
      */
+    @Suppress("UnavailableSymbol")
     @ComplicationExperimental
     public fun drawHighlight(
         canvas: Canvas,
@@ -137,6 +138,7 @@ public interface CanvasComplication {
         @ComplicationSlotBoundsType boundsType: Int,
         zonedDateTime: ZonedDateTime,
         @ColorInt color: Int,
+        @Suppress("HiddenTypeParameter")
         boundingArc: BoundingArc?
     ) {
         drawHighlight(canvas, bounds, boundsType, zonedDateTime, color)
