@@ -1248,6 +1248,7 @@ class TextFieldTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.P)
     fun testTextField_imeActionAndKeyboardTypePropagatedDownstream() {
         val platformTextInputService = mock<PlatformTextInputService>()
         val textInputService = TextInputService(platformTextInputService)
@@ -1335,7 +1336,8 @@ class TextFieldTest {
                         containerColor = Color.Blue,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        textColor = Color.Transparent,
+                        focusedTextColor = Color.Transparent,
+                        unfocusedTextColor = Color.Transparent,
                         cursorColor = Color.Transparent,
                         focusedLabelColor = Color.Transparent,
                         unfocusedLabelColor = Color.Transparent

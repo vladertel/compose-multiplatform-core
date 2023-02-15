@@ -1278,9 +1278,6 @@ public class NotificationCompat {
         /**
          * Set the time that the event occurred.  Notifications in the panel are
          * sorted by this time.
-         *
-         * <p>For apps targeting {@link android.os.Build.VERSION_CODES#N} and above, this time is
-         * not shown anymore by default and must be opted into using {@link #setShowWhen(boolean)}
          */
         public @NonNull Builder setWhen(long when) {
             mNotification.when = when;
@@ -1289,10 +1286,7 @@ public class NotificationCompat {
 
         /**
          * Control whether the timestamp set with {@link #setWhen(long) setWhen} is shown
-         * in the content view.
-         *
-         * <p>For apps targeting {@link android.os.Build.VERSION_CODES#N} and above, this
-         * defaults to {@code false}. For earlier apps, the default is {@code true}.
+         * in the content view. The default is {@code true}.
          */
         public @NonNull Builder setShowWhen(boolean show) {
             mShowWhen = show;
@@ -2497,7 +2491,7 @@ public class NotificationCompat {
          * this method to explicitly request deferred display.</p>
          *
          * This method has no effect when running on versions prior to
-          * {@link android.os.Build.VERSION_CODES#S}.
+         * {@link android.os.Build.VERSION_CODES#S}.
          */
         @SuppressWarnings("MissingGetterMatchingBuilder") // no underlying getter in platform API
         @NonNull
@@ -3358,6 +3352,16 @@ public class NotificationCompat {
          */
         public @NonNull BigPictureStyle bigLargeIcon(@Nullable Bitmap b) {
             mBigLargeIcon = b == null ? null : IconCompat.createWithBitmap(b);
+            mBigLargeIconSet = true;
+            return this;
+        }
+
+        /**
+         * Override the large icon when the big notification is shown.
+         */
+        @RequiresApi(23)
+        public @NonNull BigPictureStyle bigLargeIcon(@Nullable Icon i) {
+            mBigLargeIcon = i == null ? null : IconCompat.createFromIcon(i);
             mBigLargeIconSet = true;
             return this;
         }
@@ -4954,7 +4958,7 @@ public class NotificationCompat {
                     && extras.containsKey(EXTRA_CALL_PERSON)) {
                 mPerson = Person.fromAndroidPerson(
                         (android.app.Person)
-                        extras.getParcelable(EXTRA_CALL_PERSON));
+                                extras.getParcelable(EXTRA_CALL_PERSON));
             } else if (extras.containsKey(EXTRA_CALL_PERSON_COMPAT)) {
                 mPerson = Person.fromBundle(extras.getBundle(EXTRA_CALL_PERSON_COMPAT));
             }
@@ -5286,7 +5290,7 @@ public class NotificationCompat {
                 }
                 actionBuilder =
                         Api20Impl.createActionBuilder(iconResId, actionCompat.getTitle(),
-                        actionCompat.getActionIntent());
+                                actionCompat.getActionIntent());
             }
             Bundle actionExtras;
             if (actionCompat.getExtras() != null) {

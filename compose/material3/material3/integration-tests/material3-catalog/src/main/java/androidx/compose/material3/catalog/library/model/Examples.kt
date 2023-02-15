@@ -43,6 +43,7 @@ import androidx.compose.material3.samples.DateInputSample
 import androidx.compose.material3.samples.DatePickerDialogSample
 import androidx.compose.material3.samples.DatePickerSample
 import androidx.compose.material3.samples.DatePickerWithDateValidatorSample
+import androidx.compose.material3.samples.DateRangePickerSample
 import androidx.compose.material3.samples.DismissibleNavigationDrawerSample
 import androidx.compose.material3.samples.DockedSearchBarSample
 import androidx.compose.material3.samples.EditableExposedDropdownMenuSample
@@ -136,6 +137,7 @@ import androidx.compose.material3.samples.TextFieldWithPrefixAndSuffix
 import androidx.compose.material3.samples.TextFieldWithSupportingText
 import androidx.compose.material3.samples.TextTabs
 import androidx.compose.material3.samples.ThreeLineListItem
+import androidx.compose.material3.samples.TimeInputSample
 import androidx.compose.material3.samples.TimePickerSample
 import androidx.compose.material3.samples.TriStateCheckboxSample
 import androidx.compose.material3.samples.TwoLineListItem
@@ -386,6 +388,13 @@ val DatePickerExamples = listOf(
         sourceUrl = DatePickerExampleSourceUrl
     ) {
         DateInputSample()
+    },
+    Example(
+        name = ::DateRangePickerSample.name,
+        description = DatePickerExampleDescription,
+        sourceUrl = DatePickerExampleSourceUrl
+    ) {
+        DateRangePickerSample()
     },
 )
 
@@ -921,6 +930,13 @@ val TimePickerExamples = listOf(
         sourceUrl = TimePickerSourceUrl
     ) {
         TimePickerSample()
+    },
+    Example(
+        name = ::TimeInputSample.name,
+        description = TimePickerDescription,
+        sourceUrl = TimePickerSourceUrl
+    ) {
+        TimeInputSample()
     },
 )
 

@@ -18,6 +18,7 @@ package androidx.compose.material3
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
@@ -246,29 +247,33 @@ private fun TooltipBox(
     }
 
     Box {
-        Popup(
-            popupPositionProvider = tooltipPositionProvider,
-            onDismissRequest = {
-                if (tooltipState.isVisible) {
-                    coroutineScope.launch { tooltipState.dismiss() }
+        val transition = updateTransition(tooltipState.isVisible, label = "Tooltip transition")
+        if (transition.currentState || transition.targetState) {
+            Popup(
+                popupPositionProvider = tooltipPositionProvider,
+                onDismissRequest = {
+                    if (tooltipState.isVisible) {
+                        coroutineScope.launch { tooltipState.dismiss() }
+                    }
                 }
+            ) {
+                Surface(
+                    modifier = modifier
+                        .sizeIn(
+                            minWidth = TooltipMinWidth,
+                            maxWidth = maxWidth,
+                            minHeight = TooltipMinHeight
+                        )
+                        .animateTooltip(transition)
+                        .focusable()
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                    shape = shape,
+                    color = containerColor,
+                    shadowElevation = elevation,
+                    tonalElevation = elevation,
+                    content = tooltipContent
+                )
             }
-        ) {
-            Surface(
-                modifier = modifier
-                    .sizeIn(
-                        minWidth = TooltipMinWidth,
-                        maxWidth = maxWidth,
-                        minHeight = TooltipMinHeight
-                    )
-                    .animateTooltip(tooltipState.isVisible)
-                    .focusable()
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-                shape = shape,
-                color = containerColor,
-                shadowElevation = elevation,
-                content = tooltipContent
-            )
         }
 
         scope.content()
@@ -484,15 +489,13 @@ private fun Modifier.textVerticalPadding(
 }
 
 private fun Modifier.animateTooltip(
-    showTooltip: Boolean
+    transition: Transition<Boolean>
 ): Modifier = composed(
     inspectorInfo = debugInspectorInfo {
         name = "animateTooltip"
-        properties["showTooltip"] = showTooltip
+        properties["transition"] = transition
     }
 ) {
-    val transition = updateTransition(showTooltip, label = "Tooltip transition")
-
     val scale by transition.animateFloat(
         transitionSpec = {
             if (false isTransitioningTo true) {
@@ -760,5 +763,5 @@ private val ActionLabelMinHeight = 36.dp
 private val ActionLabelBottomPadding = 8.dp
 internal const val TooltipDuration = 1500L
 // No specification for fade in and fade out duration, so aligning it with the behavior for snack bar
-private const val TooltipFadeInDuration = 150
+internal const val TooltipFadeInDuration = 150
 private const val TooltipFadeOutDuration = 75

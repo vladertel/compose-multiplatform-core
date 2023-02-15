@@ -16,9 +16,16 @@
 
 package androidx.compose.material3
 
+import android.content.Context
+import android.os.Build
+import android.text.format.DateFormat
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.SemanticsProperties.SelectableGroup
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher.Companion.expectValue
 import androidx.compose.ui.test.SemanticsMatcher.Companion.keyIsDefined
 import androidx.compose.ui.test.assert
@@ -29,8 +36,12 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelectable
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.filter
+import androidx.compose.ui.test.filterToOne
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasImeAction
 import androidx.compose.ui.test.isFocusable
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.isNotSelected
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -42,17 +53,26 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onSiblings
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.input.ImeAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
+import androidx.test.filters.SdkSuppress
+import com.android.dx.mockito.inline.extended.ExtendedMockito.doReturn
+import com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSession
+import com.android.dx.mockito.inline.extended.MockedMethod
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.quality.Strictness
 
 @OptIn(ExperimentalMaterial3Api::class)
 @MediumTest
 @RunWith(AndroidJUnit4::class)
+
 class TimePickerTest {
 
     @get:Rule
@@ -138,6 +158,60 @@ class TimePickerTest {
         rule.runOnIdle {
             assertThat(state.hour).isEqualTo(3)
         }
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.P)
+    fun timePickerState_format_12h() {
+        lateinit var context: Context
+        lateinit var state: TimePickerState
+        val session = mockitoSession()
+            .spyStatic(DateFormat::class.java)
+            .strictness(Strictness.LENIENT)
+            .startMocking()
+        try {
+            rule.setMaterialContent(lightColorScheme()) {
+                context = LocalContext.current
+                doReturn(false).`when`(object : MockedMethod<Boolean> {
+                    override fun get(): Boolean {
+                        return DateFormat.is24HourFormat(context)
+                    }
+                })
+
+                state = rememberTimePickerState()
+            }
+        } finally {
+            session.finishMocking()
+        }
+
+        assertThat(state.is24hour).isFalse()
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.P)
+    fun timePickerState_format_24h() {
+        lateinit var context: Context
+        lateinit var state: TimePickerState
+        val session = mockitoSession()
+            .spyStatic(DateFormat::class.java)
+            .strictness(Strictness.LENIENT)
+            .startMocking()
+        try {
+            rule.setMaterialContent(lightColorScheme()) {
+                context = LocalContext.current
+                doReturn(true).`when`(object : MockedMethod<Boolean> {
+                    override fun get(): Boolean {
+                        return DateFormat.is24HourFormat(context)
+                    }
+                })
+
+                state = rememberTimePickerState()
+            }
+        } finally {
+            session.finishMocking()
+        }
+
+        assertThat(state.is24hour).isTrue()
     }
 
     @Test
@@ -241,5 +315,108 @@ class TimePickerTest {
                     ignoreCase = true
                 )
             )
+    }
+
+    @Test
+    fun timeInput_semantics() {
+        val state = TimePickerState(initialHour = 14, initialMinute = 23, is24Hour = true)
+
+        rule.setMaterialContent(lightColorScheme()) {
+            TimeInput(state)
+        }
+
+        rule.onNodeWithText("14")
+            .assert(isFocusable())
+            .assert(hasImeAction(ImeAction.Next))
+            .assert(isFocused())
+
+        rule.onAllNodesWithText("23")
+            .filterToOne(isSelectable())
+            .assert(isNotSelected())
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
+    @Test
+    fun timeInput_keyboardInput_valid() {
+        val state = TimePickerState(initialHour = 10, initialMinute = 23, is24Hour = false)
+
+        rule.setMaterialContent(lightColorScheme()) {
+            TimeInput(state)
+        }
+
+        rule.onNodeWithText("10")
+            .performKeyInput {
+                pressKey(Key.Zero)
+                pressKey(Key.Four)
+            }
+
+        rule.waitForIdle()
+
+        // Switched to minutes text field
+        rule.onNodeWithText("23")
+            .performKeyInput {
+                pressKey(Key.Five)
+                pressKey(Key.Two)
+            }
+
+        assertThat(state.minute).isEqualTo(52)
+        assertThat(state.hour).isEqualTo(4)
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
+    @Test
+    fun timeInput_keyboardInput_outOfRange() {
+        val state = TimePickerState(initialHour = 10, initialMinute = 23, is24Hour = false)
+
+        rule.setMaterialContent(lightColorScheme()) {
+            TimeInput(state)
+        }
+
+        rule.onNodeWithText("10")
+            .performKeyInput {
+                pressKey(Key.Four)
+                pressKey(Key.Four)
+            }
+
+        // only the first 4 is accepted
+        assertThat(state.hour).isEqualTo(4)
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
+    @Test
+    fun timeInput_keyboardInput_Nan() {
+        val state = TimePickerState(initialHour = 10, initialMinute = 23, is24Hour = false)
+
+        rule.setMaterialContent(lightColorScheme()) {
+            TimeInput(state)
+        }
+
+        rule.onNodeWithText("10")
+            .performKeyInput {
+                pressKey(Key.A)
+                pressKey(Key.B)
+                pressKey(Key.C)
+                pressKey(Key.NumPadDot)
+                pressKey(Key.Comma)
+                pressKey(Key.NumPadComma)
+            }
+
+        // Value didn't change
+        assertThat(state.hour).isEqualTo(10)
+    }
+
+    @Test
+    fun timeInput_keyboardInput_switchAmPm() {
+        val state = TimePickerState(initialHour = 10, initialMinute = 23, is24Hour = false)
+
+        rule.setMaterialContent(lightColorScheme()) {
+            TimeInput(state)
+        }
+
+        rule.onNodeWithText("PM")
+            .performClick()
+
+        // Value didn't change
+        assertThat(state.hour).isEqualTo(22)
     }
 }

@@ -20,7 +20,6 @@ import android.app.Activity
 import android.os.Build
 import android.view.Gravity
 import android.view.View
-import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ListView
 import android.widget.TextView
@@ -32,15 +31,23 @@ import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.ReservedItemIdRangeEnd
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.padding
 import androidx.glance.text.Text
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
+import kotlin.test.assertIs
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
-import kotlin.test.assertIs
 
 @SdkSuppress(minSdkVersion = 29)
 @MediumTest
@@ -342,6 +349,41 @@ class LazyColumnTest {
         }
     }
 
+    @OptIn(FlowPreview::class)
+    @Test
+    fun clickTriggersOnlyOneLambda() = runBlocking {
+        val received = MutableStateFlow(-1)
+        TestGlanceAppWidget.uiDefinition = {
+            LazyColumn {
+                items((0..4).toList()) {
+                    Button(
+                        "$it",
+                        onClick = {
+                            launch { received.emit(it) }
+                        }
+                    )
+                }
+            }
+        }
+
+        mHostRule.startHost()
+
+        val buttons = arrayOfNulls<FrameLayout>(5)
+        waitForListViewChildren { list ->
+            for (it in 0..4) {
+                val button = list.getUnboxedListItem<FrameLayout>(it)
+                buttons[it] = assertIs<FrameLayout>(button)
+            }
+        }
+        (0..4).shuffled().forEach { index ->
+            mHostRule.onHostActivity {
+                buttons[index]!!.performClick()
+            }
+            val lastClicked = received.debounce(500.milliseconds).first()
+            assertThat(lastClicked).isEqualTo(index)
+        }
+    }
+
     private fun waitForListViewChildren(action: (list: ListView) -> Unit = {}) {
         mHostRule.onHostView { }
 
@@ -358,6 +400,10 @@ class LazyColumnTest {
 
     private inline fun <reified T : View> ListView.getUnboxedListItem(position: Int): T {
         val remoteViewFrame = assertIs<FrameLayout>(getChildAt(position))
+        // Each list item frame has an explicit focusable = true, see
+        // "Glance.AppWidget.Theme.ListChildren" style.
+        assertThat(remoteViewFrame.isFocusable).isTrue()
+
         // Android S- have a RemoteViewsAdapter$RemoteViewsFrameLayout first, Android T+ do not.
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S) {
             return remoteViewFrame.getChildAt(0).getTargetView()

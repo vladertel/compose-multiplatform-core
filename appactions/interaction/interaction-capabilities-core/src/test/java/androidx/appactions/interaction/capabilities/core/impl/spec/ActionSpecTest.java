@@ -19,15 +19,12 @@ package androidx.appactions.interaction.capabilities.core.impl.spec;
 import static com.google.common.truth.Truth.assertThat;
 
 import androidx.annotation.NonNull;
-import androidx.appactions.interaction.capabilities.core.ActionCapability;
-import androidx.appactions.interaction.capabilities.core.ActionExecutor;
 import androidx.appactions.interaction.capabilities.core.impl.BuilderOf;
 import androidx.appactions.interaction.capabilities.core.impl.converters.TypeConverters;
 import androidx.appactions.interaction.capabilities.core.properties.Entity;
 import androidx.appactions.interaction.capabilities.core.properties.EntityProperty;
 import androidx.appactions.interaction.capabilities.core.properties.EnumProperty;
 import androidx.appactions.interaction.capabilities.core.properties.StringProperty;
-import androidx.appactions.interaction.capabilities.core.testing.TestingUtils;
 import androidx.appactions.interaction.capabilities.core.testing.spec.Output;
 import androidx.appactions.interaction.capabilities.core.values.EntityValue;
 import androidx.appactions.interaction.proto.AppActionsContext.AppAction;
@@ -92,18 +89,13 @@ public final class ActionSpecTest {
                             TypeConverters::toParamValue)
                     .build();
 
-    private static ActionCapability createCapability(
-            String id, Property property, ActionExecutor<Argument, Output> executor) {
-        return new ActionCapabilityImpl<>(ACTION_SPEC, Optional.of(id), property, executor);
-    }
-
     @Test
     public void getAppAction_onlyRequiredProperty() {
         Property property =
                 Property.create(
                         EntityProperty.newBuilder()
                                 .addPossibleEntity(
-                                        Entity.newBuilder()
+                                        new Entity.Builder()
                                                 .setId("contact_2")
                                                 .setName("Donald")
                                                 .setAlternateNames("Duck")
@@ -112,13 +104,9 @@ public final class ActionSpecTest {
                                 .build(),
                         StringProperty.EMPTY);
 
-        ActionCapability capability =
-                        createCapability("id", property, TestingUtils.createFakeActionExecutor());
-
-        assertThat(capability.getAppAction())
+        assertThat(ACTION_SPEC.convertPropertyToProto(property))
                 .isEqualTo(
                         AppAction.newBuilder()
-                                .setIdentifier("id")
                                 .setName("actions.intent.TEST")
                                 .addParams(
                                         IntentParameter.newBuilder()
@@ -142,7 +130,7 @@ public final class ActionSpecTest {
                 Property.create(
                         EntityProperty.newBuilder()
                                 .addPossibleEntity(
-                                        Entity.newBuilder()
+                                        new Entity.Builder()
                                                 .setId("contact_2")
                                                 .setName("Donald")
                                                 .setAlternateNames("Duck")
@@ -151,7 +139,7 @@ public final class ActionSpecTest {
                         Optional.of(
                                 EntityProperty.newBuilder()
                                         .addPossibleEntity(
-                                                Entity.newBuilder()
+                                                new Entity.Builder()
                                                         .setId("entity1")
                                                         .setName("optional possible entity")
                                                         .build())
@@ -165,12 +153,12 @@ public final class ActionSpecTest {
                         Optional.of(
                                 EntityProperty.newBuilder()
                                         .addPossibleEntity(
-                                                Entity.newBuilder()
+                                                new Entity.Builder()
                                                         .setId("entity1")
                                                         .setName("repeated entity1")
                                                         .build())
                                         .addPossibleEntity(
-                                                Entity.newBuilder()
+                                                new Entity.Builder()
                                                         .setId("entity2")
                                                         .setName("repeated entity2")
                                                         .build())
@@ -185,13 +173,9 @@ public final class ActionSpecTest {
                                         .build()),
                         Optional.of(StringProperty.PROHIBITED));
 
-        ActionCapability capability =
-                        createCapability("id", property, TestingUtils.createFakeActionExecutor());
-
-        assertThat(capability.getAppAction())
+        assertThat(ACTION_SPEC.convertPropertyToProto(property))
                 .isEqualTo(
                         AppAction.newBuilder()
-                                .setIdentifier("id")
                                 .setName("actions.intent.TEST")
                                 .addParams(
                                         IntentParameter.newBuilder()

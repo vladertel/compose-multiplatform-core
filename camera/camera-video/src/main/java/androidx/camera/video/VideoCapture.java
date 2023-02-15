@@ -73,7 +73,6 @@ import androidx.camera.core.ResolutionSelector;
 import androidx.camera.core.SurfaceRequest;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.ViewPort;
-import androidx.camera.core.impl.CamcorderProfileProxy;
 import androidx.camera.core.impl.CameraCaptureCallback;
 import androidx.camera.core.impl.CameraCaptureResult;
 import androidx.camera.core.impl.CameraInfoInternal;
@@ -101,10 +100,10 @@ import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.camera.core.internal.ThreadConfig;
 import androidx.camera.core.processing.DefaultSurfaceProcessor;
 import androidx.camera.core.processing.SurfaceEdge;
-import androidx.camera.core.processing.SurfaceProcessorInternal;
 import androidx.camera.core.processing.SurfaceProcessorNode;
 import androidx.camera.video.StreamInfo.StreamState;
 import androidx.camera.video.impl.VideoCaptureConfig;
+import androidx.camera.video.internal.VideoValidatedEncoderProfilesProxy;
 import androidx.camera.video.internal.compat.quirk.DeviceQuirks;
 import androidx.camera.video.internal.compat.quirk.ExtraSupportedResolutionQuirk;
 import androidx.camera.video.internal.compat.quirk.ImageCaptureFailedWhenVideoCaptureIsBoundQuirk;
@@ -193,8 +192,6 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     private SurfaceRequest mSurfaceRequest;
     @SuppressWarnings("WeakerAccess") // Synthetic access
     VideoOutput.SourceState mSourceState = VideoOutput.SourceState.INACTIVE;
-    @Nullable
-    private SurfaceProcessorInternal mSurfaceProcessor;
     @Nullable
     private SurfaceProcessorNode mNode;
     @Nullable
@@ -308,21 +305,6 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     public void setViewPortCropRect(@NonNull Rect viewPortCropRect) {
         super.setViewPortCropRect(viewPortCropRect);
         sendTransformationInfoIfReady();
-    }
-
-    /**
-     * Sets a {@link SurfaceProcessorInternal}.
-     *
-     * <p>The processor is used to setup post-processing pipeline.
-     *
-     * <p>Note: the value will only be used when VideoCapture is bound. Calling this method after
-     * VideoCapture is bound takes no effect until VideoCapture is rebound.
-     *
-     * @hide
-     */
-    @RestrictTo(Scope.LIBRARY_GROUP)
-    public void setProcessor(@Nullable SurfaceProcessorInternal surfaceProcessor) {
-        mSurfaceProcessor = surfaceProcessor;
     }
 
     /**
@@ -719,10 +701,10 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
     @Nullable
     private SurfaceProcessorNode createNodeIfNeeded(boolean isCropNeeded) {
-        if (mSurfaceProcessor != null || ENABLE_SURFACE_PROCESSING_BY_QUIRK || isCropNeeded) {
+        if (getEffect() != null || ENABLE_SURFACE_PROCESSING_BY_QUIRK || isCropNeeded) {
             Logger.d(TAG, "Surface processing is enabled.");
             return new SurfaceProcessorNode(requireNonNull(getCamera()),
-                    mSurfaceProcessor != null ? mSurfaceProcessor :
+                    getEffect() != null ? getEffect().createSurfaceProcessorInternal() :
                             DefaultSurfaceProcessor.Factory.newInstance());
         }
         return null;
@@ -897,11 +879,11 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             return mVideoEncoderInfo;
         }
 
-        // Find the nearest CamcorderProfile
-        CamcorderProfileProxy camcorderProfileProxy =
-                videoCapabilities.findHighestSupportedCamcorderProfileFor(resolution);
+        // Find the nearest EncoderProfiles
+        VideoValidatedEncoderProfilesProxy encoderProfiles =
+                videoCapabilities.findHighestSupportedEncoderProfilesFor(resolution);
         VideoEncoderInfo videoEncoderInfo = resolveVideoEncoderInfo(videoEncoderInfoFinder,
-                camcorderProfileProxy, mediaSpec, resolution, targetFps);
+                encoderProfiles, mediaSpec, resolution, targetFps);
         if (videoEncoderInfo == null) {
             // If VideoCapture cannot find videoEncoderInfo, it means that VideoOutput should
             // also not be able to find the encoder. VideoCapture will not handle this situation
@@ -910,9 +892,9 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             return null;
         }
 
-        Size profileSize = camcorderProfileProxy != null ? new Size(
-                camcorderProfileProxy.getVideoFrameWidth(),
-                camcorderProfileProxy.getVideoFrameHeight()) : null;
+        Size profileSize = encoderProfiles != null ? new Size(
+                encoderProfiles.getDefaultVideoProfile().getWidth(),
+                encoderProfiles.getDefaultVideoProfile().getHeight()) : null;
         videoEncoderInfo = VideoEncoderInfoWrapper.from(videoEncoderInfo, profileSize);
 
         // Cache the VideoEncoderInfo as it should be the same when recreating the pipeline.
@@ -926,12 +908,12 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     @Nullable
     private static VideoEncoderInfo resolveVideoEncoderInfo(
             @NonNull Function<VideoEncoderConfig, VideoEncoderInfo> videoEncoderInfoFinder,
-            @Nullable CamcorderProfileProxy camcorderProfileProxy,
+            @Nullable VideoValidatedEncoderProfilesProxy encoderProfiles,
             @NonNull MediaSpec mediaSpec,
             @NonNull Size resolution,
             @NonNull Range<Integer> targetFps) {
         // Resolve the VideoEncoderConfig
-        MimeInfo videoMimeInfo = resolveVideoMimeInfo(mediaSpec, camcorderProfileProxy);
+        MimeInfo videoMimeInfo = resolveVideoMimeInfo(mediaSpec, encoderProfiles);
         VideoEncoderConfig videoEncoderConfig = resolveVideoEncoderConfig(
                 videoMimeInfo,
                 // Timebase won't affect the found EncoderInfo so give a arbitrary one.
@@ -1117,6 +1099,19 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     @NonNull
     SurfaceRequest getSurfaceRequest() {
         return requireNonNull(mSurfaceRequest);
+    }
+
+    /**
+     * @inheritDoc
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
+    @Override
+    public Set<Integer> getSupportedEffectTargets() {
+        Set<Integer> targets = new HashSet<>();
+        targets.add(VIDEO_CAPTURE);
+        return targets;
     }
 
     /**
