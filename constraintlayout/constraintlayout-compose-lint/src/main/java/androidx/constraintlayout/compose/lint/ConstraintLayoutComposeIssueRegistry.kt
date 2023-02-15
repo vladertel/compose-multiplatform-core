@@ -30,7 +30,9 @@ class ConstraintLayoutComposeIssueRegistry : IssueRegistry() {
     override val minApi = CURRENT_API
 
     override val issues = listOf(
-        ConstraintLayoutDslDetector.IncorrectReferencesDeclarationIssue
+        ConstraintLayoutDslDetector.IncorrectReferencesDeclarationIssue,
+        ConstraintLayoutDslDetector.IncorrectMatchParentUsageIssue,
+        ConstraintLayoutDslDetector.IncorrectChainMarginsUsageIssue
     )
 
     override val vendor = Vendor(

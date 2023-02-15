@@ -16,6 +16,8 @@
 
 package androidx.camera.core;
 
+import static androidx.camera.core.impl.utils.TransformUtils.within360;
+
 import android.annotation.SuppressLint;
 import android.graphics.Matrix;
 import android.graphics.Rect;
@@ -44,12 +46,14 @@ import androidx.camera.core.impl.SessionConfig;
 import androidx.camera.core.impl.StreamSpec;
 import androidx.camera.core.impl.UseCaseConfig;
 import androidx.camera.core.impl.UseCaseConfigFactory;
+import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.camera.core.internal.TargetConfig;
 import androidx.camera.core.internal.utils.UseCaseConfigUtil;
 import androidx.camera.core.streamsharing.StreamSharing;
 import androidx.core.util.Preconditions;
 import androidx.lifecycle.LifecycleOwner;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -144,6 +148,9 @@ public abstract class UseCase {
 
     @GuardedBy("mCameraLock")
     private CameraInternal mCamera;
+
+    @Nullable
+    private CameraEffect mEffect;
 
     ////////////////////////////////////////////////////////////////////////////////////////////
     // [UseCase attached dynamic] - Can change but is only available when the UseCase is attached.
@@ -342,15 +349,36 @@ public abstract class UseCase {
     }
 
     /**
-     * Gets the relative rotation degrees based on the target rotation.
+     * Gets the relative rotation degrees without mirroring.
      *
      * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @IntRange(from = 0, to = 359)
     protected int getRelativeRotation(@NonNull CameraInternal cameraInternal) {
-        return cameraInternal.getCameraInfoInternal().getSensorRotationDegrees(
+        return getRelativeRotation(cameraInternal, /*requireMirroring=*/false);
+    }
+
+    /**
+     * Gets the relative rotation degrees given whether the output should be mirrored.
+     *
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @IntRange(from = 0, to = 359)
+    protected int getRelativeRotation(@NonNull CameraInternal cameraInternal,
+            boolean requireMirroring) {
+        int rotation = cameraInternal.getCameraInfoInternal().getSensorRotationDegrees(
                 getTargetRotationInternal());
+        // Parent UseCase always mirror the stream if the child requires it. No camera transform
+        // means that the stream is copied by a parent, and if the child also requires mirroring,
+        // we know that the stream has been mirrored.
+        boolean inputStreamMirrored = !mHasCameraTransform && requireMirroring;
+        if (inputStreamMirrored) {
+            // Flip rotation if the stream has been mirrored.
+            rotation = within360(-rotation);
+        }
+        return rotation;
     }
 
     /**
@@ -768,6 +796,27 @@ public abstract class UseCase {
     }
 
     /**
+     * Sets the {@link CameraEffect} associated with this use case.
+     *
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public void setEffect(@Nullable CameraEffect effect) {
+        mEffect = effect;
+    }
+
+    /**
+     * Gets the {@link CameraEffect} associated with this use case.
+     *
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Nullable
+    public CameraEffect getEffect() {
+        return mEffect;
+    }
+
+    /**
      * Sets whether the producer writes camera transform to the {@link Surface}.
      *
      * @hide
@@ -788,8 +837,6 @@ public abstract class UseCase {
     public boolean getHasCameraTransform() {
         return mHasCameraTransform;
     }
-
-
 
     /**
      * Gets the view port crop rect.
@@ -881,6 +928,22 @@ public abstract class UseCase {
         int rotationDegrees = getRelativeRotation(camera);
 
         return ResolutionInfo.create(resolution, cropRect, rotationDegrees);
+    }
+
+    /**
+     * Returns the supported {@link CameraEffect} targets.
+     *
+     * <p>{@link CameraUseCaseAdapter} sets {@link CameraEffect} on this {@link UseCase} if the
+     * returned set contains the {@link CameraEffect#getTargets()}.
+     *
+     * <p>Returns an empty set if this {@link UseCase} does not support effects.
+     *
+     * @hide
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
+    public Set<Integer> getSupportedEffectTargets() {
+        return Collections.emptySet();
     }
 
     enum State {

@@ -27,6 +27,8 @@ import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.AeMode
 import androidx.camera.camera2.pipe.Result3A
 import androidx.camera.camera2.pipe.integration.adapter.asListenableFuture
+import androidx.camera.camera2.pipe.integration.adapter.propagateTo
+import androidx.camera.camera2.pipe.integration.compat.ZoomCompat
 import androidx.camera.camera2.pipe.integration.config.CameraScope
 import androidx.camera.core.CameraControl.OperationCanceledException
 import androidx.camera.core.FocusMeteringAction
@@ -53,6 +55,7 @@ class FocusMeteringControl @Inject constructor(
     private val cameraProperties: CameraProperties,
     private val state3AControl: State3AControl,
     private val threads: UseCaseThreads,
+    private val zoomCompat: ZoomCompat,
 ) : UseCaseCameraControl, UseCaseCamera.RunningUseCasesChangeListener {
     private var _useCaseCamera: UseCaseCamera? = null
 
@@ -80,15 +83,12 @@ class FocusMeteringControl @Inject constructor(
         cancelFocusAndMeteringAsync()
     }
 
-    @Volatile
     private var previewAspectRatio: Rational? = null
-    private val sensorRect by lazy {
-        // TODO("b/262225455"): use the actual crop sensor region like in camera-camera2
-        cameraProperties.metadata[CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE]!!
-    }
+    private val cropSensorRegion
+        get() = zoomCompat.getCropSensorRegion()
 
     private val defaultAspectRatio: Rational
-        get() = previewAspectRatio ?: Rational(sensorRect.width(), sensorRect.height())
+        get() = previewAspectRatio ?: Rational(cropSensorRegion.width(), cropSensorRegion.height())
 
     private val maxAfRegionCount =
         cameraProperties.metadata.getOrDefault(CameraCharacteristics.CONTROL_MAX_REGIONS_AF, 0)
@@ -114,19 +114,19 @@ class FocusMeteringControl @Inject constructor(
                 val aeRectangles = meteringRegionsFromMeteringPoints(
                     action.meteringPointsAe,
                     maxAeRegionCount,
-                    sensorRect,
+                    cropSensorRegion,
                     defaultAspectRatio
                 )
                 val afRectangles = meteringRegionsFromMeteringPoints(
                     action.meteringPointsAf,
                     maxAfRegionCount,
-                    sensorRect,
+                    cropSensorRegion,
                     defaultAspectRatio
                 )
                 val awbRectangles = meteringRegionsFromMeteringPoints(
                     action.meteringPointsAwb,
                     maxAwbRegionCount,
-                    sensorRect,
+                    cropSensorRegion,
                     defaultAspectRatio
                 )
                 if (aeRectangles.isEmpty() && afRectangles.isEmpty() && awbRectangles.isEmpty()) {
@@ -161,7 +161,7 @@ class FocusMeteringControl @Inject constructor(
                     } else {
                         if (isCancelEnabled) {
                             if (signal.isActive) {
-                                cancelFocusAndMeteringNow(useCaseCamera, signal)
+                                cancelFocusAndMeteringNowAsync(useCaseCamera, signal)
                             }
                         } else {
                             signal.complete(FocusMeteringResult.create(false))
@@ -190,19 +190,19 @@ class FocusMeteringControl @Inject constructor(
         val rectanglesAe = meteringRegionsFromMeteringPoints(
             action.meteringPointsAe,
             maxAeRegionCount,
-            sensorRect,
+            cropSensorRegion,
             defaultAspectRatio
         )
         val rectanglesAf = meteringRegionsFromMeteringPoints(
             action.meteringPointsAf,
             maxAfRegionCount,
-            sensorRect,
+            cropSensorRegion,
             defaultAspectRatio
         )
         val rectanglesAwb = meteringRegionsFromMeteringPoints(
             action.meteringPointsAwb,
             maxAwbRegionCount,
-            sensorRect,
+            cropSensorRegion,
             defaultAspectRatio
         )
         return rectanglesAe.isNotEmpty() || rectanglesAf.isNotEmpty() || rectanglesAwb.isNotEmpty()
@@ -231,7 +231,7 @@ class FocusMeteringControl @Inject constructor(
             threads.sequentialScope.launch {
                 cancelSignal?.setCancelException("Cancelled by another cancelFocusAndMetering()")
                 cancelSignal = signal
-                signal.complete(cancelFocusAndMeteringNow(useCaseCamera, updateSignal))
+                cancelFocusAndMeteringNowAsync(useCaseCamera, updateSignal).propagateTo(signal)
             }
         } ?: run {
             signal.completeExceptionally(OperationCanceledException("Camera is not active."))
@@ -240,13 +240,13 @@ class FocusMeteringControl @Inject constructor(
         return signal
     }
 
-    private suspend fun cancelFocusAndMeteringNow(
+    private suspend fun cancelFocusAndMeteringNowAsync(
         useCaseCamera: UseCaseCamera,
         signalToCancel: CompletableDeferred<FocusMeteringResult>?,
-    ): Result3A {
+    ): Deferred<Result3A> {
         signalToCancel?.setCancelException("Cancelled by cancelFocusAndMetering()")
         state3AControl.preferredFocusMode = null
-        return useCaseCamera.requestControl.cancelFocusAndMeteringAsync().await()
+        return useCaseCamera.requestControl.cancelFocusAndMeteringAsync()
     }
 
     private fun <T> CompletableDeferred<T>.setCancelException(message: String) {
@@ -287,8 +287,6 @@ class FocusMeteringControl @Inject constructor(
             val cropRegionAspectRatio =
                 Rational(cropSensorRegion.width(), cropSensorRegion.height())
 
-            // TODO(sushilnath@): limit the number of metering regions to what is supported by the
-            // device.
             for (meteringPoint in meteringPoints) {
                 // Only enable at most maxRegionCount.
                 if (meteringRegions.size >= maxRegionCount) {
@@ -297,8 +295,6 @@ class FocusMeteringControl @Inject constructor(
                 if (!isValid(meteringPoint)) {
                     continue
                 }
-                // TODO(sushilnath@): Use the zoom based crop region aspect ratio instead of sensor
-                // active array aspect ratio.
                 val adjustedPoint: PointF =
                     getFovAdjustedPoint(meteringPoint, cropRegionAspectRatio, defaultAspectRatio)
                 val meteringRectangle: MeteringRectangle =

@@ -62,9 +62,6 @@ package androidx.work {
     property public abstract androidx.work.Configuration workManagerConfiguration;
   }
 
-  public final class ConfigurationKt {
-  }
-
   public final class Constraints {
     ctor public Constraints(optional @androidx.room.ColumnInfo(name="required_network_type") androidx.work.NetworkType requiredNetworkType, optional @androidx.room.ColumnInfo(name="requires_charging") boolean requiresCharging, optional @androidx.room.ColumnInfo(name="requires_device_idle") boolean requiresDeviceIdle, optional @androidx.room.ColumnInfo(name="requires_battery_not_low") boolean requiresBatteryNotLow, optional @androidx.room.ColumnInfo(name="requires_storage_not_low") boolean requiresStorageNotLow, optional @androidx.room.ColumnInfo(name="trigger_content_update_delay") long contentTriggerUpdateDelayMillis, optional @androidx.room.ColumnInfo(name="trigger_max_content_delay") long contentTriggerMaxDelayMillis, optional @androidx.room.ColumnInfo(name="content_uri_triggers") java.util.Set<androidx.work.Constraints.ContentUriTrigger> contentUriTriggers);
     ctor public Constraints(androidx.work.Constraints other);
@@ -201,9 +198,6 @@ package androidx.work {
     method public abstract androidx.work.InputMerger? createInputMerger(String className);
   }
 
-  public final class InputMergerKt {
-  }
-
   public abstract class ListenableWorker {
     ctor public ListenableWorker(android.content.Context, androidx.work.WorkerParameters);
     method public final android.content.Context getApplicationContext();
@@ -337,7 +331,13 @@ package androidx.work {
   }
 
   public final class WorkInfo {
+    ctor public WorkInfo(java.util.UUID id, androidx.work.WorkInfo.State state, java.util.Set<java.lang.String> tags, optional androidx.work.Data outputData, optional androidx.work.Data progress, optional int runAttemptCount, optional int generation, optional androidx.work.Constraints constraints);
     ctor public WorkInfo(java.util.UUID id, androidx.work.WorkInfo.State state, java.util.Set<java.lang.String> tags, optional androidx.work.Data outputData, optional androidx.work.Data progress, optional int runAttemptCount, optional int generation);
+    ctor public WorkInfo(java.util.UUID id, androidx.work.WorkInfo.State state, java.util.Set<java.lang.String> tags, optional androidx.work.Data outputData, optional androidx.work.Data progress, optional int runAttemptCount);
+    ctor public WorkInfo(java.util.UUID id, androidx.work.WorkInfo.State state, java.util.Set<java.lang.String> tags, optional androidx.work.Data outputData, optional androidx.work.Data progress);
+    ctor public WorkInfo(java.util.UUID id, androidx.work.WorkInfo.State state, java.util.Set<java.lang.String> tags, optional androidx.work.Data outputData);
+    ctor public WorkInfo(java.util.UUID id, androidx.work.WorkInfo.State state, java.util.Set<java.lang.String> tags);
+    method public androidx.work.Constraints getConstraints();
     method public int getGeneration();
     method public java.util.UUID getId();
     method public androidx.work.Data getOutputData();
@@ -345,6 +345,7 @@ package androidx.work {
     method @IntRange(from=0L) public int getRunAttemptCount();
     method public androidx.work.WorkInfo.State getState();
     method public java.util.Set<java.lang.String> getTags();
+    property public final androidx.work.Constraints constraints;
     property public final int generation;
     property public final java.util.UUID id;
     property public final androidx.work.Data outputData;

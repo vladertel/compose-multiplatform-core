@@ -504,6 +504,11 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    private long getCurrentEstimatedPosition(@NonNull PlaylistItem item) {
+        return item.getPosition() + (mSessionManager.isPaused()
+                ? 0 : (SystemClock.elapsedRealtime() - item.getTimestamp()));
+    }
+
     @NonNull
     private MediaRouterParams getRouterParams() {
         return new MediaRouterParams.Builder()
@@ -634,8 +639,7 @@ public class MainActivity extends AppCompatActivity {
 
             PlaylistItem item = getCheckedPlaylistItem();
             if (item != null) {
-                long pos = item.getPosition() + (mSessionManager.isPaused()
-                        ? 0 : (SystemClock.elapsedRealtime() - item.getTimestamp()));
+                long pos = getCurrentEstimatedPosition(item);
                 mSessionManager.suspend(pos);
             }
             if (isPresentationApiSupported()) {
@@ -681,7 +685,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Controller Dialog Fragment for the media router dialog.
      */
-    private static class ControllerDialogFragment extends MediaRouteControllerDialogFragment {
+    public static class ControllerDialogFragment extends MediaRouteControllerDialogFragment {
         private MainActivity mMainActivity;
         private MediaRouteControllerDialog mControllerDialog;
         private CheckBox mUseDefaultControlCheckBox;

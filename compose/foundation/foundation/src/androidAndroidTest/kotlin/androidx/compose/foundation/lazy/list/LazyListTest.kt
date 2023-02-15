@@ -721,9 +721,9 @@ class LazyListTest(orientation: Orientation) : BaseLazyListTestWithOrientation(o
 
         // and has no children
         rule.onNodeWithTag("1")
-            .assertDoesNotExist()
+            .assertIsNotPlaced()
         rule.onNodeWithTag("2")
-            .assertDoesNotExist()
+            .assertIsNotPlaced()
     }
 
     @Test
@@ -2000,6 +2000,7 @@ class LazyListTest(orientation: Orientation) : BaseLazyListTestWithOrientation(o
             .assertStartPositionInRootIsEqualTo(0.dp)
     }
 
+    @SdkSuppress(maxSdkVersion = 32) // b/269178188
     @Test
     fun assertVelocityCalculationIsSimilar_witHistoricalValues() {
         // arrange

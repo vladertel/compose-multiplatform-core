@@ -949,6 +949,7 @@ public class GridWidgetTest {
         verifyBeginAligned();
     }
 
+    @Ignore // b/269352002
     @Test
     public void testRedundantAppendRemove() throws Throwable {
         Intent intent = new Intent();
@@ -2105,6 +2106,7 @@ public class GridWidgetTest {
         assertFalse(scrolled[0]);
     }
 
+    @Ignore // b/268680302
     @Test
     public void testItemMovedHorizontal() throws Throwable {
         Intent intent = new Intent();
@@ -2251,6 +2253,7 @@ public class GridWidgetTest {
         assertEquals(topPadding, mGridView.findViewHolderForAdapterPosition(0).itemView.getTop());
     }
 
+    @Ignore // b/268680302
     @Test
     public void testItemMovedVertical() throws Throwable {
 

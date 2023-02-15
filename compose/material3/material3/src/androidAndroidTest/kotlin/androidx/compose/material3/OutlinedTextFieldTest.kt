@@ -206,7 +206,7 @@ class OutlinedTextFieldTest {
                         value = "",
                         onValueChange = {},
                         colors = TextFieldDefaults.outlinedTextFieldColors(
-                            textColor = Color.White,
+                            unfocusedTextColor = Color.White,
                             unfocusedBorderColor = Color.White
                         ),
                         shape = RectangleShape
@@ -1225,6 +1225,7 @@ class OutlinedTextFieldTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.P)
     fun testOutlinedTextField_imeActionAndKeyboardTypePropagatedDownstream() {
         val platformTextInputService = mock<PlatformTextInputService>()
         val textInputService = TextInputService(platformTextInputService)

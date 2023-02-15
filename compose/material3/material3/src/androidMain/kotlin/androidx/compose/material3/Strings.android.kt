@@ -93,6 +93,12 @@ internal actual fun getString(string: Strings): String {
         Strings.DatePickerTodayDescription -> resources.getString(
             androidx.compose.material3.R.string.date_picker_today_description
         )
+        Strings.DatePickerScrollToShowLaterYears -> resources.getString(
+            androidx.compose.material3.R.string.date_picker_scroll_to_later_years
+        )
+        Strings.DatePickerScrollToShowEarlierYears -> resources.getString(
+            androidx.compose.material3.R.string.date_picker_scroll_to_earlier_years
+        )
         Strings.DateInputTitle -> resources.getString(
             androidx.compose.material3.R.string.date_input_title
         )
@@ -123,6 +129,27 @@ internal actual fun getString(string: Strings): String {
         Strings.DatePickerSwitchToInputMode -> resources.getString(
             androidx.compose.material3.R.string.date_picker_switch_to_input_mode
         )
+        Strings.DateRangePickerTitle -> resources.getString(
+            androidx.compose.material3.R.string.date_range_picker_title
+        )
+        Strings.DateRangePickerStartHeadline -> resources.getString(
+            androidx.compose.material3.R.string.date_range_picker_start_headline
+        )
+        Strings.DateRangePickerEndHeadline -> resources.getString(
+            androidx.compose.material3.R.string.date_range_picker_end_headline
+        )
+        Strings.DateRangePickerScrollToShowNextMonth -> resources.getString(
+            androidx.compose.material3.R.string.date_range_picker_scroll_to_next_month
+        )
+        Strings.DateRangePickerScrollToShowPreviousMonth -> resources.getString(
+            androidx.compose.material3.R.string.date_range_picker_scroll_to_previous_month
+        )
+        Strings.DateRangeInputTitle -> resources.getString(
+            androidx.compose.material3.R.string.date_range_input_title
+        )
+        Strings.DateRangeInputInvalidRangeInput -> resources.getString(
+            androidx.compose.material3.R.string.date_range_input_invalid_range_input
+        )
         Strings.TooltipLongPressLabel -> resources.getString(
             androidx.compose.material3.R.string.tooltip_long_press_label
         )
@@ -142,6 +169,10 @@ internal actual fun getString(string: Strings): String {
             androidx.compose.material3.R.string.time_picker_minute_suffix)
         Strings.TimePicker24HourSuffix -> resources.getString(
             androidx.compose.material3.R.string.time_picker_hour_24h_suffix)
+        Strings.TimePickerHour -> resources.getString(
+            androidx.compose.material3.R.string.time_picker_hour)
+        Strings.TimePickerMinute -> resources.getString(
+            androidx.compose.material3.R.string.time_picker_minute)
         else -> ""
     }
 }

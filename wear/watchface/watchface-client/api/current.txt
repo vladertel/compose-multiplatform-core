@@ -68,9 +68,6 @@ package androidx.wear.watchface.client {
     property public final boolean hasLowBitAmbient;
   }
 
-  public final class DeviceConfigKt {
-  }
-
   public final class DisconnectReasons {
     field public static final int ENGINE_DETACHED = 2; // 0x2
     field public static final int ENGINE_DIED = 1; // 0x1
@@ -98,9 +95,6 @@ package androidx.wear.watchface.client {
     property public final boolean shouldCommitChanges;
     property public final androidx.wear.watchface.style.UserStyleData userStyle;
     property public final androidx.wear.watchface.client.WatchFaceId watchFaceId;
-  }
-
-  public final class EditorStateKt {
   }
 
   public interface HeadlessWatchFaceClient extends java.lang.AutoCloseable {
@@ -196,7 +190,7 @@ package androidx.wear.watchface.client {
     method @kotlin.jvm.Throws(exceptionClasses=RemoteException::class) public androidx.wear.watchface.client.EditorServiceClient getEditorServiceClient() throws android.os.RemoteException;
     method @kotlin.jvm.Throws(exceptionClasses=RemoteException::class) public androidx.wear.watchface.client.InteractiveWatchFaceClient? getInteractiveWatchFaceClientInstance(String instanceId) throws android.os.RemoteException;
     method @Deprecated @kotlin.jvm.Throws(exceptionClasses=RemoteException::class) public suspend Object? getOrCreateInteractiveWatchFaceClient(String id, androidx.wear.watchface.client.DeviceConfig deviceConfig, androidx.wear.watchface.client.WatchUiState watchUiState, androidx.wear.watchface.style.UserStyleData? userStyle, java.util.Map<java.lang.Integer,? extends androidx.wear.watchface.complications.data.ComplicationData>? slotIdToComplicationData, kotlin.coroutines.Continuation<? super androidx.wear.watchface.client.InteractiveWatchFaceClient>) throws android.os.RemoteException;
-    method @kotlin.jvm.Throws(exceptionClasses=RemoteException::class) public default suspend Object? getOrCreateInteractiveWatchFaceClient(String instanceId, androidx.wear.watchface.client.DeviceConfig deviceConfig, androidx.wear.watchface.client.WatchUiState watchUiState, androidx.wear.watchface.style.UserStyleData? userStyle, java.util.Map<java.lang.Integer,? extends androidx.wear.watchface.complications.data.ComplicationData>? slotIdToComplicationData, java.util.concurrent.Executor previewImageUpdateRequestedExecutor, java.util.function.Consumer<java.lang.String> previewImageUpdateRequestedListener, kotlin.coroutines.Continuation<? super androidx.wear.watchface.client.InteractiveWatchFaceClient>) throws android.os.RemoteException;
+    method @kotlin.jvm.Throws(exceptionClasses=RemoteException::class) public default suspend Object? getOrCreateInteractiveWatchFaceClient(String instanceId, androidx.wear.watchface.client.DeviceConfig deviceConfig, androidx.wear.watchface.client.WatchUiState watchUiState, androidx.wear.watchface.style.UserStyleData? userStyle, java.util.Map<java.lang.Integer,? extends androidx.wear.watchface.complications.data.ComplicationData>? slotIdToComplicationData, java.util.concurrent.Executor previewImageUpdateRequestedExecutor, androidx.core.util.Consumer<java.lang.String> previewImageUpdateRequestedListener, kotlin.coroutines.Continuation<? super androidx.wear.watchface.client.InteractiveWatchFaceClient>) throws android.os.RemoteException;
     method public default boolean hasComplicationDataCache();
     field public static final androidx.wear.watchface.client.WatchFaceControlClient.Companion Companion;
   }
@@ -211,9 +205,6 @@ package androidx.wear.watchface.client {
 
   public static final class WatchFaceControlClient.ServiceStartFailureException extends java.lang.Exception {
     ctor public WatchFaceControlClient.ServiceStartFailureException(optional String message);
-  }
-
-  public final class WatchFaceExceptionKt {
   }
 
   public final class WatchFaceId {

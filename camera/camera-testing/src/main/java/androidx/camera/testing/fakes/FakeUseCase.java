@@ -32,6 +32,8 @@ import androidx.camera.core.impl.UseCaseConfigFactory;
 import androidx.camera.core.impl.UseCaseConfigFactory.CaptureType;
 import androidx.core.util.Supplier;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -46,6 +48,7 @@ public class FakeUseCase extends UseCase {
     private boolean mMergedConfigRetrieved = false;
     private int mPipelineCreationCount = 0;
     private Supplier<SessionConfig> mSessionConfigSupplier;
+    private Set<Integer> mEffectTargets = Collections.emptySet();
 
     /**
      * Creates a new instance of a {@link FakeUseCase} with a given configuration and capture type.
@@ -145,6 +148,22 @@ public class FakeUseCase extends UseCase {
         }
     }
 
+    /**
+     * Sets effect targets.
+     */
+    public void setSupportedEffectTargets(@NonNull Set<Integer> effectTargets) {
+        mEffectTargets = effectTargets;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @NonNull
+    @Override
+    public Set<Integer> getSupportedEffectTargets() {
+        return mEffectTargets;
+    }
+
 
     /**
      * Returns true if {@link #onUnbind()} has been called previously.
@@ -179,5 +198,40 @@ public class FakeUseCase extends UseCase {
      */
     public void setSessionConfigSupplier(@NonNull Supplier<SessionConfig> sessionConfigSupplier) {
         mSessionConfigSupplier = sessionConfigSupplier;
+    }
+
+    /**
+     * Calls the protected method {@link UseCase#updateSessionConfig}.
+     */
+    public void updateSessionConfigForTesting(@NonNull SessionConfig sessionConfig) {
+        updateSessionConfig(sessionConfig);
+    }
+
+    /**
+     * Calls the protected method {@link UseCase#notifyActive()}.
+     */
+    public void notifyActiveForTesting() {
+        notifyActive();
+    }
+
+    /**
+     * Calls the protected method {@link UseCase#notifyInactive()}.
+     */
+    public void notifyInactiveForTesting() {
+        notifyInactive();
+    }
+
+    /**
+     * Calls the protected method {@link UseCase#notifyUpdated()}.
+     */
+    public void notifyUpdatedForTesting() {
+        notifyUpdated();
+    }
+
+    /**
+     * Calls the protected method {@link UseCase#notifyReset()}.
+     */
+    public void notifyResetForTesting() {
+        notifyReset();
     }
 }

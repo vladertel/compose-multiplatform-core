@@ -38,18 +38,19 @@ class ActivityStack internal constructor(
      * process(es), [activitiesInProcess] will return an empty list, but this method will return
      * `false`.
      */
-    val isEmpty: Boolean = false
+    val isEmpty: Boolean
 ) {
 
+    /**
+     * Whether this [ActivityStack] contains the [activity].
+     */
     operator fun contains(activity: Activity): Boolean {
         return activitiesInProcess.contains(activity)
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as ActivityStack
+        if (other !is ActivityStack) return false
 
         if (activitiesInProcess != other.activitiesInProcess) return false
         if (isEmpty != other.isEmpty) return false
@@ -63,11 +64,9 @@ class ActivityStack internal constructor(
         return result
     }
 
-    override fun toString(): String {
-        return buildString {
-            append("ActivityStack{")
-            append("activitiesInProcess=$activitiesInProcess")
-            append("isEmpty=$isEmpty}")
-        }
-    }
+    override fun toString(): String =
+        "ActivityStack{" +
+            "activitiesInProcess=$activitiesInProcess" +
+            ", isEmpty=$isEmpty" +
+            "}"
 }

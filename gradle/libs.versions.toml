@@ -73,7 +73,9 @@ androidLintChecksMin = { module = "com.android.tools.lint:lint-checks", version.
 androidLintTests = { module = "com.android.tools.lint:lint-tests", version.ref = "androidLint" }
 androidToolsCommon = { module = "com.android.tools:common", version.ref = "androidLint" }
 androidToolsNinepatch = { module = "com.android.tools:ninepatch", version.ref = "androidLint" }
+androidToolsRepository= { module = "com.android.tools:repository", version.ref = "androidLint" }
 androidToolsSdkCommon = { module = "com.android.tools:sdk-common", version.ref = "androidLint" }
+androidToolsAnalyticsProtos = { module = "com.android.tools.analytics-library:protos", version.ref = "androidLint" }
 autoCommon = { module = "com.google.auto:auto-common", version = "0.11" }
 atomicFu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "atomicFu" }
 atomicFuPluginz = { module = "org.jetbrains.kotlinx:atomicfu-gradle-plugin", version.ref = "atomicFu" }
@@ -100,6 +102,7 @@ dagger = { module = "com.google.dagger:dagger", version.ref = "dagger" }
 daggerCompiler = { module = "com.google.dagger:dagger-compiler", version.ref = "dagger" }
 dexmakerMockito = { module = "com.linkedin.dexmaker:dexmaker-mockito", version.ref = "dexmaker" }
 dexmakerMockitoInline = { module = "com.linkedin.dexmaker:dexmaker-mockito-inline", version.ref = "dexmaker" }
+dexmakerMockitoInlineExtended = { module = "com.linkedin.dexmaker:dexmaker-mockito-inline-extended", version.ref = "dexmaker" }
 dexMemberList = { module = "com.jakewharton.dex:dex-member-list", version = "4.1.1" }
 dokkaCli = { module = "org.jetbrains.dokka:dokka-cli", version.ref = "dokka" }
 dokkaAnalysis = { module = "org.jetbrains.dokka:dokka-analysis", version.ref = "dokka" }
@@ -234,7 +237,7 @@ protobufKotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref =
 reactiveStreams = { module = "org.reactivestreams:reactive-streams", version = "1.0.0" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 retrofitConverterWire = { module = "com.squareup.retrofit2:converter-wire", version.ref = "retrofit" }
-robolectric = { module = "org.robolectric:robolectric", version = "4.9-alpha-1" }
+robolectric = { module = "org.robolectric:robolectric", version = "4.9.2" }
 rxjava2 = { module = "io.reactivex.rxjava2:rxjava", version = "2.2.9" }
 rxjava3 = { module = "io.reactivex.rxjava3:rxjava", version = "3.0.0" }
 shadow = { module = "gradle.plugin.com.github.johnrengelman:shadow", version = "7.1.1" }

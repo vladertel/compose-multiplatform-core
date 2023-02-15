@@ -90,7 +90,6 @@ import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.concurrent.futures.CallbackToFutureAdapter.Completer;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -180,7 +179,7 @@ public final class TaskCapabilityImplTest {
             EMPTY_CONFIRM_LISTENER = Optional.empty();
     private static final OnDialogFinishListener<Argument, Output> EMPTY_FINISH_LISTENER =
             (finalArgs) ->
-                    Futures.immediateFuture(ExecutionResult.<Output>getDefaultInstanceWithOutput());
+                    Futures.immediateFuture(ExecutionResult.<Output>getDefaultInstance());
 
     private static boolean groundingPredicate(ParamValue paramValue) {
         return !paramValue.hasIdentifier();
@@ -846,7 +845,7 @@ public final class TaskCapabilityImplTest {
         OnDialogFinishListener<Argument, Output> finishListener =
                 (argument) ->
                         Futures.immediateFuture(
-                                ExecutionResult.<Output>newBuilderWithOutput()
+                                new ExecutionResult.Builder<Output>()
                                         .setOutput(
                                                 Output.builder()
                                                         .setOptionalStringField("bar")
@@ -1095,7 +1094,7 @@ public final class TaskCapabilityImplTest {
         OnReadyToConfirmListenerInternal<Confirmation> onReadyToConfirmListener =
                 (args) ->
                         Futures.immediateFuture(
-                                ConfirmationOutput.<Confirmation>newBuilderWithConfirmation()
+                                new ConfirmationOutput.Builder<Confirmation>()
                                         .setConfirmation(
                                                 Confirmation.builder()
                                                         .setOptionalStringField("bar")
@@ -1124,7 +1123,7 @@ public final class TaskCapabilityImplTest {
         OnReadyToConfirmListenerInternal<Confirmation> onReadyToConfirmListener =
                 (args) ->
                         Futures.immediateFuture(
-                                ConfirmationOutput.<Confirmation>newBuilderWithConfirmation()
+                                new ConfirmationOutput.Builder<Confirmation>()
                                         .setConfirmation(
                                                 Confirmation.builder()
                                                         .setOptionalStringField("bar")
@@ -1133,7 +1132,7 @@ public final class TaskCapabilityImplTest {
         OnDialogFinishListener<Argument, Output> finishListener =
                 (argument) ->
                         Futures.immediateFuture(
-                                ExecutionResult.<Output>newBuilderWithOutput()
+                                new ExecutionResult.Builder<Output>()
                                         .setOutput(
                                                 Output.builder()
                                                         .setOptionalStringField("baz")
@@ -1185,7 +1184,7 @@ public final class TaskCapabilityImplTest {
         OnReadyToConfirmListenerInternal<Confirmation> onReadyToConfirmListener =
                 (args) ->
                         Futures.immediateFuture(
-                                ConfirmationOutput.<Confirmation>newBuilderWithConfirmation()
+                                new ConfirmationOutput.Builder<Confirmation>()
                                         .setConfirmation(
                                                 Confirmation.builder()
                                                         .setOptionalStringField("bar")
@@ -1194,7 +1193,7 @@ public final class TaskCapabilityImplTest {
         OnDialogFinishListener<Argument, Output> finishListener =
                 (argument) ->
                         Futures.immediateFuture(
-                                ExecutionResult.<Output>newBuilderWithOutput()
+                                new ExecutionResult.Builder<Output>()
                                         .setOutput(
                                                 Output.builder()
                                                         .setOptionalStringField("baz")
@@ -1703,7 +1702,6 @@ public final class TaskCapabilityImplTest {
             return RequiredTaskUpdater::new;
         }
 
-        @CanIgnoreReturnValue
         public TaskHandlerBuilder setOnReadyToConfirmListener(
                 OnReadyToConfirmListenerInternal<Confirmation> listener) {
             return super.setOnReadyToConfirmListenerInternal(listener);
@@ -1761,7 +1759,6 @@ public final class TaskCapabilityImplTest {
             return RequiredTaskUpdater::new;
         }
 
-        @CanIgnoreReturnValue
         public TaskHandlerBuilderWithRequiredConfirmation setOnReadyToConfirmListener(
                 OnReadyToConfirmListenerInternal<Confirmation> listener) {
             return super.setOnReadyToConfirmListenerInternal(listener);
