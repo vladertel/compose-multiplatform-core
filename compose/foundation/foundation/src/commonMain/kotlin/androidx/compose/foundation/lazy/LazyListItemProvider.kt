@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.layout.IntervalList
 import androidx.compose.foundation.lazy.layout.LazyLayoutItemProvider
 import androidx.compose.foundation.lazy.layout.rememberLazyNearestItemsRangeState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -58,11 +59,16 @@ internal fun rememberLazyListItemProvider(
                 itemScope
             )
         }
-        object : LazyListItemProvider,
-            LazyLayoutItemProvider by DelegatingLazyLayoutItemProvider(itemProviderState) {
-            override val headerIndexes: List<Int> get() = itemProviderState.value.headerIndexes
-            override val itemScope: LazyItemScopeImpl get() = itemProviderState.value.itemScope
-        }
+        createLazyListItemProvider(itemProviderState)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class) // TODO: K/WASM workaround: can't create this object in remember { } directly
+private fun createLazyListItemProvider(itemProviderState: State<LazyListItemProviderImpl>): LazyListItemProvider {
+    return object : LazyListItemProvider,
+        LazyLayoutItemProvider by DelegatingLazyLayoutItemProvider(itemProviderState) {
+        override val headerIndexes: List<Int> get() = itemProviderState.value.headerIndexes
+        override val itemScope: LazyItemScopeImpl get() = itemProviderState.value.itemScope
     }
 }
 

@@ -35,43 +35,49 @@ internal fun rememberLazyListSemanticState(
     isVertical: Boolean
 ): LazyLayoutSemanticState =
     remember(state, itemProvider, reverseScrolling, isVertical) {
-        object : LazyLayoutSemanticState {
-            override fun scrollAxisRange(): ScrollAxisRange =
-                ScrollAxisRange(
-                    value = {
-                        // This is a simple way of representing the current position without
-                        // needing any lazy items to be measured. It's good enough so far, because
-                        // screen-readers care mostly about whether scroll position changed or not
-                        // rather than the actual offset in pixels.
-                        state.firstVisibleItemIndex + state.firstVisibleItemScrollOffset / 100_000f
-                    },
-                    maxValue = {
-                        if (state.canScrollForward) {
-                            // If we can scroll further, we don't know the end yet,
-                            // but it's upper bounded by #items + 1
-                            itemProvider.itemCount + 1f
-                        } else {
-                            // If we can't scroll further, the current value is the max
-                            state.firstVisibleItemIndex +
-                                state.firstVisibleItemScrollOffset / 100_000f
-                        }
-                    },
-                    reverseScrolling = reverseScrolling
-                )
-
-            override suspend fun animateScrollBy(delta: Float) {
-                state.animateScrollBy(delta)
-            }
-
-            override suspend fun scrollToItem(index: Int) {
-                state.scrollToItem(index)
-            }
-
-            override fun collectionInfo(): CollectionInfo =
-                if (isVertical) {
-                    CollectionInfo(rowCount = -1, columnCount = 1)
-                } else {
-                    CollectionInfo(rowCount = 1, columnCount = -1)
-                }
-        }
+        createLazyLayoutSemanticState(state, itemProvider, reverseScrolling, isVertical)
     }
+
+
+@OptIn(ExperimentalFoundationApi::class) // TODO: K/WASM workaround:
+private fun createLazyLayoutSemanticState(state: LazyListState, itemProvider: LazyLayoutItemProvider, reverseScrolling: Boolean, isVertical: Boolean): LazyLayoutSemanticState {
+    return object : LazyLayoutSemanticState {
+        override fun scrollAxisRange(): ScrollAxisRange =
+            ScrollAxisRange(
+                value = {
+                    // This is a simple way of representing the current position without
+                    // needing any lazy items to be measured. It's good enough so far, because
+                    // screen-readers care mostly about whether scroll position changed or not
+                    // rather than the actual offset in pixels.
+                    state.firstVisibleItemIndex + state.firstVisibleItemScrollOffset / 100_000f
+                },
+                maxValue = {
+                    if (state.canScrollForward) {
+                        // If we can scroll further, we don't know the end yet,
+                        // but it's upper bounded by #items + 1
+                        itemProvider.itemCount + 1f
+                    } else {
+                        // If we can't scroll further, the current value is the max
+                        state.firstVisibleItemIndex +
+                            state.firstVisibleItemScrollOffset / 100_000f
+                    }
+                },
+                reverseScrolling = reverseScrolling
+            )
+
+        override suspend fun animateScrollBy(delta: Float) {
+            state.animateScrollBy(delta)
+        }
+
+        override suspend fun scrollToItem(index: Int) {
+            state.scrollToItem(index)
+        }
+
+        override fun collectionInfo(): CollectionInfo =
+            if (isVertical) {
+                CollectionInfo(rowCount = -1, columnCount = 1)
+            } else {
+                CollectionInfo(rowCount = 1, columnCount = -1)
+            }
+    }
+}
