@@ -131,6 +131,14 @@ kotlin {
             }
         }
 
+        val desktopMain by getting {
+            dependsOn(skikoMain)
+            dependencies {
+                implementation(libs.skikoCurrentOs)
+                implementation(project(":compose:desktop:desktop"))
+            }
+        }
+
         val jsMain by getting {
             dependsOn(skikoMain)
             resources.setSrcDirs(resources.srcDirs)
@@ -221,6 +229,16 @@ if (System.getProperty("os.name") == "Mac OS X") {
             }
         }
     }
+}
+
+tasks.create("runDesktop", JavaExec::class.java) {
+    dependsOn(":compose:desktop:desktop:jar")
+    main = "androidx.compose.mpp.demo.Main_desktopKt"
+    systemProperty("skiko.fps.enabled", "true")
+    val compilation = kotlin.jvm("desktop").compilations["main"]
+    classpath =
+        compilation.output.allOutputs +
+            compilation.runtimeDependencyFiles
 }
 
 project.tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile>().configureEach {
