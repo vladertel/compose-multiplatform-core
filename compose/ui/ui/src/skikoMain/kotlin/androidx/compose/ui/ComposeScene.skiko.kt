@@ -578,10 +578,7 @@ class ComposeScene internal constructor(
         // - move from one point of the window to another (owner == lastMoveOwner): Move
         // - move from one popup to another (owner != lastMoveOwner): [Popup 1] Exit, [Popup 2] Enter
 
-        // TODO(demin) How it should behave for touch?
-        //  We need to decide whether we need Enter/Exit events
-        //  See also HitPathTracker, where we do a similar conversion of Move into Enter/Exit
-        if (owner != lastMoveOwner) {
+        if (owner != lastMoveOwner && event.pointers.any { it.type == PointerType.Mouse }) {
             lastMoveOwner?.processPointerInput(
                 event.copy(eventType = PointerEventType.Exit),
                 isInBounds = false
@@ -680,7 +677,35 @@ class ComposeScene internal constructor(
          * Pressure of the pointer. 0.0 - no pressure, 1.0 - average pressure
          */
         val pressure: Float = 1.0f,
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other == null || this::class != other::class) return false
+
+            other as Pointer
+
+            if (position != other.position) return false
+            if (pressed != other.pressed) return false
+            if (type != other.type) return false
+            if (id != other.id) return false
+            if (pressure != other.pressure) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = position.hashCode()
+            result = 31 * result + pressed.hashCode()
+            result = 31 * result + type.hashCode()
+            result = 31 * result + id.hashCode()
+            result = 31 * result + pressure.hashCode()
+            return result
+        }
+
+        override fun toString(): String {
+            return "Pointer(position=$position, pressed=$pressed, type=$type, id=$id, pressure=$pressure)"
+        }
+    }
 }
 
 private class DefaultPointerStateTracker {
@@ -734,24 +759,6 @@ private fun pointerInputEvent(
         changedButton
     )
 }
-
-@OptIn(ExperimentalComposeUiApi::class)
-private fun createMoveEvent(
-    nativeEvent: Any?,
-    sourceEvent: PointerInputEvent,
-    positionSourceEvent: PointerInputEvent
-) = pointerInputEvent(
-    eventType = PointerEventType.Move,
-    pointers = positionSourceEvent.pointers.map {
-        ComposeScene.Pointer(it.position, it.down, it.type, it.id, it.pressure)
-    },
-    timeMillis = sourceEvent.uptime,
-    nativeEvent = nativeEvent,
-    scrollDelta = Offset(0f, 0f),
-    buttons = sourceEvent.buttons,
-    keyboardModifiers = sourceEvent.keyboardModifiers,
-    changedButton = null
-)
 
 @OptIn(ExperimentalComposeUiApi::class)
 private fun createMoveEvent(

@@ -17,6 +17,7 @@
 package androidx.compose.ui.input.pointer
 
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.util.fastFirstOrNull
 
 @OptIn(ExperimentalComposeUiApi::class)
 internal actual class InternalPointerEvent constructor(
@@ -41,6 +42,6 @@ internal actual class InternalPointerEvent constructor(
 
     actual var suppressMovementConsumption: Boolean = false
 
-    // Assume that all changes are from mouse events for now
-    actual fun issuesEnterExitEvent(pointerId: PointerId): Boolean = true
+    actual fun issuesEnterExitEvent(pointerId: PointerId): Boolean =
+        changes[pointerId]?.type == PointerType.Mouse
 }

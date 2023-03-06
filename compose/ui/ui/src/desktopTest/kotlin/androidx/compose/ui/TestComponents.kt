@@ -23,6 +23,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntRect
@@ -38,13 +40,44 @@ fun Events.assertReceivedNoEvents() = assertThat(list).isEmpty()
 fun Events.assertReceived(type: PointerEventType, offset: Offset) =
     received().assertHas(type, offset)
 
+@OptIn(ExperimentalComposeUiApi::class)
+fun Events.assertReceived(type: PointerEventType, vararg pointers: ComposeScene.Pointer) =
+    received().assertHas(type, *pointers)
+
 fun Events.assertReceivedLast(type: PointerEventType, offset: Offset) =
     receivedLast().assertHas(type, offset)
 
+@OptIn(ExperimentalComposeUiApi::class)
+fun Events.assertReceivedLast(type: PointerEventType, vararg pointers: ComposeScene.Pointer) =
+    receivedLast().assertHas(type, *pointers)
+
 fun PointerEvent.assertHas(type: PointerEventType, offset: Offset) {
-    assertThat(type).isEqualTo(type)
+    assertThat(this.type).isEqualTo(type)
     assertThat(changes.first().position).isEqualTo(offset)
 }
+
+@OptIn(ExperimentalComposeUiApi::class)
+fun PointerEvent.assertHas(type: PointerEventType, vararg pointers: ComposeScene.Pointer) {
+    assertThat(this.type).isEqualTo(type)
+    val actualPointers = changes.map {
+        ComposeScene.Pointer(
+            it.position,
+            it.pressed,
+            it.type,
+            it.id,
+            it.pressure
+        )
+    }
+    assertThat(actualPointers).containsExactly(*pointers)
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+fun touchPointer(x: Float, y: Float, pressed: Boolean, id: Long) = ComposeScene.Pointer(
+    position = Offset(x, y),
+    pressed = pressed,
+    type = PointerType.Touch,
+    id = PointerId(id)
+)
 
 class Events {
     val list = mutableListOf<PointerEvent>()
