@@ -16,12 +16,21 @@
 
 package androidx.compose.compiler.plugins.kotlin.lower
 
+import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
 import androidx.compose.compiler.plugins.kotlin.hasComposableAnnotation
+import androidx.compose.compiler.plugins.kotlin.lower.decoys.copyWithNewTypeParams
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
+import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrExpressionBody
+import org.jetbrains.kotlin.ir.expressions.IrGetValue
+import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
+import org.jetbrains.kotlin.ir.util.hasAnnotation
+import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.resolve.multiplatform.findCompatibleExpectsForActual
@@ -47,10 +56,17 @@ class CopyDefaultValuesFromExpectLowering : ModuleLoweringPass {
         // can return only a descriptor
         val expectComposables = mutableMapOf<FunctionDescriptor, IrFunction>()
 
+        fun isApplicable(declaration: IrFunction): Boolean {
+            return declaration.hasComposableAnnotation()
+                || declaration.valueParameters.any {
+                it.type.hasAnnotation(ComposeFqNames.Composable)
+            }
+        }
+
         // first pass to find expect functions with default values
         module.transformChildrenVoid(object : IrElementTransformerVoid() {
             override fun visitFunction(declaration: IrFunction): IrStatement {
-                if (declaration.isExpect && declaration.hasComposableAnnotation()) {
+                if (declaration.isExpect && isApplicable(declaration)) {
                     val hasDefaultValues = declaration.valueParameters.any {
                         it.defaultValue != null
                     }
@@ -65,7 +81,7 @@ class CopyDefaultValuesFromExpectLowering : ModuleLoweringPass {
         // second pass to set corresponding default values
         module.transformChildrenVoid(object : IrElementTransformerVoid() {
             override fun visitFunction(declaration: IrFunction): IrStatement {
-                if (declaration.descriptor.isActual && declaration.hasComposableAnnotation()) {
+                if (declaration.descriptor.isActual && isApplicable(declaration)) {
                     val compatibleExpects = declaration.descriptor.findCompatibleExpectsForActual {
                         module.descriptor == it
                     }
@@ -80,6 +96,13 @@ class CopyDefaultValuesFromExpectLowering : ModuleLoweringPass {
                             declaration.valueParameters.forEachIndexed { index, it ->
                                 it.defaultValue =
                                     it.defaultValue ?: expectFun.valueParameters[index].defaultValue
+                                        ?.copyWithNewTypeParams(expectFun, declaration)
+                                        ?.patchDeclarationParents(expectFun)
+                                        ?.remapDefaultValueFromExpect(expectFun, declaration)
+
+                                // Remove a default value in the expect fun in order to prevent
+                                // Kotlin expect/actual-related lowerings trying to copy the default values
+                                expectFun.valueParameters[index].defaultValue = null
                             }
                         }
                     }
@@ -87,5 +110,26 @@ class CopyDefaultValuesFromExpectLowering : ModuleLoweringPass {
                 return super.visitFunction(declaration)
             }
         })
+    }
+
+    private fun IrExpressionBody.remapDefaultValueFromExpect(
+        expectFun: IrFunction,
+        actualFun: IrFunction
+    ): IrExpressionBody {
+        return this.copyWithNewTypeParams(expectFun, actualFun)
+            .patchDeclarationParents(expectFun)
+            .transform(object : IrElementTransformerVoid() {
+                override fun visitGetValue(expression: IrGetValue): IrExpression {
+                    val vp = expectFun.valueParameters.firstOrNull {  it == expression.symbol.owner }
+                    return if (vp != null) {
+                        IrGetValueImpl(
+                            UNDEFINED_OFFSET, UNDEFINED_OFFSET,
+                            actualFun.valueParameters[vp.index].symbol
+                        )
+                    } else {
+                        super.visitGetValue(expression)
+                    }
+                }
+            }, null)
     }
 }
