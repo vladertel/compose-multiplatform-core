@@ -753,6 +753,24 @@ private fun createMoveEvent(
     changedButton = null
 )
 
+@OptIn(ExperimentalComposeUiApi::class)
+private fun createMoveEvent(
+    nativeEvent: Any?,
+    sourceEvent: PointerInputEvent,
+    positionSourceEvent: PointerInputEvent
+) = pointerInputEvent(
+    eventType = PointerEventType.Move,
+    pointers = positionSourceEvent.pointers.map {
+        ComposeScene.Pointer(it.position, it.down, it.type, it.id, it.pressure)
+    },
+    timeMillis = sourceEvent.uptime,
+    nativeEvent = nativeEvent,
+    scrollDelta = Offset(0f, 0f),
+    buttons = sourceEvent.buttons,
+    keyboardModifiers = sourceEvent.keyboardModifiers,
+    changedButton = null
+)
+
 internal expect fun createSkiaLayer(): SkiaLayer
 
 internal expect fun NativeKeyEvent.toPointerKeyboardModifiers(): PointerKeyboardModifiers
