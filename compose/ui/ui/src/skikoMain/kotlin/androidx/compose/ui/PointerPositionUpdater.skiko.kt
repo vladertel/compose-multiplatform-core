@@ -96,12 +96,17 @@ internal class PointerPositionUpdater(
 private fun isMoveEventMissing(
     previousEvent: PointerInputEvent?,
     currentEvent: PointerInputEvent,
-) = !currentEvent.isMove() && previousEvent?.isSamePosition(currentEvent) == false
+) = !currentEvent.isMove() && !currentEvent.isSamePosition(previousEvent)
 
 private fun PointerInputEvent.isMove() =
     eventType == PointerEventType.Move ||
         eventType == PointerEventType.Enter ||
         eventType == PointerEventType.Exit
 
-private fun PointerInputEvent.isSamePosition(event: PointerInputEvent): Boolean =
-    pointers.associate { it.id to it.position } == event.pointers.associate { it.id to it.position }
+private fun PointerInputEvent.isSamePosition(previousEvent: PointerInputEvent?): Boolean {
+    val previousIdToPosition = previousEvent?.pointers?.associate { it.id to it.position }
+    return pointers.all {
+        val previousPosition = previousIdToPosition?.get(it.id)
+        previousPosition == null || it.position == previousPosition
+    }
+}

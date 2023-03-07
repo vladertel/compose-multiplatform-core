@@ -150,7 +150,9 @@ class PopupState(
 fun Modifier.collectEvents(events: Events) = pointerInput(Unit) {
     awaitPointerEventScope {
         while (true) {
-            events.add(awaitPointerEvent())
+            val event = awaitPointerEvent()
+            println("EVENT ${event.type}")
+            events.add(event)
         }
     }
 }
