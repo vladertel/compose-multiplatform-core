@@ -214,23 +214,23 @@ internal fun mouseEvent(
 )
 
 internal infix fun List<PointerInputEvent>.shouldEqual(expected: List<PointerInputEvent>) {
-    assertContentEquals(expected.toList().map { it.format() }, toList().map { it.format() })
+    assertContentEquals(expected.toList().map { it.formatEssential() }, toList().map { it.formatEssential() })
 }
 
-internal fun PointerInputEvent.format(): String {
+internal fun PointerInputEvent.formatEssential(): String {
     val pointers = if (pointers.size == 1) {
-        pointers.first().format()
+        pointers.first().formatEssential()
     } else {
         pointers.joinToString(" ") {
             val id = it.id.value
-            val data = it.format()
+            val data = it.formatEssential()
             "$id-$data"
         }
     }
     return "$eventType $pointers"
 }
 
-internal fun PointerInputEventData.format(): String {
+internal fun PointerInputEventData.formatEssential(): String {
     val x = position.x.toInt()
     val y = position.y.toInt()
     val down = if (down) "down" else "up"

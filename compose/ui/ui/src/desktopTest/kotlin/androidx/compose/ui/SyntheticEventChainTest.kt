@@ -134,7 +134,52 @@ class SyntheticEventChainTest {
     }
 
     @Test
-    fun `touch, should generate new presses and releases`() {
+    fun `touch, should generate one press or release at a time`() {
+        syntheticEventSequence(
+            event(
+                Press,
+                1 to touch(1f, 3f, pressed = true),
+                2 to touch(10f, 20f, pressed = true),
+                3 to touch(100f, 200f, pressed = true),
+            ),
+            event(
+                Release,
+                2 to touch(10f, 20f, pressed = false),
+                3 to touch(100f, 200f, pressed = true),
+            ),
+        ) shouldEqual listOf(
+            event(
+                Press,
+                1 to touch(1f, 3f, pressed = true),
+            ),
+            event(
+                Press,
+                1 to touch(1f, 3f, pressed = true),
+                2 to touch(10f, 20f, pressed = true),
+            ),
+            event(
+                Press,
+                1 to touch(1f, 3f, pressed = true),
+                2 to touch(10f, 20f, pressed = true),
+                3 to touch(100f, 200f, pressed = true),
+            ),
+            event(
+                Release,
+                1 to touch(1f, 3f, pressed = false),
+                2 to touch(10f, 20f, pressed = true),
+                3 to touch(100f, 200f, pressed = true),
+            ),
+            event(
+                Release,
+                1 to touch(1f, 3f, pressed = false),
+                2 to touch(10f, 20f, pressed = false),
+                3 to touch(100f, 200f, pressed = true),
+            ),
+        )
+    }
+
+    @Test
+    fun `touch, should generate one press or release at a time, with moves and changed position`() {
         syntheticEventSequence(
             event(
                 Press,
@@ -145,28 +190,13 @@ class SyntheticEventChainTest {
             event(
                 Move,
                 1 to touch(1f, 3f, pressed = true),
-                2 to touch(10f, 20f, pressed = true),
-                3 to touch(100f, 205f, pressed = true),
+                2 to touch(1f, 2f, pressed = true),
+                3 to touch(1f, 4f, pressed = true),
             ),
             event(
                 Release,
-                1 to touch(1f, 3f, pressed = false),
-                2 to touch(10f, 20f, pressed = true),
-                3 to touch(100f, 205f, pressed = false),
-            ),
-            event(
-                Press,
-                1 to touch(1f, 3f, pressed = true),
-                2 to touch(10f, 20f, pressed = true),
+                2 to touch(10f, 20f, pressed = false),
                 3 to touch(100f, 200f, pressed = true),
-            ),
-            event(
-                Release,
-                1 to touch(1f, 3f, pressed = true)
-            ),
-            event(
-                Release,
-                1 to touch(1f, 3f, pressed = false)
             ),
         ) shouldEqual listOf(
             event(
@@ -187,48 +217,26 @@ class SyntheticEventChainTest {
             event(
                 Move,
                 1 to touch(1f, 3f, pressed = true),
-                2 to touch(10f, 20f, pressed = true),
-                3 to touch(100f, 205f, pressed = true),
+                2 to touch(1f, 2f, pressed = true),
+                3 to touch(1f, 4f, pressed = true),
             ),
             event(
-                Release,
-                1 to touch(1f, 3f, pressed = true),
-                2 to touch(10f, 20f, pressed = true),
-                3 to touch(100f, 205f, pressed = false),
-            ),
-            event(
-                Release,
-                1 to touch(1f, 3f, pressed = false),
-                2 to touch(10f, 20f, pressed = true),
-                3 to touch(100f, 205f, pressed = false),
-            ),
-            event(
-                Press,
-                1 to touch(1f, 3f, pressed = true),
-                2 to touch(10f, 20f, pressed = true),
-                3 to touch(100f, 200f, pressed = false),
-            ),
-            event(
-                Press,
+                Move,
                 1 to touch(1f, 3f, pressed = true),
                 2 to touch(10f, 20f, pressed = true),
                 3 to touch(100f, 200f, pressed = true),
             ),
             event(
                 Release,
-                1 to touch(1f, 3f, pressed = true),
+                1 to touch(1f, 3f, pressed = false),
                 2 to touch(10f, 20f, pressed = true),
-                3 to touch(100f, 200f, pressed = false),
+                3 to touch(100f, 200f, pressed = true),
             ),
             event(
                 Release,
-                1 to touch(1f, 3f, pressed = true),
+                1 to touch(1f, 3f, pressed = false),
                 2 to touch(10f, 20f, pressed = false),
-                3 to touch(100f, 200f, pressed = false),
-            ),
-            event(
-                Release,
-                1 to touch(1f, 3f, pressed = false)
+                3 to touch(100f, 200f, pressed = true),
             ),
         )
     }
