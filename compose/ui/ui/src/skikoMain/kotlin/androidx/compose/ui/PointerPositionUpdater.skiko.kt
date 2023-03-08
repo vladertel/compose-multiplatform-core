@@ -21,7 +21,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import kotlin.js.JsName
 
-internal class SyntheticEventSender(
+internal class SyntheticEventSender2(
     private val onNeedSend: () -> Unit,
     private val sendEvent: (
         eventType: PointerEventType,

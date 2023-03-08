@@ -212,7 +212,7 @@ class ComposeScene internal constructor(
 
     private val recomposer = Recomposer(coroutineContext + job + effectDispatcher)
 
-    internal val syntheticEventSender = SyntheticEventSender(::invalidateIfNeeded, ::sendAs)
+    internal val syntheticEventSender = SyntheticEventSender2(::invalidateIfNeeded, ::sendAs)
 
     internal var mainOwner: SkiaBasedOwner? = null
     private var composition: Composition? = null

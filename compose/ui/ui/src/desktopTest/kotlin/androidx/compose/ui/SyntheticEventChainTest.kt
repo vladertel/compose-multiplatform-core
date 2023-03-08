@@ -21,13 +21,14 @@ import androidx.compose.ui.input.pointer.PointerEventType.Companion.Exit
 import androidx.compose.ui.input.pointer.PointerEventType.Companion.Move
 import androidx.compose.ui.input.pointer.PointerEventType.Companion.Press
 import androidx.compose.ui.input.pointer.PointerEventType.Companion.Release
+import androidx.compose.ui.input.pointer.PointerInputEvent
 import kotlin.test.Test
 
 @OptIn(ExperimentalComposeUiApi::class)
 class SyntheticEventChainTest {
     @Test
     fun `mouse, shouldn't generate new events if order is correct`() {
-        syntheticEventSequence(
+        syntheticEvents(
             mouseEvent(Enter, 10f, 20f, pressed = false),
             mouseEvent(Press, 10f, 20f, pressed = true),
             mouseEvent(Move, 10f, 30f, pressed = true),
@@ -50,7 +51,7 @@ class SyntheticEventChainTest {
 
     @Test
     fun `mouse, should generate new move before non-move if position isn't the same`() {
-        syntheticEventSequence(
+        syntheticEvents(
             mouseEvent(Enter, 10f, 20f, pressed = false),
             mouseEvent(Press, 10f, 25f, pressed = true),
             mouseEvent(Move, 10f, 30f, pressed = true),
@@ -77,7 +78,7 @@ class SyntheticEventChainTest {
 
     @Test
     fun `touch, shouldn't generate new events if order is correct, without moves`() {
-        syntheticEventSequence(
+        syntheticEvents(
             event(Press, 1 to touch(1f, 2f, pressed = true)),
             event(Press, 1 to touch(1f, 2f, pressed = true), 2 to touch(10f, 20f, pressed = true)),
             event(Release, 1 to touch(1f, 2f, pressed = false), 2 to touch(10f, 20f, pressed = true)),
@@ -92,7 +93,7 @@ class SyntheticEventChainTest {
 
     @Test
     fun `touch, shouldn't generate new events if order is correct, with moves`() {
-        syntheticEventSequence(
+        syntheticEvents(
             event(Press, 1 to touch(1f, 2f, pressed = true)),
             event(Move, 1 to touch(1f, 2f, pressed = true)),
             event(Press, 1 to touch(1f, 2f, pressed = true), 2 to touch(10f, 20f, pressed = true)),
@@ -115,7 +116,7 @@ class SyntheticEventChainTest {
 
     @Test
     fun `touch, should generate new move before non-move if position isn't the same`() {
-        syntheticEventSequence(
+        syntheticEvents(
             event(Press, 1 to touch(1f, 2f, pressed = true)),
             event(Press, 1 to touch(1f, 3f, pressed = true), 2 to touch(10f, 20f, pressed = true)),
             event(Move, 1 to touch(1f, 3f, pressed = true), 2 to touch(10f, 25f, pressed = true)),
@@ -135,7 +136,7 @@ class SyntheticEventChainTest {
 
     @Test
     fun `touch, should generate one press or release at a time`() {
-        syntheticEventSequence(
+        syntheticEvents(
             event(
                 Press,
                 1 to touch(1f, 3f, pressed = true),
@@ -180,7 +181,7 @@ class SyntheticEventChainTest {
 
     @Test
     fun `touch, should generate one press or release at a time, with moves and changed position`() {
-        syntheticEventSequence(
+        syntheticEvents(
             event(
                 Press,
                 1 to touch(1f, 3f, pressed = true),
@@ -239,5 +240,16 @@ class SyntheticEventChainTest {
                 3 to touch(100f, 200f, pressed = true),
             ),
         )
+    }
+
+    private fun syntheticEvents(
+        vararg inputEvents: PointerInputEvent
+    ): List<PointerInputEvent> {
+        val received = mutableListOf<PointerInputEvent>()
+        val sender = SyntheticEventSender()
+        for (inputEvent in inputEvents) {
+            sender.send(inputEvent, received::add)
+        }
+        return received
     }
 }
