@@ -165,7 +165,7 @@ class ComposeScene internal constructor(
 
     private fun invalidateIfNeeded() {
         hasPendingDraws = frameClock.hasAwaiters || needLayout || needDraw ||
-           snapshotChanges.hasCommands || syntheticEventSender.needSendMove
+           snapshotChanges.hasCommands || syntheticEventSender.needUpdate
         if (hasPendingDraws && !isInvalidationDisabled && !isClosed) {
             invalidate()
         }
@@ -212,7 +212,7 @@ class ComposeScene internal constructor(
 
     private val recomposer = Recomposer(coroutineContext + job + effectDispatcher)
 
-    internal val syntheticEventSender = SyntheticEventSender2(::invalidateIfNeeded, ::sendAs)
+    internal val syntheticEventSender = PointerPositionUpdater(::invalidateIfNeeded, ::sendAs)
 
     internal var mainOwner: SkiaBasedOwner? = null
     private var composition: Composition? = null

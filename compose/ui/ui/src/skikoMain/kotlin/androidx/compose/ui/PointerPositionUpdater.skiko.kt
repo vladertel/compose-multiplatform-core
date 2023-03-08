@@ -21,8 +21,8 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import kotlin.js.JsName
 
-internal class SyntheticEventSender2(
-    private val onNeedSend: () -> Unit,
+internal class PointerPositionUpdater(
+    private val onNeedUpdate: () -> Unit,
     private val sendEvent: (
         eventType: PointerEventType,
         sourceEvent: PointerInputEvent,
@@ -31,17 +31,17 @@ internal class SyntheticEventSender2(
 ) {
     private var lastEvent: PointerInputEvent? = null
 
-    var needSendMove: Boolean = false
+    var needUpdate: Boolean = false
         private set
 
     fun reset() {
         lastEvent = null
-        needSendMove = false
+        needUpdate = false
     }
 
     fun beforeEvent(event: PointerInputEvent) {
-        if (isMoveEventMissing(lastEvent, event) || needSendMove) {
-            needSendMove = false
+        if (isMoveEventMissing(lastEvent, event) || needUpdate) {
+            needUpdate = false
             if (!event.isMove()) {
                 lastEvent?.sendWith(positionSourceEvent = event)
             }
@@ -51,13 +51,13 @@ internal class SyntheticEventSender2(
 
     @JsName("setNeedUpdate")
     fun needSendMove() {
-        needSendMove = true
-        onNeedSend()
+        needUpdate = true
+        onNeedUpdate()
     }
 
     fun beforeDraw() {
-        if (needSendMove) {
-            needSendMove = false
+        if (needUpdate) {
+            needUpdate = false
             lastEvent?.also { it.sendWith(positionSourceEvent = it) }
         }
     }

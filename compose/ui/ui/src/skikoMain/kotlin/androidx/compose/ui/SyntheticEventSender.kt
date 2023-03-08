@@ -51,22 +51,40 @@ internal class SyntheticEventSender {
         event: PointerInputEvent,
         send: (PointerInputEvent) -> Unit
     ) {
-        previousEvent?.let { sendSynthetic(it, event, send) }
+        previousEvent?.let { sendSyntheticMove(it, event, send) }
+        sendSyntheticPresses(event, send)
+        sendSyntheticReleases(event, send)
+        sendInternal(event, send)
+    }
+
+    private fun sendSyntheticMove(
+        previousEvent: PointerInputEvent,
+        currentEvent: PointerInputEvent,
+        send: (PointerInputEvent) -> Unit
+    ) {
+        if (isMoveEventMissing(previousEvent, currentEvent)) {
+            sendInternal(createEvent(PointerEventType.Move, previousEvent, currentEvent), send)
+        }
+    }
+
+    private fun sendSyntheticPresses(
+        currentEvent: PointerInputEvent,
+        send: (PointerInputEvent) -> Unit
+    ) {
+        val
+    }
+
+    private fun newPressedPointers(previousEvent: PointerInputEvent, currentEvent: PointerInputEvent) {
+
+    }
+
+    private fun sendInternal(event: PointerInputEvent, send: (PointerInputEvent) -> Unit) {
         send(event)
         // We don't send nativeEvent for synthetic events.
         // Nullify to avoid memory leaks (native events can point to native views).
         previousEvent = event.copy(nativeEvent = null)
     }
 
-    private fun sendSynthetic(
-        previousEvent: PointerInputEvent,
-        currentEvent: PointerInputEvent,
-        send: (PointerInputEvent) -> Unit
-    ) {
-        if (isMoveEventMissing(previousEvent, currentEvent)) {
-            send(createEvent(PointerEventType.Move, previousEvent, currentEvent))
-        }
-    }
 
     private fun isMoveEventMissing(
         previousEvent: PointerInputEvent?,
