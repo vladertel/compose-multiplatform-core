@@ -70,7 +70,7 @@ internal fun PopupLayout(
         val owner = SkiaBasedOwner(
             scene = scene,
             platform = scene.platform,
-            pointerPositionUpdater = scene.pointerPositionUpdater,
+            syntheticEventSender = scene.syntheticEventSender,
             initDensity = density,
             isFocusable = focusable,
             onDismissRequest = onDismissRequest,

@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toIntRect
 import kotlin.coroutines.CoroutineContext
 import kotlin.jvm.Volatile
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -94,10 +93,7 @@ class ComposeScene internal constructor(
     coroutineContext: CoroutineContext = Dispatchers.Unconfined,
     internal val platform: Platform,
     density: Density = Density(1f),
-    private val invalidate: () -> Unit = {},
-    @Deprecated("Will be removed in Compose 1.3")
-    internal val createSyntheticNativeMoveEvent:
-        (sourceEvent: Any?, positionSourceEvent: Any?) -> Any? = { _, _ -> null }
+    private val invalidate: () -> Unit = {}
 ) {
     /**
      * Constructs [ComposeScene]
@@ -169,7 +165,7 @@ class ComposeScene internal constructor(
 
     private fun invalidateIfNeeded() {
         hasPendingDraws = frameClock.hasAwaiters || needLayout || needDraw ||
-           snapshotChanges.hasCommands || pointerPositionUpdater.needUpdate
+           snapshotChanges.hasCommands || syntheticEventSender.needSendMove
         if (hasPendingDraws && !isInvalidationDisabled && !isClosed) {
             invalidate()
         }
@@ -216,7 +212,7 @@ class ComposeScene internal constructor(
 
     private val recomposer = Recomposer(coroutineContext + job + effectDispatcher)
 
-    internal val pointerPositionUpdater = PointerPositionUpdater(::invalidateIfNeeded, ::sendAsMove)
+    internal val syntheticEventSender = SyntheticEventSender(::invalidateIfNeeded, ::sendAs)
 
     internal var mainOwner: SkiaBasedOwner? = null
     private var composition: Composition? = null
@@ -350,14 +346,14 @@ class ComposeScene internal constructor(
         content: @Composable () -> Unit
     ) {
         check(!isClosed) { "ComposeScene is closed" }
-        pointerPositionUpdater.reset()
+        syntheticEventSender.reset()
         composition?.dispose()
         mainOwner?.dispose()
         val mainOwner = SkiaBasedOwner(
             this,
             platform,
             platform.focusManager,
-            pointerPositionUpdater,
+            syntheticEventSender,
             density,
             IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect(),
             onPreviewKeyEvent = onPreviewKeyEvent,
@@ -411,7 +407,7 @@ class ComposeScene internal constructor(
         frameClock.sendFrame(nanoTime)
         needLayout = false
         forEachOwner { it.measureAndLayout() }
-        pointerPositionUpdater.update()
+        syntheticEventSender.beforeDraw()
         needDraw = false
         forEachOwner { it.draw(canvas) }
         forEachOwner { it.clearInvalidObservations() }
@@ -521,17 +517,17 @@ class ComposeScene internal constructor(
         )
         needLayout = false
         forEachOwner { it.measureAndLayout() }
-        pointerPositionUpdater.beforeEvent(event)
+        syntheticEventSender.beforeEvent(event)
         processPointerInput(event)
     }
 
     @Suppress("DEPRECATION")
-    private fun sendAsMove(sourceEvent: PointerInputEvent, positionSourceEvent: PointerInputEvent) {
-        val nativeEvent = createSyntheticNativeMoveEvent(
-            sourceEvent.nativeEvent,
-            positionSourceEvent.nativeEvent
-        )
-        processPointerInput(createMoveEvent(nativeEvent, sourceEvent, positionSourceEvent))
+    private fun sendAs(
+        eventType: PointerEventType,
+        sourceEvent: PointerInputEvent,
+        positionSourceEvent: PointerInputEvent
+    ) {
+        processPointerInput(createEvent(eventType, sourceEvent, positionSourceEvent))
     }
 
     private fun processPointerInput(event: PointerInputEvent) {
@@ -761,22 +757,25 @@ private fun pointerInputEvent(
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
-private fun createMoveEvent(
-    nativeEvent: Any?,
+internal fun createEvent(
+    eventType: PointerEventType,
     sourceEvent: PointerInputEvent,
     positionSourceEvent: PointerInputEvent
-) = pointerInputEvent(
-    eventType = PointerEventType.Move,
-    pointers = positionSourceEvent.pointers.map {
-        ComposeScene.Pointer(it.position, it.down, it.type, it.id, it.pressure)
-    },
-    timeMillis = sourceEvent.uptime,
-    nativeEvent = nativeEvent,
-    scrollDelta = Offset(0f, 0f),
-    buttons = sourceEvent.buttons,
-    keyboardModifiers = sourceEvent.keyboardModifiers,
-    changedButton = null
-)
+): PointerInputEvent {
+    val idToPosition = positionSourceEvent.pointers.associate { it.id to it.position }
+    return pointerInputEvent(
+        eventType = eventType,
+        pointers = sourceEvent.pointers.map {
+            ComposeScene.Pointer(idToPosition[it.id] ?: it.position, it.down, it.type, it.id, it.pressure)
+        },
+        timeMillis = sourceEvent.uptime,
+        nativeEvent = null,
+        scrollDelta = Offset(0f, 0f),
+        buttons = sourceEvent.buttons,
+        keyboardModifiers = sourceEvent.keyboardModifiers,
+        changedButton = null
+    )
+}
 
 internal expect fun createSkiaLayer(): SkiaLayer
 

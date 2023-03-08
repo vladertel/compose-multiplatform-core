@@ -25,7 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
-import androidx.compose.ui.PointerPositionUpdater
+import androidx.compose.ui.SyntheticEventSender
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
 import androidx.compose.ui.focus.FocusDirection
@@ -95,7 +95,7 @@ internal class SkiaBasedOwner(
     override val scene: ComposeScene,
     private val platform: Platform,
     parentFocusManager: FocusManager = EmptyFocusManager,
-    private val pointerPositionUpdater: PointerPositionUpdater,
+    private val syntheticEventSender: SyntheticEventSender,
     initDensity: Density = Density(1f, 1f),
     bounds: IntRect = IntRect.Zero,
     val isFocusable: Boolean = true,
@@ -270,7 +270,7 @@ internal class SkiaBasedOwner(
         if (
             measureAndLayoutDelegate.measureAndLayout {
                 if (sendPointerUpdate) {
-                    pointerPositionUpdater.needUpdate()
+                    syntheticEventSender.needSendMove()
                 }
             }
         ) {
@@ -282,7 +282,7 @@ internal class SkiaBasedOwner(
 
     override fun measureAndLayout(layoutNode: LayoutNode, constraints: Constraints) {
         measureAndLayoutDelegate.measureAndLayout(layoutNode, constraints)
-        pointerPositionUpdater.needUpdate()
+        syntheticEventSender.needSendMove()
         measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
         contentSize = computeContentSize()
     }
@@ -446,7 +446,7 @@ internal class SkiaBasedOwner(
         override var current: PointerIcon = PointerIconDefaults.Default
 
         override fun requestUpdate() {
-            pointerPositionUpdater.needUpdate()
+            syntheticEventSender.needSendMove()
         }
     }
 }

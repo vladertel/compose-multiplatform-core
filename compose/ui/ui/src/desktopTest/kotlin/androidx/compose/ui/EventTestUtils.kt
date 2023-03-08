@@ -21,9 +21,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerInputEvent
+import androidx.compose.ui.input.pointer.PointerInputEventData
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -34,6 +37,7 @@ import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import com.google.common.truth.Truth.assertThat
+import kotlin.test.assertContentEquals
 
 fun Events.assertReceivedNoEvents() = assertThat(list).isEmpty()
 
@@ -72,11 +76,10 @@ fun PointerEvent.assertHas(type: PointerEventType, vararg pointers: ComposeScene
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
-fun touchPointer(x: Float, y: Float, pressed: Boolean, id: Long) = ComposeScene.Pointer(
+fun touch(x: Float, y: Float, pressed: Boolean) = ComposeScene.Pointer(
     position = Offset(x, y),
     pressed = pressed,
-    type = PointerType.Touch,
-    id = PointerId(id)
+    type = PointerType.Touch
 )
 
 class Events {
@@ -155,4 +158,81 @@ fun Modifier.collectEvents(events: Events) = pointerInput(Unit) {
             events.add(event)
         }
     }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+fun ImageComposeScene.sendPointerEvent(
+    type: PointerEventType,
+    vararg pointers: ComposeScene.Pointer
+) = sendPointerEvent(type, pointers = pointers.toList())
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal fun event(
+    type: PointerEventType,
+    vararg pointers: Pair<Int, ComposeScene.Pointer>
+) = PointerInputEvent(
+    type,
+    0,
+    pointers.map {
+        val id = it.first
+        val pointer = it.second
+        PointerInputEventData(
+            PointerId(id.toLong()),
+            uptime = 0,
+            pointer.position,
+            pointer.position,
+            pointer.pressed,
+            pointer.pressure,
+            pointer.type,
+            scrollDelta = Offset.Zero
+        )
+    },
+)
+
+@OptIn(ExperimentalComposeUiApi::class)
+internal fun mouseEvent(
+    type: PointerEventType,
+    x: Float,
+    y: Float,
+    pressed: Boolean
+) = PointerInputEvent(
+    type,
+    0,
+    listOf(
+        PointerInputEventData(
+            id = PointerId(0),
+            uptime = 0,
+            Offset(x, y),
+            Offset(x, y),
+            down = pressed,
+            pressure = 1f,
+            type = PointerType.Mouse,
+            scrollDelta = Offset.Zero
+        )
+    ),
+    buttons = PointerButtons(isPrimaryPressed = pressed)
+)
+
+internal infix fun List<PointerInputEvent>.shouldEqual(expected: List<PointerInputEvent>) {
+    assertContentEquals(expected.toList().map { it.format() }, toList().map { it.format() })
+}
+
+internal fun PointerInputEvent.format(): String {
+    val pointers = if (pointers.size == 1) {
+        pointers.first().format()
+    } else {
+        pointers.joinToString(" ") {
+            val id = it.id.value
+            val data = it.format()
+            "$id-$data"
+        }
+    }
+    return "$eventType $pointers"
+}
+
+internal fun PointerInputEventData.format(): String {
+    val x = position.x.toInt()
+    val y = position.y.toInt()
+    val down = if (down) "down" else "up"
+    return "$x:$y:$down"
 }

@@ -21,55 +21,56 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import kotlin.js.JsName
 
-internal class PointerPositionUpdater(
-    private val onNeedUpdate: () -> Unit,
-    private val updatePointers: (
+internal class SyntheticEventSender(
+    private val onNeedSend: () -> Unit,
+    private val sendEvent: (
+        eventType: PointerEventType,
         sourceEvent: PointerInputEvent,
         positionSourceEvent: PointerInputEvent
     ) -> Unit,
 ) {
     private var lastEvent: PointerInputEvent? = null
 
-    var needUpdate: Boolean = false
+    var needSendMove: Boolean = false
         private set
 
     fun reset() {
         lastEvent = null
-        needUpdate = false
+        needSendMove = false
     }
 
     fun beforeEvent(event: PointerInputEvent) {
-        if (isMoveEventMissing(lastEvent, event) || needUpdate) {
-            needUpdate = false
+        if (isMoveEventMissing(lastEvent, event) || needSendMove) {
+            needSendMove = false
             if (!event.isMove()) {
-                lastEvent?.sendAsUpdate(pointersSource = event)
+                lastEvent?.sendWith(positionSourceEvent = event)
             }
         }
         lastEvent = event
     }
 
     @JsName("setNeedUpdate")
-    fun needUpdate() {
-        needUpdate = true
-        onNeedUpdate()
+    fun needSendMove() {
+        needSendMove = true
+        onNeedSend()
     }
 
-    fun update() {
-        if (needUpdate) {
-            needUpdate = false
-            lastEvent?.also { it.sendAsUpdate(pointersSource = it) }
+    fun beforeDraw() {
+        if (needSendMove) {
+            needSendMove = false
+            lastEvent?.also { it.sendWith(positionSourceEvent = it) }
         }
     }
 
-    private fun PointerInputEvent.sendAsUpdate(pointersSource: PointerInputEvent) {
-        if (pointersSource.pointers.isNotEmpty()) {
-            updatePointers(this, pointersSource)
+    private fun PointerInputEvent.sendWith(positionSourceEvent: PointerInputEvent) {
+        if (positionSourceEvent.pointers.isNotEmpty()) {
+            sendEvent(PointerEventType.Move, this, positionSourceEvent)
         }
     }
 }
 
 /**
- * Compose can't work well if we miss Move event before, for example, Scroll event.
+ * Compose can't work well if we miss Move event before, for example, a Scroll event.
  *
  * This is because of the implementation of [HitPathTracker].
  *
