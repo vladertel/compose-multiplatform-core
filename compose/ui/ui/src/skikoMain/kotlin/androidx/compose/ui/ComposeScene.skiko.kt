@@ -527,7 +527,7 @@ class ComposeScene internal constructor(
         sourceEvent: PointerInputEvent,
         positionSourceEvent: PointerInputEvent
     ) {
-        processPointerInput(createEvent(eventType, sourceEvent, positionSourceEvent))
+        //processPointerInput(createEvent(eventType, sourceEvent, positionSourceEvent))
     }
 
     private fun processPointerInput(event: PointerInputEvent) {
@@ -753,27 +753,6 @@ private fun pointerInputEvent(
         keyboardModifiers,
         nativeEvent,
         changedButton
-    )
-}
-
-@OptIn(ExperimentalComposeUiApi::class)
-internal fun createEvent(
-    eventType: PointerEventType,
-    sourceEvent: PointerInputEvent,
-    positionSourceEvent: PointerInputEvent
-): PointerInputEvent {
-    val idToPosition = positionSourceEvent.pointers.associate { it.id to it.position }
-    return pointerInputEvent(
-        eventType = eventType,
-        pointers = sourceEvent.pointers.map {
-            ComposeScene.Pointer(idToPosition[it.id] ?: it.position, it.down, it.type, it.id, it.pressure)
-        },
-        timeMillis = sourceEvent.uptime,
-        nativeEvent = null,
-        scrollDelta = Offset(0f, 0f),
-        buttons = sourceEvent.buttons,
-        keyboardModifiers = sourceEvent.keyboardModifiers,
-        changedButton = null
     )
 }
 

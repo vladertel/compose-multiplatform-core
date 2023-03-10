@@ -152,11 +152,14 @@ class SyntheticEventChainTest {
             event(
                 Press,
                 1 to touch(1f, 3f, pressed = true),
+                2 to touch(10f, 20f, pressed = false),
+                3 to touch(100f, 200f, pressed = false),
             ),
             event(
                 Press,
                 1 to touch(1f, 3f, pressed = true),
                 2 to touch(10f, 20f, pressed = true),
+                3 to touch(100f, 200f, pressed = false),
             ),
             event(
                 Press,
@@ -248,6 +251,8 @@ class SyntheticEventChainTest {
         val received = mutableListOf<PointerInputEvent>()
         val sender = SyntheticEventSender()
         for (inputEvent in inputEvents) {
+
+            println(inputEvent.formatEssential())
             sender.send(inputEvent, received::add)
         }
         return received

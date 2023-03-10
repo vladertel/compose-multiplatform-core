@@ -16,8 +16,11 @@
 
 package androidx.compose.ui
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputEvent
+import androidx.compose.ui.input.pointer.PointerInputEventData
 import org.jetbrains.skia.Image
 
 interface GG {
@@ -51,19 +54,44 @@ internal class SyntheticEventSender {
         event: PointerInputEvent,
         send: (PointerInputEvent) -> Unit
     ) {
-        previousEvent?.let { sendSyntheticMove(it, event, send) }
+        sendSyntheticMove(event, send)
         sendSyntheticPresses(event, send)
         sendSyntheticReleases(event, send)
         sendInternal(event, send)
     }
 
     private fun sendSyntheticMove(
-        previousEvent: PointerInputEvent,
         currentEvent: PointerInputEvent,
         send: (PointerInputEvent) -> Unit
     ) {
-        if (isMoveEventMissing(previousEvent, currentEvent)) {
-            sendInternal(createEvent(PointerEventType.Move, previousEvent, currentEvent), send)
+        val previousEvent = previousEvent
+        if (previousEvent != null && isMoveEventMissing(previousEvent, currentEvent)) {
+            val idToPosition = currentEvent.pointers.associate { it.id to it.position }
+            sendInternal(
+                PointerInputEvent(
+                    eventType = PointerEventType.Move,
+                    pointers = previousEvent.pointers.map {
+                        val position = idToPosition[it.id] ?: it.position
+                        PointerInputEventData(
+                            it.id,
+                            it.uptime,
+                            position,
+                            position,
+                            it.down,
+                            it.pressure,
+                            it.type,
+                            it.issuesEnterExit,
+                            scrollDelta = Offset(0f, 0f),
+                        )
+                    },
+                    uptime = previousEvent.uptime,
+                    nativeEvent = null,
+                    buttons = previousEvent.buttons,
+                    keyboardModifiers = previousEvent.keyboardModifiers,
+                    button = null
+                ),
+                send
+            )
         }
     }
 
@@ -71,12 +99,85 @@ internal class SyntheticEventSender {
         currentEvent: PointerInputEvent,
         send: (PointerInputEvent) -> Unit
     ) {
-        val
+        val previousPressed = previousEvent?.pressedIds().orEmpty()
+        val currentPressed = currentEvent.pressedIds()
+        val newPressed = (currentPressed - previousPressed).toList()
+        println(newPressed)
+        val sendingAsDown = HashSet<PointerId>(newPressed.size)
+        // Don't send the last pressed pointer (newPressed.size - 1)
+        // It will be sent as a real event. Here we only need to send synthetic events before a real one.
+        for (i in 0..newPressed.size - 2) {
+            val id = newPressed[i]
+            sendingAsDown.add(id)
+            sendInternal(
+                PointerInputEvent(
+                    eventType = PointerEventType.Press,
+                    pointers = currentEvent.pointers.map {
+                        PointerInputEventData(
+                            it.id,
+                            it.uptime,
+                            it.position,
+                            it.position,
+                            if (it.id in newPressed) sendingAsDown.contains(id) else it.down,
+                            it.pressure,
+                            it.type,
+                            it.issuesEnterExit,
+                            scrollDelta = Offset(0f, 0f),
+                        )
+                    },
+                    uptime = currentEvent.uptime,
+                    nativeEvent = null,
+                    buttons = currentEvent.buttons,
+                    keyboardModifiers = currentEvent.keyboardModifiers,
+                    button = null
+                ),
+                send
+            )
+        }
     }
 
-    private fun newPressedPointers(previousEvent: PointerInputEvent, currentEvent: PointerInputEvent) {
-
+    private fun sendSyntheticReleases(
+        currentEvent: PointerInputEvent,
+        send: (PointerInputEvent) -> Unit
+    ) {
+        val previousPressed = previousEvent?.pressedIds().orEmpty()
+        val currentPressed = currentEvent.pressedIds()
+        val newReleased = (previousPressed - currentPressed).toList()
+        val sendingAsUp = HashSet<PointerId>(newReleased.size)
+        // Don't send the first released pointer
+        // It will be sent as a real event. Here we only need to send synthetic events before a real one.
+        for (i in newReleased.size - 2 downTo 0) {
+            val id = newReleased[i]
+            sendingAsUp.add(id)
+            sendInternal(
+                PointerInputEvent(
+                    eventType = PointerEventType.Press,
+                    pointers = currentEvent.pointers.map {
+                        PointerInputEventData(
+                            it.id,
+                            it.uptime,
+                            it.position,
+                            it.position,
+                            if (it.id in sendingAsUp) !sendingAsUp.contains(id) else it.down,
+                            it.pressure,
+                            it.type,
+                            it.issuesEnterExit,
+                            scrollDelta = Offset(0f, 0f),
+                        )
+                    },
+                    uptime = currentEvent.uptime,
+                    nativeEvent = null,
+                    buttons = currentEvent.buttons,
+                    keyboardModifiers = currentEvent.keyboardModifiers,
+                    button = null
+                ),
+                send
+            )
+        }
     }
+
+    private fun PointerInputEvent.pressedIds(): Set<PointerId> =
+        pointers.asSequence().filter { it.down }.mapTo(mutableSetOf()) { it.id }
 
     private fun sendInternal(event: PointerInputEvent, send: (PointerInputEvent) -> Unit) {
         send(event)
