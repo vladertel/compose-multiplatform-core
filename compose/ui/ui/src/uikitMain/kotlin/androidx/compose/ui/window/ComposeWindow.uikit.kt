@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,11 @@
 package androidx.compose.ui.window
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.createSkiaLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.toSkiaRect
+import androidx.compose.ui.interop.LocalLayerContainer
 import androidx.compose.ui.native.ComposeLayer
 import androidx.compose.ui.platform.Platform
 import androidx.compose.ui.platform.TextToolbar
@@ -50,24 +51,38 @@ import platform.Foundation.NSSelectorFromString
 import platform.Foundation.NSValue
 import platform.UIKit.CGRectValue
 import platform.UIKit.UIScreen
+import platform.UIKit.UIView
+import platform.UIKit.UIViewAutoresizingFlexibleHeight
+import platform.UIKit.UIViewAutoresizingFlexibleWidth
 import platform.UIKit.UIViewController
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
+import platform.UIKit.addSubview
 import platform.UIKit.reloadInputViews
-//import platform.UIKit.setClipsToBounds
-//import platform.UIKit.setNeedsDisplay
+import platform.UIKit.setAutoresizesSubviews
+import platform.UIKit.setAutoresizingMask
+import platform.UIKit.setClipsToBounds
+import platform.UIKit.setNeedsDisplay
 import platform.UIKit.window
 import platform.darwin.NSObject
 
+fun ComposeUIViewController(content: @Composable () -> Unit): UIViewController =
+    ComposeWindow().apply {
+        setContent(content)
+    }
+
 // The only difference with macos' Window is that
 // it has return type of UIViewController rather than unit.
+@Deprecated(
+    "use ComposeUIViewController instead",
+    replaceWith = ReplaceWith(
+        "ComposeUIViewController(content = content)",
+        "androidx.compose.ui.window"
+    )
+)
 fun Application(
     title: String = "JetpackNativeWindow",
     content: @Composable () -> Unit = { }
-
-) = ComposeWindow().apply {
-    setTitle(title)
-    setContent(content)
-} as UIViewController
+):UIViewController = ComposeUIViewController(content)
 
 @ExportObjCClass
 internal actual class ComposeWindow : UIViewController {
@@ -89,19 +104,31 @@ internal actual class ComposeWindow : UIViewController {
             val keyboardInfo = arg.userInfo!!["UIKeyboardFrameEndUserInfoKey"] as NSValue
             val keyboardHeight = keyboardInfo.CGRectValue().useContents { size.height }
             val screenHeight = UIScreen.mainScreen.bounds.useContents { size.height }
+            val magicMultiplier = density.density - 1 // todo magic number
+            val viewY = UIScreen.mainScreen.coordinateSpace.convertPoint(
+                point = CGPointMake(0.0, 0.0),
+                fromCoordinateSpace = view.coordinateSpace
+            ).useContents { y } * magicMultiplier
             val focused = layer.getActiveFocusRect()
             if (focused != null) {
                 val focusedBottom = focused.bottom.value + getTopLeftOffset().y
-                val hiddenPartOfFocusedElement = focusedBottom + keyboardHeight - screenHeight
+                val hiddenPartOfFocusedElement =
+                    focusedBottom + keyboardHeight - screenHeight - viewY
                 if (hiddenPartOfFocusedElement > 0) {
                     // If focused element hidden by keyboard, then change UIView bounds.
                     // Focused element will be visible
-//                    view.setClipsToBounds(true)
+                    val focusedTop = focused.top.value
+                    val composeOffsetY = if (hiddenPartOfFocusedElement < focusedTop) {
+                        hiddenPartOfFocusedElement
+                    } else {
+                        maxOf(focusedTop, 0f).toDouble()
+                    }
+                    view.setClipsToBounds(true)
                     val (width, height) = getViewFrameSize()
                     view.layer.setBounds(
                         CGRectMake(
                             x = 0.0,
-                            y = hiddenPartOfFocusedElement,
+                            y = composeOffsetY,
                             width = width.toDouble(),
                             height = height.toDouble()
                         )
@@ -120,18 +147,20 @@ internal actual class ComposeWindow : UIViewController {
         @Suppress("unused")
         @ObjCAction
         fun keyboardDidHide(arg: NSNotification) {
-//            view.setClipsToBounds(false)
+            view.setClipsToBounds(false)
         }
-    }
-
-    actual fun setTitle(title: String) {
-        println("TODO: set title to SkiaWindow")
     }
 
     override fun loadView() {
         val skiaLayer = createSkiaLayer()
         val skikoUIView = SkikoUIView(skiaLayer).load()
-        view = skikoUIView
+        val rootView = UIView() // rootView needs to interop with UIKit
+        rootView.addSubview(skikoUIView)
+        rootView.setAutoresizesSubviews(true)
+        skikoUIView.setAutoresizingMask(
+            UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight
+        )
+        view = rootView
         val uiKitTextInputService = UIKitTextInputService(
             showSoftwareKeyboard = {
                 skikoUIView.showScreenKeyboard()
@@ -165,15 +194,25 @@ internal actual class ComposeWindow : UIViewController {
                     onPasteRequested: (() -> Unit)?,
                     onCutRequested: (() -> Unit)?,
                     onSelectAllRequested: (() -> Unit)?
-                ) = skikoUIView.showTextMenu(
-                    targetRect = rect.toSkiaRect(),
-                    textActions = object: TextActions {
-                        override val copy: (() -> Unit)? = onCopyRequested
-                        override val cut: (() -> Unit)? = onCutRequested
-                        override val paste: (() -> Unit)? = onPasteRequested
-                        override val selectAll: (() -> Unit)? = onSelectAllRequested
+                ) {
+                    val skiaRect = with(density) {
+                        org.jetbrains.skia.Rect.makeLTRB(
+                            l = rect.left / density,
+                            t = rect.top / density,
+                            r = rect.right / density,
+                            b = rect.bottom / density,
+                        )
                     }
-                )
+                    skikoUIView.showTextMenu(
+                        targetRect = skiaRect,
+                        textActions = object : TextActions {
+                            override val copy: (() -> Unit)? = onCopyRequested
+                            override val cut: (() -> Unit)? = onCutRequested
+                            override val paste: (() -> Unit)? = onPasteRequested
+                            override val selectAll: (() -> Unit)? = onSelectAllRequested
+                        }
+                    )
+                }
 
                 /**
                  * TODO on UIKit native behaviour is hide text menu, when touch outside
@@ -193,7 +232,13 @@ internal actual class ComposeWindow : UIViewController {
             getTopLeftOffset = ::getTopLeftOffset,
             input = uiKitTextInputService.skikoInput,
         )
-        layer.setContent(content = content)
+        layer.setContent(content = {
+            CompositionLocalProvider(
+                LocalLayerContainer provides rootView,
+            ) {
+                content()
+            }
+        })
     }
 
     override fun viewWillTransitionToSize(
@@ -205,15 +250,27 @@ internal actual class ComposeWindow : UIViewController {
         val width = size.useContents { width } * scale
         val height = size.useContents { height } * scale
         layer.setSize(width.roundToInt(), height.roundToInt())
+        layer.layer.needRedraw() // TODO: remove? the following block should be enough
+        withTransitionCoordinator.animateAlongsideTransition(animation = null) {
+            // Docs: https://developer.apple.com/documentation/uikit/uiviewcontrollertransitioncoordinator/1619295-animatealongsidetransition
+            // Request a frame once more on animation completion.
+            // Consider adding redrawImmediately() in SkiaLayer for ios to sync with current frame.
+            // This fixes an interop use case when Compose is embedded in SwiftUi.
+            layer.layer.needRedraw()
+        }
         super.viewWillTransitionToSize(size, withTransitionCoordinator)
     }
 
-    override fun viewWillAppear(animated: Boolean) {
-        super.viewDidAppear(animated)
+    override fun viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
         val (width, height) = getViewFrameSize()
         layer.setDensity(density)
         val scale = density.density
         layer.setSize((width * scale).roundToInt(), (height * scale).roundToInt())
+    }
+
+    override fun viewDidAppear(animated: Boolean) {
+        super.viewDidAppear(animated)
         NSNotificationCenter.defaultCenter.addObserver(
             observer = keyboardVisibilityListener,
             selector = NSSelectorFromString("keyboardWillShow:"),
@@ -236,7 +293,7 @@ internal actual class ComposeWindow : UIViewController {
 
     // viewDidUnload() is deprecated and not called.
     override fun viewDidDisappear(animated: Boolean) {
-        this.dispose()
+        super.viewDidDisappear(animated)
         NSNotificationCenter.defaultCenter.removeObserver(
             observer = keyboardVisibilityListener,
             name = platform.UIKit.UIKeyboardWillShowNotification,
@@ -254,11 +311,21 @@ internal actual class ComposeWindow : UIViewController {
         )
     }
 
+    override fun didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        error("didReceiveMemoryWarning, maybe memory leak")
+    }
+
     actual fun setContent(
         content: @Composable () -> Unit
     ) {
         println("ComposeWindow.setContent")
         this.content = content
+    }
+
+    override fun viewDidUnload() {
+        super.viewDidUnload()
+        this.dispose()
     }
 
     actual fun dispose() {

@@ -176,7 +176,7 @@ androidx {
 // Screenshot tests related setup
 android {
     sourceSets.androidTest.assets.srcDirs +=
-            project.rootDir.absolutePath + "/../../golden/compose/material3/material3"
+            project.rootDir.absolutePath + "/golden/compose/material3/material3"
     namespace "androidx.compose.material3"
 }
 

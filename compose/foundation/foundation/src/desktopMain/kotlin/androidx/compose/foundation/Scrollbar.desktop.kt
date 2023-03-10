@@ -19,7 +19,8 @@ package androidx.compose.foundation
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTapAndPress
+import androidx.compose.foundation.gestures.awaitHorizontalDragOrCancellation
+import androidx.compose.foundation.gestures.awaitVerticalDragOrCancellation
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.interaction.DragInteraction
@@ -27,21 +28,25 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.v2.LazyScrollbarAdapter
+import androidx.compose.foundation.text.TextFieldScrollState
+import androidx.compose.foundation.v2.LazyGridScrollbarAdapter
+import androidx.compose.foundation.v2.LazyListScrollbarAdapter
 import androidx.compose.foundation.v2.ScrollableScrollbarAdapter
 import androidx.compose.foundation.v2.SliderAdapter
+import androidx.compose.foundation.v2.TextFieldScrollbarAdapter
 import androidx.compose.foundation.v2.maxScrollOffset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocal
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -50,6 +55,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.Layout
@@ -63,8 +69,10 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
-import kotlin.math.sign
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * [CompositionLocal] used to pass [ScrollbarStyle] down the tree.
@@ -106,7 +114,7 @@ fun defaultScrollbarStyle() = ScrollbarStyle(
  * Can be placed independently.
  *
  * Example:
- *     val state = rememberScrollState(0f)
+ *     val state = rememberScrollState(0)
  *
  *     Box(Modifier.fillMaxSize()) {
  *         Box(modifier = Modifier.verticalScroll(state)) {
@@ -114,8 +122,8 @@ fun defaultScrollbarStyle() = ScrollbarStyle(
  *         }
  *
  *         VerticalScrollbar(
+ *             adapter = rememberScrollbarAdapter(state)
  *             Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
- *             rememberScrollbarAdapter(state)
  *         )
  *     }
  *
@@ -129,7 +137,9 @@ fun defaultScrollbarStyle() = ScrollbarStyle(
  * @param interactionSource [MutableInteractionSource] that will be used to dispatch
  * [DragInteraction.Start] when this Scrollbar is being dragged.
  */
-@Deprecated("Use VerticalScrollbar(adapter: androidx.compose.foundation.v2.ScrollbarAdapter) instead")
+@Deprecated("Use VerticalScrollbar(" +
+    "adapter: androidx.compose.foundation.v2.ScrollbarAdapter)" +
+    " instead")
 @Composable
 fun VerticalScrollbar(
     @Suppress("DEPRECATION") adapter: ScrollbarAdapter,
@@ -153,16 +163,16 @@ fun VerticalScrollbar(
  * Can be placed independently.
  *
  * Example:
- *     val state = rememberScrollState(0f)
+ *     val state = rememberScrollState(0)
  *
  *     Box(Modifier.fillMaxSize()) {
- *         Box(modifier = Modifier.verticalScroll(state)) {
+ *         Box(modifier = Modifier.horizontalScroll(state)) {
  *             ...
  *         }
  *
  *         HorizontalScrollbar(
- *             Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
- *             rememberScrollbarAdapter(state)
+ *             adapter = rememberScrollbarAdapter(state)
+ *             modifier = Modifier.align(Alignment.CenterEnd).fillMaxWidth(),
  *         )
  *     }
  *
@@ -220,7 +230,7 @@ private fun OldScrollbar(
  * Can be placed independently.
  *
  * Example:
- *     val state = rememberScrollState(0f)
+ *     val state = rememberScrollState(0)
  *
  *     Box(Modifier.fillMaxSize()) {
  *         Box(modifier = Modifier.verticalScroll(state)) {
@@ -228,8 +238,8 @@ private fun OldScrollbar(
  *         }
  *
  *         VerticalScrollbar(
- *             Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
- *             rememberScrollbarAdapter(state)
+ *             adapter = rememberScrollbarAdapter(state)
+ *             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
  *         )
  *     }
  *
@@ -267,7 +277,7 @@ fun VerticalScrollbar(
  * Can be placed independently.
  *
  * Example:
- *     val state = rememberScrollState(0f)
+ *     val state = rememberScrollState(0)
  *
  *     Box(Modifier.fillMaxSize()) {
  *         Box(modifier = Modifier.verticalScroll(state)) {
@@ -275,8 +285,8 @@ fun VerticalScrollbar(
  *         }
  *
  *         HorizontalScrollbar(
- *             Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
- *             rememberScrollbarAdapter(state)
+ *             adapter = rememberScrollbarAdapter(state)
+ *             modifier = Modifier.align(Alignment.CenterEnd).fillMaxWidth(),
  *         )
  *     }
  *
@@ -329,7 +339,6 @@ private typealias NewScrollbarAdapterFactory<T> = (
     adapter: T,
     trackSize: Int,
 ) -> androidx.compose.foundation.v2.ScrollbarAdapter
-
 
 /**
  * The actual implementation of the scrollbar.
@@ -410,7 +419,7 @@ internal fun <T> OldOrNewScrollbar(
         },
         modifier
             .hoverable(interactionSource = interactionSource)
-            .scrollOnPressOutsideThumb(isVertical, sliderAdapter, adapter),
+            .scrollOnPressTrack(isVertical, sliderAdapter),
         measurePolicy
     )
 }
@@ -447,7 +456,9 @@ private class OldScrollbarAdapterAsNew(
  * us to seamlessly use the new implementations, and enjoy all their benefits.
  */
 @Suppress("DEPRECATION")
-private fun ScrollbarAdapter.asNewAdapter(trackSize: Int): androidx.compose.foundation.v2.ScrollbarAdapter =
+private fun ScrollbarAdapter.asNewAdapter(
+    trackSize: Int
+): androidx.compose.foundation.v2.ScrollbarAdapter =
     if (this is NewScrollbarAdapterAsOld)
         this.newAdapter  // Just unwrap
     else
@@ -505,8 +516,8 @@ fun rememberOldScrollbarAdapter(
 }
 
 /**
- * Create and [remember] (old) [ScrollbarAdapter] for lazy scrollable container and current instance of
- * [scrollState]
+ * Create and [remember] (old) [ScrollbarAdapter] for lazy scrollable container and current instance
+ * of [scrollState]
  */
 @Deprecated(
     message ="Use rememberScrollbarAdapter instead",
@@ -532,7 +543,7 @@ fun rememberOldScrollbarAdapter(
  * [scrollState] is instance of [ScrollState] which is used by scrollable component
  *
  * Example:
- *     val state = rememberScrollState(0f)
+ *     val state = rememberScrollState(0)
  *
  *     Box(Modifier.fillMaxSize()) {
  *         Box(modifier = Modifier.verticalScroll(state)) {
@@ -540,8 +551,8 @@ fun rememberOldScrollbarAdapter(
  *         }
  *
  *         VerticalScrollbar(
- *             Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
- *             rememberScrollbarAdapter(state)
+ *             adapter = rememberScrollbarAdapter(state)
+ *             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
  *         )
  *     }
  */
@@ -563,8 +574,6 @@ fun OldScrollbarAdapter(
  *
  * [scrollState] is instance of [LazyListState] which is used by scrollable component
  *
- * Scrollbar size and position will be dynamically changed on the current visible content.
- *
  * Example:
  *     Box(Modifier.fillMaxSize()) {
  *         val state = rememberLazyListState()
@@ -574,8 +583,8 @@ fun OldScrollbarAdapter(
  *         }
  *
  *         VerticalScrollbar(
- *             Modifier.align(Alignment.CenterEnd),
- *             rememberScrollbarAdapter(state)
+ *             adapter = rememberScrollbarAdapter(state)
+ *             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
  *         )
  *     }
  */
@@ -617,12 +626,37 @@ fun rememberScrollbarAdapter(
 }
 
 /**
+ * Create and [remember] [androidx.compose.foundation.v2.ScrollbarAdapter] for lazy grid with
+ * the given instance of [LazyGridState].
+ */
+@JvmName("rememberScrollbarAdapter2")
+@Composable
+fun rememberScrollbarAdapter(
+    scrollState: LazyGridState,
+): androidx.compose.foundation.v2.ScrollbarAdapter = remember(scrollState) {
+    ScrollbarAdapter(scrollState)
+}
+
+/**
+ * Create and [remember] [androidx.compose.foundation.v2.ScrollbarAdapter] for text field with
+ * the given instance of [TextFieldScrollState].
+ */
+@ExperimentalFoundationApi
+@JvmName("rememberScrollbarAdapter2")
+@Composable
+fun rememberScrollbarAdapter(
+    scrollState: TextFieldScrollState,
+): androidx.compose.foundation.v2.ScrollbarAdapter = remember(scrollState) {
+    ScrollbarAdapter(scrollState)
+}
+
+/**
  * ScrollbarAdapter for Modifier.verticalScroll and Modifier.horizontalScroll
  *
  * [scrollState] is instance of [ScrollState] which is used by scrollable component
  *
  * Example:
- *     val state = rememberScrollState(0f)
+ *     val state = rememberScrollState(0)
  *
  *     Box(Modifier.fillMaxSize()) {
  *         Box(modifier = Modifier.verticalScroll(state)) {
@@ -630,8 +664,8 @@ fun rememberScrollbarAdapter(
  *         }
  *
  *         VerticalScrollbar(
- *             Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
- *             rememberScrollbarAdapter(state)
+ *             adapter = rememberScrollbarAdapter(state)
+ *             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
  *         )
  *     }
  */
@@ -645,8 +679,6 @@ fun ScrollbarAdapter(
  *
  * [scrollState] is instance of [LazyListState] which is used by scrollable component
  *
- * Scrollbar size and position will be dynamically changed on the current visible content.
- *
  * Example:
  *     Box(Modifier.fillMaxSize()) {
  *         val state = rememberLazyListState()
@@ -656,15 +688,68 @@ fun ScrollbarAdapter(
  *         }
  *
  *         VerticalScrollbar(
- *             Modifier.align(Alignment.CenterEnd),
- *             rememberScrollbarAdapter(state)
+ *             adapter = rememberScrollbarAdapter(state)
+ *             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
  *         )
  *     }
  */
 @JvmName("ScrollbarAdapter2")
 fun ScrollbarAdapter(
     scrollState: LazyListState
-): androidx.compose.foundation.v2.ScrollbarAdapter = LazyScrollbarAdapter(scrollState)
+): androidx.compose.foundation.v2.ScrollbarAdapter = LazyListScrollbarAdapter(scrollState)
+
+/**
+ * ScrollbarAdapter for lazy grids.
+ *
+ * [scrollState] is instance of [LazyGridState] which is used by scrollable component
+ *
+ * Example:
+ *     Box(Modifier.fillMaxSize()) {
+ *         val state = rememberLazyGridState()
+ *
+ *         LazyVerticalGrid(columns = ..., state = state) {
+ *             ...
+ *         }
+ *
+ *         VerticalScrollbar(
+ *             adapter = rememberScrollbarAdapter(state)
+ *             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+ *         )
+ *     }
+ */
+@JvmName("ScrollbarAdapter2")
+fun ScrollbarAdapter(
+    scrollState: LazyGridState
+): androidx.compose.foundation.v2.ScrollbarAdapter = LazyGridScrollbarAdapter(scrollState)
+
+/**
+ * ScrollbarAdapter for text fields.
+ *
+ * [scrollState] is instance of [TextFieldScrollState] which is used by scrollable component
+ *
+ * Example:
+ *     Box(Modifier.fillMaxSize()) {
+ *         val scrollState = rememberTextFieldVerticalScrollState()
+ *
+ *         BasicTextField(
+ *             value = ...,
+ *             onValueChange = ...,
+ *             scrollState = state
+ *         ) {
+ *             ...
+ *         }
+ *
+ *         VerticalScrollbar(
+ *             adapter = rememberScrollbarAdapter(scrollState)
+ *             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+ *         )
+ *     }
+ */
+@ExperimentalFoundationApi
+@JvmName("ScrollbarAdapter2")
+fun ScrollbarAdapter(
+    scrollState: TextFieldScrollState
+): androidx.compose.foundation.v2.ScrollbarAdapter = TextFieldScrollbarAdapter(scrollState)
 
 /**
  * Defines how to scroll the scrollable component
@@ -698,7 +783,7 @@ interface ScrollbarAdapter {
 
 }
 
-private fun computeSlidePositionAndSize(sliderAdapter: SliderAdapter): Pair<Int, Int> {
+private fun computeSliderPositionAndSize(sliderAdapter: SliderAdapter): Pair<Int, Int> {
     val adapterPosition = sliderAdapter.position
     val position = adapterPosition.roundToInt()
     val size = (sliderAdapter.thumbSize + adapterPosition - position).roundToInt()
@@ -712,7 +797,7 @@ private fun verticalMeasurePolicy(
     scrollThickness: Int
 ) = MeasurePolicy { measurables, constraints ->
     setContainerSize(constraints.maxHeight)
-    val (position, height) = computeSlidePositionAndSize(sliderAdapter)
+    val (position, height) = computeSliderPositionAndSize(sliderAdapter)
 
     val placeable = measurables.first().measure(
         Constraints.fixed(
@@ -731,7 +816,7 @@ private fun horizontalMeasurePolicy(
     scrollThickness: Int
 ) = MeasurePolicy { measurables, constraints ->
     setContainerSize(constraints.maxWidth)
-    val (position, width) = computeSlidePositionAndSize(sliderAdapter)
+    val (position, width) = computeSliderPositionAndSize(sliderAdapter)
 
     val placeable = measurables.first().measure(
         Constraints.fixed(
@@ -777,48 +862,172 @@ private fun Modifier.scrollbarDrag(
     }
 }
 
-private fun Modifier.scrollOnPressOutsideThumb(
+private fun Modifier.scrollOnPressTrack(
     isVertical: Boolean,
     sliderAdapter: SliderAdapter,
-    scrollbarAdapter: androidx.compose.foundation.v2.ScrollbarAdapter,
 ) = composed {
-    var targetOffset: Offset? by remember { mutableStateOf(null) }
-
-    if (targetOffset != null) {
-        val targetPosition = if (isVertical) targetOffset!!.y else targetOffset!!.x
-
-        LaunchedEffect(targetPosition) {
-            var delay = PressTimeoutMillis * 3
-            while (targetPosition !in sliderAdapter.bounds) {
-                val oldSign = sign(targetPosition - sliderAdapter.position)
-                scrollbarAdapter.scrollTo(
-                    scrollbarAdapter.scrollOffset + oldSign * scrollbarAdapter.viewportSize
-                )
-                val newSign = sign(targetPosition - sliderAdapter.position)
-
-                if (oldSign != newSign) {
-                    break
-                }
-
-                delay(delay)
-                delay = PressTimeoutMillis
-            }
-        }
+    val coroutineScope = rememberCoroutineScope()
+    val scroller = remember(sliderAdapter, coroutineScope) {
+        TrackPressScroller(coroutineScope, sliderAdapter)
     }
-    Modifier.pointerInput(Unit) {
-        detectTapAndPress(
-            onPress = { offset ->
-                targetOffset = offset
-                tryAwaitRelease()
-                targetOffset = null
-            },
-            onTap = {}
+    Modifier.pointerInput(scroller) {
+        detectScrollViaTrackGestures(
+            isVertical = isVertical,
+            scroller = scroller
         )
     }
 }
 
 /**
- * The time that must elapse before a tap gesture sends onTapDown, if there's
- * any doubt that the gesture is a tap.
+ * Responsible for scrolling when the scrollbar track is pressed (outside the thumb).
  */
-private const val PressTimeoutMillis: Long = 100L
+private class TrackPressScroller(
+    private val coroutineScope: CoroutineScope,
+    private val sliderAdapter: SliderAdapter
+) {
+
+    /**
+     * The current direction of scroll (1: down/right, -1: up/left, 0: not scrolling)
+     */
+    private var direction = 0
+
+    /**
+     * The currently pressed location (in pixels) on the scrollable axis.
+     */
+    private var offset: Float? = null
+
+    /**
+     * The job that keeps scrolling while the track is pressed.
+     */
+    private var job: Job? = null
+
+    /**
+     * Calculates the direction of scrolling towards the given offset (in pixels).
+     */
+    private fun directionOfScrollTowards(offset: Float): Int {
+        val thumbRange = sliderAdapter.bounds
+        return when {
+            offset < thumbRange.start -> -1
+            offset > thumbRange.endInclusive -> 1
+            else -> 0
+        }
+    }
+
+    /**
+     * Scrolls once towards the current offset, if it matches the direction of the current gesture.
+     */
+    private suspend fun scrollTowardsCurrentOffset() {
+        offset?.let {
+            val currentDirection = directionOfScrollTowards(it)
+            if (currentDirection != direction)
+                return
+            with(sliderAdapter.adapter) {
+                scrollTo(scrollOffset + currentDirection * viewportSize)
+            }
+        }
+    }
+
+    /**
+     * Starts the job that scrolls continuously towards the current offset.
+     */
+    private fun startScrolling() {
+        job?.cancel()
+        job = coroutineScope.launch {
+            scrollTowardsCurrentOffset()
+            delay(DelayBeforeSecondScrollOnTrackPress)
+            while (true) {
+                scrollTowardsCurrentOffset()
+                delay(DelayBetweenScrollsOnTrackPress)
+            }
+        }
+    }
+
+    /**
+     * Invoked on the first press for a gesture.
+     */
+    fun onPress(offset: Float) {
+        this.offset = offset
+        this.direction = directionOfScrollTowards(offset)
+
+        if (direction != 0)
+            startScrolling()
+    }
+
+    /**
+     * Invoked when the pointer moves while pressed during the gesture.
+     */
+    fun onMovePressed(offset: Float) {
+        this.offset = offset
+    }
+
+    /**
+     * Cleans up when the gesture finishes.
+     */
+    private fun cleanupAfterGesture(){
+        job?.cancel()
+        direction = 0
+        offset = null
+    }
+
+    /**
+     * Invoked when the button is released.
+     */
+    fun onRelease() {
+        cleanupAfterGesture()
+    }
+
+    /**
+     * Invoked when the gesture is cancelled.
+     */
+    fun onGestureCancelled() {
+        cleanupAfterGesture()
+        // Maybe revert to the initial position?
+    }
+
+}
+
+/**
+ * Detects the pointer events relevant for the "scroll by pressing on the track outside the thumb"
+ * gesture and calls the corresponding methods in the [scroller].
+ */
+private suspend fun PointerInputScope.detectScrollViaTrackGestures(
+    isVertical: Boolean,
+    scroller: TrackPressScroller
+) {
+    fun Offset.onScrollAxis() = if (isVertical) y else x
+
+    forEachGesture {
+        awaitPointerEventScope {
+            val down = awaitFirstDown()
+            scroller.onPress(down.position.onScrollAxis())
+
+            while (true) {
+                val drag =
+                    if (isVertical)
+                        awaitVerticalDragOrCancellation(down.id)
+                    else
+                        awaitHorizontalDragOrCancellation(down.id)
+
+                if (drag == null) {
+                    scroller.onGestureCancelled()
+                    break
+                } else if (!drag.pressed) {
+                    scroller.onRelease()
+                    break
+                } else
+                    scroller.onMovePressed(drag.position.onScrollAxis())
+            }
+        }
+    }
+}
+
+/**
+ * The delay between the 1st and 2nd scroll while the scrollbar track is pressed outside the thumb.
+ */
+internal const val DelayBeforeSecondScrollOnTrackPress: Long = 300L
+
+/**
+ * The delay between each subsequent (after the 2nd) scroll while the scrollbar track is pressed
+ * outside the thumb.
+ */
+internal const val DelayBetweenScrollsOnTrackPress: Long = 100L

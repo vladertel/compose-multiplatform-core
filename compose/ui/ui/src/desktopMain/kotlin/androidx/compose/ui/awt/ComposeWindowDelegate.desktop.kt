@@ -20,10 +20,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.window.LocalWindow
 import androidx.compose.ui.window.UndecoratedWindowResizer
 import androidx.compose.ui.window.WindowExceptionHandler
+import androidx.compose.ui.window.density
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.OS
@@ -143,10 +149,57 @@ internal class ComposeWindowDelegate(
                 LocalWindow provides window,
                 LocalLayerContainer provides _pane
             ) {
-                content()
-                undecoratedWindowResizer.Content()
+                WindowContentLayout(content)
             }
         }
+    }
+
+    @Composable
+    private fun WindowContentLayout(
+        content: @Composable () -> Unit
+    ){
+        Layout(
+            {
+                content()
+                undecoratedWindowResizer.Content(
+                    modifier = Modifier.layoutId("UndecoratedWindowResizer")
+                )
+            },
+            measurePolicy = { measurables, constraints ->
+                val resizerMeasurable = measurables.lastOrNull()?.let {
+                    if (it.layoutId == "UndecoratedWindowResizer") it else null
+                }
+                val resizerPlaceable = resizerMeasurable?.let {
+                    val density = layer.component.density.density
+                    val resizerWidth = (window.width * density).toInt()
+                    val resizerHeight = (window.height * density).toInt()
+                    it.measure(
+                        Constraints(
+                            minWidth = resizerWidth,
+                            minHeight = resizerHeight,
+                            maxWidth = resizerWidth,
+                            maxHeight = resizerHeight
+                        )
+                    )
+                }
+
+                val contentPlaceables = buildList(measurables.size){
+                    measurables.fastForEach {
+                        if (it != resizerMeasurable)
+                            add(it.measure(constraints))
+                    }
+                }
+
+                val contentWidth = contentPlaceables.maxOfOrNull { it.measuredWidth } ?: 0
+                val contentHeight = contentPlaceables.maxOfOrNull { it.measuredHeight } ?: 0
+                layout(contentWidth, contentHeight) {
+                    contentPlaceables.fastForEach { placeable ->
+                        placeable.place(0, 0)
+                    }
+                    resizerPlaceable?.place(0, 0)
+                }
+            }
+        )
     }
 
     fun dispose() {

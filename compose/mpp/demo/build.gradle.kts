@@ -23,6 +23,7 @@ plugins {
     id("AndroidXComposePlugin")
     id("kotlin-multiplatform")
     id("application")
+    kotlin("plugin.serialization") version "1.8.0"
 }
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
@@ -121,6 +122,7 @@ kotlin {
                 implementation(project(":compose:ui:ui-graphics"))
                 implementation(project(":compose:ui:ui-text"))
                 implementation(libs.kotlinCoroutinesCore)
+                 api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.4.1")
             }
         }
 
@@ -128,6 +130,14 @@ kotlin {
             dependsOn(commonMain)
             dependencies {
                 implementation(libs.skikoCommon)
+            }
+        }
+
+        val desktopMain by getting {
+            dependsOn(skikoMain)
+            dependencies {
+                implementation(libs.skikoCurrentOs)
+                implementation(project(":compose:desktop:desktop"))
             }
         }
 
@@ -221,6 +231,16 @@ if (System.getProperty("os.name") == "Mac OS X") {
             }
         }
     }
+}
+
+tasks.create("runDesktop", JavaExec::class.java) {
+    dependsOn(":compose:desktop:desktop:jar")
+    main = "androidx.compose.mpp.demo.Main_desktopKt"
+    systemProperty("skiko.fps.enabled", "true")
+    val compilation = kotlin.jvm("desktop").compilations["main"]
+    classpath =
+        compilation.output.allOutputs +
+            compilation.runtimeDependencyFiles
 }
 
 project.tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile>().configureEach {

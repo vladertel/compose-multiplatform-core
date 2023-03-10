@@ -28,59 +28,32 @@ import kotlin.native.concurrent.isFrozen
 import kotlin.native.concurrent.freeze
 import kotlin.native.concurrent.ensureNeverFrozen
 
+private val threadCounter = kotlin.native.concurrent.AtomicLong(0)
+
 @kotlin.native.concurrent.ThreadLocal
-private val threadLocalStorage = mutableMapOf<Any, Any?>()
+private var threadId: Long = threadCounter.addAndGet(1)
 
-// TODO:
-internal actual open class ThreadLocal<T> actual constructor(
-    initialValue: () -> T
-) {
-    // TODO: not exact semantics as on JVM, initialize initial value only once, not per thread,
-    // as otherwise we have to share create factory.
-    private val initial = initialValue()
-
-    private var value: T
-        get() = threadLocalStorage.getOrPut(this, { initial }) as T
-        set(value) {
-            threadLocalStorage[this] = value
-        }
-
-    actual fun get(): T = value
-
-    actual fun set(value: T) {
-        this.value = value
-    }
-
-    actual fun remove() {
-        threadLocalStorage.remove(this)
-    }
-}
+internal actual fun getCurrentThreadId(): Long = threadId
 
 /**
  * AtomicReference implementation suitable for both single and multi-threaded context.
  */
 actual class AtomicReference<V> actual constructor(value: V) {
-    private val delegate = kotlin.native.concurrent.FreezableAtomicReference(value)
+    private val delegate = kotlin.native.concurrent.AtomicReference(value)
 
     actual fun get(): V = delegate.value
 
     actual fun set(value: V) {
-        if (delegate.isFrozen)
-            value.freeze()
         delegate.value = value
     }
 
     actual fun getAndSet(value: V): V {
-        if (delegate.isFrozen)
-            value.freeze()
         var old = delegate.value
         while (!delegate.compareAndSet(old, value)) { old = delegate.value }
         return old
     }
 
     actual fun compareAndSet(expect: V, newValue: V): Boolean {
-        if (delegate.isFrozen)
-            newValue.freeze()
         return delegate.compareAndSet(expect, newValue)
     }
 }
@@ -92,10 +65,6 @@ internal actual class AtomicInt actual constructor(value: Int) {
         delegate.value = value
     }
     actual fun add(amount: Int): Int = delegate.addAndGet(amount)
-}
-
-internal actual fun ensureMutable(it: Any) {
-    it.ensureNeverFrozen()
 }
 
 internal actual fun identityHashCode(instance: Any?): Int =
@@ -133,16 +102,6 @@ internal actual fun <T> createSnapshotMutableState(
     policy: SnapshotMutationPolicy<T>
 ): SnapshotMutableState<T> =
     SnapshotMutableStateImpl(value, policy)
-
-// fixme: not actually thread local
-internal actual class SnapshotThreadLocal<T> actual constructor() {
-    private var value: T? = null
-
-    actual fun get(): T? = value
-    actual fun set(value: T?) {
-        this.value = value
-    }
-}
 
 @ExperimentalComposeApi
 internal actual class SnapshotContextElementImpl actual constructor(
