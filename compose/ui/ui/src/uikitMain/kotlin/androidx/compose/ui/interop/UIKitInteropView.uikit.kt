@@ -44,11 +44,11 @@ import kotlinx.atomicfu.atomic
 import platform.CoreGraphics.CGRectMake
 import platform.UIKit.UIColor
 import platform.UIKit.UIView
-import platform.UIKit.addSubview
+//import platform.UIKit.addSubview
 import platform.UIKit.backgroundColor
-import platform.UIKit.insertSubview
-import platform.UIKit.removeFromSuperview
-import platform.UIKit.setFrame
+//import platform.UIKit.insertSubview
+//import platform.UIKit.removeFromSuperview
+//import platform.UIKit.setFrame
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
@@ -84,11 +84,11 @@ fun <T : UIView> UIKitInteropView(
             val newRectInPixels = IntRect(localToWindowOffset, coordinates.size)
             if (rectInPixels != newRectInPixels) {
                 val rect = newRectInPixels / density
-                componentInfo.container.setFrame(rect.toCGRect())
+//                componentInfo.container.setFrame(rect.toCGRect())
                 if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
-                    componentInfo.component.setFrame(
-                        CGRectMake(0.0, 0.0, rect.width.toDouble(), rect.height.toDouble())
-                    )
+//                    componentInfo.component.setFrame(
+//                        CGRectMake(0.0, 0.0, rect.width.toDouble(), rect.height.toDouble())
+//                    )
                 }
                 rectInPixels = newRectInPixels
             }
@@ -100,12 +100,12 @@ fun <T : UIView> UIKitInteropView(
     DisposableEffect(factory, dispose) {
         componentInfo.component = factory()
         componentInfo.container = UIView().apply {
-            addSubview(componentInfo.component)
+//            addSubview(componentInfo.component)
         }
         componentInfo.updater = Updater(componentInfo.component, update)
-        root.insertSubview(componentInfo.container, 0)
+//        root.insertSubview(componentInfo.container, 0)
         onDispose {
-            componentInfo.container.removeFromSuperview()
+//            componentInfo.container.removeFromSuperview()
             componentInfo.updater.dispose()
             dispose(componentInfo.component)
         }
