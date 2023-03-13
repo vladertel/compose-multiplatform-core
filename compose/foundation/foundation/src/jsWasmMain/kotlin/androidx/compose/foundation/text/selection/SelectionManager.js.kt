@@ -39,4 +39,4 @@ internal actual fun isCopyKeyEvent(keyEvent: KeyEvent): Boolean =
  * Magnification is not supported on desktop.
  */
 internal actual fun Modifier.selectionMagnifier(manager: SelectionManager): Modifier =
-    TODO("implement js selectionMagnifier")
+    also { println("implement js selectionMagnifier") }
