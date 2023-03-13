@@ -22,7 +22,9 @@ internal actual fun String.toCharArray(
     startIndex: Int,
     endIndex: Int
 ) {
-    (startIndex until endIndex).forEach {
-        destination[destinationOffset + it] = get(it)
+    var currentDestinationIndex = destinationOffset
+    for (currentSourceIndex in startIndex until endIndex) {
+        destination[currentDestinationIndex] = get(currentSourceIndex)
+        currentDestinationIndex++
     }
 }
