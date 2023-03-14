@@ -69,6 +69,7 @@ class ComposeSceneInputTest {
             overlappedPopup.Content()
             independentPopup.Content()
         }
+        scene.render() // Popup has 2-frame layout passes. Call it to avoid synthetic events
 
         scene.sendPointerEvent(PointerEventType.Enter, Offset(-10f, -10f))
         background.events.assertReceivedNoEvents()
@@ -77,12 +78,8 @@ class ComposeSceneInputTest {
         overlappedPopup.events.assertReceivedNoEvents()
         independentPopup.events.assertReceivedNoEvents()
 
-        println("D1")
         scene.sendPointerEvent(PointerEventType.Move, Offset(10f, 10f))
-        println("D2")
         background.events.assertReceivedNoEvents()
-        cutPopup.events.assertReceived(
-            PointerEventType.Move, Offset(-10f, -10f) - cutPopup.origin)
         cutPopup.events.assertReceivedLast(
             PointerEventType.Move, Offset(10f, 10f) - cutPopup.origin)
         overlappedPopup.events.assertReceivedNoEvents()
