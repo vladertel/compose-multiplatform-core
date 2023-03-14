@@ -81,7 +81,7 @@ package androidx.compose.foundation {
   }
 
   public enum MutatePriority {
-    method public static androidx.compose.foundation.MutatePriority valueOf(String name) throws java.lang.IllegalArgumentException;
+    method public static androidx.compose.foundation.MutatePriority valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
     method public static androidx.compose.foundation.MutatePriority[] values();
     enum_constant public static final androidx.compose.foundation.MutatePriority Default;
     enum_constant public static final androidx.compose.foundation.MutatePriority PreventUserInput;
@@ -184,7 +184,7 @@ package androidx.compose.foundation.gestures {
   }
 
   public enum Orientation {
-    method public static androidx.compose.foundation.gestures.Orientation valueOf(String name) throws java.lang.IllegalArgumentException;
+    method public static androidx.compose.foundation.gestures.Orientation valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
     method public static androidx.compose.foundation.gestures.Orientation[] values();
     enum_constant public static final androidx.compose.foundation.gestures.Orientation Horizontal;
     enum_constant public static final androidx.compose.foundation.gestures.Orientation Vertical;
@@ -740,10 +740,13 @@ package androidx.compose.foundation.text {
   }
 
   public final class BasicTextKt {
-    method @androidx.compose.runtime.Composable public static void BasicText(String text, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.text.TextStyle style, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult,kotlin.Unit> onTextLayout, optional int overflow, optional boolean softWrap, optional int maxLines, optional int minLines);
-    method @androidx.compose.runtime.Composable public static void BasicText(androidx.compose.ui.text.AnnotatedString text, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.text.TextStyle style, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult,kotlin.Unit> onTextLayout, optional int overflow, optional boolean softWrap, optional int maxLines, optional int minLines, optional java.util.Map<java.lang.String,androidx.compose.foundation.text.InlineTextContent> inlineContent);
-    method @Deprecated @androidx.compose.runtime.Composable public static void BasicText(String text, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.text.TextStyle style, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult,? extends kotlin.Unit> onTextLayout, optional int overflow, optional boolean softWrap, optional int maxLines);
-    method @Deprecated @androidx.compose.runtime.Composable public static void BasicText(androidx.compose.ui.text.AnnotatedString text, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.text.TextStyle style, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult,? extends kotlin.Unit> onTextLayout, optional int overflow, optional boolean softWrap, optional int maxLines, optional java.util.Map<java.lang.String,? extends androidx.compose.foundation.text.InlineTextContent> inlineContent);
+    method @androidx.compose.runtime.Composable public static void BasicText(String text, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.text.TextStyle style, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult,kotlin.Unit>? onTextLayout, optional int overflow, optional boolean softWrap, optional int maxLines, optional int minLines);
+    method @androidx.compose.runtime.Composable public static void BasicText(androidx.compose.ui.text.AnnotatedString text, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.text.TextStyle style, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult,kotlin.Unit>? onTextLayout, optional int overflow, optional boolean softWrap, optional int maxLines, optional int minLines, optional java.util.Map<java.lang.String,androidx.compose.foundation.text.InlineTextContent> inlineContent);
+    method @Deprecated @androidx.compose.runtime.Composable public static void BasicText(String text, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.text.TextStyle style, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult,? extends kotlin.Unit>? onTextLayout, optional int overflow, optional boolean softWrap, optional int maxLines);
+    method @Deprecated @androidx.compose.runtime.Composable public static void BasicText(androidx.compose.ui.text.AnnotatedString text, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.ui.text.TextStyle style, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult,? extends kotlin.Unit>? onTextLayout, optional int overflow, optional boolean softWrap, optional int maxLines, optional java.util.Map<java.lang.String,? extends androidx.compose.foundation.text.InlineTextContent> inlineContent);
+    method @Deprecated public static boolean getNewTextRendering1_5();
+    method @Deprecated public static void setNewTextRendering1_5(boolean);
+    property @Deprecated public static final boolean NewTextRendering1_5;
   }
 
   public final class ClickableTextKt {

@@ -73,14 +73,19 @@ class CreatePublicKeyCredentialRequestTest {
     @Test
     fun constructor_setPreferImmediatelyAvailableCredentialsToTrue() {
         val preferImmediatelyAvailableCredentialsExpected = true
+        val origin = "origin"
+        val clientDataHash = "hash"
         val createPublicKeyCredentialRequest = CreatePublicKeyCredentialRequest(
             TEST_REQUEST_JSON,
-            preferImmediatelyAvailableCredentialsExpected
+            clientDataHash,
+            preferImmediatelyAvailableCredentialsExpected,
+            origin
         )
         val preferImmediatelyAvailableCredentialsActual =
             createPublicKeyCredentialRequest.preferImmediatelyAvailableCredentials
         assertThat(preferImmediatelyAvailableCredentialsActual)
             .isEqualTo(preferImmediatelyAvailableCredentialsExpected)
+        assertThat(createPublicKeyCredentialRequest.origin).isEqualTo(origin)
     }
 
     @Test
@@ -97,6 +102,9 @@ class CreatePublicKeyCredentialRequestTest {
     fun getter_frameworkProperties_success() {
         val requestJsonExpected = TEST_REQUEST_JSON
         val preferImmediatelyAvailableCredentialsExpected = false
+        val expectedAutoSelect = true
+        val origin = "origin"
+        val clientDataHash = "hash"
         val expectedData = Bundle()
         expectedData.putString(
             PublicKeyCredential.BUNDLE_KEY_SUBTYPE,
@@ -106,19 +114,33 @@ class CreatePublicKeyCredentialRequestTest {
         expectedData.putString(
             BUNDLE_KEY_REQUEST_JSON, requestJsonExpected
         )
+        expectedData.putString(CreatePublicKeyCredentialRequest.BUNDLE_KEY_CLIENT_DATA_HASH,
+            clientDataHash)
         expectedData.putBoolean(
             BUNDLE_KEY_PREFER_IMMEDIATELY_AVAILABLE_CREDENTIALS,
             preferImmediatelyAvailableCredentialsExpected
         )
+        expectedData.putBoolean(
+            CreateCredentialRequest.BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED,
+            expectedAutoSelect
+        )
+
+        val expectedCandidateQueryBundle = expectedData.deepCopy()
+        expectedCandidateQueryBundle.remove(
+            CreateCredentialRequest.BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED
+        )
 
         val request = CreatePublicKeyCredentialRequest(
             requestJsonExpected,
-            preferImmediatelyAvailableCredentialsExpected
+            clientDataHash,
+            preferImmediatelyAvailableCredentialsExpected,
+            origin
         )
 
         assertThat(request.type).isEqualTo(PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL)
-        assertThat(equals(request.candidateQueryData, expectedData)).isTrue()
+        assertThat(equals(request.candidateQueryData, expectedCandidateQueryBundle)).isTrue()
         assertThat(request.isSystemProviderRequired).isFalse()
+        assertThat(request.origin).isEqualTo(origin)
         val credentialData = getFinalCreateCredentialData(
             request, mContext
         )
@@ -151,18 +173,23 @@ class CreatePublicKeyCredentialRequestTest {
     @SdkSuppress(minSdkVersion = 28)
     @Test
     fun frameworkConversion_success() {
-        val request = CreatePublicKeyCredentialRequest(TEST_REQUEST_JSON, true)
+        val origin = "origin"
+        val clientDataHash = "hash"
+        val request = CreatePublicKeyCredentialRequest(TEST_REQUEST_JSON, clientDataHash,
+            true, origin)
 
         val convertedRequest = createFrom(
             request.type, getFinalCreateCredentialData(
                 request, mContext
             ),
-            request.candidateQueryData, request.isSystemProviderRequired
+            request.candidateQueryData, request.isSystemProviderRequired,
+            request.origin
         )
 
         assertThat(convertedRequest).isInstanceOf(
             CreatePublicKeyCredentialRequest::class.java
         )
+        assertThat(convertedRequest?.origin).isEqualTo(origin)
         val convertedSubclassRequest = convertedRequest as CreatePublicKeyCredentialRequest
         assertThat(convertedSubclassRequest.requestJson).isEqualTo(request.requestJson)
         assertThat(convertedSubclassRequest.preferImmediatelyAvailableCredentials)

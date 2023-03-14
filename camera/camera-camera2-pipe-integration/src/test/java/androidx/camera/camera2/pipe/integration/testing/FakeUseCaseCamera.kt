@@ -31,7 +31,6 @@ import androidx.camera.camera2.pipe.integration.impl.UseCaseCameraRequestControl
 import androidx.camera.core.UseCase
 import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.Config
-import androidx.camera.core.impl.SessionConfig
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
@@ -71,8 +70,6 @@ open class FakeUseCaseCameraRequestControl : UseCaseCameraRequestControl {
         values: Map<CaptureRequest.Key<*>, Any>,
         optionPriority: Config.OptionPriority,
         tags: Map<String, Any>,
-        streams: Set<StreamId>?,
-        template: RequestTemplate?,
         listeners: Set<Request.Listener>
     ): Deferred<Unit> {
         addParameterCalls.add(values)
@@ -91,10 +88,6 @@ open class FakeUseCaseCameraRequestControl : UseCaseCameraRequestControl {
         return CompletableDeferred(Unit)
     }
 
-    override fun setSessionConfigAsync(sessionConfig: SessionConfig): Deferred<Unit> {
-        return CompletableDeferred(Unit)
-    }
-
     override suspend fun setTorchAsync(enabled: Boolean): Deferred<Result3A> {
         return setTorchResult
     }
@@ -105,9 +98,9 @@ open class FakeUseCaseCameraRequestControl : UseCaseCameraRequestControl {
     var cancelFocusMeteringResult = CompletableDeferred(Result3A(status = Result3A.Status.OK))
 
     override suspend fun startFocusAndMeteringAsync(
-        aeRegions: List<MeteringRectangle>,
-        afRegions: List<MeteringRectangle>,
-        awbRegions: List<MeteringRectangle>,
+        aeRegions: List<MeteringRectangle>?,
+        afRegions: List<MeteringRectangle>?,
+        awbRegions: List<MeteringRectangle>?,
         afTriggerStartAeMode: AeMode?
     ): Deferred<Result3A> {
         focusMeteringCalls.add(
@@ -131,9 +124,9 @@ open class FakeUseCaseCameraRequestControl : UseCaseCameraRequestControl {
     }
 
     data class FocusMeteringParams(
-        val aeRegions: List<MeteringRectangle> = emptyList(),
-        val afRegions: List<MeteringRectangle> = emptyList(),
-        val awbRegions: List<MeteringRectangle> = emptyList(),
+        val aeRegions: List<MeteringRectangle>? = null,
+        val afRegions: List<MeteringRectangle>? = null,
+        val awbRegions: List<MeteringRectangle>? = null,
         val afTriggerStartAeMode: AeMode? = null
     )
 

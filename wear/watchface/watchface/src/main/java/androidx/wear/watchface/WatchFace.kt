@@ -25,16 +25,21 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.IBinder
 import android.provider.Settings
 import android.support.wearable.watchface.SharedMemoryImage
 import android.support.wearable.watchface.WatchFaceStyle
 import android.view.Gravity
 import android.view.Surface
 import android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT
+import android.view.SurfaceControlViewHost
+import android.view.SurfaceView
+import android.view.WindowManager
 import androidx.annotation.ColorInt
 import androidx.annotation.IntDef
 import androidx.annotation.RequiresApi
@@ -45,6 +50,7 @@ import androidx.wear.watchface.complications.SystemDataSources
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.toApiComplicationData
 import androidx.wear.watchface.control.HeadlessWatchFaceImpl
+import androidx.wear.watchface.control.RemoteWatchFaceView
 import androidx.wear.watchface.control.data.ComplicationRenderParams
 import androidx.wear.watchface.control.data.HeadlessWatchFaceInstanceParams
 import androidx.wear.watchface.control.data.WatchFaceRenderParams
@@ -78,8 +84,8 @@ private const val SYSTEM_DECIDES_FRAME_RATE = 0f
  * The type of watch face, whether it's digital or analog. This influences the time displayed for
  * remote previews.
  *
- * @hide
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 @IntDef(value = [WatchFaceType.DIGITAL, WatchFaceType.ANALOG])
 public annotation class WatchFaceType {
     public companion object {
@@ -117,7 +123,6 @@ public class WatchFace(
         private var pendingComponentName: ComponentName? = null
         private var pendingEditorDelegateCB: CompletableDeferred<EditorDelegate>? = null
 
-        /** @hide */
         @JvmStatic
         @UiThread
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -144,7 +149,6 @@ public class WatchFace(
             componentNameToEditorDelegate.remove(componentName)
         }
 
-        /** @hide */
         @JvmStatic
         @UiThread
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -156,7 +160,6 @@ public class WatchFace(
         /**
          * For use by on watch face editors.
          *
-         * @hide
          */
         @JvmStatic
         @UiThread
@@ -178,7 +181,6 @@ public class WatchFace(
         /**
          * For use by on watch face editors.
          *
-         * @hide
          */
         @SuppressLint("NewApi")
         @JvmStatic
@@ -213,7 +215,6 @@ public class WatchFace(
     /**
      * Delegate used by on watch face editors.
      *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public interface EditorDelegate {
@@ -262,7 +263,6 @@ public class WatchFace(
     /**
      * Used to inform EditorSession about changes to [ComplicationSlot.configExtras].
      *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public interface ComplicationSlotConfigExtrasChangeCallback {
@@ -502,7 +502,6 @@ internal class MockTime(var speed: Double, var minTime: Long, var maxTime: Long)
     }
 }
 
-/** @hide */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @SuppressLint("SyntheticAccessor")
 public class WatchFaceImpl
@@ -909,11 +908,10 @@ constructor(
     private fun getZonedDateTime() =
         ZonedDateTime.ofInstant(getNow(), systemTimeProvider.getSystemTimeZoneId())
 
-    /** Returns the current system time as provied by [systemTimeProvider] as an [Instant]. */
-    private fun getNow() =
+    /** Returns the current system time as provided by [systemTimeProvider] as an [Instant]. */
+    internal fun getNow(): Instant =
         Instant.ofEpochMilli(mockTime.applyMockTime(systemTimeProvider.getSystemTimeMillis()))
 
-    /** @hide */
     @UiThread
     internal fun maybeUpdateDrawMode() {
         var newDrawMode =
@@ -973,7 +971,6 @@ constructor(
      * @param startTimeMillis The SystemTime in milliseconds at which we started rendering
      * @param currentTimeMillis The current SystemTime in milliseconds
      * @param nowInstant The current [Instant].
-     * @hide
      */
     @UiThread
     internal fun computeDelayTillNextFrame(
@@ -1129,6 +1126,25 @@ constructor(
         }
 
     @UiThread
+    internal fun createRemoteWatchFaceView(
+        hostToken: IBinder,
+        width: Int,
+        height: Int
+    ): RemoteWatchFaceView? = TraceEvent("WatchFaceImpl.createRemoteWatchFaceView").use {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return CreateRemoteWatchFaceViewHelper.createRemoteWatchFaceView(
+                watchFaceHostApi,
+                this,
+                hostToken,
+                width,
+                height
+            )
+        } else {
+            return null
+        }
+    }
+
+    @UiThread
     @RequiresApi(27)
     internal fun renderComplicationToBitmap(params: ComplicationRenderParams): Bundle? =
         TraceEvent("WatchFaceImpl.renderComplicationToBitmap").use {
@@ -1209,6 +1225,88 @@ constructor(
         complicationSlotsManager.dump(writer)
         renderer.dumpInternal(writer)
         writer.decreaseIndent()
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.R)
+internal object CreateRemoteWatchFaceViewHelper {
+    @Suppress("deprecation") // defaultDisplay
+    internal fun createRemoteWatchFaceView(
+        watchFaceHostApi: WatchFaceHostApi,
+        watchFaceImpl: WatchFaceImpl,
+        hostToken: IBinder,
+        width: Int,
+        height: Int
+    ): RemoteWatchFaceView {
+        val context = watchFaceHostApi.getContext()
+        val host = SurfaceControlViewHost(
+            context,
+            context.getSystemService(WindowManager::class.java).defaultDisplay,
+            hostToken
+        )
+        val view = SurfaceView(context)
+        view.layoutParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            title = "RemoteWatchFaceView"
+        }
+        host.setView(view, width, height)
+        return RemoteWatchFaceView(
+            view,
+            host,
+            watchFaceHostApi.getUiThreadCoroutineScope()
+        ) { surfaceHolder, params ->
+            val oldStyle = watchFaceImpl.currentUserStyleRepository.userStyle.value
+            val instant = Instant.ofEpochMilli(params.calendarTimeMillis)
+
+            params.userStyle?.let {
+                watchFaceImpl.currentUserStyleRepository.updateUserStyle(
+                    UserStyle(UserStyleData(it), watchFaceImpl.currentUserStyleRepository.schema)
+                )
+            }
+
+            val oldComplicationData =
+                watchFaceImpl.complicationSlotsManager.complicationSlots.values.associateBy(
+                    { it.id },
+                    { it.renderer.getData() }
+                )
+
+            params.idAndComplicationDatumWireFormats?.let {
+                for (idAndData in it) {
+                    watchFaceImpl.complicationSlotsManager.setComplicationDataUpdateSync(
+                        idAndData.id,
+                        idAndData.complicationData.toApiComplicationData(),
+                        instant
+                    )
+                }
+            }
+
+            watchFaceImpl.renderer.renderScreenshotToSurface(
+                ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")),
+                RenderParameters(params.renderParametersWireFormat),
+                surfaceHolder
+            )
+
+            // Restore previous style & complicationSlots if required.
+            if (params.userStyle != null) {
+                watchFaceImpl.currentUserStyleRepository.updateUserStyle(oldStyle)
+            }
+
+            if (params.idAndComplicationDatumWireFormats != null) {
+                val now = watchFaceImpl.getNow()
+                for ((id, complicationData) in oldComplicationData) {
+                    watchFaceImpl.complicationSlotsManager.setComplicationDataUpdateSync(
+                        id,
+                        complicationData,
+                        now
+                    )
+                }
+            }
+        }
     }
 }
 

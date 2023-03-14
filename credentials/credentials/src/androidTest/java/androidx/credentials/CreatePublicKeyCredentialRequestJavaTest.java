@@ -16,6 +16,7 @@
 
 package androidx.credentials;
 
+import static androidx.credentials.CreatePublicKeyCredentialRequest.BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED;
 import static androidx.credentials.CreatePublicKeyCredentialRequest.BUNDLE_KEY_PREFER_IMMEDIATELY_AVAILABLE_CREDENTIALS;
 import static androidx.credentials.CreatePublicKeyCredentialRequest.BUNDLE_KEY_REQUEST_JSON;
 import static androidx.credentials.internal.FrameworkImplHelper.getFinalCreateCredentialData;
@@ -92,8 +93,10 @@ public class CreatePublicKeyCredentialRequestJavaTest {
     @Test
     public void constructor_setPreferImmediatelyAvailableCredentialsToTrue() {
         boolean preferImmediatelyAvailableCredentialsExpected = true;
+        String clientDataHash = "hash";
         CreatePublicKeyCredentialRequest createPublicKeyCredentialRequest =
                 new CreatePublicKeyCredentialRequest(TEST_REQUEST_JSON,
+                        clientDataHash,
                         preferImmediatelyAvailableCredentialsExpected);
         boolean preferImmediatelyAvailableCredentialsActual =
                 createPublicKeyCredentialRequest.preferImmediatelyAvailableCredentials();
@@ -116,6 +119,7 @@ public class CreatePublicKeyCredentialRequestJavaTest {
     @Test
     public void getter_frameworkProperties_success() {
         String requestJsonExpected = TEST_REQUEST_JSON;
+        String clientDataHash = "hash";
         boolean preferImmediatelyAvailableCredentialsExpected = false;
         Bundle expectedData = new Bundle();
         expectedData.putString(
@@ -124,15 +128,22 @@ public class CreatePublicKeyCredentialRequestJavaTest {
                         .BUNDLE_VALUE_SUBTYPE_CREATE_PUBLIC_KEY_CREDENTIAL_REQUEST);
         expectedData.putString(
                 BUNDLE_KEY_REQUEST_JSON, requestJsonExpected);
+        expectedData.putString(CreatePublicKeyCredentialRequest.BUNDLE_KEY_CLIENT_DATA_HASH,
+                clientDataHash);
         expectedData.putBoolean(
                 BUNDLE_KEY_PREFER_IMMEDIATELY_AVAILABLE_CREDENTIALS,
                 preferImmediatelyAvailableCredentialsExpected);
+        expectedData.putBoolean(
+                BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED,
+                preferImmediatelyAvailableCredentialsExpected);
+        Bundle expectedQuery = TestUtilsKt.deepCopyBundle(expectedData);
+        expectedQuery.remove(BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED);
 
         CreatePublicKeyCredentialRequest request = new CreatePublicKeyCredentialRequest(
-                requestJsonExpected, preferImmediatelyAvailableCredentialsExpected);
+                requestJsonExpected, clientDataHash, preferImmediatelyAvailableCredentialsExpected);
 
         assertThat(request.getType()).isEqualTo(PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL);
-        assertThat(TestUtilsKt.equals(request.getCandidateQueryData(), expectedData)).isTrue();
+        assertThat(TestUtilsKt.equals(request.getCandidateQueryData(), expectedQuery)).isTrue();
         assertThat(request.isSystemProviderRequired()).isFalse();
         Bundle credentialData = getFinalCreateCredentialData(
                 request, mContext);
@@ -158,13 +169,15 @@ public class CreatePublicKeyCredentialRequestJavaTest {
     @SdkSuppress(minSdkVersion = 28)
     @Test
     public void frameworkConversion_success() {
+        String clientDataHash = "hash";
         CreatePublicKeyCredentialRequest request =
-                new CreatePublicKeyCredentialRequest(TEST_REQUEST_JSON, true);
+                new CreatePublicKeyCredentialRequest(TEST_REQUEST_JSON, clientDataHash, true);
 
         CreateCredentialRequest convertedRequest = CreateCredentialRequest.createFrom(
                 request.getType(), getFinalCreateCredentialData(
                         request, mContext),
-                request.getCandidateQueryData(), request.isSystemProviderRequired()
+                request.getCandidateQueryData(), request.isSystemProviderRequired(),
+                request.getOrigin()
         );
 
         assertThat(convertedRequest).isInstanceOf(CreatePublicKeyCredentialRequest.class);

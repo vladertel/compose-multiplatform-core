@@ -93,8 +93,8 @@ public final class ActionSpecTest {
     public void getAppAction_onlyRequiredProperty() {
         Property property =
                 Property.create(
-                        EntityProperty.newBuilder()
-                                .addPossibleEntity(
+                        new EntityProperty.Builder()
+                                .addPossibleEntities(
                                         new Entity.Builder()
                                                 .setId("contact_2")
                                                 .setName("Donald")
@@ -102,7 +102,7 @@ public final class ActionSpecTest {
                                                 .build())
                                 .setValueMatchRequired(true)
                                 .build(),
-                        StringProperty.EMPTY);
+                        new StringProperty.Builder().build());
 
         assertThat(ACTION_SPEC.convertPropertyToProto(property))
                 .isEqualTo(
@@ -128,8 +128,8 @@ public final class ActionSpecTest {
     public void getAppAction_allProperties() {
         Property property =
                 Property.create(
-                        EntityProperty.newBuilder()
-                                .addPossibleEntity(
+                        new EntityProperty.Builder()
+                                .addPossibleEntities(
                                         new Entity.Builder()
                                                 .setId("contact_2")
                                                 .setName("Donald")
@@ -137,41 +137,40 @@ public final class ActionSpecTest {
                                                 .build())
                                 .build(),
                         Optional.of(
-                                EntityProperty.newBuilder()
-                                        .addPossibleEntity(
+                                new EntityProperty.Builder()
+                                        .addPossibleEntities(
                                                 new Entity.Builder()
                                                         .setId("entity1")
                                                         .setName("optional possible entity")
                                                         .build())
-                                        .setIsRequired(true)
+                                        .setRequired(true)
                                         .build()),
                         Optional.of(
-                                EnumProperty.newBuilder(TestEnum.class)
+                                new EnumProperty.Builder<TestEnum>(TestEnum.class)
                                         .addSupportedEnumValues(TestEnum.VALUE_1)
-                                        .setIsRequired(true)
+                                        .setRequired(true)
                                         .build()),
                         Optional.of(
-                                EntityProperty.newBuilder()
-                                        .addPossibleEntity(
+                                new EntityProperty.Builder()
+                                        .addPossibleEntities(
                                                 new Entity.Builder()
                                                         .setId("entity1")
                                                         .setName("repeated entity1")
-                                                        .build())
-                                        .addPossibleEntity(
+                                                        .build(),
                                                 new Entity.Builder()
                                                         .setId("entity2")
                                                         .setName("repeated entity2")
                                                         .build())
-                                        .setIsRequired(true)
+                                        .setRequired(true)
                                         .build()),
-                        StringProperty.EMPTY,
+                        new StringProperty.Builder().build(),
                         Optional.of(
-                                StringProperty.newBuilder()
+                                new StringProperty.Builder()
                                         .addPossibleValue("value1")
                                         .setValueMatchRequired(true)
-                                        .setIsRequired(true)
+                                        .setRequired(true)
                                         .build()),
-                        Optional.of(StringProperty.PROHIBITED));
+                        Optional.of(new StringProperty.Builder().setProhibited(true).build()));
 
         assertThat(ACTION_SPEC.convertPropertyToProto(property))
                 .isEqualTo(
@@ -266,6 +265,33 @@ public final class ActionSpecTest {
                                                         .setStringValue("test2")
                                                         .build())
                                         .build())
+                        .addOutputValues(
+                                OutputValue.newBuilder()
+                                        .setName("repeatedStringOutput")
+                                        .addValues(
+                                                ParamValue.newBuilder()
+                                                        .setStringValue("test3")
+                                                        .build())
+                                        .addValues(
+                                                ParamValue.newBuilder()
+                                                        .setStringValue("test4")
+                                                        .build())
+                                        .build())
+                        .build();
+
+        StructuredOutput executionOutput = ACTION_SPEC.convertOutputToProto(output);
+
+        assertThat(executionOutput.getOutputValuesList())
+                .containsExactlyElementsIn(expectedExecutionOutput.getOutputValuesList());
+    }
+
+    @Test
+    @SuppressWarnings("JdkImmutableCollections")
+    public void convertOutputToProto_emptyOutput() {
+        Output output = Output.builder().setRepeatedStringField(List.of("test3", "test4")).build();
+        // No optionalStringOutput since it is not in the output above.
+        StructuredOutput expectedExecutionOutput =
+                StructuredOutput.newBuilder()
                         .addOutputValues(
                                 OutputValue.newBuilder()
                                         .setName("repeatedStringOutput")

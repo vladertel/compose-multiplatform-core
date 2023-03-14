@@ -33,11 +33,13 @@ import android.opengl.EGLSurface
 import android.opengl.GLES20
 import android.os.Build
 import android.util.Log
+import android.view.Surface
 import android.view.SurfaceHolder
 import androidx.annotation.CallSuper
 import androidx.annotation.IntDef
 import androidx.annotation.IntRange
 import androidx.annotation.Px
+import androidx.annotation.RestrictTo
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.wear.watchface.style.CurrentUserStyleRepository
@@ -58,6 +60,7 @@ import kotlinx.coroutines.sync.withLock
  *
  * @hide
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 @IntDef(value = [CanvasType.SOFTWARE, CanvasType.HARDWARE])
 public annotation class CanvasType {
     public companion object {
@@ -165,11 +168,15 @@ internal fun verticalFlip(buffer: ByteBuffer, width: Int, height: Int) {
 public sealed class Renderer
 @WorkerThread
 constructor(
-    public val surfaceHolder: SurfaceHolder,
+    surfaceHolder: SurfaceHolder,
     private val currentUserStyleRepository: CurrentUserStyleRepository,
     internal val watchState: WatchState,
     @IntRange(from = 0, to = 60000) public var interactiveDrawModeUpdateDelayMillis: Long,
 ) {
+    /** The [SurfaceHolder] that [renderInternal] will draw into. */
+    public var surfaceHolder: SurfaceHolder = surfaceHolder
+       protected set
+
     @OptIn(WatchFaceExperimental::class) private var pendingWatchFaceColors: WatchFaceColors? = null
     private var pendingWatchFaceColorsSet = false
 
@@ -297,7 +304,6 @@ constructor(
 
     /** The current [RenderParameters]. Updated before every onDraw call. */
     public var renderParameters: RenderParameters = RenderParameters.DEFAULT_INTERACTIVE
-        /** @hide */
         internal set(value) {
             if (value != field) {
                 field = value
@@ -365,6 +371,23 @@ constructor(
         zonedDateTime: ZonedDateTime,
         renderParameters: RenderParameters
     ): Bitmap
+
+    /**
+     * Renders the watch face into a [Surface] with the user style specified by the
+     * [currentUserStyleRepository].
+     *
+     * @param zonedDateTime The [ZonedDateTime] to use when rendering the watch face
+     * @param renderParameters The [RenderParameters] to use when rendering the watch face
+     * @param screenShotSurfaceHolder The [SurfaceHolder] containing the [Surface] to render into.
+     * This is assumed to have the same dimensions as the screen.
+     */
+    @Suppress("HiddenAbstractMethod")
+    @UiThread
+    internal abstract fun renderScreenshotToSurface(
+        zonedDateTime: ZonedDateTime,
+        renderParameters: RenderParameters,
+        screenShotSurfaceHolder: SurfaceHolder
+    )
 
     /**
      * Called when the [RenderParameters] has been updated. Will always be called before the first
@@ -597,6 +620,28 @@ constructor(
 
                 return bitmap
             }
+
+        internal override fun renderScreenshotToSurface(
+            zonedDateTime: ZonedDateTime,
+            renderParameters: RenderParameters,
+            screenShotSurfaceHolder: SurfaceHolder
+        ) {
+            val prevRenderParameters = this.renderParameters
+            val originalIsForScreenshot = renderParameters.isForScreenshot
+            val originalSurfaceHolder = surfaceHolder
+            surfaceHolder = screenShotSurfaceHolder
+
+            renderParameters.isForScreenshot = true
+            this.renderParameters = renderParameters
+            val canvas = surfaceHolder.surface.lockHardwareCanvas()
+            TraceEvent("CanvasRenderer.renderScreenshotToSurface").use {
+                renderAndComposite(canvas, zonedDateTime)
+            }
+            surfaceHolder.surface.unlockCanvasAndPost(canvas)
+            this.renderParameters = prevRenderParameters
+            renderParameters.isForScreenshot = originalIsForScreenshot
+            surfaceHolder = originalSurfaceHolder
+        }
 
         private fun renderAndComposite(canvas: Canvas, zonedDateTime: ZonedDateTime) {
             // Usually renderParameters.watchFaceWatchFaceLayers will be non-empty.
@@ -945,7 +990,6 @@ constructor(
             watchState,
             interactiveDrawModeUpdateDelayMillis
         ) {
-        /** @hide */
         internal companion object {
             internal const val TAG = "Gles2WatchFace"
 
@@ -1381,14 +1425,80 @@ constructor(
                             pixelBuf
                         )
                         // The image is flipped when using read pixels because the first pixel in
-                        // the
-                        // OpenGL buffer is in bottom left.
+                        // the OpenGL buffer is in bottom left.
                         verticalFlip(pixelBuf, width, height)
                         bitmap.copyPixelsFromBuffer(pixelBuf)
                     }
                 }
                 return bitmap
             }
+
+        internal override fun renderScreenshotToSurface(
+            zonedDateTime: ZonedDateTime,
+            renderParameters: RenderParameters,
+            screenShotSurfaceHolder: SurfaceHolder
+        ) {
+            val prevRenderParameters = this.renderParameters
+            val originalIsForScreenshot = renderParameters.isForScreenshot
+            val originalSurfaceHolder = surfaceHolder
+            surfaceHolder = screenShotSurfaceHolder
+
+            renderParameters.isForScreenshot = true
+            this.renderParameters = renderParameters
+
+            runBlocking {
+                glContextLock.withLock {
+                    val tempEglSurface = EGL14.eglCreateWindowSurface(
+                        eglDisplay,
+                        eglConfig,
+                        surfaceHolder.surface,
+                        eglSurfaceAttribList,
+                        0
+                    )
+
+                    if (
+                        !EGL14.eglMakeCurrent(
+                            eglDisplay,
+                            tempEglSurface,
+                            tempEglSurface,
+                            eglUiThreadContext
+                        )
+                    ) {
+                        throw IllegalStateException(
+                            "eglMakeCurrent failed, eglGetError() = " + EGL14.eglGetError()
+                        )
+                    }
+
+                    try {
+                        // NB we assume the surface has the same dimensions as the screen.
+                        GLES20.glViewport(
+                            0,
+                            0,
+                            surfaceHolder.surfaceFrame.width(),
+                            surfaceHolder.surfaceFrame.height()
+                        )
+
+                        renderAndComposite(zonedDateTime)
+
+                        if (!EGL14.eglSwapBuffers(eglDisplay, tempEglSurface)) {
+                            Log.w(TAG, "eglSwapBuffers failed")
+                        }
+                    } finally {
+                        EGL14.eglMakeCurrent(
+                            eglDisplay,
+                            EGL14.EGL_NO_SURFACE,
+                            EGL14.EGL_NO_SURFACE,
+                            EGL14.EGL_NO_CONTEXT
+                        )
+                        EGL14.eglDestroySurface(eglDisplay, tempEglSurface)
+                    }
+                }
+            }
+
+            this.renderParameters = prevRenderParameters
+            renderParameters.isForScreenshot = originalIsForScreenshot
+            surfaceHolder = originalSurfaceHolder
+        }
 
         private fun renderAndComposite(zonedDateTime: ZonedDateTime) {
             GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ZERO)

@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,6 +51,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
@@ -83,7 +83,6 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -100,7 +99,9 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.semantics.verticalScrollAxisRange
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -112,7 +113,6 @@ import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-// TODO: External preview image.
 /**
  * <a href="https://m3.material.io/components/date-pickers/overview" class="external" target="_blank">Material Design date picker</a>.
  *
@@ -121,6 +121,8 @@ import kotlinx.coroutines.launch
  *
  * By default, a date picker lets you pick a date via a calendar UI. However, it also allows
  * switching into a date input mode for a manual entry of dates using the numbers on a keyboard.
+ *
+ * ![Date picker image](https://developer.android.com/images/reference/androidx/compose/material3/date-picker.png)
  *
  * A simple DatePicker looks like:
  * @sample androidx.compose.material3.samples.DatePickerSample
@@ -150,11 +152,17 @@ fun DatePicker(
     modifier: Modifier = Modifier,
     dateFormatter: DatePickerFormatter = remember { DatePickerFormatter() },
     dateValidator: (Long) -> Boolean = { true },
-    title: (@Composable () -> Unit)? = { DatePickerDefaults.DatePickerTitle(state) },
-    headline: @Composable () -> Unit = {
+    title: (@Composable () -> Unit)? = {
+        DatePickerDefaults.DatePickerTitle(
+            state,
+            modifier = Modifier.padding(DatePickerTitlePadding)
+        )
+    },
+    headline: (@Composable () -> Unit)? = {
         DatePickerDefaults.DatePickerHeadline(
             state,
-            dateFormatter
+            dateFormatter,
+            modifier = Modifier.padding(DatePickerHeadlinePadding)
         )
     },
     showModeToggle: Boolean = true,
@@ -167,6 +175,7 @@ fun DatePicker(
         modeToggleButton = if (showModeToggle) {
             {
                 DisplayModeToggleButton(
+                    modifier = Modifier.padding(DatePickerModeTogglePadding),
                     displayMode = state.displayMode,
                     onDisplayModeChange = { displayMode ->
                         state.stateData.switchDisplayMode(
@@ -182,7 +191,6 @@ fun DatePicker(
             DatePickerModalTokens.HeaderHeadlineFont
         ),
         headerMinHeight = DatePickerModalTokens.HeaderContainerHeight,
-        headerContentPadding = DatePickerHeaderPadding,
         colors = colors
     ) {
         SwitchableDateEntryContent(
@@ -273,10 +281,23 @@ class DatePickerState private constructor(internal val stateData: StateData) {
      * from the epoch.
      *
      * In case no date was selected or provided, the state will hold a `null` value.
+     *
+     * @see [setSelection]
      */
-    @get:Suppress("AutoBoxing")
-    val selectedDateMillis by derivedStateOf {
-        stateData.selectedStartDate.value?.utcTimeMillis
+    val selectedDateMillis: Long?
+        @Suppress("AutoBoxing") get() = stateData.selectedStartDate.value?.utcTimeMillis
+
+    /**
+     * Sets the selected date.
+     *
+     * @param dateMillis timestamp in _UTC_ milliseconds from the epoch that represents the date
+     * selection, or `null` to indicate no selection.
+     *
+     * @throws IllegalArgumentException in case the given timestamps do not fall within the year
+     * range this state was created with.
+     */
+    fun setSelection(@Suppress("AutoBoxing") dateMillis: Long?) {
+        stateData.setSelection(startDateMillis = dateMillis, endDateMillis = null)
     }
 
     /**
@@ -824,44 +845,24 @@ internal class StateData constructor(
     /**
      * A mutable state of [CalendarDate] that represents the start date for a selection.
      */
-    var selectedStartDate = mutableStateOf(
-        if (initialSelectedStartDateMillis != null) {
-            val date = calendarModel.getCanonicalDate(
-                initialSelectedStartDateMillis
-            )
-            require(yearRange.contains(date.year)) {
-                "The initial selected start date's year (${date.year}) is out of the years range " +
-                    "of $yearRange."
-            }
-            date
-        } else {
-            null
-        }
-    )
+    var selectedStartDate = mutableStateOf<CalendarDate?>(null)
 
     /**
      * A mutable state of [CalendarDate] that represents the end date for a selection.
      *
      * Single date selection states that use this [StateData] should always have this as `null`.
      */
-    var selectedEndDate = mutableStateOf(
-        // Set to null in case the provided value is "undefined" or <= than the start date.
-        if (initialSelectedEndDateMillis != null &&
-            initialSelectedStartDateMillis != null &&
-            initialSelectedEndDateMillis > initialSelectedStartDateMillis
-        ) {
-            val date = calendarModel.getCanonicalDate(
-                initialSelectedEndDateMillis
-            )
-            require(yearRange.contains(date.year)) {
-                "The initial selected end date's year (${date.year}) is out of the years range " +
-                    "of $yearRange."
-            }
-            date
-        } else {
-            null
-        }
-    )
+    var selectedEndDate = mutableStateOf<CalendarDate?>(null)
+
+    /**
+     * Initialize the state with the provided initial selections.
+     */
+    init {
+        setSelection(
+            startDateMillis = initialSelectedStartDateMillis,
+            endDateMillis = initialSelectedEndDateMillis
+        )
+    }
 
     /**
      * A mutable state for the month that is displayed to the user. In case an initial month was not
@@ -909,9 +910,54 @@ internal class StateData constructor(
     val totalMonthsInRange: Int
         get() = (yearRange.last - yearRange.first + 1) * 12
 
-    fun isInRange(date: Long): Boolean {
-        return date >= (selectedStartDate.value?.utcTimeMillis ?: Long.MAX_VALUE) &&
-            date <= (selectedEndDate.value?.utcTimeMillis ?: Long.MIN_VALUE)
+    /**
+     * Sets a start and end selection dates.
+     *
+     * The function expects the dates to be within the state's year-range, and for the start date to
+     * appear before the end date. Also, if an end date is provided (e.g. not `null`), a start date
+     * is also expected to be provided. In any other case, an [IllegalArgumentException] is thrown.
+     *
+     * @param startDateMillis timestamp in _UTC_ milliseconds from the epoch that represents the
+     * start date selection. Provide a `null` to indicate no selection.
+     * @param endDateMillis timestamp in _UTC_ milliseconds from the epoch that represents the
+     * end date selection. Provide a `null` to indicate no selection.
+     * @throws IllegalArgumentException in case the given timestamps do not comply with the expected
+     * values specified above.
+     */
+    fun setSelection(startDateMillis: Long?, endDateMillis: Long?) {
+        val startDate = if (startDateMillis != null) {
+            calendarModel.getCanonicalDate(startDateMillis)
+        } else {
+            null
+        }
+        val endDate = if (endDateMillis != null) {
+            calendarModel.getCanonicalDate(endDateMillis)
+        } else {
+            null
+        }
+        // Validate that both dates are within the valid years range.
+        startDate?.let {
+            require(yearRange.contains(it.year)) {
+                "The provided start date year (${it.year}) is out of the years range of $yearRange."
+            }
+        }
+        endDate?.let {
+            require(yearRange.contains(it.year)) {
+                "The provided end date year (${it.year}) is out of the years range of $yearRange."
+            }
+        }
+        // Validate that an end date cannot be set without a start date.
+        if (endDate != null) {
+            requireNotNull(startDate) {
+                "An end date was provided without a start date."
+            }
+            // Validate that the end date appears after the start date.
+            require(startDate.utcTimeMillis < endDate.utcTimeMillis) {
+                "The provided end date appears before the start date."
+            }
+        }
+        selectedStartDate.value = startDate
+        selectedEndDate.value = endDate
     }
 
     fun switchDisplayMode(displayMode: DisplayMode) {
@@ -965,18 +1011,16 @@ internal class StateData constructor(
 internal fun DateEntryContainer(
     modifier: Modifier,
     title: (@Composable () -> Unit)?,
-    headline: @Composable () -> Unit,
+    headline: (@Composable () -> Unit)?,
     modeToggleButton: (@Composable () -> Unit)?,
     colors: DatePickerColors,
     headlineTextStyle: TextStyle,
     headerMinHeight: Dp,
-    headerContentPadding: PaddingValues,
     content: @Composable () -> Unit
 ) {
     Column(
         modifier = modifier
             .sizeIn(minWidth = DatePickerModalTokens.ContainerWidth)
-            .padding(DatePickerHorizontalPadding)
             .semantics { isContainer = true }
     ) {
         DatePickerHeader(
@@ -984,13 +1028,30 @@ internal fun DateEntryContainer(
             title = title,
             titleContentColor = colors.titleContentColor,
             headlineContentColor = colors.headlineContentColor,
-            minHeight = headerMinHeight,
-            contentPadding = headerContentPadding
+            minHeight = headerMinHeight
         ) {
-            ProvideTextStyle(value = headlineTextStyle, content = headline)
-            modeToggleButton?.invoke()
+            Column(modifier = Modifier.fillMaxWidth()) {
+                val horizontalArrangement = when {
+                    headline != null && modeToggleButton != null -> Arrangement.SpaceBetween
+                    headline != null -> Arrangement.Start
+                    else -> Arrangement.End
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = horizontalArrangement,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (headline != null) {
+                        ProvideTextStyle(value = headlineTextStyle, content = headline)
+                    }
+                    modeToggleButton?.invoke()
+                }
+                // Display a divider only when there is a title, headline, or a mode toggle.
+                if (title != null || headline != null || modeToggleButton != null) {
+                    Divider()
+                }
+            }
         }
-        Divider()
         content()
     }
 }
@@ -998,20 +1059,19 @@ internal fun DateEntryContainer(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DisplayModeToggleButton(
+    modifier: Modifier,
     displayMode: DisplayMode,
     onDisplayModeChange: (DisplayMode) -> Unit
 ) {
     if (displayMode == DisplayMode.Picker) {
-        IconButton(onClick = { onDisplayModeChange(DisplayMode.Input) }) {
+        IconButton(onClick = { onDisplayModeChange(DisplayMode.Input) }, modifier = modifier) {
             Icon(
                 imageVector = Icons.Filled.Edit,
                 contentDescription = getString(Strings.DatePickerSwitchToInputMode)
             )
         }
     } else {
-        IconButton(
-            onClick = { onDisplayModeChange(DisplayMode.Picker) }
-        ) {
+        IconButton(onClick = { onDisplayModeChange(DisplayMode.Picker) }, modifier = modifier) {
             Icon(
                 imageVector = Icons.Filled.DateRange,
                 contentDescription = getString(Strings.DatePickerSwitchToCalendarMode)
@@ -1076,6 +1136,7 @@ private fun DatePickerContent(
     val defaultLocale = defaultLocale()
     Column {
         MonthsNavigation(
+            modifier = Modifier.padding(horizontal = DatePickerHorizontalPadding),
             nextAvailable = monthsListState.canScrollForward,
             previousAvailable = monthsListState.canScrollBackward,
             yearPickerVisible = yearPickerVisible,
@@ -1102,7 +1163,7 @@ private fun DatePickerContent(
         )
 
         Box {
-            Column {
+            Column(modifier = Modifier.padding(horizontal = DatePickerHorizontalPadding)) {
                 WeekDays(colors, stateData.calendarModel)
                 HorizontalMonthsList(
                     onDateSelected = onDateSelected,
@@ -1129,10 +1190,12 @@ private fun DatePickerContent(
                         // Keep the height the same as the monthly calendar + weekdays height, and
                         // take into account the thickness of the divider that will be composed
                         // below it.
-                        modifier = Modifier.requiredHeight(
-                            RecommendedSizeForAccessibility * (MaxCalendarRows + 1) -
-                                DividerDefaults.Thickness
-                        ),
+                        modifier = Modifier
+                            .requiredHeight(
+                                RecommendedSizeForAccessibility * (MaxCalendarRows + 1) -
+                                    DividerDefaults.Thickness
+                            )
+                            .padding(horizontal = DatePickerHorizontalPadding),
                         onYearSelected = { year ->
                             // Switch back to the monthly calendar and scroll to the selected year.
                             yearPickerVisible = !yearPickerVisible
@@ -1164,8 +1227,7 @@ internal fun DatePickerHeader(
     titleContentColor: Color,
     headlineContentColor: Color,
     minHeight: Dp,
-    contentPadding: PaddingValues,
-    content: @Composable RowScope.() -> Unit
+    content: @Composable () -> Unit
 ) {
     // Apply a defaultMinSize only when the title is not null.
     val heightModifier =
@@ -1177,8 +1239,7 @@ internal fun DatePickerHeader(
     Column(
         modifier
             .fillMaxWidth()
-            .then(heightModifier)
-            .padding(contentPadding),
+            .then(heightModifier),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         if (title != null) {
@@ -1194,14 +1255,9 @@ internal fun DatePickerHeader(
                 }
             }
         }
-        CompositionLocalProvider(LocalContentColor provides headlineContentColor) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                content = content
-            )
-        }
+        CompositionLocalProvider(
+            LocalContentColor provides headlineContentColor, content = content
+        )
     }
 }
 
@@ -1351,10 +1407,6 @@ internal fun Month(
     dateFormatter: DatePickerFormatter,
     colors: DatePickerColors
 ) {
-    fun isInRange(date: Long): Boolean {
-        return rangeSelectionEnabled && stateData.isInRange(date)
-    }
-
     val rangeSelectionInfo: State<SelectedRangeInfo?> = remember(rangeSelectionEnabled) {
         derivedStateOf {
             if (rangeSelectionEnabled) {
@@ -1380,6 +1432,7 @@ internal fun Month(
         Modifier
     }
 
+    val defaultLocale = defaultLocale()
     val startSelection = stateData.selectedStartDate
     val endSelection = stateData.selectedEndDate
     ProvideTextStyle(
@@ -1418,17 +1471,31 @@ internal fun Month(
                             val startDateSelected =
                                 dateInMillis == startSelection.value?.utcTimeMillis
                             val endDateSelected = dateInMillis == endSelection.value?.utcTimeMillis
+                            val inRange = remember(rangeSelectionEnabled, dateInMillis) {
+                                derivedStateOf {
+                                    with(stateData) {
+                                        rangeSelectionEnabled &&
+                                            dateInMillis >= (selectedStartDate.value?.utcTimeMillis
+                                            ?: Long.MAX_VALUE) &&
+                                            dateInMillis <= (selectedEndDate.value?.utcTimeMillis
+                                            ?: Long.MIN_VALUE)
+                                    }
+                                }
+                            }
                             val dayContentDescription = dayContentDescription(
                                 rangeSelectionEnabled = rangeSelectionEnabled,
                                 isToday = isToday,
                                 isStartDate = startDateSelected,
-                                isEndDate = endDateSelected
+                                isEndDate = endDateSelected,
+                                isInRange = inRange.value
+                            )
+                            val formattedDateDescription = formatWithSkeleton(
+                                dateInMillis,
+                                dateFormatter.selectedDateDescriptionSkeleton,
+                                defaultLocale
                             )
                             Day(
-                                modifier = Modifier.semantics {
-                                    role = Role.Button
-                                    dayContentDescription?.let { contentDescription = it }
-                                },
+                                modifier = Modifier,
                                 selected = startDateSelected || endDateSelected,
                                 onClick = { onDateSelected(dateInMillis) },
                                 // Only animate on the first selected day. This is important to
@@ -1439,22 +1506,18 @@ internal fun Month(
                                     dateValidator.invoke(dateInMillis)
                                 },
                                 today = isToday,
-                                inRange = remember(dateInMillis, startSelection, endSelection) {
-                                    isInRange(dateInMillis)
+                                inRange = inRange.value,
+                                description = if (dayContentDescription != null) {
+                                    "$dayContentDescription, $formattedDateDescription"
+                                } else {
+                                    formattedDateDescription
                                 },
                                 colors = colors
                             ) {
-                                val defaultLocale = defaultLocale()
                                 Text(
                                     text = (dayNumber + 1).toLocalString(),
-                                    modifier = Modifier.semantics {
-                                        contentDescription =
-                                            formatWithSkeleton(
-                                                dateInMillis,
-                                                dateFormatter.selectedDateDescriptionSkeleton,
-                                                defaultLocale
-                                            )
-                                    },
+                                    // The semantics are set at the Day level.
+                                    modifier = Modifier.clearAndSetSemantics { },
                                     textAlign = TextAlign.Center
                                 )
                             }
@@ -1472,14 +1535,23 @@ private fun dayContentDescription(
     rangeSelectionEnabled: Boolean,
     isToday: Boolean,
     isStartDate: Boolean,
-    isEndDate: Boolean
+    isEndDate: Boolean,
+    isInRange: Boolean
 ): String? {
     val descriptionBuilder = StringBuilder()
     if (rangeSelectionEnabled) {
-        if (isStartDate) {
-            descriptionBuilder.append(getString(string = Strings.DateRangePickerStartHeadline))
-        } else if (isEndDate) {
-            descriptionBuilder.append(getString(string = Strings.DateRangePickerEndHeadline))
+        when {
+            isStartDate -> descriptionBuilder.append(
+                getString(string = Strings.DateRangePickerStartHeadline)
+            )
+
+            isEndDate -> descriptionBuilder.append(
+                getString(string = Strings.DateRangePickerEndHeadline)
+            )
+
+            isInRange -> descriptionBuilder.append(
+                getString(string = Strings.DateRangePickerDayInRange)
+            )
         }
     }
     if (isToday) {
@@ -1499,21 +1571,26 @@ private fun Day(
     enabled: Boolean,
     today: Boolean,
     inRange: Boolean,
+    description: String,
     colors: DatePickerColors,
     content: @Composable () -> Unit
 ) {
     Surface(
         selected = selected,
         onClick = onClick,
-        // Semantic role is intentionally not set here and left to be set by the caller
-        // In the `Month` function above, the implementation checks whether the day is today and
-        // sets the content description differently.
         modifier = modifier
             .minimumInteractiveComponentSize()
             .requiredSize(
                 DatePickerModalTokens.DateStateLayerWidth,
                 DatePickerModalTokens.DateStateLayerHeight
-            ),
+            )
+            // Apply and merge semantics here. This will ensure that when scrolling the list the
+            // entire Day surface is treated as one unit and holds the date semantics even when it's
+            // not completely visible atm.
+            .semantics(mergeDescendants = true) {
+                text = AnnotatedString(description)
+                role = Role.Button
+            },
         enabled = enabled,
         shape = DatePickerModalTokens.DateContainerShape.toShape(),
         color = colors.dayContainerColor(
@@ -1587,6 +1664,7 @@ private fun YearPicker(
         ) {
             items(stateData.yearRange.count()) {
                 val selectedYear = it + stateData.yearRange.first
+                val localizedYear = selectedYear.toLocalString()
                 Year(
                     modifier = Modifier
                         .requiredSize(
@@ -1613,16 +1691,14 @@ private fun YearPicker(
                     selected = selectedYear == displayedYear,
                     currentYear = selectedYear == currentYear,
                     onClick = { onYearSelected(selectedYear) },
+                    description = getString(Strings.DatePickerNavigateToYearDescription)
+                        .format(localizedYear),
                     colors = colors
                 ) {
-                    val localizedYear = selectedYear.toLocalString()
-                    val description =
-                        getString(Strings.DatePickerNavigateToYearDescription).format(localizedYear)
                     Text(
                         text = localizedYear,
-                        modifier = Modifier.semantics {
-                            contentDescription = description
-                        },
+                        // The semantics are set at the Year level.
+                        modifier = Modifier.clearAndSetSemantics {},
                         textAlign = TextAlign.Center
                     )
                 }
@@ -1638,6 +1714,7 @@ private fun Year(
     selected: Boolean,
     currentYear: Boolean,
     onClick: () -> Unit,
+    description: String,
     colors: DatePickerColors,
     content: @Composable () -> Unit
 ) {
@@ -1655,7 +1732,13 @@ private fun Year(
     Surface(
         selected = selected,
         onClick = onClick,
-        modifier = modifier.semantics { role = Role.Button },
+        // Apply and merge semantics here. This will ensure that when scrolling the list the entire
+        // Year surface is treated as one unit and holds the date semantics even when it's not
+        // completely visible atm.
+        modifier = modifier.semantics(mergeDescendants = true) {
+            text = AnnotatedString(description)
+            role = Role.Button
+        },
         shape = DatePickerModalTokens.SelectionYearStateLayerShape.toShape(),
         color = colors.yearContainerColor(selected = selected).value,
         contentColor = colors.yearContentColor(
@@ -1676,6 +1759,7 @@ private fun Year(
  */
 @Composable
 private fun MonthsNavigation(
+    modifier: Modifier,
     nextAvailable: Boolean,
     previousAvailable: Boolean,
     yearPickerVisible: Boolean,
@@ -1685,7 +1769,7 @@ private fun MonthsNavigation(
     onYearPickerButtonClicked: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .requiredHeight(MonthYearHeight),
         horizontalArrangement = if (yearPickerVisible) {
@@ -1748,7 +1832,7 @@ private fun YearPickerMenuButton(
     TextButton(
         onClick = onClick,
         modifier = modifier,
-        shape = RectangleShape,
+        shape = CircleShape,
         colors =
         ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
         elevation = null,
@@ -1818,12 +1902,11 @@ internal fun Int.toLocalString(): String {
 
 internal val RecommendedSizeForAccessibility = 48.dp
 internal val MonthYearHeight = 56.dp
-internal val DatePickerHorizontalPadding = PaddingValues(horizontal = 12.dp)
-private val DatePickerHeaderPadding = PaddingValues(
-    start = 12.dp,
-    top = 16.dp,
-    bottom = 12.dp
-)
+internal val DatePickerHorizontalPadding = 12.dp
+internal val DatePickerModeTogglePadding = PaddingValues(end = 12.dp, bottom = 12.dp)
+
+private val DatePickerTitlePadding = PaddingValues(start = 24.dp, end = 12.dp, top = 16.dp)
+private val DatePickerHeadlinePadding = PaddingValues(start = 24.dp, end = 12.dp, bottom = 12.dp)
 
 private val YearsVerticalPadding = 16.dp
 

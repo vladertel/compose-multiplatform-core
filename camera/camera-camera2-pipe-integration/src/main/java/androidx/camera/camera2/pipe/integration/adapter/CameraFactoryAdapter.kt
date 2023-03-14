@@ -30,8 +30,10 @@ import androidx.camera.camera2.pipe.integration.config.CameraConfig
 import androidx.camera.camera2.pipe.integration.config.DaggerCameraAppComponent
 import androidx.camera.camera2.pipe.integration.internal.CameraCompatibilityFilter
 import androidx.camera.camera2.pipe.integration.internal.CameraSelectionOptimizer
+import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.concurrent.CameraCoordinator
+import androidx.camera.core.concurrent.CameraCoordinator.ConcurrentCameraModeListener
 import androidx.camera.core.impl.CameraFactory
 import androidx.camera.core.impl.CameraInternal
 import androidx.camera.core.impl.CameraThreadConfig
@@ -89,9 +91,37 @@ class CameraFactoryAdapter(
         // Use a LinkedHashSet to preserve order
         LinkedHashSet(mAvailableCameraIds)
 
-    override fun getCameraCoordinator(): CameraCoordinator? {
+    override fun getCameraCoordinator(): CameraCoordinator {
         // TODO(b/262772650): camera-pipe support for concurrent camera.
-        return null
+        return object : CameraCoordinator {
+            override fun getConcurrentCameraSelectors(): MutableList<MutableList<CameraSelector>> {
+                return mutableListOf()
+            }
+
+            override fun getActiveConcurrentCameraInfos(): MutableList<CameraInfo> {
+                return mutableListOf()
+            }
+
+            override fun setActiveConcurrentCameraInfos(cameraInfos: MutableList<CameraInfo>) {
+            }
+
+            override fun getPairedConcurrentCameraId(cameraId: String): String? {
+                return null
+            }
+
+            override fun getCameraOperatingMode(): Int {
+                return CameraCoordinator.CAMERA_OPERATING_MODE_UNSPECIFIED
+            }
+
+            override fun setCameraOperatingMode(cameraOperatingMode: Int) {
+            }
+
+            override fun addListener(listener: ConcurrentCameraModeListener) {
+            }
+
+            override fun removeListener(listener: ConcurrentCameraModeListener) {
+            }
+        }
     }
 
     override fun getCameraManager(): Any? = appComponent

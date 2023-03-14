@@ -39,38 +39,39 @@ class GetCredentialRequestTest {
 
     @Test
     fun constructor() {
-        val expectedIsAutoSelectAllowed = true
         val expectedCredentialOptions = ArrayList<CredentialOption>()
         expectedCredentialOptions.add(GetPasswordOption())
         expectedCredentialOptions.add(GetPublicKeyCredentialOption("json"))
+        val origin = "origin"
 
         val request = GetCredentialRequest(
             expectedCredentialOptions,
-            expectedIsAutoSelectAllowed
+            origin
         )
 
-        assertThat(request.isAutoSelectAllowed).isEqualTo(expectedIsAutoSelectAllowed)
         assertThat(request.credentialOptions).hasSize(expectedCredentialOptions.size)
         for (i in expectedCredentialOptions.indices) {
             assertThat(request.credentialOptions[i]).isEqualTo(
                 expectedCredentialOptions[i]
             )
         }
+        assertThat(request.origin).isEqualTo(origin)
     }
 
     @Test
     fun constructor_defaultAutoSelect() {
         val options = ArrayList<CredentialOption>()
         options.add(GetPasswordOption())
+        val origin = "origin"
 
-        val request = GetCredentialRequest(options)
+        val request = GetCredentialRequest(options, origin)
 
-        assertThat(request.isAutoSelectAllowed).isFalse()
+        assertThat(request.credentialOptions[0].isAutoSelectAllowed).isFalse()
+        assertThat(request.origin).isEqualTo(origin)
     }
 
     @Test
     fun builder_addCredentialOption() {
-        val expectedIsAutoSelectAllowed = true
         val expectedCredentialOptions = ArrayList<CredentialOption>()
         expectedCredentialOptions.add(GetPasswordOption())
         expectedCredentialOptions.add(GetPublicKeyCredentialOption("json"))
@@ -78,10 +79,8 @@ class GetCredentialRequestTest {
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(expectedCredentialOptions[0])
             .addCredentialOption(expectedCredentialOptions[1])
-            .setAutoSelectAllowed(expectedIsAutoSelectAllowed)
             .build()
 
-        assertThat(request.isAutoSelectAllowed).isEqualTo(expectedIsAutoSelectAllowed)
         assertThat(request.credentialOptions).hasSize(expectedCredentialOptions.size)
         for (i in expectedCredentialOptions.indices) {
             assertThat(request.credentialOptions[i]).isEqualTo(
@@ -92,17 +91,14 @@ class GetCredentialRequestTest {
 
     @Test
     fun builder_setCredentialOptions() {
-        val expectedIsAutoSelectAllowed = true
         val expectedCredentialOptions = ArrayList<CredentialOption>()
         expectedCredentialOptions.add(GetPasswordOption())
         expectedCredentialOptions.add(GetPublicKeyCredentialOption("json"))
 
         val request = GetCredentialRequest.Builder()
             .setCredentialOptions(expectedCredentialOptions)
-            .setAutoSelectAllowed(expectedIsAutoSelectAllowed)
             .build()
 
-        assertThat(request.isAutoSelectAllowed).isEqualTo(expectedIsAutoSelectAllowed)
         assertThat(request.credentialOptions).hasSize(expectedCredentialOptions.size)
         for (i in expectedCredentialOptions.indices) {
             assertThat(request.credentialOptions[i]).isEqualTo(
@@ -117,6 +113,6 @@ class GetCredentialRequestTest {
             .addCredentialOption(GetPasswordOption())
             .build()
 
-        assertThat(request.isAutoSelectAllowed).isFalse()
+        assertThat(request.credentialOptions[0].isAutoSelectAllowed).isFalse()
     }
 }

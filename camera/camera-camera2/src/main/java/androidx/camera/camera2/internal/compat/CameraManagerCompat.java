@@ -76,7 +76,6 @@ public final class CameraManagerCompat {
     /**
      * Get a {@link CameraManagerCompat} instance from a provided {@link CameraManagerCompatImpl}.
      *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.TESTS)
     @NonNull
@@ -186,9 +185,8 @@ public final class CameraManagerCompat {
             characteristics = mCameraCharacteristicsMap.get(cameraId);
             if (characteristics == null) {
                 try {
-                    characteristics =
-                            CameraCharacteristicsCompat.toCameraCharacteristicsCompat(
-                                    mImpl.getCameraCharacteristics(cameraId));
+                    characteristics = CameraCharacteristicsCompat.toCameraCharacteristicsCompat(
+                            mImpl.getCameraCharacteristics(cameraId), cameraId);
                     mCameraCharacteristicsMap.put(cameraId, characteristics);
                 } catch (AssertionError e) {
                     // Some devices may throw AssertionError when creating CameraCharacteristics

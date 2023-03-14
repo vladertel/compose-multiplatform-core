@@ -16,13 +16,20 @@
 
 package androidx.camera.camera2.internal.concurrent
 
+import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.os.Build
+import androidx.camera.camera2.internal.Camera2CameraInfoImpl
 import androidx.camera.camera2.internal.compat.CameraManagerCompat
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.concurrent.CameraCoordinator
+import androidx.camera.core.concurrent.CameraCoordinator.CAMERA_OPERATING_MODE_CONCURRENT
+import androidx.camera.core.concurrent.CameraCoordinator.CAMERA_OPERATING_MODE_SINGLE
+import androidx.camera.core.concurrent.CameraCoordinator.CAMERA_OPERATING_MODE_UNSPECIFIED
 import androidx.camera.core.impl.utils.MainThreadAsyncHandler
+import androidx.camera.testing.fakes.FakeCameraInfoInternal
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.Executor
@@ -30,6 +37,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito
+import org.mockito.Mockito.anyInt
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.reset
@@ -37,6 +45,10 @@ import org.mockito.Mockito.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.internal.DoNotInstrument
+import org.robolectric.shadow.api.Shadow
+
+import org.robolectric.shadows.ShadowCameraCharacteristics
+import org.robolectric.shadows.ShadowCameraManager
 
 @RunWith(RobolectricTestRunner::class)
 @DoNotInstrument
@@ -45,6 +57,8 @@ import org.robolectric.annotation.internal.DoNotInstrument
     instrumentedPackages = ["androidx.camera.camera2.internal"]
 )
 class Camera2CameraCoordinatorTest {
+
+    private val mContext = ApplicationProvider.getApplicationContext<Context>()
 
     private lateinit var cameraCoordinator: CameraCoordinator
 
@@ -60,11 +74,11 @@ class Camera2CameraCoordinatorTest {
         fakeCameraImpl.addCamera("0", cameraCharacteristics0)
         fakeCameraImpl.addCamera("1", cameraCharacteristics1)
         cameraCoordinator = Camera2CameraCoordinator(CameraManagerCompat.from(fakeCameraImpl))
-        cameraCoordinator.init()
     }
 
     @Test
     fun getConcurrentCameraSelectors() {
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_CONCURRENT
         assertThat(cameraCoordinator.concurrentCameraSelectors).isNotEmpty()
         assertThat(cameraCoordinator.concurrentCameraSelectors[0]).isNotEmpty()
         assertThat(cameraCoordinator.concurrentCameraSelectors[0][0].lensFacing)
@@ -74,33 +88,81 @@ class Camera2CameraCoordinatorTest {
     }
 
     @Test
+    fun clearConcurrentCameraSelectors_whenConcurrentModeBecomesOff() {
+        // Concurrent -> Single
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_CONCURRENT
+        assertThat(cameraCoordinator.concurrentCameraSelectors).isNotEmpty()
+        cameraCoordinator.activeConcurrentCameraInfos =
+            listOf(FakeCameraInfoInternal(0, CameraSelector.LENS_FACING_BACK))
+        assertThat(cameraCoordinator.activeConcurrentCameraInfos).isNotEmpty()
+
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_SINGLE
+        assertThat(cameraCoordinator.activeConcurrentCameraInfos).isEmpty()
+
+        // Concurrent -> Unspecified
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_CONCURRENT
+        cameraCoordinator.activeConcurrentCameraInfos =
+            listOf(FakeCameraInfoInternal(0, CameraSelector.LENS_FACING_BACK))
+
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_UNSPECIFIED
+        assertThat(cameraCoordinator.activeConcurrentCameraInfos).isEmpty()
+    }
+
+    @Test
     fun getPairedCameraId() {
+        val characteristics0 = ShadowCameraCharacteristics.newCameraCharacteristics()
+        (Shadow.extract<Any>(
+            ApplicationProvider.getApplicationContext<Context>()
+                .getSystemService(Context.CAMERA_SERVICE)
+        ) as ShadowCameraManager)
+            .addCamera("0", characteristics0)
+        val characteristics1 = ShadowCameraCharacteristics.newCameraCharacteristics()
+        (Shadow.extract<Any>(
+            ApplicationProvider.getApplicationContext<Context>()
+                .getSystemService(Context.CAMERA_SERVICE)
+        ) as ShadowCameraManager)
+            .addCamera("1", characteristics1)
+
+        val mCameraManagerCompat =
+            CameraManagerCompat.from((ApplicationProvider.getApplicationContext() as Context))
+
+        cameraCoordinator.activeConcurrentCameraInfos = listOf(
+            Camera2CameraInfoImpl("0", mCameraManagerCompat),
+            Camera2CameraInfoImpl("1", mCameraManagerCompat)
+        )
+
         assertThat(cameraCoordinator.getPairedConcurrentCameraId("0")).isEqualTo("1")
         assertThat(cameraCoordinator.getPairedConcurrentCameraId("1")).isEqualTo("0")
     }
 
     @Test
     fun setAndIsConcurrentCameraMode() {
-        assertThat(cameraCoordinator.isConcurrentCameraModeOn).isFalse()
-        cameraCoordinator.setConcurrentCameraMode(true)
-        assertThat(cameraCoordinator.isConcurrentCameraModeOn).isTrue()
-        cameraCoordinator.setConcurrentCameraMode(false)
-        assertThat(cameraCoordinator.isConcurrentCameraModeOn).isFalse()
+        assertThat(cameraCoordinator.cameraOperatingMode).isEqualTo(
+            CAMERA_OPERATING_MODE_UNSPECIFIED)
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_CONCURRENT
+        assertThat(cameraCoordinator.cameraOperatingMode).isEqualTo(
+            CAMERA_OPERATING_MODE_CONCURRENT)
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_SINGLE
+        assertThat(cameraCoordinator.cameraOperatingMode).isEqualTo(
+            CAMERA_OPERATING_MODE_SINGLE)
     }
 
     @Test
     fun addAndRemoveListener() {
         val listener = mock(CameraCoordinator.ConcurrentCameraModeListener::class.java)
         cameraCoordinator.addListener(listener)
-        cameraCoordinator.setConcurrentCameraMode(true)
-        verify(listener).notifyConcurrentCameraModeUpdated(true)
-        cameraCoordinator.setConcurrentCameraMode(false)
-        verify(listener).notifyConcurrentCameraModeUpdated(false)
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_CONCURRENT
+        verify(listener).onCameraOperatingModeUpdated(
+            CAMERA_OPERATING_MODE_UNSPECIFIED, CAMERA_OPERATING_MODE_CONCURRENT)
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_SINGLE
+        verify(listener).onCameraOperatingModeUpdated(
+            CAMERA_OPERATING_MODE_CONCURRENT, CAMERA_OPERATING_MODE_SINGLE)
 
         reset(listener)
         cameraCoordinator.removeListener(listener)
-        cameraCoordinator.setConcurrentCameraMode(true)
-        verify(listener, never()).notifyConcurrentCameraModeUpdated(true)
+        cameraCoordinator.cameraOperatingMode = CAMERA_OPERATING_MODE_CONCURRENT
+        verify(listener, never()).onCameraOperatingModeUpdated(
+            anyInt(), anyInt())
     }
 
     private class FakeCameraManagerImpl : CameraManagerCompat.CameraManagerCompatImpl {

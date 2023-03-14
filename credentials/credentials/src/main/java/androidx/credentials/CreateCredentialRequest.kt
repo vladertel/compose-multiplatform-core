@@ -22,7 +22,6 @@ import android.text.TextUtils
 import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 import androidx.annotation.VisibleForTesting
-import androidx.credentials.CreatePublicKeyCredentialRequestPrivileged.Companion.BUNDLE_VALUE_SUBTYPE_CREATE_PUBLIC_KEY_CREDENTIAL_REQUEST_PRIV
 import androidx.credentials.PublicKeyCredential.Companion.BUNDLE_KEY_SUBTYPE
 import androidx.credentials.internal.FrameworkClassParsingException
 
@@ -47,20 +46,32 @@ abstract class CreateCredentialRequest internal constructor(
     @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     open val isSystemProviderRequired: Boolean,
     /** @hide */
+    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    open val isAutoSelectAllowed: Boolean,
+    /** @hide */
     val displayInfo: DisplayInfo,
+    val origin: String?,
 ) {
+
+    init {
+        @Suppress("UNNECESSARY_SAFE_CALL")
+        credentialData?.let {
+            credentialData.putBoolean(BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED, isAutoSelectAllowed)
+        }
+    }
+
     /**
      * Information that may be used for display purposes when rendering UIs to collect the user
      * consent and choice.
      *
-     * @property userId the user id of the created credential
+     * @property userId the user identifier of the created credential
      * @property userDisplayName an optional display name in addition to the [userId] that may be
      * displayed next to the `userId` during the user consent to help your user better understand
      * the credential being created.
      */
     class DisplayInfo internal /** @hide */ constructor(
-        val userId: String,
-        val userDisplayName: String?,
+        val userId: CharSequence,
+        val userDisplayName: CharSequence?,
         /** @hide */
         val credentialTypeIcon: Icon?
     ) {
@@ -74,7 +85,10 @@ abstract class CreateCredentialRequest internal constructor(
          * understand the credential being created.
          * @throws IllegalArgumentException If [userId] is empty
          */
-        @JvmOverloads constructor(userId: String, userDisplayName: String? = null) : this(
+        @JvmOverloads constructor(
+            userId: CharSequence,
+            userDisplayName: CharSequence? = null,
+        ) : this(
             userId,
             userDisplayName,
             null
@@ -88,9 +102,9 @@ abstract class CreateCredentialRequest internal constructor(
         @RequiresApi(23)
         fun toBundle(): Bundle {
             val bundle = Bundle()
-            bundle.putString(BUNDLE_KEY_USER_ID, userId)
+            bundle.putCharSequence(BUNDLE_KEY_USER_ID, userId)
             if (!TextUtils.isEmpty(userDisplayName)) {
-                bundle.putString(BUNDLE_KEY_USER_DISPLAY_NAME, userDisplayName)
+                bundle.putCharSequence(BUNDLE_KEY_USER_DISPLAY_NAME, userDisplayName)
             }
             // Today the type icon is determined solely within this library right before the
             // request is passed into the framework. Later if needed a new API can be added for
@@ -130,8 +144,9 @@ abstract class CreateCredentialRequest internal constructor(
             fun parseFromCredentialDataBundle(from: Bundle): DisplayInfo? {
                 return try {
                     val displayInfoBundle = from.getBundle(BUNDLE_KEY_REQUEST_DISPLAY_INFO)!!
-                    val userId = displayInfoBundle.getString(BUNDLE_KEY_USER_ID)
-                    val displayName = displayInfoBundle.getString(BUNDLE_KEY_USER_DISPLAY_NAME)
+                    val userId = displayInfoBundle.getCharSequence(BUNDLE_KEY_USER_ID)
+                    val displayName =
+                        displayInfoBundle.getCharSequence(BUNDLE_KEY_USER_DISPLAY_NAME)
                     val icon: Icon? =
                         displayInfoBundle.getParcelable(BUNDLE_KEY_CREDENTIAL_TYPE_ICON)
                     DisplayInfo(userId!!, displayName, icon)
@@ -144,9 +159,13 @@ abstract class CreateCredentialRequest internal constructor(
 
     /** @hide */
     companion object {
+        /** @hide */
+        const val BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED =
+            "androidx.credentials.BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED"
+
         /**
          * Attempts to parse the raw data into one of [CreatePasswordRequest],
-         * [CreatePublicKeyCredentialRequest], [CreatePublicKeyCredentialRequestPrivileged], and
+         * [CreatePublicKeyCredentialRequest], and
          * [CreateCustomCredentialRequest]. Otherwise returns null.
          *
          * @hide
@@ -157,22 +176,19 @@ abstract class CreateCredentialRequest internal constructor(
             type: String,
             credentialData: Bundle,
             candidateQueryData: Bundle,
-            requireSystemProvider: Boolean
+            requireSystemProvider: Boolean,
+            origin: String? = null,
         ): CreateCredentialRequest? {
             return try {
                 when (type) {
                     PasswordCredential.TYPE_PASSWORD_CREDENTIAL ->
-                        CreatePasswordRequest.createFrom(credentialData)
+                        CreatePasswordRequest.createFrom(credentialData, origin)
 
                     PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL ->
                         when (credentialData.getString(BUNDLE_KEY_SUBTYPE)) {
                             CreatePublicKeyCredentialRequest
                                 .BUNDLE_VALUE_SUBTYPE_CREATE_PUBLIC_KEY_CREDENTIAL_REQUEST ->
-                                CreatePublicKeyCredentialRequest.createFrom(credentialData)
-
-                            BUNDLE_VALUE_SUBTYPE_CREATE_PUBLIC_KEY_CREDENTIAL_REQUEST_PRIV ->
-                                CreatePublicKeyCredentialRequestPrivileged
-                                    .createFrom(credentialData)
+                                CreatePublicKeyCredentialRequest.createFrom(credentialData, origin)
 
                             else -> throw FrameworkClassParsingException()
                         }
@@ -189,7 +205,8 @@ abstract class CreateCredentialRequest internal constructor(
                     requireSystemProvider,
                     DisplayInfo.parseFromCredentialDataBundle(
                         credentialData
-                    ) ?: return null
+                    ) ?: return null,
+                    credentialData.getBoolean(BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED, false)
                 )
             }
         }

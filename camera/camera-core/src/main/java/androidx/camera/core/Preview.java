@@ -17,9 +17,12 @@
 package androidx.camera.core;
 
 import static androidx.camera.core.CameraEffect.PREVIEW;
+import static androidx.camera.core.MirrorMode.MIRROR_MODE_FRONT_ON;
+import static androidx.camera.core.impl.ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE;
 import static androidx.camera.core.impl.ImageInputConfig.OPTION_INPUT_FORMAT;
 import static androidx.camera.core.impl.ImageOutputConfig.OPTION_APP_TARGET_ROTATION;
 import static androidx.camera.core.impl.ImageOutputConfig.OPTION_CUSTOM_ORDERED_RESOLUTIONS;
+import static androidx.camera.core.impl.ImageOutputConfig.OPTION_MIRROR_MODE;
 import static androidx.camera.core.impl.ImageOutputConfig.OPTION_RESOLUTION_SELECTOR;
 import static androidx.camera.core.impl.PreviewConfig.OPTION_BACKGROUND_EXECUTOR;
 import static androidx.camera.core.impl.PreviewConfig.OPTION_CAPTURE_CONFIG_UNPACKER;
@@ -71,7 +74,6 @@ import androidx.camera.core.impl.CaptureConfig;
 import androidx.camera.core.impl.Config;
 import androidx.camera.core.impl.ConfigProvider;
 import androidx.camera.core.impl.DeferrableSurface;
-import androidx.camera.core.impl.ImageFormatConstants;
 import androidx.camera.core.impl.ImageOutputConfig;
 import androidx.camera.core.impl.MutableConfig;
 import androidx.camera.core.impl.MutableOptionsBundle;
@@ -150,7 +152,6 @@ public final class Preview extends UseCase {
     /**
      * Provides a static configuration with implementation-agnostic options.
      *
-     * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     public static final Defaults DEFAULT_CONFIG = new Defaults();
@@ -215,7 +216,8 @@ public final class Preview extends UseCase {
         }
 
         checkMainThread();
-        SessionConfig.Builder sessionConfigBuilder = SessionConfig.Builder.createFrom(config);
+        SessionConfig.Builder sessionConfigBuilder = SessionConfig.Builder.createFrom(config,
+                streamSpec.getResolution());
 
         // Close previous session's deferrable surface before creating new one
         clearPipeline();
@@ -231,6 +233,7 @@ public final class Preview extends UseCase {
 
         mSessionDeferrableSurface = surfaceRequest.getDeferrableSurface();
         addCameraSurfaceAndErrorListener(sessionConfigBuilder, cameraId, config, streamSpec);
+        sessionConfigBuilder.setExpectedFrameRateRange(streamSpec.getExpectedFrameRateRange());
         return sessionConfigBuilder;
     }
 
@@ -259,12 +262,13 @@ public final class Preview extends UseCase {
         checkState(mCameraEdge == null);
         mCameraEdge = new SurfaceEdge(
                 PREVIEW,
+                INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE,
                 streamSpec,
                 new Matrix(),
-                getHasCameraTransform(),
+                camera.getHasTransform(),
                 requireNonNull(getCropRect(streamSpec.getResolution())),
-                getRelativeRotation(camera, camera.isFrontFacing()),
-                shouldMirror());
+                getRelativeRotation(camera, isMirroringRequired(camera)),
+                shouldMirror(camera));
         mCameraEdge.addOnInvalidatedListener(this::notifyReset);
         SurfaceProcessorNode.OutConfig outConfig = SurfaceProcessorNode.OutConfig.of(mCameraEdge);
         SurfaceProcessorNode.In nodeInput = SurfaceProcessorNode.In.of(mCameraEdge,
@@ -282,7 +286,8 @@ public final class Preview extends UseCase {
         }
 
         // Send the camera Surface to the camera2.
-        SessionConfig.Builder sessionConfigBuilder = SessionConfig.Builder.createFrom(config);
+        SessionConfig.Builder sessionConfigBuilder = SessionConfig.Builder.createFrom(config,
+                streamSpec.getResolution());
         addCameraSurfaceAndErrorListener(sessionConfigBuilder, cameraId, config, streamSpec);
         return sessionConfigBuilder;
     }
@@ -297,13 +302,11 @@ public final class Preview extends UseCase {
         }
     }
 
-    private boolean shouldMirror() {
-        boolean isFrontCamera = requireNonNull(getCamera()).getCameraInfoInternal().getLensFacing()
-                == CameraSelector.LENS_FACING_FRONT;
+    private boolean shouldMirror(@NonNull CameraInternal camera) {
         // Since PreviewView cannot mirror, we will always mirror preview stream during buffer
         // copy. If there has been a buffer copy, it means it's already mirrored. Otherwise,
         // mirror it for the front camera.
-        return getHasCameraTransform() && isFrontCamera;
+        return camera.getHasTransform() && isMirroringRequired(camera);
     }
 
     /**
@@ -398,12 +401,12 @@ public final class Preview extends UseCase {
             if (mNode == null) {
                 surfaceRequest.updateTransformationInfo(SurfaceRequest.TransformationInfo.of(
                         cropRect,
-                        getRelativeRotation(cameraInternal, cameraInternal.isFrontFacing()),
+                        getRelativeRotation(cameraInternal, isMirroringRequired(cameraInternal)),
                         getAppTargetRotation(),
-                        getHasCameraTransform()));
+                        cameraInternal.getHasTransform()));
             } else {
                 mCameraEdge.setRotationDegrees(
-                        getRelativeRotation(cameraInternal, cameraInternal.isFrontFacing()));
+                        getRelativeRotation(cameraInternal, isMirroringRequired(cameraInternal)));
             }
         }
     }
@@ -540,7 +543,6 @@ public final class Preview extends UseCase {
     /**
      * {@inheritDoc}
      *
-     * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
@@ -562,7 +564,6 @@ public final class Preview extends UseCase {
     /**
      * {@inheritDoc}
      *
-     * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
@@ -570,7 +571,7 @@ public final class Preview extends UseCase {
     protected UseCaseConfig<?> onMergeConfig(@NonNull CameraInfoInternal cameraInfo,
             @NonNull UseCaseConfig.Builder<?, ?, ?> builder) {
         builder.getMutableConfig().insertOption(OPTION_INPUT_FORMAT,
-                ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE);
+                INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE);
 
         // Merges Preview's default max resolution setting when resolution selector is used
         ResolutionSelector resolutionSelector =
@@ -592,7 +593,6 @@ public final class Preview extends UseCase {
     /**
      * {@inheritDoc}
      *
-     * @hide
      */
     @NonNull
     @RestrictTo(Scope.LIBRARY_GROUP)
@@ -604,7 +604,6 @@ public final class Preview extends UseCase {
     /**
      * {@inheritDoc}
      *
-     * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
@@ -615,7 +614,6 @@ public final class Preview extends UseCase {
     /**
      * {@inheritDoc}
      *
-     * @hide
      */
     @Override
     @RestrictTo(Scope.LIBRARY_GROUP)
@@ -630,7 +628,6 @@ public final class Preview extends UseCase {
     /**
      * {@inheritDoc}
      *
-     * @hide
      */
     @Override
     @RestrictTo(Scope.LIBRARY)
@@ -640,7 +637,6 @@ public final class Preview extends UseCase {
     }
 
     /**
-     * @hide
      */
     @VisibleForTesting
     @NonNull
@@ -651,7 +647,6 @@ public final class Preview extends UseCase {
 
     /**
      * @inheritDoc
-     * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
@@ -736,12 +731,12 @@ public final class Preview extends UseCase {
      * <p>These values may be overridden by the implementation. They only provide a minimum set of
      * defaults that are implementation independent.
      *
-     * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     public static final class Defaults implements ConfigProvider<PreviewConfig> {
         private static final int DEFAULT_SURFACE_OCCUPANCY_PRIORITY = 2;
         private static final int DEFAULT_ASPECT_RATIO = AspectRatio.RATIO_4_3;
+        private static final int DEFAULT_MIRROR_MODE = MIRROR_MODE_FRONT_ON;
 
         private static final PreviewConfig DEFAULT_CONFIG;
 
@@ -786,12 +781,12 @@ public final class Preview extends UseCase {
             }
 
             setTargetClass(Preview.class);
+            mutableConfig.insertOption(OPTION_MIRROR_MODE, Defaults.DEFAULT_MIRROR_MODE);
         }
 
         /**
          * Generates a Builder from another Config object
          *
-         * @hide
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
@@ -804,7 +799,6 @@ public final class Preview extends UseCase {
          *
          * @param configuration An immutable configuration to pre-populate this builder.
          * @return The new Builder.
-         * @hide
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
@@ -815,7 +809,6 @@ public final class Preview extends UseCase {
         /**
          * {@inheritDoc}
          *
-         * @hide
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
@@ -824,7 +817,6 @@ public final class Preview extends UseCase {
             return mMutableConfig;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         @Override
@@ -849,7 +841,6 @@ public final class Preview extends UseCase {
 
         // Implementations of TargetConfig.Builder default methods
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
         @NonNull
@@ -967,6 +958,17 @@ public final class Preview extends UseCase {
         }
 
         /**
+         * setMirrorMode is not supported on Preview.
+         *
+         */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        @Override
+        public Builder setMirrorMode(@MirrorMode.Mirror int mirrorMode) {
+            throw new UnsupportedOperationException("setMirrorMode is not supported.");
+        }
+
+        /**
          * Sets the resolution of the intended target from this configuration.
          *
          * <p>The target resolution attempts to establish a minimum bound for the preview
@@ -1018,7 +1020,6 @@ public final class Preview extends UseCase {
          *
          * @param resolution The default resolution to choose from supported output sizes list.
          * @return The current Builder.
-         * @hide
          */
         @NonNull
         @RestrictTo(Scope.LIBRARY_GROUP)
@@ -1028,7 +1029,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @NonNull
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
@@ -1037,7 +1037,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
         @NonNull
@@ -1046,7 +1045,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         @Override
@@ -1077,7 +1075,6 @@ public final class Preview extends UseCase {
          * {@link ResolutionSelector} will throw an {@link IllegalArgumentException} while
          * {@link #build()} is called to create the {@link Preview} instance.
          *
-         * @hide
          **/
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
@@ -1097,7 +1094,6 @@ public final class Preview extends UseCase {
          *
          * @param executor The executor which will be used for background tasks.
          * @return the current Builder.
-         * @hide Background executor not used in {@link Preview}.
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
@@ -1109,7 +1105,6 @@ public final class Preview extends UseCase {
 
         // Implementations of UseCaseConfig.Builder default methods
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
         @NonNull
@@ -1118,7 +1113,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
         @NonNull
@@ -1127,7 +1121,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
         @NonNull
@@ -1137,7 +1130,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
         @NonNull
@@ -1147,7 +1139,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
         @NonNull
@@ -1156,7 +1147,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
         @NonNull
@@ -1165,7 +1155,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
         @NonNull
@@ -1175,7 +1164,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         @Override
@@ -1184,7 +1172,6 @@ public final class Preview extends UseCase {
             return this;
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         @Override

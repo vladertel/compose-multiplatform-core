@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -66,7 +67,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             fun Dp.toPx() = toPixels(list.context.resources.displayMetrics)
             assertThat(list.paddingStart).isEqualTo(5.dp.toPx())
             assertThat(list.paddingTop).isEqualTo(6.dp.toPx())
@@ -86,7 +87,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val adapter = list.adapter!!
             assertThat(adapter.hasStableIds()).isFalse()
             assertThat(adapter.count).isEqualTo(2)
@@ -106,7 +107,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val adapter = list.adapter!!
             assertThat(adapter.hasStableIds()).isTrue()
             assertThat(adapter.count).isEqualTo(2)
@@ -125,7 +126,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val adapter = list.adapter!!
             assertThat(adapter.count).isEqualTo(3)
             assertThat(adapter.hasStableIds()).isFalse()
@@ -146,7 +147,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val adapter = list.adapter!!
             assertThat(adapter.count).isEqualTo(4)
             assertThat(adapter.hasStableIds()).isTrue()
@@ -169,7 +170,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val textView0 = list.getUnboxedListItem<TextView>(0)
             val textView1 = list.getUnboxedListItem<TextView>(1)
             val textView2 = list.getUnboxedListItem<TextView>(2)
@@ -193,7 +194,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val textView0 = list.getUnboxedListItem<TextView>(0)
             val textView1 = list.getUnboxedListItem<TextView>(1)
             val textView2 = list.getUnboxedListItem<TextView>(2)
@@ -205,6 +206,7 @@ class LazyColumnTest {
         }
     }
 
+    @Ignore // b/270621933
     @Test
     fun itemContent_defaultAlignment_doesNotWrapItem() {
         TestGlanceAppWidget.uiDefinition = {
@@ -217,7 +219,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             list.getUnboxedListItem<TextView>(0)
         }
     }
@@ -234,7 +236,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             list.getUnboxedListItem<TextView>(0)
         }
     }
@@ -251,7 +253,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val listItem = list.getUnboxedListItem<FrameLayout>(0)
             val layoutParams =
                 assertIs<FrameLayout.LayoutParams>(listItem.notGoneChildren.first().layoutParams)
@@ -271,7 +273,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val listItem = list.getUnboxedListItem<FrameLayout>(0)
             val layoutParams =
                 assertIs<FrameLayout.LayoutParams>(listItem.notGoneChildren.first().layoutParams)
@@ -279,6 +281,7 @@ class LazyColumnTest {
         }
     }
 
+    @Ignore("b/273482357")
     @Test
     fun itemContent_multipleViews() {
         TestGlanceAppWidget.uiDefinition = {
@@ -292,7 +295,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val row = list.getUnboxedListItem<FrameLayout>(0)
             val (rowItem0, rowItem1) = row.notGoneChildren.toList()
             assertIs<TextView>(rowItem0)
@@ -312,7 +315,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             // The adapter may report more layout types than the provider declared, e.g. adding a
             // loading layout
             assertThat(list.adapter.viewTypeCount).isAtLeast(TopLevelLayoutsCount)
@@ -338,7 +341,7 @@ class LazyColumnTest {
 
         mHostRule.startHost()
 
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             val row = list.getUnboxedListItem<FrameLayout>(0)
             val (rowItem0, rowItem1) = row.notGoneChildren.toList()
             // All items with actions are wrapped in FrameLayout
@@ -369,7 +372,7 @@ class LazyColumnTest {
         mHostRule.startHost()
 
         val buttons = arrayOfNulls<FrameLayout>(5)
-        waitForListViewChildren { list ->
+        mHostRule.waitForListViewChildren { list ->
             for (it in 0..4) {
                 val button = list.getUnboxedListItem<FrameLayout>(it)
                 buttons[it] = assertIs<FrameLayout>(button)
@@ -383,32 +386,32 @@ class LazyColumnTest {
             assertThat(lastClicked).isEqualTo(index)
         }
     }
+}
 
-    private fun waitForListViewChildren(action: (list: ListView) -> Unit = {}) {
-        mHostRule.onHostView { }
+internal fun AppWidgetHostRule.waitForListViewChildren(action: (list: ListView) -> Unit = {}) {
+    onHostView { }
 
-        mHostRule.runAndObserveUntilDraw(condition = "ListView did not load in time") {
-            mHostRule.mHostView.let { host ->
-                val list = host.findChildByType<ListView>()
-                host.childCount > 0 &&
-                    list?.let { it.childCount > 0 && it.adapter != null } ?: false
-            }
+    runAndObserveUntilDraw(condition = "ListView did not load in time") {
+        mHostView.let { host ->
+            val list = host.findChildByType<ListView>()
+            host.childCount > 0 &&
+                list?.let { it.childCount > 0 && it.adapter != null } ?: false
         }
-
-        mHostRule.onUnboxedHostView(action)
     }
 
-    private inline fun <reified T : View> ListView.getUnboxedListItem(position: Int): T {
-        val remoteViewFrame = assertIs<FrameLayout>(getChildAt(position))
-        // Each list item frame has an explicit focusable = true, see
-        // "Glance.AppWidget.Theme.ListChildren" style.
-        assertThat(remoteViewFrame.isFocusable).isTrue()
+    onUnboxedHostView(action)
+}
 
-        // Android S- have a RemoteViewsAdapter$RemoteViewsFrameLayout first, Android T+ do not.
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S) {
-            return remoteViewFrame.getChildAt(0).getTargetView()
-        }
-        val frame = assertIs<FrameLayout>(remoteViewFrame.getChildAt(0))
-        return frame.getChildAt(0).getTargetView()
+internal inline fun <reified T : View> ListView.getUnboxedListItem(position: Int): T {
+    val remoteViewFrame = assertIs<FrameLayout>(getChildAt(position))
+    // Each list item frame has an explicit focusable = true, see
+    // "Glance.AppWidget.Theme.ListChildren" style.
+    assertThat(remoteViewFrame.isFocusable).isTrue()
+
+    // Android S- have a RemoteViewsAdapter$RemoteViewsFrameLayout first, Android T+ do not.
+    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S) {
+        return remoteViewFrame.getChildAt(0).getTargetView()
     }
+    val frame = assertIs<FrameLayout>(remoteViewFrame.getChildAt(0))
+    return frame.getChildAt(0).getTargetView()
 }

@@ -36,7 +36,6 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.LookaheadLayoutCoordinatesImpl
-import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.Placeable
@@ -187,31 +186,12 @@ internal abstract class NodeCoordinator(
             }
         }
 
-    internal var lookaheadDelegate: LookaheadDelegate? = null
-        private set
+    abstract var lookaheadDelegate: LookaheadDelegate?
+        protected set
 
     private var oldAlignmentLines: MutableMap<AlignmentLine, Int>? = null
 
-    /**
-     * Creates a new lookaheadDelegate instance when the scope changes. If the provided scope is
-     * null, it means the lookahead root does not exit (or no longer exists), set
-     * the [lookaheadDelegate] to null.
-     */
-    internal fun updateLookaheadScope(scope: LookaheadScope?) {
-        lookaheadDelegate = scope?.let {
-            if (it != lookaheadDelegate?.lookaheadScope) {
-                createLookaheadDelegate(it)
-            } else {
-                lookaheadDelegate
-            }
-        }
-    }
-
-    protected fun updateLookaheadDelegate(lookaheadDelegate: LookaheadDelegate) {
-        this.lookaheadDelegate = lookaheadDelegate
-    }
-
-    abstract fun createLookaheadDelegate(scope: LookaheadScope): LookaheadDelegate
+    abstract fun ensureLookaheadDelegateCreated()
 
     override val providedAlignmentLines: Set<AlignmentLine>
         get() {
@@ -262,10 +242,10 @@ internal abstract class NodeCoordinator(
             if (layoutNode.nodes.has(Nodes.ParentData)) {
                 with(layoutNode.density) {
                     layoutNode.nodes.tailToHead {
-                        if (it === thisNode) return@tailToHead
                         if (it.isKind(Nodes.ParentData) && it is ParentDataModifierNode) {
                             data = with(it) { modifyParentData(data) }
                         }
+                        if (it === thisNode) return@tailToHead
                     }
                 }
             }
@@ -328,7 +308,7 @@ internal abstract class NodeCoordinator(
         zIndex: Float,
         layerBlock: (GraphicsLayerScope.() -> Unit)?
     ) {
-        onLayerBlockUpdated(layerBlock)
+        updateLayerBlock(layerBlock)
         if (this.position != position) {
             this.position = position
             layoutNode.layoutDelegate.measurePassDelegate
@@ -377,12 +357,6 @@ internal abstract class NodeCoordinator(
 
     @OptIn(ExperimentalComposeUiApi::class)
     fun onPlaced() {
-        val lookahead = lookaheadDelegate
-        if (lookahead != null) {
-            visitNodes(Nodes.LayoutAware) {
-                it.onLookaheadPlaced(lookahead.lookaheadLayoutCoordinates)
-            }
-        }
         visitNodes(Nodes.LayoutAware) {
             it.onPlaced(this)
         }
@@ -406,20 +380,11 @@ internal abstract class NodeCoordinator(
 
     fun updateLayerBlock(
         layerBlock: (GraphicsLayerScope.() -> Unit)?,
-        forceLayerInvalidated: Boolean = false
+        forceUpdateLayerParameters: Boolean = false
     ) {
-        val layerInvalidated = this.layerBlock !== layerBlock || forceLayerInvalidated
-        this.layerBlock = layerBlock
-        onLayerBlockUpdated(layerBlock, forceLayerInvalidated = layerInvalidated)
-    }
-
-    private fun onLayerBlockUpdated(
-        layerBlock: (GraphicsLayerScope.() -> Unit)?,
-        forceLayerInvalidated: Boolean = false
-    ) {
-        val layerInvalidated = this.layerBlock !== layerBlock || layerDensity != layoutNode
+        val updateParameters = this.layerBlock !== layerBlock || layerDensity != layoutNode
             .density || layerLayoutDirection != layoutNode.layoutDirection ||
-            forceLayerInvalidated
+            forceUpdateLayerParameters
         this.layerBlock = layerBlock
         this.layerDensity = layoutNode.density
         this.layerLayoutDirection = layoutNode.layoutDirection
@@ -436,7 +401,7 @@ internal abstract class NodeCoordinator(
                 updateLayerParameters()
                 layoutNode.innerLayerCoordinatorIsDirty = true
                 invalidateParentLayer()
-            } else if (layerInvalidated) {
+            } else if (updateParameters) {
                 updateLayerParameters()
             }
         } else {
@@ -932,7 +897,10 @@ internal abstract class NodeCoordinator(
      * attached to the [Owner].
      */
     fun onLayoutNodeAttach() {
-        onLayerBlockUpdated(layerBlock)
+        // this call will update the parameters of the layer (alpha, scale, etc)
+        updateLayerBlock(layerBlock, forceUpdateLayerParameters = true)
+        // this call will invalidate the content of the layer
+        layer?.invalidate()
     }
 
     /**
@@ -942,7 +910,7 @@ internal abstract class NodeCoordinator(
     fun onRelease() {
         released = true
         if (layer != null) {
-            onLayerBlockUpdated(null)
+            updateLayerBlock(null)
         }
     }
 

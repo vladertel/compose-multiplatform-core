@@ -486,7 +486,6 @@ public class ConstraintSetParser {
      * @param state the state to populate
      * @param layoutVariables the variables to override
      * @throws CLParsingException when parsing fails
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public static void populateState(
@@ -1031,6 +1030,25 @@ public class ConstraintSetParser {
                     grid.setPaddingTop(paddingTop);
                     grid.setPaddingRight(paddingRight);
                     grid.setPaddingBottom(paddingBottom);
+                    break;
+                case "flags":
+                    String flags = element.get(param).content();
+                    if (flags != null && flags.length() > 0) {
+                        grid.setFlags(flags);
+                    } else {
+                        CLArray flagArray = element.getArrayOrNull(param);
+                        flags = "";
+                        if (flagArray != null) {
+                            for (int i = 0; i < flagArray.size(); i++) {
+                                String flag = flagArray.get(i).content();
+                                flags += flag;
+                                if (i != flagArray.size() - 1) {
+                                    flags += "|";
+                                }
+                            }
+                            grid.setFlags(flags);
+                        }
+                    }
                     break;
                 default:
                     ConstraintReference reference = state.constraints(name);
@@ -1612,6 +1630,7 @@ public class ConstraintSetParser {
                         break;
                     case "invisible":
                         reference.visibility(ConstraintWidget.INVISIBLE);
+                        reference.alpha(0f);
                         break;
                     case "gone":
                         reference.visibility(ConstraintWidget.GONE);

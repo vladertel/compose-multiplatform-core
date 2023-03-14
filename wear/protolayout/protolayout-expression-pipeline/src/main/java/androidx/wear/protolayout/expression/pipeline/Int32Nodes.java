@@ -16,31 +16,31 @@
 
 package androidx.wear.protolayout.expression.pipeline;
 
-import static androidx.wear.protolayout.expression.pipeline.AnimationsHelper.applyAnimationSpecToAnimator;
 import static java.lang.Math.abs;
 
-import android.animation.ValueAnimator;
 import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
-import androidx.wear.protolayout.expression.pipeline.PlatformDataSources.PlatformDataSource;
-import androidx.wear.protolayout.expression.pipeline.PlatformDataSources.SensorGatewayPlatformDataSource;
 import androidx.wear.protolayout.expression.proto.AnimationParameterProto.AnimationSpec;
 import androidx.wear.protolayout.expression.proto.DynamicProto.AnimatableFixedInt32;
 import androidx.wear.protolayout.expression.proto.DynamicProto.ArithmeticInt32Op;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DurationPartType;
 import androidx.wear.protolayout.expression.proto.DynamicProto.FloatToInt32Op;
+import androidx.wear.protolayout.expression.proto.DynamicProto.GetDurationPartOp;
 import androidx.wear.protolayout.expression.proto.DynamicProto.PlatformInt32Source;
 import androidx.wear.protolayout.expression.proto.DynamicProto.PlatformInt32SourceType;
 import androidx.wear.protolayout.expression.proto.DynamicProto.StateInt32Source;
-import androidx.wear.protolayout.expression.proto.DynamicProto.GetDurationPartOp;
 import androidx.wear.protolayout.expression.proto.FixedProto.FixedInt32;
+
 import java.time.Duration;
 
 /** Dynamic data nodes which yield integers. */
 class Int32Nodes {
-    private Int32Nodes() {}
+
+    private Int32Nodes() {
+    }
 
     /** Dynamic integer node that has a fixed value. */
     static class FixedInt32Node implements DynamicDataSourceNode<Integer> {
@@ -74,22 +74,30 @@ class Int32Nodes {
         private static final String TAG = "PlatformInt32SourceNode";
 
         @Nullable private final SensorGatewayPlatformDataSource mSensorGatewaySource;
-        private final PlatformInt32Source mProtoNode;
+        private final PlatformInt32SourceType mPlatformSourceType;
         private final DynamicTypeValueReceiver<Integer> mDownstream;
 
         PlatformInt32SourceNode(
                 PlatformInt32Source protoNode,
                 @Nullable SensorGatewayPlatformDataSource sensorGatewaySource,
                 DynamicTypeValueReceiver<Integer> downstream) {
-            this.mProtoNode = protoNode;
-            this.mSensorGatewaySource = sensorGatewaySource;
+            this.mPlatformSourceType = protoNode.getSourceType();
+            if (mPlatformSourceType
+                    == PlatformInt32SourceType.PLATFORM_INT32_SOURCE_TYPE_CURRENT_HEART_RATE
+                    || mPlatformSourceType
+                    == PlatformInt32SourceType.PLATFORM_INT32_SOURCE_TYPE_DAILY_STEP_COUNT) {
+                this.mSensorGatewaySource = sensorGatewaySource;
+            } else {
+                this.mSensorGatewaySource = null;
+                Log.w(TAG, "Unknown PlatformInt32SourceType: " + mPlatformSourceType);
+            }
             this.mDownstream = downstream;
         }
 
         @Override
         @UiThread
         public void preInit() {
-            if (platformInt32SourceTypeToPlatformDataSource(mProtoNode.getSourceType()) != null) {
+            if (mSensorGatewaySource != null) {
                 mDownstream.onPreUpdate();
             }
         }
@@ -97,10 +105,14 @@ class Int32Nodes {
         @Override
         @UiThread
         public void init() {
-            PlatformDataSource dataSource =
-                    platformInt32SourceTypeToPlatformDataSource(mProtoNode.getSourceType());
-            if (dataSource != null) {
-                dataSource.registerForData(mProtoNode.getSourceType(), mDownstream);
+            if (mSensorGatewaySource != null) {
+                try {
+                    mSensorGatewaySource.registerForData(mPlatformSourceType, mDownstream);
+                } catch (SecurityException e) {
+                    // Package does not have the permission to request the health data.
+                    Log.w(TAG, e.getMessage(), e);
+                    mDownstream.onInvalidated();
+                }
             } else {
                 mDownstream.onInvalidated();
             }
@@ -109,27 +121,9 @@ class Int32Nodes {
         @Override
         @UiThread
         public void destroy() {
-            PlatformDataSource dataSource =
-                    platformInt32SourceTypeToPlatformDataSource(mProtoNode.getSourceType());
-            if (dataSource != null) {
-                dataSource.unregisterForData(mProtoNode.getSourceType(), mDownstream);
+            if (mSensorGatewaySource != null) {
+                mSensorGatewaySource.unregisterForData(mPlatformSourceType, mDownstream);
             }
-        }
-
-        @Nullable
-        private PlatformDataSource platformInt32SourceTypeToPlatformDataSource(
-                PlatformInt32SourceType sourceType) {
-            switch (sourceType) {
-                case UNRECOGNIZED:
-                case PLATFORM_INT32_SOURCE_TYPE_UNDEFINED:
-                    Log.w(TAG, "Unknown PlatformInt32SourceType");
-                    return null;
-                case PLATFORM_INT32_SOURCE_TYPE_CURRENT_HEART_RATE:
-                case PLATFORM_INT32_SOURCE_TYPE_DAILY_STEP_COUNT:
-                    return mSensorGatewaySource;
-            }
-            Log.w(TAG, "Unknown PlatformInt32SourceType");
-            return null;
         }
     }
 
@@ -209,13 +203,13 @@ class Int32Nodes {
 
     /** Dynamic integer node that gets duration part from a duration. */
     static class GetDurationPartOpNode extends DynamicDataTransformNode<Duration, Integer> {
-
         private static final String TAG = "GetDurationPartOpNode";
 
         GetDurationPartOpNode(
-            GetDurationPartOp protoNode, DynamicTypeValueReceiver<Integer> downstream) {
-            super(downstream,
-                duration -> (int) getDurationPart(duration, protoNode.getDurationPart()));
+                GetDurationPartOp protoNode, DynamicTypeValueReceiver<Integer> downstream) {
+            super(
+                    downstream,
+                    duration -> (int) getDurationPart(duration, protoNode.getDurationPart()));
         }
 
         private static long getDurationPart(Duration duration, DurationPartType durationPartType) {
@@ -256,9 +250,11 @@ class Int32Nodes {
                 AnimatableFixedInt32 protoNode,
                 DynamicTypeValueReceiver<Integer> downstream,
                 QuotaManager quotaManager) {
-            super(quotaManager);
+            super(quotaManager, protoNode.getAnimationSpec());
             this.mProtoNode = protoNode;
             this.mDownstream = downstream;
+            mQuotaAwareAnimator.addUpdateCallback(
+                    animatedValue -> mDownstream.onData((Integer) animatedValue));
         }
 
         @Override
@@ -270,11 +266,7 @@ class Int32Nodes {
         @Override
         @UiThread
         public void init() {
-            ValueAnimator animator =
-                    ValueAnimator.ofInt(mProtoNode.getFromValue(), mProtoNode.getToValue());
-            applyAnimationSpecToAnimator(animator, mProtoNode.getAnimationSpec());
-            animator.addUpdateListener(a -> mDownstream.onData((Integer) a.getAnimatedValue()));
-            mQuotaAwareAnimator.updateAnimator(animator);
+            mQuotaAwareAnimator.setIntValues(mProtoNode.getFromValue(), mProtoNode.getToValue());
             startOrSkipAnimator();
         }
 
@@ -286,14 +278,13 @@ class Int32Nodes {
     }
 
     /** Dynamic int32 node that gets animatable value from dynamic source. */
-    static class DynamicAnimatedInt32Node extends AnimatableNode implements
-            DynamicDataNode<Integer> {
+    static class DynamicAnimatedInt32Node extends AnimatableNode
+            implements DynamicDataNode<Integer> {
 
         final DynamicTypeValueReceiver<Integer> mDownstream;
         private final DynamicTypeValueReceiver<Integer> mInputCallback;
 
-        @Nullable
-        Integer mCurrentValue = null;
+        @Nullable Integer mCurrentValue = null;
         int mPendingCalls = 0;
 
         // Static analysis complains about calling methods of parent class AnimatableNode under
@@ -303,8 +294,15 @@ class Int32Nodes {
                 DynamicTypeValueReceiver<Integer> downstream,
                 @NonNull AnimationSpec spec,
                 QuotaManager quotaManager) {
-            super(quotaManager);
+            super(quotaManager, spec);
             this.mDownstream = downstream;
+            mQuotaAwareAnimator.addUpdateCallback(
+                    animatedValue -> {
+                        if (mPendingCalls == 0) {
+                            mCurrentValue = (Integer) animatedValue;
+                            mDownstream.onData(mCurrentValue);
+                        }
+                    });
             this.mInputCallback =
                     new DynamicTypeValueReceiver<Integer>() {
                         @Override
@@ -313,8 +311,6 @@ class Int32Nodes {
 
                             if (mPendingCalls == 1) {
                                 mDownstream.onPreUpdate();
-
-                                mQuotaAwareAnimator.resetAnimator();
                             }
                         }
 
@@ -329,19 +325,7 @@ class Int32Nodes {
                                     mCurrentValue = newData;
                                     mDownstream.onData(mCurrentValue);
                                 } else {
-                                    ValueAnimator animator = ValueAnimator.ofInt(mCurrentValue,
-                                            newData);
-
-                                    applyAnimationSpecToAnimator(animator, spec);
-                                    animator.addUpdateListener(
-                                            a -> {
-                                                if (mPendingCalls == 0) {
-                                                    mCurrentValue = (Integer) a.getAnimatedValue();
-                                                    mDownstream.onData(mCurrentValue);
-                                                }
-                                            });
-
-                                    mQuotaAwareAnimator.updateAnimator(animator);
+                                    mQuotaAwareAnimator.setIntValues(mCurrentValue, newData);
                                     startOrSkipAnimator();
                                 }
                             }
