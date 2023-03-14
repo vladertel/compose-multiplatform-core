@@ -165,7 +165,7 @@ class ComposeScene internal constructor(
 
     private fun invalidateIfNeeded() {
         hasPendingDraws = frameClock.hasAwaiters || needLayout || needDraw ||
-           snapshotChanges.hasCommands || syntheticEventSender.needUpdate
+           snapshotChanges.hasCommands || pointerPositionUpdater.needUpdate
         if (hasPendingDraws && !isInvalidationDisabled && !isClosed) {
             invalidate()
         }
@@ -212,7 +212,10 @@ class ComposeScene internal constructor(
 
     private val recomposer = Recomposer(coroutineContext + job + effectDispatcher)
 
-    internal val syntheticEventSender = PointerPositionUpdater(::invalidateIfNeeded, ::sendAs)
+    private val syntheticEventSender = SyntheticEventSender(::processPointerInput)
+    internal val pointerPositionUpdater = PointerPositionUpdater(
+        ::invalidateIfNeeded, syntheticEventSender
+    )
 
     internal var mainOwner: SkiaBasedOwner? = null
     private var composition: Composition? = null
@@ -347,13 +350,14 @@ class ComposeScene internal constructor(
     ) {
         check(!isClosed) { "ComposeScene is closed" }
         syntheticEventSender.reset()
+        pointerPositionUpdater.reset()
         composition?.dispose()
         mainOwner?.dispose()
         val mainOwner = SkiaBasedOwner(
             this,
             platform,
             platform.focusManager,
-            syntheticEventSender,
+            pointerPositionUpdater,
             density,
             IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect(),
             onPreviewKeyEvent = onPreviewKeyEvent,
@@ -407,7 +411,7 @@ class ComposeScene internal constructor(
         frameClock.sendFrame(nanoTime)
         needLayout = false
         forEachOwner { it.measureAndLayout() }
-        syntheticEventSender.beforeDraw()
+        pointerPositionUpdater.update()
         needDraw = false
         forEachOwner { it.draw(canvas) }
         forEachOwner { it.clearInvalidObservations() }
@@ -504,7 +508,6 @@ class ComposeScene internal constructor(
         nativeEvent: Any? = null,
         button: PointerButton? = null,
     ): Unit = postponeInvalidation {
-        println("$eventType ${pointers.getOrNull(0)?.position} ${pointers.getOrNull(0)?.id} ${pointers.getOrNull(1)?.position} ${pointers.getOrNull(0)?.pressed} ${pointers.getOrNull(1)?.pressed}")
         val event = pointerInputEvent(
             eventType,
             pointers,
@@ -517,17 +520,8 @@ class ComposeScene internal constructor(
         )
         needLayout = false
         forEachOwner { it.measureAndLayout() }
-        syntheticEventSender.beforeEvent(event)
-        processPointerInput(event)
-    }
-
-    @Suppress("DEPRECATION")
-    private fun sendAs(
-        eventType: PointerEventType,
-        sourceEvent: PointerInputEvent,
-        positionSourceEvent: PointerInputEvent
-    ) {
-        //processPointerInput(createEvent(eventType, sourceEvent, positionSourceEvent))
+        pointerPositionUpdater.update()
+        syntheticEventSender.send(event)
     }
 
     private fun processPointerInput(event: PointerInputEvent) {
@@ -560,7 +554,6 @@ class ComposeScene internal constructor(
         owner?.processPointerInput(event)
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     private fun processMove(event: PointerInputEvent) {
         val owner = when {
             event.buttons.areAnyPressed -> pressOwner

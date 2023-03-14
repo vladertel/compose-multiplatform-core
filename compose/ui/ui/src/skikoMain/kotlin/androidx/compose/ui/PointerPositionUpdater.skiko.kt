@@ -16,37 +16,20 @@
 
 package androidx.compose.ui
 
-import androidx.compose.ui.input.pointer.HitPathTracker
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerInputEvent
 import kotlin.js.JsName
 
+// It is usually used when we need to update the current position of the pointers.
+// For example, when we relayout or scroll Compose content, it will request update via needSendMove.
+// The update happen after relayout via sending a synthetic Move event through all UI tree
 internal class PointerPositionUpdater(
     private val onNeedUpdate: () -> Unit,
-    private val sendEvent: (
-        eventType: PointerEventType,
-        sourceEvent: PointerInputEvent,
-        positionSourceEvent: PointerInputEvent
-    ) -> Unit,
+    private val syntheticEventSender: SyntheticEventSender,
 ) {
-    private var lastEvent: PointerInputEvent? = null
-
     var needUpdate: Boolean = false
         private set
 
     fun reset() {
-        lastEvent = null
         needUpdate = false
-    }
-
-    fun beforeEvent(event: PointerInputEvent) {
-        if (isMoveEventMissing(lastEvent, event) || needUpdate) {
-            needUpdate = false
-            if (!event.isMove()) {
-                lastEvent?.sendWith(positionSourceEvent = event)
-            }
-        }
-        lastEvent = event
     }
 
     @JsName("setNeedUpdate")
@@ -55,59 +38,10 @@ internal class PointerPositionUpdater(
         onNeedUpdate()
     }
 
-    fun beforeDraw() {
+    fun update() {
         if (needUpdate) {
             needUpdate = false
-            lastEvent?.also { it.sendWith(positionSourceEvent = it) }
+            syntheticEventSender.sendPreviousMove()
         }
-    }
-
-    private fun PointerInputEvent.sendWith(positionSourceEvent: PointerInputEvent) {
-        if (positionSourceEvent.pointers.isNotEmpty()) {
-            sendEvent(PointerEventType.Move, this, positionSourceEvent)
-        }
-    }
-}
-
-/**
- * Compose can't work well if we miss Move event before, for example, a Scroll event.
- *
- * This is because of the implementation of [HitPathTracker].
- *
- * Imaging two boxes:
- * ```
- * Column {
- *   Box(size=10)
- *   Box(size=10)
- * }
- * ```
- *
- * - we send Move's in the right order:
- * 1. Move(5,5) -> box1 receives Enter(5,5)
- * 2. Move(5,15) -> box1 receives Exit(5,15), box2 receives Enter(5,15)
- * 3. Scroll(5,15) -> box2 receives Scroll(5,15)
- *
- * - we skip some Move's between last move and current Scroll (AWT, for example, can skip them):
- * 1. Move(5,5) -> box1 receives Enter(5,5)
- * 2. Scroll(5,15) -> box1 receives Scroll(5,15), box2 receives Scroll(5,15)
- * 3. Move(5,16) -> box2 receives Enter(5,16)
- *
- * You can see that box1 loses the Exit event (instead it receives Scroll event)
- */
-private fun isMoveEventMissing(
-    previousEvent: PointerInputEvent?,
-    currentEvent: PointerInputEvent,
-) = !currentEvent.isMove() && !currentEvent.isSamePosition(previousEvent)
-
-private fun PointerInputEvent.isMove() =
-    eventType == PointerEventType.Move ||
-        eventType == PointerEventType.Enter ||
-        eventType == PointerEventType.Exit
-
-private fun PointerInputEvent.isSamePosition(previousEvent: PointerInputEvent?): Boolean {
-    val previousIdToPosition = previousEvent?.pointers?.associate { it.id to it.position }
-    return pointers.all {
-        val previousPosition = previousIdToPosition?.get(it.id)
-        previousPosition == null || it.position == previousPosition
     }
 }

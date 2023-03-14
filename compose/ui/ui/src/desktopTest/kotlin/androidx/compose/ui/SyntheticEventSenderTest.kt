@@ -250,11 +250,11 @@ class SyntheticEventSenderTest {
         vararg inputEvents: PointerInputEvent
     ): List<PointerInputEvent> {
         val received = mutableListOf<PointerInputEvent>()
-        val sender = SyntheticEventSender()
+        val sender = SyntheticEventSender(received::add)
         for (inputEvent in inputEvents) {
 
             println(inputEvent.formatEssential())
-            sender.send(inputEvent, received::add)
+            sender.send(inputEvent)
         }
         return received
     }

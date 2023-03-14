@@ -392,23 +392,6 @@ internal class SkiaBasedOwner(
         }
     }
 
-    @Suppress("OVERRIDE_DEPRECATION")
-    override fun processPointerInput(timeMillis: Long, pointers: List<TestPointerInputEventData>) {
-        // TODO(https://github.com/JetBrains/compose-jb/issues/1846)
-        //  we should route test events through ComposeScene, not through SkiaBasedOwner
-        measureAndLayout()
-        val isPressed = pointers.any { it.down }
-        processPointerInput(
-            PointerInputEvent(
-                PointerEventType.Unknown,
-                timeMillis,
-                pointers.map { it.toPointerInputEventData() },
-                if (isPressed) PointerButtons(isPrimaryPressed = true) else PointerButtons(),
-                button = null
-            )
-        )
-    }
-
     override fun onEndApplyChanges() {
         // Listeners can add more items to the list and we want to ensure that they
         // are executed after being added, so loop until the list is empty

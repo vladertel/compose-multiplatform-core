@@ -21,7 +21,6 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventData
-import org.jetbrains.skia.Image
 
 /**
  * Compose or user code can't work well if we miss some events.
@@ -34,42 +33,44 @@ import org.jetbrains.skia.Image
  *
  * This class generates new synthetic events based on the previous event, if something is missing
  */
-internal class SyntheticEventSender {
+internal class SyntheticEventSender(
+    send: (PointerInputEvent) -> Unit
+) {
+    private val _send: (PointerInputEvent) -> Unit = send
     private var previousEvent: PointerInputEvent? = null
+
+    fun reset() {
+        previousEvent = null
+    }
 
     /**
      * Send [event] and synthetic events before it if needed. On each sent event we just call [send]
      */
-    fun send(
-        event: PointerInputEvent,
-        send: (PointerInputEvent) -> Unit
-    ) {
-        sendSyntheticMove(event, send)
-        sendSyntheticReleases(event, send)
-        sendSyntheticPresses(event, send)
-        sendInternal(event, send)
+    fun send(event: PointerInputEvent) {
+        sendSyntheticMove(event)
+        sendSyntheticReleases(event)
+        sendSyntheticPresses(event)
+        sendInternal(event)
     }
 
-    private fun sendSyntheticMove(
-        currentEvent: PointerInputEvent,
-        send: (PointerInputEvent) -> Unit
-    ) {
-        val previousEvent = previousEvent
-        if (previousEvent != null && isMoveEventMissing(previousEvent, currentEvent)) {
+    fun sendPreviousMove() {
+        val previousEvent = previousEvent ?: return
+        sendSyntheticMove(previousEvent)
+    }
+
+    private fun sendSyntheticMove(currentEvent: PointerInputEvent) {
+        val previousEvent = previousEvent ?: return
+        if (isMoveEventMissing(previousEvent, currentEvent)) {
             val idToPosition = currentEvent.pointers.associate { it.id to it.position }
             sendInternal(
                 previousEvent.copySynthetic(PointerEventType.Move) {
                     copySynthetic(position = idToPosition[id] ?: position)
-                },
-                send
+                }
             )
         }
     }
 
-    private fun sendSyntheticReleases(
-        currentEvent: PointerInputEvent,
-        send: (PointerInputEvent) -> Unit
-    ) {
+    private fun sendSyntheticReleases(currentEvent: PointerInputEvent) {
         val previousEvent = previousEvent ?: return
         val previousPressed = previousEvent.pressedIds()
         val currentPressed = currentEvent.pressedIds()
@@ -86,16 +87,12 @@ internal class SyntheticEventSender {
                     copySynthetic(
                         down = if (id in sendingAsUp) !sendingAsUp.contains(id) else down
                     )
-                },
-                send
+                }
             )
         }
     }
 
-    private fun sendSyntheticPresses(
-        currentEvent: PointerInputEvent,
-        send: (PointerInputEvent) -> Unit
-    ) {
+    private fun sendSyntheticPresses(currentEvent: PointerInputEvent) {
         val previousPressed = previousEvent?.pressedIds().orEmpty()
         val currentPressed = currentEvent.pressedIds()
         val newPressed = (currentPressed - previousPressed).toList()
@@ -111,8 +108,7 @@ internal class SyntheticEventSender {
                     copySynthetic(
                         down = if (id in newPressed) sendingAsDown.contains(id) else down
                     )
-                },
-                send
+                }
             )
         }
     }
@@ -120,8 +116,8 @@ internal class SyntheticEventSender {
     private fun PointerInputEvent.pressedIds(): Set<PointerId> =
         pointers.asSequence().filter { it.down }.mapTo(mutableSetOf()) { it.id }
 
-    private fun sendInternal(event: PointerInputEvent, send: (PointerInputEvent) -> Unit) {
-        send(event)
+    private fun sendInternal(event: PointerInputEvent) {
+        _send(event)
         // We don't send nativeEvent for synthetic events.
         // Nullify to avoid memory leaks (native events can point to native views).
         previousEvent = event.copy(nativeEvent = null)
