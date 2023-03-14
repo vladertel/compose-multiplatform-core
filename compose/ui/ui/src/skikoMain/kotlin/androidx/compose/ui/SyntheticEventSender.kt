@@ -59,7 +59,7 @@ internal class SyntheticEventSender {
             val idToPosition = currentEvent.pointers.associate { it.id to it.position }
             sendInternal(
                 previousEvent.copySynthetic(PointerEventType.Move) {
-                    it.copySynthetic(position = idToPosition[it.id] ?: it.position)
+                    copySynthetic(position = idToPosition[id] ?: position)
                 },
                 send
             )
@@ -79,13 +79,12 @@ internal class SyntheticEventSender {
         // Don't send the first released pointer
         // It will be sent as a real event. Here we only need to send synthetic events before a real one.
         for (i in newReleased.size - 2 downTo 0) {
-            val id = newReleased[i]
-            sendingAsUp.add(id)
+            sendingAsUp.add(newReleased[i])
 
             sendInternal(
                 previousEvent.copySynthetic(PointerEventType.Release) {
-                    it.copySynthetic(
-                        down = if (it.id in sendingAsUp) !sendingAsUp.contains(it.id) else it.down
+                    copySynthetic(
+                        down = if (id in sendingAsUp) !sendingAsUp.contains(id) else down
                     )
                 },
                 send
@@ -105,13 +104,12 @@ internal class SyntheticEventSender {
         // Don't send the last pressed pointer (newPressed.size - 1)
         // It will be sent as a real event. Here we only need to send synthetic events before a real one.
         for (i in 0..newPressed.size - 2) {
-            val id = newPressed[i]
-            sendingAsDown.add(id)
+            sendingAsDown.add(newPressed[i])
 
             sendInternal(
                 currentEvent.copySynthetic(PointerEventType.Press) {
-                    it.copySynthetic(
-                        down = if (it.id in newPressed) sendingAsDown.contains(it.id) else it.down
+                    copySynthetic(
+                        down = if (id in newPressed) sendingAsDown.contains(id) else down
                     )
                 },
                 send
@@ -150,7 +148,7 @@ internal class SyntheticEventSender {
     // we don't use copy here to not forget to nullify properties that shouldn't be in a synthetic event
     private fun PointerInputEvent.copySynthetic(
         type: PointerEventType,
-        pointer: (PointerInputEventData) -> PointerInputEventData,
+        pointer: PointerInputEventData.() -> PointerInputEventData,
     ) = PointerInputEvent(
         eventType = type,
         pointers = pointers.map(pointer),
