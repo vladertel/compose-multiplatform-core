@@ -25,7 +25,7 @@ import androidx.compose.ui.input.pointer.PointerInputEvent
 import kotlin.test.Test
 
 @OptIn(ExperimentalComposeUiApi::class)
-class SyntheticEventChainTest {
+class SyntheticEventSenderTest {
     @Test
     fun `mouse, shouldn't generate new events if order is correct`() {
         syntheticEvents(
@@ -175,7 +175,6 @@ class SyntheticEventChainTest {
             ),
             event(
                 Release,
-                1 to touch(1f, 3f, pressed = false),
                 2 to touch(10f, 20f, pressed = false),
                 3 to touch(100f, 200f, pressed = true),
             ),
@@ -206,11 +205,14 @@ class SyntheticEventChainTest {
             event(
                 Press,
                 1 to touch(1f, 3f, pressed = true),
+                2 to touch(10f, 20f, pressed = false),
+                3 to touch(100f, 200f, pressed = false),
             ),
             event(
                 Press,
                 1 to touch(1f, 3f, pressed = true),
                 2 to touch(10f, 20f, pressed = true),
+                3 to touch(100f, 200f, pressed = false),
             ),
             event(
                 Press,
@@ -238,7 +240,6 @@ class SyntheticEventChainTest {
             ),
             event(
                 Release,
-                1 to touch(1f, 3f, pressed = false),
                 2 to touch(10f, 20f, pressed = false),
                 3 to touch(100f, 200f, pressed = true),
             ),
