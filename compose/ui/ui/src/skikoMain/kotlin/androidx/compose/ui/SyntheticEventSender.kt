@@ -58,28 +58,36 @@ internal class SyntheticEventSender {
         if (previousEvent != null && isMoveEventMissing(previousEvent, currentEvent)) {
             val idToPosition = currentEvent.pointers.associate { it.id to it.position }
             sendInternal(
-                PointerInputEvent(
-                    eventType = PointerEventType.Move,
-                    pointers = previousEvent.pointers.map {
-                        val position = idToPosition[it.id] ?: it.position
-                        PointerInputEventData(
-                            it.id,
-                            it.uptime,
-                            position,
-                            position,
-                            it.down,
-                            it.pressure,
-                            it.type,
-                            it.issuesEnterExit,
-                            scrollDelta = Offset(0f, 0f),
-                        )
-                    },
-                    uptime = previousEvent.uptime,
-                    nativeEvent = null,
-                    buttons = previousEvent.buttons,
-                    keyboardModifiers = previousEvent.keyboardModifiers,
-                    button = null
-                ),
+                previousEvent.copySynthetic(PointerEventType.Move) {
+                    it.copySynthetic(position = idToPosition[it.id] ?: it.position)
+                },
+                send
+            )
+        }
+    }
+
+    private fun sendSyntheticReleases(
+        currentEvent: PointerInputEvent,
+        send: (PointerInputEvent) -> Unit
+    ) {
+        val previousEvent = previousEvent ?: return
+        val previousPressed = previousEvent.pressedIds()
+        val currentPressed = currentEvent.pressedIds()
+        val newReleased = (previousPressed - currentPressed).toList()
+        val sendingAsUp = HashSet<PointerId>(newReleased.size)
+
+        // Don't send the first released pointer
+        // It will be sent as a real event. Here we only need to send synthetic events before a real one.
+        for (i in newReleased.size - 2 downTo 0) {
+            val id = newReleased[i]
+            sendingAsUp.add(id)
+
+            sendInternal(
+                previousEvent.copySynthetic(PointerEventType.Release) {
+                    it.copySynthetic(
+                        down = if (it.id in sendingAsUp) !sendingAsUp.contains(it.id) else it.down
+                    )
+                },
                 send
             )
         }
@@ -92,8 +100,8 @@ internal class SyntheticEventSender {
         val previousPressed = previousEvent?.pressedIds().orEmpty()
         val currentPressed = currentEvent.pressedIds()
         val newPressed = (currentPressed - previousPressed).toList()
-
         val sendingAsDown = HashSet<PointerId>(newPressed.size)
+
         // Don't send the last pressed pointer (newPressed.size - 1)
         // It will be sent as a real event. Here we only need to send synthetic events before a real one.
         for (i in 0..newPressed.size - 2) {
@@ -101,69 +109,11 @@ internal class SyntheticEventSender {
             sendingAsDown.add(id)
 
             sendInternal(
-                PointerInputEvent(
-                    eventType = PointerEventType.Press,
-                    pointers = currentEvent.pointers.map {
-                        PointerInputEventData(
-                            it.id,
-                            it.uptime,
-                            it.position,
-                            it.position,
-                            if (it.id in newPressed) sendingAsDown.contains(it.id) else it.down,
-                            it.pressure,
-                            it.type,
-                            it.issuesEnterExit,
-                            scrollDelta = Offset(0f, 0f),
-                        )
-                    },
-                    uptime = currentEvent.uptime,
-                    nativeEvent = null,
-                    buttons = currentEvent.buttons,
-                    keyboardModifiers = currentEvent.keyboardModifiers,
-                    button = null
-                ),
-                send
-            )
-        }
-    }
-
-    private fun sendSyntheticReleases(
-        currentEvent: PointerInputEvent,
-        send: (PointerInputEvent) -> Unit
-    ) {
-        val previousPressed = previousEvent?.pressedIds().orEmpty()
-        val currentPressed = currentEvent.pressedIds()
-        val newReleased = (previousPressed - currentPressed).toList()
-        val sendingAsUp = HashSet<PointerId>(newReleased.size)
-
-        // Don't send the first released pointer
-        // It will be sent as a real event. Here we only need to send synthetic events before a real one.
-        for (i in newReleased.size - 2 downTo 0) {
-            val id = newReleased[i]
-            sendingAsUp.add(id)
-
-            sendInternal(
-                PointerInputEvent(
-                    eventType = PointerEventType.Release,
-                    pointers = previousEvent?.pointers.orEmpty().map {
-                        PointerInputEventData(
-                            it.id,
-                            it.uptime,
-                            it.position,
-                            it.position,
-                            if (it.id in sendingAsUp) !sendingAsUp.contains(it.id) else it.down,
-                            it.pressure,
-                            it.type,
-                            it.issuesEnterExit,
-                            scrollDelta = Offset(0f, 0f),
-                        )
-                    },
-                    uptime = currentEvent.uptime,
-                    nativeEvent = null,
-                    buttons = currentEvent.buttons,
-                    keyboardModifiers = currentEvent.keyboardModifiers,
-                    button = null
-                ),
+                currentEvent.copySynthetic(PointerEventType.Press) {
+                    it.copySynthetic(
+                        down = if (it.id in newPressed) sendingAsDown.contains(it.id) else it.down
+                    )
+                },
                 send
             )
         }
@@ -196,4 +146,33 @@ internal class SyntheticEventSender {
             previousPosition == null || it.position == previousPosition
         }
     }
+
+    // we don't use copy here to not forget to nullify properties that shouldn't be in a synthetic event
+    private fun PointerInputEvent.copySynthetic(
+        type: PointerEventType,
+        pointer: (PointerInputEventData) -> PointerInputEventData,
+    ) = PointerInputEvent(
+        eventType = type,
+        pointers = pointers.map(pointer),
+        uptime = uptime,
+        nativeEvent = null,
+        buttons = buttons,
+        keyboardModifiers = keyboardModifiers,
+        button = null
+    )
+
+    private fun PointerInputEventData.copySynthetic(
+        position: Offset = this.position,
+        down: Boolean = this.down
+    ) = PointerInputEventData(
+        id,
+        uptime,
+        position,
+        position,
+        down,
+        pressure,
+        type,
+        issuesEnterExit,
+        scrollDelta = Offset(0f, 0f),
+    )
 }
