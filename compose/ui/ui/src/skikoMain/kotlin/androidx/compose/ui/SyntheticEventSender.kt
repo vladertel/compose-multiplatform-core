@@ -93,16 +93,19 @@ internal class SyntheticEventSender(
     }
 
     private fun sendSyntheticPresses(currentEvent: PointerInputEvent) {
+        println("Q3")
         val previousPressed = previousEvent?.pressedIds().orEmpty()
         val currentPressed = currentEvent.pressedIds()
         val newPressed = (currentPressed - previousPressed).toList()
         val sendingAsDown = HashSet<PointerId>(newPressed.size)
 
+        println("Q4 $newPressed")
         // Don't send the last pressed pointer (newPressed.size - 1)
         // It will be sent as a real event. Here we only need to send synthetic events before a real one.
         for (i in 0..newPressed.size - 2) {
             sendingAsDown.add(newPressed[i])
 
+            println("Q5 ${currentEvent.pointers.map { it.id }}")
             sendInternal(
                 currentEvent.copySynthetic(PointerEventType.Press) {
                     copySynthetic(

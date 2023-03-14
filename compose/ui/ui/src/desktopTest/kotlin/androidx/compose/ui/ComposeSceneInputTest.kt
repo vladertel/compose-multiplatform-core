@@ -23,6 +23,7 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Test
 
+@OptIn(ExperimentalComposeUiApi::class)
 class ComposeSceneInputTest {
     @Test
     fun move() = ImageComposeScene(100, 100).use { scene ->
@@ -401,64 +402,66 @@ class ComposeSceneInputTest {
             touch(1f, 55f, pressed = false, id = 2)
         )
     }
-//
-//    @Test
-//    fun `multitouch, send multiple touch changes in a single event`() = ImageComposeScene(
-//        100, 100
-//    ).use { scene ->
-//        val background = FillBox()
-//
-//        scene.setContent {
-//            background.Content()
-//        }
-//
-//        scene.sendPointerEvent(
-//            PointerEventType.Press,
-//            touch(10f, 20f, pressed = true, id = 1),
-//            touch(1f, 20f, pressed = true, id = 2),
-//        )
-//        background.events.assertReceived(
-//            PointerEventType.Press, // Simulate sequential touch presses, not all touches at once
-//            touch(10f, 20f, pressed = true, id = 1)
-//        )
-//        background.events.assertReceivedLast(
-//            PointerEventType.Press,
-//            touch(10f, 20f, pressed = true, id = 1),
-//            touch(1f, 20f, pressed = true, id = 2),
-//        )
-//
-//        scene.sendPointerEvent(
-//            PointerEventType.Move,
-//            touch(10f, 55f, pressed = true, id = 1),
-//            touch(1f, 55f, pressed = true, id = 2),
-//        )
-//        background.events.assertReceivedLast(
-//            PointerEventType.Move,
-//            touch(10f, 55f, pressed = true, id = 1),
-//            touch(1f, 55f, pressed = true, id = 2),
-//        )
-//
-//        scene.sendPointerEvent(
-//            PointerEventType.Release,
-//            touch(1f, 1f, pressed = false, id = 1),
-//            touch(1f, 2f, pressed = false, id = 2),
-//        )
-//        background.events.assertReceived(
-//            PointerEventType.Move, // Position is changed, we need to generate synthetic Move to this position
-//            touch(1f, 1f, pressed = true, id = 1),
-//            touch(1f, 2f, pressed = true, id = 2),
-//        )
-//        background.events.assertReceived(
-//            PointerEventType.Release,
-//            touch(1f, 1f, pressed = true, id = 1),
-//            touch(1f, 2f, pressed = false, id = 2),
-//        )
-//        background.events.assertReceivedLast(
-//            PointerEventType.Release,
-//            touch(1f, 1f, pressed = false, id = 1),
-//            touch(1f, 2f, pressed = false, id = 2),
-//        )
-//    }
+
+    @Test
+    fun `multitouch, send multiple touch changes in a single event`() = ImageComposeScene(
+        100, 100
+    ).use { scene ->
+        val background = FillBox()
+
+        scene.setContent {
+            background.Content()
+        }
+
+        println("Q1")
+        scene.sendPointerEvent(
+            PointerEventType.Press,
+            touch(10f, 20f, pressed = true, id = 1),
+            touch(1f, 20f, pressed = true, id = 2),
+        )
+        // Simulate sequential touch presses, not all touches at once
+        background.events.assertReceived(
+            PointerEventType.Press,
+            touch(10f, 20f, pressed = true, id = 1),
+        )
+        background.events.assertReceivedLast(
+            PointerEventType.Press,
+            touch(10f, 20f, pressed = true, id = 1),
+            touch(1f, 20f, pressed = true, id = 2),
+        )
+
+        scene.sendPointerEvent(
+            PointerEventType.Move,
+            touch(10f, 55f, pressed = true, id = 1),
+            touch(1f, 55f, pressed = true, id = 2),
+        )
+        background.events.assertReceivedLast(
+            PointerEventType.Move,
+            touch(10f, 55f, pressed = true, id = 1),
+            touch(1f, 55f, pressed = true, id = 2),
+        )
+
+        scene.sendPointerEvent(
+            PointerEventType.Release,
+            touch(1f, 1f, pressed = false, id = 1),
+            touch(1f, 2f, pressed = false, id = 2),
+        )
+        // Position is changed, we need to generate a synthetic Move for this position
+        background.events.assertReceived(
+            PointerEventType.Move,
+            touch(1f, 1f, pressed = true, id = 1),
+            touch(1f, 2f, pressed = true, id = 2),
+        )
+        background.events.assertReceived(
+            PointerEventType.Release,
+            touch(1f, 1f, pressed = false, id = 1),
+            touch(1f, 2f, pressed = true, id = 2),
+        )
+        background.events.assertReceivedLast(
+            PointerEventType.Release,
+            touch(1f, 2f, pressed = false, id = 2),
+        )
+    }
 
     // TODO(https://github.com/JetBrains/compose-jb/issues/1396):
     //  ImageComposeScene should be able to run in the test thread.

@@ -76,7 +76,8 @@ fun PointerEvent.assertHas(type: PointerEventType, vararg pointers: ComposeScene
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
-fun touch(x: Float, y: Float, pressed: Boolean) = ComposeScene.Pointer(
+fun touch(x: Float, y: Float, pressed: Boolean, id: Int = 0) = ComposeScene.Pointer(
+    id = PointerId(id.toLong()),
     position = Offset(x, y),
     pressed = pressed,
     type = PointerType.Touch
@@ -154,7 +155,7 @@ fun Modifier.collectEvents(events: Events) = pointerInput(Unit) {
     awaitPointerEventScope {
         while (true) {
             val event = awaitPointerEvent()
-            println("EVENT ${event.type}")
+            println("EVENT ${event.type} ${event.changes.map { it.id }}")
             events.add(event)
         }
     }
