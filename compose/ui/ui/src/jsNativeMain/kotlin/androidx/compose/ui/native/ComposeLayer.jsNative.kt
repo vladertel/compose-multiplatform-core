@@ -70,10 +70,7 @@ internal class ComposeLayer(
                 eventType = event.kind.toCompose(),
                 pointers = event.pointers.map {
                     ComposeScene.Pointer(
-                        position = Offset(
-                            x = event.x.toFloat() * scale,
-                            y = event.y.toFloat() * scale
-                        ) - topLeftOffset,
+                        position = Offset(it.x.toFloat(), it.y.toFloat()) - topLeftOffset,
                         pressed = it.pressed,
                         type = it.device.toCompose(),
                         id = PointerId(it.id),

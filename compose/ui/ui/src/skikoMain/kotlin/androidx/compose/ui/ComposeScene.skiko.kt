@@ -410,11 +410,8 @@ class ComposeScene internal constructor(
         recomposeDispatcher.flush()
         frameClock.sendFrame(nanoTime)
         needLayout = false
-        println("H1")
         forEachOwner { it.measureAndLayout() }
-        println("H2")
         pointerPositionUpdater.update()
-        println("H3")
         needDraw = false
         forEachOwner { it.draw(canvas) }
         forEachOwner { it.clearInvalidObservations() }
@@ -528,7 +525,7 @@ class ComposeScene internal constructor(
     }
 
     private fun processPointerInput(event: PointerInputEvent) {
-        println("processPointerInput ${event.pointers.map { it.id }}")
+        println("processPointerInput ${event.eventType} ${event.pointers.map { it.id to it.down }}")
         when (event.eventType) {
             PointerEventType.Press -> processPress(event)
             PointerEventType.Release -> processRelease(event)

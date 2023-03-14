@@ -31,7 +31,9 @@ import androidx.compose.ui.window.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.animateZoomBy
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
@@ -66,33 +68,28 @@ private fun TransformableSample() {
     ) {
         // set up all transformation states
         var scale by remember { mutableStateOf(1f) }
-        var rotation by remember { mutableStateOf(0f) }
         var offset by remember { mutableStateOf(Offset.Zero) }
         val coroutineScope = rememberCoroutineScope()
         // let's create a modifier state to specify how to update our UI state defined above
-        val state = rememberTransformableState { zoomChange, offsetChange, rotationChange ->
-            // note: scale goes by factor, not an absolute difference, so we need to multiply it
-            scale *= zoomChange
-            rotation += rotationChange
-            offset += offsetChange
 
-            println("QQQ $scale $offset")
-        }
         CircularProgressIndicator()
         Box(
             Modifier
                 // apply pan offset state as a layout transformation before other modifiers
                 .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
-                // add transformable to listen to multitouch transformation events after offset
-                .transformable(state = state)
                 // optional for example: add double click to zoom
                 .pointerInput(Unit) {
-                    detectTapGestures(
-                        onDoubleTap = {
-                            coroutineScope.launch { state.animateZoomBy(4f) }
-                        }
-                    )
+                    detectTransformGestures(panZoomLock = true) { centroid, pan, gestureZoom, _ ->
+                        offset += pan
+                        scale = (scale * gestureZoom).coerceIn(0.2f..5f)
+                    }
                 }
+//                .pointerInput(Unit) {
+//                    detectDragGestures { event, amount ->
+//                        if (!event.isConsumed)
+//                        offset += amount
+//                    }
+//                }
                 .fillMaxSize()
                 .border(1.dp, Color.Green),
             contentAlignment = Alignment.Center
@@ -103,8 +100,7 @@ private fun TransformableSample() {
                 // apply other transformations like rotation and zoom on the pizza slice emoji
                 modifier = Modifier.graphicsLayer(
                     scaleX = scale,
-                    scaleY = scale,
-                    rotationZ = rotation
+                    scaleY = scale
                 )
             )
         }
