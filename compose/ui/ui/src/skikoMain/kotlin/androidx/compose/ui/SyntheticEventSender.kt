@@ -55,7 +55,12 @@ internal class SyntheticEventSender(
 
     fun sendPreviousMove() {
         val previousEvent = previousEvent ?: return
-        sendSyntheticMove(previousEvent)
+        val idToPosition = previousEvent.pointers.associate { it.id to it.position }
+        sendInternal(
+            previousEvent.copySynthetic(PointerEventType.Move) {
+                copySynthetic(position = idToPosition[id] ?: position)
+            }
+        )
     }
 
     private fun sendSyntheticMove(currentEvent: PointerInputEvent) {

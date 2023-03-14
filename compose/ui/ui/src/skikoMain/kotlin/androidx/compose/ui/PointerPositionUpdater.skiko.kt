@@ -34,11 +34,13 @@ internal class PointerPositionUpdater(
 
     @JsName("setNeedUpdate")
     fun needSendMove() {
+        println("needSendMove")
         needUpdate = true
         onNeedUpdate()
     }
 
     fun update() {
+        println("update $needUpdate")
         if (needUpdate) {
             needUpdate = false
             syntheticEventSender.sendPreviousMove()

@@ -163,8 +163,11 @@ class MouseHoverTest {
         counts1.assertEquals(enter = 1, exit = 0, move = 0)
         counts2.assertEquals(enter = 0, exit = 0, move = 0)
 
+        println("F1")
         scene.sendPointerEvent(PointerEventType.Scroll, Offset(0f, 0f), scrollDelta = Offset(0f, 10000f))
+        println("F2")
         scene.render() // we update hover only on relayout
+        println("F3")
         counts1.assertEquals(enter = 1, exit = 1, move = 0)
         counts2.assertEquals(enter = 1, exit = 0, move = 0)
 

@@ -410,8 +410,11 @@ class ComposeScene internal constructor(
         recomposeDispatcher.flush()
         frameClock.sendFrame(nanoTime)
         needLayout = false
+        println("H1")
         forEachOwner { it.measureAndLayout() }
+        println("H2")
         pointerPositionUpdater.update()
+        println("H3")
         needDraw = false
         forEachOwner { it.draw(canvas) }
         forEachOwner { it.clearInvalidObservations() }
