@@ -202,6 +202,7 @@ public interface EditorSession : AutoCloseable {
      * @param instant The [Instant] to render with
      * @param slotIdToComplicationData The [ComplicationData] for each
      *   [androidx.wear.watchface.ComplicationSlot] to render with
+     * @return A [Bitmap] containing the screen shot with the specified parameters
      */
     @UiThread
     public fun renderWatchFaceToBitmap(
@@ -349,6 +350,9 @@ public interface EditorSession : AutoCloseable {
         /**
          * Constructs an [EditorSession] for a remote watch face editor.
          *
+         * Caution the remote watchface must have been built with the same version of the watch face
+         * libraries.
+         *
          * @param activity The [ComponentActivity] associated with the EditorSession.
          * @param editIntent The [Intent] sent by SysUI to launch the editing session.
          * @param headlessWatchFaceClient The [HeadlessWatchFaceClient] to use for rendering etc...
@@ -415,7 +419,6 @@ internal interface ComplicationDataSourceInfoRetrieverProvider {
     fun getComplicationDataSourceInfoRetriever(): ComplicationDataSourceInfoRetriever
 }
 
-/** @hide */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public abstract class BaseEditorSession
 internal constructor(
@@ -606,21 +609,6 @@ internal constructor(
         requireNotClosed()
         complicationSlotsState.value.entries
             .firstOrNull { it.value.boundsType == ComplicationSlotBoundsType.BACKGROUND }
-            ?.key
-    }
-
-    override fun getComplicationSlotIdAt(@Px x: Int, @Px y: Int): Int? {
-        requireNotClosed()
-        return complicationSlotsState.value.entries
-            .firstOrNull {
-                it.value.isEnabled &&
-                    when (it.value.boundsType) {
-                        ComplicationSlotBoundsType.ROUND_RECT -> it.value.bounds.contains(x, y)
-                        ComplicationSlotBoundsType.BACKGROUND -> false
-                        ComplicationSlotBoundsType.EDGE -> false
-                        else -> false
-                    }
-            }
             ?.key
     }
 
@@ -996,6 +984,11 @@ internal class OnWatchFaceEditorSessionImpl(
 
     override val showComplicationRationaleDialogIntent
         get() = editorDelegate.complicationRationaleDialogIntent
+
+    override fun getComplicationSlotIdAt(@Px x: Int, @Px y: Int): Int? {
+        requireNotClosed()
+        return editorDelegate.complicationSlotsManager.getComplicationSlotAt(x, y)?.id
+    }
 }
 
 @RequiresApi(27)
@@ -1064,6 +1057,21 @@ internal class HeadlessEditorSession(
 
     init {
         fetchComplicationsData(coroutineScope)
+    }
+
+    override fun getComplicationSlotIdAt(@Px x: Int, @Px y: Int): Int? {
+        requireNotClosed()
+        return complicationSlotsState.value.entries
+            .firstOrNull {
+                it.value.isEnabled &&
+                    when (it.value.boundsType) {
+                        ComplicationSlotBoundsType.ROUND_RECT -> it.value.bounds.contains(x, y)
+                        ComplicationSlotBoundsType.BACKGROUND -> false
+                        ComplicationSlotBoundsType.EDGE -> false
+                        else -> false
+                    }
+            }
+            ?.key
     }
 }
 

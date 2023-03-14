@@ -57,8 +57,9 @@ class GetPublicKeyCredentialOptionTest {
     @Test
     fun constructor_setPreferImmediatelyAvailableCredentialsTrue() {
         val preferImmediatelyAvailableCredentialsExpected = true
+        val clientDataHash = "hash"
         val getPublicKeyCredentialOpt = GetPublicKeyCredentialOption(
-            "JSON", preferImmediatelyAvailableCredentialsExpected
+            "JSON", clientDataHash, preferImmediatelyAvailableCredentialsExpected
         )
         val preferImmediatelyAvailableCredentialsActual =
             getPublicKeyCredentialOpt.preferImmediatelyAvailableCredentials
@@ -78,6 +79,8 @@ class GetPublicKeyCredentialOptionTest {
     fun getter_frameworkProperties_success() {
         val requestJsonExpected = "{\"hi\":{\"there\":{\"lol\":\"Value\"}}}"
         val preferImmediatelyAvailableCredentialsExpected = false
+        val expectedAutoSelectAllowed = true
+        val clientDataHash = "hash"
         val expectedData = Bundle()
         expectedData.putString(
             PublicKeyCredential.BUNDLE_KEY_SUBTYPE,
@@ -87,24 +90,33 @@ class GetPublicKeyCredentialOptionTest {
             GetPublicKeyCredentialOption.BUNDLE_KEY_REQUEST_JSON,
             requestJsonExpected
         )
+        expectedData.putString(GetPublicKeyCredentialOption.BUNDLE_KEY_CLIENT_DATA_HASH,
+            clientDataHash)
         expectedData.putBoolean(
             GetPublicKeyCredentialOption.BUNDLE_KEY_PREFER_IMMEDIATELY_AVAILABLE_CREDENTIALS,
             preferImmediatelyAvailableCredentialsExpected
         )
+        expectedData.putBoolean(
+            CredentialOption.BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED,
+            expectedAutoSelectAllowed
+        )
 
         val option = GetPublicKeyCredentialOption(
-            requestJsonExpected, preferImmediatelyAvailableCredentialsExpected
+            requestJsonExpected, clientDataHash, preferImmediatelyAvailableCredentialsExpected
         )
 
         assertThat(option.type).isEqualTo(PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL)
         assertThat(equals(option.requestData, expectedData)).isTrue()
+        expectedData.remove(CredentialOption.BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED)
         assertThat(equals(option.candidateQueryData, expectedData)).isTrue()
         assertThat(option.isSystemProviderRequired).isFalse()
+        assertThat(option.isAutoSelectAllowed).isTrue()
     }
 
     @Test
     fun frameworkConversion_success() {
-        val option = GetPublicKeyCredentialOption("json", true)
+        val clientDataHash = "hash"
+        val option = GetPublicKeyCredentialOption("json", clientDataHash, true)
 
         val convertedOption = createFrom(
             option.type,

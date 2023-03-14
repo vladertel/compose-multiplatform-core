@@ -63,11 +63,14 @@ class CreatePasswordRequestTest {
         val idExpected = "id"
         val passwordExpected = "pwd"
         val expectedCredentialData = Bundle()
+        val expectedAutoSelect = false
         expectedCredentialData.putString(CreatePasswordRequest.BUNDLE_KEY_ID, idExpected)
         expectedCredentialData.putString(
             CreatePasswordRequest.BUNDLE_KEY_PASSWORD,
             passwordExpected
         )
+        expectedCredentialData.putBoolean(CreateCredentialRequest.BUNDLE_KEY_IS_AUTO_SELECT_ALLOWED,
+            expectedAutoSelect)
 
         val request = CreatePasswordRequest(idExpected, passwordExpected)
 
@@ -100,12 +103,14 @@ class CreatePasswordRequestTest {
     fun frameworkConversion_success() {
         val idExpected = "id"
         val request = CreatePasswordRequest(idExpected, "password")
+        val origin = "origin"
 
         val convertedRequest = createFrom(
             request.type, getFinalCreateCredentialData(
                 request, mContext
             ),
-            request.candidateQueryData, request.isSystemProviderRequired
+            request.candidateQueryData, request.isSystemProviderRequired,
+            origin
         )
 
         assertThat(convertedRequest).isInstanceOf(
@@ -118,5 +123,6 @@ class CreatePasswordRequestTest {
         assertThat(convertedCreatePasswordRequest.displayInfo.userId).isEqualTo(idExpected)
         assertThat(convertedCreatePasswordRequest.displayInfo.credentialTypeIcon?.resId)
             .isEqualTo(R.drawable.ic_password)
+        assertThat(convertedCreatePasswordRequest.origin).isEqualTo(origin)
     }
 }

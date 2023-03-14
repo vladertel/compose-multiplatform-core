@@ -61,8 +61,10 @@ import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.platform.invertTo
 import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.semantics.SemanticsModifier
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.PlatformTextInputPluginRegistry
 import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
@@ -74,6 +76,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.zIndex
 import com.google.common.truth.Truth.assertThat
+import java.util.concurrent.Executors
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.asCoroutineDispatcher
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -2494,7 +2499,9 @@ private class EmptyLayoutModifier : LayoutModifier {
 @OptIn(InternalCoreApi::class)
 internal class MockOwner(
     val position: IntOffset = IntOffset.Zero,
-    override val root: LayoutNode = LayoutNode()
+    override val root: LayoutNode = LayoutNode(),
+    override val coroutineContext: CoroutineContext =
+        Executors.newFixedThreadPool(3).asCoroutineDispatcher()
 ) : Owner {
     val onRequestMeasureParams = mutableListOf<LayoutNode>()
     val onAttachParams = mutableListOf<LayoutNode>()
@@ -2524,6 +2531,9 @@ internal class MockOwner(
     override val density: Density
         get() = Density(1f)
     override val textInputService: TextInputService
+        get() = TODO("Not yet implemented")
+    @OptIn(ExperimentalTextApi::class)
+    override val platformTextInputPluginRegistry: PlatformTextInputPluginRegistry
         get() = TODO("Not yet implemented")
     override val pointerIconService: PointerIconService
         get() = TODO("Not yet implemented")

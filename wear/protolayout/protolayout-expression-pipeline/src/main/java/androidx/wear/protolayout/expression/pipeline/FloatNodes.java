@@ -16,9 +16,6 @@
 
 package androidx.wear.protolayout.expression.pipeline;
 
-import static androidx.wear.protolayout.expression.pipeline.AnimationsHelper.applyAnimationSpecToAnimator;
-
-import android.animation.ValueAnimator;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -27,6 +24,7 @@ import androidx.annotation.UiThread;
 import androidx.wear.protolayout.expression.proto.AnimationParameterProto.AnimationSpec;
 import androidx.wear.protolayout.expression.proto.DynamicProto.AnimatableFixedFloat;
 import androidx.wear.protolayout.expression.proto.DynamicProto.ArithmeticFloatOp;
+import androidx.wear.protolayout.expression.proto.DynamicProto.StateFloatSource;
 import androidx.wear.protolayout.expression.proto.FixedProto.FixedFloat;
 
 /** Dynamic data nodes which yield floats. */
@@ -62,12 +60,16 @@ class FloatNodes {
     }
 
     /** Dynamic float node that gets value from the state. */
-    static class StateFloatNode extends StateSourceNode<Float> {
-        StateFloatNode(
+    static class StateFloatSourceNode extends StateSourceNode<Float> {
+        StateFloatSourceNode(
                 ObservableStateStore observableStateStore,
-                String bindKey,
+                StateFloatSource protoNode,
                 DynamicTypeValueReceiver<Float> downstream) {
-            super(observableStateStore, bindKey, se -> se.getFloatVal().getValue(), downstream);
+            super(
+                    observableStateStore,
+                    protoNode.getSourceKey(),
+                    se -> se.getFloatVal().getValue(),
+                    downstream);
         }
     }
 
@@ -127,9 +129,12 @@ class FloatNodes {
                 AnimatableFixedFloat protoNode,
                 DynamicTypeValueReceiver<Float> downstream,
                 QuotaManager quotaManager) {
-            super(quotaManager);
+
+            super(quotaManager, protoNode.getAnimationSpec());
             this.mProtoNode = protoNode;
             this.mDownstream = downstream;
+            mQuotaAwareAnimator.addUpdateCallback(
+                    animatedValue -> mDownstream.onData((Float) animatedValue));
         }
 
         @Override
@@ -141,13 +146,7 @@ class FloatNodes {
         @Override
         @UiThread
         public void init() {
-            ValueAnimator animator =
-                    ValueAnimator.ofFloat(mProtoNode.getFromValue(), mProtoNode.getToValue());
-            animator.addUpdateListener(a -> mDownstream.onData((float) a.getAnimatedValue()));
-
-            applyAnimationSpecToAnimator(animator, mProtoNode.getAnimationSpec());
-
-            mQuotaAwareAnimator.updateAnimator(animator);
+            mQuotaAwareAnimator.setFloatValues(mProtoNode.getFromValue(), mProtoNode.getToValue());
             startOrSkipAnimator();
         }
 
@@ -174,8 +173,16 @@ class FloatNodes {
                 DynamicTypeValueReceiver<Float> downstream,
                 @NonNull AnimationSpec spec,
                 QuotaManager quotaManager) {
-            super(quotaManager);
+
+            super(quotaManager, spec);
             this.mDownstream = downstream;
+            mQuotaAwareAnimator.addUpdateCallback(
+                    animatedValue -> {
+                        if (mPendingCalls == 0) {
+                            mCurrentValue = (Float) animatedValue;
+                            mDownstream.onData(mCurrentValue);
+                        }
+                    });
             this.mInputCallback =
                     new DynamicTypeValueReceiver<Float>() {
                         @Override
@@ -184,8 +191,6 @@ class FloatNodes {
 
                             if (mPendingCalls == 1) {
                                 mDownstream.onPreUpdate();
-
-                                mQuotaAwareAnimator.resetAnimator();
                             }
                         }
 
@@ -200,20 +205,7 @@ class FloatNodes {
                                     mCurrentValue = newData;
                                     mDownstream.onData(mCurrentValue);
                                 } else {
-                                    ValueAnimator animator =
-                                            ValueAnimator.ofFloat(mCurrentValue, newData);
-
-                                    applyAnimationSpecToAnimator(animator, spec);
-
-                                    animator.addUpdateListener(
-                                            a -> {
-                                                if (mPendingCalls == 0) {
-                                                    mCurrentValue = (float) a.getAnimatedValue();
-                                                    mDownstream.onData(mCurrentValue);
-                                                }
-                                            });
-
-                                    mQuotaAwareAnimator.updateAnimator(animator);
+                                    mQuotaAwareAnimator.setFloatValues(mCurrentValue, newData);
                                     startOrSkipAnimator();
                                 }
                             }

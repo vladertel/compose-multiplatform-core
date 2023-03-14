@@ -134,12 +134,15 @@ package androidx.wear.protolayout {
 
   public static final class ColorBuilders.ColorProp {
     method @ColorInt public int getArgb();
+    method public androidx.wear.protolayout.expression.DynamicBuilders.DynamicColor? getDynamicValue();
   }
 
   public static final class ColorBuilders.ColorProp.Builder {
-    ctor public ColorBuilders.ColorProp.Builder();
+    ctor @Deprecated public ColorBuilders.ColorProp.Builder();
+    ctor public ColorBuilders.ColorProp.Builder(@ColorInt int);
     method public androidx.wear.protolayout.ColorBuilders.ColorProp build();
     method public androidx.wear.protolayout.ColorBuilders.ColorProp.Builder setArgb(@ColorInt int);
+    method public androidx.wear.protolayout.ColorBuilders.ColorProp.Builder setDynamicValue(androidx.wear.protolayout.expression.DynamicBuilders.DynamicColor);
   }
 
   public final class DeviceParametersBuilders {
@@ -189,33 +192,37 @@ package androidx.wear.protolayout {
     method public static androidx.wear.protolayout.DimensionBuilders.DpProp dp(@Dimension(unit=androidx.annotation.Dimension.DP) float);
     method public static androidx.wear.protolayout.DimensionBuilders.EmProp em(int);
     method public static androidx.wear.protolayout.DimensionBuilders.EmProp em(float);
+    method public static androidx.wear.protolayout.DimensionBuilders.ExpandedDimensionProp expand();
     method public static androidx.wear.protolayout.DimensionBuilders.SpProp sp(@Dimension(unit=androidx.annotation.Dimension.SP) float);
+    method public static androidx.wear.protolayout.DimensionBuilders.WrappedDimensionProp wrap();
   }
 
   public static interface DimensionBuilders.ContainerDimension {
   }
 
-  public static interface DimensionBuilders.ContainerDimension.Builder {
-    method public androidx.wear.protolayout.DimensionBuilders.ContainerDimension build();
-  }
-
   public static final class DimensionBuilders.DegreesProp {
+    method public androidx.wear.protolayout.expression.DynamicBuilders.DynamicFloat? getDynamicValue();
     method public float getValue();
   }
 
   public static final class DimensionBuilders.DegreesProp.Builder {
-    ctor public DimensionBuilders.DegreesProp.Builder();
+    ctor @Deprecated public DimensionBuilders.DegreesProp.Builder();
+    ctor public DimensionBuilders.DegreesProp.Builder(float);
     method public androidx.wear.protolayout.DimensionBuilders.DegreesProp build();
+    method public androidx.wear.protolayout.DimensionBuilders.DegreesProp.Builder setDynamicValue(androidx.wear.protolayout.expression.DynamicBuilders.DynamicFloat);
     method public androidx.wear.protolayout.DimensionBuilders.DegreesProp.Builder setValue(float);
   }
 
   public static final class DimensionBuilders.DpProp implements androidx.wear.protolayout.DimensionBuilders.ContainerDimension androidx.wear.protolayout.DimensionBuilders.ImageDimension androidx.wear.protolayout.DimensionBuilders.SpacerDimension {
+    method public androidx.wear.protolayout.expression.DynamicBuilders.DynamicFloat? getDynamicValue();
     method @Dimension(unit=androidx.annotation.Dimension.DP) public float getValue();
   }
 
-  public static final class DimensionBuilders.DpProp.Builder implements androidx.wear.protolayout.DimensionBuilders.ContainerDimension.Builder androidx.wear.protolayout.DimensionBuilders.ImageDimension.Builder androidx.wear.protolayout.DimensionBuilders.SpacerDimension.Builder {
-    ctor public DimensionBuilders.DpProp.Builder();
+  public static final class DimensionBuilders.DpProp.Builder {
+    ctor @Deprecated public DimensionBuilders.DpProp.Builder();
+    ctor public DimensionBuilders.DpProp.Builder(@Dimension(unit=androidx.annotation.Dimension.DP) float);
     method public androidx.wear.protolayout.DimensionBuilders.DpProp build();
+    method public androidx.wear.protolayout.DimensionBuilders.DpProp.Builder setDynamicValue(androidx.wear.protolayout.expression.DynamicBuilders.DynamicFloat);
     method public androidx.wear.protolayout.DimensionBuilders.DpProp.Builder setValue(@Dimension(unit=androidx.annotation.Dimension.DP) float);
   }
 
@@ -229,11 +236,17 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.DimensionBuilders.EmProp.Builder setValue(float);
   }
 
-  public static interface DimensionBuilders.ImageDimension {
+  public static final class DimensionBuilders.ExpandedDimensionProp implements androidx.wear.protolayout.DimensionBuilders.ContainerDimension androidx.wear.protolayout.DimensionBuilders.ImageDimension {
+    method public androidx.wear.protolayout.TypeBuilders.FloatProp? getLayoutWeight();
   }
 
-  public static interface DimensionBuilders.ImageDimension.Builder {
-    method public androidx.wear.protolayout.DimensionBuilders.ImageDimension build();
+  public static final class DimensionBuilders.ExpandedDimensionProp.Builder {
+    ctor public DimensionBuilders.ExpandedDimensionProp.Builder();
+    method public androidx.wear.protolayout.DimensionBuilders.ExpandedDimensionProp build();
+    method public androidx.wear.protolayout.DimensionBuilders.ExpandedDimensionProp.Builder setLayoutWeight(androidx.wear.protolayout.TypeBuilders.FloatProp);
+  }
+
+  public static interface DimensionBuilders.ImageDimension {
   }
 
   public static final class DimensionBuilders.ProportionalDimensionProp implements androidx.wear.protolayout.DimensionBuilders.ImageDimension {
@@ -241,7 +254,7 @@ package androidx.wear.protolayout {
     method @IntRange(from=0) public int getAspectRatioWidth();
   }
 
-  public static final class DimensionBuilders.ProportionalDimensionProp.Builder implements androidx.wear.protolayout.DimensionBuilders.ImageDimension.Builder {
+  public static final class DimensionBuilders.ProportionalDimensionProp.Builder {
     ctor public DimensionBuilders.ProportionalDimensionProp.Builder();
     method public androidx.wear.protolayout.DimensionBuilders.ProportionalDimensionProp build();
     method public androidx.wear.protolayout.DimensionBuilders.ProportionalDimensionProp.Builder setAspectRatioHeight(@IntRange(from=0) int);
@@ -261,8 +274,14 @@ package androidx.wear.protolayout {
   public static interface DimensionBuilders.SpacerDimension {
   }
 
-  public static interface DimensionBuilders.SpacerDimension.Builder {
-    method public androidx.wear.protolayout.DimensionBuilders.SpacerDimension build();
+  public static final class DimensionBuilders.WrappedDimensionProp implements androidx.wear.protolayout.DimensionBuilders.ContainerDimension {
+    method public androidx.wear.protolayout.DimensionBuilders.DpProp? getMinimumSize();
+  }
+
+  public static final class DimensionBuilders.WrappedDimensionProp.Builder {
+    ctor public DimensionBuilders.WrappedDimensionProp.Builder();
+    method public androidx.wear.protolayout.DimensionBuilders.WrappedDimensionProp build();
+    method public androidx.wear.protolayout.DimensionBuilders.WrappedDimensionProp.Builder setMinimumSize(androidx.wear.protolayout.DimensionBuilders.DpProp);
   }
 
   public final class LayoutElementBuilders {
@@ -736,6 +755,26 @@ package androidx.wear.protolayout {
   }
 
   public final class ModifiersBuilders {
+    field @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final int SLIDE_DIRECTION_BOTTOM_TO_TOP = 4; // 0x4
+    field @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final int SLIDE_DIRECTION_LEFT_TO_RIGHT = 1; // 0x1
+    field @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final int SLIDE_DIRECTION_RIGHT_TO_LEFT = 2; // 0x2
+    field @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final int SLIDE_DIRECTION_TOP_TO_BOTTOM = 3; // 0x3
+    field @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final int SLIDE_DIRECTION_UNDEFINED = 0; // 0x0
+    field @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final int SLIDE_PARENT_SNAP_TO_INSIDE = 1; // 0x1
+    field @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final int SLIDE_PARENT_SNAP_TO_OUTSIDE = 2; // 0x2
+    field @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final int SLIDE_PARENT_SNAP_UNDEFINED = 0; // 0x0
+  }
+
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.AnimatedVisibility {
+    method public androidx.wear.protolayout.ModifiersBuilders.EnterTransition? getEnterTransition();
+    method public androidx.wear.protolayout.ModifiersBuilders.ExitTransition? getExitTransition();
+  }
+
+  public static final class ModifiersBuilders.AnimatedVisibility.Builder {
+    ctor public ModifiersBuilders.AnimatedVisibility.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.AnimatedVisibility build();
+    method public androidx.wear.protolayout.ModifiersBuilders.AnimatedVisibility.Builder setEnterTransition(androidx.wear.protolayout.ModifiersBuilders.EnterTransition);
+    method public androidx.wear.protolayout.ModifiersBuilders.AnimatedVisibility.Builder setExitTransition(androidx.wear.protolayout.ModifiersBuilders.ExitTransition);
   }
 
   public static final class ModifiersBuilders.ArcModifiers {
@@ -796,6 +835,15 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setRadius(androidx.wear.protolayout.DimensionBuilders.DpProp);
   }
 
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.DefaultContentTransitions {
+    method public static androidx.wear.protolayout.ModifiersBuilders.EnterTransition fadeIn();
+    method public static androidx.wear.protolayout.ModifiersBuilders.EnterTransition fadeInSlideIn(int);
+    method public static androidx.wear.protolayout.ModifiersBuilders.ExitTransition fadeOut();
+    method public static androidx.wear.protolayout.ModifiersBuilders.ExitTransition fadeOutSlideOut(int);
+    method public static androidx.wear.protolayout.ModifiersBuilders.EnterTransition slideIn(int);
+    method public static androidx.wear.protolayout.ModifiersBuilders.ExitTransition slideOut(int);
+  }
+
   public static final class ModifiersBuilders.ElementMetadata {
     method public byte[] getTagData();
   }
@@ -806,10 +854,59 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.ModifiersBuilders.ElementMetadata.Builder setTagData(byte[]);
   }
 
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.EnterTransition {
+    method public androidx.wear.protolayout.ModifiersBuilders.FadeInTransition? getFadeIn();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideInTransition? getSlideIn();
+  }
+
+  public static final class ModifiersBuilders.EnterTransition.Builder {
+    ctor public ModifiersBuilders.EnterTransition.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.EnterTransition build();
+    method public androidx.wear.protolayout.ModifiersBuilders.EnterTransition.Builder setFadeIn(androidx.wear.protolayout.ModifiersBuilders.FadeInTransition);
+    method public androidx.wear.protolayout.ModifiersBuilders.EnterTransition.Builder setSlideIn(androidx.wear.protolayout.ModifiersBuilders.SlideInTransition);
+  }
+
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.ExitTransition {
+    method public androidx.wear.protolayout.ModifiersBuilders.FadeOutTransition? getFadeOut();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideOutTransition? getSlideOut();
+  }
+
+  public static final class ModifiersBuilders.ExitTransition.Builder {
+    ctor public ModifiersBuilders.ExitTransition.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.ExitTransition build();
+    method public androidx.wear.protolayout.ModifiersBuilders.ExitTransition.Builder setFadeOut(androidx.wear.protolayout.ModifiersBuilders.FadeOutTransition);
+    method public androidx.wear.protolayout.ModifiersBuilders.ExitTransition.Builder setSlideOut(androidx.wear.protolayout.ModifiersBuilders.SlideOutTransition);
+  }
+
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.FadeInTransition {
+    method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec? getAnimationSpec();
+    method @FloatRange(from=0.0, to=1.0) public float getInitialAlpha();
+  }
+
+  public static final class ModifiersBuilders.FadeInTransition.Builder {
+    ctor public ModifiersBuilders.FadeInTransition.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.FadeInTransition build();
+    method public androidx.wear.protolayout.ModifiersBuilders.FadeInTransition.Builder setAnimationSpec(androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec);
+    method public androidx.wear.protolayout.ModifiersBuilders.FadeInTransition.Builder setInitialAlpha(@FloatRange(from=0.0, to=1.0) float);
+  }
+
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.FadeOutTransition {
+    method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec? getAnimationSpec();
+    method @FloatRange(from=0.0, to=1.0) public float getTargetAlpha();
+  }
+
+  public static final class ModifiersBuilders.FadeOutTransition.Builder {
+    ctor public ModifiersBuilders.FadeOutTransition.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.FadeOutTransition build();
+    method public androidx.wear.protolayout.ModifiersBuilders.FadeOutTransition.Builder setAnimationSpec(androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec);
+    method public androidx.wear.protolayout.ModifiersBuilders.FadeOutTransition.Builder setTargetAlpha(@FloatRange(from=0.0, to=1.0) float);
+  }
+
   public static final class ModifiersBuilders.Modifiers {
     method public androidx.wear.protolayout.ModifiersBuilders.Background? getBackground();
     method public androidx.wear.protolayout.ModifiersBuilders.Border? getBorder();
     method public androidx.wear.protolayout.ModifiersBuilders.Clickable? getClickable();
+    method @androidx.wear.protolayout.expression.ProtoLayoutExperimental public androidx.wear.protolayout.ModifiersBuilders.AnimatedVisibility? getContentUpdateAnimation();
     method public androidx.wear.protolayout.ModifiersBuilders.ElementMetadata? getMetadata();
     method public androidx.wear.protolayout.ModifiersBuilders.Padding? getPadding();
     method public androidx.wear.protolayout.ModifiersBuilders.Semantics? getSemantics();
@@ -821,6 +918,7 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setBackground(androidx.wear.protolayout.ModifiersBuilders.Background);
     method public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setBorder(androidx.wear.protolayout.ModifiersBuilders.Border);
     method public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setClickable(androidx.wear.protolayout.ModifiersBuilders.Clickable);
+    method @androidx.wear.protolayout.expression.ProtoLayoutExperimental public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setContentUpdateAnimation(androidx.wear.protolayout.ModifiersBuilders.AnimatedVisibility);
     method public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setMetadata(androidx.wear.protolayout.ModifiersBuilders.ElementMetadata);
     method public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setPadding(androidx.wear.protolayout.ModifiersBuilders.Padding);
     method public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setSemantics(androidx.wear.protolayout.ModifiersBuilders.Semantics);
@@ -854,6 +952,47 @@ package androidx.wear.protolayout {
     ctor public ModifiersBuilders.Semantics.Builder();
     method public androidx.wear.protolayout.ModifiersBuilders.Semantics build();
     method public androidx.wear.protolayout.ModifiersBuilders.Semantics.Builder setContentDescription(String);
+  }
+
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static interface ModifiersBuilders.SlideBound {
+  }
+
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.SlideInTransition {
+    method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec? getAnimationSpec();
+    method public int getDirection();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideBound? getInitialSlideBound();
+  }
+
+  public static final class ModifiersBuilders.SlideInTransition.Builder {
+    ctor public ModifiersBuilders.SlideInTransition.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideInTransition build();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideInTransition.Builder setAnimationSpec(androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec);
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideInTransition.Builder setDirection(int);
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideInTransition.Builder setInitialSlideBound(androidx.wear.protolayout.ModifiersBuilders.SlideBound);
+  }
+
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.SlideOutTransition {
+    method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec? getAnimationSpec();
+    method public int getDirection();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideBound? getTargetSlideBound();
+  }
+
+  public static final class ModifiersBuilders.SlideOutTransition.Builder {
+    ctor public ModifiersBuilders.SlideOutTransition.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideOutTransition build();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideOutTransition.Builder setAnimationSpec(androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec);
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideOutTransition.Builder setDirection(int);
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideOutTransition.Builder setTargetSlideBound(androidx.wear.protolayout.ModifiersBuilders.SlideBound);
+  }
+
+  @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.SlideParentBound implements androidx.wear.protolayout.ModifiersBuilders.SlideBound {
+    method public int getSnapTo();
+  }
+
+  public static final class ModifiersBuilders.SlideParentBound.Builder {
+    ctor public ModifiersBuilders.SlideParentBound.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideParentBound build();
+    method public androidx.wear.protolayout.ModifiersBuilders.SlideParentBound.Builder setSnapTo(int);
   }
 
   public static final class ModifiersBuilders.SpanModifiers {

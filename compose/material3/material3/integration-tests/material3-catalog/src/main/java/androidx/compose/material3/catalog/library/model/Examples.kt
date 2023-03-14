@@ -28,7 +28,7 @@ import androidx.compose.material3.samples.AlertDialogWithIconSample
 import androidx.compose.material3.samples.AnimatedExtendedFloatingActionButtonSample
 import androidx.compose.material3.samples.AssistChipSample
 import androidx.compose.material3.samples.BottomAppBarWithFAB
-import androidx.compose.material3.samples.ModalBottomSheetSample
+import androidx.compose.material3.samples.BottomSheetScaffoldNestedScrollSample
 import androidx.compose.material3.samples.ButtonSample
 import androidx.compose.material3.samples.ButtonWithIconSample
 import androidx.compose.material3.samples.CardSample
@@ -80,6 +80,7 @@ import androidx.compose.material3.samples.LargeFloatingActionButtonSample
 import androidx.compose.material3.samples.LeadingIconTabs
 import androidx.compose.material3.samples.LinearProgressIndicatorSample
 import androidx.compose.material3.samples.MenuSample
+import androidx.compose.material3.samples.ModalBottomSheetSample
 import androidx.compose.material3.samples.ModalNavigationDrawerSample
 import androidx.compose.material3.samples.NavigationBarItemWithBadge
 import androidx.compose.material3.samples.NavigationBarSample
@@ -107,11 +108,13 @@ import androidx.compose.material3.samples.RichTooltipWithManualInvocationSample
 import androidx.compose.material3.samples.ScaffoldWithCoroutinesSnackbar
 import androidx.compose.material3.samples.ScaffoldWithCustomSnackbar
 import androidx.compose.material3.samples.ScaffoldWithIndefiniteSnackbar
+import androidx.compose.material3.samples.ScaffoldWithMultilineSnackbar
 import androidx.compose.material3.samples.ScaffoldWithSimpleSnackbar
 import androidx.compose.material3.samples.ScrollingFancyIndicatorContainerTabs
 import androidx.compose.material3.samples.ScrollingTextTabs
 import androidx.compose.material3.samples.SearchBarSample
 import androidx.compose.material3.samples.SimpleBottomAppBar
+import androidx.compose.material3.samples.SimpleBottomSheetScaffoldSample
 import androidx.compose.material3.samples.SimpleCenterAlignedTopAppBar
 import androidx.compose.material3.samples.SimpleOutlinedTextFieldSample
 import androidx.compose.material3.samples.SimpleTextFieldSample
@@ -139,6 +142,7 @@ import androidx.compose.material3.samples.TextTabs
 import androidx.compose.material3.samples.ThreeLineListItem
 import androidx.compose.material3.samples.TimeInputSample
 import androidx.compose.material3.samples.TimePickerSample
+import androidx.compose.material3.samples.TimePickerSwitchableSample
 import androidx.compose.material3.samples.TriStateCheckboxSample
 import androidx.compose.material3.samples.TwoLineListItem
 import androidx.compose.runtime.Composable
@@ -171,7 +175,17 @@ val BottomSheetExamples =
             name = ::ModalBottomSheetSample.name,
             description = BottomSheetExampleDescription,
             sourceUrl = BottomSheetExampleSourceUrl
-        ) { ModalBottomSheetSample() }
+        ) { ModalBottomSheetSample() },
+        Example(
+            name = ::SimpleBottomSheetScaffoldSample.name,
+            description = BottomSheetExampleDescription,
+            sourceUrl = BottomSheetExampleSourceUrl
+        ) { SimpleBottomSheetScaffoldSample() },
+        Example(
+            name = ::BottomSheetScaffoldNestedScrollSample.name,
+            description = BottomSheetExampleDescription,
+            sourceUrl = BottomSheetExampleSourceUrl
+        ) { BottomSheetScaffoldNestedScrollSample() }
     )
 
 private const val ButtonsExampleDescription = "Button examples"
@@ -830,6 +844,13 @@ val SnackbarsExamples = listOf(
         sourceUrl = SnackbarsExampleSourceUrl
     ) {
         ScaffoldWithCoroutinesSnackbar()
+    },
+    Example(
+        name = ::ScaffoldWithMultilineSnackbar.name,
+        description = SnackbarsExampleDescription,
+        sourceUrl = SnackbarsExampleSourceUrl
+    ) {
+        ScaffoldWithMultilineSnackbar()
     }
 )
 
@@ -937,6 +958,13 @@ val TimePickerExamples = listOf(
         sourceUrl = TimePickerSourceUrl
     ) {
         TimeInputSample()
+    },
+    Example(
+        name = ::TimePickerSwitchableSample.name,
+        description = TimePickerDescription,
+        sourceUrl = TimePickerSourceUrl
+    ) {
+        TimePickerSwitchableSample()
     },
 )
 

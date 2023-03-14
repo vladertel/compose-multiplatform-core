@@ -111,7 +111,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
 
     private static boolean DEBUG = false;
 
-    /** @hide */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     public static final String TAG = "FragmentManager";
 
@@ -128,7 +127,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
         FragmentManager.DEBUG = enabled;
     }
 
-    /** @hide */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     public static boolean isLoggingEnabled(int level) {
         return DEBUG || Log.isLoggable(TAG, level);
@@ -589,7 +587,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
     }
 
     /**
-     * @hide -- remove once prebuilts are in.
      * @deprecated Use {@link #beginTransaction()}.
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
@@ -991,7 +988,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
                 }
             }
         };
-        lifecycle.addObserver(observer);
         LifecycleAwareResultListener storedListener = mResultListeners.put(requestKey,
                 new LifecycleAwareResultListener(lifecycle, listener, observer));
         if (storedListener != null) {
@@ -1001,6 +997,9 @@ public abstract class FragmentManager implements FragmentResultOwner {
             Log.v(FragmentManager.TAG, "Setting FragmentResultListener with key " + requestKey
                     + " lifecycleOwner " + lifecycle + " and listener " + listener);
         }
+        // Only add the observer after we've added the listener to the map
+        // to ensure that re-entrant removals actually have a registered listener to remove
+        lifecycle.addObserver(observer);
     }
 
     @Override
@@ -2634,7 +2633,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
         mLaunchedFragments = new ArrayDeque<>(fms.mLaunchedFragments);
     }
 
-    /** @hide */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @NonNull
     public FragmentHostCallback<?> getHost() {
@@ -3007,7 +3005,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
             onPictureInPictureModeChangedProvider.removeOnPictureInPictureModeChangedListener(
                     mOnPictureInPictureModeChangedListener);
         }
-        if (mHost instanceof MenuHost) {
+        if (mHost instanceof MenuHost && mParent == null) {
             ((MenuHost) mHost).removeMenuProvider(mMenuProvider);
         }
         mHost = null;

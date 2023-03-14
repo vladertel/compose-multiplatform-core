@@ -20,6 +20,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -101,15 +102,16 @@ import androidx.compose.ui.zIndex
 import kotlin.math.max
 import kotlin.math.min
 
-// TODO(260864875): Add material.io link and image when available
 /**
- * Material Design search bar
+ * <a href="https://m3.material.io/components/search/overview" class="external" target="_blank">Material Design search</a>.
  *
  * A search bar represents a floating search field that allows users to enter a keyword or phrase
  * and get relevant information. It can be used as a way to navigate through an app via search
  * queries.
  *
  * An active search bar expands into a search "view" and can be used to display dynamic suggestions.
+ *
+ * ![Search bar image](https://developer.android.com/images/reference/androidx/compose/material3/search-bar.png)
  *
  * A [SearchBar] expands to occupy the entirety of its allowed size when active. For full-screen
  * behavior as specified by Material guidelines, parent layouts of the [SearchBar] must not pass
@@ -172,10 +174,7 @@ fun SearchBar(
 ) {
     val animationProgress: State<Float> = animateFloatAsState(
         targetValue = if (active) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = AnimationDurationMillis,
-            easing = MotionTokens.EasingLegacyCubicBezier,
-        )
+        animationSpec = if (active) AnimationEnterFloatSpec else AnimationExitFloatSpec
     )
 
     val density = LocalDensity.current
@@ -282,15 +281,16 @@ fun SearchBar(
     }
 }
 
-// TODO(260864875): Add material.io link and image when available
 /**
- * Material Design search bar
+ * <a href="https://m3.material.io/components/search/overview" class="external" target="_blank">Material Design search</a>.
  *
  * A search bar represents a floating search field that allows users to enter a keyword or phrase
  * and get relevant information. It can be used as a way to navigate through an app via search
  * queries.
  *
  * An active search bar expands into a search "view" and can be used to display dynamic suggestions.
+ *
+ * ![Search bar image](https://developer.android.com/images/reference/androidx/compose/material3/docked-search-bar.png)
  *
  * A [DockedSearchBar] displays search results in a bounded table below the input field. It is meant
  * to be an alternative to [SearchBar] when expanding to full-screen size is undesirable on large
@@ -469,6 +469,7 @@ private fun SearchBarInputField(
 /**
  * Defaults used in [SearchBar] and [DockedSearchBar].
  */
+@ExperimentalMaterial3Api
 object SearchBarDefaults {
     /** Default elevation for a search bar. */
     val Elevation: Dp = SearchBarTokens.ContainerElevation
@@ -497,7 +498,6 @@ object SearchBarDefaults {
      * @param dividerColor the color of the divider between the input field and the search results
      * @param inputFieldColors the colors of the input field
      */
-    @ExperimentalMaterial3Api
     @Composable
     fun colors(
         containerColor: Color = SearchBarTokens.ContainerColor.toColor(),
@@ -533,7 +533,6 @@ object SearchBarDefaults {
      * @param unfocusedPlaceholderColor the placeholder color for this input field when not focused
      * @param disabledPlaceholderColor the placeholder color for this input field when disabled
      */
-    @ExperimentalMaterial3Api
     @Composable
     fun inputFieldColors(
         focusedTextColor: Color = SearchBarTokens.InputTextColor.toColor(),
@@ -573,7 +572,6 @@ object SearchBarDefaults {
         )
 
     @Deprecated("Maintained for binary compatibility", level = DeprecationLevel.HIDDEN)
-    @ExperimentalMaterial3Api
     @Composable
     fun inputFieldColors(
         textColor: Color = SearchBarTokens.InputTextColor.toColor(),
@@ -681,6 +679,7 @@ private class MutableWindowInsets(
 }
 
 // Measurement specs
+@OptIn(ExperimentalMaterial3Api::class)
 private val SearchBarCornerRadius: Dp = InputFieldHeight / 2
 internal val DockedActiveTableMinHeight: Dp = 240.dp
 private const val DockedActiveTableMaxHeightScreenRatio: Float = 2f / 3f
@@ -691,12 +690,32 @@ internal val SearchBarVerticalPadding: Dp = 8.dp
 private val SearchBarIconOffsetX: Dp = 4.dp
 
 // Animation specs
-private const val AnimationDurationMillis: Int = MotionTokens.DurationMedium2.toInt()
-private val SizeAnimationSpec: FiniteAnimationSpec<IntSize> =
-    tween(durationMillis = AnimationDurationMillis, easing = MotionTokens.EasingLegacyCubicBezier)
-private val OpacityAnimationSpec: FiniteAnimationSpec<Float> =
-    tween(durationMillis = AnimationDurationMillis, easing = MotionTokens.EasingLegacyCubicBezier)
+private const val AnimationEnterDurationMillis: Int = MotionTokens.DurationLong4.toInt()
+private const val AnimationExitDurationMillis: Int = MotionTokens.DurationMedium3.toInt()
+private const val AnimationDelayMillis: Int = MotionTokens.DurationShort2.toInt()
+private val AnimationEnterEasing = MotionTokens.EasingEmphasizedDecelerateCubicBezier
+private val AnimationExitEasing = CubicBezierEasing(0.0f, 1.0f, 0.0f, 1.0f)
+private val AnimationEnterFloatSpec: FiniteAnimationSpec<Float> = tween(
+    durationMillis = AnimationEnterDurationMillis,
+    delayMillis = AnimationDelayMillis,
+    easing = AnimationEnterEasing,
+)
+private val AnimationExitFloatSpec: FiniteAnimationSpec<Float> = tween(
+    durationMillis = AnimationExitDurationMillis,
+    delayMillis = AnimationDelayMillis,
+    easing = AnimationExitEasing,
+)
+private val AnimationEnterSizeSpec: FiniteAnimationSpec<IntSize> = tween(
+    durationMillis = AnimationEnterDurationMillis,
+    delayMillis = AnimationDelayMillis,
+    easing = AnimationEnterEasing,
+)
+private val AnimationExitSizeSpec: FiniteAnimationSpec<IntSize> = tween(
+    durationMillis = AnimationExitDurationMillis,
+    delayMillis = AnimationDelayMillis,
+    easing = AnimationExitEasing,
+)
 private val DockedEnterTransition: EnterTransition =
-    fadeIn(OpacityAnimationSpec) + expandVertically(SizeAnimationSpec)
+    fadeIn(AnimationEnterFloatSpec) + expandVertically(AnimationEnterSizeSpec)
 private val DockedExitTransition: ExitTransition =
-    fadeOut(OpacityAnimationSpec) + shrinkVertically(SizeAnimationSpec)
+    fadeOut(AnimationExitFloatSpec) + shrinkVertically(AnimationExitSizeSpec)

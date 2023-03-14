@@ -34,8 +34,11 @@ import androidx.window.embedding.SplitAttributes.LayoutDirection.Companion.BOTTO
 import androidx.window.embedding.SplitAttributes.LayoutDirection.Companion.LEFT_TO_RIGHT
 import androidx.window.embedding.SplitAttributes.LayoutDirection.Companion.RIGHT_TO_LEFT
 import androidx.window.embedding.SplitAttributes.LayoutDirection.Companion.TOP_TO_BOTTOM
+import androidx.window.embedding.SplitAttributes.SplitType.Companion.SPLIT_TYPE_HINGE
+import androidx.window.embedding.SplitAttributes.SplitType.Companion.SPLIT_TYPE_EQUAL
 import androidx.window.embedding.SplitAttributesCalculatorParams
 import androidx.window.embedding.SplitController
+import androidx.window.embedding.SplitController.SplitSupportStatus.Companion.SPLIT_AVAILABLE
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowLayoutInfo
 import androidx.window.layout.WindowMetrics
@@ -43,10 +46,9 @@ import androidx.window.layout.WindowMetrics
 /**
  * Initializes SplitController with a set of statically defined rules.
  */
+@OptIn(ExperimentalWindowApi::class)
 class ExampleWindowInitializer : Initializer<RuleController> {
-    private val mDemoActivityEmbeddingController = DemoActivityEmbeddingController.getInstance()
 
-    @OptIn(ExperimentalWindowApi::class)
     override fun create(context: Context): RuleController {
         SplitController.getInstance(context).apply {
             if (isSplitAttributesCalculatorSupported()) {
@@ -54,7 +56,7 @@ class ExampleWindowInitializer : Initializer<RuleController> {
             }
         }
         return RuleController.getInstance(context).apply {
-            if (SplitController.getInstance(context).isSplitSupported()) {
+            if (SplitController.getInstance(context).splitSupportStatus == SPLIT_AVAILABLE) {
                 setRules(RuleController.parseRules(context, R.xml.main_split_config))
             }
         }
@@ -75,17 +77,15 @@ class ExampleWindowInitializer : Initializer<RuleController> {
         val config = params.parentConfiguration
         // The SplitAttributes to occupy the whole task bounds
         val expandContainersAttrs = SplitAttributes.Builder()
-            .setSplitType(SplitAttributes.SplitType.expandContainers())
+            .setSplitType(SplitAttributes.SplitType.SPLIT_TYPE_EXPAND)
             .build()
         val tag = params.splitRuleTag
         val shouldReversed = tag?.contains(SUFFIX_REVERSED) ?: false
         // Make a copy of the default splitAttributes, but replace the animation background
         // color to what is configured in the Demo app.
-        val backgroundColor = mDemoActivityEmbeddingController.animationBackgroundColor
         val defaultSplitAttributes = SplitAttributes.Builder()
             .setLayoutDirection(params.defaultSplitAttributes.layoutDirection)
             .setSplitType(params.defaultSplitAttributes.splitType)
-            .setAnimationBackgroundColor(backgroundColor)
             .build()
         when (tag?.substringBefore(SUFFIX_REVERSED)) {
             TAG_USE_DEFAULT_SPLIT_ATTRIBUTES, null -> {
@@ -103,7 +103,7 @@ class ExampleWindowInitializer : Initializer<RuleController> {
             TAG_SHOW_FULLSCREEN_IN_PORTRAIT + SUFFIX_AND_HORIZONTAL_LAYOUT_IN_TABLETOP -> {
                 if (isTabletop) {
                     return SplitAttributes.Builder()
-                        .setSplitType(SplitAttributes.SplitType.splitByHinge())
+                        .setSplitType(SPLIT_TYPE_HINGE)
                         .setLayoutDirection(
                             if (shouldReversed) {
                                 BOTTOM_TO_TOP
@@ -111,7 +111,6 @@ class ExampleWindowInitializer : Initializer<RuleController> {
                                 TOP_TO_BOTTOM
                             }
                         )
-                        .setAnimationBackgroundColor(backgroundColor)
                         .build()
                 } else if (isPortrait) {
                     return expandContainersAttrs
@@ -120,7 +119,7 @@ class ExampleWindowInitializer : Initializer<RuleController> {
             TAG_SHOW_HORIZONTAL_LAYOUT_IN_TABLETOP -> {
                 if (isTabletop) {
                     return SplitAttributes.Builder()
-                        .setSplitType(SplitAttributes.SplitType.splitByHinge())
+                        .setSplitType(SPLIT_TYPE_HINGE)
                         .setLayoutDirection(
                             if (shouldReversed) {
                                 BOTTOM_TO_TOP
@@ -128,13 +127,12 @@ class ExampleWindowInitializer : Initializer<RuleController> {
                                 TOP_TO_BOTTOM
                             }
                         )
-                        .setAnimationBackgroundColor(backgroundColor)
                         .build()
                 }
             }
             TAG_SHOW_DIFFERENT_LAYOUT_WITH_SIZE -> {
                 return SplitAttributes.Builder()
-                    .setSplitType(SplitAttributes.SplitType.splitByHinge())
+                    .setSplitType(SPLIT_TYPE_HINGE)
                     .setLayoutDirection(
                         if (shouldReversed) {
                             BOTTOM_TO_TOP
@@ -148,7 +146,7 @@ class ExampleWindowInitializer : Initializer<RuleController> {
                     expandContainersAttrs
                 } else if (config.screenWidthDp <= 600) {
                     SplitAttributes.Builder()
-                        .setSplitType(SplitAttributes.SplitType.splitEqually())
+                        .setSplitType(SPLIT_TYPE_EQUAL)
                         .setLayoutDirection(
                             if (shouldReversed) {
                                 BOTTOM_TO_TOP
@@ -156,11 +154,10 @@ class ExampleWindowInitializer : Initializer<RuleController> {
                                 TOP_TO_BOTTOM
                             }
                         )
-                        .setAnimationBackgroundColor(backgroundColor)
                         .build()
                 } else {
                     SplitAttributes.Builder()
-                        .setSplitType(SplitAttributes.SplitType.splitEqually())
+                        .setSplitType(SPLIT_TYPE_EQUAL)
                         .setLayoutDirection(
                             if (shouldReversed) {
                                 RIGHT_TO_LEFT
@@ -168,7 +165,6 @@ class ExampleWindowInitializer : Initializer<RuleController> {
                                 LEFT_TO_RIGHT
                             }
                         )
-                        .setAnimationBackgroundColor(backgroundColor)
                         .build()
                 }
             }
@@ -178,7 +174,7 @@ class ExampleWindowInitializer : Initializer<RuleController> {
                     return SplitAttributes.Builder()
                         .setSplitType(
                             if (foldingState.isSeparating) {
-                                SplitAttributes.SplitType.splitByHinge()
+                                SPLIT_TYPE_HINGE
                             } else {
                                 SplitAttributes.SplitType.ratio(0.3f)
                             }
@@ -192,7 +188,6 @@ class ExampleWindowInitializer : Initializer<RuleController> {
                                 if (shouldReversed) RIGHT_TO_LEFT else LEFT_TO_RIGHT
                             }
                         )
-                        .setAnimationBackgroundColor(backgroundColor)
                         .build()
                 }
             }

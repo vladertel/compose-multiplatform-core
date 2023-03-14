@@ -31,7 +31,6 @@ import androidx.compose.material3.tokens.DatePickerModalTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +55,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.verticalScrollAxisRange
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -88,12 +88,16 @@ fun DateRangePicker(
     dateFormatter: DatePickerFormatter = remember { DatePickerFormatter() },
     dateValidator: (Long) -> Boolean = { true },
     title: (@Composable () -> Unit)? = {
-        DateRangePickerDefaults.DateRangePickerTitle(state = state)
+        DateRangePickerDefaults.DateRangePickerTitle(
+            state = state,
+            modifier = Modifier.padding(DateRangePickerTitlePadding)
+        )
     },
-    headline: @Composable () -> Unit = {
+    headline: (@Composable () -> Unit)? = {
         DateRangePickerDefaults.DateRangePickerHeadline(
             state,
-            dateFormatter
+            dateFormatter,
+            modifier = Modifier.padding(DateRangePickerHeadlinePadding)
         )
     },
     showModeToggle: Boolean = true,
@@ -106,6 +110,7 @@ fun DateRangePicker(
         modeToggleButton = if (showModeToggle) {
             {
                 DisplayModeToggleButton(
+                    modifier = Modifier.padding(DatePickerModeTogglePadding),
                     displayMode = state.displayMode,
                     onDisplayModeChange = { displayMode ->
                         state.stateData.switchDisplayMode(
@@ -122,7 +127,6 @@ fun DateRangePicker(
         ),
         headerMinHeight = DatePickerModalTokens.RangeSelectionHeaderContainerHeight -
             HeaderHeightOffset,
-        headerContentPadding = DateRangePickerHeaderPadding,
         colors = colors
     ) {
         SwitchableDateEntryContent(
@@ -197,8 +201,9 @@ class DateRangePickerState private constructor(internal val stateData: StateData
      * to
      * @param initialDisplayMode an initial [DisplayMode] that this state will hold
      * @see rememberDatePickerState
-     * @throws [IllegalArgumentException] if the initial selected date or displayed month represent
-     * a year that is out of the year range.
+     * @throws IllegalArgumentException if the initial timestamps do not fall within the year range
+     * this state is created with, or the end date precedes the start date, or when an end date is
+     * provided without a start date (e.g. the start date was null, while the end date was not).
      */
     constructor(
         @Suppress("AutoBoxing") initialSelectedStartDateMillis: Long?,
@@ -223,11 +228,12 @@ class DateRangePickerState private constructor(internal val stateData: StateData
      * epoch.
      *
      * In case a start date was not selected or provided, the state will hold a `null` value.
+     *
+     * @see [setSelection]
      */
-    @get:Suppress("AutoBoxing")
-    val selectedStartDateMillis by derivedStateOf {
-        stateData.selectedStartDate.value?.utcTimeMillis
-    }
+
+    val selectedStartDateMillis: Long?
+        @Suppress("AutoBoxing") get() = stateData.selectedStartDate.value?.utcTimeMillis
 
     /**
      * A timestamp that represents the selected range end date.
@@ -236,10 +242,29 @@ class DateRangePickerState private constructor(internal val stateData: StateData
      * epoch.
      *
      * In case an end date was not selected or provided, the state will hold a `null` value.
+     *
+     * @see [setSelection]
      */
-    @get:Suppress("AutoBoxing")
-    val selectedEndDateMillis by derivedStateOf {
-        stateData.selectedEndDate.value?.utcTimeMillis
+    val selectedEndDateMillis: Long?
+        @Suppress("AutoBoxing") get() = stateData.selectedEndDate.value?.utcTimeMillis
+
+    /**
+     * Sets the selected date.
+     *
+     * @param startDateMillis timestamp in _UTC_ milliseconds from the epoch that represents the
+     * start date selection, or `null` to indicate no selection.
+     * @param endDateMillis timestamp in _UTC_ milliseconds from the epoch that represents the end
+     * date selection, or `null` to indicate no selection.
+     *
+     * @throws IllegalArgumentException if the given timestamps do not fall within the year range
+     * this state was created with, or the end date precedes the start date, or when an end date is
+     * provided without a start date (e.g. the start date was null, while the end date was not).
+     */
+    fun setSelection(
+        @Suppress("AutoBoxing") startDateMillis: Long?,
+        @Suppress("AutoBoxing") endDateMillis: Long?
+    ) {
+        stateData.setSelection(startDateMillis = startDateMillis, endDateMillis = endDateMillis)
     }
 
     /**
@@ -273,23 +298,21 @@ object DateRangePickerDefaults {
      *
      * @param state a [DatePickerState] that will help determine the title's content
      * @param modifier a [Modifier] to be applied for the title
-     * @param contentPadding [PaddingValues] to be applied for the title
      */
     @Composable
     fun DateRangePickerTitle(
         state: DateRangePickerState,
-        modifier: Modifier = Modifier,
-        contentPadding: PaddingValues = PaddingValues(start = DateRangePickerHeaderStartPadding)
+        modifier: Modifier = Modifier
     ) {
         when (state.displayMode) {
             DisplayMode.Picker -> Text(
                 getString(string = Strings.DateRangePickerTitle),
-                modifier = modifier.padding(paddingValues = contentPadding)
+                modifier = modifier
             )
 
             DisplayMode.Input -> Text(
                 getString(string = Strings.DateRangeInputTitle),
-                modifier = modifier.padding(paddingValues = contentPadding)
+                modifier = modifier
             )
         }
     }
@@ -301,14 +324,12 @@ object DateRangePickerDefaults {
      * @param state a [DateRangePickerState] that will help determine the headline
      * @param dateFormatter a [DatePickerFormatter]
      * @param modifier a [Modifier] to be applied for the headline
-     * @param contentPadding [PaddingValues] to be applied for the headline row
      */
     @Composable
     fun DateRangePickerHeadline(
         state: DateRangePickerState,
         dateFormatter: DatePickerFormatter,
-        modifier: Modifier = Modifier,
-        contentPadding: PaddingValues = PaddingValues(start = DateRangePickerHeaderStartPadding)
+        modifier: Modifier = Modifier
     ) {
         val startDateText = getString(Strings.DateRangePickerStartHeadline)
         val endDateText = getString(Strings.DateRangePickerEndHeadline)
@@ -321,7 +342,6 @@ object DateRangePickerDefaults {
             startDatePlaceholder = { Text(text = startDateText) },
             endDatePlaceholder = { Text(text = endDateText) },
             datesDelimiter = { Text(text = "-") },
-            contentPadding = contentPadding
         )
     }
 
@@ -344,7 +364,6 @@ object DateRangePickerDefaults {
      * date (i.e a [Text] with an "End date" string)
      * @param datesDelimiter a composable to be displayed as a headline delimiter between the
      * start and the end dates
-     * @param contentPadding [PaddingValues] to be applied for the headline row
      */
     @Composable
     private fun DateRangePickerHeadline(
@@ -356,7 +375,6 @@ object DateRangePickerDefaults {
         startDatePlaceholder: @Composable () -> Unit,
         endDatePlaceholder: @Composable () -> Unit,
         datesDelimiter: @Composable () -> Unit,
-        contentPadding: PaddingValues
     ) {
         with(state.stateData) {
             val defaultLocale = defaultLocale()
@@ -398,12 +416,10 @@ object DateRangePickerDefaults {
             val endHeadlineDescription = "$endDateText: $verboseEndDateDescription"
 
             Row(
-                modifier = modifier
-                    .padding(paddingValues = contentPadding)
-                    .clearAndSetSemantics {
-                        liveRegion = LiveRegionMode.Polite
-                        contentDescription = "$startHeadlineDescription, $endHeadlineDescription"
-                    },
+                modifier = modifier.clearAndSetSemantics {
+                    liveRegion = LiveRegionMode.Polite
+                    contentDescription = "$startHeadlineDescription, $endHeadlineDescription"
+                },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -474,7 +490,7 @@ private fun DateRangePickerContent(
     val onDateSelected = { dateInMillis: Long ->
         updateDateSelection(stateData, dateInMillis)
     }
-    Column {
+    Column(modifier = Modifier.padding(horizontal = DatePickerHorizontalPadding)) {
         WeekDays(colors, stateData.calendarModel)
         VerticalMonthsList(
             onDateSelected = onDateSelected,
@@ -594,7 +610,7 @@ private fun updateDateSelection(
 }
 
 internal val CalendarMonthSubheadPadding = PaddingValues(
-    start = 12.dp,
+    start = 24.dp,
     top = 20.dp,
     bottom = 8.dp
 )
@@ -615,7 +631,8 @@ internal class SelectedRangeInfo(
         /**
          * Calculates the selection coordinates within the current month's grid. The returned [Pair]
          * holds the actual item x & y coordinates within the LazyVerticalGrid, and is later used to
-         * calculate the exact offset for drawing the selection rectangles when in range-selection mode.
+         * calculate the exact offset for drawing the selection rectangles when in range-selection
+         * mode.
          */
         @OptIn(ExperimentalMaterial3Api::class)
         fun calculateRangeInfo(
@@ -688,21 +705,32 @@ internal fun ContentDrawScope.drawRangeBackground(
     val (x2, y2) = selectedRangeInfo.gridCoordinates.second
     // The endX and startX are offset to include only half the item's width when dealing with first
     // and last items in the selection in order to keep the selection edges rounded.
-    val startX = x1 * (itemContainerWidth + horizontalSpaceBetweenItems) +
+    var startX = x1 * (itemContainerWidth + horizontalSpaceBetweenItems) +
         (if (selectedRangeInfo.firstIsSelectionStart) itemContainerWidth / 2 else 0f) +
         horizontalSpaceBetweenItems / 2
     val startY = y1 * itemContainerHeight + stateLayerVerticalPadding
-    val endX = x2 * (itemContainerWidth + horizontalSpaceBetweenItems) +
+    var endX = x2 * (itemContainerWidth + horizontalSpaceBetweenItems) +
         (if (selectedRangeInfo.lastIsSelectionEnd) itemContainerWidth / 2 else itemContainerWidth) +
         horizontalSpaceBetweenItems / 2
     val endY = y2 * itemContainerHeight + stateLayerVerticalPadding
+
+    val isRtl = layoutDirection == LayoutDirection.Rtl
+    // Adjust the start and end in case the layout is RTL.
+    if (isRtl) {
+        startX = this.size.width - startX
+        endX = this.size.width - endX
+    }
 
     // Draw the first row background
     drawRect(
         color = color,
         topLeft = Offset(startX, startY),
         size = Size(
-            width = if (y1 == y2) endX - startX else this.size.width - startX,
+            width = when {
+                y1 == y2 -> endX - startX
+                isRtl -> -startX
+                else -> this.size.width - startX
+            },
             height = itemStateLayerHeight
         )
     )
@@ -720,11 +748,12 @@ internal fun ContentDrawScope.drawRangeBackground(
             )
         }
         // Draw the last row selection background
+        val topLeftX = if (layoutDirection == LayoutDirection.Ltr) 0f else this.size.width
         drawRect(
             color = color,
-            topLeft = Offset(0f, endY),
+            topLeft = Offset(topLeftX, endY),
             size = Size(
-                width = endX,
+                width = if (isRtl) endX - this.size.width else endX,
                 height = itemStateLayerHeight
             )
         )
@@ -769,16 +798,9 @@ private fun customScrollActions(
     )
 }
 
-// Base header paddings that are used for the header part (title + headline). Note that for the
-// range picker default title and headline we add additional start padding. The additional paddings
-// are added there to allow more flexibility when those composables are provided by a developer.
-private val DateRangePickerHeaderPadding = PaddingValues(
-    start = 12.dp,
-    bottom = 12.dp
-)
-
-// Additional start padding for the default headline and title parts.
-private val DateRangePickerHeaderStartPadding = 40.dp
+private val DateRangePickerTitlePadding = PaddingValues(start = 64.dp, end = 12.dp)
+private val DateRangePickerHeadlinePadding =
+    PaddingValues(start = 64.dp, end = 12.dp, bottom = 12.dp)
 
 // An offset that is applied to the token value for the RangeSelectionHeaderContainerHeight. The
 // implementation does not render a "Save" and "X" buttons by default, so we don't take those into

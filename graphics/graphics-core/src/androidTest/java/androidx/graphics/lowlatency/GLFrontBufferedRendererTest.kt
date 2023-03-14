@@ -157,7 +157,7 @@ class GLFrontBufferedRendererTest {
         }
     }
 
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q, maxSdkVersion = 32) // b/266749527
     @Test
     fun testDoubleBufferedLayerRender() {
         val renderLatch = CountDownLatch(1)
@@ -281,7 +281,7 @@ class GLFrontBufferedRendererTest {
         }
     }
 
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q, maxSdkVersion = 32) // b/266749527
     @Test
     fun testRenderDoubleBufferLayer() {
         val squareSize = 100f
@@ -396,7 +396,7 @@ class GLFrontBufferedRendererTest {
         }
     }
 
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q, maxSdkVersion = 32) // b/266749527
     @Test
     fun testBufferRetargetingFrontBufferLayer() {
         val squareSize = 100f
@@ -491,7 +491,7 @@ class GLFrontBufferedRendererTest {
         }
     }
 
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q, maxSdkVersion = 32) // b/266749527
     @Test
     fun testBufferRetargetingDoubleBufferedLayer() {
         val squareSize = 100f
@@ -590,7 +590,7 @@ class GLFrontBufferedRendererTest {
         }
     }
 
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q, maxSdkVersion = 32) // b/266749527
     @Test
     fun testCancelFrontBufferLayerRender() {
         val squareSize = 100f
@@ -749,7 +749,7 @@ class GLFrontBufferedRendererTest {
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
     fun testUsageFlagContainsFrontBufferUsage() {
-        val usageFlags = GLFrontBufferedRenderer.obtainHardwareBufferUsageFlags()
+        val usageFlags = FrontBufferUtils.obtainHardwareBufferUsageFlags()
         if (UsageFlagsVerificationHelper.isSupported(HardwareBuffer.USAGE_FRONT_BUFFER)) {
             assertNotEquals(0, usageFlags and HardwareBuffer.USAGE_FRONT_BUFFER)
         } else {
@@ -760,7 +760,7 @@ class GLFrontBufferedRendererTest {
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
     fun testUsageFlagContainsComposerOverlay() {
-        val usageFlags = GLFrontBufferedRenderer.obtainHardwareBufferUsageFlags()
+        val usageFlags = FrontBufferUtils.obtainHardwareBufferUsageFlags()
         if (UsageFlagsVerificationHelper.isSupported(HardwareBuffer.USAGE_COMPOSER_OVERLAY)) {
             assertNotEquals(
                 0,
@@ -775,11 +775,11 @@ class GLFrontBufferedRendererTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
     fun testBaseFlags() {
         assertNotEquals(
-            0, GLFrontBufferedRenderer.BaseFlags and
+            0, FrontBufferUtils.BaseFlags and
                 HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE
         )
         assertNotEquals(
-            0, GLFrontBufferedRenderer.BaseFlags and
+            0, FrontBufferUtils.BaseFlags and
                 HardwareBuffer.USAGE_GPU_COLOR_OUTPUT
         )
     }
@@ -865,7 +865,7 @@ class GLFrontBufferedRendererTest {
         }
     }
 
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q, maxSdkVersion = 32) // b/266749527
     @Test
     fun testDoubleBufferedContentsNotPersisted() {
         val mOrthoMatrix = FloatArray(16)

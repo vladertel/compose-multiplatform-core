@@ -18,8 +18,6 @@ package androidx.wear.protolayout;
 
 import static androidx.wear.protolayout.expression.Preconditions.checkNotNull;
 
-import android.annotation.SuppressLint;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
@@ -60,7 +58,6 @@ public final class TriggerBuilders {
       this.mFingerprint = fingerprint;
     }
 
-    /** @hide */
     @Override
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Nullable
@@ -78,7 +75,6 @@ public final class TriggerBuilders {
       return mImpl;
     }
 
-    /** @hide */
     @Override
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
@@ -109,10 +105,10 @@ public final class TriggerBuilders {
    * @since 1.2
    */
   public static final class OnConditionMetTrigger implements Trigger {
-    private final TriggerProto.OnConditionTrigger mImpl;
+    private final TriggerProto.OnConditionMetTrigger mImpl;
     @Nullable private final Fingerprint mFingerprint;
 
-    OnConditionMetTrigger(TriggerProto.OnConditionTrigger impl, @Nullable Fingerprint fingerprint) {
+    OnConditionMetTrigger(TriggerProto.OnConditionMetTrigger impl, @Nullable Fingerprint fingerprint) {
       this.mImpl = impl;
       this.mFingerprint = fingerprint;
     }
@@ -124,14 +120,13 @@ public final class TriggerBuilders {
      */
     @Nullable
     public DynamicBool getTrigger() {
-      if (mImpl.hasDynamicBool()) {
-        return DynamicBuilders.dynamicBoolFromProto(mImpl.getDynamicBool());
+      if (mImpl.hasTrigger()) {
+        return DynamicBuilders.dynamicBoolFromProto(mImpl.getTrigger());
       } else {
         return null;
       }
     }
 
-    /** @hide */
     @Override
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Nullable
@@ -140,27 +135,26 @@ public final class TriggerBuilders {
     }
 
     @NonNull
-    static OnConditionMetTrigger fromProto(@NonNull TriggerProto.OnConditionTrigger proto) {
+    static OnConditionMetTrigger fromProto(@NonNull TriggerProto.OnConditionMetTrigger proto) {
       return new OnConditionMetTrigger(proto, null);
     }
 
     @NonNull
-    TriggerProto.OnConditionTrigger toProto() {
+    TriggerProto.OnConditionMetTrigger toProto() {
       return mImpl;
     }
 
-    /** @hide */
     @Override
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
       public TriggerProto.Trigger toTriggerProto() {
-      return TriggerProto.Trigger.newBuilder().setOnConditionTrigger(mImpl).build();
+      return TriggerProto.Trigger.newBuilder().setOnConditionMetTrigger(mImpl).build();
     }
 
     /** Builder for {@link OnConditionMetTrigger}. */
     public static final class Builder implements Trigger.Builder {
-      private final TriggerProto.OnConditionTrigger.Builder mImpl =
-          TriggerProto.OnConditionTrigger.newBuilder();
+      private final TriggerProto.OnConditionMetTrigger.Builder mImpl =
+          TriggerProto.OnConditionMetTrigger.newBuilder();
       private final Fingerprint mFingerprint = new Fingerprint(1952746052);
 
       public Builder() {}
@@ -172,7 +166,7 @@ public final class TriggerBuilders {
        */
       @NonNull
       public Builder setTrigger(@NonNull DynamicBool dynamicBool) {
-        mImpl.setDynamicBool(dynamicBool.toDynamicBoolProto());
+        mImpl.setTrigger(dynamicBool.toDynamicBoolProto());
         mFingerprint.recordPropertyUpdate(
             1, checkNotNull(dynamicBool.getFingerprint()).aggregateValueAsInt());
         return this;
@@ -196,7 +190,6 @@ public final class TriggerBuilders {
     /**
      * Get the protocol buffer representation of this object.
      *
-     * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
@@ -205,7 +198,6 @@ public final class TriggerBuilders {
     /**
      * Get the fingerprint for this object or null if unknown.
      *
-     * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Nullable
@@ -213,7 +205,6 @@ public final class TriggerBuilders {
 
     /** Builder to create {@link Trigger} objects.
      *
-     * @hide
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     interface Builder {
@@ -229,8 +220,8 @@ public final class TriggerBuilders {
     if (proto.hasOnLoadTrigger()) {
       return OnLoadTrigger.fromProto(proto.getOnLoadTrigger());
     }
-    if (proto.hasOnConditionTrigger()) {
-      return OnConditionMetTrigger.fromProto(proto.getOnConditionTrigger());
+    if (proto.hasOnConditionMetTrigger()) {
+      return OnConditionMetTrigger.fromProto(proto.getOnConditionMetTrigger());
     }
     throw new IllegalStateException("Proto was not a recognised instance of Trigger");
   }

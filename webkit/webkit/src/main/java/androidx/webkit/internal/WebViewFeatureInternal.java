@@ -389,6 +389,15 @@ public class WebViewFeatureInternal {
 
     /**
      * This feature covers
+     * {@link androidx.webkit.ProcessGlobalConfig#setDirectoryBasePath(String, String)}.
+     */
+    public static final StartupApiFeature.NoFramework STARTUP_FEATURE_SET_DIRECTORY_BASE_PATH =
+            new StartupApiFeature.NoFramework(
+                    WebViewFeature.STARTUP_FEATURE_SET_DIRECTORY_BASE_PATH,
+                    StartupFeatures.STARTUP_FEATURE_SET_DIRECTORY_BASE_PATH);
+
+    /**
+     * This feature covers
      * {@link WebViewCompat#getWebViewRenderProcessClient()},
      * {@link WebViewCompat#setWebViewRenderProcessClient(WebViewRenderProcessClient)},
      * {@link WebViewRenderProcessClient#onRenderProcessUnresponsive(WebView, WebViewRenderProcess)},
@@ -523,7 +532,6 @@ public class WebViewFeatureInternal {
      * {@link androidx.webkit.WebSettingsCompat#setRequestedWithHeaderAllowList(WebSettings, Set)},
      * {@link androidx.webkit.ServiceWorkerWebSettingsCompat#getRequestedWithHeaderAllowList(WebSettings)}, and
      * {@link androidx.webkit.ServiceWorkerWebSettingsCompat#setRequestedWithHeaderAllowList(WebSettings, Set)}.
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public static final ApiFeature.NoFramework REQUESTED_WITH_HEADER_ALLOW_LIST =

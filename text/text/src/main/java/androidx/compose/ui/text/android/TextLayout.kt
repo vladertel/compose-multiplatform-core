@@ -70,6 +70,11 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
+ * We swap canvas delegates, and can share the wrapper.
+ */
+private val SharedTextAndroidCanvas: TextAndroidCanvas = TextAndroidCanvas()
+
+/**
  * Wrapper for Static Text Layout classes.
  *
  * @param charSequence text to be laid out.
@@ -109,7 +114,7 @@ import kotlin.math.min
 @InternalPlatformTextApi
 class TextLayout constructor(
     charSequence: CharSequence,
-    width: Float = 0.0f,
+    width: Float,
     textPaint: TextPaint,
     @TextLayoutAlignment alignment: Int = DEFAULT_ALIGNMENT,
     ellipsize: TextUtils.TruncateAt? = null,
@@ -234,12 +239,6 @@ class TextLayout constructor(
     private val lineHeightSpans: Array<LineHeightStyleSpan>
 
     private val rect: Rect = Rect()
-
-    /**
-     * Android Canvas object that overrides the `getClipBounds` method and delegates the rest
-     * to the Canvas object that it wraps. See [TextAndroidCanvas] for more details.
-     */
-    private val textCanvas = TextAndroidCanvas()
 
     init {
         val end = charSequence.length
@@ -491,7 +490,7 @@ class TextLayout constructor(
 
     fun getLineEllipsisCount(lineIndex: Int): Int = layout.getEllipsisCount(lineIndex)
 
-    fun getLineForVertical(vertical: Int): Int = layout.getLineForVertical(topPadding + vertical)
+    fun getLineForVertical(vertical: Int): Int = layout.getLineForVertical(vertical - topPadding)
 
     fun getOffsetForHorizontal(line: Int, horizontal: Float): Int {
         return layout.getOffsetForHorizontal(line, horizontal + -1 * getHorizontalPadding(line))
@@ -735,8 +734,10 @@ class TextLayout constructor(
             canvas.translate(0f, topPadding.toFloat())
         }
 
-        textCanvas.setCanvas(canvas)
-        layout.draw(textCanvas)
+        with(SharedTextAndroidCanvas) {
+            setCanvas(canvas)
+            layout.draw(this)
+        }
 
         if (topPadding != 0) {
             canvas.translate(0f, -1 * topPadding.toFloat())

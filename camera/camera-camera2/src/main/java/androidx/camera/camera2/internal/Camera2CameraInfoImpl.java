@@ -22,13 +22,11 @@ import static android.hardware.camera2.CameraMetadata.SENSOR_INFO_TIMESTAMP_SOUR
 
 import static androidx.camera.camera2.internal.ZslUtil.isCapabilitySupported;
 
-import static java.util.Objects.requireNonNull;
-
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraMetadata;
-import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Build;
 import android.util.Pair;
+import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 
@@ -123,7 +121,7 @@ public final class Camera2CameraInfoImpl implements CameraInfoInternal {
      * Constructs an instance. Before {@link #linkWithCameraControl(Camera2CameraControlImpl)} is
      * called, camera control related API (torch/exposure/zoom) will return default values.
      */
-    Camera2CameraInfoImpl(@NonNull String cameraId,
+    public Camera2CameraInfoImpl(@NonNull String cameraId,
             @NonNull CameraManagerCompat cameraManager) throws CameraAccessExceptionCompat {
         mCameraId = Preconditions.checkNotNull(cameraId);
         mCameraManager = cameraManager;
@@ -422,11 +420,18 @@ public final class Camera2CameraInfoImpl implements CameraInfoInternal {
     @NonNull
     @Override
     public List<Size> getSupportedResolutions(int format) {
-        StreamConfigurationMap map = requireNonNull(mCameraCharacteristicsCompat.get(
-                CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP));
         StreamConfigurationMapCompat mapCompat =
-                StreamConfigurationMapCompat.toStreamConfigurationMapCompat(map);
+                mCameraCharacteristicsCompat.getStreamConfigurationMapCompat();
         Size[] size = mapCompat.getOutputSizes(format);
+        return size != null ? Arrays.asList(size) : Collections.emptyList();
+    }
+
+    @NonNull
+    @Override
+    public List<Size> getSupportedHighResolutions(int format) {
+        StreamConfigurationMapCompat mapCompat =
+                mCameraCharacteristicsCompat.getStreamConfigurationMapCompat();
+        Size[] size = mapCompat.getHighResolutionOutputSizes(format);
         return size != null ? Arrays.asList(size) : Collections.emptyList();
     }
 
@@ -472,6 +477,19 @@ public final class Camera2CameraInfoImpl implements CameraInfoInternal {
     @Override
     public Quirks getCameraQuirks() {
         return mCameraQuirks;
+    }
+
+    @NonNull
+    @Override
+    public List<Range<Integer>> getSupportedFpsRanges() {
+        Range<Integer>[] availableTargetFpsRanges =
+                mCameraCharacteristicsCompat.get(
+                        CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+        if (availableTargetFpsRanges != null) {
+            return Arrays.asList(availableTargetFpsRanges);
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     /**

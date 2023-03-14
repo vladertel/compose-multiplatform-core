@@ -28,9 +28,9 @@ import androidx.work.WorkManager.UpdateResult.APPLIED_FOR_NEXT_RUN
 import androidx.work.WorkManager.UpdateResult.APPLIED_IMMEDIATELY
 import androidx.work.WorkManager.UpdateResult.NOT_APPLIED
 import androidx.work.impl.Processor
-import androidx.work.impl.Scheduler
 import androidx.work.impl.WorkDatabase
 import androidx.work.impl.WorkManagerImpl
+import androidx.work.impl.WorkLauncherImpl
 import androidx.work.impl.background.greedy.GreedyScheduler
 import androidx.work.impl.constraints.trackers.Trackers
 import androidx.work.impl.testutils.TestConstraintTracker
@@ -67,17 +67,14 @@ class WorkUpdateTest {
     )
     val db = WorkDatabase.create(context, executor, true)
 
-    // ugly, ugly hack because of circular dependency:
-    // Schedulers need WorkManager, WorkManager needs schedulers
-    val schedulers = mutableListOf<Scheduler>()
     val processor = Processor(context, configuration, taskExecutor, db)
+    val launcher = WorkLauncherImpl(processor, taskExecutor)
+    val greedyScheduler = GreedyScheduler(context, configuration, trackers, processor, launcher)
     val workManager = WorkManagerImpl(
-        context, configuration, taskExecutor, db, schedulers, processor, trackers
+        context, configuration, taskExecutor, db, listOf(greedyScheduler), processor, trackers
     )
-    val greedyScheduler = GreedyScheduler(context, configuration, trackers, workManager)
 
     init {
-        schedulers.add(greedyScheduler)
         WorkManagerImpl.setDelegate(workManager)
     }
 
@@ -396,6 +393,34 @@ class WorkUpdateTest {
         val newTags = workManager.getWorkInfoById(request.id).get().tags
         assertThat(newTags).contains("updated")
         assertThat(newTags).doesNotContain("original")
+    }
+
+    @MediumTest
+    @Test
+    fun updatePeriodicWorkAfterFirstPeriod() {
+        val request = PeriodicWorkRequest.Builder(TestWorker::class.java, 1, TimeUnit.DAYS)
+            .addTag("original").build()
+        val onExecutedLatch = CountDownLatch(1)
+        processor.addExecutionListener { id, _ ->
+            if (id.workSpecId == request.stringId) onExecutedLatch.countDown()
+        }
+        workManager.enqueue(request).result.get()
+        workerFactory.awaitWorker(request.id)
+        workManager.awaitReenqueued(request.id)
+
+        val updatedRequest =
+            PeriodicWorkRequest.Builder(TestWorker::class.java, 1, TimeUnit.DAYS)
+                // requiresCharging constraint is faked, so it will never be satisfied
+                .setConstraints(Constraints(requiresCharging = true))
+                .setId(request.id).addTag("updated").build()
+
+        assertThat(workManager.updateWork(updatedRequest).get()).isEqualTo(APPLIED_IMMEDIATELY)
+
+        val newTags = workManager.getWorkInfoById(request.id).get().tags
+        assertThat(newTags).contains("updated")
+        assertThat(newTags).doesNotContain("original")
+        val workSpec = db.workSpecDao().getWorkSpec(request.stringId)!!
+        assertThat(workSpec.periodCount).isEqualTo(1)
     }
 
     @MediumTest

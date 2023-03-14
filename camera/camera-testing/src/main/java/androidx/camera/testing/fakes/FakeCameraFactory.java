@@ -42,7 +42,6 @@ import java.util.concurrent.Callable;
 /**
  * A {@link CameraFactory} implementation that contains and produces fake cameras.
  *
- * @hide
  */
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @RestrictTo(Scope.LIBRARY_GROUP)
@@ -59,8 +58,8 @@ public final class FakeCameraFactory implements CameraFactory {
     @Nullable
     private Object mCameraManager = null;
 
-    @Nullable
-    private CameraCoordinator mCameraCoordinator = null;
+    @NonNull
+    private CameraCoordinator mCameraCoordinator = new FakeCameraCoordinator();
 
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
     final Map<String, Pair<Integer, Callable<CameraInternal>>> mCameraMap = new HashMap<>();
@@ -174,13 +173,13 @@ public final class FakeCameraFactory implements CameraFactory {
         return filteredCameraIds;
     }
 
-    @Nullable
+    @NonNull
     @Override
     public CameraCoordinator getCameraCoordinator() {
         return mCameraCoordinator;
     }
 
-    public void setCameraCoordinator(@Nullable CameraCoordinator cameraCoordinator) {
+    public void setCameraCoordinator(@NonNull CameraCoordinator cameraCoordinator) {
         mCameraCoordinator = cameraCoordinator;
     }
 

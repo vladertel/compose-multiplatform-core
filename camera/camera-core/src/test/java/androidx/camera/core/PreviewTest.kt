@@ -20,12 +20,17 @@ import android.content.Context
 import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper.getMainLooper
 import android.util.Rational
 import android.util.Size
 import android.view.Surface
+import androidx.camera.core.CameraEffect.IMAGE_CAPTURE
 import androidx.camera.core.CameraEffect.PREVIEW
+import androidx.camera.core.CameraEffect.VIDEO_CAPTURE
 import androidx.camera.core.CameraSelector.LENS_FACING_FRONT
+import androidx.camera.core.MirrorMode.MIRROR_MODE_FRONT_ON
 import androidx.camera.core.SurfaceRequest.TransformationInfo
 import androidx.camera.core.impl.CameraFactory
 import androidx.camera.core.impl.CameraThreadConfig
@@ -87,6 +92,8 @@ class PreviewTest {
     private lateinit var processor: FakeSurfaceProcessorInternal
     private lateinit var effect: CameraEffect
 
+    private val handlersToRelease = mutableListOf<Handler>()
+
     @Before
     @Throws(ExecutionException::class, InterruptedException::class)
     fun setUp() {
@@ -129,6 +136,22 @@ class PreviewTest {
         }
         processor.release()
         CameraXUtil.shutdown().get()
+        for (handler in handlersToRelease) {
+            handler.looper.quitSafely()
+        }
+    }
+
+    @Test
+    fun verifySupportedEffects() {
+        val preview = Preview.Builder().build()
+        assertThat(preview.isEffectTargetsSupported(PREVIEW)).isTrue()
+        assertThat(preview.isEffectTargetsSupported(PREVIEW or VIDEO_CAPTURE)).isTrue()
+        assertThat(
+            preview.isEffectTargetsSupported(PREVIEW or VIDEO_CAPTURE or IMAGE_CAPTURE)
+        ).isTrue()
+        assertThat(preview.isEffectTargetsSupported(VIDEO_CAPTURE)).isFalse()
+        assertThat(preview.isEffectTargetsSupported(IMAGE_CAPTURE)).isFalse()
+        assertThat(preview.isEffectTargetsSupported(IMAGE_CAPTURE or VIDEO_CAPTURE)).isFalse()
     }
 
     @Test
@@ -179,6 +202,17 @@ class PreviewTest {
     }
 
     @Test
+    fun defaultMirrorModeIsFrontOn() {
+        val preview = Preview.Builder().build()
+        assertThat(preview.mirrorModeInternal).isEqualTo(MIRROR_MODE_FRONT_ON)
+    }
+
+    @Test(expected = UnsupportedOperationException::class)
+    fun setMirrorMode_throwException() {
+        Preview.Builder().setMirrorMode(MIRROR_MODE_FRONT_ON)
+    }
+
+    @Test
     fun setTargetRotation_rotationIsChanged() {
         // Arrange.
         val preview = Preview.Builder().setTargetRotation(Surface.ROTATION_0).build()
@@ -195,7 +229,7 @@ class PreviewTest {
         // Arrange: attach Preview without a SurfaceProvider.
         // Build and bind use case.
         val sessionOptionUnpacker =
-            { _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
+            { _: Size, _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
         val preview = Preview.Builder()
             .setTargetRotation(Surface.ROTATION_0)
             .setSessionOptionUnpacker(sessionOptionUnpacker)
@@ -301,6 +335,25 @@ class PreviewTest {
     }
 
     @Test
+    fun setTargetRotationWithProcessorOnBackground_rotationChangesOnSurfaceEdge() {
+        // Act: create pipeline
+        val preview = createPreview(effect)
+        // Act: update target rotation
+        preview.targetRotation = Surface.ROTATION_0
+        shadowOf(getMainLooper()).idle()
+        // Assert that the rotation of the SettableFuture is updated based on ROTATION_0.
+        assertThat(preview.cameraEdge.rotationDegrees).isEqualTo(0)
+
+        // Act: update target rotation again.
+        val backgroundHandler = createBackgroundHandler()
+        backgroundHandler.post { preview.targetRotation = Surface.ROTATION_180 }
+        shadowOf(backgroundHandler.looper).idle()
+        shadowOf(getMainLooper()).idle()
+        // Assert: the rotation of the SettableFuture is updated based on ROTATION_90.
+        assertThat(preview.cameraEdge.rotationDegrees).isEqualTo(180)
+    }
+
+    @Test
     fun invalidateAppSurfaceRequestWithProcessing_cameraNotReset() {
         // Arrange: create Preview with processing.
         val surfaceRequest = createPreview(effect).mCurrentSurfaceRequest
@@ -364,10 +417,10 @@ class PreviewTest {
     @Test
     fun noCameraTransform_rotationDegreesFlipped() {
         // Act: create preview with hasCameraTransform == false
+        frontCamera.hasTransform = false
         val preview = createPreview(
             effect,
             frontCamera,
-            hasCameraTransform = false,
             targetRotation = Surface.ROTATION_90
         )
         // Assert: rotationDegrees is flipped
@@ -377,9 +430,10 @@ class PreviewTest {
     @Test
     fun setNoCameraTransform_propagatesToCameraEdge() {
         // Act: create preview with hasCameraTransform == false
+        frontCamera.hasTransform = false
         val preview = createPreview(
             effect,
-            hasCameraTransform = false,
+            frontCamera,
             targetRotation = Surface.ROTATION_90
         )
         // Assert
@@ -390,10 +444,10 @@ class PreviewTest {
     @Test
     fun frontCameraWithoutCameraTransform_noMirroring() {
         // Act: create preview with hasCameraTransform == false
+        frontCamera.hasTransform = false
         val preview = createPreview(
             effect,
             frontCamera,
-            hasCameraTransform = false,
             targetRotation = Surface.ROTATION_90
         )
         // Assert
@@ -457,7 +511,7 @@ class PreviewTest {
     fun setTargetRotation_transformationInfoUpdated() {
         // Arrange: set up preview and verify target rotation in TransformationInfo.
         val sessionOptionUnpacker =
-            { _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
+            { _: Size, _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
         val preview = Preview.Builder()
             .setTargetRotation(Surface.ROTATION_0)
             .setSessionOptionUnpacker(sessionOptionUnpacker)
@@ -490,7 +544,7 @@ class PreviewTest {
     fun setSurfaceProviderAfterAttachment_receivesSurfaceProviderCallbacks() {
         // Arrange: attach Preview without a SurfaceProvider.
         val sessionOptionUnpacker =
-            { _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
+            { _: Size, _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
         val preview = Preview.Builder()
             .setTargetRotation(Surface.ROTATION_0)
             .setSessionOptionUnpacker(sessionOptionUnpacker)
@@ -543,7 +597,7 @@ class PreviewTest {
     fun setSurfaceProviderAfterDetach_receivesSurfaceRequestAfterAttach() {
         // Arrange: attach Preview without a SurfaceProvider.
         val sessionOptionUnpacker =
-            { _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
+            { _: Size, _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
         val preview = Preview.Builder()
             .setTargetRotation(Surface.ROTATION_0)
             .setSessionOptionUnpacker(sessionOptionUnpacker)
@@ -614,7 +668,7 @@ class PreviewTest {
         TransformationInfo> {
         // Arrange.
         val sessionOptionUnpacker =
-            { _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
+            { _: Size, _: UseCaseConfig<*>?, _: SessionConfig.Builder? -> }
         val preview = Preview.Builder()
             .setTargetRotation(Surface.ROTATION_0)
             .setSessionOptionUnpacker(sessionOptionUnpacker)
@@ -644,13 +698,11 @@ class PreviewTest {
     private fun createPreview(
         effect: CameraEffect? = null,
         camera: FakeCamera = backCamera,
-        hasCameraTransform: Boolean = true,
         targetRotation: Int = Surface.ROTATION_0
     ): Preview {
         previewToDetach = Preview.Builder()
             .setTargetRotation(targetRotation)
             .build()
-        previewToDetach.hasCameraTransform = hasCameraTransform
         previewToDetach.effect = effect
         previewToDetach.setSurfaceProvider(CameraXExecutors.directExecutor()) {}
         val previewConfig = PreviewConfig(
@@ -664,5 +716,14 @@ class PreviewTest {
         val streamSpec = StreamSpec.builder(Size(640, 480)).build()
         previewToDetach.onSuggestedStreamSpecUpdated(streamSpec)
         return previewToDetach
+    }
+
+    private fun createBackgroundHandler(): Handler {
+        val handler = Handler(HandlerThread("PreviewTest").run {
+            start()
+            looper
+        })
+        handlersToRelease.add(handler)
+        return handler
     }
 }
