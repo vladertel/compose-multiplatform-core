@@ -64,7 +64,6 @@ internal class ComposeLayer(
 
         @OptIn(ExperimentalComposeUiApi::class)
         override fun onPointerEvent(event: SkikoPointerEvent) {
-            val scale = density.density
             val topLeftOffset = getTopLeftOffset()
             scene.sendPointerEvent(
                 eventType = event.kind.toCompose(),
