@@ -18,9 +18,16 @@ package androidx.compose.ui
 
 import kotlin.js.JsName
 
-// It is usually used when we need to update the current position of the pointers.
-// For example, when we relayout or scroll Compose content, it will request update via needSendMove.
-// The update happen after relayout via sending a synthetic Move event through all UI tree
+/**
+ * Updater of the current position of pointer.
+ *
+ * If something happened with Compose content (it relayouted), we need to send an
+ * event to it with the latest pointer position. Otherwise, the content won't be updated
+ * by the actual relative position of the pointer.
+ *
+ * For example, it can be needed when we scroll content without moving the pointer, and we need
+ * to highlight the items under the pointer.
+ */
 internal class PointerPositionUpdater(
     private val onNeedUpdate: () -> Unit,
     private val syntheticEventSender: SyntheticEventSender,

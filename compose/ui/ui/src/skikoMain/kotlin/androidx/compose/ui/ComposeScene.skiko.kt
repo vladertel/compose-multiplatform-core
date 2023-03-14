@@ -528,7 +528,6 @@ class ComposeScene internal constructor(
     }
 
     private fun processPointerInput(event: PointerInputEvent) {
-
         println("processPointerInput ${event.pointers.map { it.id }}")
         when (event.eventType) {
             PointerEventType.Press -> processPress(event)

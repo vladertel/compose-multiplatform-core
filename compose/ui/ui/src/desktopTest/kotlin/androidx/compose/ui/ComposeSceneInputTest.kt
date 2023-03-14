@@ -19,6 +19,7 @@ package androidx.compose.ui
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.unit.IntRect
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Test
@@ -76,8 +77,12 @@ class ComposeSceneInputTest {
         overlappedPopup.events.assertReceivedNoEvents()
         independentPopup.events.assertReceivedNoEvents()
 
+        println("D1")
         scene.sendPointerEvent(PointerEventType.Move, Offset(10f, 10f))
+        println("D2")
         background.events.assertReceivedNoEvents()
+        cutPopup.events.assertReceived(
+            PointerEventType.Move, Offset(-10f, -10f) - cutPopup.origin)
         cutPopup.events.assertReceivedLast(
             PointerEventType.Move, Offset(10f, 10f) - cutPopup.origin)
         overlappedPopup.events.assertReceivedNoEvents()
