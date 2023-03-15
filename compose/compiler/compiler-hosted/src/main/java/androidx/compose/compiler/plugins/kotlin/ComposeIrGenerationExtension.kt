@@ -34,6 +34,8 @@ import androidx.compose.compiler.plugins.kotlin.lower.WrapJsComposableLambdaLowe
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.CreateDecoysTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.RecordDecoySignaturesTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.SubstituteDecoyCallsTransformer
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.AddHiddenFromObjCLowering
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.HideFromObjCDeclarationsSet
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.serialization.DeclarationTable
@@ -45,6 +47,7 @@ import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.platform.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
+import org.jetbrains.kotlin.platform.konan.isNative
 
 class ComposeIrGenerationExtension(
     @Suppress("unused") private val liveLiteralsEnabled: Boolean = false,
@@ -57,6 +60,7 @@ class ComposeIrGenerationExtension(
     private val reportsDestination: String? = null,
     private val validateIr: Boolean = false,
     private val useK2: Boolean = false,
+    private val hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet? = null,
 ) : IrGenerationExtension {
     var metrics: ModuleMetrics = EmptyModuleMetrics
 
@@ -208,6 +212,15 @@ class ComposeIrGenerationExtension(
                 metrics,
                 idSignatureBuilder!!,
                 decoysEnabled
+            ).lower(moduleFragment)
+        }
+
+        if (pluginContext.platform.isNative() && hideFromObjCDeclarationsSet != null) {
+            AddHiddenFromObjCLowering(
+                pluginContext,
+                symbolRemapper,
+                metrics,
+                hideFromObjCDeclarationsSet
             ).lower(moduleFragment)
         }
 
