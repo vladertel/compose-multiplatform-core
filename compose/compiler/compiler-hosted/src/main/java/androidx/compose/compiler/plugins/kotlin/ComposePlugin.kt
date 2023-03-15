@@ -23,6 +23,8 @@ import androidx.compose.compiler.plugins.kotlin.k1.ComposeDiagnosticSuppressor
 import androidx.compose.compiler.plugins.kotlin.k1.ComposeTypeResolutionInterceptorExtension
 import androidx.compose.compiler.plugins.kotlin.k2.ComposeFirExtensionRegistrar
 import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityFieldSerializationPlugin
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.AddHiddenFromObjCSerializationPlugin
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.HideFromObjCDeclarationsSet
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
@@ -66,6 +68,8 @@ object ComposeConfiguration {
     )
     val DECOYS_ENABLED_KEY =
         CompilerConfigurationKey<Boolean>("Generate decoy methods in IR transform")
+    val HIDE_DECLARATION_FROM_OBJC_ENABLED_KEY =
+        CompilerConfigurationKey<Boolean>("Add HiddenFromObjC annotation to declarations")
 }
 
 @OptIn(ExperimentalCompilerApi::class)
@@ -136,6 +140,13 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
             required = false,
             allowMultipleOccurrences = false
         )
+        val HIDE_DECLARATION_FROM_OBJC_OPTION = CliOption(
+            "hideFromObjC",
+            "<true|false>",
+            "Add HiddenFromObjC annotation to Composable declarations",
+            required = false,
+            allowMultipleOccurrences = false
+        )
     }
 
     override val pluginId = PLUGIN_ID
@@ -149,6 +160,7 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
         INTRINSIC_REMEMBER_OPTIMIZATION_ENABLED_OPTION,
         SUPPRESS_KOTLIN_VERSION_CHECK_ENABLED_OPTION,
         DECOYS_ENABLED_OPTION,
+        HIDE_DECLARATION_FROM_OBJC_OPTION,
     )
 
     override fun processOption(
@@ -192,6 +204,10 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
             ComposeConfiguration.DECOYS_ENABLED_KEY,
             value == "true"
         )
+        HIDE_DECLARATION_FROM_OBJC_OPTION -> configuration.put(
+            ComposeConfiguration.HIDE_DECLARATION_FROM_OBJC_ENABLED_KEY,
+            value == "true"
+        )
         else -> throw CliOptionProcessingException("Unknown option: ${option.optionName}")
     }
 }
@@ -203,9 +219,18 @@ class ComposePluginRegistrar : CompilerPluginRegistrar() {
 
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         if (checkCompilerVersion(configuration)) {
-            registerCommonExtensions()
+            val hideFromObjC = configuration.get(
+                ComposeConfiguration.HIDE_DECLARATION_FROM_OBJC_ENABLED_KEY,
+                true
+            )
+            val hideFromObjCDeclarationsSet = if (hideFromObjC) {
+                HideFromObjCDeclarationsSet.create()
+            } else {
+                null
+            }
+            registerCommonExtensions(hideFromObjCDeclarationsSet)
             IrGenerationExtension.registerExtension(
-                createComposeIrExtension(configuration)
+                createComposeIrExtension(configuration, hideFromObjCDeclarationsSet)
             )
         }
     }
@@ -288,7 +313,9 @@ class ComposePluginRegistrar : CompilerPluginRegistrar() {
             }
         }
 
-        fun ExtensionStorage.registerCommonExtensions() {
+        fun ExtensionStorage.registerCommonExtensions(
+            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet?
+        ) {
             StorageComponentContainerContributor.registerExtension(ComposableCallChecker())
             StorageComponentContainerContributor.registerExtension(ComposableDeclarationChecker())
             StorageComponentContainerContributor.registerExtension(ComposableTargetChecker())
@@ -302,10 +329,16 @@ class ComposePluginRegistrar : CompilerPluginRegistrar() {
                 ClassStabilityFieldSerializationPlugin()
             )
             FirExtensionRegistrarAdapter.registerExtension(ComposeFirExtensionRegistrar())
+            if (hideFromObjCDeclarationsSet != null) {
+                DescriptorSerializerPlugin.registerExtension(
+                    AddHiddenFromObjCSerializationPlugin(hideFromObjCDeclarationsSet)
+                )
+            }
         }
 
         fun createComposeIrExtension(
-            configuration: CompilerConfiguration
+            configuration: CompilerConfiguration,
+            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet?
         ): ComposeIrGenerationExtension {
             val liveLiteralsEnabled = configuration.getBoolean(
                 ComposeConfiguration.LIVE_LITERALS_ENABLED_KEY,
@@ -352,6 +385,7 @@ class ComposePluginRegistrar : CompilerPluginRegistrar() {
                 reportsDestination = reportsDestination,
                 validateIr = validateIr,
                 useK2 = useK2,
+                hideFromObjCDeclarationsSet = hideFromObjCDeclarationsSet,
             )
         }
     }
