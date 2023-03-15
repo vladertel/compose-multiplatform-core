@@ -77,6 +77,7 @@ import org.jetbrains.kotlin.ir.types.impl.IrStarProjectionImpl
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.load.kotlin.computeJvmDescriptor
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.jvm.isJvm
@@ -141,10 +142,20 @@ abstract class AbstractComposeLowering(
         return symbolRemapper.getReferencedConstructor(symbol)
     }
 
+    fun getTopLevelClass(classId: ClassId): IrClassSymbol {
+        return getTopLevelClassOrNull(classId)
+            ?: error("Class not found in the classpath: ${classId.asSingleFqName()}")
+    }
+
+    fun getTopLevelClassOrNull(classId: ClassId): IrClassSymbol? {
+        return context.referenceClass(classId)
+    }
+
     fun getTopLevelClass(fqName: FqName): IrClassSymbol {
         return getTopLevelClassOrNull(fqName) ?: error("Class not found in the classpath: $fqName")
     }
 
+    @OptIn(FirIncompatiblePluginAPI::class)
     fun getTopLevelClassOrNull(fqName: FqName): IrClassSymbol? {
         return context.referenceClass(fqName)
     }

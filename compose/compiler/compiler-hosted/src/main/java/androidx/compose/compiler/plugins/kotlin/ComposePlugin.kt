@@ -17,6 +17,8 @@
 package androidx.compose.compiler.plugins.kotlin
 
 import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityFieldSerializationPlugin
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.AddHiddenFromObjCSerializationPlugin
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.HideFromObjCDeclarationsSet
 import com.intellij.mock.MockProject
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -59,6 +61,8 @@ object ComposeConfiguration {
         )
     val DECOYS_ENABLED_KEY =
         CompilerConfigurationKey<Boolean>("Generate decoy methods in IR transform")
+    val HIDE_DECLARATION_FROM_OBJC_ENABLED_KEY =
+        CompilerConfigurationKey<Boolean>("Add HiddenFromObjC annotation to declarations")
 }
 
 @OptIn(ExperimentalCompilerApi::class)
@@ -129,6 +133,13 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
             required = false,
             allowMultipleOccurrences = false
         )
+        val HIDE_DECLARATION_FROM_OBJC_OPTION = CliOption(
+            "hideFromObjC",
+            "<true|false>",
+            "Add HiddenFromObjC annotation to Composable declarations",
+            required = false,
+            allowMultipleOccurrences = false
+        )
     }
 
     override val pluginId = PLUGIN_ID
@@ -142,6 +153,7 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
         INTRINSIC_REMEMBER_OPTIMIZATION_ENABLED_OPTION,
         SUPPRESS_KOTLIN_VERSION_CHECK_ENABLED_OPTION,
         DECOYS_ENABLED_OPTION,
+        HIDE_DECLARATION_FROM_OBJC_OPTION,
     )
 
     override fun processOption(
@@ -183,6 +195,10 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
         )
         DECOYS_ENABLED_OPTION -> configuration.put(
             ComposeConfiguration.DECOYS_ENABLED_KEY,
+            value == "true"
+        )
+        HIDE_DECLARATION_FROM_OBJC_OPTION -> configuration.put(
+            ComposeConfiguration.HIDE_DECLARATION_FROM_OBJC_ENABLED_KEY,
             value == "true"
         )
         else -> throw CliOptionProcessingException("Unknown option: ${option.optionName}")
@@ -287,6 +303,10 @@ class ComposeComponentRegistrar : ComponentRegistrar {
                 ComposeConfiguration.DECOYS_ENABLED_KEY,
                 false
             )
+            val hideFromObjC = configuration.get(
+                ComposeConfiguration.HIDE_DECLARATION_FROM_OBJC_ENABLED_KEY,
+                true
+            )
             val metricsDestination = configuration.get(
                 ComposeConfiguration.METRICS_DESTINATION_KEY,
                 ""
@@ -322,6 +342,13 @@ class ComposeComponentRegistrar : ComponentRegistrar {
                 @Suppress("IllegalExperimentalApiUsage")
                 ComposeTypeResolutionInterceptorExtension()
             )
+
+            val hideFromObjCDeclarationsSet = if (hideFromObjC) {
+                HideFromObjCDeclarationsSet.create()
+            } else {
+                null
+            }
+
             IrGenerationExtension.registerExtension(
                 project,
                 ComposeIrGenerationExtension(
@@ -334,12 +361,19 @@ class ComposeComponentRegistrar : ComponentRegistrar {
                     decoysEnabled = decoysEnabled,
                     metricsDestination = metricsDestination,
                     reportsDestination = reportsDestination,
+                    hideFromObjCDeclarationsSet = hideFromObjCDeclarationsSet
                 )
             )
             DescriptorSerializerPlugin.registerExtension(
                 project,
                 ClassStabilityFieldSerializationPlugin()
             )
+            if (hideFromObjCDeclarationsSet != null) {
+                DescriptorSerializerPlugin.registerExtension(
+                    project,
+                    AddHiddenFromObjCSerializationPlugin(hideFromObjCDeclarationsSet)
+                )
+            }
         }
     }
 }
