@@ -69,6 +69,27 @@ import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance
 
+internal fun IrFunction.needsComposableRemapping(): Boolean {
+    if (
+        needsComposableRemapping(dispatchReceiverParameter?.type) ||
+        needsComposableRemapping(extensionReceiverParameter?.type) ||
+        needsComposableRemapping(returnType)
+    ) return true
+
+    for (param in valueParameters) {
+        if (needsComposableRemapping(param.type)) return true
+    }
+    return false
+}
+
+internal fun needsComposableRemapping(type: IrType?): Boolean {
+    if (type == null) return false
+    if (type !is IrSimpleType) return false
+    if (type.hasComposableAnnotation()) return true
+    if (type.arguments.any { needsComposableRemapping(it.typeOrNull) }) return true
+    return false
+}
+
 internal class DeepCopyIrTreeWithRemappedComposableTypes(
     private val context: IrPluginContext,
     private val symbolRemapper: DeepCopySymbolRemapper,
@@ -214,27 +235,6 @@ internal class DeepCopyIrTreeWithRemappedComposableTypes(
         }
 
         return super.visitTypeOperator(expression)
-    }
-
-    private fun IrFunction.needsComposableRemapping(): Boolean {
-        if (
-            needsComposableRemapping(dispatchReceiverParameter?.type) ||
-            needsComposableRemapping(extensionReceiverParameter?.type) ||
-            needsComposableRemapping(returnType)
-        ) return true
-
-        for (param in valueParameters) {
-            if (needsComposableRemapping(param.type)) return true
-        }
-        return false
-    }
-
-    private fun needsComposableRemapping(type: IrType?): Boolean {
-        if (type == null) return false
-        if (type !is IrSimpleType) return false
-        if (type.hasComposableAnnotation()) return true
-        if (type.arguments.any { needsComposableRemapping(it.typeOrNull) }) return true
-        return false
     }
 
     override fun visitDelegatingConstructorCall(
