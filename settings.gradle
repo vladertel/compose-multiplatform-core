@@ -1264,4 +1264,23 @@ void includeRequestedProjectsAndDependencies() {
     }
 }
 
-includeRequestedProjectsAndDependencies()
+//includeRequestedProjectsAndDependencies()
+
+void module(String name, String path) {
+    include(name)
+    File projectDir = new File(rootDir, path).absoluteFile
+    if (!projectDir.exists()) {
+        throw AssertionError("file $projectDir does not exist")
+    }
+    project(name).projectDir = projectDir
+}
+
+module(":compose:compiler:compiler", "compose/compiler/compiler")
+module(":compose:compiler:compiler-hosted", "compose/compiler/compiler-hosted")
+module(":lint-checks", "lint-checks")
+module(":compose:runtime:runtime", "compose/runtime/runtime")
+module(":compose:runtime:runtime-lint", "compose/runtime/runtime-lint")
+module(":compose:lint", "compose/lint")
+module(":compose:lint:common", "compose/lint/common")
+module(":compose:lint:common-test", "compose/lint/common-test")
+module(":compose:lint:internal-lint-checks", "compose/lint/internal-lint-checks")
