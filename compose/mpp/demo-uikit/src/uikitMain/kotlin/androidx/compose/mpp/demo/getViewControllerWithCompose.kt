@@ -84,12 +84,6 @@ private fun TransformableSample() {
                         scale = (scale * gestureZoom).coerceIn(0.2f..5f)
                     }
                 }
-//                .pointerInput(Unit) {
-//                    detectDragGestures { event, amount ->
-//                        if (!event.isConsumed)
-//                        offset += amount
-//                    }
-//                }
                 .fillMaxSize()
                 .border(1.dp, Color.Green),
             contentAlignment = Alignment.Center

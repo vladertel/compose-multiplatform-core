@@ -160,6 +160,7 @@ fun main() = singleWindowApplication(
         false
     }
 ) {
+    Modifier.onPointerEvent()
     App()
 }
 
