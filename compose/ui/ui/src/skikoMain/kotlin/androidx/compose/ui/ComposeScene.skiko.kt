@@ -479,8 +479,13 @@ class ComposeScene internal constructor(
         processPointerInput(event)
     }
 
+    private var lastMoveEvent: PointerInputEvent? = null
+
     @Suppress("DEPRECATION")
     private fun sendAsMove(sourceEvent: PointerInputEvent, positionSourceEvent: PointerInputEvent) {
+        if (lastMoveEvent === sourceEvent) return
+        lastMoveEvent = sourceEvent
+
         val nativeEvent = createSyntheticNativeMoveEvent(
             sourceEvent.nativeEvent,
             positionSourceEvent.nativeEvent
