@@ -127,6 +127,13 @@ kotlin {
             }
         }
 
+        val desktopMain by getting {
+            dependsOn(skikoMain)
+            dependencies {
+                implementation(libs.skikoCurrentOs)
+            }
+        }
+
         val jsMain by getting {
             dependsOn(skikoMain)
             resources.setSrcDirs(resources.srcDirs)
@@ -205,4 +212,12 @@ if (System.getProperty("os.name") == "Mac OS X") {
             }
         }
     }
+}
+
+task("runMultiplatformDemo", JavaExec::class) {
+    classpath = sourceSets["main"].runtimeClasspath
+    dependsOn(":compose:desktop:desktop:jar")
+    main = "androidx.compose.mpp.demo.Main_desktopKt"
+    val compilation = kotlin.jvm("desktop").compilations["main"]
+    classpath = compilation.output.allOutputs + compilation.runtimeDependencyFiles
 }
