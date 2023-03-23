@@ -87,6 +87,15 @@ class ComposeIrGenerationExtension(
             metrics = ModuleMetricsImpl(moduleFragment.name.asString())
         }
 
+        if (pluginContext.platform.isNative() && hideFromObjCDeclarationsSet != null) {
+            AddHiddenFromObjCLowering(
+                pluginContext,
+                symbolRemapper,
+                metrics,
+                hideFromObjCDeclarationsSet
+            ).lower(moduleFragment)
+        }
+
         ClassStabilityTransformer(
             pluginContext,
             symbolRemapper,
@@ -212,15 +221,6 @@ class ComposeIrGenerationExtension(
                 metrics,
                 idSignatureBuilder!!,
                 decoysEnabled
-            ).lower(moduleFragment)
-        }
-
-        if (pluginContext.platform.isNative() && hideFromObjCDeclarationsSet != null) {
-            AddHiddenFromObjCLowering(
-                pluginContext,
-                symbolRemapper,
-                metrics,
-                hideFromObjCDeclarationsSet
             ).lower(moduleFragment)
         }
 
