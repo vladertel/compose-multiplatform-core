@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,6 +140,9 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
         project.configureProjectVersionValidation(extension)
         project.registerProjectOrArtifact()
 
+        // extension to download latest androidx artifacts instead of depending on project modules
+        project.registerAndroidxArtifact()
+
         project.configurations.create("samples")
         project.validateMultiplatformPluginHasNotBeenApplied()
     }
@@ -170,6 +173,19 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
                 )
             )
         }
+    }
+
+    private fun Project.registerAndroidxArtifact() {
+        extra.set(
+            ANDROIDX_ARTIFACT_EXT_NAME,
+            KotlinClosure1<String, Any>(
+                function = {
+                    val (_, moduleName) = this.trim(':').split(":")
+                    val libraryName = "androidx" + moduleName.replace(":", "").replace("-", "")
+                    getLibraryByName(libraryName)
+                }
+            )
+        )
     }
 
     /**
@@ -1097,3 +1113,4 @@ fun removeLineAndColumnAttributes(baseline: String): String = baseline.replace(
 )
 
 const val PROJECT_OR_ARTIFACT_EXT_NAME = "projectOrArtifact"
+const val ANDROIDX_ARTIFACT_EXT_NAME = "androidxArtifact"

@@ -141,7 +141,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(project(":compose:test-utils"))
                 implementation(project(':compose:foundation:foundation-layout'))
                 implementation(project(":test:screenshot:screenshot"))
-                implementation(project(":core:core"))
+                implementation(androidxArtifact(":core:core"))
 
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
