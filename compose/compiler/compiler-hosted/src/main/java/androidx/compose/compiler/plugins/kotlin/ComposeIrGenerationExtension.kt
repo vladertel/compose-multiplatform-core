@@ -95,6 +95,15 @@ class ComposeIrGenerationExtension(
             }
         }
 
+        if (pluginContext.platform.isNative() && hideFromObjCDeclarationsSet != null) {
+            AddHiddenFromObjCLowering(
+                pluginContext,
+                symbolRemapper,
+                metrics,
+                hideFromObjCDeclarationsSet
+            ).lower(moduleFragment)
+        }
+
         ClassStabilityTransformer(
             pluginContext,
             symbolRemapper,
@@ -234,15 +243,6 @@ class ComposeIrGenerationExtension(
                 idSignatureBuilder!!,
                 stabilityInferencer,
                 decoysEnabled
-            ).lower(moduleFragment)
-        }
-
-        if (pluginContext.platform.isNative() && hideFromObjCDeclarationsSet != null) {
-            AddHiddenFromObjCLowering(
-                pluginContext,
-                symbolRemapper,
-                metrics,
-                hideFromObjCDeclarationsSet
             ).lower(moduleFragment)
         }
 
