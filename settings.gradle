@@ -196,7 +196,8 @@ enum BuildType {
     TOOLS,
     KMP,
     CAMERA,
-    NATIVE
+    NATIVE,
+    JETBRAINS_FORK,
 }
 
 private String getRequestedProjectSubsetName() {
@@ -257,6 +258,9 @@ private Set<BuildType> createRequestedFilter() {
             case "NATIVE":
                 filter.add(BuildType.NATIVE)
                 break
+            case "JETBRAINS_FORK":
+                filter.add(BuildType.JETBRAINS_FORK)
+                break
             case "ALL":
                 // Return null so that no filtering is done
                 return null
@@ -316,7 +320,7 @@ List<Pair<String, String>> composeRelatedProjects = new ArrayList<>()
 //   the Maven artifactId
 //
 def includeProject(name, filePath, List<BuildType> filter = []) {
-    if (!shouldIncludeForFilter(filter)) {
+    if (!filter.contains(BuildType.JETBRAINS_FORK) && !name.startsWith(":compose")) {
         skippedProjects.add(new Pair<String, String>(name, (String)filePath))
         return
     }
@@ -367,11 +371,11 @@ includeProject(":ads:ads-identifier-provider", [BuildType.MAIN])
 includeProject(":ads:ads-identifier-provider:integration-tests:testapp", [BuildType.MAIN])
 includeProject(":ads:ads-identifier-testing", [BuildType.MAIN])
 includeProject(":ads:ads-identifier:integration-tests:testapp", [BuildType.MAIN])
-includeProject(":annotation:annotation")
+includeProject(":annotation:annotation", [BuildType.JETBRAINS_FORK])
 includeProject(":annotation:annotation-experimental")
 includeProject(":annotation:annotation-experimental-lint")
 includeProject(":annotation:annotation-experimental-lint-integration-tests", "annotation/annotation-experimental-lint/integration-tests")
-includeProject(":annotation:annotation-sampled")
+includeProject(":annotation:annotation-sampled", [BuildType.JETBRAINS_FORK])
 includeProject(":appcompat:appcompat", [BuildType.MAIN])
 includeProject(":appcompat:appcompat-benchmark", [BuildType.MAIN])
 includeProject(":appcompat:appcompat-lint", [BuildType.MAIN])
@@ -398,7 +402,7 @@ includeProject(":benchmark:benchmark-common")
 includeProject(":benchmark:benchmark-darwin", [BuildType.KMP])
 includeProject(":benchmark:benchmark-darwin-core", [BuildType.KMP])
 includeProject(":benchmark:benchmark-darwin-samples", [BuildType.KMP])
-includeProject(":benchmark:benchmark-gradle-plugin", "benchmark/gradle-plugin", [BuildType.MAIN, BuildType.COMPOSE])
+includeProject(":benchmark:benchmark-gradle-plugin", "benchmark/gradle-plugin", [BuildType.MAIN, BuildType.COMPOSE, BuildType.JETBRAINS_FORK])
 includeProject(":benchmark:benchmark-junit4")
 includeProject(":benchmark:benchmark-macro", [BuildType.MAIN, BuildType.COMPOSE])
 includeProject(":benchmark:benchmark-macro-junit4", [BuildType.MAIN, BuildType.COMPOSE])
@@ -691,9 +695,9 @@ includeProject(":hilt:hilt-navigation-fragment", [BuildType.MAIN])
 includeProject(":hilt:hilt-work", [BuildType.MAIN])
 includeProject(":hilt:integration-tests:hilt-testapp-viewmodel", "hilt/integration-tests/viewmodelapp", [BuildType.MAIN])
 includeProject(":hilt:integration-tests:hilt-testapp-worker", "hilt/integration-tests/workerapp", [BuildType.MAIN])
-includeProject(":inspection:inspection", [BuildType.MAIN, BuildType.COMPOSE])
-includeProject(":inspection:inspection-gradle-plugin", [BuildType.MAIN, BuildType.COMPOSE])
-includeProject(":inspection:inspection-testing", [BuildType.MAIN, BuildType.COMPOSE])
+includeProject(":inspection:inspection", [BuildType.MAIN, BuildType.COMPOSE, BuildType.JETBRAINS_FORK])
+includeProject(":inspection:inspection-gradle-plugin", [BuildType.MAIN, BuildType.COMPOSE, BuildType.JETBRAINS_FORK])
+includeProject(":inspection:inspection-testing", [BuildType.MAIN, BuildType.COMPOSE, BuildType.JETBRAINS_FORK])
 includeProject(":interpolator:interpolator", [BuildType.MAIN])
 includeProject(":javascriptengine:javascriptengine", [BuildType.MAIN])
 includeProject(":leanback:leanback", [BuildType.MAIN])
@@ -865,17 +869,17 @@ includeProject(":startup:startup-runtime-lint", [BuildType.MAIN])
 includeProject(":swiperefreshlayout:swiperefreshlayout", [BuildType.MAIN])
 includeProject(":test:ext:junit-gtest", [BuildType.NATIVE])
 includeProject(":test:integration-tests:junit-gtest-test", [BuildType.NATIVE])
-includeProject(":test:screenshot:screenshot")
+includeProject(":test:screenshot:screenshot", [BuildType.JETBRAINS_FORK])
 includeProject(":test:screenshot:screenshot-layoutlib", [BuildType.MAIN, BuildType.COMPOSE])
-includeProject(":test:screenshot:screenshot-proto")
+includeProject(":test:screenshot:screenshot-proto", [BuildType.JETBRAINS_FORK])
 includeProject(":test:uiautomator:uiautomator", [BuildType.MAIN])
 includeProject(":test:uiautomator:integration-tests:testapp", [BuildType.MAIN])
 includeProject(":text:text", [BuildType.COMPOSE])
-includeProject(":tracing:tracing")
+includeProject(":tracing:tracing", [BuildType.JETBRAINS_FORK])
 includeProject(":tracing:tracing-ktx")
-includeProject(":tracing:tracing-perfetto")
-includeProject(":tracing:tracing-perfetto-binary")
-includeProject(":tracing:tracing-perfetto-common")
+includeProject(":tracing:tracing-perfetto", [BuildType.JETBRAINS_FORK])
+includeProject(":tracing:tracing-perfetto-binary", [BuildType.JETBRAINS_FORK])
+includeProject(":tracing:tracing-perfetto-common", [BuildType.JETBRAINS_FORK])
 includeProject(":transition:transition", [BuildType.MAIN, BuildType.FLAN])
 includeProject(":transition:transition-ktx", [BuildType.MAIN, BuildType.FLAN])
 includeProject(":tv:tv-foundation", [BuildType.COMPOSE])
@@ -991,20 +995,20 @@ includeProject(":support-wear-demos", new File(samplesRoot, "SupportWearDemos"),
 //
 /////////////////////////////
 
-includeProject(":internal-testutils-common", "testutils/testutils-common", [BuildType.MAIN, BuildType.COMPOSE, BuildType.FLAN])
+includeProject(":internal-testutils-common", "testutils/testutils-common", [BuildType.MAIN, BuildType.COMPOSE, BuildType.FLAN, BuildType.JETBRAINS_FORK])
 includeProject(":internal-testutils-datastore", "testutils/testutils-datastore", [BuildType.MAIN, BuildType.KMP])
-includeProject(":internal-testutils-runtime", "testutils/testutils-runtime", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.MEDIA, BuildType.WEAR, BuildType.CAMERA])
+includeProject(":internal-testutils-runtime", "testutils/testutils-runtime", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.MEDIA, BuildType.WEAR, BuildType.CAMERA, BuildType.JETBRAINS_FORK])
 includeProject(":internal-testutils-appcompat", "testutils/testutils-appcompat", [BuildType.MAIN])
-includeProject(":internal-testutils-espresso", "testutils/testutils-espresso", [BuildType.MAIN, BuildType.COMPOSE])
-includeProject(":internal-testutils-fonts", "testutils/testutils-fonts", [BuildType.MAIN, BuildType.GLANCE, BuildType.MEDIA, BuildType.FLAN, BuildType.COMPOSE, BuildType.WEAR])
-includeProject(":internal-testutils-truth", "testutils/testutils-truth", [BuildType.MAIN, BuildType.GLANCE, BuildType.MEDIA, BuildType.FLAN, BuildType.COMPOSE, BuildType.WEAR, BuildType.KMP, BuildType.CAMERA])
-includeProject(":internal-testutils-ktx", "testutils/testutils-ktx")
+includeProject(":internal-testutils-espresso", "testutils/testutils-espresso", [BuildType.MAIN, BuildType.COMPOSE, BuildType.JETBRAINS_FORK])
+includeProject(":internal-testutils-fonts", "testutils/testutils-fonts", [BuildType.MAIN, BuildType.GLANCE, BuildType.MEDIA, BuildType.FLAN, BuildType.COMPOSE, BuildType.WEAR, BuildType.JETBRAINS_FORK])
+includeProject(":internal-testutils-truth", "testutils/testutils-truth", [BuildType.MAIN, BuildType.GLANCE, BuildType.MEDIA, BuildType.FLAN, BuildType.COMPOSE, BuildType.WEAR, BuildType.KMP, BuildType.CAMERA, BuildType.JETBRAINS_FORK])
+includeProject(":internal-testutils-ktx", "testutils/testutils-ktx", [BuildType.JETBRAINS_FORK])
 includeProject(":internal-testutils-kmp", "testutils/testutils-kmp", [BuildType.MAIN, BuildType.KMP])
-includeProject(":internal-testutils-macrobenchmark", "testutils/testutils-macrobenchmark", [BuildType.MAIN, BuildType.COMPOSE])
-includeProject(":internal-testutils-navigation", "testutils/testutils-navigation", [BuildType.MAIN, BuildType.COMPOSE, BuildType.FLAN])
-includeProject(":internal-testutils-paging", "testutils/testutils-paging", [BuildType.MAIN, BuildType.COMPOSE])
-includeProject(":internal-testutils-gradle-plugin", "testutils/testutils-gradle-plugin", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.TOOLS])
-includeProject(":internal-testutils-mockito", "testutils/testutils-mockito", [BuildType.MAIN, BuildType.MEDIA, BuildType.FLAN, BuildType.COMPOSE, BuildType.WEAR])
+includeProject(":internal-testutils-macrobenchmark", "testutils/testutils-macrobenchmark", [BuildType.MAIN, BuildType.COMPOSE, BuildType.JETBRAINS_FORK])
+includeProject(":internal-testutils-navigation", "testutils/testutils-navigation", [BuildType.MAIN, BuildType.COMPOSE, BuildType.FLAN, BuildType.JETBRAINS_FORK])
+includeProject(":internal-testutils-paging", "testutils/testutils-paging", [BuildType.MAIN, BuildType.COMPOSE, BuildType.JETBRAINS_FORK])
+includeProject(":internal-testutils-gradle-plugin", "testutils/testutils-gradle-plugin", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.TOOLS, BuildType.JETBRAINS_FORK])
+includeProject(":internal-testutils-mockito", "testutils/testutils-mockito", [BuildType.MAIN, BuildType.MEDIA, BuildType.FLAN, BuildType.COMPOSE, BuildType.WEAR, BuildType.JETBRAINS_FORK])
 
 /////////////////////////////
 //
@@ -1060,7 +1064,7 @@ includeProject(":placeholder-tests")
 includeBuild("placeholder")
 
 
-includeProject(":scripts", [BuildType.COMPOSE])
+includeProject(":scripts", [BuildType.COMPOSE, BuildType.JETBRAINS_FORK])
 def logComposeProjectModulesInfo() {
     def composeModulesFile = new File(rootDir, "composeModules")
     def nonComposeModulesFile = new File(rootDir, "nonComposeModules")
