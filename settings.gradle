@@ -1,6 +1,7 @@
 import groovy.transform.Field
 import androidx.build.gradle.gcpbuildcache.GcpBuildCache
 import androidx.build.gradle.gcpbuildcache.GcpBuildCacheServiceFactory
+import org.gradle.internal.Pair
 
 pluginManagement {
     repositories {
@@ -299,6 +300,12 @@ def includeProject(name, List<BuildType> filter = []) {
     includeProject(name, null, filter)
 }
 
+@Field
+List<Pair<String, String>> skippedProjects = new ArrayList<>()
+
+@Field
+List<Pair<String, String>> composeRelatedProjects = new ArrayList<>()
+
 // Calling includeProject(name, filePath) is shorthand for:
 //
 //   include(name)
@@ -309,7 +316,11 @@ def includeProject(name, List<BuildType> filter = []) {
 //   the Maven artifactId
 //
 def includeProject(name, filePath, List<BuildType> filter = []) {
-    if (!shouldIncludeForFilter(filter)) return
+    if (!shouldIncludeForFilter(filter)) {
+        skippedProjects.add(new Pair<String, String>(name, (String)filePath))
+        return
+    }
+    composeRelatedProjects.add(new Pair<String, String>(name, (String)filePath))
     settings.include(name)
 
     def file
@@ -1047,3 +1058,23 @@ includeProject(":placeholder-tests")
 
 // Workaround for b/203825166
 includeBuild("placeholder")
+
+
+includeProject(":scripts", [BuildType.COMPOSE])
+def logComposeProjectModulesInfo() {
+    def composeModulesFile = new File(rootDir, "composeModules")
+    def nonComposeModulesFile = new File(rootDir, "nonComposeModules")
+    skippedProjects.forEach {
+        def moduleId = it.left()
+        def path = it.right()
+        nonComposeModulesFile.append("${moduleId} ${path}\n")
+    }
+
+    composeRelatedProjects.forEach {
+        def moduleId = it.left()
+        def path = it.right()
+        composeModulesFile.append("${moduleId} ${path}\n")
+    }
+}
+
+logComposeProjectModulesInfo()
