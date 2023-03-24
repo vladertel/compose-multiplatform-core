@@ -1081,4 +1081,4 @@ def logComposeProjectModulesInfo() {
     }
 }
 
-logComposeProjectModulesInfo()
+//logComposeProjectModulesInfo()
