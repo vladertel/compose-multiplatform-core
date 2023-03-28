@@ -231,7 +231,7 @@ internal class SkiaBasedOwner(
         // we don't need to call root.detach() because root will be garbage collected
     }
 
-    // TODO: check that it works properly, since after merging 1.4 Modifier doesn't have dispatch method
+    // TODO: [1.4 Update] check that it works properly, since after merging 1.4 Modifier doesn't have dispatch method
     override fun sendKeyEvent(keyEvent: KeyEvent): Boolean = focusOwner.dispatchKeyEvent(keyEvent)
 
     override var showLayoutBounds = false
