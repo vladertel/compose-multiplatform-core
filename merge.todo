@@ -3,13 +3,8 @@
   * 92d3c662f9b1f404c980a06c5e59fa000d5ad237
   * d1dcb385886fc7840d7c0203ee7daf460c71a9de
 
-2. Check gradlew, jdk 17 started to be used in androidx
-
 3. Wear OS build files doesn't support multiplaftorm anymore after commits:
   * ff8d60482c23e06be78e19283af4fd2e6d2094db
-
-4. Check LibraryVersionsService, there were a lot of changes. Androidx state is used. Latest commit from androidx:
-  * 302779dfdc820629d527660c692ab1d9eda58850
 
 5. Check sendKeyEvent and sendPointerEvent (our changes were moved to another place) after androidx commit:
   * 92d3c662
