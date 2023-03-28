@@ -213,6 +213,12 @@ open class AndroidXExtension(val project: Project) {
                 "Library group (in libraryversions.toml) having group=\"$groupIdText\" is $result"
             )
         }
+
+        // for JetBrains Fork, androidx.compose groups -> org.jetbrains groups (see libraryversions.toml)
+        if (groupIdText.startsWith("androidx.compose")) {
+            return libraryGroupsByGroupId.get(groupIdText.replaceFirst("androidx", "org.jetbrains"))
+        }
+
         return result
     }
 
