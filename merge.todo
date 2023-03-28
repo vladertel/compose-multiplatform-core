@@ -32,9 +32,6 @@
 10. Check Scrollbar.desktop.kt -- use awaitEachGesture after commits:
   * 32de9dd2
 
-11. Fix SkiaParagraph after commits:
-  * 3b6bc9fd
-
 12. Check AndroidX extensions. Androidx version is used. There are a lot of commits, latest is:
   * 1f288d8d
 
