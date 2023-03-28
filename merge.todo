@@ -1,10 +1,6 @@
 5. Check sendKeyEvent and sendPointerEvent (our changes were moved to another place) after androidx commit:
   * 92d3c662
 
-8. Check ComposeUiTest after commits:
-  * d1dcb385
-  * fd593836
-
 9. Check ContextMenuProvider.desktop.kt -- use awaitEachGesture after commits:
   * 32de9dd2
 
