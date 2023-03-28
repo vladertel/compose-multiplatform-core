@@ -14,14 +14,6 @@
 5. Check sendKeyEvent and sendPointerEvent (our changes were moved to another place) after androidx commit:
   * 92d3c662
 
-6. Check SkiaLayer after commits:
-  * b4f1d512
-  * 06fdca89
-
-7. Check SkiaLayerTest after commits:
-  * b4f1d512
-  * 06fdca89
-
 8. Check ComposeUiTest after commits:
   * d1dcb385
   * fd593836
