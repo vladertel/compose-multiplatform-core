@@ -22,7 +22,7 @@ plugins {
     id("AndroidXPlugin")
     id("AndroidXComposePlugin")
     id("kotlin-multiplatform")
-    id("application")
+//    id("application")
     kotlin("plugin.serialization") version "1.8.0"
 }
 

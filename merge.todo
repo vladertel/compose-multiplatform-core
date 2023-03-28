@@ -61,6 +61,8 @@
 
 22. Check AbstractComposeLowering.kt. It was merged with keeping both changes.
 
+23. Check compose/mpp/demo/build.gradle.kts:25. It was commented because of gradle 8.0 update. With it there were issues with Gradle Sync
+
 
 Common part conflicts:
 androidx.compose.foundation.foundation.commonMain
