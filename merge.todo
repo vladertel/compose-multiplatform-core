@@ -8,7 +8,7 @@
 3. Wear OS build files doesn't support multiplaftorm anymore after commits:
   * ff8d60482c23e06be78e19283af4fd2e6d2094db
 
-4. Check LibraryVersionsService, there were a lot of changes. Latest commit from androidx:
+4. Check LibraryVersionsService, there were a lot of changes. Androidx state is used. Latest commit from androidx:
   * 302779dfdc820629d527660c692ab1d9eda58850
 
 5. Check sendKeyEvent and sendPointerEvent (our changes were moved to another place) after androidx commit:
@@ -35,7 +35,7 @@
 11. Fix SkiaParagraph after commits:
   * 3b6bc9fd
 
-12. Check AndroidX extensions. There are a lot of commits, latest is:
+12. Check AndroidX extensions. Androidx version is used. There are a lot of commits, latest is:
   * 1f288d8d
 
 13. Check AbstractIrTransformTest. There are a lot of commits, latest is:
