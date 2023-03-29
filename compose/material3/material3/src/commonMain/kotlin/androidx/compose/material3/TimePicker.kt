@@ -141,6 +141,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import java.text.NumberFormat
+import kotlin.jvm.JvmInline
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2

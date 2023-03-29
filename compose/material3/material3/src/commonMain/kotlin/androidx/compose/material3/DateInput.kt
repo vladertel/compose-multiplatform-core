@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import java.util.Locale
+import kotlin.jvm.JvmInline
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
