@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-package androidx.compose.material3
+package androidx.compose.material.internal
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
-
-// TODO: [1.4 Update] implement properly and change to val back when JS compiler is fixed
-@Composable
-@ReadOnlyComposable
-internal actual fun is24HourFormat(): Boolean = true
+// TODO: [1.4 Update] upstream it and move to jvmMain
+@Suppress("ACTUAL_WITHOUT_EXPECT") // https://youtrack.jetbrains.com/issue/KT-37316
+internal actual typealias JvmDefaultWithCompatibility = kotlin.jvm.JvmDefaultWithCompatibility
