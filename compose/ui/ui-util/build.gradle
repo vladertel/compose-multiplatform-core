@@ -112,3 +112,9 @@ androidxCompose {
 android {
     namespace "androidx.compose.ui.util"
 }
+
+android.variantFilter { variant -> // TODO: [1.4 Update] Workaround for building publications. Should be done in better way
+    if (variant.buildType.name.endsWith('debug')) {
+        variant.setIgnore(true);
+    }
+}

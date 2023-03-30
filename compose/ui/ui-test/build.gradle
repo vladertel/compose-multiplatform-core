@@ -180,3 +180,9 @@ androidx {
     description = "Compose testing library"
     legacyDisableKotlinStrictApiMode = true
 }
+
+android.variantFilter { variant -> // TODO: [1.4 Update] Workaround for building publications. Should be done in better way
+    if (variant.buildType.name.endsWith('debug')) {
+        variant.setIgnore(true);
+    }
+}
