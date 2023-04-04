@@ -94,8 +94,6 @@ suspend fun PointerInputScope.detectTapGestures(
 
     while (currentCoroutineContext().isActive) {
         awaitPointerEventScope {
-            // TODO: [1.4 Update] seems that launch may introduce races?
-            //  TapGestureDetectorKt.detectTapGestures also use it
             launch { pressScope.reset() }
 
             val down = awaitPress(filter = filter, requireUnconsumed = true).apply { changes[0].consume() }
@@ -146,8 +144,6 @@ suspend fun PointerInputScope.detectTapGestures(
                 if (secondPress == null) {
                     onTap?.invoke(firstRelease.changes[0].position)
                 } else {
-                    // TODO: [1.4 Update] seems that launch may introduce races?
-                    //  TapGestureDetectorKt.detectTapGestures also use it
                     launch { pressScope.reset() }
                     launch { pressScope.onPress(secondPress.changes[0].position) }
 
