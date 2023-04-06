@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+@file:Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+
 package androidx.compose.ui.text.platform
 
 import kotlin.native.Platform as NativePlatform
@@ -32,12 +35,14 @@ internal actual fun loadTypeface(font: Font): SkTypeface {
     }
 }
 
-internal actual fun currentPlatform(): Platform = when (NativePlatform.osFamily) {
-    OsFamily.MACOSX -> Platform.MacOS
-    OsFamily.IOS -> Platform.IOS
-    OsFamily.LINUX -> Platform.Linux
-    OsFamily.WINDOWS -> Platform.Windows
-    OsFamily.TVOS -> Platform.TvOS
-    OsFamily.WATCHOS -> Platform.WatchOS
-    else -> Platform.Unknown
-}
+internal actual fun currentPlatform(): Platform = TODO()
+// K2 fails here
+//when (NativePlatform.osFamily) {
+//    OsFamily.MACOSX -> Platform.MacOS
+//    OsFamily.IOS -> Platform.IOS
+//    OsFamily.LINUX -> Platform.Linux
+//    OsFamily.WINDOWS -> Platform.Windows
+//    OsFamily.TVOS -> Platform.TvOS
+//    OsFamily.WATCHOS -> Platform.WatchOS
+//    else -> Platform.Unknown
+//}

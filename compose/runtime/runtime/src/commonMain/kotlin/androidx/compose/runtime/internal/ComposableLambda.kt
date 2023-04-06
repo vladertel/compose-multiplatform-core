@@ -62,21 +62,21 @@ internal fun RecomposeScope?.replacableWith(other: RecomposeScope) =
 @ComposeCompilerApi
 @Stable
 expect interface ComposableLambda {
-    operator fun invoke(c: Composer, changed: Int): Any?
+    operator fun invoke(p1: Composer, p2: Int): Any?
 
-    operator fun invoke(p1: Any?, c: Composer, changed: Int): Any?
+    operator fun invoke(p1: Any?, p2: Composer, p3: Int): Any?
 
-    operator fun invoke(p1: Any?, p2: Any?, c: Composer, changed: Int): Any?
+    operator fun invoke(p1: Any?, p2: Any?, p3: Composer, p4: Int): Any?
 
-    operator fun invoke(p1: Any?, p2: Any?, p3: Any?, c: Composer, changed: Int): Any?
+    operator fun invoke(p1: Any?, p2: Any?, p3: Any?, p4: Composer, p5: Int): Any?
 
     operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
         p4: Any?,
-        c: Composer,
-        changed: Int
+        p5: Composer,
+        p6: Int
     ): Any?
 
     operator fun invoke(
@@ -85,8 +85,8 @@ expect interface ComposableLambda {
         p3: Any?,
         p4: Any?,
         p5: Any?,
-        c: Composer,
-        changed: Int
+        p6: Composer,
+        p7: Int
     ): Any?
 
     operator fun invoke(
@@ -96,8 +96,8 @@ expect interface ComposableLambda {
         p4: Any?,
         p5: Any?,
         p6: Any?,
-        c: Composer,
-        changed: Int
+        p7: Composer,
+        p8: Int
     ): Any?
 
     operator fun invoke(
@@ -108,8 +108,8 @@ expect interface ComposableLambda {
         p5: Any?,
         p6: Any?,
         p7: Any?,
-        c: Composer,
-        changed: Int
+        p8: Composer,
+        p9: Int
     ): Any?
 
     operator fun invoke(
@@ -121,8 +121,8 @@ expect interface ComposableLambda {
         p6: Any?,
         p7: Any?,
         p8: Any?,
-        c: Composer,
-        changed: Int
+        p9: Composer,
+        p10: Int
     ): Any?
 
     operator fun invoke(
@@ -135,8 +135,8 @@ expect interface ComposableLambda {
         p7: Any?,
         p8: Any?,
         p9: Any?,
-        c: Composer,
-        changed: Int
+        p10: Composer,
+        p11: Int
     ): Any?
 
     operator fun invoke(
@@ -150,9 +150,9 @@ expect interface ComposableLambda {
         p8: Any?,
         p9: Any?,
         p10: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p11: Composer,
+        p12: Int,
+        p13: Int
     ): Any?
 
     operator fun invoke(
@@ -167,9 +167,9 @@ expect interface ComposableLambda {
         p9: Any?,
         p10: Any?,
         p11: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p12: Composer,
+        p13: Int,
+        p14: Int
     ): Any?
 
     operator fun invoke(
@@ -185,9 +185,9 @@ expect interface ComposableLambda {
         p10: Any?,
         p11: Any?,
         p12: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p13: Composer,
+        p14: Int,
+        p15: Int
     ): Any?
 
     operator fun invoke(
@@ -204,9 +204,9 @@ expect interface ComposableLambda {
         p11: Any?,
         p12: Any?,
         p13: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p14: Composer,
+        p15: Int,
+        p16: Int
     ): Any?
 
     operator fun invoke(
@@ -224,9 +224,9 @@ expect interface ComposableLambda {
         p12: Any?,
         p13: Any?,
         p14: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p15: Composer,
+        p16: Int,
+        p17: Int
     ): Any?
 
     operator fun invoke(
@@ -245,9 +245,9 @@ expect interface ComposableLambda {
         p13: Any?,
         p14: Any?,
         p15: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p16: Composer,
+        p17: Int,
+        p18: Int
     ): Any?
 
     operator fun invoke(
@@ -267,9 +267,9 @@ expect interface ComposableLambda {
         p14: Any?,
         p15: Any?,
         p16: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p17: Composer,
+        p18: Int,
+        p19: Int
     ): Any?
 
     operator fun invoke(
@@ -290,9 +290,9 @@ expect interface ComposableLambda {
         p15: Any?,
         p16: Any?,
         p17: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p18: Composer,
+        p19: Int,
+        p20: Int
     ): Any?
 
     operator fun invoke(
@@ -314,9 +314,9 @@ expect interface ComposableLambda {
         p16: Any?,
         p17: Any?,
         p18: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p19: Composer,
+        p20: Int,
+        p21: Int
     ): Any?
 }
 

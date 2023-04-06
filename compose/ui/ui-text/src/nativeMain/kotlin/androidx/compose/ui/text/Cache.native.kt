@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+
 package androidx.compose.ui.text
 
 import kotlin.native.ref.WeakReference
