@@ -282,12 +282,11 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
     ) {
         project.afterEvaluate {
             project.tasks.withType(KotlinCompile::class.java).configureEach { task ->
-                if (extension.type.compilationTarget == CompilationTarget.HOST &&
-                    extension.type != LibraryType.ANNOTATION_PROCESSOR_UTILS
-                ) {
-                    task.kotlinOptions.jvmTarget = "17"
-                } else {
-                    task.kotlinOptions.jvmTarget = "1.8"
+                task.kotlinOptions.jvmTarget = when {
+                    extension.type == LibraryType.COMPILER_PLUGIN -> "11"
+                    extension.type.compilationTarget == CompilationTarget.HOST &&
+                        extension.type != LibraryType.ANNOTATION_PROCESSOR_UTILS -> "17"
+                    else -> "1.8"
                 }
                 val kotlinCompilerArgs = mutableListOf(
                     "-Xskip-metadata-version-check",
