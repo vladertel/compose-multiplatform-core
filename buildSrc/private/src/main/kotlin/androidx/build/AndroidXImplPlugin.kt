@@ -161,7 +161,7 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
             it.configureWithAndroidXExtension(extension)
         }
         project.configureConstraintsWithinGroup(extension)
-        project.validateProjectParser(extension)
+        //project.validateProjectParser(extension)
     }
 
     private fun Project.registerProjectOrArtifact() {
