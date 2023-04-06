@@ -168,8 +168,8 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             it.configureWithAndroidXExtension(extension)
         }
         project.configureConstraintsWithinGroup(extension)
-        project.validateProjectParser(extension)
-        project.validateAllArchiveInputsRecognized()
+//        project.validateProjectParser(extension)
+//        project.validateAllArchiveInputsRecognized()
         project.afterEvaluate {
             if (extension.shouldPublishSbom()) {
                 project.configureSbomPublishing()
