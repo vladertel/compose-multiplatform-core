@@ -22,7 +22,7 @@ plugins {
     id("AndroidXPlugin")
     id("com.android.library")
     id("AndroidXComposePlugin")
-    id("AndroidXPaparazziPlugin")
+    //id("AndroidXPaparazziPlugin")
 }
 
 def desktopEnabled = KmpPlatformsKt.enableDesktop(project)
