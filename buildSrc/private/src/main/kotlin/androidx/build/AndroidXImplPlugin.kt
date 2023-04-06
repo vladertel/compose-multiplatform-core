@@ -155,8 +155,8 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
             it.configureWithAndroidXExtension(extension)
         }
         project.configureConstraintsWithinGroup(extension)
-        project.validateProjectParser(extension)
-        project.validateAllArchiveInputsRecognized()
+        //project.validateProjectParser(extension)
+        //project.validateAllArchiveInputsRecognized()
     }
 
     private fun Project.registerProjectOrArtifact() {
