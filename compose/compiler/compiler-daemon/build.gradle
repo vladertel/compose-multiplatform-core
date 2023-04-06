@@ -32,6 +32,18 @@ dependencies {
     implementation(project(":compose:compiler:compiler-hosted"))
 }
 
+tasks.withType(KotlinCompile).configureEach {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+        freeCompilerArgs = [
+                "-Xskip-metadata-version-check"
+        ]
+    }
+}
+
 shadowJar {
     // The jar file MUST begin with "kotlin-compiler".
     // If this name is not present, the Kotlin compiler will try to find kotlinHome and might cause
