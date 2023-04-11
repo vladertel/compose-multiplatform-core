@@ -86,6 +86,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -635,6 +636,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * @return Returns true if there were any pending transactions to be
      * executed.
      */
+    @MainThread
     public boolean executePendingTransactions() {
         boolean updates = execPendingActions(true);
         forcePostponedTransactions();
@@ -790,6 +792,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * afterwards without forcing the start of postponed Transactions.
      * @return Returns true if there was something popped, else false.
      */
+    @MainThread
     public boolean popBackStackImmediate() {
         return popBackStackImmediate(null, -1, 0);
     }
@@ -817,6 +820,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * afterwards without forcing the start of postponed Transactions.
      * @return Returns true if there was something popped, else false.
      */
+    @MainThread
     public boolean popBackStackImmediate(@Nullable String name, int flags) {
         return popBackStackImmediate(name, -1, flags);
     }
@@ -1894,14 +1898,24 @@ public abstract class FragmentManager implements FragmentResultOwner {
         // such as push, push, pop, push are correctly considered a push
         boolean isPop = isRecordPop.get(endIndex - 1);
 
-        if (mBackStackChangeListeners != null) {
-            // we dispatch callbacks based on each record
+        if (addToBackStack && mBackStackChangeListeners != null
+                && !mBackStackChangeListeners.isEmpty()) {
+            Set<Fragment> fragments = new LinkedHashSet<>();
+            // Build a list of fragments based on the records
             for (BackStackRecord record : records) {
-                for (Fragment fragment : fragmentsFromRecord(record)) {
-                    // We give all fragment the back stack changed started signal first
-                    for (OnBackStackChangedListener listener : mBackStackChangeListeners) {
-                        listener.onBackStackChangeStarted(fragment, isPop);
-                    }
+                fragments.addAll(fragmentsFromRecord(record));
+            }
+            // Dispatch to all of the fragments in the list
+            for (OnBackStackChangedListener listener : mBackStackChangeListeners) {
+                // We give all fragment the back stack changed started signal first
+                for (Fragment fragment: fragments) {
+                    listener.onBackStackChangeStarted(fragment, isPop);
+                }
+            }
+            for (OnBackStackChangedListener listener : mBackStackChangeListeners) {
+                // Then we give them all the committed signal
+                for (Fragment fragment: fragments) {
+                    listener.onBackStackChangeCommitted(fragment, isPop);
                 }
             }
         }
@@ -1952,17 +1966,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
         }
         if (addToBackStack) {
             reportBackStackChanged();
-            if (mBackStackChangeListeners != null) {
-                // we dispatch callbacks based on each record
-                for (BackStackRecord record : records) {
-                    for (Fragment fragment : fragmentsFromRecord(record)) {
-                        // Then we give them all the committed signal
-                        for (OnBackStackChangedListener listener : mBackStackChangeListeners) {
-                            listener.onBackStackChangeCommitted(fragment, isPop);
-                        }
-                    }
-                }
-            }
         }
     }
 

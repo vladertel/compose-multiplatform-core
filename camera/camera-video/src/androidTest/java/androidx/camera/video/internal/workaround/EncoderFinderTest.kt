@@ -25,6 +25,7 @@ import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
+import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.core.impl.Timebase
 import androidx.camera.testing.CameraPipeConfigTestRule
@@ -33,7 +34,7 @@ import androidx.camera.testing.CameraXUtil
 import androidx.camera.testing.LabTestRule
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
-import androidx.camera.video.VideoCapabilities
+import androidx.camera.video.LegacyVideoCapabilities
 import androidx.camera.video.VideoSpec
 import androidx.camera.video.internal.compat.quirk.DeviceQuirks
 import androidx.camera.video.internal.compat.quirk.MediaCodecInfoReportIncorrectInfoQuirk
@@ -153,7 +154,7 @@ class EncoderFinderTest(
             resolution != null
         )
 
-        val encoderProfiles = VideoCapabilities.from(cameraInfo).getProfiles(quality)
+        val encoderProfiles = LegacyVideoCapabilities.from(cameraInfo).getProfiles(quality)
         val videoProfile = encoderProfiles!!.defaultVideoProfile
 
         val videoSpec =
@@ -165,7 +166,7 @@ class EncoderFinderTest(
             videoSpec,
             resolution!!,
             videoProfile,
-            /*expectedFrameRateRange=*/null
+            SurfaceRequest.FRAME_RATE_RANGE_UNSPECIFIED
         ).get().toMediaFormat()
 
         // Act.

@@ -36,6 +36,7 @@ import androidx.camera.core.CameraEffect;
 import androidx.camera.core.ForwardingImageProxy;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
+import androidx.camera.core.MetadataImageReader;
 import androidx.camera.core.impl.CaptureBundle;
 import androidx.camera.core.impl.CaptureConfig;
 import androidx.camera.core.impl.CaptureStage;
@@ -88,14 +89,16 @@ public class ImagePipeline {
     public ImagePipeline(
             @NonNull ImageCaptureConfig useCaseConfig,
             @NonNull Size cameraSurfaceSize) {
-        this(useCaseConfig, cameraSurfaceSize, /*cameraEffect=*/ null);
+        this(useCaseConfig, cameraSurfaceSize, /*cameraEffect=*/ null,
+                /*isVirtualCamera=*/ false);
     }
 
     @MainThread
     public ImagePipeline(
             @NonNull ImageCaptureConfig useCaseConfig,
             @NonNull Size cameraSurfaceSize,
-            @Nullable CameraEffect cameraEffect) {
+            @Nullable CameraEffect cameraEffect,
+            boolean isVirtualCamera) {
         checkMainThread();
         mUseCaseConfig = useCaseConfig;
         mCaptureConfig = CaptureConfig.Builder.createFrom(useCaseConfig).build();
@@ -108,7 +111,8 @@ public class ImagePipeline {
                 cameraEffect != null ? new InternalImageProcessor(cameraEffect) : null);
 
         // Connect nodes
-        mPipelineIn = CaptureNode.In.of(cameraSurfaceSize, mUseCaseConfig.getInputFormat());
+        mPipelineIn = CaptureNode.In.of(cameraSurfaceSize, mUseCaseConfig.getInputFormat(),
+                isVirtualCamera);
         CaptureNode.Out captureOut = mCaptureNode.transform(mPipelineIn);
         ProcessingNode.In processingIn = mBundlingNode.transform(captureOut);
         mProcessingNode.transform(processingIn);
@@ -305,5 +309,15 @@ public class ImagePipeline {
     @VisibleForTesting
     ProcessingNode getProcessingNode() {
         return mProcessingNode;
+    }
+
+
+    /**
+     * Returns true if the image reader is a {@link MetadataImageReader}.
+     */
+    @VisibleForTesting
+    public boolean expectsMetadata() {
+        return mCaptureNode.getSafeCloseImageReaderProxy().getImageReaderProxy()
+                instanceof MetadataImageReader;
     }
 }

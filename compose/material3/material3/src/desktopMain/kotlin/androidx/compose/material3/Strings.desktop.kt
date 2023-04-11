@@ -70,7 +70,7 @@ internal actual fun getString(string: Strings): String {
         Strings.DateRangeInputTitle -> "Enter dates"
         Strings.DateRangeInputInvalidRangeInput -> "Invalid date range input"
         Strings.BottomSheetDragHandleDescription -> "Drag Handle"
-        Strings.BottomSheetCollapseDescription -> "Collapse bottom sheet"
+        Strings.BottomSheetPartialExpandDescription -> "Collapse bottom sheet"
         Strings.BottomSheetDismissDescription -> "Dismiss bottom sheet"
         Strings.BottomSheetExpandDescription -> "Expand bottom sheet"
         Strings.TooltipLongPressLabel -> "Show tooltip"
@@ -84,6 +84,8 @@ internal actual fun getString(string: Strings): String {
         Strings.TimePicker24HourSuffix -> "%1$ hours"
         Strings.TimePickerMinute -> "Minute"
         Strings.TimePickerHour -> "Hour"
+        Strings.TimePickerMinuteTextField -> "for minutes"
+        Strings.TimePickerHourTextField -> "for hour"
         Strings.TooltipPaneDescription -> "Tooltip"
         else -> ""
     }

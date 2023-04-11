@@ -19,8 +19,10 @@ package androidx.compose.foundation.text.modifiers
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
 import androidx.compose.foundation.text.toIntPx
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Paragraph
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -212,5 +214,40 @@ class MultiParagraphLayoutCacheTest {
         val layoutResultRtl = textDelegate.textLayoutResult
 
         assertThat(layoutResultLtr.size.width).isEqualTo(layoutResultRtl.size.width)
+    }
+
+    @Test
+    fun maxHeight_hasSameHeight_asParagraph() {
+        val text = buildAnnotatedString {
+            for (i in 1..100 step 10) {
+                pushStyle(SpanStyle(fontSize = i.sp))
+                append("$i.sp\n")
+                pop()
+            }
+        }
+
+        val textDelegate = MultiParagraphLayoutCache(
+            text = text,
+            style = TextStyle(fontSize = 1.sp),
+            fontFamilyResolver = fontFamilyResolver,
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 5
+        ).also {
+            it.density = density
+        }
+        textDelegate.layoutWithConstraints(Constraints(), LayoutDirection.Ltr)
+        val actual = textDelegate.textLayoutResult.multiParagraph
+
+        val expected = Paragraph(
+            text.text,
+            TextStyle(fontSize = 1.sp),
+            Constraints(),
+            density,
+            fontFamilyResolver,
+            text.spanStyles,
+            maxLines = 5,
+            ellipsis = true
+        )
+        assertThat(actual.height).isEqualTo(expected.height)
     }
 }

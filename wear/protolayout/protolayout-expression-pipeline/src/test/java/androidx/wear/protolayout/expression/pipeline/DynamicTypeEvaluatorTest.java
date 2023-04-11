@@ -20,12 +20,9 @@ import static androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
 
 import static com.google.common.truth.Truth.assertThat;
 
-import static org.robolectric.Shadows.shadowOf;
-
 import static java.lang.Integer.MAX_VALUE;
 
 import android.icu.util.ULocale;
-import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicBool;
@@ -268,14 +265,15 @@ public class DynamicTypeEvaluatorTest {
 
     @Test
     public void runTest() {
-        ObservableStateStore stateStore = new ObservableStateStore(generateExampleState());
+        StateStore stateStore = new StateStore(generateExampleState());
 
         DynamicTypeEvaluator evaluator =
                 new DynamicTypeEvaluator(
-                        /* platformDataSourcesInitiallyEnabled= */ true,
-                        /* sensorGateway= */ null,
-                        stateStore,
-                        new FixedQuotaManagerImpl(MAX_VALUE));
+                        new DynamicTypeEvaluator.Config.Builder()
+                                .setPlatformDataSourcesInitiallyEnabled(true)
+                                .setStateStore(stateStore)
+                                .setAnimationQuotaManager(new FixedQuotaManagerImpl(MAX_VALUE))
+                                .build());
 
         mTestCase.runTest(evaluator);
     }
@@ -285,8 +283,12 @@ public class DynamicTypeEvaluatorTest {
         return new DynamicTypeEvaluatorTest.TestCase<>(
                 bindUnderTest.toDynamicStringProto().toString(),
                 (evaluator, cb) ->
-                        evaluator.bind(
-                                bindUnderTest, ULocale.getDefault(), new MainThreadExecutor(), cb)
+                        evaluator
+                                .bind(
+                                        bindUnderTest,
+                                        ULocale.getDefault(),
+                                        new MainThreadExecutor(),
+                                        cb)
                                 .startEvaluation(),
                 expectedValue);
     }
@@ -295,8 +297,10 @@ public class DynamicTypeEvaluatorTest {
             DynamicInt32 bindUnderTest, Integer expectedValue) {
         return new DynamicTypeEvaluatorTest.TestCase<>(
                 bindUnderTest.toDynamicInt32Proto().toString(),
-                (evaluator, cb) -> evaluator.bind(bindUnderTest, new MainThreadExecutor(), cb)
-                        .startEvaluation(),
+                (evaluator, cb) ->
+                        evaluator
+                                .bind(bindUnderTest, new MainThreadExecutor(), cb)
+                                .startEvaluation(),
                 expectedValue);
     }
 
@@ -305,8 +309,7 @@ public class DynamicTypeEvaluatorTest {
         return new DynamicTypeEvaluatorTest.TestCase<>(
                 bindUnderTest.toDynamicInstantProto().toString(),
                 (evaluator, cb) -> {
-                    evaluator.bind(bindUnderTest, new MainThreadExecutor(), cb)
-                            .startEvaluation();
+                    evaluator.bind(bindUnderTest, new MainThreadExecutor(), cb).startEvaluation();
                 },
                 instant);
     }
@@ -315,8 +318,10 @@ public class DynamicTypeEvaluatorTest {
             DynamicFloat bindUnderTest, Float expectedValue) {
         return new DynamicTypeEvaluatorTest.TestCase<>(
                 bindUnderTest.toDynamicFloatProto().toString(),
-                (evaluator, cb) -> evaluator.bind(bindUnderTest, new MainThreadExecutor(), cb)
-                        .startEvaluation(),
+                (evaluator, cb) ->
+                        evaluator
+                                .bind(bindUnderTest, new MainThreadExecutor(), cb)
+                                .startEvaluation(),
                 expectedValue);
     }
 
@@ -324,8 +329,10 @@ public class DynamicTypeEvaluatorTest {
             DynamicBool bindUnderTest, Boolean expectedValue) {
         return new DynamicTypeEvaluatorTest.TestCase<>(
                 bindUnderTest.toDynamicBoolProto().toString(),
-                (evaluator, cb) -> evaluator.bind(bindUnderTest, new MainThreadExecutor(), cb)
-                        .startEvaluation(),
+                (evaluator, cb) ->
+                        evaluator
+                                .bind(bindUnderTest, new MainThreadExecutor(), cb)
+                                .startEvaluation(),
                 expectedValue);
     }
 
@@ -350,9 +357,6 @@ public class DynamicTypeEvaluatorTest {
             DynamicTypeValueReceiver<T> callback =
                     new DynamicTypeValueReceiver<T>() {
                         @Override
-                        public void onPreUpdate() {}
-
-                        @Override
                         public void onData(@NonNull T newData) {
                             results.add(newData);
                         }
@@ -362,7 +366,6 @@ public class DynamicTypeEvaluatorTest {
                     };
 
             this.mExpressionEvaluator.accept(evaluator, callback);
-            shadowOf(Looper.getMainLooper()).idle();
 
             assertThat(results).hasSize(1);
             assertThat(results).containsExactly(mExpectedValue);

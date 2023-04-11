@@ -16,9 +16,13 @@
 
 package androidx.camera.core;
 
-import static androidx.camera.core.MirrorMode.MIRROR_MODE_FRONT_ON;
 import static androidx.camera.core.MirrorMode.MIRROR_MODE_OFF;
 import static androidx.camera.core.MirrorMode.MIRROR_MODE_ON;
+import static androidx.camera.core.MirrorMode.MIRROR_MODE_ON_FRONT_ONLY;
+import static androidx.camera.core.impl.ImageOutputConfig.OPTION_RESOLUTION_SELECTOR;
+import static androidx.camera.core.impl.ImageOutputConfig.OPTION_TARGET_ASPECT_RATIO;
+import static androidx.camera.core.impl.ImageOutputConfig.OPTION_TARGET_RESOLUTION;
+import static androidx.camera.core.impl.StreamSpec.FRAME_RATE_RANGE_UNSPECIFIED;
 import static androidx.camera.core.impl.utils.TransformUtils.within360;
 import static androidx.camera.core.processing.TargetUtils.isSuperset;
 import static androidx.core.util.Preconditions.checkArgument;
@@ -27,6 +31,7 @@ import android.annotation.SuppressLint;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.media.ImageReader;
+import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 
@@ -52,6 +57,7 @@ import androidx.camera.core.impl.UseCaseConfig;
 import androidx.camera.core.impl.UseCaseConfigFactory;
 import androidx.camera.core.internal.TargetConfig;
 import androidx.camera.core.internal.utils.UseCaseConfigUtil;
+import androidx.camera.core.resolutionselector.ResolutionSelector;
 import androidx.camera.core.streamsharing.StreamSharing;
 import androidx.core.util.Preconditions;
 import androidx.lifecycle.LifecycleOwner;
@@ -209,6 +215,16 @@ public abstract class UseCase {
             mergedConfig = MutableOptionsBundle.create();
         }
 
+        // Removes the default resolution selector setting to go for the legacy resolution
+        // selection logic flow if applications call the legacy setTargetAspectRatio and
+        // setTargetResolution APIs to do the setting.
+        if (mUseCaseConfig.containsOption(OPTION_TARGET_ASPECT_RATIO)
+                || mUseCaseConfig.containsOption(OPTION_TARGET_RESOLUTION)) {
+            if (mergedConfig.containsOption(OPTION_RESOLUTION_SELECTOR)) {
+                mergedConfig.removeOption(OPTION_RESOLUTION_SELECTOR);
+            }
+        }
+
         // If any options need special handling, this is the place to do it. For now we'll just copy
         // over all options.
         for (Option<?> opt : mUseCaseConfig.listOptions()) {
@@ -247,7 +263,8 @@ public abstract class UseCase {
         // Forces disable ZSL when high resolution is enabled.
         if (mergedConfig.containsOption(ImageOutputConfig.OPTION_RESOLUTION_SELECTOR)
                 && mergedConfig.retrieveOption(
-                ImageOutputConfig.OPTION_RESOLUTION_SELECTOR).isHighResolutionEnabled()) {
+                ImageOutputConfig.OPTION_RESOLUTION_SELECTOR).getHighResolutionEnabledFlag()
+                != ResolutionSelector.HIGH_RESOLUTION_FLAG_OFF) {
             mergedConfig.insertOption(UseCaseConfig.OPTION_ZSL_DISABLED, true);
         }
 
@@ -339,6 +356,17 @@ public abstract class UseCase {
     }
 
     /**
+     * Returns the target frame rate range for the associated VideoCapture use case.
+     *
+     * @return The target frame rate.
+     */
+    @NonNull
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    protected Range<Integer> getTargetFrameRateInternal() {
+        return mCurrentConfig.getTargetFrameRate(FRAME_RATE_RANGE_UNSPECIFIED);
+    }
+
+    /**
      * Returns the mirror mode.
      *
      * <p>If mirror mode is not set, defaults to {@link MirrorMode#MIRROR_MODE_OFF}.
@@ -362,7 +390,7 @@ public abstract class UseCase {
                 return false;
             case MIRROR_MODE_ON:
                 return true;
-            case MIRROR_MODE_FRONT_ON:
+            case MIRROR_MODE_ON_FRONT_ONLY:
                 return camera.isFrontFacing();
             default:
                 throw new AssertionError("Unknown mirrorMode: " + mirrorMode);

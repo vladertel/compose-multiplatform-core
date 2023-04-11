@@ -16,7 +16,11 @@
 
 package androidx.compose.foundation.demos.text
 
+import androidx.compose.foundation.demos.text2.BasicSecureTextFieldDemos
 import androidx.compose.foundation.demos.text2.BasicTextField2Demos
+import androidx.compose.foundation.demos.text2.BasicTextField2FilterDemos
+import androidx.compose.foundation.demos.text2.ScrollableDemos
+import androidx.compose.foundation.demos.text2.DecorationBoxDemos
 import androidx.compose.foundation.demos.text2.KeyboardOptionsDemos
 import androidx.compose.integration.demos.common.ComposableDemo
 import androidx.compose.integration.demos.common.DemoCategory
@@ -124,6 +128,18 @@ val TextDemos = DemoCategory(
                 },
                 ComposableDemo("Keyboard Options") {
                     KeyboardOptionsDemos()
+                },
+                ComposableDemo("Decoration Box") {
+                    DecorationBoxDemos()
+                },
+                ComposableDemo("Scroll") {
+                    ScrollableDemos()
+                },
+                ComposableDemo("Filters") {
+                    BasicTextField2FilterDemos()
+                },
+                ComposableDemo("Secure Field") {
+                    BasicSecureTextFieldDemos()
                 }
             )
         ),
@@ -139,7 +155,8 @@ val TextDemos = DemoCategory(
             "\uD83D\uDD75️️️ Memory allocs",
             listOf(
                 ComposableDemo("\uD83D\uDD75️ SetText") { MemoryAllocsSetText() },
-                ComposableDemo("\uD83D\uDD75️ IfNotEmptyText") { MemoryAllocsIfNotEmptyText() }
+                ComposableDemo("\uD83D\uDD75️ IfNotEmptyText") { MemoryAllocsIfNotEmptyText() },
+                ComposableDemo("\uD83E\uDDA5 LazyList reuse") { MemoryAllocsLazyList() }
             )
         )
     )

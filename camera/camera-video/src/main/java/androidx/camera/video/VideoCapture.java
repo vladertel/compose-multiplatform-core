@@ -32,6 +32,7 @@ import static androidx.camera.core.impl.UseCaseConfig.OPTION_DEFAULT_SESSION_CON
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_HIGH_RESOLUTION_DISABLED;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_SESSION_CONFIG_UNPACKER;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_SURFACE_OCCUPANCY_PRIORITY;
+import static androidx.camera.core.impl.UseCaseConfig.OPTION_TARGET_FRAME_RATE;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_ZSL_DISABLED;
 import static androidx.camera.core.impl.utils.Threads.isMainThread;
 import static androidx.camera.core.impl.utils.TransformUtils.rectToString;
@@ -72,7 +73,7 @@ import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.Logger;
 import androidx.camera.core.MirrorMode;
-import androidx.camera.core.ResolutionSelector;
+import androidx.camera.core.Preview;
 import androidx.camera.core.SurfaceRequest;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.ViewPort;
@@ -104,6 +105,7 @@ import androidx.camera.core.internal.ThreadConfig;
 import androidx.camera.core.processing.DefaultSurfaceProcessor;
 import androidx.camera.core.processing.SurfaceEdge;
 import androidx.camera.core.processing.SurfaceProcessorNode;
+import androidx.camera.core.resolutionselector.ResolutionSelector;
 import androidx.camera.video.StreamInfo.StreamState;
 import androidx.camera.video.impl.VideoCaptureConfig;
 import androidx.camera.video.internal.VideoValidatedEncoderProfilesProxy;
@@ -130,6 +132,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
@@ -253,6 +256,22 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     }
 
     /**
+     * Returns the target frame rate range, in frames per second, for the associated VideoCapture
+     * use case.
+     *
+     * <p>The target frame rate can be set prior to constructing a VideoCapture using
+     * {@link VideoCapture.Builder#setTargetFrameRate(Range)}
+     * If not set, the target frame rate defaults to the value of
+     * {@link StreamSpec#FRAME_RATE_RANGE_UNSPECIFIED}
+     *
+     * @return The target frame rate of the intended target.
+     */
+    @NonNull
+    public Range<Integer> getTargetFrameRate() {
+        return getTargetFrameRateInternal();
+    }
+
+    /**
      * Sets the desired rotation of the output video.
      *
      * <p>Valid values include: {@link Surface#ROTATION_0}, {@link Surface#ROTATION_90},
@@ -366,17 +385,14 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         setTargetRotation(orientationDegreesToSurfaceRotation(degrees));
     }
 
-    // TODO: to public API
     /**
      * Returns the mirror mode.
      *
      * <p>The mirror mode is set by {@link VideoCapture.Builder#setMirrorMode(int)}. If not set,
-     * it is defaults to {@link MirrorMode#MIRROR_MODE_OFF}.
+     * it defaults to {@link MirrorMode#MIRROR_MODE_OFF}.
      *
      * @return The mirror mode of the intended target.
-     *
      */
-    @RestrictTo(Scope.LIBRARY_GROUP)
     @MirrorMode.Mirror
     public int getMirrorMode() {
         return getMirrorModeInternal();
@@ -384,6 +400,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
     /**
      * {@inheritDoc}
+     *
      */
     @SuppressWarnings("unchecked")
     @RestrictTo(Scope.LIBRARY_GROUP)
@@ -409,6 +426,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
     /**
      * {@inheritDoc}
+     *
      */
     @Override
     @RestrictTo(Scope.LIBRARY_GROUP)
@@ -419,6 +437,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
     /**
      * {@inheritDoc}
+     *
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
@@ -445,6 +464,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
     /**
      * {@inheritDoc}
+     *
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
@@ -465,6 +485,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
     /**
      * {@inheritDoc}
+     *
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
@@ -479,6 +500,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
     /**
      * {@inheritDoc}
+     *
      */
     @NonNull
     @RestrictTo(Scope.LIBRARY_GROUP)
@@ -548,15 +570,19 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         // handleInvalidate() can be used as an alternative.
         Runnable onSurfaceInvalidated = this::notifyReset;
 
-        // TODO(b/229410005): The expected FPS range will need to come from the camera rather
-        //  than what is requested in the config. For now we use the default range of (30, 30)
-        //  for behavioral consistency.
-        Range<Integer> targetFpsRange = requireNonNull(
-                config.getTargetFramerate(Defaults.DEFAULT_FPS_RANGE));
+        // If the expected frame rate range is unspecified, we need to give an educated estimate
+        // on what frame rate the camera will be operating at. For most devices this is a
+        // constant frame rate of 30fps, but in the future this could probably be queried from
+        // the camera.
+        Range<Integer> expectedFrameRate = streamSpec.getExpectedFrameRateRange();
+        if (Objects.equals(expectedFrameRate, StreamSpec.FRAME_RATE_RANGE_UNSPECIFIED)) {
+            expectedFrameRate = Defaults.DEFAULT_FPS_RANGE;
+        }
         MediaSpec mediaSpec = requireNonNull(getMediaSpec());
-        VideoCapabilities videoCapabilities = VideoCapabilities.from(camera.getCameraInfo());
+        LegacyVideoCapabilities videoCapabilities = LegacyVideoCapabilities.from(
+                camera.getCameraInfo());
         VideoEncoderInfo videoEncoderInfo = getVideoEncoderInfo(config.getVideoEncoderInfoFinder(),
-                videoCapabilities, mediaSpec, resolution, targetFpsRange);
+                videoCapabilities, mediaSpec, resolution, expectedFrameRate);
         mCropRect = calculateCropRect(resolution, videoEncoderInfo);
         mNode = createNodeIfNeeded(camera, mCropRect, resolution);
         // Choose Timebase based on the whether the buffer is copied.
@@ -574,10 +600,13 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         if (mNode != null) {
             // Make sure the previously created camera edge is cleared before creating a new one.
             checkState(mCameraEdge == null);
+            // Update the StreamSpec to use the frame rate range that is not unspecified.
+            StreamSpec updatedStreamSpec =
+                    streamSpec.toBuilder().setExpectedFrameRateRange(expectedFrameRate).build();
             SurfaceEdge cameraEdge = new SurfaceEdge(
                     VIDEO_CAPTURE,
                     INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE,
-                    streamSpec,
+                    updatedStreamSpec,
                     getSensorToBufferTransformMatrix(),
                     camera.getHasTransform(),
                     mCropRect,
@@ -594,7 +623,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             SurfaceEdge appEdge = requireNonNull(nodeOutput.get(outConfig));
             appEdge.addOnInvalidatedListener(
                     () -> onAppEdgeInvalidated(appEdge, camera, config, timebase));
-            mSurfaceRequest = appEdge.createSurfaceRequest(camera, targetFpsRange);
+            mSurfaceRequest = appEdge.createSurfaceRequest(camera);
             mDeferrableSurface = cameraEdge.getDeferrableSurface();
             DeferrableSurface latestDeferrableSurface = mDeferrableSurface;
             mDeferrableSurface.getTerminationFuture().addListener(() -> {
@@ -605,7 +634,11 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
                 }
             }, CameraXExecutors.mainThreadExecutor());
         } else {
-            mSurfaceRequest = new SurfaceRequest(resolution, camera, targetFpsRange,
+            mSurfaceRequest = new SurfaceRequest(
+                    resolution,
+                    camera,
+                    streamSpec.getDynamicRange(),
+                    expectedFrameRate,
                     onSurfaceInvalidated);
             mDeferrableSurface = mSurfaceRequest.getDeferrableSurface();
         }
@@ -618,6 +651,8 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
         SessionConfig.Builder sessionConfigBuilder = SessionConfig.Builder.createFrom(config,
                 streamSpec.getResolution());
+        // Use the frame rate range directly from the StreamSpec here (don't resolve it to the
+        // default if unresolved).
         sessionConfigBuilder.setExpectedFrameRateRange(streamSpec.getExpectedFrameRateRange());
         sessionConfigBuilder.addErrorListener(
                 (sessionConfig, error) -> resetPipeline(cameraId, config, streamSpec));
@@ -682,6 +717,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     }
 
     /**
+     *
      */
     @Nullable
     @RestrictTo(Scope.TESTS)
@@ -694,6 +730,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
      *
      * <p>These values may be overridden by the implementation. They only provide a minimum set of
      * defaults that are implementation independent.
+     *
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     public static final class Defaults implements ConfigProvider<VideoCaptureConfig<?>> {
@@ -905,7 +942,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             return cropRect;
         }
 
-        // New width/height should be multiple of 2 since VideoCapabilities.get*Alignment()
+        // New width/height should be multiple of 2 since LegacyVideoCapabilities.get*Alignment()
         // returns power of 2. This ensures width/2 and height/2 are not rounded off.
         // New width/height smaller than resolution ensures calculated cropRect never exceeds
         // the resolution.
@@ -1000,10 +1037,10 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     @Nullable
     private VideoEncoderInfo getVideoEncoderInfo(
             @NonNull Function<VideoEncoderConfig, VideoEncoderInfo> videoEncoderInfoFinder,
-            @NonNull VideoCapabilities videoCapabilities,
+            @NonNull LegacyVideoCapabilities videoCapabilities,
             @NonNull MediaSpec mediaSpec,
             @NonNull Size resolution,
-            @NonNull Range<Integer> targetFps) {
+            @NonNull Range<Integer> expectedFrameRate) {
         if (mVideoEncoderInfo != null) {
             return mVideoEncoderInfo;
         }
@@ -1012,7 +1049,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         VideoValidatedEncoderProfilesProxy encoderProfiles =
                 videoCapabilities.findHighestSupportedEncoderProfilesFor(resolution);
         VideoEncoderInfo videoEncoderInfo = resolveVideoEncoderInfo(videoEncoderInfoFinder,
-                encoderProfiles, mediaSpec, resolution, targetFps);
+                encoderProfiles, mediaSpec, resolution, expectedFrameRate);
         if (videoEncoderInfo == null) {
             // If VideoCapture cannot find videoEncoderInfo, it means that VideoOutput should
             // also not be able to find the encoder. VideoCapture will not handle this situation
@@ -1040,7 +1077,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             @Nullable VideoValidatedEncoderProfilesProxy encoderProfiles,
             @NonNull MediaSpec mediaSpec,
             @NonNull Size resolution,
-            @NonNull Range<Integer> targetFps) {
+            @NonNull Range<Integer> expectedFrameRate) {
         // Resolve the VideoEncoderConfig
         MimeInfo videoMimeInfo = resolveVideoMimeInfo(mediaSpec, encoderProfiles);
         VideoEncoderConfig videoEncoderConfig = resolveVideoEncoderConfig(
@@ -1049,7 +1086,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
                 Timebase.UPTIME,
                 mediaSpec.getVideoSpec(),
                 resolution,
-                targetFps);
+                expectedFrameRate);
 
         return videoEncoderInfoFinder.apply(videoEncoderConfig);
     }
@@ -1309,6 +1346,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
         /**
          * {@inheritDoc}
+         *
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Override
@@ -1319,6 +1357,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
         /**
          * {@inheritDoc}
+         *
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
@@ -1390,6 +1429,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
          * setTargetAspectRatio is not supported on VideoCapture
          *
          * <p>To set aspect ratio, see {@link Recorder.Builder#setAspectRatio(int)}.
+         *
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
@@ -1432,19 +1472,21 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             return this;
         }
 
-        // TODO: to public API
         /**
          * Sets the mirror mode.
          *
          * <p>Valid values include: {@link MirrorMode#MIRROR_MODE_OFF},
-         * {@link MirrorMode#MIRROR_MODE_ON} and {@link MirrorMode#MIRROR_MODE_FRONT_ON}.
-         * If not set, it is defaults to {@link MirrorMode#MIRROR_MODE_OFF}.
+         * {@link MirrorMode#MIRROR_MODE_ON} and {@link MirrorMode#MIRROR_MODE_ON_FRONT_ONLY}.
+         * If not set, it defaults to {@link MirrorMode#MIRROR_MODE_OFF}.
+         *
+         * <p>This API only changes the mirroring behavior on VideoCapture, but does not affect
+         * other UseCases. If the application wants to be consistent with the default
+         * {@link Preview} behavior where the rear camera is not mirrored but the front camera is
+         * mirrored, then {@link MirrorMode#MIRROR_MODE_ON_FRONT_ONLY} is recommended.
          *
          * @param mirrorMode The mirror mode of the intended target.
          * @return The current Builder.
-         *
          */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         @Override
         public Builder<T> setMirrorMode(@MirrorMode.Mirror int mirrorMode) {
@@ -1456,6 +1498,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
          * setTargetResolution is not supported on VideoCapture
          *
          * <p>To set resolution, see {@link Recorder.Builder#setQualitySelector(QualitySelector)}.
+         *
          */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
@@ -1604,6 +1647,24 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         @Override
         public Builder<T> setHighResolutionDisabled(boolean disabled) {
             getMutableConfig().insertOption(OPTION_HIGH_RESOLUTION_DISABLED, disabled);
+            return this;
+        }
+
+        /**
+         * Sets the target frame rate range in frames per second for the associated VideoCapture
+         * use case.
+         *
+         * <p>This target will be used as a part of the heuristics for the algorithm that determines
+         * the final frame rate range and resolution of all concurrently bound use cases.
+         * <p>It is not guaranteed that this target frame rate will be the final range,
+         * as other use cases as well as frame rate restrictions of the device may affect the
+         * outcome of the algorithm that chooses the actual frame rate.
+         *
+         * @param targetFrameRate the target frame rate range.
+         */
+        @NonNull
+        public Builder<T> setTargetFrameRate(@NonNull Range<Integer> targetFrameRate) {
+            getMutableConfig().insertOption(OPTION_TARGET_FRAME_RATE, targetFrameRate);
             return this;
         }
     }

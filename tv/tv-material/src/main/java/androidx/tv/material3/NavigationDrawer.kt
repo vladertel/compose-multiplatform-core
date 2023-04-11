@@ -16,6 +16,7 @@
 
 package androidx.tv.material3
 
+import android.view.KeyEvent.KEYCODE_BACK
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.focusable
@@ -39,11 +40,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType.Companion.KeyDown
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyCode
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -70,7 +78,6 @@ import androidx.compose.ui.zIndex
  * Drawer-entries can be animated when the drawer moves from Closed to Open state and vice-versa.
  * For, e.g., the entry could show only an icon in the Closed state and slide in text to form
  * (icon + text) when in the Open state.
- * @sample androidx.tv.samples.NavigationRow
  *
  * To limit the width of the drawer in the open or closed state, wrap the content in a box with the
  * required width.
@@ -90,6 +97,7 @@ fun ModalNavigationDrawer(
     content: @Composable () -> Unit
 ) {
     val layoutDirection = LocalLayoutDirection.current
+    val localDensity = LocalDensity.current
     val exitDirection =
         if (layoutDirection == Ltr) FocusDirection.Right else FocusDirection.Left
     val drawerFocusRequester = remember { FocusRequester() }
@@ -107,7 +115,9 @@ fun ModalNavigationDrawer(
                 if (closedDrawerWidth.value == null &&
                     drawerState.currentValue == DrawerValue.Closed
                 ) {
-                    closedDrawerWidth.value = it.width.dp
+                    with(localDensity) {
+                        closedDrawerWidth.value = it.width.toDp()
+                    }
                 }
             }
 
@@ -117,7 +127,9 @@ fun ModalNavigationDrawer(
             drawerState = drawerState,
             sizeAnimationFinishedListener = { _, targetSize ->
                 if (drawerState.currentValue == DrawerValue.Closed) {
-                    closedDrawerWidth.value = targetSize.width.dp
+                    with(localDensity) {
+                        closedDrawerWidth.value = targetSize.width.toDp()
+                    }
                 }
             },
             content = drawerContent
@@ -153,7 +165,6 @@ fun ModalNavigationDrawer(
  * Drawer-entries can be animated when the drawer moves from Closed to Open state and vice-versa.
  * For, e.g., the entry could show only an icon in the Closed state and slide in text to form
  * (icon + text) when in the Open state.
- * @sample androidx.tv.samples.NavigationRow
  *
  * To limit the width of the drawer in the open or closed state, wrap the content in a box with the
  * required width.
@@ -252,7 +263,7 @@ private fun Modifier.modalDrawerNavigation(
         .focusRequester(drawerFocusRequester)
         .focusProperties {
             exit = {
-                if (it == exitDirection || it == FocusDirection.Exit) {
+                if (it == exitDirection) {
                     drawerFocusRequester.requestFocus()
                     drawerState.setValue(DrawerValue.Closed)
                     focusManager.moveFocus(it)
@@ -275,18 +286,22 @@ private fun DrawerSheet(
 ) {
     // indicates that the drawer has been set to its initial state and has grabbed focus if
     // necessary. Controls whether focus is used to decide the state of the drawer going forward.
-    var initializationComplete: Boolean = remember { false }
+    var initializationComplete: Boolean by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    var focusState by remember { mutableStateOf<FocusState?>(null) }
+
+    val isDrawerOpen = drawerState.currentValue == DrawerValue.Open
+    val isDrawerClosed = drawerState.currentValue == DrawerValue.Closed
 
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(key1 = drawerState.currentValue) {
-        if (drawerState.currentValue == DrawerValue.Open) {
+        if (drawerState.currentValue == DrawerValue.Open && focusState?.hasFocus == false) {
             // used to grab focus if the drawer state is set to Open on start.
             focusRequester.requestFocus()
         }
         initializationComplete = true
     }
 
-    val focusManager = LocalFocusManager.current
     val internalModifier =
         Modifier
             .focusRequester(focusRequester)
@@ -296,17 +311,24 @@ private fun DrawerSheet(
             // size based modifiers.
             .then(modifier)
             .onFocusChanged {
+                focusState = it
                 when {
-                    it.isFocused && drawerState.currentValue == DrawerValue.Closed -> {
+                    it.isFocused && isDrawerClosed -> {
                         drawerState.setValue(DrawerValue.Open)
                         focusManager.moveFocus(FocusDirection.Enter)
                     }
 
-                    !it.hasFocus && drawerState.currentValue == DrawerValue.Open &&
-                        initializationComplete -> {
+                    !it.hasFocus && isDrawerOpen && initializationComplete -> {
                         drawerState.setValue(DrawerValue.Closed)
                     }
                 }
+            }
+            .onKeyEvent {
+                // Handle back press key event
+                if (it.key.nativeKeyCode == KEYCODE_BACK && it.type == KeyDown) {
+                    focusManager.moveFocus(FocusDirection.Exit)
+                }
+                KeyEventPropagation.ContinuePropagation
             }
             .focusable()
 
