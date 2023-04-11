@@ -23,13 +23,14 @@ import androidx.camera.camera2.Camera2Config
 import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
+import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.impl.Timebase
 import androidx.camera.core.internal.CameraUseCaseAdapter
 import androidx.camera.testing.CameraPipeConfigTestRule
 import androidx.camera.testing.CameraUtil
 import androidx.camera.testing.CameraXUtil
 import androidx.camera.video.Quality
-import androidx.camera.video.VideoCapabilities
+import androidx.camera.video.LegacyVideoCapabilities
 import androidx.camera.video.VideoSpec
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.filters.SdkSuppress
@@ -73,7 +74,7 @@ class VideoEncoderConfigVideoProfileResolverTest(
     private val timebase = Timebase.UPTIME
 
     private lateinit var cameraUseCaseAdapter: CameraUseCaseAdapter
-    private lateinit var videoCapabilities: VideoCapabilities
+    private lateinit var videoCapabilities: LegacyVideoCapabilities
 
     @Before
     fun setUp() {
@@ -85,7 +86,7 @@ class VideoEncoderConfigVideoProfileResolverTest(
         ).get()
 
         val cameraInfo = CameraUtil.createCameraUseCaseAdapter(context, cameraSelector).cameraInfo
-        videoCapabilities = VideoCapabilities.from(cameraInfo)
+        videoCapabilities = LegacyVideoCapabilities.from(cameraInfo)
         Assume.assumeTrue(videoCapabilities.supportedQualities.isNotEmpty())
     }
 
@@ -114,7 +115,7 @@ class VideoEncoderConfigVideoProfileResolverTest(
                 defaultVideoSpec,
                 Size(videoProfile.width, videoProfile.height),
                 videoProfile,
-                /*expectedFrameRateRange=*/null
+                SurfaceRequest.FRAME_RATE_RANGE_UNSPECIFIED
             ).get()
 
             assertThat(config.mimeType).isEqualTo(videoProfile.mediaType)
@@ -135,7 +136,7 @@ class VideoEncoderConfigVideoProfileResolverTest(
             defaultVideoSpec,
             surfaceSize,
             profile,
-            /*expectedFrameRateRange=*/null
+            SurfaceRequest.FRAME_RATE_RANGE_UNSPECIFIED
         ).get().bitrate
 
         val increasedSurfaceSize = Size(surfaceSize.width + 100, surfaceSize.height + 100)
@@ -148,7 +149,7 @@ class VideoEncoderConfigVideoProfileResolverTest(
                 defaultVideoSpec,
                 increasedSurfaceSize,
                 profile,
-                /*expectedFrameRateRange=*/null
+                SurfaceRequest.FRAME_RATE_RANGE_UNSPECIFIED
             ).get().bitrate
         ).isGreaterThan(defaultBitrate)
 
@@ -159,7 +160,7 @@ class VideoEncoderConfigVideoProfileResolverTest(
                 defaultVideoSpec,
                 decreasedSurfaceSize,
                 profile,
-                /*expectedFrameRateRange=*/null
+                SurfaceRequest.FRAME_RATE_RANGE_UNSPECIFIED
             ).get().bitrate
         ).isLessThan(defaultBitrate)
     }
@@ -175,7 +176,7 @@ class VideoEncoderConfigVideoProfileResolverTest(
             defaultVideoSpec,
             surfaceSize,
             profile,
-            /*expectedFrameRateRange=*/null
+            SurfaceRequest.FRAME_RATE_RANGE_UNSPECIFIED
         ).get().bitrate
 
         // Create video spec with limit 20% higher than default.
@@ -194,7 +195,7 @@ class VideoEncoderConfigVideoProfileResolverTest(
                 higherVideoSpec,
                 surfaceSize,
                 profile,
-                /*expectedFrameRateRange=*/null
+                SurfaceRequest.FRAME_RATE_RANGE_UNSPECIFIED
             ).get().bitrate
         ).isEqualTo(higherBitrate)
 
@@ -205,7 +206,7 @@ class VideoEncoderConfigVideoProfileResolverTest(
                 lowerVideoSpec,
                 surfaceSize,
                 profile,
-                /*expectedFrameRateRange=*/null
+                SurfaceRequest.FRAME_RATE_RANGE_UNSPECIFIED
             ).get().bitrate
         ).isEqualTo(lowerBitrate)
     }

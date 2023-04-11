@@ -221,12 +221,12 @@ internal abstract class NodeCoordinator(
         } else {
             wrappedBy?.invalidateLayer()
         }
-        layoutNode.owner?.onLayoutChange(layoutNode)
         measuredSize = IntSize(width, height)
-        graphicsLayerScope.size = measuredSize.toSize()
+        updateLayerParameters(invokeOnLayoutChange = false)
         visitNodes(Nodes.Draw) {
             it.onMeasureResultChanged()
         }
+        layoutNode.owner?.onLayoutChange(layoutNode)
     }
 
     override var position: IntOffset = IntOffset.Zero
@@ -281,12 +281,10 @@ internal abstract class NodeCoordinator(
 
     protected inline fun performingMeasure(
         constraints: Constraints,
-        block: () -> Placeable
+        crossinline block: () -> Placeable
     ): Placeable {
         measurementConstraints = constraints
-        val result = block()
-        layer?.resize(measuredSize)
-        return result
+        return block()
     }
 
     fun onMeasured() {
@@ -418,7 +416,7 @@ internal abstract class NodeCoordinator(
         }
     }
 
-    private fun updateLayerParameters() {
+    private fun updateLayerParameters(invokeOnLayoutChange: Boolean = true) {
         val layer = layer
         if (layer != null) {
             val layerBlock = requireNotNull(layerBlock)
@@ -453,11 +451,13 @@ internal abstract class NodeCoordinator(
                 density = layoutNode.density
             )
             isClipping = graphicsLayerScope.clip
+            lastLayerAlpha = graphicsLayerScope.alpha
+            if (invokeOnLayoutChange) {
+                layoutNode.owner?.onLayoutChange(layoutNode)
+            }
         } else {
             require(layerBlock == null)
         }
-        lastLayerAlpha = graphicsLayerScope.alpha
-        layoutNode.owner?.onLayoutChange(layoutNode)
     }
 
     private val invalidateParentLayer: () -> Unit = {

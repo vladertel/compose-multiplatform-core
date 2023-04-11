@@ -53,14 +53,16 @@ data class ComposeDemo(val title: String, val content: @Composable () -> Unit)
 val AllComposeConstraintLayoutDemos: List<ComposeDemo> =
     listOf(
         ComposeDemo("CustomColorInKeyAttributes") { CustomColorInKeyAttributesDemo() },
-        ComposeDemo("SimpleOnSwipe") { SimpleOnSwipe() },
+        ComposeDemo("Simple OnSwipe") { SimpleOnSwipe() },
+        ComposeDemo("Multiple OnSwipe") { MultiSwipeDsl() },
         ComposeDemo("AnimatedChainOrientation") { ChainsAnimatedOrientationDemo() },
         ComposeDemo("CollapsibleToolbar w/ Column") { ToolBarDslDemo() },
         ComposeDemo("CollapsibleToolbar w/ LazyColumn") { ToolBarLazyDslDemo() },
         ComposeDemo("MotionLayout in LazyList") { MotionInLazyColumnDslDemo() },
         ComposeDemo("Animated Graphs") { AnimateGraphsOnRevealDemo() },
         ComposeDemo("Animated Reactions Selector") { ReactionSelectorDemo() },
-        ComposeDemo("Animated Puzzle Pieces") { AnimatedPuzzlePiecesDemo() }
+        ComposeDemo("Animated Puzzle Pieces") { AnimatedPuzzlePiecesDemo() },
+        ComposeDemo("Simple Staggered") { SimpleStaggeredDemo() }
     )
 
 /**

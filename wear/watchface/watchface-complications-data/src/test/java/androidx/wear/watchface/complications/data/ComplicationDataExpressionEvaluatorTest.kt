@@ -19,39 +19,38 @@ package androidx.wear.watchface.complications.data
 import android.support.wearable.complications.ComplicationData as WireComplicationData
 import android.support.wearable.complications.ComplicationText as WireComplicationText
 import android.util.Log
-import androidx.core.content.ContextCompat
-import androidx.core.util.Consumer
-import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicFloat
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
 import androidx.wear.protolayout.expression.StateEntryBuilders.StateEntryValue
-import androidx.wear.protolayout.expression.pipeline.ObservableStateStore
+import androidx.wear.protolayout.expression.pipeline.StateStore
+import androidx.wear.protolayout.expression.pipeline.TimeGateway
 import androidx.wear.watchface.complications.data.ComplicationDataExpressionEvaluator.Companion.INVALID_DATA
 import androidx.wear.watchface.complications.data.ComplicationDataExpressionEvaluator.Companion.hasExpression
 import com.google.common.truth.Expect
 import com.google.common.truth.Truth.assertThat
+import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.verifyNoMoreInteractions
 import org.robolectric.shadows.ShadowLog
-import org.robolectric.shadows.ShadowLooper.runUiThreadTasks
 
 @RunWith(SharedRobolectricTestRunner::class)
 class ComplicationDataExpressionEvaluatorTest {
     @get:Rule val expect = Expect.create()
-
-    private val listener = mock<Consumer<WireComplicationData>>()
 
     @Before
     fun setup() {
@@ -59,20 +58,11 @@ class ComplicationDataExpressionEvaluatorTest {
     }
 
     @Test
-    fun data_notInitialized_setToNull() {
-        ComplicationDataExpressionEvaluator(DATA_WITH_NO_EXPRESSION).use { evaluator ->
-            assertThat(evaluator.data.value).isNull()
-        }
-    }
+    fun evaluate_noExpression_returnsUnevaluated() = runBlocking {
+        val evaluator = ComplicationDataExpressionEvaluator()
 
-    @Test
-    fun data_noExpression_setToUnevaluated() {
-        ComplicationDataExpressionEvaluator(DATA_WITH_NO_EXPRESSION).use { evaluator ->
-            evaluator.init()
-            runUiThreadTasks()
-
-            assertThat(evaluator.data.value).isEqualTo(DATA_WITH_NO_EXPRESSION)
-        }
+        assertThat(evaluator.evaluate(DATA_WITH_NO_EXPRESSION).firstOrNull())
+            .isEqualTo(DATA_WITH_NO_EXPRESSION)
     }
 
     /**
@@ -209,38 +199,66 @@ class ComplicationDataExpressionEvaluatorTest {
     }
 
     @Test
-    fun data_withExpression_setToEvaluated() {
+    fun evaluate_withExpression_returnsEvaluated() = runBlocking {
         for (scenario in DataWithExpressionScenario.values()) {
             // Defensive copy due to in-place evaluation.
             val expressed = WireComplicationData.Builder(scenario.expressed).build()
-            val stateStore = ObservableStateStore(mapOf())
-            ComplicationDataExpressionEvaluator(expressed, stateStore).use { evaluator ->
-                val allEvaluations =
-                    evaluator.data
-                        .filterNotNull()
-                        .shareIn(
-                            CoroutineScope(Dispatchers.Main),
-                            SharingStarted.Eagerly,
-                            replay = 10,
-                        )
-                evaluator.init()
-                runUiThreadTasks() // Ensures data sharing started.
+            val stateStore =
+                StateStore(mapOf())
+            val evaluator = ComplicationDataExpressionEvaluator(stateStore)
+            val allEvaluations =
+                evaluator
+                    .evaluate(expressed)
+                    .shareIn(
+                        CoroutineScope(Dispatchers.Main.immediate),
+                        SharingStarted.Eagerly,
+                        replay = 10,
+                    )
 
-                for (state in scenario.states) {
-                    stateStore.setStateEntryValues(state)
-                    runUiThreadTasks() // Ensures data sharing ended.
-                }
-
-                expect
-                    .withMessage(scenario.name)
-                    .that(allEvaluations.replayCache)
-                    .isEqualTo(scenario.evaluated)
+            for (state in scenario.states) {
+                stateStore.setStateEntryValues(state)
             }
+
+            expect
+                .withMessage(scenario.name)
+                .that(allEvaluations.replayCache)
+                .isEqualTo(scenario.evaluated)
         }
     }
 
     @Test
-    fun data_keepExpression_doesNotTrimUnevaluatedExpression() {
+    fun evaluate_cancelled_cleansUp() = runBlocking {
+        val expressed =
+            WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
+                .setRangedValueExpression(
+                    // Uses TimeGateway, which needs cleaning up.
+                    DynamicInstant.withSecondsPrecision(Instant.EPOCH)
+                        .durationUntil(DynamicInstant.platformTimeWithSecondsPrecision())
+                        .secondsPart
+                        .asFloat()
+                )
+                .build()
+        val timeGateway = mock<TimeGateway>()
+        val evaluator = ComplicationDataExpressionEvaluator(timeGateway = timeGateway)
+        val flow = evaluator.evaluate(expressed)
+
+        // Validity check - TimeGateway not used until Flow collection.
+        verifyNoInteractions(timeGateway)
+        val job = launch(Dispatchers.Main.immediate) { flow.collect {} }
+        try {
+            // Validity check - TimeGateway registered while collection is in progress.
+            verify(timeGateway).registerForUpdates(any(), any())
+            verifyNoMoreInteractions(timeGateway)
+        } finally {
+            job.cancel()
+        }
+
+        verify(timeGateway).unregisterForUpdates(any())
+        verifyNoMoreInteractions(timeGateway)
+    }
+
+    @Test
+    fun evaluate_keepExpression_doesNotTrimUnevaluatedExpression() = runBlocking {
         val expressed =
             WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
                 .setRangedValueExpression(DynamicFloat.constant(1f))
@@ -250,39 +268,30 @@ class ComplicationDataExpressionEvaluatorTest {
                 .setShortTitle(WireComplicationText(DynamicString.constant("Short Title")))
                 .setContentDescription(WireComplicationText(DynamicString.constant("Description")))
                 .build()
-        ComplicationDataExpressionEvaluator(expressed, keepExpression = true).use { evaluator ->
-            evaluator.init()
-            runUiThreadTasks()
+        val evaluator = ComplicationDataExpressionEvaluator(keepExpression = true)
 
-            assertThat(evaluator.data.value)
-                .isEqualTo(
-                    WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
-                        .setRangedValue(1f)
-                        .setRangedValueExpression(DynamicFloat.constant(1f))
-                        .setLongText(
-                            WireComplicationText("Long Text", DynamicString.constant("Long Text"))
-                        )
-                        .setLongTitle(
-                            WireComplicationText("Long Title", DynamicString.constant("Long Title"))
-                        )
-                        .setShortText(
-                            WireComplicationText("Short Text", DynamicString.constant("Short Text"))
-                        )
-                        .setShortTitle(
-                            WireComplicationText(
-                                "Short Title",
-                                DynamicString.constant("Short Title")
-                            )
-                        )
-                        .setContentDescription(
-                            WireComplicationText(
-                                "Description",
-                                DynamicString.constant("Description")
-                            )
-                        )
-                        .build()
-                )
-        }
+        assertThat(evaluator.evaluate(expressed).firstOrNull())
+            .isEqualTo(
+                WireComplicationData.Builder(WireComplicationData.TYPE_NO_DATA)
+                    .setRangedValue(1f)
+                    .setRangedValueExpression(DynamicFloat.constant(1f))
+                    .setLongText(
+                        WireComplicationText("Long Text", DynamicString.constant("Long Text"))
+                    )
+                    .setLongTitle(
+                        WireComplicationText("Long Title", DynamicString.constant("Long Title"))
+                    )
+                    .setShortText(
+                        WireComplicationText("Short Text", DynamicString.constant("Short Text"))
+                    )
+                    .setShortTitle(
+                        WireComplicationText("Short Title", DynamicString.constant("Short Title"))
+                    )
+                    .setContentDescription(
+                        WireComplicationText("Description", DynamicString.constant("Description"))
+                    )
+                    .build()
+            )
     }
 
     enum class HasExpressionDataWithExpressionScenario(val data: WireComplicationData) {
@@ -328,29 +337,6 @@ class ComplicationDataExpressionEvaluatorTest {
     @Test
     fun hasExpression_dataWithoutExpression_returnsFalse() {
         assertThat(hasExpression(DATA_WITH_NO_EXPRESSION)).isFalse()
-    }
-
-    @Test
-    fun compat_notInitialized_listenerNotInvoked() {
-        ComplicationDataExpressionEvaluator.Compat.Builder(DATA_WITH_NO_EXPRESSION, listener)
-            .build()
-            .use {
-                runUiThreadTasks()
-
-                verify(listener, never()).accept(any())
-            }
-    }
-
-    @Test
-    fun compat_noExpression_listenerInvokedWithData() {
-        ComplicationDataExpressionEvaluator.Compat.Builder(DATA_WITH_NO_EXPRESSION, listener)
-            .build()
-            .use { evaluator ->
-                evaluator.init(ContextCompat.getMainExecutor(getApplicationContext()))
-                runUiThreadTasks()
-
-                verify(listener, times(1)).accept(DATA_WITH_NO_EXPRESSION)
-            }
     }
 
     private companion object {

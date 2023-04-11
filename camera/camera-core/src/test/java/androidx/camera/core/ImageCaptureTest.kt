@@ -33,7 +33,7 @@ import androidx.camera.core.CameraEffect.VIDEO_CAPTURE
 import androidx.camera.core.ImageCapture.ImageCaptureRequest
 import androidx.camera.core.ImageCapture.ImageCaptureRequestProcessor
 import androidx.camera.core.ImageCapture.ImageCaptureRequestProcessor.ImageCaptor
-import androidx.camera.core.MirrorMode.MIRROR_MODE_FRONT_ON
+import androidx.camera.core.MirrorMode.MIRROR_MODE_ON_FRONT_ONLY
 import androidx.camera.core.MirrorMode.MIRROR_MODE_OFF
 import androidx.camera.core.impl.CameraConfig
 import androidx.camera.core.impl.CameraFactory
@@ -48,6 +48,7 @@ import androidx.camera.core.impl.utils.executor.CameraXExecutors
 import androidx.camera.core.impl.utils.futures.Futures
 import androidx.camera.core.internal.CameraUseCaseAdapter
 import androidx.camera.core.internal.utils.SizeUtil
+import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.testing.CameraUtil
 import androidx.camera.testing.CameraXUtil
 import androidx.camera.testing.fakes.FakeAppConfig
@@ -155,6 +156,20 @@ class ImageCaptureTest {
     }
 
     @Test
+    fun virtualCamera_imagePipelineExpectsNoMetadata() {
+        // Arrange.
+        camera.hasTransform = false
+
+        // Act.
+        val imageCapture = bindImageCapture(
+            bufferFormat = ImageFormat.JPEG,
+        )
+
+        // Assert.
+        assertThat(imageCapture.imagePipeline!!.expectsMetadata()).isFalse()
+    }
+
+    @Test
     fun verifySupportedEffects() {
         val imageCapture = ImageCapture.Builder().build()
         assertThat(imageCapture.isEffectTargetsSupported(IMAGE_CAPTURE)).isTrue()
@@ -192,7 +207,7 @@ class ImageCaptureTest {
 
     @Test(expected = UnsupportedOperationException::class)
     fun setMirrorMode_throwException() {
-        ImageCapture.Builder().setMirrorMode(MIRROR_MODE_FRONT_ON)
+        ImageCapture.Builder().setMirrorMode(MIRROR_MODE_ON_FRONT_ONLY)
     }
 
     @Test
@@ -269,7 +284,8 @@ class ImageCaptureTest {
     private fun assertTakePictureManagerHasTheSameSurface(imageCapture: ImageCapture) {
         val takePictureManagerSurface =
             imageCapture.takePictureManager.imagePipeline.createSessionConfigBuilder(
-                resolution).build().surfaces.single().surface.get()
+                resolution
+            ).build().surfaces.single().surface.get()
         val useCaseSurface = imageCapture.sessionConfig.surfaces.single().surface.get()
         assertThat(takePictureManagerSurface).isEqualTo(useCaseSurface)
     }
@@ -628,6 +644,7 @@ class ImageCaptureTest {
         assertThat(cameraControl.isZslConfigAdded).isTrue()
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun throwException_whenSetBothTargetResolutionAndAspectRatio() {
         assertThrows(IllegalArgumentException::class.java) {
@@ -636,6 +653,7 @@ class ImageCaptureTest {
         }
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun throwException_whenSetTargetResolutionWithResolutionSelector() {
         assertThrows(IllegalArgumentException::class.java) {
@@ -645,6 +663,7 @@ class ImageCaptureTest {
         }
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun throwException_whenSetTargetAspectRatioWithResolutionSelector() {
         assertThrows(IllegalArgumentException::class.java) {
@@ -674,8 +693,7 @@ class ImageCaptureTest {
         }
 
         cameraUseCaseAdapter = CameraUtil.createCameraUseCaseAdapter(
-            ApplicationProvider
-                .getApplicationContext<Context>(),
+            ApplicationProvider.getApplicationContext(),
             CameraSelector.DEFAULT_BACK_CAMERA
         )
 
@@ -718,7 +736,8 @@ class ImageCaptureTest {
             .setFlashMode(ImageCapture.FLASH_MODE_OFF)
             .setCaptureOptionUnpacker { _: UseCaseConfig<*>?, _: CaptureConfig.Builder? -> }
             .setSessionOptionUnpacker { _: Size, _: UseCaseConfig<*>?,
-                _: SessionConfig.Builder? -> }
+                _: SessionConfig.Builder? ->
+            }
 
         builder.setBufferFormat(bufferFormat)
         if (imageReaderProxyProvider != null) {

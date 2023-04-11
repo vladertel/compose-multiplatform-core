@@ -9,24 +9,21 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+b * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package androidx.appactions.interaction.capabilities.productivity
 
-import androidx.appactions.interaction.capabilities.core.ActionCapability
-import androidx.appactions.interaction.capabilities.core.BaseSession
-import androidx.appactions.interaction.capabilities.core.CapabilityBuilderBase
+import androidx.appactions.interaction.capabilities.core.Capability
+import androidx.appactions.interaction.capabilities.core.BaseExecutionSession
 import androidx.appactions.interaction.capabilities.core.impl.BuilderOf
 import androidx.appactions.interaction.capabilities.core.impl.converters.TypeConverters
 import androidx.appactions.interaction.capabilities.core.impl.spec.ActionSpecBuilder
-import androidx.appactions.interaction.capabilities.core.properties.SimpleProperty
-import androidx.appactions.interaction.capabilities.core.task.impl.AbstractTaskUpdater
+import androidx.appactions.interaction.capabilities.core.properties.Property
 import androidx.appactions.interaction.capabilities.core.values.GenericErrorStatus
 import androidx.appactions.interaction.capabilities.core.values.SuccessStatus
-import androidx.appactions.interaction.capabilities.core.values.Timer
 import androidx.appactions.interaction.proto.ParamValue
 import androidx.appactions.interaction.protobuf.Struct
 import androidx.appactions.interaction.protobuf.Value
@@ -35,36 +32,47 @@ import java.util.Optional
 /** PauseTimer.kt in interaction-capabilities-productivity */
 private const val CAPABILITY_NAME = "actions.intent.PAUSE_TIMER"
 
-private val ACTION_SPEC = ActionSpecBuilder.ofCapabilityNamed(CAPABILITY_NAME)
-    .setDescriptor(PauseTimer.Property::class.java)
-    .setArgument(PauseTimer.Argument::class.java, PauseTimer.Argument::Builder)
-    .setOutput(PauseTimer.Output::class.java).bindRepeatedStructParameter(
-        "timer",
-        { property -> Optional.ofNullable(property.timerList) },
-        PauseTimer.Argument.Builder::setTimerList,
-        TypeConverters::toTimer
-    ).bindOptionalOutput(
-        "executionStatus",
-        { output -> Optional.ofNullable(output.executionStatus) },
-        PauseTimer.ExecutionStatus::toParamValue
-    ).build()
+private val ACTION_SPEC =
+    ActionSpecBuilder.ofCapabilityNamed(CAPABILITY_NAME)
+        .setDescriptor(PauseTimer.Properties::class.java)
+        .setArguments(PauseTimer.Arguments::class.java, PauseTimer.Arguments::Builder)
+        .setOutput(PauseTimer.Output::class.java)
+        .bindRepeatedParameter(
+            "timer",
+            { property -> Optional.ofNullable(property.timerList) },
+            PauseTimer.Arguments.Builder::setTimerList,
+            TimerValue.PARAM_VALUE_CONVERTER,
+            TimerValue.ENTITY_CONVERTER
+        )
+        .bindOptionalOutput(
+            "executionStatus",
+            { output -> Optional.ofNullable(output.executionStatus) },
+            PauseTimer.ExecutionStatus::toParamValue,
+        )
+        .build()
 
 // TODO(b/267806701): Add capability factory annotation once the testing library is fully migrated.
 class PauseTimer private constructor() {
 
     class CapabilityBuilder :
-        CapabilityBuilderBase<
-            CapabilityBuilder, Property, Argument, Output, Confirmation, TaskUpdater, Session
-            >(ACTION_SPEC) {
-        override fun build(): ActionCapability {
-            super.setProperty(Property.Builder().build())
+        Capability.Builder<
+            CapabilityBuilder,
+            Properties,
+            Arguments,
+            Output,
+            Confirmation,
+            ExecutionSession,
+        >(ACTION_SPEC) {
+        override fun build(): Capability {
+            super.setProperty(Properties.Builder().build())
             return super.build()
         }
     }
 
     // TODO(b/268369632): Remove Property from public capability APIs.
-    class Property internal constructor(
-        val timerList: SimpleProperty?
+    class Properties
+    internal constructor(
+        val timerList: Property<TimerValue>?,
     ) {
         override fun toString(): String {
             return "Property(timerList=$timerList}"
@@ -74,7 +82,7 @@ class PauseTimer private constructor() {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as Property
+            other as Properties
 
             if (timerList != other.timerList) return false
 
@@ -86,27 +94,29 @@ class PauseTimer private constructor() {
         }
 
         class Builder {
-            private var timerList: SimpleProperty? = null
+            private var timerList: Property<TimerValue>? = null
 
-            fun setTimerList(timerList: SimpleProperty): Builder =
-                apply { this.timerList = timerList }
+            fun setTimerList(timerList: Property<TimerValue>): Builder = apply {
+                this.timerList = timerList
+            }
 
-            fun build(): Property = Property(timerList)
+            fun build(): Properties = Properties(timerList)
         }
     }
 
-    class Argument internal constructor(
-        val timerList: List<Timer>?
+    class Arguments
+    internal constructor(
+        val timerList: List<TimerValue>?,
     ) {
         override fun toString(): String {
-            return "Argument(timerList=$timerList)"
+            return "Arguments(timerList=$timerList)"
         }
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as Argument
+            other as Arguments
 
             if (timerList != other.timerList) return false
 
@@ -117,12 +127,14 @@ class PauseTimer private constructor() {
             return timerList.hashCode()
         }
 
-        class Builder : BuilderOf<Argument> {
-            private var timerList: List<Timer>? = null
+        class Builder : BuilderOf<Arguments> {
+            private var timerList: List<TimerValue>? = null
 
-            fun setTimerList(timerList: List<Timer>): Builder = apply { this.timerList = timerList }
+            fun setTimerList(timerList: List<TimerValue>): Builder = apply {
+                this.timerList = timerList
+            }
 
-            override fun build(): Argument = Argument(timerList)
+            override fun build(): Arguments = Arguments(timerList)
         }
     }
 
@@ -149,8 +161,9 @@ class PauseTimer private constructor() {
         class Builder {
             private var executionStatus: ExecutionStatus? = null
 
-            fun setExecutionStatus(executionStatus: ExecutionStatus): Builder =
-                apply { this.executionStatus = executionStatus }
+            fun setExecutionStatus(executionStatus: ExecutionStatus): Builder = apply {
+                this.executionStatus = executionStatus
+            }
 
             fun build(): Output = Output(executionStatus)
         }
@@ -177,15 +190,15 @@ class PauseTimer private constructor() {
                 status = genericErrorStatus.toString()
             }
             val value: Value = Value.newBuilder().setStringValue(status).build()
-            return ParamValue.newBuilder().setStructValue(
-                Struct.newBuilder().putFields(TypeConverters.FIELD_NAME_TYPE, value).build(),
-            ).build()
+            return ParamValue.newBuilder()
+                .setStructValue(
+                    Struct.newBuilder().putFields(TypeConverters.FIELD_NAME_TYPE, value).build(),
+                )
+                .build()
         }
     }
 
     class Confirmation internal constructor()
 
-    class TaskUpdater internal constructor() : AbstractTaskUpdater()
-
-    sealed interface Session : BaseSession<Argument, Output>
+    sealed interface ExecutionSession : BaseExecutionSession<Arguments, Output>
 }

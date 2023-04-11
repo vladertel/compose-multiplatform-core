@@ -53,6 +53,7 @@ import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.verify
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.robolectric.annotation.internal.DoNotInstrument
 import org.robolectric.shadows.ShadowLog
 import org.robolectric.shadows.ShadowLooper.runUiThreadTasks
@@ -74,8 +75,11 @@ class ComplicationDataSourceServiceTest {
                 complicationSlotId: Int,
                 data: WireComplicationData?
             ) {
-                mRemoteManager.updateComplicationData(complicationSlotId, data)
-                mUpdateComplicationDataLatch.countDown()
+                try {
+                    mRemoteManager.updateComplicationData(complicationSlotId, data)
+                } finally {
+                    mUpdateComplicationDataLatch.countDown()
+                }
             }
         }
     private lateinit var mProvider: IComplicationProvider.Stub
@@ -109,6 +113,11 @@ class ComplicationDataSourceServiceTest {
         /** Last type provided to [previewData]. */
         var lastPreviewType: ComplicationType? = null
 
+        /** Last error provided to [onComplicationDataError]. */
+        var lastSendError: Throwable? = null
+
+        val lastPreviewOrErrorLatch = CountDownLatch(1)
+
         override var wearPlatformVersion = Build.VERSION.SDK_INT
 
         override fun createMainThreadHandler(): Handler = mPretendMainThreadHandler
@@ -129,8 +138,14 @@ class ComplicationDataSourceServiceTest {
             }
         }
 
+        override fun onComplicationDataError(throwable: Throwable) {
+            lastSendError = throwable
+            lastPreviewOrErrorLatch.countDown()
+        }
+
         override fun getPreviewData(type: ComplicationType): ComplicationData? {
             lastPreviewType = type
+            lastPreviewOrErrorLatch.countDown()
             return previewData
         }
     }
@@ -329,6 +344,26 @@ class ComplicationDataSourceServiceTest {
         val data = argumentCaptor<WireComplicationData>()
         verify(mRemoteManager).updateComplicationData(eq(id), data.capture())
         assertThat(data.allValues).containsExactly(null)
+    }
+
+    @Test
+    fun testOnComplicationDataError() {
+        val data =
+            LongTextComplicationData.Builder(
+                    PlainComplicationText.Builder("hello").build(),
+                    ComplicationText.EMPTY
+                )
+                .build()
+        mService.responseData = data
+        val id = 123
+        val error = RuntimeException("failed!")
+        whenever(mRemoteManager.updateComplicationData(id, data.asWireComplicationData()))
+            .thenThrow(error)
+
+        mProvider.onUpdate(id, ComplicationType.LONG_TEXT.toWireComplicationType(), mLocalManager)
+        mService.lastPreviewOrErrorLatch.await(1, TimeUnit.SECONDS)
+
+        assertThat(mService.lastSendError).isEqualTo(error)
     }
 
     @Test

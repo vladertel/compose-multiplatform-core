@@ -17,7 +17,7 @@
 package androidx.camera.core;
 
 import static androidx.camera.core.CameraEffect.PREVIEW;
-import static androidx.camera.core.MirrorMode.MIRROR_MODE_FRONT_ON;
+import static androidx.camera.core.MirrorMode.MIRROR_MODE_ON_FRONT_ONLY;
 import static androidx.camera.core.impl.ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE;
 import static androidx.camera.core.impl.ImageInputConfig.OPTION_INPUT_FORMAT;
 import static androidx.camera.core.impl.ImageOutputConfig.OPTION_APP_TARGET_ROTATION;
@@ -60,6 +60,7 @@ import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.TextureView;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -89,6 +90,9 @@ import androidx.camera.core.internal.ThreadConfig;
 import androidx.camera.core.processing.Node;
 import androidx.camera.core.processing.SurfaceEdge;
 import androidx.camera.core.processing.SurfaceProcessorNode;
+import androidx.camera.core.resolutionselector.AspectRatioStrategy;
+import androidx.camera.core.resolutionselector.ResolutionSelector;
+import androidx.camera.core.resolutionselector.ResolutionStrategy;
 import androidx.core.util.Consumer;
 import androidx.lifecycle.LifecycleOwner;
 
@@ -222,8 +226,12 @@ public final class Preview extends UseCase {
         // Close previous session's deferrable surface before creating new one
         clearPipeline();
 
-        final SurfaceRequest surfaceRequest = new SurfaceRequest(streamSpec.getResolution(),
-                getCamera(), this::notifyReset);
+        final SurfaceRequest surfaceRequest = new SurfaceRequest(
+                streamSpec.getResolution(),
+                getCamera(),
+                streamSpec.getDynamicRange(),
+                streamSpec.getExpectedFrameRateRange(),
+                this::notifyReset);
         mCurrentSurfaceRequest = surfaceRequest;
 
         if (mSurfaceProvider != null) {
@@ -299,6 +307,20 @@ public final class Preview extends UseCase {
         if (camera == getCamera()) {
             mCurrentSurfaceRequest = appEdge.createSurfaceRequest(camera);
             sendSurfaceRequest();
+        }
+    }
+
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @Override
+    @IntRange(from = 0, to = 359)
+    protected int getRelativeRotation(@NonNull CameraInternal cameraInternal,
+            boolean requireMirroring) {
+        if (cameraInternal.getHasTransform()) {
+            return super.getRelativeRotation(cameraInternal, requireMirroring);
+        } else {
+            // If there is a virtual parent camera, the buffer is already rotated because
+            // SurfaceView cannot handle additional rotation.
+            return 0;
         }
     }
 
@@ -534,6 +556,17 @@ public final class Preview extends UseCase {
         return super.getResolutionInfo();
     }
 
+    /**
+     * Returns the resolution selector setting.
+     *
+     * <p>This setting is set when constructing an ImageCapture using
+     * {@link Builder#setResolutionSelector(ResolutionSelector)}.
+     */
+    @Nullable
+    public ResolutionSelector getResolutionSelector() {
+        return ((ImageOutputConfig) getCurrentConfig()).getResolutionSelector(null);
+    }
+
     @NonNull
     @Override
     public String toString() {
@@ -572,20 +605,6 @@ public final class Preview extends UseCase {
             @NonNull UseCaseConfig.Builder<?, ?, ?> builder) {
         builder.getMutableConfig().insertOption(OPTION_INPUT_FORMAT,
                 INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE);
-
-        // Merges Preview's default max resolution setting when resolution selector is used
-        ResolutionSelector resolutionSelector =
-                builder.getMutableConfig().retrieveOption(OPTION_RESOLUTION_SELECTOR, null);
-        if (resolutionSelector != null && resolutionSelector.getMaxResolution() == null) {
-            Size maxResolution = builder.getMutableConfig().retrieveOption(OPTION_MAX_RESOLUTION);
-            if (maxResolution != null) {
-                ResolutionSelector.Builder resolutionSelectorBuilder =
-                        ResolutionSelector.Builder.fromSelector(resolutionSelector);
-                resolutionSelectorBuilder.setMaxResolution(maxResolution);
-                builder.getMutableConfig().insertOption(OPTION_RESOLUTION_SELECTOR,
-                        resolutionSelectorBuilder.build());
-            }
-        }
 
         return builder.getUseCaseConfig();
     }
@@ -736,13 +755,20 @@ public final class Preview extends UseCase {
     public static final class Defaults implements ConfigProvider<PreviewConfig> {
         private static final int DEFAULT_SURFACE_OCCUPANCY_PRIORITY = 2;
         private static final int DEFAULT_ASPECT_RATIO = AspectRatio.RATIO_4_3;
-        private static final int DEFAULT_MIRROR_MODE = MIRROR_MODE_FRONT_ON;
+        private static final int DEFAULT_MIRROR_MODE = MIRROR_MODE_ON_FRONT_ONLY;
+
+        private static final ResolutionSelector DEFAULT_RESOLUTION_SELECTOR =
+                new ResolutionSelector.Builder().setAspectRatioStrategy(
+                        AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY).setResolutionStrategy(
+                        ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY).build();
 
         private static final PreviewConfig DEFAULT_CONFIG;
 
         static {
-            Builder builder = new Builder().setSurfaceOccupancyPriority(
-                    DEFAULT_SURFACE_OCCUPANCY_PRIORITY).setTargetAspectRatio(DEFAULT_ASPECT_RATIO);
+            Builder builder = new Builder()
+                    .setSurfaceOccupancyPriority(DEFAULT_SURFACE_OCCUPANCY_PRIORITY)
+                    .setTargetAspectRatio(DEFAULT_ASPECT_RATIO)
+                    .setResolutionSelector(DEFAULT_RESOLUTION_SELECTOR);
             DEFAULT_CONFIG = builder.getUseCaseConfig();
         }
 
@@ -908,6 +934,8 @@ public final class Preview extends UseCase {
          *
          * @param aspectRatio The desired Preview {@link AspectRatio}
          * @return The current Builder.
+         * @deprecated use {@link ResolutionSelector} with {@link AspectRatioStrategy} to specify
+         * the preferred aspect ratio settings instead.
          */
         @NonNull
         @Override
@@ -1006,6 +1034,8 @@ public final class Preview extends UseCase {
          *
          * @param resolution The target resolution to choose from supported output sizes list.
          * @return The current Builder.
+         * @deprecated use {@link ResolutionSelector} with {@link ResolutionStrategy} to specify
+         * the preferred resolution settings instead.
          */
         @NonNull
         @Override
@@ -1061,22 +1091,23 @@ public final class Preview extends UseCase {
          * size match to the device's screen resolution, or to 1080p (1920x1080), whichever is
          * smaller. See the
          * <a href="https://developer.android.com/reference/android/hardware/camera2/CameraDevice#regular-capture">Regular capture</a>
-         * section in {@link android.hardware.camera2.CameraDevice}'. If the
-         * {@link ResolutionSelector} contains the max resolution setting larger than the {@code
-         * PREVIEW} size, a size larger than the device's screen resolution or 1080p can be
-         * selected to use for {@link Preview}.
+         * section in {@link android.hardware.camera2.CameraDevice}'. {@link Preview} has a
+         * default {@link ResolutionStrategy} with the {@code PREVIEW} bound size and
+         * {@link ResolutionStrategy#FALLBACK_RULE_CLOSEST_LOWER} to achieve this. Applications
+         * can override this default strategy with a different resolution strategy.
          *
          * <p>Note that due to compatibility reasons, CameraX may select a resolution that is
          * larger than the default screen resolution on certain devices.
          *
          * <p>The existing {@link #setTargetResolution(Size)} and
          * {@link #setTargetAspectRatio(int)} APIs are deprecated and are not compatible with
-         * {@link ResolutionSelector}. Calling any of these APIs together with
-         * {@link ResolutionSelector} will throw an {@link IllegalArgumentException} while
-         * {@link #build()} is called to create the {@link Preview} instance.
+         * {@link #setResolutionSelector(ResolutionSelector)}. Calling either of these APIs
+         * together with {@link #setResolutionSelector(ResolutionSelector)} will result in an
+         * {@link IllegalArgumentException} being thrown when you attempt to build the
+         * {@link Preview} instance.
          *
-         **/
-        @RestrictTo(Scope.LIBRARY_GROUP)
+         * @return The current Builder.
+         */
         @Override
         @NonNull
         public Builder setResolutionSelector(@NonNull ResolutionSelector resolutionSelector) {

@@ -47,6 +47,7 @@ import androidx.compose.ui.node.LayoutNode.LayoutState.Measuring
 import androidx.compose.ui.node.Nodes.FocusEvent
 import androidx.compose.ui.node.Nodes.FocusProperties
 import androidx.compose.ui.node.Nodes.FocusTarget
+import androidx.compose.ui.node.Nodes.PointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -176,10 +177,10 @@ internal class LayoutNode(
     }
 
     internal val childMeasurables: List<Measurable>
-        get() = measurePassDelegate.childMeasurables
+        get() = measurePassDelegate.childDelegates
 
     internal val childLookaheadMeasurables: List<Measurable>
-        get() = lookaheadPassDelegate!!.childMeasurables
+        get() = lookaheadPassDelegate!!.childDelegates
 
     // when the list of our children is modified it will be set to true if we are a virtual node
     // or it will be set to true on a parent if the parent is a virtual node
@@ -284,14 +285,14 @@ internal class LayoutNode(
      * and layout related impl during *lookahead*. For the actual measure & layout, use
      * [measurePassDelegate].
      */
-    private val lookaheadPassDelegate
+    internal val lookaheadPassDelegate
         get() = layoutDelegate.lookaheadPassDelegate
 
     /**
      * The measure pass delegate for the [LayoutNode]. This delegate is responsible for the actual
      * measure & layout, after lookahead if any.
      */
-    private val measurePassDelegate
+    internal val measurePassDelegate
         get() = layoutDelegate.measurePassDelegate
 
     /**
@@ -443,7 +444,8 @@ internal class LayoutNode(
         if (parent == null) {
             // it is a root node and attached root nodes are always placed (as there is no parent
             // to place them explicitly)
-            isPlaced = true
+            measurePassDelegate.isPlaced = true
+            lookaheadPassDelegate?.let { it.isPlaced = true }
         }
 
         // Use the inner coordinator of first non-virtual parent
@@ -463,7 +465,7 @@ internal class LayoutNode(
         // Update lookahead root when attached. For nested cases, we'll always use the
         // closest lookahead root
         updateLookaheadRoot()
-        nodes.attach(performInvalidations = false)
+        nodes.attach()
         _foldedChildren.forEach { child ->
             child.attach(owner)
         }
@@ -474,6 +476,7 @@ internal class LayoutNode(
         forEachCoordinatorIncludingInner { it.onLayoutNodeAttach() }
         onAttach?.invoke(owner)
 
+        layoutDelegate.updateParentData()
         invalidateFocusOnAttach()
     }
 
@@ -492,7 +495,8 @@ internal class LayoutNode(
         if (parent != null) {
             parent.invalidateLayer()
             parent.invalidateMeasurements()
-            measuredByParent = UsageByParent.NotUsed
+            measurePassDelegate.measuredByParent = UsageByParent.NotUsed
+            lookaheadPassDelegate?.let { it.measuredByParent = UsageByParent.NotUsed }
         }
         layoutDelegate.resetAlignmentLines()
         onDetach?.invoke(owner)
@@ -514,9 +518,8 @@ internal class LayoutNode(
         _foldedChildren.forEach { child ->
             child.detach()
         }
-        placeOrder = NotPlacedPlaceOrder
-        previousPlaceOrder = NotPlacedPlaceOrder
-        isPlaced = false
+        measurePassDelegate.onNodeDetached()
+        lookaheadPassDelegate?.onNodeDetached()
     }
 
     private fun addVirtualLookaheadChild(layoutNode: LayoutNode) {
@@ -661,6 +664,10 @@ internal class LayoutNode(
             if (field != value) {
                 field = value
                 onDensityOrLayoutDirectionChanged()
+
+                nodes.headToTail(type = PointerInput) {
+                    it.onDensityChange()
+                }
             }
         }
 
@@ -676,6 +683,16 @@ internal class LayoutNode(
         }
 
     override var viewConfiguration: ViewConfiguration = DummyViewConfiguration
+        set(value) {
+            if (field != value) {
+                field = value
+
+                nodes.headToTail(type = PointerInput) {
+                    it.onViewConfigurationChange()
+                }
+            }
+        }
+
     override var compositionLocalMap = CompositionLocalMap.Empty
         set(value) {
             field = value
@@ -684,7 +701,12 @@ internal class LayoutNode(
             viewConfiguration = value[LocalViewConfiguration]
             @OptIn(ExperimentalComposeUiApi::class)
             nodes.headToTail(Nodes.CompositionLocalConsumer) { modifierNode ->
-                autoInvalidateUpdatedNode(modifierNode as Modifier.Node)
+                val delegatedNode = modifierNode.node
+                if (delegatedNode.isAttached) {
+                    autoInvalidateUpdatedNode(delegatedNode)
+                } else {
+                    delegatedNode.updatedNodeAwaitingAttachForInvalidation = true
+                }
             }
         }
 
@@ -722,41 +744,30 @@ internal class LayoutNode(
     /**
      * Whether or not this [LayoutNode] and all of its parents have been placed in the hierarchy.
      */
-    override var isPlaced: Boolean = false
-        private set
+    override val isPlaced: Boolean
+        get() = measurePassDelegate.isPlaced
 
     /**
      * The order in which this node was placed by its parent during the previous `layoutChildren`.
      * Before the placement the order is set to [NotPlacedPlaceOrder] to all the children. Then
-     * every placed node assigns this variable to [parent]s [nextChildPlaceOrder] and increments
-     * this counter. Not placed items will still have [NotPlacedPlaceOrder] set.
+     * every placed node assigns this variable to [parent]s MeasurePassDelegate's
+     * nextChildPlaceOrder and increments this counter. Not placed items will still
+     * have [NotPlacedPlaceOrder] set.
      */
-    internal var placeOrder: Int = NotPlacedPlaceOrder
-        private set
-
-    /**
-     * The value [placeOrder] had during the previous parent `layoutChildren`. Helps us to
-     * understand if the order did change.
-     */
-    internal var previousPlaceOrder: Int = NotPlacedPlaceOrder
-        private set
-
-    /**
-     * The counter on a parent node which is used by its children to understand the order in which
-     * they were placed.
-     * @see placeOrder
-     */
-    private var nextChildPlaceOrder: Int = 0
+    internal val placeOrder: Int
+        get() = measurePassDelegate.placeOrder
 
     /**
      * Remembers how the node was measured by the parent.
      */
-    internal var measuredByParent: UsageByParent = UsageByParent.NotUsed
+    internal val measuredByParent: UsageByParent
+        get() = measurePassDelegate.measuredByParent
 
     /**
      * Remembers how the node was measured by the parent in lookahead.
      */
-    internal var measuredByParentInLookahead: UsageByParent = UsageByParent.NotUsed
+    internal val measuredByParentInLookahead: UsageByParent
+        get() = lookaheadPassDelegate?.measuredByParent ?: UsageByParent.NotUsed
 
     /**
      * Remembers how the node was measured using intrinsics by an ancestor.
@@ -785,7 +796,8 @@ internal class LayoutNode(
      * Default zIndex is 0. We use sum of the values passed as zIndex to place() by the
      * parent layout and all the applied modifiers.
      */
-    private var zIndex: Float = 0f
+    private val zIndex: Float
+        get() = measurePassDelegate.zIndex
 
     /**
      * The inner state associated with [androidx.compose.ui.layout.SubcomposeLayout].
@@ -907,12 +919,7 @@ internal class LayoutNode(
             // clear the intrinsics usage for everything that was requested previously.
             clearSubtreePlacementIntrinsicsUsage()
         }
-        try {
-            relayoutWithoutParentInProgress = true
-            measurePassDelegate.replace()
-        } finally {
-            relayoutWithoutParentInProgress = false
-        }
+        measurePassDelegate.replace()
     }
 
     internal fun lookaheadReplace() {
@@ -923,13 +930,6 @@ internal class LayoutNode(
         }
         lookaheadPassDelegate!!.replace()
     }
-
-    /**
-     * Is true during [replace] invocation. Helps to differentiate between the cases when our
-     * parent is measuring us during the measure block, and when we are remeasured individually
-     * because of some change. This could be useful to know if we need to record the placing order.
-     */
-    private var relayoutWithoutParentInProgress = false
 
     internal fun draw(canvas: Canvas) = outerCoordinator.draw(canvas)
 
@@ -981,106 +981,6 @@ internal class LayoutNode(
         )
     }
 
-    /**
-     * Invoked when the parent placed the node. It will trigger the layout.
-     */
-    internal fun onNodePlaced() {
-        val parent = parent
-
-        var newZIndex = innerCoordinator.zIndex
-        forEachCoordinator {
-            newZIndex += it.zIndex
-        }
-        if (newZIndex != zIndex) {
-            zIndex = newZIndex
-            parent?.onZSortedChildrenInvalidated()
-            parent?.invalidateLayer()
-        }
-
-        if (!isPlaced) {
-            // when the visibility of a child has been changed we need to invalidate
-            // parents inner layer - the layer in which this child will be drawn
-            parent?.invalidateLayer()
-            markNodeAndSubtreeAsPlaced()
-        }
-
-        if (parent != null) {
-            if (!relayoutWithoutParentInProgress && parent.layoutState == LayingOut) {
-                // the parent is currently placing its children
-                check(placeOrder == NotPlacedPlaceOrder) {
-                    "Place was called on a node which was placed already"
-                }
-                placeOrder = parent.nextChildPlaceOrder
-                parent.nextChildPlaceOrder++
-            }
-            // if relayoutWithoutParentInProgress is true we were asked to be relaid out without
-            // affecting the parent. this means our placeOrder didn't change since the last time
-            // parent placed us.
-        } else {
-            // parent is null for the root node
-            placeOrder = 0
-        }
-
-        layoutDelegate.alignmentLinesOwner.layoutChildren()
-    }
-
-    internal fun clearPlaceOrder() {
-        // reset the place order counter which will be used by the children
-        nextChildPlaceOrder = 0
-        forEachChild { child ->
-            // and reset the place order for all the children before placing them
-            child.previousPlaceOrder = child.placeOrder
-            child.placeOrder = LayoutNode.NotPlacedPlaceOrder
-            // before rerunning the user's layout block reset previous measuredByParent
-            // for children which we measured in the layout block during the last run.
-            if (child.measuredByParent == LayoutNode.UsageByParent.InLayoutBlock) {
-                child.measuredByParent = LayoutNode.UsageByParent.NotUsed
-            }
-        }
-    }
-
-    internal fun checkChildrenPlaceOrderForUpdates() {
-        forEachChild { child ->
-            // we set `placeOrder` to NotPlacedPlaceOrder for all the children, then
-            // during the placeChildren() invocation the real order will be assigned for
-            // all the placed children.
-            if (child.previousPlaceOrder != child.placeOrder) {
-                onZSortedChildrenInvalidated()
-                invalidateLayer()
-                if (child.placeOrder == LayoutNode.NotPlacedPlaceOrder) {
-                    child.markSubtreeAsNotPlaced()
-                }
-            }
-        }
-    }
-
-    private fun markNodeAndSubtreeAsPlaced() {
-        val wasPlaced = isPlaced
-        isPlaced = true
-        if (!wasPlaced) {
-            // if the node was not placed previous remeasure request could have been ignored
-            if (measurePending) {
-                requestRemeasure(forceRequest = true)
-            } else if (lookaheadMeasurePending) {
-                requestLookaheadRemeasure(forceRequest = true)
-            }
-        }
-        // invalidate all the nodes layers that were invalidated while the node was not placed
-        forEachCoordinatorIncludingInner {
-            if (it.lastLayerDrawingWasSkipped) {
-                it.invalidateLayer()
-            }
-        }
-        forEachChild {
-            // this child was placed during the previous parent's layoutChildren(). this means that
-            // before the parent became not placed this child was placed. we need to restore that
-            if (it.placeOrder != NotPlacedPlaceOrder) {
-                it.markNodeAndSubtreeAsPlaced()
-                rescheduleRemeasureOrRelayout(it)
-            }
-        }
-    }
-
     internal fun rescheduleRemeasureOrRelayout(it: LayoutNode) {
         when (it.layoutState) {
             Idle -> {
@@ -1101,15 +1001,6 @@ internal class LayoutNode(
             }
 
             else -> throw IllegalStateException("Unexpected state ${it.layoutState}")
-        }
-    }
-
-    private fun markSubtreeAsNotPlaced() {
-        if (isPlaced) {
-            isPlaced = false
-            forEachChild {
-                it.markSubtreeAsNotPlaced()
-            }
         }
     }
 
@@ -1323,7 +1214,11 @@ internal class LayoutNode(
         layoutDelegate.markLookaheadMeasurePending()
 
     override fun forceRemeasure() {
-        requestRemeasure()
+        if (lookaheadRoot != null) {
+            requestLookaheadRemeasure()
+        } else {
+            requestRemeasure()
+        }
         val lastConstraints = layoutDelegate.lastConstraints
         if (lastConstraints != null) {
             owner?.measureAndLayout(this, lastConstraints)
@@ -1342,7 +1237,7 @@ internal class LayoutNode(
     /**
      * Calls [block] on all [LayoutModifierNodeCoordinator]s in the NodeCoordinator chain.
      */
-    private inline fun forEachCoordinator(block: (LayoutModifierNodeCoordinator) -> Unit) {
+    internal inline fun forEachCoordinator(block: (LayoutModifierNodeCoordinator) -> Unit) {
         var coordinator: NodeCoordinator? = outerCoordinator
         val inner = innerCoordinator
         while (coordinator !== inner) {
@@ -1354,7 +1249,7 @@ internal class LayoutNode(
     /**
      * Calls [block] on all [NodeCoordinator]s in the NodeCoordinator chain.
      */
-    private inline fun forEachCoordinatorIncludingInner(block: (NodeCoordinator) -> Unit) {
+    internal inline fun forEachCoordinatorIncludingInner(block: (NodeCoordinator) -> Unit) {
         var delegate: NodeCoordinator? = outerCoordinator
         val final = innerCoordinator.wrapped
         while (delegate != final && delegate != null) {
@@ -1447,6 +1342,8 @@ internal class LayoutNode(
         } else {
             resetModifierState()
         }
+        // resetModifierState detaches all nodes, so we need to re-attach them upon reuse.
+        nodes.attach()
     }
 
     override fun onDeactivate() {

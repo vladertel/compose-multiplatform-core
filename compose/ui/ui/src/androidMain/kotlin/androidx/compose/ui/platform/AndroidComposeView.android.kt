@@ -49,7 +49,6 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
-import androidx.annotation.RestrictTo
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.derivedStateOf
@@ -58,7 +57,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.AndroidAutofill
 import androidx.compose.ui.autofill.Autofill
@@ -137,9 +135,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.input.AndroidTextInputServicePlugin
 import androidx.compose.ui.text.input.PlatformTextInputPluginRegistryImpl
-import androidx.compose.ui.text.input.PlatformTextInputService
-import androidx.compose.ui.text.input.TextInputForTests
-import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
@@ -393,9 +388,6 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
         AndroidTextInputServicePlugin
     ).adapter.service
 
-    override val textInputForTests: TextInputForTests?
-        get() = platformTextInputPluginRegistry.focusedAdapter?.inputForTests
-
     @Deprecated(
         "fontLoader is deprecated, use fontFamilyResolver",
         replaceWith = ReplaceWith("fontFamilyResolver")
@@ -632,22 +624,42 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
         }
     }
 
-    override fun sendKeyEvent(keyEvent: KeyEvent): Boolean {
-        return focusOwner.dispatchKeyEvent(keyEvent)
-    }
+    /**
+     * This function is used by the testing framework to send key events.
+     */
+    override fun sendKeyEvent(keyEvent: KeyEvent): Boolean =
+        // First dispatch the key event to mimic the event being intercepted before it is sent to
+        // the soft keyboard.
+        focusOwner.dispatchInterceptedSoftKeyboardEvent(keyEvent) ||
+            // Next, send the key event to the Soft Keyboard.
+            // TODO(b/272600716): Send the key event to the IME.
 
-    override fun dispatchKeyEvent(event: AndroidKeyEvent) =
+            // Finally, dispatch the key event to onPreKeyEvent/onKeyEvent listeners.
+            focusOwner.dispatchKeyEvent(keyEvent)
+
+    override fun dispatchKeyEvent(event: AndroidKeyEvent): Boolean {
         if (isFocused) {
             // Focus lies within the Compose hierarchy, so we dispatch the key event to the
             // appropriate place.
             _windowInfo.keyboardModifiers = PointerKeyboardModifiers(event.metaState)
-            sendKeyEvent(KeyEvent(event))
+            // If the event is not consumed, use the default implementation.
+            return focusOwner.dispatchKeyEvent(KeyEvent(event)) || super.dispatchKeyEvent(event)
         } else {
-            // This Owner has a focused child view, which is a view interop use case,
+            // This Owner has a focused child view, which is a view interoperability use case,
             // so we use the default ViewGroup behavior which will route tke key event to the
             // focused view.
-            super.dispatchKeyEvent(event)
+            return super.dispatchKeyEvent(event)
         }
+    }
+
+    override fun dispatchKeyEventPreIme(event: AndroidKeyEvent): Boolean {
+        return (isFocused && focusOwner.dispatchInterceptedSoftKeyboardEvent(KeyEvent(event))) ||
+            // If this view is not focused, and it received a key event, it means this is a view
+            // interoperability use case and we need to route the event to the embedded child view.
+            // Also, if this event wasn't consumed by the compose hierarchy, we need to send it back
+            // to the parent view. Both these cases are handles by the default view implementation.
+            super.dispatchKeyEventPreIme(event)
+    }
 
     override fun onAttach(node: LayoutNode) {
     }
@@ -822,8 +834,8 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
         }
     }
 
-    override fun forceMeasureTheSubtree(layoutNode: LayoutNode) {
-        measureAndLayoutDelegate.forceMeasureTheSubtree(layoutNode)
+    override fun forceMeasureTheSubtree(layoutNode: LayoutNode, affectsLookahead: Boolean) {
+        measureAndLayoutDelegate.forceMeasureTheSubtree(layoutNode, affectsLookahead)
     }
 
     override fun onRequestMeasure(
@@ -1386,9 +1398,8 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
         eventTime: Long,
         forceHover: Boolean = true
     ) {
-        val oldAction = motionEvent.actionMasked
         // don't send any events for pointers that are "up" unless they support hover
-        val upIndex = when (oldAction) {
+        val upIndex = when (motionEvent.actionMasked) {
             ACTION_UP -> if (action == ACTION_HOVER_ENTER || action == ACTION_HOVER_EXIT) -1 else 0
             ACTION_POINTER_UP -> motionEvent.actionIndex
             else -> -1
@@ -1781,12 +1792,6 @@ private fun layoutDirectionFromInt(layoutDirection: Int): LayoutDirection = when
     android.util.LayoutDirection.RTL -> LayoutDirection.Rtl
     else -> LayoutDirection.Ltr
 }
-
-/** @suppress */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-@InternalComposeUiApi // used by testing infra
-var textInputServiceFactory: (PlatformTextInputService) -> TextInputService =
-    { TextInputService(it) }
 
 /**
  * These classes are here to ensure that the classes that use this API will get verified and can be

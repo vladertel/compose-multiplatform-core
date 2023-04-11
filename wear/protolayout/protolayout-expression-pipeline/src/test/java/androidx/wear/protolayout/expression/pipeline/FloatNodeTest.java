@@ -18,9 +18,9 @@ package androidx.wear.protolayout.expression.pipeline;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import static java.lang.Integer.MAX_VALUE;
-
 import static org.robolectric.Shadows.shadowOf;
+
+import static java.lang.Integer.MAX_VALUE;
 
 import android.os.Looper;
 
@@ -45,11 +45,11 @@ import androidx.wear.protolayout.expression.proto.StateEntryProto.StateEntryValu
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @RunWith(AndroidJUnit4.class)
 public class FloatNodeTest {
@@ -72,8 +72,8 @@ public class FloatNodeTest {
     public void stateFloatSourceNodeTest() {
         List<Float> results = new ArrayList<>();
         float testValue = 6.6f;
-        ObservableStateStore oss =
-                new ObservableStateStore(
+        StateStore oss =
+                new StateStore(
                         ImmutableMap.of(
                                 "foo",
                                 StateEntryValue.newBuilder()
@@ -96,8 +96,8 @@ public class FloatNodeTest {
         float oldValue = 6.5f;
         float newValue = 7.8f;
 
-        ObservableStateStore oss =
-                new ObservableStateStore(
+        StateStore oss =
+                new StateStore(
                         ImmutableMap.of(
                                 "foo",
                                 StateEntryValue.newBuilder()
@@ -128,8 +128,8 @@ public class FloatNodeTest {
         float oldValue = 6.5f;
         float newValue = 7.8f;
 
-        ObservableStateStore oss =
-                new ObservableStateStore(
+        StateStore oss =
+                new StateStore(
                         ImmutableMap.of(
                                 "foo",
                                 StateEntryValue.newBuilder()
@@ -165,8 +165,8 @@ public class FloatNodeTest {
                         .setOperationType(ArithmeticOpType.ARITHMETIC_OP_TYPE_ADD)
                         .build();
 
-        ArithmeticFloatNode node = new ArithmeticFloatNode(protoNode,
-                new AddToListCallback<>(results));
+        ArithmeticFloatNode node =
+                new ArithmeticFloatNode(protoNode, new AddToListCallback<>(results));
 
         float lhsValue = 6.6f;
         FixedFloat lhsProtoNode = FixedFloat.newBuilder().setValue(lhsValue).build();
@@ -174,8 +174,8 @@ public class FloatNodeTest {
         lhsNode.init();
 
         float oldRhsValue = 6.5f;
-        ObservableStateStore oss =
-                new ObservableStateStore(
+        StateStore oss =
+                new StateStore(
                         ImmutableMap.of(
                                 "foo",
                                 StateEntryValue.newBuilder()
@@ -197,8 +197,9 @@ public class FloatNodeTest {
                         StateEntryValue.newBuilder()
                                 .setFloatVal(FixedFloat.newBuilder().setValue(newRhsValue))
                                 .build()));
-        assertThat(results).containsExactly(lhsValue + oldRhsValue,
-                lhsValue + newRhsValue).inOrder();
+        assertThat(results)
+                .containsExactly(lhsValue + oldRhsValue, lhsValue + newRhsValue)
+                .inOrder();
     }
 
     @Test
@@ -207,8 +208,8 @@ public class FloatNodeTest {
         Int32ToFloatNode node = new Int32ToFloatNode(new AddToListCallback<>(results));
 
         int oldIntValue = 65;
-        ObservableStateStore oss =
-                new ObservableStateStore(
+        StateStore oss =
+                new StateStore(
                         ImmutableMap.of(
                                 "foo",
                                 StateEntryValue.newBuilder()
@@ -242,11 +243,13 @@ public class FloatNodeTest {
         List<Float> results = new ArrayList<>();
         QuotaManager quotaManager = new FixedQuotaManagerImpl(MAX_VALUE);
         AnimatableFixedFloat protoNode =
-                AnimatableFixedFloat.newBuilder().setFromValue(startValue).setToValue(
-                        endValue).build();
+                AnimatableFixedFloat.newBuilder()
+                        .setFromValue(startValue)
+                        .setToValue(endValue)
+                        .build();
         AnimatableFixedFloatNode node =
-                new AnimatableFixedFloatNode(protoNode, new AddToListCallback<>(results),
-                        quotaManager);
+                new AnimatableFixedFloatNode(
+                        protoNode, new AddToListCallback<>(results), quotaManager);
         node.setVisibility(true);
 
         node.preInit();
@@ -265,11 +268,13 @@ public class FloatNodeTest {
         List<Float> results = new ArrayList<>();
         QuotaManager quotaManager = new FixedQuotaManagerImpl(MAX_VALUE);
         AnimatableFixedFloat protoNode =
-                AnimatableFixedFloat.newBuilder().setFromValue(startValue).setToValue(
-                        endValue).build();
+                AnimatableFixedFloat.newBuilder()
+                        .setFromValue(startValue)
+                        .setToValue(endValue)
+                        .build();
         AnimatableFixedFloatNode node =
-                new AnimatableFixedFloatNode(protoNode, new AddToListCallback<>(results),
-                        quotaManager);
+                new AnimatableFixedFloatNode(
+                        protoNode, new AddToListCallback<>(results), quotaManager);
         node.setVisibility(false);
 
         node.preInit();
@@ -287,11 +292,13 @@ public class FloatNodeTest {
         List<Float> results = new ArrayList<>();
         QuotaManager quotaManager = new FixedQuotaManagerImpl(0);
         AnimatableFixedFloat protoNode =
-                AnimatableFixedFloat.newBuilder().setFromValue(startValue).setToValue(
-                        endValue).build();
+                AnimatableFixedFloat.newBuilder()
+                        .setFromValue(startValue)
+                        .setToValue(endValue)
+                        .build();
         AnimatableFixedFloatNode node =
-                new AnimatableFixedFloatNode(protoNode, new AddToListCallback<>(results),
-                        quotaManager);
+                new AnimatableFixedFloatNode(
+                        protoNode, new AddToListCallback<>(results), quotaManager);
         node.setVisibility(true);
 
         node.preInit();
@@ -309,8 +316,8 @@ public class FloatNodeTest {
         float value3 = 17.0f;
         List<Float> results = new ArrayList<>();
         QuotaManager quotaManager = new FixedQuotaManagerImpl(MAX_VALUE);
-        ObservableStateStore oss =
-                new ObservableStateStore(
+        StateStore oss =
+                new StateStore(
                         ImmutableMap.of(
                                 "foo",
                                 StateEntryValue.newBuilder()
@@ -319,7 +326,8 @@ public class FloatNodeTest {
                                         .build()));
         DynamicAnimatedFloatNode floatNode =
                 new DynamicAnimatedFloatNode(
-                        new AddToListCallback<>(results), AnimationSpec.getDefaultInstance(),
+                        new AddToListCallback<>(results),
+                        AnimationSpec.getDefaultInstance(),
                         quotaManager);
         floatNode.setVisibility(false);
         StateFloatSourceNode stateNode =

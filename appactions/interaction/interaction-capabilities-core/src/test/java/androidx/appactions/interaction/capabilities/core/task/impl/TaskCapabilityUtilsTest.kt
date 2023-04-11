@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package androidx.appactions.interaction.capabilities.core.task.impl
+package androidx.appactions.interaction.capabilities.core.impl.task
 
-import androidx.appactions.interaction.capabilities.core.impl.converters.PropertyConverter
-import androidx.appactions.interaction.capabilities.core.properties.StringProperty
-import androidx.appactions.interaction.proto.AppActionsContext
+import androidx.appactions.interaction.proto.AppActionsContext.IntentParameter
 import androidx.appactions.interaction.proto.CurrentValue
 import androidx.appactions.interaction.proto.FulfillmentRequest
 import androidx.appactions.interaction.proto.ParamValue
@@ -32,24 +30,18 @@ class TaskCapabilityUtilsTest {
     fun isSlotFillingComplete_allRequiredParamsFilled_returnsTrue() {
         val args: MutableMap<String, List<ParamValue>> = HashMap()
         args["required"] = listOf(ParamValue.newBuilder().setStringValue("Donald").build())
-        val intentParameters: MutableList<AppActionsContext.IntentParameter> = ArrayList()
+        val intentParameters: MutableList<IntentParameter> = ArrayList()
         intentParameters.add(
-            PropertyConverter.getIntentParameter(
-                "required",
-                StringProperty.Builder().setRequired(true).build()
-            )
+            IntentParameter.newBuilder().setName("required").setIsRequired(true).build()
         )
         assertThat(TaskCapabilityUtils.isSlotFillingComplete(args, intentParameters)).isTrue()
     }
 
     @Test
     fun isSlotFillingComplete_notAllRequiredParamsFilled_returnsFalse() {
-        val intentParameters: MutableList<AppActionsContext.IntentParameter> = ArrayList()
+        val intentParameters: MutableList<IntentParameter> = ArrayList()
         intentParameters.add(
-            PropertyConverter.getIntentParameter(
-                "required",
-                StringProperty.Builder().setRequired(true).build()
-            )
+            IntentParameter.newBuilder().setName("required").setIsRequired(true).build()
         )
         assertThat(TaskCapabilityUtils.isSlotFillingComplete(emptyMap(), intentParameters))
             .isFalse()

@@ -48,7 +48,6 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
-import androidx.camera.core.ResolutionSelector
 import androidx.camera.core.UseCase
 import androidx.camera.core.UseCaseGroup
 import androidx.camera.core.ViewPort
@@ -63,6 +62,7 @@ import androidx.camera.core.impl.SessionProcessor
 import androidx.camera.core.impl.utils.CameraOrientationUtil
 import androidx.camera.core.impl.utils.Exif
 import androidx.camera.core.internal.compat.workaround.ExifRotationAvailability
+import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.integration.core.util.CameraPipeUtil
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.testing.CameraPipeConfigTestRule
@@ -165,6 +165,7 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
         }
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun capturedImageHasCorrectSize() = runBlocking {
         val useCase = ImageCapture.Builder()
@@ -312,6 +313,17 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
         assertThat(saveLocation.exists())
 
         canSaveToFile(saveLocation)
+    }
+
+    @Test
+    fun saveCanSucceed_toExternalStoragePublicFolderFile() {
+        val pictureFolder = Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_PICTURES
+        )
+        assumeTrue(pictureFolder.exists())
+        val saveLocation = File(pictureFolder, "test.jpg")
+        canSaveToFile(saveLocation)
+        saveLocation.delete()
     }
 
     private fun canSaveToFile(saveLocation: File) = runBlocking {
@@ -790,6 +802,7 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
         assertThat(config.targetAspectRatio).isEqualTo(AspectRatio.RATIO_4_3)
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun defaultAspectRatioWillBeSet_whenRatioDefaultIsSet() = runBlocking {
         val useCase = ImageCapture.Builder().setTargetAspectRatio(AspectRatio.RATIO_DEFAULT).build()
@@ -801,6 +814,7 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
         assertThat(config.targetAspectRatio).isEqualTo(AspectRatio.RATIO_4_3)
     }
 
+    @Suppress("DEPRECATION") // legacy resolution API
     @Test
     fun defaultAspectRatioWontBeSet_whenTargetResolutionIsSet() = runBlocking {
         val useCase = ImageCapture.Builder()
@@ -833,6 +847,7 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
         assertThat(imageCapture.targetRotation).isEqualTo(Surface.ROTATION_90)
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun targetResolutionIsUpdatedAfterTargetRotationIsUpdated() = runBlocking {
         val imageCapture = ImageCapture.Builder()
@@ -853,6 +868,7 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
         assertThat(newConfig.targetResolution).isEqualTo(expectedTargetResolution)
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun capturedImageHasCorrectCroppingSizeWithoutSettingRotation() {
         val useCase = ImageCapture.Builder()
@@ -867,6 +883,7 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
         )
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun capturedImageHasCorrectCroppingSizeSetRotationBuilder() {
         // Checks camera device sensor degrees to set correct target rotation value to make sure
@@ -886,6 +903,7 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
         )
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun capturedImageHasCorrectCroppingSize_setUseCaseRotation90FromRotationInBuilder() {
         // Checks camera device sensor degrees to set correct target rotation value to make sure
@@ -1181,6 +1199,8 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
 
     @Test
     fun useCaseCanBeReusedInDifferentCamera() = runBlocking {
+        assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_FRONT))
+
         val useCase = defaultBuilder.build()
         withContext(Dispatchers.Main) {
             cameraProvider.bindToLifecycle(fakeLifecycleOwner, BACK_SELECTOR, useCase)
@@ -1383,6 +1403,11 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
     @Test
     @SdkSuppress(minSdkVersion = 28)
     fun returnJpegImage_whenSessionProcessorIsSet() = runBlocking {
+        assumeTrue(
+            "TODO(b/275493663): Enable when camera-pipe has extensions support",
+            implName != CameraPipeConfig::class.simpleName
+        )
+
         val builder = ImageCapture.Builder()
         val sessionProcessor = FakeSessionProcessor(
             inputFormatPreview = null, // null means using the same output surface
@@ -1582,11 +1607,12 @@ class ImageCaptureTest(private val implName: String, private val cameraXConfig: 
         // Only runs the test when the device has high resolution output sizes
         assumeTrue(maxHighResolutionOutputSize != null)
 
-        val resolutionSelector =
-            ResolutionSelector.Builder()
-                .setPreferredResolution(maxHighResolutionOutputSize!!)
-                .setHighResolutionEnabled(true)
-                .build()
+        val resolutionSelector = ResolutionSelector.Builder()
+            .setHighResolutionEnabledFlag(ResolutionSelector.HIGH_RESOLUTION_FLAG_ON)
+            .setResolutionFilter { _, _ ->
+                listOf(maxHighResolutionOutputSize)
+            }
+            .build()
         val sensorOrientation = CameraUtil.getSensorOrientation(BACK_SELECTOR.lensFacing!!)
         // Sets the target rotation to the camera sensor orientation to avoid the captured image
         // buffer data rotated by the HAL and impact the final image resolution check

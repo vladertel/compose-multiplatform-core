@@ -214,6 +214,7 @@ public class WatchFaceServiceImageTest {
         }
         assertThat(latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)).isTrue()
         pretendBinderThread.quitSafely()
+        InteractiveInstanceManager.setParameterlessEngine(null)
     }
 
     private fun initCanvasWatchFace(onInvalidateCountDownLatch: CountDownLatch? = null) {

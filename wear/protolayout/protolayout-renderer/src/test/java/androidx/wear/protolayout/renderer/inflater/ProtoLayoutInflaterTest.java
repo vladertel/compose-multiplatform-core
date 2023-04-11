@@ -73,7 +73,8 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.vectordrawable.graphics.drawable.SeekableAnimatedVectorDrawable;
 import androidx.wear.protolayout.expression.pipeline.FixedQuotaManagerImpl;
-import androidx.wear.protolayout.expression.pipeline.ObservableStateStore;
+import androidx.wear.protolayout.expression.pipeline.StateStore;
+import androidx.wear.protolayout.expression.proto.AnimationParameterProto.AnimationParameters;
 import androidx.wear.protolayout.expression.proto.AnimationParameterProto.AnimationSpec;
 import androidx.wear.protolayout.expression.proto.AnimationParameterProto.Repeatable;
 import androidx.wear.protolayout.expression.proto.DynamicProto.AnimatableDynamicFloat;
@@ -216,7 +217,7 @@ public class ProtoLayoutInflaterTest {
     @Rule
     public final Expect expect = Expect.create();
 
-    private final ObservableStateStore mStateStore = new ObservableStateStore(ImmutableMap.of());
+    private final StateStore mStateStore = new StateStore(ImmutableMap.of());
     private ProtoLayoutDynamicDataPipeline mDataPipeline;
 
     @Test
@@ -4042,7 +4043,9 @@ public class ProtoLayoutInflaterTest {
     @NonNull
     private static FadeInTransition.Builder fadeIn(int delay) {
         return FadeInTransition.newBuilder()
-                .setAnimationSpec(AnimationSpec.newBuilder().setStartDelayMillis(delay));
+                .setAnimationSpec(
+                        AnimationSpec.newBuilder().setAnimationParameters(
+                                AnimationParameters.newBuilder().setDelayMillis(delay)));
     }
 
     private LayoutElement textFadeInSlideIn(String text) {

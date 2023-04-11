@@ -111,11 +111,11 @@ internal class TextAnnotatedStringNode(
         fontFamilyResolver: FontFamily.Resolver,
         overflow: TextOverflow
     ): Boolean {
-        var changed = false
-        if (this.style != style) {
-            this.style = style
-            changed = true
-        }
+        var changed: Boolean
+
+        changed = !this.style.hasSameLayoutAffectingAttributes(style)
+        this.style = style
+
         if (this.placeholders != placeholders) {
             this.placeholders = placeholders
             changed = true
@@ -201,8 +201,8 @@ internal class TextAnnotatedStringNode(
                 placeholders = placeholders
             )
             invalidateMeasurements()
-            invalidateDraw()
         }
+        invalidateDraw()
     }
 
     private var _semanticsConfiguration: SemanticsConfiguration? = null
@@ -288,7 +288,7 @@ internal class TextAnnotatedStringNode(
             baselineCache!!
         ) {
             // this is basically a graphicsLayer
-            placeable.placeWithLayer(0, 0)
+            placeable.place(0, 0)
         }
     }
 
