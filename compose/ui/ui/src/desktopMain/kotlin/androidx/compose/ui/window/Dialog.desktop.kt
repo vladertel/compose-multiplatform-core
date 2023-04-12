@@ -29,11 +29,12 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.ComponentUpdater
-import androidx.compose.ui.util.makeDisplayable
+import androidx.compose.ui.util.componentListenerRef
 import androidx.compose.ui.util.setIcon
 import androidx.compose.ui.util.setPositionSafely
 import androidx.compose.ui.util.setSizeSafely
 import androidx.compose.ui.util.setUndecoratedSafely
+import androidx.compose.ui.util.windowListenerRef
 import java.awt.Dialog.ModalityType
 import java.awt.Window
 import java.awt.event.ComponentAdapter
@@ -137,6 +138,19 @@ fun Dialog(
         }
     }
 
+    val listeners = remember {
+        object {
+            var windowListenerRef = windowListenerRef()
+            var componentListenerRef = componentListenerRef()
+
+            fun removeFromAndClear(window: ComposeDialog) {
+                windowListenerRef.unregisterFromAndClear(window)
+                componentListenerRef.unregisterFromAndClear(window)
+            }
+        }
+    }
+
+
     Dialog(
         visible = visible,
         onPreviewKeyEvent = onPreviewKeyEvent,
@@ -151,27 +165,35 @@ fun Dialog(
             dialog.apply {
                 // close state is controlled by DialogState.isOpen
                 defaultCloseOperation = JDialog.DO_NOTHING_ON_CLOSE
-                addWindowListener(object : WindowAdapter() {
-                    override fun windowClosing(e: WindowEvent?) {
-                        currentOnCloseRequest()
+                listeners.windowListenerRef.registerWithAndSet(
+                    this,
+                    object : WindowAdapter() {
+                        override fun windowClosing(e: WindowEvent?) {
+                            currentOnCloseRequest()
+                        }
                     }
-                })
-                addComponentListener(object : ComponentAdapter() {
-                    override fun componentResized(e: ComponentEvent) {
-                        currentState.size = DpSize(width.dp, height.dp)
-                        appliedState.size = currentState.size
-                    }
+                )
+                listeners.componentListenerRef.registerWithAndSet(
+                    this,
+                    object : ComponentAdapter() {
+                        override fun componentResized(e: ComponentEvent) {
+                            currentState.size = DpSize(width.dp, height.dp)
+                            appliedState.size = currentState.size
+                        }
 
-                    override fun componentMoved(e: ComponentEvent) {
-                        currentState.position = WindowPosition(x.dp, y.dp)
-                        appliedState.position = currentState.position
+                        override fun componentMoved(e: ComponentEvent) {
+                            currentState.position = WindowPosition(x.dp, y.dp)
+                            appliedState.position = currentState.position
+                        }
                     }
-                })
+                )
                 WindowLocationTracker.onWindowCreated(this)
             }
         },
         dispose = {
             WindowLocationTracker.onWindowDisposed(it)
+            // We need to remove them because AWT can still call them after dispose()
+            listeners.removeFromAndClear(it)
             it.dispose()
         },
         update = { dialog ->
@@ -185,12 +207,13 @@ fun Dialog(
                 set(currentFocusable, dialog::setFocusableWindowState)
             }
             if (state.size != appliedState.size) {
-                dialog.setSizeSafely(state.size)
+                dialog.setSizeSafely(state.size, WindowPlacement.Floating)
                 appliedState.size = state.size
             }
             if (state.position != appliedState.position) {
                 dialog.setPositionSafely(
                     state.position,
+                    WindowPlacement.Floating,
                     platformDefaultPosition = { WindowLocationTracker.getCascadeLocationFor(dialog) }
                 )
                 appliedState.position = state.position
@@ -272,11 +295,17 @@ fun Dialog(
             it.compositionLocalContext = compositionLocalContext
             it.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(it)
 
+            val wasDisplayable = it.isDisplayable
+
             update(it)
 
-            if (!it.isDisplayable) {
-                it.makeDisplayable()
-                it.contentPane.paint(it.graphics)
+            // If displaying for the first time, make sure we draw the first frame before making
+            // the dialog visible, to avoid showing the dialog background.
+            // It's the responsibility of setSizeSafely to
+            // - Make the dialog displayable
+            // - Size the dialog and the ComposeLayer correctly, so that we can draw it here
+            if (!wasDisplayable && it.isDisplayable) {
+                it.contentPane.paint(it.contentPane.graphics)
             }
         }
     )

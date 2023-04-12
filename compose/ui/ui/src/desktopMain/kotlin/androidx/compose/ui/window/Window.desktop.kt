@@ -31,11 +31,13 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.ComponentUpdater
-import androidx.compose.ui.util.makeDisplayable
+import androidx.compose.ui.util.componentListenerRef
 import androidx.compose.ui.util.setIcon
 import androidx.compose.ui.util.setPositionSafely
 import androidx.compose.ui.util.setSizeSafely
 import androidx.compose.ui.util.setUndecoratedSafely
+import androidx.compose.ui.util.windowListenerRef
+import androidx.compose.ui.util.windowStateListenerRef
 import java.awt.Window
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
@@ -153,6 +155,20 @@ fun Window(
         }
     }
 
+    val listeners = remember {
+        object {
+            var windowListenerRef = windowListenerRef()
+            var windowStateListenerRef = windowStateListenerRef()
+            var componentListenerRef = componentListenerRef()
+
+            fun removeFromAndClear(window: ComposeWindow) {
+                windowListenerRef.unregisterFromAndClear(window)
+                windowStateListenerRef.unregisterFromAndClear(window)
+                componentListenerRef.unregisterFromAndClear(window)
+            }
+        }
+    }
+
     Window(
         visible = visible,
         onPreviewKeyEvent = onPreviewKeyEvent,
@@ -162,38 +178,46 @@ fun Window(
             ComposeWindow(graphicsConfiguration = graphicsConfiguration).apply {
                 // close state is controlled by WindowState.isOpen
                 defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
-                addWindowListener(object : WindowAdapter() {
-                    override fun windowClosing(e: WindowEvent) {
-                        currentOnCloseRequest()
+                listeners.windowListenerRef.registerWithAndSet(
+                    this,
+                    object : WindowAdapter() {
+                        override fun windowClosing(e: WindowEvent) {
+                            currentOnCloseRequest()
+                        }
                     }
-                })
-                addWindowStateListener {
+                )
+                listeners.windowStateListenerRef.registerWithAndSet(this) {
                     currentState.placement = placement
                     currentState.isMinimized = isMinimized
                     appliedState.placement = currentState.placement
                     appliedState.isMinimized = currentState.isMinimized
                 }
-                addComponentListener(object : ComponentAdapter() {
-                    override fun componentResized(e: ComponentEvent) {
-                        // we check placement here and in windowStateChanged,
-                        // because fullscreen changing doesn't
-                        // fire windowStateChanged, only componentResized
-                        currentState.placement = placement
-                        currentState.size = DpSize(width.dp, height.dp)
-                        appliedState.placement = currentState.placement
-                        appliedState.size = currentState.size
-                    }
+                listeners.componentListenerRef.registerWithAndSet(
+                    this,
+                    object : ComponentAdapter() {
+                        override fun componentResized(e: ComponentEvent) {
+                            // we check placement here and in windowStateChanged,
+                            // because fullscreen changing doesn't
+                            // fire windowStateChanged, only componentResized
+                            currentState.placement = placement
+                            currentState.size = DpSize(width.dp, height.dp)
+                            appliedState.placement = currentState.placement
+                            appliedState.size = currentState.size
+                        }
 
-                    override fun componentMoved(e: ComponentEvent) {
-                        currentState.position = WindowPosition(x.dp, y.dp)
-                        appliedState.position = currentState.position
+                        override fun componentMoved(e: ComponentEvent) {
+                            currentState.position = WindowPosition(x.dp, y.dp)
+                            appliedState.position = currentState.position
+                        }
                     }
-                })
+                )
                 WindowLocationTracker.onWindowCreated(this)
             }
         },
         dispose = {
             WindowLocationTracker.onWindowDisposed(it)
+            // We need to remove them because AWT can still call them after dispose()
+            listeners.removeFromAndClear(it)
             it.dispose()
         },
         update = { window ->
@@ -208,12 +232,13 @@ fun Window(
                 set(currentAlwaysOnTop, window::setAlwaysOnTop)
             }
             if (state.size != appliedState.size) {
-                window.setSizeSafely(state.size)
+                window.setSizeSafely(state.size, state.placement)
                 appliedState.size = state.size
             }
             if (state.position != appliedState.position) {
                 window.setPositionSafely(
                     state.position,
+                    state.placement,
                     platformDefaultPosition = { WindowLocationTracker.getCascadeLocationFor(window) }
                 )
                 appliedState.position = state.position
@@ -386,11 +411,17 @@ fun Window(
             it.compositionLocalContext = compositionLocalContext
             it.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(it)
 
+            val wasDisplayable = it.isDisplayable
+
             update(it)
 
-            if (!it.isDisplayable) {
-                it.makeDisplayable()
-                it.contentPane.paint(it.graphics)
+            // If displaying for the first time, make sure we draw the first frame before making
+            // the window visible, to avoid showing the window background
+            // It's the responsibility of setSizeSafely to
+            // - Make the window displayable
+            // - Size the window and the ComposeLayer correctly, so that we can draw it here
+            if (!wasDisplayable && it.isDisplayable) {
+                it.contentPane.paint(it.contentPane.graphics)
             }
         }
     )

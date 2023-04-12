@@ -32,23 +32,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.LeakDetector
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeWindow
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.launchApplication
-import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.unit.*
+import androidx.compose.ui.window.*
 import androidx.compose.ui.window.runApplicationTest
 import com.google.common.truth.Truth.assertThat
 import java.awt.Dimension
 import java.awt.GraphicsEnvironment
+import java.awt.Toolkit
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import kotlin.test.assertEquals
@@ -57,16 +54,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Assume.assumeFalse
+import org.junit.Ignore
 import org.junit.Test
-import kotlinx.coroutines.cancelAndJoin
 
-@OptIn(ExperimentalComposeUiApi::class)
 class WindowTest {
     @Test
     fun `open and close custom window`() = runApplicationTest {
         var window: ComposeWindow? = null
 
-        launchApplication {
+        launchTestApplication {
             var isOpen by remember { mutableStateOf(true) }
 
             fun createWindow() = ComposeWindow().apply {
@@ -103,7 +99,7 @@ class WindowTest {
         var isOpen by mutableStateOf(true)
         var title by mutableStateOf("Title1")
 
-        launchApplication {
+        launchTestApplication {
             fun createWindow() = ComposeWindow().apply {
                 size = Dimension(300, 200)
 
@@ -141,7 +137,7 @@ class WindowTest {
     fun `open and close window`() = runApplicationTest {
         var window: ComposeWindow? = null
 
-        launchApplication {
+        launchTestApplication {
             Window(onCloseRequest = ::exitApplication) {
                 window = this.window
                 Box(Modifier.size(32.dp).background(Color.Red))
@@ -160,7 +156,7 @@ class WindowTest {
         var isCloseCalled by mutableStateOf(false)
         var window: ComposeWindow? = null
 
-        launchApplication {
+        launchTestApplication {
             if (isOpen) {
                 Window(
                     onCloseRequest = {
@@ -193,7 +189,7 @@ class WindowTest {
         var isOpen by mutableStateOf(true)
         var isLoading by mutableStateOf(true)
 
-        launchApplication {
+        launchTestApplication {
             if (isOpen) {
                 if (isLoading) {
                     Window(onCloseRequest = {}) {
@@ -231,7 +227,7 @@ class WindowTest {
 
         var isOpen by mutableStateOf(true)
 
-        launchApplication {
+        launchTestApplication {
             if (isOpen) {
                 Window(onCloseRequest = {}) {
                     window1 = this.window
@@ -263,7 +259,7 @@ class WindowTest {
         var isOpen by mutableStateOf(true)
         var isNestedOpen by mutableStateOf(true)
 
-        launchApplication {
+        launchTestApplication {
             if (isOpen) {
                 Window(
                     onCloseRequest = {},
@@ -320,7 +316,7 @@ class WindowTest {
         val local2TestValue = compositionLocalOf { 0 }
         var locals by mutableStateOf(arrayOf(local1TestValue provides 1))
 
-        launchApplication {
+        launchTestApplication {
             if (isOpen) {
                 CompositionLocalProvider(*locals) {
                     Window(
@@ -386,7 +382,7 @@ class WindowTest {
 
         var isOpen by mutableStateOf(true)
 
-        launchApplication {
+        launchTestApplication {
             if (isOpen) {
                 Window(onCloseRequest = {}) {
                     DisposableEffect(Unit) {
@@ -438,34 +434,92 @@ class WindowTest {
         }
     }
 
-    @Test(timeout = 30000)
-    fun `should draw before window is visible`() = runApplicationTest {
+    private fun testDrawingBeforeWindowIsVisible(
+        windowState: WindowState,
+        canvasSizeModifier: Modifier,
+        expectedCanvasSize: FrameWindowScope.() -> DpSize
+    ) = runApplicationTest {
         var isComposed = false
         var isDrawn = false
         var isVisibleOnFirstComposition = false
         var isVisibleOnFirstDraw = false
+        var actualCanvasSize: Size? = null
+        var expectedCanvasSizePx: Size? = null
 
-        launchApplication {
-            Window(onCloseRequest = ::exitApplication) {
+        launchTestApplication {
+            Window(
+                onCloseRequest = ::exitApplication,
+                state = windowState
+            ) {
                 if (!isComposed) {
                     isVisibleOnFirstComposition = window.isVisible
                     isComposed = true
                 }
 
-                Canvas(Modifier.fillMaxSize()) {
+                Canvas(canvasSizeModifier) {
                     if (!isDrawn) {
                         isVisibleOnFirstDraw = window.isVisible
                         isDrawn = true
+
+                        actualCanvasSize = size
+                        expectedCanvasSizePx = expectedCanvasSize().toSize()
                     }
                 }
             }
         }
 
         awaitIdle()
+
+        assertThat(isComposed)
+        assertThat(isDrawn)
         assertThat(isVisibleOnFirstComposition).isFalse()
         assertThat(isVisibleOnFirstDraw).isFalse()
+        assertEquals(expectedCanvasSizePx, actualCanvasSize)
+    }
 
-        exitApplication()
+    @Test(timeout = 30000)
+    fun `should draw before window is visible`() {
+        val windowSize = DpSize(400.dp, 300.dp)
+        testDrawingBeforeWindowIsVisible(
+            windowState = WindowState(size = windowSize),
+            canvasSizeModifier = Modifier.fillMaxSize(),
+            expectedCanvasSize = { windowSize - window.insets.toSize() }
+        )
+    }
+
+    @Test(timeout = 30000)
+    fun `should draw before window with unspecified size is visible`() {
+        val canvasSize = DpSize(400.dp, 300.dp)
+        testDrawingBeforeWindowIsVisible(
+            windowState = WindowState(size = DpSize.Unspecified),
+            canvasSizeModifier = Modifier.size(canvasSize),
+            expectedCanvasSize = { canvasSize }
+        )
+    }
+
+    // Unfortunately it doesn't appear to be possible to draw the first frame in a maximized
+    // window before it's visible, while at the same time having the WindowState define the
+    // "floating" size and position to which it will go when un-maximized.
+    // The reason for that is that in order to draw the first frame in time, we need to `pack()` the
+    // window before showing it, but this breaks setting the "floating" state.
+    // So we don't attempt to draw the first frame in time.
+    @Ignore
+    @Test(timeout = 30000)
+    fun `should draw before maximized window is visible`() {
+        testDrawingBeforeWindowIsVisible(
+            windowState = WindowState(
+                size = DpSize(400.dp, 300.dp),
+                placement = WindowPlacement.Maximized
+            ),
+            canvasSizeModifier = Modifier.fillMaxSize(),
+            expectedCanvasSize = {
+                val gfxConf = window.graphicsConfiguration
+                val screenSize = gfxConf.screenSize()
+                val screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(gfxConf).toSize()
+
+                screenSize - screenInsets - window.insets.toSize()
+            }
+        )
     }
 
     @Test(timeout = 30000)
@@ -473,7 +527,7 @@ class WindowTest {
         val customDensity = Density(3.14f)
         var actualDensity: Density? = null
 
-        launchApplication {
+        launchTestApplication {
             if (isOpen) {
                 CompositionLocalProvider(LocalDensity provides customDensity) {
                     Window(onCloseRequest = ::exitApplication) {
@@ -486,8 +540,6 @@ class WindowTest {
         awaitIdle()
         assertThat(actualDensity).isNotNull()
         assertThat(actualDensity).isNotEqualTo(customDensity)
-
-        exitApplication()
     }
 
     @Test
@@ -495,7 +547,7 @@ class WindowTest {
         var isApplicationEffectEnded = false
         var isWindowEffectEnded = false
 
-        val job = launchApplication {
+        val job = launchTestApplication {
             if (isOpen) {
                 Window(onCloseRequest = ::exitApplication) {
                     LaunchedEffect(Unit) {
@@ -518,7 +570,7 @@ class WindowTest {
         }
 
         awaitIdle()
-        exitApplication()
+        exitTestApplication()
         job.cancelAndJoin()
 
         assertThat(isApplicationEffectEnded).isTrue()
@@ -529,9 +581,9 @@ class WindowTest {
     fun `undecorated resizable window with unspecified size`() = runApplicationTest {
         var window: ComposeWindow? = null
 
-        launchApplication {
+        launchTestApplication {
             Window(
-                onCloseRequest = ::exitApplication,
+                onCloseRequest = { },
                 state = rememberWindowState(width = Dp.Unspecified, height = Dp.Unspecified),
                 undecorated = true,
                 resizable = true,
@@ -544,8 +596,42 @@ class WindowTest {
         awaitIdle()
         assertEquals(32, window?.width)
         assertEquals(32, window?.height)
-
-        window?.dispatchEvent(WindowEvent(window, WindowEvent.WINDOW_CLOSING))
     }
 
+    @Test
+    fun `showing a window should measure content specified size`() = runApplicationTest{
+        val constraintsList = mutableListOf<Constraints>()
+        val windowSize = DpSize(400.dp, 300.dp)
+        lateinit var window: ComposeWindow
+
+        launchTestApplication {
+            Window(
+                onCloseRequest = { },
+                state = rememberWindowState(size = windowSize),
+            ) {
+                window = this.window
+                Layout(
+                    measurePolicy = { _, constraints ->
+                        constraintsList.add(constraints)
+                        layout(0, 0){ }
+                    }
+                )
+            }
+        }
+
+        awaitIdle()
+
+        with(window.density) {
+            val expectedSize = (windowSize - window.insets.toSize()).toSize()
+            assertEquals(
+                listOf(
+                    Constraints(
+                        maxWidth = expectedSize.width.toInt(),
+                        maxHeight = expectedSize.height.toInt()
+                    )
+                ),
+                constraintsList
+            )
+        }
+    }
 }

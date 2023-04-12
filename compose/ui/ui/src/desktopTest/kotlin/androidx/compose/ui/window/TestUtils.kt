@@ -25,20 +25,20 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.awaitEDT
 import java.awt.GraphicsEnvironment
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
 import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Assume.assumeFalse
+import androidx.compose.ui.window.launchApplication as realLaunchApplication
+
 
 internal fun runApplicationTest(
     /**
-     * Use delay(500) additionally to `yield` in `await*` functions
+     * Use delay additionally to `yield` in `await*` functions
      *
      * Set this property only if you sure that you can't easily make the test deterministic
      * (non-flaky).
@@ -47,12 +47,14 @@ internal fun runApplicationTest(
      * non-deterministic way when we change position/size very fast (see the snippet below).
      */
     useDelay: Boolean = false,
+    delayMillis: Long = 500,
     // TODO ui-test solved this issue by passing InfiniteAnimationPolicy to CoroutineContext. Do the same way here
     /**
      * Hint for `awaitIdle` that the content contains animations (ProgressBar, TextField cursor, etc).
      * In this case, we use `delay` instead of waiting for state changes to end.
      */
     hasAnimations: Boolean = false,
+    animationsDelayMillis: Long = 500,
     timeoutMillis: Long = 30000,
     body: suspend WindowTestScope.() -> Unit
 ) {
@@ -62,9 +64,16 @@ internal fun runApplicationTest(
         withTimeout(timeoutMillis) {
             val exceptionHandler = TestExceptionHandler()
             withExceptionHandler(exceptionHandler) {
-                val scope = WindowTestScope(this, useDelay, hasAnimations, exceptionHandler)
-                scope.body()
-                scope.exitTestApplication()
+                val scope = WindowTestScope(
+                    scope = this,
+                    delayMillis = if (useDelay) delayMillis else -1,
+                    animationsDelayMillis = if (hasAnimations) animationsDelayMillis else -1,
+                    exceptionHandler = exceptionHandler)
+                try {
+                    scope.body()
+                } finally {
+                    scope.exitTestApplication()
+                }
             }
             exceptionHandler.throwIfCaught()
         }
@@ -104,43 +113,48 @@ internal class TestExceptionHandler : Thread.UncaughtExceptionHandler {
 
 internal class WindowTestScope(
     private val scope: CoroutineScope,
-    private val useDelay: Boolean,
-    private val hasAnimations: Boolean,
+    private val delayMillis: Long,
+    private val animationsDelayMillis: Long,
     private val exceptionHandler: TestExceptionHandler
 ) : CoroutineScope by CoroutineScope(scope.coroutineContext + Job()) {
     var isOpen by mutableStateOf(true)
     private val initialRecomposers = Recomposer.runningRecomposers.value
 
-    // TODO(demin) replace launchApplication to launchTestApplication in all tests,
-    //  because we don't close the window with simple launchApplication
     fun launchTestApplication(
         content: @Composable ApplicationScope.() -> Unit
-    ) = launchApplication {
+    ) = realLaunchApplication {
         if (isOpen) {
             content()
         }
     }
 
-    // TODO(demin) remove when we migrate from launchApplication to launchTestApplication (see TODO above)
-    fun exitApplication() {
-        isOpen = false
+    // Overload `launchApplication` to prohibit calling it from tests
+    @Deprecated(
+        "Do not use `launchApplication` from tests; use `launchTestApplication` instead",
+        level = DeprecationLevel.ERROR
+    )
+    fun launchApplication(
+        @Suppress("UNUSED_PARAMETER") content: @Composable ApplicationScope.() -> Unit
+    ): Nothing {
+        error("Do not use `launchApplication` from tests; use `launchTestApplication` instead")
     }
 
-    fun exitTestApplication() {
+    suspend fun exitTestApplication() {
         isOpen = false
+        awaitIdle()  // Wait for the windows to actually complete disposing
     }
 
     suspend fun awaitIdle() {
-        if (useDelay) {
-            delay(500)
+        if (delayMillis >= 0) {
+            delay(delayMillis)
         }
 
         awaitEDT()
 
         Snapshot.sendApplyNotifications()
 
-        if (hasAnimations) {
-            delay(500)
+        if (animationsDelayMillis >= 0) {
+            delay(animationsDelayMillis)
         } else {
             for (recomposerInfo in Recomposer.runningRecomposers.value - initialRecomposers) {
                 recomposerInfo.state.takeWhile { it > Recomposer.State.Idle }.collect()

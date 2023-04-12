@@ -176,6 +176,7 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                     error.add("MissingColorAlphaChannel")
                     error.add("ModifierFactoryReturnType")
                     error.add("ModifierFactoryExtensionFunction")
+                    error.add("ModifierNodeInspectableProperties")
                     error.add("ModifierParameter")
                     error.add("MutableCollectionMutableState")
                     error.add("UnnecessaryComposedModifier")
@@ -359,13 +360,13 @@ private fun configureComposeCompilerPlugin(
         // for Playground builds as well
         project.dependencies.add(
             COMPILER_PLUGIN_CONFIGURATION,
-            if (StudioType.isPlayground(project)) {
+            if (ProjectLayoutType.isPlayground(project)) {
                 AndroidXPlaygroundRootImplPlugin.projectOrArtifact(
                     project.rootProject,
                     ":compose:compiler:compiler"
                 )
             } else {
-                project.rootProject.findProject(":compose:compiler:compiler")!!
+                project.rootProject.resolveProject(":compose:compiler:compiler")
             }
         )
         val kotlinPlugin = configuration.incoming.artifactView { view ->

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,63 +22,81 @@ import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.platform.SkiaRootForTest
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.junit4.MainTestClockImpl
+import androidx.compose.ui.test.junit4.TextInputServiceForTests
 import androidx.compose.ui.test.junit4.UncaughtExceptionHandler
 import androidx.compose.ui.test.junit4.isOnUiThread
-import androidx.compose.ui.text.input.EditCommand
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.PlatformTextInputService
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.roundToInt
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
-import kotlin.coroutines.cancellation.CancellationException
-import kotlin.math.roundToInt
-import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.IRect
-import org.jetbrains.skia.Image
 import org.jetbrains.skia.Surface
 import org.jetbrains.skiko.currentNanoTime
 
 @ExperimentalTestApi
-actual fun runComposeUiTest(block: ComposeUiTest.() -> Unit) {
-    SkikoComposeUiTest().runTest(block)
+actual fun runComposeUiTest(effectContext: CoroutineContext, block: ComposeUiTest.() -> Unit) {
+    SkikoComposeUiTest(effectContext = effectContext).runTest(block)
 }
 
 @ExperimentalTestApi
 fun runSkikoComposeUiTest(
     size: Size = Size(1024.0f, 768.0f),
+    density: Density = Density(1f),
+    // TODO(https://github.com/JetBrains/compose-multiplatform/issues/2960) Support effectContext
+    effectContext: CoroutineContext = EmptyCoroutineContext,
     block: SkikoComposeUiTest.() -> Unit
 ) {
     SkikoComposeUiTest(
         width = size.width.roundToInt(),
-        height = size.height.roundToInt()
+        height = size.height.roundToInt(),
+        effectContext = effectContext,
+        density = density
     ).runTest(block)
 }
 
+/**
+ * @param effectContext The [CoroutineContext] used to run the composition. The context for
+ * `LaunchedEffect`s and `rememberCoroutineScope` will be derived from this context.
+ */
 @ExperimentalTestApi
 @OptIn(ExperimentalCoroutinesApi::class, InternalTestApi::class)
 class SkikoComposeUiTest(
     width: Int = 1024,
-    height: Int = 768
+    height: Int = 768,
+    // TODO(https://github.com/JetBrains/compose-multiplatform/issues/2960) Support effectContext
+    effectContext: CoroutineContext = EmptyCoroutineContext,
+    override val density: Density = Density(1f)
 ) : ComposeUiTest {
+    init {
+        require(effectContext == EmptyCoroutineContext) {
+            "The argument effectContext isn't supported yet. " +
+                "Follow https://github.com/JetBrains/compose-multiplatform/issues/2960"
+        }
+    }
 
-    override val density = Density(1f, 1f)
+    private class Session(
+        var imeOptions: ImeOptions,
+        var onEditCommand: (List<EditCommand>) -> Unit,
+        var onImeActionPerformed: (ImeAction) -> Unit,
+    )
 
     private val textInputService = object : PlatformTextInputService {
-        var onEditCommand: ((List<EditCommand>) -> Unit)? = null
-        var onImeActionPerformed: ((ImeAction) -> Unit)? = null
+        var session: Session? = null
 
         override fun startInput(
             value: TextFieldValue,
@@ -86,18 +104,45 @@ class SkikoComposeUiTest(
             onEditCommand: (List<EditCommand>) -> Unit,
             onImeActionPerformed: (ImeAction) -> Unit
         ) {
-            this.onEditCommand = onEditCommand
-            this.onImeActionPerformed = onImeActionPerformed
+            session = Session(
+                imeOptions = imeOptions,
+                onEditCommand = onEditCommand,
+                onImeActionPerformed = onImeActionPerformed
+            )
         }
 
         override fun stopInput() {
-            this.onEditCommand = null
-            this.onImeActionPerformed = null
+            session = null
         }
 
         override fun showSoftwareKeyboard() = Unit
         override fun hideSoftwareKeyboard() = Unit
         override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) = Unit
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    private val textInputServiceForTests = object : TextInputForTests {
+        override fun inputTextForTest(text: String) {
+            performEditCommand(listOf(CommitTextCommand(text, 1)))
+        }
+
+        override fun submitTextForTest() {
+            with(requireSession()) {
+                if (imeOptions.imeAction == ImeAction.Default) {
+                    throw AssertionError(
+                        "Failed to perform IME action as current node does not specify any."
+                    )
+                }
+                onImeActionPerformed(imeOptions.imeAction)
+            }
+        }
+
+        private fun performEditCommand(commands: List<EditCommand>) {
+            requireSession().onEditCommand(commands)
+        }
+
+        private fun requireSession(): Session =
+            textInputService.session ?: error("No input session started. Missing a focus?")
     }
 
     private val coroutineDispatcher = UnconfinedTestDispatcher()
@@ -138,7 +183,7 @@ class SkikoComposeUiTest(
     private fun renderNextFrame() = runOnUiThread {
         scene.render(
             surface.canvas,
-            mainClock.currentTime * 1_000_000
+            mainClock.currentTime * NanoSecondsPerMilliSecond
         )
         if (mainClock.autoAdvance) {
             mainClock.advanceTimeByFrame()
@@ -217,6 +262,8 @@ class SkikoComposeUiTest(
                 )
             }
         }
+
+        // TODO Add a wait function variant without conditions (timeout exceptions)
     }
 
     override fun registerIdlingResource(idlingResource: IdlingResource) {
@@ -270,19 +317,10 @@ class SkikoComposeUiTest(
     }
 
     private inner class DesktopTestOwner : TestOwner {
-        override fun sendTextInputCommand(node: SemanticsNode, command: List<EditCommand>) {
+        @OptIn(ExperimentalTextApi::class)
+        override fun performTextInput(node: SemanticsNode, action: TextInputForTests.() -> Unit) {
             runOnIdle {
-                val onEditCommand = textInputService.onEditCommand
-                    ?: throw IllegalStateException("No input session started. Missing a focus?")
-                onEditCommand(command)
-            }
-        }
-
-        override fun sendImeAction(node: SemanticsNode, actionSpecified: ImeAction) {
-            runOnIdle {
-                val onImeActionPerformed = textInputService.onImeActionPerformed
-                    ?: throw IllegalStateException("No input session started. Missing a focus?")
-                onImeActionPerformed.invoke(actionSpecified)
+                textInputServiceForTests.action()
             }
         }
 

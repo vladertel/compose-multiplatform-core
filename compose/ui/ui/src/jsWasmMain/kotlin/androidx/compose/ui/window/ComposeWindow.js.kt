@@ -89,7 +89,6 @@ internal actual class ComposeWindow(val canvasId: String)  {
     actual fun setContent(
         content: @Composable () -> Unit
     ) {
-        println("ComposeWindow.setContent")
         layer.setDensity(density)
         layer.setContent(
             content = content

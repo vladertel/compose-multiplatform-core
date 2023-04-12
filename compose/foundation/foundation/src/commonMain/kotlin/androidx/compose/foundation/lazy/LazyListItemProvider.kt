@@ -20,6 +20,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.layout.DelegatingLazyLayoutItemProvider
 import androidx.compose.foundation.lazy.layout.IntervalList
 import androidx.compose.foundation.lazy.layout.LazyLayoutItemProvider
+import androidx.compose.foundation.lazy.layout.LazyLayoutPinnableItem
 import androidx.compose.foundation.lazy.layout.rememberLazyNearestItemsRangeState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -48,7 +49,7 @@ internal fun rememberLazyListItemProvider(
         extraItemCount = { NearestItemsExtraItemCount }
     )
 
-    return remember(nearestItemsRangeState) {
+    return remember(nearestItemsRangeState, state) {
         val itemScope = LazyItemScopeImpl()
         val itemProviderState = derivedStateOf {
             val listScope = LazyListScopeImpl().apply(latestContent.value)
@@ -56,7 +57,8 @@ internal fun rememberLazyListItemProvider(
                 listScope.intervals,
                 nearestItemsRangeState.value,
                 listScope.headerIndexes,
-                itemScope
+                itemScope,
+                state
             )
         }
         createLazyListItemProvider(itemProviderState)
@@ -77,13 +79,21 @@ private class LazyListItemProviderImpl(
     intervals: IntervalList<LazyListIntervalContent>,
     nearestItemsRange: IntRange,
     override val headerIndexes: List<Int>,
-    override val itemScope: LazyItemScopeImpl
+    override val itemScope: LazyItemScopeImpl,
+    state: LazyListState
 ) : LazyListItemProvider,
     LazyLayoutItemProvider by LazyLayoutItemProvider(
         intervals = intervals,
         nearestItemsRange = nearestItemsRange,
-        itemContent = { interval: LazyListIntervalContent, index: Int ->
-            interval.item.invoke(itemScope, index)
+        itemContent = { interval, index ->
+            val localIndex = index - interval.startIndex
+            LazyLayoutPinnableItem(
+                key = interval.value.key?.invoke(localIndex),
+                index = index,
+                pinnedItemList = state.pinnedItems
+            ) {
+                interval.value.item.invoke(itemScope, localIndex)
+            }
         }
     )
 

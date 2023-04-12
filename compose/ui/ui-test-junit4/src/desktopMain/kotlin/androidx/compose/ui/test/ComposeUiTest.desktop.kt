@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 
 package androidx.compose.ui.test
 
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+
 @OptIn(ExperimentalTestApi::class)
 typealias DesktopComposeUiTest = SkikoComposeUiTest
 
@@ -24,12 +27,16 @@ typealias DesktopComposeUiTest = SkikoComposeUiTest
  *
  * @param width the desired width of the surface
  * @param height the desired height of the surface
+ * @param effectContext The [CoroutineContext] used to run the composition. The context for
+ * `LaunchedEffect`s and `rememberCoroutineScope` will be derived from this context.
  */
 @ExperimentalTestApi
 fun runDesktopComposeUiTest(
     width: Int = 1024,
     height: Int = 768,
+    // TODO(https://github.com/JetBrains/compose-multiplatform/issues/2960) Support effectContext
+    effectContext: CoroutineContext = EmptyCoroutineContext,
     block: DesktopComposeUiTest.() -> Unit
 ) {
-    DesktopComposeUiTest(width, height).runTest(block)
+    DesktopComposeUiTest(width, height, effectContext).runTest(block)
 }

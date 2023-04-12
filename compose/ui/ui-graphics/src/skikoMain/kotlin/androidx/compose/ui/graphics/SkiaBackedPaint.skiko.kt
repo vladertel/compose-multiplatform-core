@@ -34,10 +34,24 @@ internal class SkiaBackedPaint(
 ) : Paint {
     override fun asFrameworkPaint(): NativePaint = skia
 
+    private var mAlphaMultiplier = 1.0f
+
+    var alphaMultiplier: Float
+        get() = mAlphaMultiplier
+        set(value) {
+            val multiplier = value.coerceIn(0f, 1f)
+            updateAlpha(multiplier = multiplier)
+            mAlphaMultiplier = multiplier
+        }
+
+    private fun updateAlpha(alpha: Float = this.alpha, multiplier: Float = this.mAlphaMultiplier) {
+        skia.color = Color(skia.color).copy(alpha = alpha * multiplier).toArgb()
+    }
+
     override var alpha: Float
         get() = Color(skia.color).alpha
         set(value) {
-            skia.color = Color(skia.color).copy(alpha = value).toArgb()
+            updateAlpha(alpha = value)
         }
 
     override var isAntiAlias: Boolean

@@ -2,6 +2,7 @@ package androidx.compose.mpp.demo
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.CanvasBasedWindow
+import androidx.compose.runtime.remember
 import androidx.compose.ui.window.Window
 import org.jetbrains.skiko.wasm.onWasmReady
 
@@ -9,7 +10,8 @@ import org.jetbrains.skiko.wasm.onWasmReady
 fun main() {
     onWasmReady {
         CanvasBasedWindow("Compose/JS sample", canvasElementId = "canvas1") {
-            myContent()
+            val app = remember { App() }
+            app.Content()
         }
     }
 }

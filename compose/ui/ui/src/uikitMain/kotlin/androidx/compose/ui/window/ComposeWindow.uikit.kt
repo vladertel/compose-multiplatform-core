@@ -21,13 +21,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.createSkiaLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.interop.LocalLayerContainer
+import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.native.ComposeLayer
+import androidx.compose.ui.platform.*
+import androidx.compose.ui.platform.DefaultInputModeManager
 import androidx.compose.ui.platform.Platform
-import androidx.compose.ui.platform.TextToolbar
-import androidx.compose.ui.platform.TextToolbarStatus
 import androidx.compose.ui.platform.UIKitTextInputService
-import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpOffset
@@ -39,6 +40,10 @@ import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.useContents
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import org.jetbrains.skiko.SkikoUIView
 import org.jetbrains.skiko.TextActions
 import platform.CoreGraphics.CGPointMake
@@ -50,19 +55,20 @@ import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSSelectorFromString
 import platform.Foundation.NSValue
 import platform.UIKit.CGRectValue
+import platform.UIKit.UIColor
 import platform.UIKit.UIScreen
 import platform.UIKit.UIView
 import platform.UIKit.UIViewAutoresizingFlexibleHeight
 import platform.UIKit.UIViewAutoresizingFlexibleWidth
 import platform.UIKit.UIViewController
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
-//import platform.UIKit.addSubview
+import platform.UIKit.addSubview
+import platform.UIKit.backgroundColor
 import platform.UIKit.reloadInputViews
-//import platform.UIKit.setAutoresizesSubviews
-//import platform.UIKit.setAutoresizingMask
-//import platform.UIKit.setClipsToBounds
-//import platform.UIKit.setNeedsDisplay
-import platform.UIKit.window
+import platform.UIKit.setAutoresizesSubviews
+import platform.UIKit.setAutoresizingMask
+import platform.UIKit.setClipsToBounds
+import platform.UIKit.setNeedsDisplay
 import platform.darwin.NSObject
 
 fun ComposeUIViewController(content: @Composable () -> Unit): UIViewController =
@@ -97,6 +103,7 @@ internal actual class ComposeWindow : UIViewController {
 
     private lateinit var layer: ComposeLayer
     private lateinit var content: @Composable () -> Unit
+
     private val keyboardVisibilityListener = object : NSObject() {
         @Suppress("unused")
         @ObjCAction
@@ -123,7 +130,7 @@ internal actual class ComposeWindow : UIViewController {
                     } else {
                         maxOf(focusedTop, 0f).toDouble()
                     }
-//                    view.setClipsToBounds(true)
+                    view.setClipsToBounds(true)
                     val (width, height) = getViewFrameSize()
                     view.layer.setBounds(
                         CGRectMake(
@@ -147,19 +154,25 @@ internal actual class ComposeWindow : UIViewController {
         @Suppress("unused")
         @ObjCAction
         fun keyboardDidHide(arg: NSNotification) {
-//            view.setClipsToBounds(false)
+            view.setClipsToBounds(false)
         }
     }
 
     override fun loadView() {
         val skiaLayer = createSkiaLayer()
-        val skikoUIView = SkikoUIView(skiaLayer).load()
+        val skikoUIView = SkikoUIView(
+            skiaLayer = skiaLayer,
+            pointInside = { point, _ ->
+                !layer.hitInteropView(point, isTouchEvent = true)
+            },
+        ).load()
         val rootView = UIView() // rootView needs to interop with UIKit
-//        rootView.addSubview(skikoUIView)
-//        rootView.setAutoresizesSubviews(true)
-//        skikoUIView.setAutoresizingMask(
-//            UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight
-//        )
+        rootView.backgroundColor = UIColor.whiteColor
+        rootView.addSubview(skikoUIView)
+        rootView.setAutoresizesSubviews(true)
+        skikoUIView.setAutoresizingMask(
+            UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight
+        )
         view = rootView
         val uiKitTextInputService = UIKitTextInputService(
             showSoftwareKeyboard = {
@@ -169,7 +182,7 @@ internal actual class ComposeWindow : UIViewController {
                 skikoUIView.hideScreenKeyboard()
             },
             updateView = {
-//                skikoUIView.setNeedsDisplay() // redraw on next frame
+                skikoUIView.setNeedsDisplay() // redraw on next frame
                 platform.QuartzCore.CATransaction.flush() // clear all animations
                 skikoUIView.reloadInputViews() // update input (like screen keyboard)
             },
@@ -225,6 +238,8 @@ internal actual class ComposeWindow : UIViewController {
                     else
                         TextToolbarStatus.Hidden
             }
+
+            override val inputModeManager = DefaultInputModeManager(InputMode.Touch)
         }
         layer = ComposeLayer(
             layer = skiaLayer,
@@ -235,6 +250,7 @@ internal actual class ComposeWindow : UIViewController {
         layer.setContent(content = {
             CompositionLocalProvider(
                 LocalLayerContainer provides rootView,
+                LocalUIViewController provides this,
             ) {
                 content()
             }
@@ -312,14 +328,14 @@ internal actual class ComposeWindow : UIViewController {
     }
 
     override fun didReceiveMemoryWarning() {
+        println("didReceiveMemoryWarning")
+        kotlin.native.internal.GC.collect()
         super.didReceiveMemoryWarning()
-        error("didReceiveMemoryWarning, maybe memory leak")
     }
 
     actual fun setContent(
         content: @Composable () -> Unit
     ) {
-        println("ComposeWindow.setContent")
         this.content = content
     }
 

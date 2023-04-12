@@ -5,7 +5,7 @@ plugins {
     id("AndroidXPlugin")
     id("AndroidXComposePlugin")
     id("kotlin-multiplatform")
-    id("org.jetbrains.gradle.apple.applePlugin") version "222.3345.143-0.16"
+    id("org.jetbrains.gradle.apple.applePlugin") version "222.4550-0.21"
 }
 
 val RUN_ON_DEVICE = false
@@ -35,7 +35,7 @@ kotlin {
             }
         }
     } else {
-        ios("uikitX64") {
+        iosX64("uikitX64") {
             binaries {
                 framework {
                     baseName = "shared"
@@ -69,6 +69,7 @@ kotlin {
                 implementation(project(":compose:foundation:foundation-layout"))
                 implementation(project(":compose:material:material"))
                 implementation(project(":compose:mpp"))
+                implementation(project(":compose:mpp:demo"))
                 implementation(project(":compose:runtime:runtime"))
                 implementation(project(":compose:ui:ui"))
                 implementation(project(":compose:ui:ui-graphics"))
@@ -104,7 +105,7 @@ apple {
         launchStoryboard = "LaunchScreen"
 
         dependencies {
-            implementation(project(":compose:mpp:demo-uikit"))
+            // Here we can add additional dependencies to Swift sourceSet
         }
     }
 }

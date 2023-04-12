@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.copyPasteAndroidTests.textfield
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.assertPixels
 import androidx.compose.foundation.assertThat
 import androidx.compose.foundation.background
@@ -32,12 +31,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.*
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TextFieldScrollerPosition
 import androidx.compose.foundation.text.TextLayoutResultProxy
-import androidx.compose.foundation.text.maxLinesHeight
 import androidx.compose.foundation.text.textFieldScroll
 import androidx.compose.foundation.text.textFieldScrollable
 import androidx.compose.runtime.Composable
@@ -96,7 +93,7 @@ import kotlin.test.Test
  * [BasicText] which is equivalent for testing these modifiers
  */
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTestApi::class)
+@OptIn(ExperimentalTestApi::class)
 class TextFieldScrollTest {
 
     private val TextfieldTag = "textField"
@@ -688,13 +685,13 @@ class TextFieldScrollTest {
             softWrap = isVertical,
             modifier = modifier
                 .testTag(TextfieldTag)
-                .maxLinesHeight(resolvedMaxLines, TextStyle.Default)
+                .heightInLines(textStyle = TextStyle.Default, maxLines = resolvedMaxLines)
                 .textFieldScrollable(scrollerPosition)
                 .textFieldScroll(
                     remember { scrollerPosition },
                     TextFieldValue(text),
                     VisualTransformation.None,
-                    { textLayoutResultRef.value }
+                    textLayoutResultProvider = { textLayoutResultRef.value }
                 )
         )
     }

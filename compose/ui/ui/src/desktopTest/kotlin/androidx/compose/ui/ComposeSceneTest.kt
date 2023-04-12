@@ -161,8 +161,8 @@ class ComposeSceneTest {
             Row(Modifier.height(height.dp)) {
                 Layout({
                     Box(Modifier.fillMaxSize().background(Color.Green))
-                }) { measureables, constraints ->
-                    val placeables = measureables.map { it.measure(constraints) }
+                }) { measurables, constraints ->
+                    val placeables = measurables.map { it.measure(constraints) }
                     layout(width, constraints.maxHeight) {
                         placeables.forEach { it.place(x, 0) }
                     }
@@ -307,6 +307,9 @@ class ComposeSceneTest {
 
         scene.sendPointerEvent(PointerEventType.Move, Offset(-1f, -1f))
         scene.sendPointerEvent(PointerEventType.Exit, Offset(-1f, -1f))
+        awaitNextRender()
+        // TODO(https://github.com/JetBrains/compose-multiplatform/issues/2970)
+        //  fix one-frame lag after a Release
         awaitNextRender()
         screenshotRule.snap(surface, "frame3_onMouseReleased")
 

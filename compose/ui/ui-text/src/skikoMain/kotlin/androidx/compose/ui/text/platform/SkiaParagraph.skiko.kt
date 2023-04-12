@@ -18,56 +18,32 @@ package androidx.compose.ui.text.platform
 import org.jetbrains.skia.Font as SkFont
 import org.jetbrains.skia.FontStyle as SkFontStyle
 import org.jetbrains.skia.paragraph.Alignment as SkAlignment
-import org.jetbrains.skia.paragraph.BaselineMode
 import org.jetbrains.skia.paragraph.DecorationLineStyle as SkDecorationLineStyle
 import org.jetbrains.skia.paragraph.DecorationStyle as SkDecorationStyle
 import org.jetbrains.skia.paragraph.Direction as SkDirection
 import org.jetbrains.skia.paragraph.Paragraph as SkParagraph
 import org.jetbrains.skia.paragraph.ParagraphBuilder as SkParagraphBuilder
-import org.jetbrains.skia.paragraph.ParagraphStyle
-import org.jetbrains.skia.paragraph.PlaceholderAlignment
-import org.jetbrains.skia.paragraph.PlaceholderStyle
 import org.jetbrains.skia.paragraph.Shadow as SkShadow
-import org.jetbrains.skia.paragraph.StrutStyle
-import org.jetbrains.skia.paragraph.TextBox
-import org.jetbrains.skia.paragraph.TextStyle as SkTextStyle
 import org.jetbrains.skia.paragraph.TextIndent as SkTextIndent
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.isSpecified
-import androidx.compose.ui.graphics.toArgb
+import org.jetbrains.skia.paragraph.TextStyle as SkTextStyle
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.text.*
 import androidx.compose.ui.text.AnnotatedString.Range
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.Paragraph
-import androidx.compose.ui.text.ParagraphIntrinsics
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.SkiaParagraph
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.ceilToInt
+import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontFamilyResolverImpl
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontSynthesis
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.SkiaFontLoader
-import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.intl.LocaleList
-import androidx.compose.ui.text.style.BaselineShift
-import androidx.compose.ui.text.style.ResolvedTextDirection
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextGeometricTransform
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.isSpecified
-import androidx.compose.ui.unit.isUnspecified
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.*
+import androidx.compose.ui.unit.*
 import org.jetbrains.skia.FontFeature
 import org.jetbrains.skia.Paint
+import org.jetbrains.skia.paragraph.*
+import org.jetbrains.skia.paragraph.ParagraphStyle
 
 private val DefaultFontSize = 16.sp
 
@@ -148,10 +124,12 @@ private fun fontSizeInHierarchy(density: Density, base: Float, other: TextUnit):
 }
 
 // Computed ComputedStyles always have font/letter size in pixels for particular `density`.
-// It's important because density could be changed in runtime and it should force
+// It's important because density could be changed in runtime, and it should force
 // SkTextStyle to be recalculated. Or we can have different densities in different windows.
+@OptIn(ExperimentalTextApi::class)
 internal data class ComputedStyle(
-    var color: Color,
+    var textForegroundStyle: TextForegroundStyle,
+    var brushSize: Size,
     var fontSize: Float,
     var fontWeight: FontWeight?,
     var fontStyle: FontStyle?,
@@ -164,11 +142,19 @@ internal data class ComputedStyle(
     var localeList: LocaleList?,
     var background: Color = Color.Unspecified,
     var textDecoration: TextDecoration?,
-    var shadow: Shadow?
+    var shadow: Shadow?,
+    var drawStyle: DrawStyle?,
+    var blendMode: BlendMode
 ) {
 
-    constructor(density: Density, spanStyle: SpanStyle) : this(
-        color = spanStyle.color,
+    constructor(
+        density: Density,
+        spanStyle: SpanStyle,
+        brushSize: Size = Size.Unspecified,
+        blendMode: BlendMode = DrawScope.DefaultBlendMode
+    ) : this(
+        textForegroundStyle = spanStyle.textForegroundStyle,
+        brushSize = brushSize,
         fontSize = with(density) { spanStyle.fontSize.toPx() },
         fontWeight = spanStyle.fontWeight,
         fontStyle = spanStyle.fontStyle,
@@ -187,19 +173,35 @@ internal data class ComputedStyle(
         localeList = spanStyle.localeList,
         background = spanStyle.background,
         textDecoration = spanStyle.textDecoration,
-        shadow = spanStyle.shadow
+        shadow = spanStyle.shadow,
+        drawStyle = spanStyle.drawStyle,
+        blendMode = blendMode
     )
+
+    private fun toTextPaint(): Paint? = Paint().let {
+        with(it.asComposePaint()) {
+            color = textForegroundStyle.color
+            applyBrush(textForegroundStyle.brush, brushSize, textForegroundStyle.alpha)
+            applyDrawStyle(drawStyle)
+            blendMode = this@ComputedStyle.blendMode
+            return@let it.takeIf { shader != null || style != PaintingStyle.Fill || !it.isSrcOver }
+        }
+    }
 
     fun toSkTextStyle(fontFamilyResolver: FontFamily.Resolver): SkTextStyle {
         val res = SkTextStyle()
-        if (color != Color.Unspecified) {
-            res.color = color.toArgb()
+        if (textForegroundStyle.color.isSpecified) {
+            res.color = textForegroundStyle.color.toArgb()
+        }
+        val foreground = toTextPaint()
+        if (foreground != null) {
+            res.foreground = foreground
         }
         fontStyle?.let {
             res.fontStyle = it.toSkFontStyle()
         }
         textDecoration?.let {
-            res.decorationStyle = it.toSkDecorationStyle(this.color)
+            res.decorationStyle = it.toSkDecorationStyle(textForegroundStyle.color)
         }
         if (background != Color.Unspecified) {
             res.background = Paint().also {
@@ -241,9 +243,7 @@ internal data class ComputedStyle(
 
     fun merge(density: Density, other: SpanStyle) {
         val fontSize = fontSizeInHierarchy(density, fontSize, other.fontSize)
-        if (other.color.isSpecified) {
-            color = other.color
-        }
+        textForegroundStyle = textForegroundStyle.merge(other.textForegroundStyle)
         other.fontFamily?.let { fontFamily = it }
         this.fontSize = fontSize
         other.fontWeight?.let { fontWeight = it }
@@ -251,14 +251,12 @@ internal data class ComputedStyle(
         other.fontSynthesis?.let { fontSynthesis = it }
         other.fontFeatureSettings?.let { fontFeatureSettings = it }
         if (!other.letterSpacing.isUnspecified) {
-            when {
-                other.letterSpacing.isEm ->
-                    letterSpacing = fontSize * other.letterSpacing.value
-                other.letterSpacing.isSp ->
-                    letterSpacing = with(density) {
-                        other.letterSpacing.toPx()
-                    }
-                else -> throw UnsupportedOperationException()
+            letterSpacing = with(other.letterSpacing) {
+                when {
+                    isEm -> fontSize * value
+                    isSp -> with(density) { toPx() }
+                    else -> throw UnsupportedOperationException()
+                }
             }
         }
         other.baselineShift?.let { baselineShift = it }
@@ -269,12 +267,11 @@ internal data class ComputedStyle(
         }
         other.textDecoration?.let { textDecoration = it }
         other.shadow?.let { shadow = it }
+        other.drawStyle?.let { drawStyle = it }
     }
 }
 
-internal expect class WeakHashMap<K, V> : MutableMap<K, V> {
-    constructor()
-}
+internal expect class WeakHashMap<K, V>() : MutableMap<K, V>
 
 // Building of SkTextStyle is a relatively expensive operation. We enable simple caching by
 // mapping SpanStyle to SkTextStyle. To increase the efficiency of this mapping we are making
@@ -285,12 +282,15 @@ internal class ParagraphBuilder(
     val fontFamilyResolver: FontFamily.Resolver,
     val text: String,
     var textStyle: TextStyle,
+    var brushSize: Size = Size.Unspecified,
     var ellipsis: String = "",
     var maxLines: Int = Int.MAX_VALUE,
     val spanStyles: List<Range<SpanStyle>>,
     val placeholders: List<Range<Placeholder>>,
     val density: Density,
-    val textDirection: ResolvedTextDirection
+    val textDirection: ResolvedTextDirection,
+    var drawStyle: DrawStyle? = null,
+    var blendMode: BlendMode = DrawScope.DefaultBlendMode
 ) {
     private lateinit var initialStyle: SpanStyle
     private lateinit var defaultStyle: ComputedStyle
@@ -308,10 +308,11 @@ internal class ParagraphBuilder(
      * positions line and maintaining a list of active styles while building a paragraph. This list
      * of active styles is being compiled into single SkParagraph's style for every chunk of text
      */
-    @OptIn(ExperimentalTextApi::class)
     fun build(): SkParagraph {
-        initialStyle = textStyle.toSpanStyle().withDefaultFontSize()
-        defaultStyle = ComputedStyle(density, initialStyle)
+        initialStyle = textStyle.toSpanStyle().copyWithDefaultFontSize(
+            drawStyle = drawStyle
+        )
+        defaultStyle = ComputedStyle(density, initialStyle, brushSize, blendMode)
         ops = makeOps(
             spanStyles,
             placeholders
@@ -326,7 +327,7 @@ internal class ParagraphBuilder(
             ps.ellipsis = ellipsis
         }
 
-        // this downcast is always safe because of sealed types and we control construction
+        // this downcast is always safe because of sealed types, and we control construction
         @OptIn(ExperimentalTextApi::class)
         val platformFontLoader = (fontFamilyResolver as FontFamilyResolverImpl).platformFontLoader
         val fontCollection = when (platformFontLoader) {
@@ -491,7 +492,7 @@ internal class ParagraphBuilder(
 
     private fun mergeStyles(activeStyles: List<SpanStyle>): ComputedStyle {
         // there is always at least one active style
-        val style = ComputedStyle(density, activeStyles[0])
+        val style = ComputedStyle(density, activeStyles[0], brushSize, blendMode)
         for (i in 1 until activeStyles.size) {
             style.merge(density, activeStyles[i])
         }
@@ -524,12 +525,12 @@ internal class ParagraphBuilder(
             val fontSize = with(density) {
                 style.fontSize.orDefaultFontSize().toPx()
             }
-            val lineHeight = when {
-                style.lineHeight.isSp -> with(density) {
-                    style.lineHeight.toPx()
+            val lineHeight = with(style.lineHeight) {
+                when {
+                    isSp -> with(density) { toPx() }
+                    isEm -> fontSize * value
+                    else -> error("Unexpected size in textStyleToParagraphStyle")
                 }
-                style.lineHeight.isEm -> fontSize * style.lineHeight.value
-                else -> error("Unexpected size in textStyleToParagraphStyle")
             }
             strutStyle.height = lineHeight / fontSize
             strutStyle.fontSize = fontSize
@@ -575,7 +576,8 @@ private fun TextUnit.orDefaultFontSize() = when {
     else -> this
 }
 
-private fun SpanStyle.withDefaultFontSize(): SpanStyle {
+@OptIn(ExperimentalTextApi::class)
+private fun SpanStyle.copyWithDefaultFontSize(drawStyle: DrawStyle? = null): SpanStyle {
     val fontSize = this.fontSize.orDefaultFontSize()
     val letterSpacing = when {
         this.letterSpacing.isEm -> fontSize * this.letterSpacing.value
@@ -583,7 +585,8 @@ private fun SpanStyle.withDefaultFontSize(): SpanStyle {
     }
     return this.copy(
         fontSize = fontSize,
-        letterSpacing = letterSpacing
+        letterSpacing = letterSpacing,
+        drawStyle = drawStyle
     )
 }
 

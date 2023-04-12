@@ -52,8 +52,16 @@ fun org.jetbrains.skia.Canvas.asComposeCanvas(): Canvas = SkiaBackedCanvas(this)
 
 actual val Canvas.nativeCanvas: NativeCanvas get() = (this as SkiaBackedCanvas).skia
 
+var Canvas.alphaMultiplier: Float
+    get() = (this as SkiaBackedCanvas).alphaMultiplier
+    set(value) { (this as SkiaBackedCanvas).alphaMultiplier = value }
+
 internal class SkiaBackedCanvas(val skia: org.jetbrains.skia.Canvas) : Canvas {
-    private val Paint.skia get() = (this as SkiaBackedPaint).skia
+    internal var alphaMultiplier: Float = 1.0f
+
+    private val Paint.skia get() = (this as SkiaBackedPaint).apply {
+        this.alphaMultiplier = this@SkiaBackedCanvas.alphaMultiplier
+    }.skia
 
     override fun save() {
         skia.save()

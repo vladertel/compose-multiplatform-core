@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,7 +100,7 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerIconDefaults
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.isBackPressed
 import androidx.compose.ui.input.pointer.isForwardPressed
 import androidx.compose.ui.input.pointer.onPointerEvent
@@ -115,7 +115,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDecoration.Companion.Underline
@@ -125,10 +124,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.FrameWindowScope
-import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.awaitApplication
 import androidx.compose.ui.window.launchApplication
 import androidx.compose.ui.window.rememberWindowState
@@ -140,6 +137,7 @@ import kotlin.random.Random
 import kotlinx.coroutines.delay
 import org.junit.Test
 
+@Suppress("ConstPropertyName")
 private const val title = "Desktop Compose Elements"
 
 private val isCtrlPressed = mutableStateOf(false)
@@ -266,6 +264,7 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
         )
         var loremColor by remember { mutableStateOf(0) }
 
+        @Suppress("RemoveRedundantQualifierName")
         val loremDecorations = listOf(
             TextDecoration.None,
             TextDecoration.Underline,
@@ -376,7 +375,7 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Button(
-                modifier = Modifier.padding(4.dp).pointerHoverIcon(PointerIconDefaults.Hand),
+                modifier = Modifier.padding(4.dp).pointerHoverIcon(PointerIcon.Hand),
                 onClick = {
                     amount.value++
                 }
@@ -568,12 +567,12 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
 
         Box(
             modifier = Modifier.size(150.dp).background(Color.Gray).pointerHoverIcon(
-                if (isCtrlPressed.value) PointerIconDefaults.Hand else PointerIconDefaults.Default
+                if (isCtrlPressed.value) PointerIcon.Hand else PointerIcon.Default
             )
         ) {
             Box(
                 modifier = Modifier.offset(20.dp, 20.dp).size(100.dp).background(Color.Blue).pointerHoverIcon(
-                    if (isCtrlPressed.value) PointerIconDefaults.Crosshair else PointerIconDefaults.Text,
+                    if (isCtrlPressed.value) PointerIcon.Crosshair else PointerIcon.Text,
                 )
             ) {
                 Text("pointerHoverIcon test with Ctrl")
@@ -694,7 +693,7 @@ class ComplexApplicationTest {
     fun `no memory leak when wait 3 minutes`() = runApplicationTest(
         timeoutMillis = 10 * 60 * 1000
     ) {
-        launchApplication {
+        launchTestApplication {
             AppWindow()
         }
 
@@ -712,7 +711,5 @@ class ComplexApplicationTest {
             .assertWithMessage("Memory is increased more than 15% after waiting a few minutes")
             .that(newMemory < 1.15 * oldMemory)
             .isTrue()
-
-        exitApplication()
     }
 }

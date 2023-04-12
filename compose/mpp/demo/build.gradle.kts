@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ plugins {
     id("AndroidXPlugin")
     id("AndroidXComposePlugin")
     id("kotlin-multiplatform")
-    id("application")
+//  [1.4 Update]  id("application")
 //    kotlin("plugin.serialization") version "1.8.0"
 }
 
@@ -83,6 +83,20 @@ kotlin {
         }
     }
     iosX64("uikitX64") {
+        binaries {
+            executable() {
+                entryPoint = "androidx.compose.mpp.demo.main"
+                freeCompilerArgs += listOf(
+                    "-linker-option", "-framework", "-linker-option", "Metal",
+                    "-linker-option", "-framework", "-linker-option", "CoreText",
+                    "-linker-option", "-framework", "-linker-option", "CoreGraphics"
+                )
+                // TODO: the current compose binary surprises LLVM, so disable checks for now.
+                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
+            }
+        }
+    }
+    iosArm64("uikitArm64") {
         binaries {
             executable() {
                 entryPoint = "androidx.compose.mpp.demo.main"
@@ -166,7 +180,7 @@ kotlin {
         val macosArm64Main by getting { dependsOn(macosMain) }
         val uikitMain by creating { dependsOn(darwinMain) }
         val uikitX64Main by getting { dependsOn(uikitMain) }
-        val uikitArm64Main by creating { dependsOn(uikitMain) }
+        val uikitArm64Main by getting { dependsOn(uikitMain) }
         val uikitSimArm64Main by getting { dependsOn(uikitMain) }
     }
 }
@@ -235,7 +249,8 @@ if (System.getProperty("os.name") == "Mac OS X") {
 
 tasks.create("runDesktop", JavaExec::class.java) {
     dependsOn(":compose:desktop:desktop:jar")
-    main = "androidx.compose.mpp.demo.Main_desktopKt"
+    mainClass.set("androidx.compose.mpp.demo.Main_desktopKt")
+    args = listOfNotNull(project.findProperty("args")?.toString())
     systemProperty("skiko.fps.enabled", "true")
     val compilation = kotlin.jvm("desktop").compilations["main"]
     classpath =
