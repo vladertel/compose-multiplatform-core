@@ -23,12 +23,16 @@ import androidx.compose.foundation.text2.input.internal.ChangeTracker
 import androidx.compose.ui.text.TextRange
 
 /**
- * A mutable version of [TextFieldCharSequence], similar to [StringBuilder].
+ * A text buffer that can be edited, similar to [StringBuilder].
  *
- * This class provides methods for changing the text, such as [replace] and [append].
+ * This class provides methods for changing the text, such as [replace], [append], [insert], and
+ * [delete].
  *
  * To get one of these, and for usage samples, see [TextFieldState.edit]. Every change to the buffer
  * is tracked in a [ChangeList] which you can access via the [changes] property.
+ *
+ * [TextFieldBufferWithSelection] is a special type of buffer that has an associated cursor position
+ * or selection range.
  */
 @ExperimentalFoundationApi
 open class TextFieldBuffer internal constructor(
@@ -57,9 +61,9 @@ open class TextFieldBuffer internal constructor(
     val codepointLength: Int get() = buffer.codePointCount(0, length)
 
     /**
-     * The [ChangeList] that represents the changes made to this value. The returned [ChangeList]
-     * will always represent the total list of changes made to this value, including changes made
-     * after this property is read.
+     * The [ChangeList] represents the changes made to this value and is inherently mutable. This
+     * means that the returned [ChangeList] always reflects the complete list of changes made to
+     * this value at any given time, even those made after reading this property.
      *
      * @sample androidx.compose.foundation.samples.BasicTextField2ChangeIterationSample
      * @sample androidx.compose.foundation.samples.BasicTextField2ChangeReverseIterationSample
@@ -70,18 +74,21 @@ open class TextFieldBuffer internal constructor(
      * Replaces the text between [start] (inclusive) and [end] (exclusive) in this value with
      * [text], and records the change in [changes].
      *
+     * @param start The character offset of the first character to replace.
+     * @param end The character offset of the first character after the text to replace.
+     * @param text The text to replace the range `[start, end)` with.
+     *
+     * @see append
      * @see insert
+     * @see delete
      */
     fun replace(start: Int, end: Int, text: String) {
         onTextWillChange(TextRange(start, end), text.length)
         buffer.replace(start, end, text)
     }
 
-    override fun append(char: Char): Appendable = apply {
-        onTextWillChange(TextRange(length), 1)
-        buffer.append(char)
-    }
-
+    // Doc inherited from Appendable.
+    // This append overload should be first so it ends up being the target of links to this method.
     override fun append(text: CharSequence?): Appendable = apply {
         if (text != null) {
             onTextWillChange(TextRange(length), text.length)
@@ -89,11 +96,18 @@ open class TextFieldBuffer internal constructor(
         }
     }
 
+    // Doc inherited from Appendable.
     override fun append(text: CharSequence?, start: Int, end: Int): Appendable = apply {
         if (text != null) {
             onTextWillChange(TextRange(length), end - start)
             buffer.append(text, start, end)
         }
+    }
+
+    // Doc inherited from Appendable.
+    override fun append(char: Char): Appendable = apply {
+        onTextWillChange(TextRange(length), 1)
+        buffer.append(char)
     }
 
     /**
@@ -198,9 +212,17 @@ open class TextFieldBuffer internal constructor(
 }
 
 /**
- * Insert [text] at the given [index] in this value.
+ * Insert [text] at the given [index] in this value. Pass 0 to insert [text] at the beginning of
+ * this buffer, and pass [TextFieldBuffer.length] to insert [text] at the end of this buffer.
+ *
+ * This is equivalent to calling `replace(index, index, text)`.
+ *
+ * @param index The character offset at which to insert [text].
+ * @param text The text to insert.
  *
  * @see TextFieldBuffer.replace
+ * @see TextFieldBuffer.append
+ * @see TextFieldBuffer.delete
  */
 @ExperimentalFoundationApi
 fun TextFieldBuffer.insert(index: Int, text: String) {
@@ -208,7 +230,15 @@ fun TextFieldBuffer.insert(index: Int, text: String) {
 }
 
 /**
- * Delete the text between [start] (inclusive) and [end] (exclusive).
+ * Delete the text between [start] (inclusive) and [end] (exclusive). Pass 0 as [start] and
+ * [TextFieldBuffer.length] as [end] to delete everything in this buffer.
+ *
+ * @param start The character offset of the first character to delete.
+ * @param end The character offset of the first character after the deleted range.
+ *
+ * @see TextFieldBuffer.replace
+ * @see TextFieldBuffer.append
+ * @see TextFieldBuffer.insert
  */
 @ExperimentalFoundationApi
 fun TextFieldBuffer.delete(start: Int, end: Int) {
