@@ -62,13 +62,13 @@ import platform.UIKit.UIViewAutoresizingFlexibleHeight
 import platform.UIKit.UIViewAutoresizingFlexibleWidth
 import platform.UIKit.UIViewController
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
-import platform.UIKit.addSubview
+//import platform.UIKit.addSubview
 import platform.UIKit.backgroundColor
 import platform.UIKit.reloadInputViews
-import platform.UIKit.setAutoresizesSubviews
-import platform.UIKit.setAutoresizingMask
-import platform.UIKit.setClipsToBounds
-import platform.UIKit.setNeedsDisplay
+//import platform.UIKit.setAutoresizesSubviews
+//import platform.UIKit.setAutoresizingMask
+//import platform.UIKit.setClipsToBounds
+//import platform.UIKit.setNeedsDisplay
 import platform.darwin.NSObject
 
 fun ComposeUIViewController(content: @Composable () -> Unit): UIViewController =
@@ -130,7 +130,7 @@ internal actual class ComposeWindow : UIViewController {
                     } else {
                         maxOf(focusedTop, 0f).toDouble()
                     }
-                    view.setClipsToBounds(true)
+//                    view.setClipsToBounds(true)
                     val (width, height) = getViewFrameSize()
                     view.layer.setBounds(
                         CGRectMake(
@@ -168,11 +168,11 @@ internal actual class ComposeWindow : UIViewController {
         ).load()
         val rootView = UIView() // rootView needs to interop with UIKit
         rootView.backgroundColor = UIColor.whiteColor
-        rootView.addSubview(skikoUIView)
-        rootView.setAutoresizesSubviews(true)
-        skikoUIView.setAutoresizingMask(
-            UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight
-        )
+//        rootView.addSubview(skikoUIView)
+//        rootView.setAutoresizesSubviews(true)
+//        skikoUIView.setAutoresizingMask(
+//            UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight
+//        )
         view = rootView
         val uiKitTextInputService = UIKitTextInputService(
             showSoftwareKeyboard = {
@@ -182,7 +182,7 @@ internal actual class ComposeWindow : UIViewController {
                 skikoUIView.hideScreenKeyboard()
             },
             updateView = {
-                skikoUIView.setNeedsDisplay() // redraw on next frame
+//                skikoUIView.setNeedsDisplay() // redraw on next frame
                 platform.QuartzCore.CATransaction.flush() // clear all animations
                 skikoUIView.reloadInputViews() // update input (like screen keyboard)
             },

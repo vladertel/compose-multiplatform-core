@@ -47,18 +47,18 @@ import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
 import platform.UIKit.UIColor
 import platform.UIKit.UIView
-import platform.UIKit.addSubview
+//import platform.UIKit.addSubview
 import platform.UIKit.backgroundColor
-import platform.UIKit.insertSubview
-import platform.UIKit.removeFromSuperview
-import platform.UIKit.setFrame
+//import platform.UIKit.insertSubview
+//import platform.UIKit.removeFromSuperview
+//import platform.UIKit.setFrame
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
 private val STUB_CALLBACK_WITH_RECEIVER: Any.() -> Unit = {}
 private val NoOpUpdate: UIView.() -> Unit = STUB_CALLBACK_WITH_RECEIVER
 private val NoOpDispose: UIView.() -> Unit = STUB_CALLBACK_WITH_RECEIVER
-private val DefaultResize: UIView.(CValue<CGRect>) -> Unit = { rect -> this.setFrame(rect) }
+private val DefaultResize: UIView.(CValue<CGRect>) -> Unit = { rect -> /*this.setFrame(rect)*/ }
 
 /**
  * @param factory The block creating the [UIView] to be composed.
@@ -96,7 +96,7 @@ fun <T : UIView> UIKitView(
             val newRectInPixels = IntRect(localToWindowOffset, coordinates.size)
             if (rectInPixels != newRectInPixels) {
                 val rect = newRectInPixels / density
-                componentInfo.container.setFrame(rect.toCGRect())
+//                componentInfo.container.setFrame(rect.toCGRect())
                 if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
                     onResize(
                         componentInfo.component,
@@ -119,12 +119,12 @@ fun <T : UIView> UIKitView(
     DisposableEffect(factory, onRelease) {
         componentInfo.component = factory()
         componentInfo.container = UIView().apply {
-            addSubview(componentInfo.component)
+//            addSubview(componentInfo.component)
         }
         componentInfo.updater = Updater(componentInfo.component, update)
-        root.insertSubview(componentInfo.container, 0)
+//        root.insertSubview(componentInfo.container, 0)
         onDispose {
-            componentInfo.container.removeFromSuperview()
+//            componentInfo.container.removeFromSuperview()
             componentInfo.updater.dispose()
             onRelease(componentInfo.component)
         }
