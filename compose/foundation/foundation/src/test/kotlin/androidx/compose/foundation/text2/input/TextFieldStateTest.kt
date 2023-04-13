@@ -17,14 +17,23 @@
 package androidx.compose.foundation.text2.input
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.text.TextRange
 import com.google.common.truth.Truth.assertThat
 import kotlin.test.assertFailsWith
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalCoroutinesApi::class)
 @RunWith(JUnit4::class)
 class TextFieldStateTest {
 
@@ -32,7 +41,7 @@ class TextFieldStateTest {
 
     @Test
     fun initialValue() {
-        assertThat(state.value.toString()).isEqualTo("")
+        assertThat(state.text.toString()).isEqualTo("")
     }
 
     @Test
@@ -46,7 +55,7 @@ class TextFieldStateTest {
             }
         }
 
-        assertThat(state.value.toString()).isEmpty()
+        assertThat(state.text.toString()).isEmpty()
     }
 
     @Test
@@ -65,14 +74,14 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             placeCursorAtEnd()
         }
-        assertThat(state.value.toString()).isEqualTo("hello")
+        assertThat(state.text.toString()).isEqualTo("hello")
     }
 
     @Test
     fun edit_replace_doesNotChangeStateUntilReturn() {
         state.edit {
             replace(0, 0, "hello")
-            assertThat(state.value.toString()).isEmpty()
+            assertThat(state.text.toString()).isEmpty()
             placeCursorAtEnd()
         }
     }
@@ -85,10 +94,10 @@ class TextFieldStateTest {
             replace(5, 5, " ")
             replace(6, 11, "Compose")
             assertThat(toString()).isEqualTo("hello Compose")
-            assertThat(state.value.toString()).isEmpty()
+            assertThat(state.text.toString()).isEmpty()
             placeCursorAtEnd()
         }
-        assertThat(state.value.toString()).isEqualTo("hello Compose")
+        assertThat(state.text.toString()).isEqualTo("hello Compose")
     }
 
     @Test
@@ -97,7 +106,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             placeCursorAtEnd()
         }
-        assertThat(state.value.selectionInChars).isEqualTo(TextRange(5))
+        assertThat(state.text.selectionInChars).isEqualTo(TextRange(5))
     }
 
     @Test
@@ -106,7 +115,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             placeCursorBeforeCharAt(2)
         }
-        assertThat(state.value.selectionInChars).isEqualTo(TextRange(2))
+        assertThat(state.text.selectionInChars).isEqualTo(TextRange(2))
     }
 
     @Test
@@ -128,7 +137,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             placeCursorBeforeCodepointAt(2)
         }
-        assertThat(state.value.selectionInChars).isEqualTo(TextRange(2))
+        assertThat(state.text.selectionInChars).isEqualTo(TextRange(2))
     }
 
     @Test
@@ -150,7 +159,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             selectAll()
         }
-        assertThat(state.value.selectionInChars).isEqualTo(TextRange(0, 5))
+        assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 5))
     }
 
     @Test
@@ -159,7 +168,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             selectCharsIn(TextRange(1, 4))
         }
-        assertThat(state.value.selectionInChars).isEqualTo(TextRange(1, 4))
+        assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 4))
     }
 
     @Test
@@ -187,7 +196,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             selectCodepointsIn(TextRange(1, 4))
         }
-        assertThat(state.value.selectionInChars).isEqualTo(TextRange(1, 4))
+        assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 4))
     }
 
     @Test
@@ -221,7 +230,7 @@ class TextFieldStateTest {
             assertThat(toString()).isEqualTo("hello world")
             placeCursorAtEnd()
         }
-        assertThat(state.value.toString()).isEqualTo("hello world")
+        assertThat(state.text.toString()).isEqualTo("hello world")
     }
 
     @Test
@@ -230,7 +239,7 @@ class TextFieldStateTest {
             append('c')
             placeCursorAtEnd()
         }
-        assertThat(state.value.toString()).isEqualTo("c")
+        assertThat(state.text.toString()).isEqualTo("c")
     }
 
     @Test
@@ -239,7 +248,7 @@ class TextFieldStateTest {
             append("hello")
             placeCursorAtEnd()
         }
-        assertThat(state.value.toString()).isEqualTo("hello")
+        assertThat(state.text.toString()).isEqualTo("hello")
     }
 
     @Test
@@ -248,21 +257,21 @@ class TextFieldStateTest {
             append("hello world", 0, 5)
             placeCursorAtEnd()
         }
-        assertThat(state.value.toString()).isEqualTo("hello")
+        assertThat(state.text.toString()).isEqualTo("hello")
     }
 
     @Test
     fun setTextAndPlaceCursorAtEnd_works() {
         state.setTextAndPlaceCursorAtEnd("Hello")
-        assertThat(state.value.toString()).isEqualTo("Hello")
-        assertThat(state.value.selectionInChars).isEqualTo(TextRange(5))
+        assertThat(state.text.toString()).isEqualTo("Hello")
+        assertThat(state.text.selectionInChars).isEqualTo(TextRange(5))
     }
 
     @Test
     fun setTextAndSelectAll_works() {
         state.setTextAndSelectAll("Hello")
-        assertThat(state.value.toString()).isEqualTo("Hello")
-        assertThat(state.value.selectionInChars).isEqualTo(TextRange(0, 5))
+        assertThat(state.text.toString()).isEqualTo("Hello")
+        assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 5))
     }
 
     @Test
@@ -314,6 +323,192 @@ class TextFieldStateTest {
             assertThat(changes.getRange(0)).isEqualTo(TextRange(6, 11))
             assertThat(changes.getOriginalRange(0)).isEqualTo(TextRange(6))
             placeCursorAtEnd()
+        }
+    }
+
+    @Test
+    fun forEachValues_fires_immediately() = runTestWithSnapshotsThenCancelChildren {
+        val state = TextFieldState("hello", initialSelectionInChars = TextRange(5))
+        val texts = mutableListOf<TextFieldCharSequence>()
+
+        launch(Dispatchers.Unconfined) {
+            state.forEachTextValue { texts += it }
+        }
+
+        assertThat(texts).hasSize(1)
+        assertThat(texts.single()).isSameInstanceAs(state.text)
+        assertThat(texts.single().toString()).isEqualTo("hello")
+        assertThat(texts.single().selectionInChars).isEqualTo(TextRange(5))
+    }
+
+    @Test
+    fun forEachValue_fires_whenTextChanged() = runTestWithSnapshotsThenCancelChildren {
+        val state = TextFieldState(initialSelectionInChars = TextRange(0))
+        val texts = mutableListOf<TextFieldCharSequence>()
+        val initialText = state.text
+
+        launch(Dispatchers.Unconfined) {
+            state.forEachTextValue { texts += it }
+        }
+
+        state.edit {
+            append("hello")
+            placeCursorBeforeCharAt(0)
+        }
+
+        assertThat(texts).hasSize(2)
+        assertThat(texts.last()).isSameInstanceAs(state.text)
+        assertThat(texts.last().toString()).isEqualTo("hello")
+        assertThat(texts.last().selectionInChars).isEqualTo(initialText.selectionInChars)
+    }
+
+    @Test
+    fun forEachValue_fires_whenSelectionChanged() = runTestWithSnapshotsThenCancelChildren {
+        val state = TextFieldState("hello", initialSelectionInChars = TextRange(0))
+        val texts = mutableListOf<TextFieldCharSequence>()
+
+        launch(Dispatchers.Unconfined) {
+            state.forEachTextValue { texts += it }
+        }
+
+        state.edit {
+            placeCursorAtEnd()
+        }
+
+        assertThat(texts).hasSize(2)
+        assertThat(texts.last()).isSameInstanceAs(state.text)
+        assertThat(texts.last().toString()).isEqualTo("hello")
+        assertThat(texts.last().selectionInChars).isEqualTo(TextRange(5))
+    }
+
+    @Test
+    fun forEachValue_firesTwice_whenEditCalledTwice() = runTestWithSnapshotsThenCancelChildren {
+        val state = TextFieldState()
+        val texts = mutableListOf<TextFieldCharSequence>()
+
+        launch(Dispatchers.Unconfined) {
+            state.forEachTextValue { texts += it }
+        }
+
+        state.edit {
+            append("hello")
+            placeCursorAtEnd()
+        }
+
+        state.edit {
+            append(" world")
+            placeCursorAtEnd()
+        }
+
+        assertThat(texts).hasSize(3)
+        assertThat(texts[1].toString()).isEqualTo("hello")
+        assertThat(texts[2]).isSameInstanceAs(state.text)
+        assertThat(texts[2].toString()).isEqualTo("hello world")
+    }
+
+    @Test
+    fun forEachValue_firesOnce_whenMultipleChangesMadeInSingleEdit() =
+        runTestWithSnapshotsThenCancelChildren {
+            val state = TextFieldState()
+            val texts = mutableListOf<TextFieldCharSequence>()
+
+            launch(Dispatchers.Unconfined) {
+                state.forEachTextValue { texts += it }
+            }
+
+            state.edit {
+                append("hello")
+                append(" world")
+                placeCursorAtEnd()
+            }
+
+            assertThat(texts.last()).isSameInstanceAs(state.text)
+            assertThat(texts.last().toString()).isEqualTo("hello world")
+        }
+
+    @Test
+    fun forEachValue_fires_whenChangeMadeInSnapshotIsApplied() =
+        runTestWithSnapshotsThenCancelChildren {
+            val state = TextFieldState()
+            val texts = mutableListOf<TextFieldCharSequence>()
+
+            launch(Dispatchers.Unconfined) {
+                state.forEachTextValue { texts += it }
+            }
+
+            val snapshot = Snapshot.takeMutableSnapshot()
+            snapshot.enter {
+                state.edit {
+                    append("hello")
+                    placeCursorAtEnd()
+                }
+                assertThat(texts.isEmpty())
+            }
+            assertThat(texts.isEmpty())
+
+            snapshot.apply()
+            snapshot.dispose()
+
+            assertThat(texts.last()).isSameInstanceAs(state.text)
+        }
+
+    @Test
+    fun forEachValue_notFired_whenChangeMadeInSnapshotThenDisposed() =
+        runTestWithSnapshotsThenCancelChildren {
+            val state = TextFieldState()
+            val texts = mutableListOf<TextFieldCharSequence>()
+
+            launch(Dispatchers.Unconfined) {
+                state.forEachTextValue { texts += it }
+            }
+
+            val snapshot = Snapshot.takeMutableSnapshot()
+            snapshot.enter {
+                state.edit {
+                    append("hello")
+                    placeCursorAtEnd()
+                }
+            }
+            snapshot.dispose()
+
+            // Only contains initial value.
+            assertThat(texts).hasSize(1)
+            assertThat(texts.single().toString()).isEmpty()
+        }
+
+    @Test
+    fun forEachValue_cancelsPreviousHandler_whenChangeMadeWhileSuspended() =
+        runTestWithSnapshotsThenCancelChildren {
+            val state = TextFieldState()
+            val texts = mutableListOf<TextFieldCharSequence>()
+
+            launch(Dispatchers.Unconfined) {
+                state.forEachTextValue {
+                    texts += it
+                    awaitCancellation()
+                }
+            }
+
+            state.setTextAndPlaceCursorAtEnd("hello")
+            state.setTextAndPlaceCursorAtEnd("world")
+
+            assertThat(texts.map { it.toString() })
+                .containsExactly("", "hello", "world")
+                .inOrder()
+        }
+
+    private fun runTestWithSnapshotsThenCancelChildren(testBody: suspend TestScope.() -> Unit) {
+        val globalWriteObserverHandle = Snapshot.registerGlobalWriteObserver {
+            // This is normally done by the compose runtime.
+            Snapshot.sendApplyNotifications()
+        }
+        try {
+            runTest {
+                testBody()
+                coroutineContext.job.cancelChildren()
+            }
+        } finally {
+            globalWriteObserverHandle.dispose()
         }
     }
 }

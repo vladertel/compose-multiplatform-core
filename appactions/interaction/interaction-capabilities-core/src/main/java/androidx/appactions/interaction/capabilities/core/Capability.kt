@@ -17,7 +17,6 @@
 package androidx.appactions.interaction.capabilities.core
 
 import androidx.annotation.RestrictTo
-import androidx.appactions.interaction.capabilities.core.ActionExecutorAsync.Companion.toActionExecutorAsync
 import androidx.appactions.interaction.capabilities.core.impl.CapabilitySession
 import androidx.appactions.interaction.capabilities.core.impl.SingleTurnCapabilityImpl
 import androidx.appactions.interaction.capabilities.core.impl.spec.ActionSpec
@@ -52,7 +51,7 @@ abstract class Capability internal constructor(
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     abstract fun createSession(
         sessionId: String,
-        hostProperties: HostProperties,
+        hostProperties: HostProperties
     ): CapabilitySession
 
     /**
@@ -66,18 +65,19 @@ abstract class Capability internal constructor(
             ArgumentsT,
             OutputT,
             ConfirmationT,
-            ExecutionSessionT,>,
+            ExecutionSessionT
+            >,
         PropertyT,
         ArgumentsT,
         OutputT,
         ConfirmationT,
-        ExecutionSessionT : BaseExecutionSession<ArgumentsT, OutputT>,
+        ExecutionSessionT : BaseExecutionSession<ArgumentsT, OutputT>
         > protected constructor(
-        private val actionSpec: ActionSpec<PropertyT, ArgumentsT, OutputT>,
+        private val actionSpec: ActionSpec<PropertyT, ArgumentsT, OutputT>
     ) {
         private var id: String? = null
         private var property: PropertyT? = null
-        private var actionExecutorAsync: ActionExecutorAsync<ArgumentsT, OutputT>? = null
+        private var capabilityExecutor: CapabilityExecutor<ArgumentsT, OutputT>? = null
         private var sessionFactory: ExecutionSessionFactory<ExecutionSessionT>? = null
 
         /**
@@ -111,30 +111,31 @@ abstract class Capability internal constructor(
         }
 
         /**
-         * Sets the ActionExecutor for this capability.
+         * Sets the CapabilityExecutor for this capability.
          *
          * setExecutionSessionFactory and setExecutor are mutually exclusive, so calling one will
          * nullify the other.
          *
-         * This method accepts a coroutine-based ActionExecutor instance. There is also an overload
-         * which accepts the ActionExecutorAsync instead.
+         * This method accepts a coroutine-based CapabilityExecutor instance. There is also an overload
+         * which accepts the CapabilityExecutorAsync instead.
          */
-        fun setExecutor(actionExecutor: ActionExecutor<ArgumentsT, OutputT>) = asBuilder().apply {
-            this.actionExecutorAsync = actionExecutor.toActionExecutorAsync()
-        }
+        fun setExecutor(capabilityExecutor: CapabilityExecutor<ArgumentsT, OutputT>) =
+            asBuilder().apply {
+                this.capabilityExecutor = capabilityExecutor
+            }
 
         /**
-         * Sets the ActionExecutorAsync for this capability.
+         * Sets the CapabilityExecutorAsync for this capability.
          *
          * setExecutionSessionFactory and setExecutor are mutually exclusive, so calling one will
          * nullify the other.
          *
-         * This method accepts the ActionExecutorAsync interface which returns a ListenableFuture.
+         * This method accepts the CapabilityExecutorAsync interface which returns a ListenableFuture.
          */
         fun setExecutor(
-            actionExecutorAsync: ActionExecutorAsync<ArgumentsT, OutputT>,
+            capabilityExecutorAsync: CapabilityExecutorAsync<ArgumentsT, OutputT>
         ) = asBuilder().apply {
-            this.actionExecutorAsync = actionExecutorAsync
+            this.capabilityExecutor = capabilityExecutorAsync.toCapabilityExecutor()
         }
 
         /**
@@ -145,7 +146,7 @@ abstract class Capability internal constructor(
          * will nullify the other.
          */
         protected open fun setExecutionSessionFactory(
-            sessionFactory: ExecutionSessionFactory<ExecutionSessionT>,
+            sessionFactory: ExecutionSessionFactory<ExecutionSessionT>
         ): BuilderT = asBuilder().apply {
             this.sessionFactory = sessionFactory
         }
@@ -154,12 +155,12 @@ abstract class Capability internal constructor(
         open fun build(): Capability {
             val checkedId = requireNotNull(id) { "setId must be called before build" }
             val checkedProperty = requireNotNull(property) { "property must not be null." }
-            if (actionExecutorAsync != null) {
+            if (capabilityExecutor != null) {
                 return SingleTurnCapabilityImpl(
                     checkedId,
                     actionSpec,
                     checkedProperty,
-                    actionExecutorAsync!!,
+                    capabilityExecutor!!
                 )
             } else {
                 val checkedSessionFactory = requireNotNull(sessionFactory) {
@@ -171,7 +172,7 @@ abstract class Capability internal constructor(
                     checkedProperty,
                     checkedSessionFactory,
                     sessionBridge!!,
-                    ::EmptyTaskUpdater,
+                    ::EmptyTaskUpdater
                 )
             }
         }
