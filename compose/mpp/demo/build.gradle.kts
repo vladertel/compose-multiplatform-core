@@ -17,6 +17,7 @@
 import androidx.build.AndroidXComposePlugin
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     id("AndroidXPlugin")
@@ -55,7 +56,17 @@ kotlin {
         binaries.executable()
     }
     wasm() {
-        browser()
+        browser {
+            commonWebpackConfig {
+                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).copy(
+                    open = mapOf(
+                        "app" to mapOf(
+                            "name" to "google-chrome",
+                        )
+                    ),
+                )
+            }
+        }
         binaries.executable()
     }
     macosX64() {
