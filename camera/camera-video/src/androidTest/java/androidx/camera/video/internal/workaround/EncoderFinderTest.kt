@@ -25,6 +25,7 @@ import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
+import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.core.impl.Timebase
 import androidx.camera.testing.CameraPipeConfigTestRule
@@ -33,11 +34,11 @@ import androidx.camera.testing.CameraXUtil
 import androidx.camera.testing.LabTestRule
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
-import androidx.camera.video.VideoCapabilities
+import androidx.camera.video.LegacyVideoCapabilities
 import androidx.camera.video.VideoSpec
 import androidx.camera.video.internal.compat.quirk.DeviceQuirks
 import androidx.camera.video.internal.compat.quirk.MediaCodecInfoReportIncorrectInfoQuirk
-import androidx.camera.video.internal.config.VideoEncoderConfigCamcorderProfileResolver
+import androidx.camera.video.internal.config.VideoEncoderConfigVideoProfileResolver
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
@@ -144,7 +145,7 @@ class EncoderFinderTest(
 
     @LabTestRule.LabTestOnly
     @Test
-    fun findEncoderForFormat_CamcorderProfile() {
+    fun findEncoderForFormat_EncoderProfiles() {
         // Arrange.
         val cameraInfo = camera.cameraInfo as CameraInfoInternal
         val resolution = QualitySelector.getResolution(cameraInfo, quality)
@@ -153,19 +154,19 @@ class EncoderFinderTest(
             resolution != null
         )
 
-        val camcorderProfile = VideoCapabilities.from(cameraInfo).getProfile(quality)
-        val camcorderProfileVideoMime = camcorderProfile!!.videoCodecMimeType!!
+        val encoderProfiles = LegacyVideoCapabilities.from(cameraInfo).getProfiles(quality)
+        val videoProfile = encoderProfiles!!.defaultVideoProfile
 
         val videoSpec =
             VideoSpec.builder().setQualitySelector(QualitySelector.from(quality)).build()
 
-        val mediaFormat = VideoEncoderConfigCamcorderProfileResolver(
-            camcorderProfileVideoMime,
+        val mediaFormat = VideoEncoderConfigVideoProfileResolver(
+            videoProfile.mediaType,
             timebase,
             videoSpec,
             resolution!!,
-            camcorderProfile,
-            /*expectedFrameRateRange=*/null
+            videoProfile,
+            SurfaceRequest.FRAME_RATE_RANGE_UNSPECIFIED
         ).get().toMediaFormat()
 
         // Act.

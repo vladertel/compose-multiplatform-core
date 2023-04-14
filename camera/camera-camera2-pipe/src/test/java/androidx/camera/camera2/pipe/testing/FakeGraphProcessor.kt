@@ -71,7 +71,7 @@ internal class FakeGraphProcessor(
         _requestQueue.add(requests)
     }
 
-    override suspend fun submit(parameters: Map<*, Any?>): Boolean {
+    override suspend fun trySubmit(parameters: Map<*, Any?>): Boolean {
         if (closed) {
             return false
         }
@@ -89,7 +89,8 @@ internal class FakeGraphProcessor(
                     requests = listOf(currRepeatingRequest),
                     defaultParameters = defaultParameters,
                     requiredParameters = requiredParameters,
-                    listeners = defaultListeners)
+                    listeners = defaultListeners
+                )
         }
     }
 
@@ -163,6 +164,7 @@ internal class FakeGraphProcessor(
             requests = listOf(currRepeatingRequest),
             defaultParameters = defaultParameters,
             requiredParameters = requiredParameters,
-            listeners = defaultListeners)
+            listeners = defaultListeners
+        )
     }
 }
