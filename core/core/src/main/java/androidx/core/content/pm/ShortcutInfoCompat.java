@@ -27,10 +27,12 @@ import android.content.pm.ShortcutManager;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.os.UserHandle;
 import android.text.TextUtils;
 
+import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -40,7 +42,10 @@ import androidx.core.app.Person;
 import androidx.core.content.LocusIdCompat;
 import androidx.core.graphics.drawable.IconCompat;
 import androidx.core.net.UriCompat;
+import androidx.core.util.Preconditions;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -60,6 +65,17 @@ public class ShortcutInfoCompat {
     private static final String EXTRA_LONG_LIVED = "extraLongLived";
 
     private static final String EXTRA_SLICE_URI = "extraSliceUri";
+
+    /** @hide */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+    @IntDef(flag = true, value = {SURFACE_LAUNCHER})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface Surface {}
+
+    /**
+     * Indicates system surfaces managed by a launcher app. e.g. Long-Press Menu.
+     */
+    public static final int SURFACE_LAUNCHER = 1 << 0;
 
     Context mContext;
     String mId;
@@ -85,6 +101,7 @@ public class ShortcutInfoCompat {
     int mRank;
 
     PersistableBundle mExtras;
+    Bundle mTransientExtras;
 
     // Read-Only fields
     long mLastChangedTimestamp;
@@ -97,7 +114,7 @@ public class ShortcutInfoCompat {
     boolean mIsEnabled = true;
     boolean mHasKeyFieldsOnly;
     int mDisabledReason;
-    boolean mIsHiddenFromLauncher;
+    int mExcludedSurfaces;
 
     ShortcutInfoCompat() { }
 
@@ -145,6 +162,9 @@ public class ShortcutInfoCompat {
             // introduced in API 29. On older API versions, we store mPersons and mIsLongLived in
             // the extras field of ShortcutInfo for backwards compatibility.
             builder.setExtras(buildLegacyExtrasBundle());
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            Api33Impl.setExcludedFromSurfaces(builder, mExcludedSurfaces);
         }
         return builder.build();
     }
@@ -381,6 +401,17 @@ public class ShortcutInfoCompat {
     }
 
     /**
+     * Get additional extras from the shortcut, which will not be persisted anywhere once the
+     * shortcut is published.
+     * @hide
+     */
+    @RestrictTo(LIBRARY_GROUP_PREFIX)
+    @Nullable
+    public Bundle getTransientExtras() {
+        return mTransientExtras;
+    }
+
+    /**
      * {@link UserHandle} on which the publisher created this shortcut.
      */
     @Nullable
@@ -418,7 +449,7 @@ public class ShortcutInfoCompat {
      * <p>When an app is upgraded and a shortcut is no longer published from AndroidManifest.xml,
      * this will be set to {@code false}.  If the shortcut is not pinned, then it'll disappear.
      * However, if it's pinned, it will still be visible, {@link #isEnabled()} will be
-     * {@code false} and {@link #isEnabled()} will be {@code true}.
+     * {@code false} and {@link #isImmutable()} will be {@code true}.
      */
     public boolean isDeclaredInManifest() {
         return mIsDeclaredInManifest;
@@ -477,6 +508,23 @@ public class ShortcutInfoCompat {
         } else {
             return getLocusIdFromExtra(shortcutInfo.getExtras());
         }
+    }
+
+    /**
+     * Return true if the shortcut is excluded from specified surface.
+     */
+    public boolean isExcludedFromSurfaces(@Surface int surface) {
+        return (mExcludedSurfaces & surface) != 0;
+    }
+
+    /**
+     * Returns a bitmask of all surfaces this shortcut is excluded from.
+     *
+     * @see ShortcutInfo.Builder#setExcludedFromSurfaces(int)
+     */
+    @Surface
+    public int getExcludedFromSurfaces() {
+        return mExcludedSurfaces;
     }
 
     /**
@@ -546,7 +594,7 @@ public class ShortcutInfoCompat {
             if (shortcutInfo.mExtras != null) {
                 mInfo.mExtras = shortcutInfo.mExtras;
             }
-            mInfo.mIsHiddenFromLauncher = shortcutInfo.mIsHiddenFromLauncher;
+            mInfo.mExcludedSurfaces = shortcutInfo.mExcludedSurfaces;
         }
 
         /**
@@ -788,20 +836,22 @@ public class ShortcutInfoCompat {
         }
 
         /**
-         * Sets if a shortcut is considered hidden from Launcher. If so, shortcuts will be
-         * excluded from the search result of {@link android.content.pm.LauncherApps#getShortcuts(
-         * android.content.pm.LauncherApps.ShortcutQuery, UserHandle)}. This generally means the
-         * shortcut would not be displayed by a launcher app (e.g. in Long-Press menu), while remain
-         * visible in other surfaces such as assistant or on-device-intelligence.
+         * Sets which surfaces a shortcut will be excluded from.
          *
-         * <p>On API <= 31, shortcuts that are hidden from launcher are not actually sent to
-         * {@link ShortcutManager}. These shortcuts might still be made available to other surfaces
-         * via alternative means.
+         * If the shortcut is set to be excluded from {@link #SURFACE_LAUNCHER}, shortcuts will be
+         * excluded from the search result of {@link android.content.pm.LauncherApps#getShortcuts(
+         * android.content.pm.LauncherApps.ShortcutQuery, UserHandle)} and
+         * {@link android.content.pm.ShortcutManager#getShortcuts(int)}. This generally means the
+         * shortcut would not be displayed by a launcher app (e.g. in Long-Press menu), while
+         * remain visible in other surfaces such as assistant or on-device-intelligence.
+         *
+         * <p>On API <= 31, shortcuts that are excluded from {@link #SURFACE_LAUNCHER} are not
+         * actually sent to {@link ShortcutManager}. These shortcuts might still be made
+         * available to other surfaces via alternative means.
          */
-        @SuppressWarnings("MissingGetterMatchingBuilder")
         @NonNull
-        public Builder setIsHiddenFromLauncher(boolean isHidden) {
-            mInfo.mIsHiddenFromLauncher = isHidden;
+        public Builder setExcludedFromSurfaces(final int surfaces) {
+            mInfo.mExcludedSurfaces = surfaces;
             return this;
         }
 
@@ -828,6 +878,16 @@ public class ShortcutInfoCompat {
         @NonNull
         public Builder setExtras(@NonNull PersistableBundle extras) {
             mInfo.mExtras = extras;
+            return this;
+        }
+
+        /**
+         * @hide
+         */
+        @RestrictTo(LIBRARY_GROUP_PREFIX)
+        @NonNull
+        public Builder setTransientExtras(@NonNull final Bundle transientExtras) {
+            mInfo.mTransientExtras = Preconditions.checkNotNull(transientExtras);
             return this;
         }
 
@@ -950,6 +1010,14 @@ public class ShortcutInfoCompat {
                 }
             }
             return mInfo;
+        }
+    }
+
+    @RequiresApi(33)
+    private static class Api33Impl {
+        static void setExcludedFromSurfaces(@NonNull final ShortcutInfo.Builder builder,
+                final int surfaces) {
+            builder.setExcludedFromSurfaces(surfaces);
         }
     }
 }

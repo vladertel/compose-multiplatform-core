@@ -16,29 +16,35 @@
 
 package androidx.room.compiler.processing.ksp
 
+import androidx.room.compiler.processing.XElement
 import androidx.room.compiler.processing.XFiler
 import androidx.room.compiler.processing.XMessager
+import androidx.room.compiler.processing.originatingElementForPoet
 import androidx.room.compiler.processing.util.ISSUE_TRACKER_LINK
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.squareup.javapoet.JavaFile
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.OriginatingElementsHolder
 import java.io.OutputStream
+import java.nio.file.Path
 import javax.lang.model.element.Element
 import javax.tools.Diagnostic
+import kotlin.io.path.extension
+import kotlin.io.path.nameWithoutExtension
 
 internal class KspFiler(
     private val delegate: CodeGenerator,
     private val messager: XMessager,
 ) : XFiler {
     override fun write(javaFile: JavaFile, mode: XFiler.Mode) {
-        val originatingFiles = javaFile.typeSpec.originatingElements
-            .map(::originatingFileFor)
+        val originatingElements = javaFile.typeSpec.originatingElements
+            .toOriginatingElements()
 
         createNewFile(
-            originatingFiles = originatingFiles,
+            originatingElements = originatingElements,
             packageName = javaFile.packageName,
             fileName = javaFile.typeSpec.name,
             extensionName = "java",
@@ -51,13 +57,13 @@ internal class KspFiler(
     }
 
     override fun write(fileSpec: FileSpec, mode: XFiler.Mode) {
-        val originatingFiles = fileSpec.members
+        val originatingElements = fileSpec.members
             .filterIsInstance<OriginatingElementsHolder>()
             .flatMap { it.originatingElements }
-            .map(::originatingFileFor)
+            .toOriginatingElements()
 
         createNewFile(
-            originatingFiles = originatingFiles,
+            originatingElements = originatingElements,
             packageName = fileSpec.packageName,
             fileName = fileSpec.name,
             extensionName = "kt",
@@ -69,34 +75,59 @@ internal class KspFiler(
         }
     }
 
-    private fun originatingFileFor(element: Element): KSFile {
-        check(element is KSFileAsOriginatingElement) {
-            "Unexpected element type in originating elements. $element"
+    override fun writeResource(
+        filePath: Path,
+        originatingElements: List<XElement>,
+        mode: XFiler.Mode
+    ): OutputStream {
+        require(filePath.extension != "java" && filePath.extension != "kt") {
+            "Could not create resource file with a source type extension. File must not be " +
+                "neither '.java' nor '.kt', but was: $filePath"
         }
-        return element.ksFile
+        val kspFilerOriginatingElements = originatingElements
+            .mapNotNull { it.originatingElementForPoet() }
+            .toOriginatingElements()
+        return createNewFile(
+            originatingElements = kspFilerOriginatingElements,
+            packageName = filePath.parent?.toString() ?: "",
+            fileName = filePath.nameWithoutExtension,
+            extensionName = filePath.extension,
+            aggregating = mode == XFiler.Mode.Aggregating
+        )
     }
 
     private fun createNewFile(
-        originatingFiles: List<KSFile>,
+        originatingElements: OriginatingElements,
         packageName: String,
         fileName: String,
         extensionName: String,
         aggregating: Boolean
     ): OutputStream {
-        val dependencies = if (originatingFiles.isEmpty()) {
-            messager.printMessage(
-                Diagnostic.Kind.WARNING,
-                """
-                    No dependencies are reported for $fileName which will prevent
-                    incremental compilation.
-                    Please file a bug at $ISSUE_TRACKER_LINK.
-                """.trimIndent()
-            )
+        val dependencies = if (originatingElements.isEmpty()) {
+            val isSourceFile = extensionName == "java" || extensionName == "kt"
+            if (isSourceFile) {
+                val filePath = "$packageName.$fileName.$extensionName"
+                messager.printMessage(
+                    Diagnostic.Kind.WARNING,
+                    "No dependencies reported for generated source $filePath which will" +
+                        "prevent incremental compilation.\n" +
+                        "Please file a bug at $ISSUE_TRACKER_LINK."
+                )
+            }
             Dependencies.ALL_FILES
         } else {
             Dependencies(
                 aggregating = aggregating,
-                sources = originatingFiles.distinct().toTypedArray()
+                sources = originatingElements.files.distinct().toTypedArray()
+            )
+        }
+
+        if (originatingElements.classes.isNotEmpty()) {
+            delegate.associateWithClasses(
+                classes = originatingElements.classes,
+                packageName = packageName,
+                fileName = fileName,
+                extensionName = extensionName
             )
         }
 
@@ -106,5 +137,27 @@ internal class KspFiler(
             fileName = fileName,
             extensionName = extensionName
         )
+    }
+
+    private data class OriginatingElements(
+        val files: List<KSFile>,
+        val classes: List<KSClassDeclaration>,
+    ) {
+        fun isEmpty(): Boolean = files.isEmpty() && classes.isEmpty()
+    }
+
+    private fun List<Element>.toOriginatingElements(): OriginatingElements {
+        val files = mutableListOf<KSFile>()
+        val classes = mutableListOf<KSClassDeclaration>()
+
+        forEach { element ->
+            when (element) {
+                is KSFileAsOriginatingElement -> files.add(element.ksFile)
+                is KSClassDeclarationAsOriginatingElement -> classes.add(element.ksClassDeclaration)
+                else -> error("Unexpected element type in originating elements. $element")
+            }
+        }
+
+        return OriginatingElements(files, classes)
     }
 }

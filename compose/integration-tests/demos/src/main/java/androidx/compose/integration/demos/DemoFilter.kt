@@ -16,27 +16,22 @@
 
 package androidx.compose.integration.demos
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.integration.demos.common.Demo
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.ListItem
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
@@ -45,8 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -60,9 +53,8 @@ fun DemoFilter(launchableDemos: List<Demo>, filterText: String, onNavigate: (Dem
     val filteredDemos = launchableDemos
         .filter { it.title.contains(filterText, ignoreCase = true) }
         .sortedBy { it.title }
-    // TODO: migrate to LazyColumn after b/175671850
-    Column(Modifier.verticalScroll(rememberScrollState())) {
-        filteredDemos.forEach { demo ->
+    LazyColumn {
+        items(filteredDemos) { demo ->
             FilteredDemoListItem(
                 demo,
                 filterText = filterText,
@@ -75,51 +67,46 @@ fun DemoFilter(launchableDemos: List<Demo>, filterText: String, onNavigate: (Dem
 /**
  * [TopAppBar] with a text field allowing filtering all the demos.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterAppBar(
     filterText: String,
     onFilter: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior
 ) {
-    with(MaterialTheme.colors) {
-        val appBarColor = if (isLight) {
-            surface
-        } else {
-            // Blending primary over surface according to Material design guidance for brand
-            // surfaces in dark theme
-            primary.copy(alpha = 0.08f).compositeOver(surface)
-        }
-        TopAppBar(backgroundColor = appBarColor, contentColor = onSurface) {
-            IconButton(modifier = Modifier.align(Alignment.CenterVertically), onClick = onClose) {
+    TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = onClose) {
                 Icon(Icons.Filled.Close, null)
             }
+        },
+        title = {
             FilterField(
                 filterText,
                 onFilter,
-                Modifier.fillMaxWidth().align(Alignment.CenterVertically)
+                Modifier.fillMaxWidth()
             )
-        }
-    }
+        },
+        scrollBehavior = scrollBehavior
+    )
 }
 
 /**
- * [BasicTextField] that edits the current [filterText], providing [onFilter] when edited.
+ * [TextField] that edits the current [filterText], providing [onFilter] when edited.
  */
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 private fun FilterField(
     filterText: String,
     onFilter: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
-    // TODO: replace with Material text field when available
-    BasicTextField(
+    TextField(
         modifier = modifier.focusRequester(focusRequester),
         value = filterText,
-        onValueChange = onFilter,
-        textStyle = LocalTextStyle.current,
-        cursorBrush = SolidColor(LocalContentColor.current)
+        onValueChange = onFilter
     )
     DisposableEffect(focusRequester) {
         focusRequester.requestFocus()
@@ -131,13 +118,12 @@ private fun FilterField(
  * [ListItem] that displays a [demo] and highlights any matches for [filterText] inside [Demo.title]
  */
 @Composable
-@OptIn(ExperimentalMaterialApi::class)
 private fun FilteredDemoListItem(
     demo: Demo,
     filterText: String,
     onNavigate: (Demo) -> Unit
 ) {
-    val primary = MaterialTheme.colors.primary
+    val primary = MaterialTheme.colorScheme.primary
     val annotatedString = buildAnnotatedString {
         val title = demo.title
         var currentIndex = 0
@@ -159,13 +145,13 @@ private fun FilteredDemoListItem(
     }
     key(demo.title) {
         ListItem(
-            text = {
-                Text(
-                    modifier = Modifier.height(56.dp).wrapContentSize(Alignment.Center),
-                    text = annotatedString
-                )
-            },
-            modifier = Modifier.clickable { onNavigate(demo) }
-        )
+            onClick = { onNavigate(demo) }) {
+            Text(
+                modifier = Modifier
+                    .height(56.dp)
+                    .wrapContentSize(Alignment.Center),
+                text = annotatedString
+            )
+        }
     }
 }

@@ -25,6 +25,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.annotation.CallSuper
+import androidx.glance.appwidget.action.LambdaActionBroadcasts
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -43,11 +44,28 @@ import kotlinx.coroutines.launch
  *
  * Note: If you override any of the [AppWidgetProvider] methods, ensure you call their super-class
  * implementation.
+ *
+ * Important: if you override any of the methods of this class, you must call the super
+ * implementation, and you must not call [AppWidgetProvider.goAsync], as it will be called by the
+ * super implementation. This means your processing time must be short.
  */
 abstract class GlanceAppWidgetReceiver : AppWidgetProvider() {
 
-    private companion object {
+    companion object {
         private const val TAG = "GlanceAppWidgetReceiver"
+
+        /**
+         * Action for a broadcast intent that will try to update all instances of a Glance App
+         * Widget for debugging.
+         * <pre>
+         * adb shell am broadcast -a androidx.glance.appwidget.action.DEBUG_UPDATE -n APP/COMPONENT
+         * </pre>
+         * where APP/COMPONENT is the manifest component for the GlanceAppWidgetReceiver subclass.
+         * This only works if the Receiver is exported (or the target device has adb running as
+         * root), and has androidx.glance.appwidget.DEBUG_UPDATE in its intent-filter.
+         * This should only be done for debug builds and disabled for release.
+         */
+        const val ACTION_DEBUG_UPDATE = "androidx.glance.appwidget.action.DEBUG_UPDATE"
     }
 
     /**
@@ -88,10 +106,11 @@ abstract class GlanceAppWidgetReceiver : AppWidgetProvider() {
         }
     }
 
-    override fun onDeleted(context: Context?, appWidgetIds: IntArray?) {
-        // TODO: When a widget is deleted, delete the datastore
-        appWidgetIds?.forEach {
-            createUniqueRemoteUiName(it)
+    @CallSuper
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        goAsync {
+            updateManager(context)
+            appWidgetIds.forEach { glanceAppWidget.deleted(context, it) }
         }
     }
 
@@ -106,18 +125,34 @@ abstract class GlanceAppWidgetReceiver : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         runAndLogExceptions {
-            if (intent.action == Intent.ACTION_LOCALE_CHANGED) {
-                val appWidgetManager = AppWidgetManager.getInstance(context)
-                val componentName =
-                    ComponentName(context.packageName, checkNotNull(javaClass.canonicalName))
-                onUpdate(
-                    context,
-                    appWidgetManager,
-                    appWidgetManager.getAppWidgetIds(componentName)
-                )
-                return
+            when (intent.action) {
+                Intent.ACTION_LOCALE_CHANGED, ACTION_DEBUG_UPDATE -> {
+                    val appWidgetManager = AppWidgetManager.getInstance(context)
+                    val componentName =
+                        ComponentName(context.packageName, checkNotNull(javaClass.canonicalName))
+                    val ids = if (intent.hasExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)) {
+                        intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)!!
+                    } else {
+                        appWidgetManager.getAppWidgetIds(componentName)
+                    }
+                    onUpdate(
+                        context,
+                        appWidgetManager,
+                        ids,
+                    )
+                }
+                LambdaActionBroadcasts.ActionTriggerLambda -> {
+                    val actionKey = intent.getStringExtra(LambdaActionBroadcasts.ExtraActionKey)
+                            ?: error("Intent is missing ActionKey extra")
+                    val id = intent.getIntExtra(LambdaActionBroadcasts.ExtraAppWidgetId, -1)
+                    if (id == -1) error("Intent is missing AppWidgetId extra")
+                    goAsync {
+                        updateManager(context)
+                        glanceAppWidget.triggerAction(context, id, actionKey)
+                    }
+                }
+                else -> super.onReceive(context, intent)
             }
-            super.onReceive(context, intent)
         }
     }
 }

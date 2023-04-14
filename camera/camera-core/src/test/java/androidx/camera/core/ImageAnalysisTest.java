@@ -18,25 +18,33 @@ package androidx.camera.core;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.junit.Assert.assertThrows;
 import static org.robolectric.Shadows.shadowOf;
 
 import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.SystemClock;
 import android.util.Pair;
+import android.util.Size;
 import android.view.Surface;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.camera.core.impl.CameraFactory;
 import androidx.camera.core.impl.CameraInternal;
+import androidx.camera.core.impl.ImageAnalysisConfig;
 import androidx.camera.core.impl.TagBundle;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.internal.CameraUseCaseAdapter;
+import androidx.camera.core.internal.utils.SizeUtil;
 import androidx.camera.testing.CameraUtil;
 import androidx.camera.testing.CameraXUtil;
 import androidx.camera.testing.fakes.FakeAppConfig;
 import androidx.camera.testing.fakes.FakeCamera;
 import androidx.camera.testing.fakes.FakeCameraFactory;
+import androidx.camera.testing.fakes.FakeCameraInfoInternal;
 import androidx.camera.testing.fakes.FakeImageReaderProxy;
 import androidx.test.core.app.ApplicationProvider;
 
@@ -53,6 +61,7 @@ import org.robolectric.annotation.internal.DoNotInstrument;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -65,6 +74,11 @@ import java.util.concurrent.TimeoutException;
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 public class ImageAnalysisTest {
+
+    private static final Size APP_RESOLUTION = new Size(100, 200);
+    private static final Size ANALYZER_RESOLUTION = new Size(300, 400);
+    private static final Size FLIPPED_ANALYZER_RESOLUTION = new Size(400, 300);
+    private static final Size DEFAULT_RESOLUTION = new Size(640, 480);
 
     private static final int QUEUE_DEPTH = 8;
     private static final int IMAGE_TAG = 0;
@@ -129,6 +143,101 @@ public class ImageAnalysisTest {
     }
 
     @Test
+    public void canSetQueueDepth() {
+        assertThat(getMergedImageAnalysisConfig(null, null, QUEUE_DEPTH,
+                false).getImageQueueDepth()).isEqualTo(QUEUE_DEPTH);
+    }
+
+    @Test
+    public void setAnalyzerWithResolution_doesNotOverridesUseCaseResolution_legacyApi() {
+        assertThat(getMergedImageAnalysisConfig(APP_RESOLUTION, ANALYZER_RESOLUTION, -1,
+                false).getTargetResolution()).isEqualTo(APP_RESOLUTION);
+    }
+
+    @Test
+    public void setAnalyzerWithResolution_doesNotOverridesUseCaseResolution_resolutionSelector() {
+        ImageAnalysisConfig config = getMergedImageAnalysisConfig(APP_RESOLUTION,
+                ANALYZER_RESOLUTION, -1, true);
+        assertThat(config.getResolutionSelector().getPreferredResolution()).isEqualTo(
+                APP_RESOLUTION);
+    }
+
+    @Test
+    public void setAnalyzerWithResolution_usedAsDefaultUseCaseResolution_legacyApi() {
+        assertThat(
+                getMergedImageAnalysisConfig(null, ANALYZER_RESOLUTION, -1,
+                        false).getTargetResolution()).isEqualTo(FLIPPED_ANALYZER_RESOLUTION);
+    }
+
+    @Test
+    public void setAnalyzerWithResolution_usedAsDefaultUseCaseResolution_resolutionSelector() {
+        ImageAnalysisConfig config = getMergedImageAnalysisConfig(null,
+                ANALYZER_RESOLUTION, -1, true);
+        assertThat(config.getResolutionSelector().getPreferredResolution()).isEqualTo(
+                ANALYZER_RESOLUTION);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void noAppOrAnalyzerResolution_noMergedOption_legacyApi() {
+        getMergedImageAnalysisConfig(null, null, -1, false).getTargetResolution();
+    }
+
+    @NonNull
+    private ImageAnalysisConfig getMergedImageAnalysisConfig(
+            @Nullable Size appResolution,
+            @Nullable Size analyzerResolution,
+            int queueDepth,
+            boolean useResolutionSelector) {
+        // Arrange: set up ImageAnalysis.
+        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
+
+        // Sets preferred resolution by ResolutionSelector or legacy API
+        if (useResolutionSelector) {
+            ResolutionSelector.Builder resolutionSelectorBuilder = new ResolutionSelector.Builder();
+            if (appResolution != null) {
+                resolutionSelectorBuilder.setPreferredResolution(appResolution);
+            }
+            builder.setResolutionSelector(resolutionSelectorBuilder.build());
+        } else {
+            if (appResolution != null) {
+                builder.setTargetResolution(appResolution);
+            }
+        }
+
+        if (queueDepth >= 0) {
+            builder.setImageQueueDepth(QUEUE_DEPTH);
+        }
+
+        mImageAnalysis = builder.build();
+        // Analyzer that overrides the resolution.
+        ImageAnalysis.Analyzer analyzer = new ImageAnalysis.Analyzer() {
+            @Override
+            public void analyze(@NonNull ImageProxy image) {
+                // no-op
+            }
+
+            @Override
+            public Size getDefaultTargetResolution() {
+                return analyzerResolution;
+            }
+        };
+
+        // Act: set the analyzer.
+        mImageAnalysis.setAnalyzer(mBackgroundExecutor, analyzer);
+
+        return (ImageAnalysisConfig) mImageAnalysis.mergeConfigs(
+                new FakeCameraInfoInternal(90, CameraSelector.LENS_FACING_BACK), null,
+                null);
+    }
+
+    @NonNull
+    private ImageAnalysisConfig createDefaultConfig() {
+        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
+        builder.setDefaultResolution(DEFAULT_RESOLUTION);
+        return builder.getUseCaseConfig();
+    }
+
+    @Test
     public void resultSize_isEqualToSurfaceSize() throws InterruptedException,
             CameraUseCaseAdapter.CameraException {
         // Arrange.
@@ -169,7 +278,7 @@ public class ImageAnalysisTest {
 
         // Clear ImageAnalysis and flush both handlers. No more image should be received because
         // it's closed.
-        mImageAnalysis.onDetached();
+        mImageAnalysis.onUnbind();
         flushHandler(mBackgroundHandler);
         flushHandler(mCallbackHandler);
         assertThat(getImageTimestampsReceived()).containsExactly(TIMESTAMP_1);
@@ -191,7 +300,7 @@ public class ImageAnalysisTest {
         assertThat(mImageProxiesReceived).isEmpty();
 
         // Flush callback handler and it's still empty because it's close.
-        mImageAnalysis.onDetached();
+        mImageAnalysis.onUnbind();
         flushHandler(mCallbackHandler);
         assertThat(mImageProxiesReceived).isEmpty();
     }
@@ -256,6 +365,91 @@ public class ImageAnalysisTest {
                 .containsExactly(TIMESTAMP_1, TIMESTAMP_2, TIMESTAMP_3);
     }
 
+    /*
+     *  Verify that ImageAnalysis#setAnalyzer won't cause any image leakage.
+     */
+    @Test
+    public void analyzerSetMultipleTimesInKeepOnlyLatestMode() throws InterruptedException,
+            CameraUseCaseAdapter.CameraException {
+        setUpImageAnalysisWithStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST);
+
+        assertCanReceiveAnalysisImage(mImageAnalysis);
+
+        List<ImageProxy> postedImageProxies = new ArrayList<>();
+        ImageAnalysis.Analyzer slowImageAnalyzer = image -> {
+            // image left as unclosed until we closed all images in postedImageProxies.
+            postedImageProxies.add(image);
+        };
+
+        mImageAnalysis.setAnalyzer(CameraXExecutors.directExecutor(), slowImageAnalyzer);
+        triggerNextImage();  // +1 unclosed image (mPostedImage)
+        triggerNextImage();  // +1 unclosed image (mCachedImage) if the image leakage happens.
+
+        // If setAnalysis does thing inappropriately(e.g, clear mCachedImage reference without
+        // closing it), previous unclosed image(mCachedImage) won't be closed.
+        mImageAnalysis.setAnalyzer(CameraXExecutors.directExecutor(), slowImageAnalyzer);
+        triggerNextImage();  //+1 unclosed image (mCachedImage) if the image leakage happens.
+
+        mImageAnalysis.setAnalyzer(CameraXExecutors.directExecutor(), slowImageAnalyzer);
+        triggerNextImage(); // +1 unclosed image (mCachedImage) if the image leakage happens.
+
+        mImageAnalysis.setAnalyzer(CameraXExecutors.directExecutor(), slowImageAnalyzer);
+        triggerNextImage(); // +1 unclosed image (mCachedImage) if the image leakage happens.
+        // If unclosed image reaches 5 (MaxImages == 4), it will throw
+        // IllegalStateException(MaxImages) and no image can be received.
+
+        // Closed all posted ImageProxies to ensure the analyzer can receive ImageProxy normally.
+        for (ImageProxy imagePendingProxy : postedImageProxies) {
+            imagePendingProxy.close();
+        }
+
+        // If image leakage happens, 4 unclosed image will never be closed. It means the analyzer
+        // won't be able to receive images anymore.
+        assertCanReceiveAnalysisImage(mImageAnalysis);
+    }
+
+    @Test
+    public void throwException_whenSetBothTargetResolutionAndAspectRatio() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new ImageAnalysis.Builder()
+                        .setTargetResolution(SizeUtil.RESOLUTION_VGA)
+                        .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                        .build());
+    }
+
+    @Test
+    public void throwException_whenSetTargetResolutionWithResolutionSelector() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new ImageAnalysis.Builder()
+                        .setTargetResolution(SizeUtil.RESOLUTION_VGA)
+                        .setResolutionSelector(new ResolutionSelector.Builder().build())
+                        .build());
+    }
+
+    @Test
+    public void throwException_whenSetTargetAspectRatioWithResolutionSelector() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new ImageAnalysis.Builder()
+                        .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                        .setResolutionSelector(new ResolutionSelector.Builder().build())
+                        .build());
+    }
+
+    void assertCanReceiveAnalysisImage(ImageAnalysis imageAnalysis) throws InterruptedException {
+        CountDownLatch latch = new CountDownLatch(1);
+        imageAnalysis.setAnalyzer(CameraXExecutors.directExecutor(), image -> {
+            image.close();
+            latch.countDown();
+        });
+        triggerNextImage();
+        assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+    }
+
+    void triggerNextImage() throws InterruptedException {
+        mFakeImageReaderProxy.triggerImageAvailable(mTagBundle, SystemClock.elapsedRealtime());
+        flushHandler(mBackgroundHandler);
+    }
+
     private void setUpImageAnalysisWithStrategy(
             @ImageAnalysis.BackpressureStrategy int backpressureStrategy) throws
             CameraUseCaseAdapter.CameraException {
@@ -276,7 +470,8 @@ public class ImageAnalysisTest {
                                     height, format, queueDepth, usage);
                             return mFakeImageReaderProxy;
                         })
-                .setSessionOptionUnpacker((config, builder) -> { })
+                .setSessionOptionUnpacker((config, builder) -> {
+                })
                 .setOnePixelShiftEnabled(false)
                 .build();
 

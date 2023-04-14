@@ -17,19 +17,17 @@
 package androidx.wear.watchface.client.guava
 
 import android.annotation.SuppressLint
-import android.app.Service
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.XmlResourceParser
-import android.os.Handler
+import android.os.Build
 import android.os.IBinder
-import android.os.Looper
+import androidx.annotation.RequiresApi
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.wear.watchface.client.ListenableWatchFaceMetadataClient
-import androidx.wear.watchface.client.WatchFaceClientExperimental
 import androidx.wear.watchface.client.WatchFaceMetadataClient
 import androidx.wear.watchface.control.IWatchFaceInstanceServiceStub
 import androidx.wear.watchface.control.WatchFaceControlService
@@ -37,6 +35,7 @@ import com.google.common.truth.Truth
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.MainScope
 
 private const val TIMEOUT_MS = 500L
 
@@ -44,15 +43,12 @@ private const val TIMEOUT_MS = 500L
  * Test shim to allow us to connect to WatchFaceControlService from
  * [ListenableWatchFaceMetadataClientTest] and to optionally override the reported API version.
  */
-public class WatchFaceControlTestService : Service() {
+@RequiresApi(Build.VERSION_CODES.O_MR1)
+public class WatchFaceControlTestService : WatchFaceControlService() {
     private val realService = object : WatchFaceControlService() {
         @SuppressLint("NewApi")
         override fun createServiceStub(): IWatchFaceInstanceServiceStub =
-            IWatchFaceInstanceServiceStub(this, Handler(Looper.getMainLooper()))
-
-        init {
-            setContext(ApplicationProvider.getApplicationContext<Context>())
-        }
+            IWatchFaceInstanceServiceStub(this@WatchFaceControlTestService, MainScope())
     }
 
     @SuppressLint("NewApi")
@@ -61,7 +57,7 @@ public class WatchFaceControlTestService : Service() {
 
 @RunWith(AndroidJUnit4::class)
 @MediumTest
-@OptIn(WatchFaceClientExperimental::class)
+@RequiresApi(Build.VERSION_CODES.O_MR1)
 public class ListenableWatchFaceMetadataClientTest {
     private val exampleWatchFaceComponentName = ComponentName(
         "androidx.wear.watchface.samples.test",
@@ -71,9 +67,10 @@ public class ListenableWatchFaceMetadataClientTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     @Test
+    @Suppress("Deprecation") // userStyleSettings
     public fun getSchema() {
         val listenableFuture =
-            ListenableWatchFaceMetadataClient.createListenableWatchFaceMetadataClientImpl(
+            ListenableWatchFaceMetadataClient.createImpl(
                 context,
                 Intent(context, WatchFaceControlTestService::class.java).apply {
                     action = WatchFaceControlService.ACTION_WATCHFACE_CONTROL_SERVICE
@@ -90,7 +87,7 @@ public class ListenableWatchFaceMetadataClientTest {
         val watchFaceMetadataClient = listenableFuture.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
         val schema = watchFaceMetadataClient.getUserStyleSchema()
 
-        Truth.assertThat(schema.userStyleSettings.size).isEqualTo(4)
+        Truth.assertThat(schema.userStyleSettings.size).isEqualTo(5)
         Truth.assertThat(schema.userStyleSettings[0].id.value).isEqualTo(
             "color_style_setting"
         )
@@ -102,6 +99,9 @@ public class ListenableWatchFaceMetadataClientTest {
         )
         Truth.assertThat(schema.userStyleSettings[3].id.value).isEqualTo(
             "complications_style_setting"
+        )
+        Truth.assertThat(schema.userStyleSettings[4].id.value).isEqualTo(
+            "hours_draw_freq_style_setting"
         )
     }
 }

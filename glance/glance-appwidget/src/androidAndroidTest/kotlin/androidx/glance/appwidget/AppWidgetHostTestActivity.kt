@@ -46,6 +46,10 @@ import java.util.concurrent.TimeUnit
 class AppWidgetHostTestActivity : Activity() {
     private var mHost: AppWidgetHost? = null
     private val mHostViews = mutableListOf<TestAppWidgetHostView>()
+    private var mConfigurationChanged: CountDownLatch? = null
+    private var mLastConfiguration: Configuration? = null
+    val lastConfiguration: Configuration
+        get() = synchronized(this) { mLastConfiguration!! }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,9 +64,13 @@ class AppWidgetHostTestActivity : Activity() {
     override fun onDestroy() {
         try {
             mHost?.stopListening()
-            mHost?.deleteHost()
         } catch (ex: Throwable) {
-            Log.w("AppWidgetHostTestActivity", "Error stopping the AppWidget Host", ex)
+            Log.w("AppWidgetHostTestActivity", "Error stopping listening", ex)
+        }
+        try {
+            mHost?.deleteHost()
+        } catch (t: Throwable) {
+            Log.w("AppWidgetHostTestActivity", "Error deleting Host", t)
         }
         mHost = null
         super.onDestroy()
@@ -101,18 +109,38 @@ class AppWidgetHostTestActivity : Activity() {
         return hostView
     }
 
+    fun deleteAppWidget(hostView: TestAppWidgetHostView) {
+        val appWidgetId = hostView.appWidgetId
+        mHost?.deleteAppWidgetId(appWidgetId)
+        mHostViews.remove(hostView)
+        val contentFrame = findViewById<FrameLayout>(R.id.content)
+        contentFrame.removeView(hostView)
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        updateAllSizes(newConfig.orientation)
-        reapplyRemoteViews()
+        mHostViews.forEach {
+            it.updateSize(newConfig.orientation)
+            it.reapplyRemoteViews()
+        }
+        synchronized(this) {
+            mLastConfiguration = newConfig
+            mConfigurationChanged?.countDown()
+        }
     }
 
-    fun updateAllSizes(orientation: Int) {
-        mHostViews.forEach { it.updateSize(orientation) }
+    fun resetConfigurationChangedLatch() {
+       synchronized(this) {
+           mConfigurationChanged = CountDownLatch(1)
+           mLastConfiguration = null
+       }
     }
 
-    fun reapplyRemoteViews() {
-        mHostViews.forEach { it.reapplyRemoteViews() }
+    // This should not be called from the main thread, so that it does not block
+    // onConfigurationChanged from being called.
+    fun waitForConfigurationChange() {
+        val result = mConfigurationChanged?.await(5, TimeUnit.SECONDS)!!
+        require(result) { "Timeout before getting configuration" }
     }
 }
 
@@ -148,7 +176,7 @@ class TestAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
             mRemoteViews?.let { return }
             mLatch = CountDownLatch(1)
         }
-        val result = mLatch?.await(5, TimeUnit.SECONDS)!!
+        val result = mLatch?.await(30, TimeUnit.SECONDS)!!
         require(result) { "Timeout before getting RemoteViews" }
     }
 

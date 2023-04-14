@@ -27,7 +27,10 @@ import android.view.MotionEvent.ACTION_HOVER_ENTER
 import android.view.MotionEvent.ACTION_HOVER_EXIT
 import android.view.MotionEvent.ACTION_HOVER_MOVE
 import android.view.MotionEvent.ACTION_MOVE
+import android.view.MotionEvent.ACTION_POINTER_DOWN
 import android.view.MotionEvent.ACTION_POINTER_INDEX_SHIFT
+import android.view.MotionEvent.ACTION_POINTER_UP
+import android.view.MotionEvent.ACTION_SCROLL
 import android.view.MotionEvent.ACTION_UP
 import android.view.MotionEvent.TOOL_TYPE_FINGER
 import android.view.MotionEvent.TOOL_TYPE_MOUSE
@@ -62,14 +65,16 @@ import androidx.compose.ui.gesture.PointerProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.findRoot
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.AndroidComposeView
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -151,6 +156,39 @@ class AndroidPointerInputTest {
     }
 
     @Test
+    fun dispatchTouchEvent_infiniteCoordinates() {
+        countDown { latch ->
+            rule.runOnUiThread {
+                container.setContent {
+                    FillLayout(
+                        Modifier
+                            .consumeMovementGestureFilter()
+                            .onGloballyPositioned { latch.countDown() }
+                    )
+                }
+            }
+        }
+
+        rule.runOnUiThread {
+            val motionEvent = MotionEvent(
+                0,
+                ACTION_DOWN,
+                1,
+                0,
+                arrayOf(PointerProperties(0)),
+                arrayOf(PointerCoords(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY))
+            )
+
+            val androidComposeView = findAndroidComposeView(container)!!
+            // Act
+            val actual = androidComposeView.dispatchTouchEvent(motionEvent)
+
+            // Assert
+            assertThat(actual).isFalse()
+        }
+    }
+
+    @Test
     fun dispatchTouchEvent_noPointerInputModifiers_returnsFalse() {
 
         // Arrange
@@ -181,6 +219,206 @@ class AndroidPointerInputTest {
 
             // Assert
             assertThat(actual).isFalse()
+        }
+    }
+
+    /**
+     * Recreates dispatch of non-system created cancellation [MotionEvent] (that is, developer
+     * created) while system is already handling multiple [MotionEvent]s. Due to the platform not
+     * allowing reentrancy while handling [MotionEvent]s, the cancellation event will be ignored.
+     */
+    @Test
+    fun dispatchTouchEvents_eventCancelledDuringProcessing_doesNotCancel() {
+        // Arrange
+        var topBoxInnerCoordinates: LayoutCoordinates? = null
+        var bottomBoxInnerCoordinates: LayoutCoordinates? = null
+
+        val latch = CountDownLatch(2)
+
+        val pointerEventsLog = mutableListOf<PointerEvent>()
+
+        rule.runOnUiThread {
+            container.setContent {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // Top Box
+                    Box(modifier = Modifier
+                        .size(50.dp)
+                        .align(AbsoluteAlignment.TopLeft)
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { it.consume() }
+                                    pointerEventsLog += event
+
+                                    // Actual dispatch of non-system created cancellation
+                                    // [MotionEvent] while other [MotionEvent]s are being handled.
+                                    if (event.type == PointerEventType.Move) {
+                                        dispatchTouchEvent(ACTION_CANCEL, topBoxInnerCoordinates!!)
+                                    }
+                                }
+                            }
+                        }
+                        .onGloballyPositioned {
+                            topBoxInnerCoordinates = it
+                            latch.countDown()
+                        }
+                    )
+
+                    // Bottom Box
+                    Box(modifier = Modifier
+                        .size(60.dp)
+                        .align(AbsoluteAlignment.BottomRight)
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { it.consume() }
+                                    pointerEventsLog += event
+                                }
+                            }
+                        }
+                        .onGloballyPositioned {
+                            bottomBoxInnerCoordinates = it
+                            latch.countDown()
+                        }
+                    )
+                }
+            }
+        }
+
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+
+        rule.runOnUiThread {
+            // Arrange continued
+            val root = topBoxInnerCoordinates!!.findRootCoordinates()
+            val topBoxOffset = root.localPositionOf(topBoxInnerCoordinates!!, Offset.Zero)
+            val bottomBoxOffset = root.localPositionOf(bottomBoxInnerCoordinates!!, Offset.Zero)
+
+            val topBoxFingerPointerPropertiesId = 0
+            val bottomBoxFingerPointerPropertiesId = 1
+
+            val topBoxPointerProperties =
+                PointerProperties(topBoxFingerPointerPropertiesId).also {
+                    it.toolType = MotionEvent.TOOL_TYPE_FINGER
+                }
+            val bottomBoxPointerProperties =
+                PointerProperties(bottomBoxFingerPointerPropertiesId).also {
+                    it.toolType = MotionEvent.TOOL_TYPE_FINGER
+                }
+
+            var eventStartTime = 0
+
+            val downTopBoxEvent = MotionEvent(
+                eventStartTime,
+                action = ACTION_DOWN,
+                numPointers = 1,
+                actionIndex = 0,
+                pointerProperties = arrayOf(topBoxPointerProperties),
+                pointerCoords = arrayOf(PointerCoords(topBoxOffset.x, topBoxOffset.y))
+            )
+
+            eventStartTime += 500
+            val downBottomBoxEvent = MotionEvent(
+                eventStartTime,
+                action = ACTION_POINTER_DOWN,
+                numPointers = 2,
+                actionIndex = 1,
+                pointerProperties = arrayOf(
+                    topBoxPointerProperties,
+                    bottomBoxPointerProperties
+                ),
+                pointerCoords = arrayOf(
+                    PointerCoords(topBoxOffset.x, topBoxOffset.y),
+                    PointerCoords(bottomBoxOffset.x, bottomBoxOffset.y)
+                )
+            )
+
+            eventStartTime += 500
+            val moveTopBoxEvent = MotionEvent(
+                eventStartTime,
+                action = ACTION_MOVE,
+                numPointers = 2,
+                actionIndex = 0,
+                pointerProperties = arrayOf(
+                    topBoxPointerProperties,
+                    bottomBoxPointerProperties
+                ),
+                pointerCoords = arrayOf(
+                    PointerCoords(topBoxOffset.x + 10, topBoxOffset.y),
+                    PointerCoords(bottomBoxOffset.x + 10, bottomBoxOffset.y)
+                )
+            )
+
+            eventStartTime += 500
+            val moveBottomBoxEvent = MotionEvent(
+                eventStartTime,
+                action = ACTION_MOVE,
+                numPointers = 2,
+                actionIndex = 1,
+                pointerProperties = arrayOf(
+                    topBoxPointerProperties,
+                    bottomBoxPointerProperties
+                ),
+                pointerCoords = arrayOf(
+                    PointerCoords(topBoxOffset.x + 10, topBoxOffset.y),
+                    PointerCoords(bottomBoxOffset.x + 10, bottomBoxOffset.y)
+                )
+            )
+
+            eventStartTime += 500
+            val upTopBoxEvent = MotionEvent(
+                eventStartTime,
+                action = ACTION_POINTER_UP,
+                numPointers = 2,
+                actionIndex = 0,
+                pointerProperties = arrayOf(
+                    topBoxPointerProperties,
+                    bottomBoxPointerProperties
+                ),
+                pointerCoords = arrayOf(
+                    PointerCoords(topBoxOffset.x + 10, topBoxOffset.y),
+                    PointerCoords(bottomBoxOffset.x + 10, bottomBoxOffset.y)
+                )
+            )
+
+            eventStartTime += 500
+            val upBottomBoxEvent = MotionEvent(
+                eventStartTime,
+                action = ACTION_UP,
+                numPointers = 1,
+                actionIndex = 0,
+                pointerProperties = arrayOf(bottomBoxPointerProperties),
+                pointerCoords = arrayOf(PointerCoords(bottomBoxOffset.x + 10, bottomBoxOffset.y))
+            )
+
+            // Act
+            val androidComposeView = findAndroidComposeView(container) as AndroidComposeView
+
+            androidComposeView.dispatchTouchEvent(downTopBoxEvent)
+            androidComposeView.dispatchTouchEvent(downBottomBoxEvent)
+            androidComposeView.dispatchTouchEvent(moveTopBoxEvent)
+            androidComposeView.dispatchTouchEvent(moveBottomBoxEvent)
+            androidComposeView.dispatchTouchEvent(upTopBoxEvent)
+            androidComposeView.dispatchTouchEvent(upBottomBoxEvent)
+
+            // Assert
+            assertThat(pointerEventsLog).hasSize(8)
+
+            for (pointerEvent in pointerEventsLog) {
+                assertThat(pointerEvent.internalPointerEvent).isNotNull()
+            }
+
+            assertThat(pointerEventsLog[0].type).isEqualTo(PointerEventType.Press)
+            assertThat(pointerEventsLog[1].type).isEqualTo(PointerEventType.Press)
+            assertThat(pointerEventsLog[2].type).isEqualTo(PointerEventType.Press)
+
+            assertThat(pointerEventsLog[3].type).isEqualTo(PointerEventType.Move)
+            assertThat(pointerEventsLog[4].type).isEqualTo(PointerEventType.Move)
+
+            assertThat(pointerEventsLog[5].type).isEqualTo(PointerEventType.Release)
+            assertThat(pointerEventsLog[6].type).isEqualTo(PointerEventType.Release)
+            assertThat(pointerEventsLog[7].type).isEqualTo(PointerEventType.Release)
         }
     }
 
@@ -246,7 +484,10 @@ class AndroidPointerInputTest {
         var consumedDownPosition: Offset? = null
         rule.runOnUiThread {
             container.setContent {
-                Box(Modifier.fillMaxSize().wrapContentSize(align = AbsoluteAlignment.TopLeft)) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .wrapContentSize(align = AbsoluteAlignment.TopLeft)) {
                     Layout(
                         {},
                         Modifier
@@ -560,11 +801,13 @@ class AndroidPointerInputTest {
                     Modifier
                         .pointerInput(Unit) {
                             detectTapGestures { tapLatch.countDown() }
-                        }.then(
+                        }
+                        .then(
                             if (tap2Enabled) Modifier.pointerInput(Unit) {
                                 detectTapGestures { tapLatch2.countDown() }
                             } else Modifier
-                        ).onGloballyPositioned { positionedLatch.countDown() }
+                        )
+                        .onGloballyPositioned { positionedLatch.countDown() }
                 )
             }
         }
@@ -653,7 +896,8 @@ class AndroidPointerInputTest {
                                         awaitFirstDown()
                                         tapLatch.countDown()
                                     }
-                                }.size(10.toDp())
+                                }
+                                .size(10.toDp())
                         )
                     }
                 }
@@ -723,6 +967,39 @@ class AndroidPointerInputTest {
         }
     }
 
+    @Test
+    fun dispatchNotAttached() {
+        val tapLatch = CountDownLatch(1)
+        val layoutLatch = CountDownLatch(1)
+        rule.runOnUiThread {
+            container.setContent {
+                with(LocalDensity.current) {
+                    Box(
+                        Modifier
+                            .onPlaced {
+                                layoutLatch.countDown()
+                            }
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    awaitFirstDown()
+                                    tapLatch.countDown()
+                                }
+                            }
+                            .requiredSize(10.toDp())
+                    )
+                }
+            }
+        }
+        assertTrue(layoutLatch.await(1, TimeUnit.SECONDS))
+
+        val composeView = findAndroidComposeView(container) as AndroidComposeView
+        rule.runOnUiThread {
+            container.removeAllViews()
+            val down = createPointerEventAt(0, ACTION_DOWN, intArrayOf(5, 5))
+            assertFalse(composeView.dispatchTouchEvent(down))
+        }
+    }
+
     private fun assertHoverEvent(
         event: PointerEvent,
         isEnter: Boolean = false,
@@ -740,13 +1017,26 @@ class AndroidPointerInputTest {
         assertThat(event.type).isEqualTo(expectedHoverType)
     }
 
+    private fun assertScrollEvent(
+        event: PointerEvent,
+        scrollExpected: Offset
+    ) {
+        assertThat(event.changes).hasSize(1)
+        val change = event.changes[0]
+        assertThat(change.pressed).isFalse()
+        assertThat(event.type).isEqualTo(PointerEventType.Scroll)
+        // we agreed to reverse Y in android to be in line with other platforms
+        assertThat(change.scrollDelta).isEqualTo(scrollExpected.copy(y = scrollExpected.y * -1))
+    }
+
     private fun dispatchMouseEvent(
-        action: Int = ACTION_HOVER_ENTER,
+        action: Int,
         layoutCoordinates: LayoutCoordinates,
-        offset: Offset = Offset.Zero
+        offset: Offset = Offset.Zero,
+        scrollDelta: Offset = Offset.Zero
     ) {
         rule.runOnUiThread {
-            val root = layoutCoordinates.findRoot()
+            val root = layoutCoordinates.findRootCoordinates()
             val pos = root.localPositionOf(layoutCoordinates, offset)
             val event = MotionEvent(
                 0,
@@ -754,13 +1044,14 @@ class AndroidPointerInputTest {
                 1,
                 0,
                 arrayOf(PointerProperties(0).also { it.toolType = MotionEvent.TOOL_TYPE_MOUSE }),
-                arrayOf(PointerCoords(pos.x, pos.y))
+                arrayOf(PointerCoords(pos.x, pos.y, scrollDelta.x, scrollDelta.y))
             )
 
             val androidComposeView = findAndroidComposeView(container) as AndroidComposeView
             when (action) {
                 ACTION_HOVER_ENTER, ACTION_HOVER_MOVE, ACTION_HOVER_EXIT ->
                     androidComposeView.dispatchHoverEvent(event)
+                ACTION_SCROLL -> androidComposeView.dispatchGenericMotionEvent(event)
                 else -> androidComposeView.dispatchTouchEvent(event)
             }
         }
@@ -772,7 +1063,7 @@ class AndroidPointerInputTest {
         vararg actions: Int
     ) {
         rule.runOnUiThread {
-            val root = layoutCoordinates.findRoot()
+            val root = layoutCoordinates.findRootCoordinates()
             val pos = root.localPositionOf(layoutCoordinates, offset)
             val androidComposeView = findAndroidComposeView(container) as AndroidComposeView
 
@@ -803,7 +1094,7 @@ class AndroidPointerInputTest {
         offset: Offset = Offset.Zero
     ) {
         rule.runOnUiThread {
-            val root = layoutCoordinates.findRoot()
+            val root = layoutCoordinates.findRootCoordinates()
             val pos = root.localPositionOf(layoutCoordinates, offset)
             val event = MotionEvent(
                 0,
@@ -827,18 +1118,21 @@ class AndroidPointerInputTest {
         rule.runOnUiThread {
             container.setContent {
                 Box(
-                    Modifier.fillMaxSize().onGloballyPositioned {
-                        layoutCoordinates = it
-                        latch.countDown()
-                    }.pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                event.changes[0].consumeAllChanges()
-                                events += event
+                    Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned {
+                            layoutCoordinates = it
+                            latch.countDown()
+                        }
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes[0].consume()
+                                    events += event
+                                }
                             }
                         }
-                    }
                 )
             }
         }
@@ -863,11 +1157,12 @@ class AndroidPointerInputTest {
                         .onGloballyPositioned {
                             layoutCoordinates = it
                             latch.countDown()
-                        }.pointerInput(Unit) {
+                        }
+                        .pointerInput(Unit) {
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    event.changes[0].consumeAllChanges()
+                                    event.changes[0].consume()
                                     events += event
                                 }
                             }
@@ -910,7 +1205,8 @@ class AndroidPointerInputTest {
                         .onGloballyPositioned {
                             layoutCoordinates = it
                             latch.countDown()
-                        }.pointerInput(Unit) {
+                        }
+                        .pointerInput(Unit) {
                             awaitPointerEventScope {
                                 awaitPointerEvent() // enter
                                 assertHoverEvent(awaitPointerEvent()) // move
@@ -930,7 +1226,8 @@ class AndroidPointerInputTest {
                             .size(50.dp)
                             .onGloballyPositioned {
                                 layoutCoordinates2 = it
-                            }.pointerInput(Unit) {
+                            }
+                            .pointerInput(Unit) {
                                 awaitPointerEventScope {
                                     enter = awaitPointerEvent()
                                     move = awaitPointerEvent()
@@ -981,6 +1278,161 @@ class AndroidPointerInputTest {
     }
 
     @Test
+    fun dispatchScroll() {
+        var layoutCoordinates: LayoutCoordinates? = null
+        val latch = CountDownLatch(1)
+        val events = mutableListOf<PointerEvent>()
+        val scrollDelta = Offset(0.35f, 0.65f)
+        rule.runOnUiThread {
+            container.setContent {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned {
+                            layoutCoordinates = it
+                            latch.countDown()
+                        }
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes[0].consume()
+                                    events += event
+                                }
+                            }
+                        }
+                )
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+        dispatchMouseEvent(ACTION_SCROLL, layoutCoordinates!!, scrollDelta = scrollDelta)
+        rule.runOnUiThread {
+            assertThat(events).hasSize(2) // synthetic enter and scroll
+            assertHoverEvent(events[0], isEnter = true)
+            assertScrollEvent(events[1], scrollExpected = scrollDelta)
+        }
+    }
+
+    @Test
+    fun dispatchScroll_whenButtonPressed() {
+        var layoutCoordinates: LayoutCoordinates? = null
+        val latch = CountDownLatch(1)
+        val events = mutableListOf<PointerEvent>()
+        val scrollDelta = Offset(0.35f, 0.65f)
+        rule.runOnUiThread {
+            container.setContent {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned {
+                            layoutCoordinates = it
+                            latch.countDown()
+                        }
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes[0].consume()
+                                    events += event
+                                }
+                            }
+                        }
+                )
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+        // press the button first before scroll
+        dispatchMouseEvent(ACTION_DOWN, layoutCoordinates!!)
+        dispatchMouseEvent(ACTION_SCROLL, layoutCoordinates!!, scrollDelta = scrollDelta)
+        rule.runOnUiThread {
+            assertThat(events).hasSize(3) // synthetic enter, button down, scroll
+            assertHoverEvent(events[0], isEnter = true)
+            assert(events[1].changes.fastAll { it.changedToDownIgnoreConsumed() })
+            assertScrollEvent(events[2], scrollExpected = scrollDelta)
+        }
+    }
+
+    @Test
+    fun dispatchScroll_batch() {
+        var layoutCoordinates: LayoutCoordinates? = null
+        val latch = CountDownLatch(1)
+        val events = mutableListOf<PointerEvent>()
+        val scrollDelta1 = Offset(0.32f, -0.75f)
+        val scrollDelta2 = Offset(0.14f, 0.35f)
+        val scrollDelta3 = Offset(-0.30f, -0.12f)
+        val scrollDelta4 = Offset(-0.05f, 0.68f)
+        rule.runOnUiThread {
+            container.setContent {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned {
+                            layoutCoordinates = it
+                            latch.countDown()
+                        }
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes[0].consume()
+                                    events += event
+                                }
+                            }
+                        }
+                )
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+        listOf(scrollDelta1, scrollDelta2, scrollDelta3, scrollDelta4).fastForEach {
+            dispatchMouseEvent(ACTION_SCROLL, layoutCoordinates!!, scrollDelta = it)
+        }
+        rule.runOnUiThread {
+            assertThat(events).hasSize(5) // 4 + synthetic enter
+            assertHoverEvent(events[0], isEnter = true)
+            assertScrollEvent(events[1], scrollExpected = scrollDelta1)
+            assertScrollEvent(events[2], scrollExpected = scrollDelta2)
+            assertScrollEvent(events[3], scrollExpected = scrollDelta3)
+            assertScrollEvent(events[4], scrollExpected = scrollDelta4)
+        }
+    }
+
+    @Test
+    fun mouseScroll_ignoredAsDownEvent() {
+        var layoutCoordinates: LayoutCoordinates? = null
+        val latch = CountDownLatch(1)
+        val events = mutableListOf<PointerEvent>()
+        val scrollDelta = Offset(0.35f, 0.65f)
+        rule.runOnUiThread {
+            container.setContent {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned {
+                            layoutCoordinates = it
+                            latch.countDown()
+                        }
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes[0].consume()
+                                    events += event
+                                }
+                            }
+                        }
+                )
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+        dispatchMouseEvent(ACTION_SCROLL, layoutCoordinates!!, scrollDelta = scrollDelta)
+        rule.runOnUiThread {
+            assertThat(events).hasSize(2) // hover enter + scroll
+            assertThat(events[1].changes).isNotEmpty()
+            assertThat(events[1].changes[0].changedToDown()).isFalse()
+        }
+    }
+
+    @Test
     fun hoverEnterPressExitEnterExitRelease() {
         var outerCoordinates: LayoutCoordinates? = null
         var innerCoordinates: LayoutCoordinates? = null
@@ -989,21 +1441,27 @@ class AndroidPointerInputTest {
         rule.runOnUiThread {
             container.setContent {
                 Box(
-                    Modifier.fillMaxSize().onGloballyPositioned {
-                        outerCoordinates = it
-                        latch.countDown()
-                    }
+                    Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned {
+                            outerCoordinates = it
+                            latch.countDown()
+                        }
                 ) {
                     Box(
-                        Modifier.align(Alignment.Center).size(50.dp).pointerInput(Unit) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    event.changes[0].consumeAllChanges()
-                                    eventLog += event
+                        Modifier
+                            .align(Alignment.Center)
+                            .size(50.dp)
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        event.changes[0].consume()
+                                        eventLog += event
+                                    }
                                 }
                             }
-                        }.onGloballyPositioned { innerCoordinates = it }
+                            .onGloballyPositioned { innerCoordinates = it }
                     )
                 }
             }
@@ -1029,39 +1487,54 @@ class AndroidPointerInputTest {
 
     @Test
     fun hoverPressEnterRelease() {
-        var outerCoordinates: LayoutCoordinates? = null
-        var innerCoordinates: LayoutCoordinates? = null
+        var missCoordinates: LayoutCoordinates? = null
+        var hitCoordinates: LayoutCoordinates? = null
         val latch = CountDownLatch(1)
         val eventLog = mutableListOf<PointerEvent>()
         rule.runOnUiThread {
             container.setContent {
-                Box(
-                    Modifier.fillMaxSize().onGloballyPositioned {
-                        outerCoordinates = it
-                        latch.countDown()
-                    }
-                ) {
+                Box(Modifier.fillMaxSize()) {
                     Box(
-                        Modifier.align(Alignment.Center).size(50.dp).pointerInput(Unit) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    event.changes[0].consumeAllChanges()
-                                    eventLog += event
+                        Modifier
+                            .align(AbsoluteAlignment.TopLeft)
+                            .size(50.dp)
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent()
+                                    }
                                 }
                             }
-                        }.onGloballyPositioned { innerCoordinates = it }
+                            .onGloballyPositioned {
+                                missCoordinates = it
+                                latch.countDown()
+                            }
+                    )
+                    Box(
+                        Modifier
+                            .align(AbsoluteAlignment.BottomRight)
+                            .size(50.dp)
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        event.changes[0].consume()
+                                        eventLog += event
+                                    }
+                                }
+                            }
+                            .onGloballyPositioned { hitCoordinates = it }
                     )
                 }
             }
         }
         assertTrue(latch.await(1, TimeUnit.SECONDS))
-        dispatchMouseEvent(ACTION_HOVER_ENTER, outerCoordinates!!)
-        dispatchMouseEvent(ACTION_HOVER_EXIT, outerCoordinates!!)
-        dispatchMouseEvent(ACTION_DOWN, outerCoordinates!!)
-        dispatchMouseEvent(ACTION_MOVE, innerCoordinates!!)
-        dispatchMouseEvent(ACTION_UP, innerCoordinates!!)
-        dispatchMouseEvent(ACTION_HOVER_ENTER, innerCoordinates!!)
+        dispatchMouseEvent(ACTION_HOVER_ENTER, missCoordinates!!)
+        dispatchMouseEvent(ACTION_HOVER_EXIT, missCoordinates!!)
+        dispatchMouseEvent(ACTION_DOWN, missCoordinates!!)
+        dispatchMouseEvent(ACTION_MOVE, hitCoordinates!!)
+        dispatchMouseEvent(ACTION_UP, hitCoordinates!!)
+        dispatchMouseEvent(ACTION_HOVER_ENTER, hitCoordinates!!)
         rule.runOnUiThread {
             assertThat(eventLog).hasSize(1)
             assertThat(eventLog[0].type).isEqualTo(PointerEventType.Enter)
@@ -1080,16 +1553,21 @@ class AndroidPointerInputTest {
                         Modifier
                             .align(Alignment.BottomCenter)
                             .size(50.dp)
-                            .graphicsLayer { translationY = 25.dp.roundToPx().toFloat() }
+                            .graphicsLayer {
+                                translationY = 25.dp
+                                    .roundToPx()
+                                    .toFloat()
+                            }
                             .pointerInput(Unit) {
                                 awaitPointerEventScope {
                                     while (true) {
                                         val event = awaitPointerEvent()
-                                        event.changes[0].consumeAllChanges()
+                                        event.changes[0].consume()
                                         eventLog += event
                                     }
                                 }
-                            }.onGloballyPositioned {
+                            }
+                            .onGloballyPositioned {
                                 innerCoordinates = it
                                 latch.countDown()
                             }
@@ -1122,20 +1600,29 @@ class AndroidPointerInputTest {
         rule.runOnUiThread {
             container.setContent {
                 Box(Modifier.fillMaxSize()) {
-                    Box(Modifier.align(Alignment.TopCenter).requiredSize(50.dp).clipToBounds()) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .requiredSize(50.dp)
+                            .clipToBounds()) {
                         Box(
                             Modifier
                                 .requiredSize(50.dp)
-                                .graphicsLayer { translationY = 25.dp.roundToPx().toFloat() }
+                                .graphicsLayer {
+                                    translationY = 25.dp
+                                        .roundToPx()
+                                        .toFloat()
+                                }
                                 .pointerInput(Unit) {
                                     awaitPointerEventScope {
                                         while (true) {
                                             val event = awaitPointerEvent()
-                                            event.changes[0].consumeAllChanges()
+                                            event.changes[0].consume()
                                             eventLog += event
                                         }
                                     }
-                                }.onGloballyPositioned {
+                                }
+                                .onGloballyPositioned {
                                     innerCoordinates = it
                                     latch.countDown()
                                 }
@@ -1166,16 +1653,18 @@ class AndroidPointerInputTest {
         val latch = CountDownLatch(1)
         rule.runOnUiThread {
             container.setContent {
-                Box(Modifier.fillMaxSize()
+                Box(Modifier
+                    .fillMaxSize()
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
-                                event.changes[0].consumeAllChanges()
+                                event.changes[0].consume()
                                 eventLog += event
                             }
                         }
-                    }.onGloballyPositioned {
+                    }
+                    .onGloballyPositioned {
                         innerCoordinates = it
                         latch.countDown()
                     }
@@ -1301,7 +1790,7 @@ class AndroidPointerInputTest {
         // Exit followed by a different device should send the exit
         dispatchStylusEvents(coords, Offset.Zero, ACTION_HOVER_ENTER)
         rule.runOnUiThread {
-            val root = coords.findRoot()
+            val root = coords.findRootCoordinates()
             val pos = root.localPositionOf(coords, Offset.Zero)
             val androidComposeView = findAndroidComposeView(container) as AndroidComposeView
             val exit = MotionEvent(
@@ -1366,27 +1855,37 @@ class AndroidPointerInputTest {
         rule.runOnUiThread {
             container.setContent {
                 Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.size(50.dp).pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                awaitPointerEvent()
-                            }
-                        }
-                    })
-                    Box(Modifier.size(50.dp).clipToBounds()) {
-                        Box(Modifier.size(50.dp)
+                    Box(
+                        Modifier
+                            .size(50.dp)
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent()
+                                    }
+                                }
+                            })
+                    Box(
+                        Modifier
+                            .size(50.dp)
+                            .clipToBounds()) {
+                        Box(Modifier
+                            .size(50.dp)
                             .graphicsLayer {
-                                translationY = -25.dp.roundToPx().toFloat()
+                                translationY = -25.dp
+                                    .roundToPx()
+                                    .toFloat()
                             }
                             .pointerInput(Unit) {
                                 awaitPointerEventScope {
                                     while (true) {
                                         val event = awaitPointerEvent()
-                                        event.changes[0].consumeAllChanges()
+                                        event.changes[0].consume()
                                         eventLog += event.type
                                     }
                                 }
-                            }.onGloballyPositioned {
+                            }
+                            .onGloballyPositioned {
                                 innerCoordinates = it
                                 latch.countDown()
                             }
@@ -1404,7 +1903,8 @@ class AndroidPointerInputTest {
 
         // Hit the bottom box, but clipped
         dispatchMouseEvent(ACTION_HOVER_MOVE, coords)
-        dispatchMouseEvent(ACTION_HOVER_MOVE, coords,
+        dispatchMouseEvent(
+            ACTION_HOVER_MOVE, coords,
             Offset(0f, (coords.size.height / 2 - 1).toFloat())
         )
 
@@ -1413,17 +1913,20 @@ class AndroidPointerInputTest {
         }
 
         // Now hit the box in the unclipped region
-        dispatchMouseEvent(ACTION_HOVER_MOVE, coords,
+        dispatchMouseEvent(
+            ACTION_HOVER_MOVE, coords,
             Offset(0f, (coords.size.height / 2 + 1).toFloat())
         )
 
         // Now hit the bottom of the clipped region
-        dispatchMouseEvent(ACTION_HOVER_MOVE, coords,
+        dispatchMouseEvent(
+            ACTION_HOVER_MOVE, coords,
             Offset(0f, (coords.size.height - 1).toFloat())
         )
 
         // Now leave
-        dispatchMouseEvent(ACTION_HOVER_MOVE, coords,
+        dispatchMouseEvent(
+            ACTION_HOVER_MOVE, coords,
             Offset(0f, coords.size.height.toFloat() + 1f)
         )
 
@@ -1442,27 +1945,37 @@ class AndroidPointerInputTest {
         rule.runOnUiThread {
             container.setContent {
                 Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.size(50.dp).pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                awaitPointerEvent()
-                            }
-                        }
-                    })
-                    Box(Modifier.size(20.dp).clipToBounds()) {
-                        Box(Modifier.size(20.dp)
+                    Box(
+                        Modifier
+                            .size(50.dp)
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent()
+                                    }
+                                }
+                            })
+                    Box(
+                        Modifier
+                            .size(20.dp)
+                            .clipToBounds()) {
+                        Box(Modifier
+                            .size(20.dp)
                             .graphicsLayer {
-                                translationY = -10.dp.roundToPx().toFloat()
+                                translationY = -10.dp
+                                    .roundToPx()
+                                    .toFloat()
                             }
                             .pointerInput(Unit) {
                                 awaitPointerEventScope {
                                     while (true) {
                                         val event = awaitPointerEvent()
-                                        event.changes[0].consumeAllChanges()
+                                        event.changes[0].consume()
                                         eventLog += event.type
                                     }
                                 }
-                            }.onGloballyPositioned {
+                            }
+                            .onGloballyPositioned {
                                 innerCoordinates = it
                                 latch.countDown()
                             }
@@ -1522,25 +2035,30 @@ class AndroidPointerInputTest {
         val latch = CountDownLatch(1)
         rule.runOnUiThread {
             container.setContent {
-                Box(Modifier.fillMaxSize()
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                awaitPointerEvent()
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent()
+                                }
                             }
                         }
-                    }
                 ) {
-                    Box(Modifier.size(50.dp).align(AbsoluteAlignment.BottomRight)
+                    Box(Modifier
+                        .size(50.dp)
+                        .align(AbsoluteAlignment.BottomRight)
                         .pointerInput(Unit) {
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    event.changes.forEach { it.consumeAllChanges() }
+                                    event.changes.forEach { it.consume() }
                                     eventLog += event
                                 }
                             }
-                        }.onGloballyPositioned {
+                        }
+                        .onGloballyPositioned {
                             innerCoordinates = it
                             latch.countDown()
                         }
@@ -1567,6 +2085,77 @@ class AndroidPointerInputTest {
             assertThat(eventLog[1].type).isEqualTo(PointerEventType.Press)
             assertThat(eventLog[2].type).isEqualTo(PointerEventType.Exit)
             assertThat(eventLog[3].type).isEqualTo(PointerEventType.Release)
+        }
+    }
+
+    @Test
+    fun restartStreamAfterNotProcessing() {
+        // Stylus hover enter/exit events should be sent to pointer input areas
+        val eventLog = mutableListOf<PointerEvent>()
+        var hitCoordinates: LayoutCoordinates? = null
+        var missCoordinates: LayoutCoordinates? = null
+        val latch = CountDownLatch(2)
+        rule.runOnUiThread {
+            container.setContent {
+                Box(Modifier.fillMaxSize()) {
+                    Box(Modifier
+                        .size(50.dp)
+                        .align(AbsoluteAlignment.TopLeft)
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { it.consume() }
+                                    eventLog += event
+                                }
+                            }
+                        }
+                        .onGloballyPositioned {
+                            hitCoordinates = it
+                            latch.countDown()
+                        }
+                    )
+                    Box(
+                        Modifier
+                            .size(50.dp)
+                            .align(AbsoluteAlignment.BottomRight)
+                            .onGloballyPositioned {
+                                missCoordinates = it
+                                latch.countDown()
+                            }
+                    )
+                }
+            }
+        }
+        assertTrue(latch.await(1, TimeUnit.SECONDS))
+        val miss = missCoordinates!!
+        val hit = hitCoordinates!!
+
+        // This should hit
+        dispatchTouchEvent(ACTION_DOWN, hit)
+        dispatchTouchEvent(ACTION_UP, hit)
+
+        // This should miss
+        dispatchTouchEvent(ACTION_DOWN, miss)
+
+        // This should hit
+        dispatchTouchEvent(ACTION_DOWN, hit)
+
+        rule.runOnUiThread {
+            assertThat(eventLog).hasSize(3)
+            val down1 = eventLog[0]
+            val up1 = eventLog[1]
+            val down2 = eventLog[2]
+            assertThat(down1.changes).hasSize(1)
+            assertThat(up1.changes).hasSize(1)
+            assertThat(down2.changes).hasSize(1)
+
+            assertThat(down1.type).isEqualTo(PointerEventType.Press)
+            assertThat(up1.type).isEqualTo(PointerEventType.Release)
+            assertThat(down2.type).isEqualTo(PointerEventType.Press)
+
+            assertThat(up1.changes[0].id).isEqualTo(down1.changes[0].id)
+            assertThat(down2.changes[0].id.value).isEqualTo(down1.changes[0].id.value + 2)
         }
     }
 
@@ -1625,7 +2214,7 @@ private class ConsumeMovementGestureFilter(val consumeMovement: Boolean) : Point
     ) {
         if (consumeMovement) {
             pointerEvent.changes.fastForEach {
-                it.consumePositionChange()
+                it.consume()
             }
         }
     }
@@ -1643,7 +2232,7 @@ private class ConsumeDownChangeFilter : PointerInputFilter() {
         pointerEvent.changes.fastForEach {
             if (it.changedToDown()) {
                 onDown(it.position)
-                it.consumeDownChange()
+                it.consume()
             }
         }
     }

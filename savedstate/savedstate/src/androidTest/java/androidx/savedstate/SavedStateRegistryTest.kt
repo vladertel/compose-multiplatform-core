@@ -24,6 +24,7 @@ import androidx.test.annotation.UiThreadTest
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -172,6 +173,17 @@ class SavedStateRegistryTest {
 
     @UiThreadTest
     @Test
+    fun emptyBundle() {
+        val owner = FakeSavedStateRegistryOwner()
+        val outBundle = Bundle()
+        owner.savedStateRegistryController.performSave(outBundle)
+        assertWithMessage("Bundle $outBundle should be empty")
+            .that(outBundle.isEmpty)
+            .isTrue()
+    }
+
+    @UiThreadTest
+    @Test
     fun runOnNextRecreationFromEarlyRegisteredObserver() {
         val owner = FakeSavedStateRegistryOwner()
         owner.savedStateRegistryController.performAttach()
@@ -221,7 +233,8 @@ private class FakeSavedStateRegistryOwner : SavedStateRegistryOwner {
     val savedStateRegistryController = SavedStateRegistryController.create(this)
 
     override fun getLifecycle() = lifecycleRegistry
-    override fun getSavedStateRegistry() = savedStateRegistryController.savedStateRegistry
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateRegistryController.savedStateRegistry
 }
 
 private fun bundleOf(key: String, value: Int): Bundle {
@@ -236,6 +249,7 @@ private fun bundleOf(key: String, value: String): Bundle {
     return result
 }
 
+@Suppress("DEPRECATION")
 private fun Bundle?.isSame(other: Bundle): Boolean {
     if (this == null) {
         return false

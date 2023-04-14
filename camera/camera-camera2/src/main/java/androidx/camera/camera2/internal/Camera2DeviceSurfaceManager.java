@@ -27,12 +27,13 @@ import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.camera.camera2.internal.compat.CameraManagerCompat;
 import androidx.camera.core.CameraUnavailableException;
+import androidx.camera.core.impl.AttachedSurfaceInfo;
 import androidx.camera.core.impl.CameraDeviceSurfaceManager;
+import androidx.camera.core.impl.StreamSpec;
 import androidx.camera.core.impl.SurfaceConfig;
 import androidx.camera.core.impl.UseCaseConfig;
 import androidx.core.util.Preconditions;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -164,14 +165,14 @@ public final class Camera2DeviceSurfaceManager implements CameraDeviceSurfaceMan
     }
 
     /**
-     * Retrieves a map of suggested resolutions for the given list of use cases.
+     * Retrieves a map of suggested stream specifications for the given list of use cases.
      *
      * @param cameraId          the camera id of the camera device used by the use cases
      * @param existingSurfaces  list of surfaces already configured and used by the camera. The
-     *                          resolutions for these surface can not change.
+     *                          stream specifications for these surface can not change.
      * @param newUseCaseConfigs list of configurations of the use cases that will be given a
-     *                          suggested resolution
-     * @return map of suggested resolutions for given use cases
+     *                          suggested stream specification
+     * @return map of suggested stream specifications for given use cases
      * @throws IllegalStateException    if not initialized
      * @throws IllegalArgumentException if {@code newUseCaseConfigs} is an empty list, if
      *                                  there isn't a supported combination of surfaces
@@ -180,22 +181,11 @@ public final class Camera2DeviceSurfaceManager implements CameraDeviceSurfaceMan
      */
     @NonNull
     @Override
-    public Map<UseCaseConfig<?>, Size> getSuggestedResolutions(
+    public Map<UseCaseConfig<?>, StreamSpec> getSuggestedStreamSpecs(
             @NonNull String cameraId,
-            @NonNull List<SurfaceConfig> existingSurfaces,
+            @NonNull List<AttachedSurfaceInfo> existingSurfaces,
             @NonNull List<UseCaseConfig<?>> newUseCaseConfigs) {
         Preconditions.checkArgument(!newUseCaseConfigs.isEmpty(), "No new use cases to be bound.");
-
-        // Use the small size (640x480) for new use cases to check whether there is any possible
-        // supported combination first
-        List<SurfaceConfig> surfaceConfigs = new ArrayList<>(existingSurfaces);
-
-        for (UseCaseConfig<?> useCaseConfig : newUseCaseConfigs) {
-            surfaceConfigs.add(
-                    transformSurfaceConfig(cameraId,
-                            useCaseConfig.getInputFormat(),
-                            new Size(640, 480)));
-        }
 
         SupportedSurfaceCombination supportedSurfaceCombination =
                 mCameraSupportedSurfaceCombinationMap.get(cameraId);
@@ -205,15 +195,7 @@ public final class Camera2DeviceSurfaceManager implements CameraDeviceSurfaceMan
                     + cameraId);
         }
 
-        if (!supportedSurfaceCombination.checkSupported(surfaceConfigs)) {
-            throw new IllegalArgumentException(
-                    "No supported surface combination is found for camera device - Id : "
-                            + cameraId + ".  May be attempting to bind too many use cases. "
-                            + "Existing surfaces: " + existingSurfaces + " New configs: "
-                            + newUseCaseConfigs);
-        }
-
-        return supportedSurfaceCombination.getSuggestedResolutions(existingSurfaces,
+        return supportedSurfaceCombination.getSuggestedStreamSpecifications(existingSurfaces,
                 newUseCaseConfigs);
     }
 }
