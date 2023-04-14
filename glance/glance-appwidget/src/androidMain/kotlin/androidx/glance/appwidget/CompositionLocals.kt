@@ -18,20 +18,12 @@ package androidx.glance.appwidget
 
 import android.os.Bundle
 import androidx.compose.runtime.ProvidableCompositionLocal
-import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.glance.state.GlanceStateDefinition
+import androidx.compose.runtime.compositionLocalOf
 
 /**
  * Option Bundle accessible when generating an App Widget.
  *
  * See [AppWidgetManager#getAppWidgetOptions] for details
  */
-public val LocalAppWidgetOptions: ProvidableCompositionLocal<Bundle> =
-    staticCompositionLocalOf { error("No default app widget options") }
-
-/**
- * Uniquely identifying key for this remote UI, for use with [GlanceStateDefinition].
- */
-// TODO: Look into refactoring the state to not need this key constant
-public val LocalUiKey =
-    staticCompositionLocalOf<String> { error("No default UI key") }
+val LocalAppWidgetOptions: ProvidableCompositionLocal<Bundle> =
+    compositionLocalOf { Bundle() }

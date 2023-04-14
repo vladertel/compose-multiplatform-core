@@ -17,44 +17,43 @@
 package androidx.glance.appwidget
 
 import android.Manifest
-import android.app.Activity
 import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.pm.ActivityInfo
-import android.os.Build
+import android.content.res.Configuration
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.view.children
+import androidx.glance.session.GlanceSessionManager
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.UiController
-import androidx.test.espresso.ViewAction
-import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
-import androidx.test.runner.lifecycle.Stage
 import androidx.test.uiautomator.UiDevice
-import org.hamcrest.Matcher
-import org.junit.rules.RuleChain
-import org.junit.rules.TestRule
-import org.junit.runner.Description
-import org.junit.runners.model.Statement
+import androidx.work.WorkManager
+import androidx.work.testing.WorkManagerTestInitHelper
+import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertIs
 import kotlin.test.fail
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
+import org.junit.runner.Description
+import org.junit.runners.model.Statement
 
 @SdkSuppress(minSdkVersion = 29)
 class AppWidgetHostRule(
     private var mPortraitSize: DpSize = DpSize(200.dp, 300.dp),
-    private var mLandscapeSize: DpSize = DpSize(300.dp, 200.dp)
+    private var mLandscapeSize: DpSize = DpSize(300.dp, 200.dp),
+    private var useSessionManager: Boolean = false,
 ) : TestRule {
 
     val portraitSize: DpSize
@@ -85,15 +84,25 @@ class AppWidgetHostRule(
     private val mInnerRules = RuleChain.outerRule(mActivityRule).around(mOrientationRule)
 
     private var mHostStarted = false
-    lateinit var mHostView: TestAppWidgetHostView
+    private var mMaybeHostView: TestAppWidgetHostView? = null
     private var mAppWidgetId = 0
     private val mScenario: ActivityScenario<AppWidgetHostTestActivity>
         get() = mActivityRule.scenario
     private val mContext = ApplicationProvider.getApplicationContext<Context>()
 
+    val mHostView: TestAppWidgetHostView
+        get() = checkNotNull(mMaybeHostView) { "No app widget installed on the host" }
+
+    val appWidgetId: Int get() = mAppWidgetId
+
+    val device: UiDevice get() = mUiDevice
+
     override fun apply(base: Statement, description: Description) = object : Statement() {
 
         override fun evaluate() {
+            WorkManagerTestInitHelper.initializeTestWorkManager(mContext)
+            TestGlanceAppWidget.sessionManager =
+                if (useSessionManager) GlanceSessionManager else null
             mInnerRules.apply(base, description).evaluate()
             stopHost()
         }
@@ -102,6 +111,7 @@ class AppWidgetHostRule(
             if (mHostStarted) {
                 mUiAutomation.dropShellPermissionIdentity()
             }
+            WorkManager.getInstance(mContext).cancelAllWork()
         }
     }
 
@@ -111,12 +121,50 @@ class AppWidgetHostRule(
         mHostStarted = true
 
         mActivityRule.scenario.onActivity { activity ->
-            mHostView = activity.bindAppWidget(mPortraitSize, mLandscapeSize)
+            mMaybeHostView = activity.bindAppWidget(mPortraitSize, mLandscapeSize)
         }
 
+        val hostView = checkNotNull(mMaybeHostView) { "Host view wasn't successfully started" }
+
         runAndWaitForChildren {
-            mAppWidgetId = mHostView.appWidgetId
-            mHostView.waitForRemoteViews()
+            mAppWidgetId = hostView.appWidgetId
+            hostView.waitForRemoteViews()
+        }
+    }
+
+    /**
+     * Run the [block] (usually some sort of app widget update) and wait for new RemoteViews to be
+     * applied.
+     *
+     * This should not be called from the main thread, i.e. in [onHostView] or [onHostActivity].
+     */
+    suspend fun runAndWaitForUpdate(block: suspend () -> Unit) {
+        val hostView = checkNotNull(mMaybeHostView) { "Host view wasn't successfully started" }
+        hostView.resetRemoteViewsLatch()
+        withContext(Dispatchers.Main) { block() }
+        // Do not wait on the main thread so that the UI handlers can run.
+        runAndWaitForChildren {
+            hostView.waitForRemoteViews()
+        }
+    }
+
+    /**
+     * Set TestGlanceAppWidgetReceiver to ignore broadcasts, run [block], and then reset
+     * TestGlanceAppWidgetReceiver.
+     */
+    fun ignoreBroadcasts(block: () -> Unit) {
+        TestGlanceAppWidgetReceiver.ignoreBroadcasts = true
+        try {
+            block()
+        } finally {
+            TestGlanceAppWidgetReceiver.ignoreBroadcasts = false
+        }
+    }
+
+    fun removeAppWidget() {
+        mActivityRule.scenario.onActivity { activity ->
+            val hostView = checkNotNull(mMaybeHostView) { "No app widget to remove" }
+            activity.deleteAppWidget(hostView)
         }
     }
 
@@ -143,12 +191,30 @@ class AppWidgetHostRule(
 
     /** Change the orientation to landscape.*/
     fun setLandscapeOrientation() {
-        onView(isRoot()).perform(orientationLandscape())
+        var activity: AppWidgetHostTestActivity? = null
+        onHostActivity {
+            it.resetConfigurationChangedLatch()
+            it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            activity = it
+        }
+        checkNotNull(activity).apply {
+            waitForConfigurationChange()
+            assertThat(lastConfiguration.orientation).isEqualTo(Configuration.ORIENTATION_LANDSCAPE)
+        }
     }
 
     /** Change the orientation to portrait.*/
     fun setPortraitOrientation() {
-        onView(isRoot()).perform(orientationPortrait())
+        var activity: AppWidgetHostTestActivity? = null
+        onHostActivity {
+            it.resetConfigurationChangedLatch()
+            it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            activity = it
+        }
+        checkNotNull(activity).apply {
+            waitForConfigurationChange()
+            assertThat(lastConfiguration.orientation).isEqualTo(Configuration.ORIENTATION_PORTRAIT)
+        }
     }
 
     /**
@@ -182,18 +248,21 @@ class AppWidgetHostRule(
         mPortraitSize = portrait
         if (!mHostStarted) return
 
-        mScenario.onActivity {
-            mHostView.setSizes(portrait, landscape)
-        }
+        val hostView = mMaybeHostView
+        if (hostView != null) {
+            mScenario.onActivity {
+                hostView.setSizes(portrait, landscape)
+            }
 
-        if (updateRemoteViews) {
-            runAndWaitForChildren {
-                mHostView.resetRemoteViewsLatch()
-                AppWidgetManager.getInstance(mContext).updateAppWidgetOptions(
-                    mAppWidgetId,
-                    optionsBundleOf(listOf(portrait, landscape))
-                )
-                mHostView.waitForRemoteViews()
+            if (updateRemoteViews) {
+                runAndWaitForChildren {
+                    hostView.resetRemoteViewsLatch()
+                    AppWidgetManager.getInstance(mContext).updateAppWidgetOptions(
+                        mAppWidgetId,
+                        optionsBundleOf(listOf(portrait, landscape))
+                    )
+                    hostView.waitForRemoteViews()
+                }
             }
         }
     }
@@ -203,12 +272,13 @@ class AppWidgetHostRule(
         run: () -> Unit = {},
         test: () -> Boolean
     ) {
+        val hostView = mHostView
         val latch = CountDownLatch(1)
         val onDrawListener = ViewTreeObserver.OnDrawListener {
-            if (mHostView.childCount > 0 && test()) latch.countDown()
+            if (hostView.childCount > 0 && test()) latch.countDown()
         }
         mActivityRule.scenario.onActivity {
-            mHostView.viewTreeObserver.addOnDrawListener(onDrawListener)
+            hostView.viewTreeObserver.addOnDrawListener(onDrawListener)
         }
 
         run()
@@ -224,7 +294,7 @@ class AppWidgetHostRule(
         } finally {
             latch.countDown() // make sure it's released in all conditions
             mActivityRule.scenario.onActivity {
-                mHostView.viewTreeObserver.removeOnDrawListener(onDrawListener)
+                hostView.viewTreeObserver.removeOnDrawListener(onDrawListener)
             }
         }
     }
@@ -233,47 +303,5 @@ class AppWidgetHostRule(
         runAndObserveUntilDraw("Expected new children on HostView within 5 seconds", action) {
             mHostView.childCount > 0
         }
-    }
-
-    private inner class OrientationChangeAction constructor(private val orientation: Int) :
-        ViewAction {
-        override fun getConstraints(): Matcher<View> = isRoot()
-
-        override fun getDescription() = "change orientation to $orientationName"
-
-        private val orientationName: String
-            get() =
-                if (orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
-                    "landscape"
-                } else {
-                    "portrait"
-                }
-
-        override fun perform(uiController: UiController, view: View) {
-            uiController.loopMainThreadUntilIdle()
-            mActivityRule.scenario.onActivity { it.requestedOrientation = orientation }
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                // Somehow, before Android S, changing the orientation doesn't trigger the
-                // onConfigurationChange
-                uiController.loopMainThreadUntilIdle()
-                mScenario.onActivity {
-                    it.updateAllSizes(it.resources.configuration.orientation)
-                    it.reapplyRemoteViews()
-                }
-            }
-            val resumedActivities: Collection<Activity> =
-                ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)
-            if (resumedActivities.isEmpty()) {
-                throw RuntimeException("Could not change orientation")
-            }
-        }
-    }
-
-    private fun orientationLandscape(): ViewAction {
-        return OrientationChangeAction(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
-    }
-
-    private fun orientationPortrait(): ViewAction {
-        return OrientationChangeAction(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
     }
 }

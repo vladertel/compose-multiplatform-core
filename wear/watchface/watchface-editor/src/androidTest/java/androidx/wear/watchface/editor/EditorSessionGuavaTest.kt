@@ -81,6 +81,7 @@ public class EditorSessionGuavaTest {
             mockInvalidateCallback
         )
     private val leftComplication =
+        @Suppress("DEPRECATION")
         ComplicationSlot.createRoundRectComplicationSlotBuilder(
             LEFT_COMPLICATION_ID,
             { _, _, -> mockLeftCanvasComplication },
@@ -103,6 +104,7 @@ public class EditorSessionGuavaTest {
             mockInvalidateCallback
         )
     private val rightComplication =
+        @Suppress("DEPRECATION")
         ComplicationSlot.createRoundRectComplicationSlotBuilder(
             RIGHT_COMPLICATION_ID,
             { _, _, -> mockRightCanvasComplication },
@@ -236,6 +238,7 @@ public class EditorSessionGuavaTest {
     }
 
     @Test
+    @Suppress("Deprecation") // userStyleSettings
     public fun doNotCommitChangesOnClose() {
         val scenario = createOnWatchFaceEditingTestActivity(
             listOf(colorStyleSetting, watchHandStyleSetting),

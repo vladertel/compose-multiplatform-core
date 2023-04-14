@@ -24,14 +24,15 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
+import androidx.glance.ButtonColors
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
-import androidx.glance.action.actionLaunchActivity
+import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.test.R
-import androidx.glance.appwidget.unit.ColorProvider
 import androidx.glance.background
+import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -128,6 +129,25 @@ class GlanceAppWidgetReceiverScreenshotTest {
     }
 
     @Test
+    fun createRadioButtonAppWidget() {
+        TestGlanceAppWidget.uiDefinition = { RadioButtonScreenshotTest() }
+
+        mHostRule.startHost()
+
+        mScreenshotRule.checkScreenshot(mHostRule.mHostView, "radioButtonWidget")
+    }
+
+    @WithNightMode
+    @Test
+    fun createRadioButtonAppWidget_dark() {
+        TestGlanceAppWidget.uiDefinition = { RadioButtonScreenshotTest() }
+
+        mHostRule.startHost()
+
+        mScreenshotRule.checkScreenshot(mHostRule.mHostView, "radioButtonWidget_dark")
+    }
+
+    @Test
     fun createRowWidget() {
         TestGlanceAppWidget.uiDefinition = { RowTest() }
 
@@ -204,32 +224,42 @@ class GlanceAppWidgetReceiverScreenshotTest {
     }
 
     @Test
-    fun checkButtonTextAlignement() {
+    fun checkButtonTextAlignment() {
         TestGlanceAppWidget.uiDefinition = {
             Column(modifier = GlanceModifier.fillMaxSize()) {
                 Row(modifier = GlanceModifier.defaultWeight().fillMaxWidth()) {
                     Button(
                         "Start",
-                        onClick = actionLaunchActivity<Activity>(),
+                        onClick = actionStartActivity<Activity>(),
                         modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
+                        colors = ButtonColors(
+                            backgroundColor = ColorProvider(Color.Transparent),
+                            contentColor = ColorProvider(Color.DarkGray)
+                        ),
                         style = TextStyle(textAlign = TextAlign.Start)
                     )
                     Button(
                         "End",
-                        onClick = actionLaunchActivity<Activity>(),
+                        onClick = actionStartActivity<Activity>(),
                         modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
+                        colors = ButtonColors(
+                            backgroundColor = ColorProvider(Color.Transparent),
+                            contentColor = ColorProvider(Color.DarkGray)
+                        ),
                         style = TextStyle(textAlign = TextAlign.End)
                     )
                 }
                 Row(modifier = GlanceModifier.defaultWeight().fillMaxWidth()) {
                     CheckBox(
                         checked = false,
+                        onCheckedChange = null,
                         text = "Start",
                         modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
                         style = TextStyle(textAlign = TextAlign.Start)
                     )
                     CheckBox(
                         checked = true,
+                        onCheckedChange = null,
                         text = "End",
                         modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
                         style = TextStyle(textAlign = TextAlign.End)
@@ -238,12 +268,30 @@ class GlanceAppWidgetReceiverScreenshotTest {
                 Row(modifier = GlanceModifier.defaultWeight().fillMaxWidth()) {
                     Switch(
                         checked = false,
+                        onCheckedChange = null,
                         text = "Start",
                         modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
                         style = TextStyle(textAlign = TextAlign.Start)
                     )
                     Switch(
                         checked = true,
+                        onCheckedChange = null,
+                        text = "End",
+                        modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
+                        style = TextStyle(textAlign = TextAlign.End)
+                    )
+                }
+                Row(modifier = GlanceModifier.defaultWeight().fillMaxWidth()) {
+                    RadioButton(
+                        checked = false,
+                        onClick = null,
+                        text = "Start",
+                        modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
+                        style = TextStyle(textAlign = TextAlign.Start)
+                    )
+                    RadioButton(
+                        checked = true,
+                        onClick = null,
                         text = "End",
                         modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
                         style = TextStyle(textAlign = TextAlign.End)
@@ -254,8 +302,6 @@ class GlanceAppWidgetReceiverScreenshotTest {
 
         mHostRule.setSizes(DpSize(300.dp, 400.dp))
         mHostRule.startHost()
-
-        Thread.sleep(5000)
 
         mScreenshotRule.checkScreenshot(mHostRule.mHostView, "button_text_align")
     }
@@ -582,6 +628,7 @@ private fun CheckBoxScreenshotTest() {
     Column(modifier = GlanceModifier.background(day = Color.White, night = Color.Black)) {
         CheckBox(
             checked = true,
+            onCheckedChange = null,
             text = "Hello Checked Checkbox (text: day=black, night=white| box: day=magenta, " +
                 "night=yellow)",
             style = TextStyle(
@@ -589,13 +636,15 @@ private fun CheckBoxScreenshotTest() {
                 fontWeight = FontWeight.Bold,
                 fontStyle = FontStyle.Normal,
             ),
-            colors = CheckBoxColors(
-                checkedColor = ColorProvider(day = Color.Magenta, night = Color.Yellow)
+            colors = checkBoxColors(
+                checkedColor = ColorProvider(day = Color.Magenta, night = Color.Yellow),
+                uncheckedColor = ColorProvider(day = Color.Black, night = Color.Gray)
             )
         )
 
         CheckBox(
             checked = false,
+            onCheckedChange = null,
             text = "Hello Unchecked Checkbox (text: day=dark gray, night=light gray, green box)",
             style = TextStyle(
                 color = ColorProvider(day = Color.DarkGray, night = Color.LightGray),
@@ -603,7 +652,7 @@ private fun CheckBoxScreenshotTest() {
                 fontWeight = FontWeight.Medium,
                 fontStyle = FontStyle.Italic,
             ),
-            colors = CheckBoxColors(checkedColor = Color.Red, uncheckedColor = Color.Green)
+            colors = checkBoxColors(checkedColor = Color.Red, uncheckedColor = Color.Green)
         )
     }
 }
@@ -613,27 +662,73 @@ private fun SwitchTest() {
     Column(modifier = GlanceModifier.background(day = Color.White, night = Color.Black)) {
         Switch(
             checked = true,
+            onCheckedChange = null,
             text = "Hello Checked Switch (day: Blue/Green, night: Red/Yellow)",
             style = TextStyle(
                 color = ColorProvider(day = Color.Black, night = Color.White),
                 fontWeight = FontWeight.Bold,
                 fontStyle = FontStyle.Normal,
             ),
-            colors = SwitchColors(
+            colors = switchColors(
                 checkedThumbColor = ColorProvider(day = Color.Blue, night = Color.Red),
+                uncheckedThumbColor = ColorProvider(Color.Magenta),
                 checkedTrackColor = ColorProvider(day = Color.Green, night = Color.Yellow),
+                uncheckedTrackColor = ColorProvider(Color.Magenta)
             )
         )
 
         Switch(
             checked = false,
-            text = "Hello Unchecked Switch",
+            onCheckedChange = null,
+            text = "Hello Unchecked Switch. day: thumb magenta / track cyan, night: thumb cyan",
             style = TextStyle(
                 color = ColorProvider(day = Color.Black, night = Color.White),
                 textDecoration = TextDecoration.Underline,
                 fontWeight = FontWeight.Medium,
                 fontStyle = FontStyle.Italic,
+            ),
+            colors = switchColors(
+                checkedThumbColor = ColorProvider(Color.Blue),
+                uncheckedThumbColor = ColorProvider(day = Color.Magenta, night = Color.Cyan),
+                checkedTrackColor = ColorProvider(Color.Blue),
+                uncheckedTrackColor = ColorProvider(day = Color.Cyan, night = Color.Magenta)
             )
+        )
+    }
+}
+
+@Composable
+private fun RadioButtonScreenshotTest() {
+    Column(
+        modifier = GlanceModifier.background(day = Color.White, night = Color.Black)
+    ) {
+        RadioButton(
+            checked = true,
+            onClick = null,
+            text = "Hello Checked Radio (text: day=black, night=white| radio: day=magenta, " +
+                "night=yellow)",
+            style = TextStyle(
+                color = ColorProvider(day = Color.Black, night = Color.White),
+                fontWeight = FontWeight.Bold,
+                fontStyle = FontStyle.Normal,
+            ),
+            colors = radioButtonColors(
+                checkedColor = ColorProvider(day = Color.Magenta, night = Color.Yellow),
+                uncheckedColor = ColorProvider(day = Color.Yellow, night = Color.Magenta)
+            )
+        )
+
+        RadioButton(
+            checked = false,
+            onClick = null,
+            text = "Hello Unchecked Radio (text: day=dark gray, night=light gray| radio: green)",
+            style = TextStyle(
+                color = ColorProvider(day = Color.DarkGray, night = Color.LightGray),
+                textDecoration = TextDecoration.Underline,
+                fontWeight = FontWeight.Medium,
+                fontStyle = FontStyle.Italic,
+            ),
+            colors = radioButtonColors(checkedColor = Color.Red, uncheckedColor = Color.Green)
         )
     }
 }

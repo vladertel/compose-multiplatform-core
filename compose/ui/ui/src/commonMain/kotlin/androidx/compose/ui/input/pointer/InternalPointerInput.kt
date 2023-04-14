@@ -45,9 +45,11 @@ internal data class PointerInputEventData(
     val positionOnScreen: Offset,
     val position: Offset,
     val down: Boolean,
+    val pressure: Float,
     val type: PointerType,
     val issuesEnterExit: Boolean = false,
-    val historical: List<HistoricalChange> = mutableListOf()
+    val historical: List<HistoricalChange> = mutableListOf(),
+    val scrollDelta: Offset = Offset.Zero
 )
 
 /**
