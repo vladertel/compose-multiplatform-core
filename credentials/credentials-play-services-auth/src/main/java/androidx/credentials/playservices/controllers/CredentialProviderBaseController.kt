@@ -19,12 +19,15 @@ package androidx.credentials.playservices.controllers
 import android.content.Intent
 import android.os.Parcel
 import android.os.ResultReceiver
+import androidx.credentials.exceptions.CreateCredentialCancellationException
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.CreateCredentialInterruptedException
 import androidx.credentials.exceptions.CreateCredentialUnknownException
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.GetCredentialInterruptedException
 import androidx.credentials.exceptions.GetCredentialUnknownException
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.gms.common.api.CommonStatusCodes
 
 /**
@@ -85,8 +88,14 @@ open class CredentialProviderBaseController(private val activity: android.app.Ac
         internal fun getCredentialExceptionTypeToException(typeName: String?, msg: String?):
             GetCredentialException {
             return when (typeName) {
-                GetCredentialUnknownException::class.java.name -> {
+                GetCredentialCancellationException::class.java.name -> {
+                    GetCredentialCancellationException(msg)
+                }
+                GetCredentialInterruptedException::class.java.name -> {
                     GetCredentialInterruptedException(msg)
+                }
+                NoCredentialException::class.java.name -> {
+                    NoCredentialException(msg)
                 }
                 else -> {
                     GetCredentialUnknownException(msg)
@@ -97,7 +106,10 @@ open class CredentialProviderBaseController(private val activity: android.app.Ac
         internal fun createCredentialExceptionTypeToException(typeName: String?, msg: String?):
             CreateCredentialException {
             return when (typeName) {
-                GetCredentialInterruptedException::class.java.name -> {
+                CreateCredentialCancellationException::class.java.name -> {
+                    CreateCredentialCancellationException(msg)
+                }
+                CreateCredentialInterruptedException::class.java.name -> {
                     CreateCredentialInterruptedException(msg)
                 }
                 else -> {

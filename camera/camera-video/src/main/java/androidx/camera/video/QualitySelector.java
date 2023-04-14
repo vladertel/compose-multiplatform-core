@@ -27,7 +27,8 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.Logger;
-import androidx.camera.core.impl.CamcorderProfileProxy;
+import androidx.camera.core.impl.EncoderProfilesProxy.VideoProfileProxy;
+import androidx.camera.video.internal.VideoValidatedEncoderProfilesProxy;
 import androidx.core.util.Preconditions;
 
 import java.util.ArrayList;
@@ -95,7 +96,7 @@ public final class QualitySelector {
      */
     @NonNull
     public static List<Quality> getSupportedQualities(@NonNull CameraInfo cameraInfo) {
-        return VideoCapabilities.from(cameraInfo).getSupportedQualities();
+        return LegacyVideoCapabilities.from(cameraInfo).getSupportedQualities();
     }
 
     /**
@@ -118,7 +119,7 @@ public final class QualitySelector {
      */
     public static boolean isQualitySupported(@NonNull CameraInfo cameraInfo,
             @NonNull Quality quality) {
-        return VideoCapabilities.from(cameraInfo).isQualitySupported(quality);
+        return LegacyVideoCapabilities.from(cameraInfo).isQualitySupported(quality);
     }
 
     /**
@@ -139,24 +140,24 @@ public final class QualitySelector {
     @Nullable
     public static Size getResolution(@NonNull CameraInfo cameraInfo, @NonNull Quality quality) {
         checkQualityConstantsOrThrow(quality);
-        CamcorderProfileProxy profile = VideoCapabilities.from(cameraInfo).getProfile(quality);
-        return profile != null ? getProfileVideoSize(profile) : null;
+        VideoValidatedEncoderProfilesProxy profiles =
+                LegacyVideoCapabilities.from(cameraInfo).getProfiles(quality);
+        return profiles != null ? getProfileVideoSize(profiles) : null;
     }
 
     /**
      * Gets a map from all supported qualities to mapped resolutions.
      *
      * @param cameraInfo the cameraInfo to query the supported qualities on that camera.
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @NonNull
     public static Map<Quality, Size> getQualityToResolutionMap(@NonNull CameraInfo cameraInfo) {
-        VideoCapabilities videoCapabilities = VideoCapabilities.from(cameraInfo);
+        LegacyVideoCapabilities videoCapabilities = LegacyVideoCapabilities.from(cameraInfo);
         Map<Quality, Size> map = new HashMap<>();
         for (Quality supportedQuality : videoCapabilities.getSupportedQualities()) {
             map.put(supportedQuality, getProfileVideoSize(
-                    requireNonNull(videoCapabilities.getProfile(supportedQuality))));
+                    requireNonNull(videoCapabilities.getProfiles(supportedQuality))));
         }
         return map;
     }
@@ -273,9 +274,58 @@ public final class QualitySelector {
      */
     @NonNull
     List<Quality> getPrioritizedQualities(@NonNull CameraInfo cameraInfo) {
-        VideoCapabilities videoCapabilities = VideoCapabilities.from(cameraInfo);
+        LegacyVideoCapabilities videoCapabilities = LegacyVideoCapabilities.from(cameraInfo);
 
         List<Quality> supportedQualities = videoCapabilities.getSupportedQualities();
+        if (supportedQualities.isEmpty()) {
+            Logger.w(TAG, "No supported quality on the device.");
+            return new ArrayList<>();
+        }
+        Logger.d(TAG, "supportedQualities = " + supportedQualities);
+
+        // Use LinkedHashSet to prevent from duplicate quality and keep the adding order.
+        Set<Quality> sortedQualities = new LinkedHashSet<>();
+        // Add exact quality.
+        for (Quality quality : mPreferredQualityList) {
+            if (quality == Quality.HIGHEST) {
+                // Highest means user want a quality as higher as possible, so the return list can
+                // contain all supported resolutions from large to small.
+                sortedQualities.addAll(supportedQualities);
+                break;
+            } else if (quality == Quality.LOWEST) {
+                // Opposite to the highest
+                List<Quality> reversedList = new ArrayList<>(supportedQualities);
+                Collections.reverse(reversedList);
+                sortedQualities.addAll(reversedList);
+                break;
+            } else {
+                if (supportedQualities.contains(quality)) {
+                    sortedQualities.add(quality);
+                } else {
+                    Logger.w(TAG, "quality is not supported and will be ignored: " + quality);
+                }
+            }
+        }
+
+        // Add quality by fallback strategy based on fallback quality.
+        addByFallbackStrategy(supportedQualities, sortedQualities);
+
+        return new ArrayList<>(sortedQualities);
+    }
+
+    /**
+     * Generates a sorted quality list that matches the desired quality settings.
+     *
+     * <p>The method bases on the desired qualities and the fallback strategy to find a matched
+     * quality list on this device. The search algorithm first checks which desired quality is
+     * supported according to the set sequence and adds to the returned list by order. Then the
+     * fallback strategy will be applied to add more valid qualities.
+     *
+     * @param supportedQualities the supported qualities.
+     * @return a sorted supported quality list according to the desired quality settings.
+     */
+    @NonNull
+    List<Quality> getPrioritizedQualities(@NonNull List<Quality> supportedQualities) {
         if (supportedQualities.isEmpty()) {
             Logger.w(TAG, "No supported quality on the device.");
             return new ArrayList<>();
@@ -404,8 +454,9 @@ public final class QualitySelector {
     }
 
     @NonNull
-    private static Size getProfileVideoSize(@NonNull CamcorderProfileProxy profile) {
-        return new Size(profile.getVideoFrameWidth(), profile.getVideoFrameHeight());
+    private static Size getProfileVideoSize(@NonNull VideoValidatedEncoderProfilesProxy profiles) {
+        VideoProfileProxy videoProfile = profiles.getDefaultVideoProfile();
+        return new Size(videoProfile.getWidth(), videoProfile.getHeight());
     }
 
     private static void checkQualityConstantsOrThrow(@NonNull List<Quality> qualities) {

@@ -55,7 +55,6 @@ import java.util.concurrent.Executor;
  *     .writeIfNeeded(skipStrategy);
  * </pre>
  *
- * @hide
  */
 @RequiresApi(19)
 @RestrictTo(RestrictTo.Scope.LIBRARY)
@@ -88,7 +87,6 @@ public class DeviceProfileWriter {
     }
 
     /**
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     public DeviceProfileWriter(
@@ -111,7 +109,6 @@ public class DeviceProfileWriter {
     }
 
     /**
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     public boolean deviceAllowsProfileInstallerAotWrites() {
@@ -120,13 +117,28 @@ public class DeviceProfileWriter {
             return false;
         }
 
-        if (!mCurProfile.canWrite()) {
-            // It's possible that some OEMs might not allow writing to this directory. If this is
-            // the case, there's not really anything we can do, so we should quit before doing
-            // any unnecessary work.
-            result(ProfileInstaller.RESULT_NOT_WRITABLE, null);
-            return false;
+        // Check if the current profile file can be written. In Android U the current profile is
+        // no more created empty at app startup, so we need to deal with both file already existing
+        // and not existing. When the file exists, we just want to make sure that it's writeable.
+        // When the file does not exist, we want to make sure that it can be created.
+        // If this is not possible on the device, there is nothing we can do. This behavior might
+        // also be customized by OEM, that could prevent writing this file.
+        if (mCurProfile.exists()) {
+            if (!mCurProfile.canWrite()) {
+                result(ProfileInstaller.RESULT_NOT_WRITABLE, null);
+                return false;
+            }
+        } else {
+            try {
+                mCurProfile.createNewFile();
+            } catch (IOException e) {
+                // If the file cannot be created it's the same of the profile file not being
+                // writeable
+                result(ProfileInstaller.RESULT_NOT_WRITABLE, null);
+                return false;
+            }
         }
+
 
         mDeviceSupportsAotProfile = true;
         return true;
@@ -150,7 +162,6 @@ public class DeviceProfileWriter {
      *         .write()
      * </pre>
      *
-     * @hide
      * @return this to chain call to transcodeIfNeeded
      */
     @NonNull
@@ -287,7 +298,6 @@ public class DeviceProfileWriter {
      * This method will always clear the profile read by copyProfileOrRead and may only be called
      * once.
      *
-     * @hide
      * @return this to chain call call writeIfNeeded()
      */
     @NonNull
@@ -331,7 +341,6 @@ public class DeviceProfileWriter {
      *
      * This method will always clear the profile, and may only be called once.
      *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     public boolean write() {

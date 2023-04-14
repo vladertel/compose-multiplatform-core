@@ -32,11 +32,17 @@ import kotlinx.coroutines.sync.withLock
  * file location.
  *
  * @param serializer The serializer that can write <T> to and from a byte array.
+ * @param coordinatorProducer The producer to provide [InterProcessCoordinator] that coordinates IO
+ * operations across processes if needed. By default it provides single process coordinator, which
+ * doesn't support cross process use cases.
  * @param produceFile The file producer that returns the file that will be read and written.
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class FileStorage<T>(
     private val serializer: Serializer<T>,
+    private val coordinatorProducer: (File) -> InterProcessCoordinator = {
+        SingleProcessCoordinator()
+    },
     private val produceFile: () -> File
 ) : Storage<T> {
 
@@ -54,7 +60,7 @@ class FileStorage<T>(
             activeFiles.add(path)
         }
 
-        return FileStorageConnection(file, serializer) {
+        return FileStorageConnection(file, serializer, coordinatorProducer(file)) {
             synchronized(activeFilesLock) {
                 activeFiles.remove(file.absolutePath)
             }
@@ -78,6 +84,7 @@ class FileStorage<T>(
 internal class FileStorageConnection<T>(
     private val file: File,
     private val serializer: Serializer<T>,
+    override val coordinator: InterProcessCoordinator,
     private val onClose: () -> Unit
 ) : StorageConnection<T> {
 

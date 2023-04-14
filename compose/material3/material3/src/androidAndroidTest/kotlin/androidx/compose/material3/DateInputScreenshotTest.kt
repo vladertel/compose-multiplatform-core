@@ -57,8 +57,9 @@ class DateInputScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun dateInput_initialState() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrap.testTag(wrapperTestTag)) {
-                DateInput(
-                    dateInputState = rememberDatePickerState()
+                DatePicker(
+                    state = rememberDatePickerState(initialDisplayMode = DisplayMode.Input),
+                    showModeToggle = false
                 )
             }
         }
@@ -66,14 +67,28 @@ class DateInputScreenshotTest(private val scheme: ColorSchemeWrapper) {
     }
 
     @Test
+    fun dateInput_withModeToggle() {
+        rule.setMaterialContent(scheme.colorScheme) {
+            Box(wrap.testTag(wrapperTestTag)) {
+                DatePicker(
+                    state = rememberDatePickerState(initialDisplayMode = DisplayMode.Input)
+                )
+            }
+        }
+        assertAgainstGolden("dateInput_withModeToggle_${scheme.name}")
+    }
+
+    @Test
     fun dateInput_withEnteredDate() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrap.testTag(wrapperTestTag)) {
                 val dayMillis = dayInUtcMilliseconds(year = 2021, month = 3, dayOfMonth = 6)
-                DateInput(
-                    dateInputState = rememberDatePickerState(
-                        initialSelectedDateMillis = dayMillis
-                    )
+                DatePicker(
+                    state = rememberDatePickerState(
+                        initialSelectedDateMillis = dayMillis,
+                        initialDisplayMode = DisplayMode.Input
+                    ),
+                    showModeToggle = false
                 )
             }
         }
@@ -85,11 +100,16 @@ class DateInputScreenshotTest(private val scheme: ColorSchemeWrapper) {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrap.testTag(wrapperTestTag)) {
                 val monthInUtcMillis = dayInUtcMilliseconds(year = 2000, month = 6, dayOfMonth = 1)
-                DateInput(
-                    dateInputState = rememberDatePickerState(
-                        initialDisplayedMonthMillis = monthInUtcMillis
+                DatePicker(
+                    state = rememberDatePickerState(
+                        initialDisplayedMonthMillis = monthInUtcMillis,
+                        initialDisplayMode = DisplayMode.Input,
+                        selectableDates = object : SelectableDates {
+                            // All dates are invalid for the sake of this test.
+                            override fun isSelectableDate(utcTimeMillis: Long): Boolean = false
+                        }
                     ),
-                    dateValidator = { false }
+                    showModeToggle = false
                 )
             }
         }
@@ -105,10 +125,12 @@ class DateInputScreenshotTest(private val scheme: ColorSchemeWrapper) {
                 confirmButton = { TextButton(onClick = {}) { Text("OK") } },
                 dismissButton = { TextButton(onClick = {}) { Text("Cancel") } }
             ) {
-                DateInput(
-                    dateInputState = rememberDatePickerState(
-                        initialSelectedDateMillis = selectedDayMillis
-                    )
+                DatePicker(
+                    state = rememberDatePickerState(
+                        initialSelectedDateMillis = selectedDayMillis,
+                        initialDisplayMode = DisplayMode.Input
+                    ),
+                    showModeToggle = false
                 )
             }
         }
