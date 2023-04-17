@@ -8,7 +8,10 @@ plugins {
     id("org.jetbrains.gradle.apple.applePlugin") version "222.4550-0.21"
 }
 
-val RUN_ON_DEVICE = false
+// Value of the TEAM_ID like in Config.xcconfig
+// https://github.com/JetBrains/compose-multiplatform-template#running-on-a-real-ios-device
+val developmentTeamToRunOnRealDevice = "JMS9FA69HB"
+val runOnDevice = developmentTeamToRunOnRealDevice.isNotEmpty()
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
@@ -21,8 +24,8 @@ repositories {
 }
 
 kotlin {
-    if (System.getProperty("os.arch") == "aarch64") {
-        iosSimulatorArm64("uikitSimArm64") {
+    if (runOnDevice) {
+        ios("uikitArm64") {
             binaries {
                 framework {
                     baseName = "shared"
@@ -35,29 +38,30 @@ kotlin {
             }
         }
     } else {
-        iosX64("uikitX64") {
-            binaries {
-                framework {
-                    baseName = "shared"
-                    freeCompilerArgs += listOf(
-                        "-linker-option", "-framework", "-linker-option", "Metal",
-                        "-linker-option", "-framework", "-linker-option", "CoreText",
-                        "-linker-option", "-framework", "-linker-option", "CoreGraphics"
-                    )
+        if (System.getProperty("os.arch") == "aarch64") {
+            iosSimulatorArm64("uikitSimArm64") {
+                binaries {
+                    framework {
+                        baseName = "shared"
+                        freeCompilerArgs += listOf(
+                            "-linker-option", "-framework", "-linker-option", "Metal",
+                            "-linker-option", "-framework", "-linker-option", "CoreText",
+                            "-linker-option", "-framework", "-linker-option", "CoreGraphics"
+                        )
+                    }
                 }
             }
-        }
-    }
-    if (RUN_ON_DEVICE) {
-        iosArm64("uikitArm64") {
-            binaries {
-                framework {
-                    baseName = "shared"
-                    freeCompilerArgs += listOf(
-                        "-linker-option", "-framework", "-linker-option", "Metal",
-                        "-linker-option", "-framework", "-linker-option", "CoreText",
-                        "-linker-option", "-framework", "-linker-option", "CoreGraphics"
-                    )
+        } else {
+            iosX64("uikitX64") {
+                binaries {
+                    framework {
+                        baseName = "shared"
+                        freeCompilerArgs += listOf(
+                            "-linker-option", "-framework", "-linker-option", "Metal",
+                            "-linker-option", "-framework", "-linker-option", "CoreText",
+                            "-linker-option", "-framework", "-linker-option", "CoreGraphics"
+                        )
+                    }
                 }
             }
         }
@@ -86,13 +90,14 @@ kotlin {
         val nativeMain by creating { dependsOn(skikoMain) }
         val darwinMain by creating { dependsOn(nativeMain) }
         val uikitMain by creating { dependsOn(darwinMain) }
-        if (System.getProperty("os.arch") == "aarch64") {
-            val uikitSimArm64Main by getting { dependsOn(uikitMain) }
-        } else {
-            val uikitX64Main by getting { dependsOn(uikitMain) }
-        }
-        if (RUN_ON_DEVICE) {
+        if (runOnDevice) {
             val uikitArm64Main by getting { dependsOn(uikitMain) }
+        } else {
+            if (System.getProperty("os.arch") == "aarch64") {
+                val uikitSimArm64Main by getting { dependsOn(uikitMain) }
+            } else {
+                val uikitX64Main by getting { dependsOn(uikitMain) }
+            }
         }
     }
 }
@@ -103,6 +108,9 @@ apple {
 
         sceneDelegateClass = "SceneDelegate"
         launchStoryboard = "LaunchScreen"
+
+        buildSettings.DEVELOPMENT_TEAM(developmentTeamToRunOnRealDevice)
+        buildSettings.DEPLOYMENT_TARGET("15.0")
 
         dependencies {
             // Here we can add additional dependencies to Swift sourceSet
