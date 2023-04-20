@@ -20,6 +20,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clipScrollableContainer
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,24 +39,30 @@ import androidx.compose.foundation.lazy.layout.PinnableItem
 import androidx.compose.foundation.lazy.layout.lazyLayoutSemantics
 import androidx.compose.foundation.overscroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastAll
+import kotlinx.coroutines.coroutineScope
 
 @ExperimentalFoundationApi
 @Composable
 internal fun Pager(
     /** Modifier to be applied for the inner layout */
     modifier: Modifier,
-    /** The amount of Pages that will be present in this Pager **/
-    pageCount: Int,
     /** State controlling the scroll position */
     state: PagerState,
     /** The inner padding to be added for the whole content(not for each individual page) */
@@ -94,9 +102,8 @@ internal fun Pager(
     val pagerItemProvider = rememberPagerItemProvider(
         state = state,
         pageContent = pageContent,
-        key = key,
-        pageCount = pageCount
-    )
+        key = key
+    ) { state.pageCount }
 
     val beyondBoundsInfo = remember { LazyListBeyondBoundsInfo() }
 
@@ -111,7 +118,7 @@ internal fun Pager(
         horizontalAlignment = horizontalAlignment,
         verticalAlignment = verticalAlignment,
         itemProvider = pagerItemProvider,
-        pageCount = pageCount,
+        pageCount = { state.pageCount },
         beyondBoundsInfo = beyondBoundsInfo
     )
 
@@ -160,6 +167,7 @@ internal fun Pager(
                 overscrollEffect = overscrollEffect,
                 enabled = userScrollEnabled
             )
+            .dragDirectionDetector(state)
             .nestedScroll(pageNestedScrollConnection),
         measurePolicy = measurePolicy,
         prefetchState = state.prefetchState,
@@ -172,10 +180,11 @@ internal class PagerLazyLayoutItemProvider(
     val state: PagerState,
     latestContent: () -> (@Composable (page: Int) -> Unit),
     key: ((index: Int) -> Any)?,
-    pageCount: Int
+    pageCount: () -> Int
 ) : LazyLayoutItemProvider {
-    private val pagerContent =
-        PagerLayoutIntervalContent(latestContent(), key = key, pageCount = pageCount)
+    private val pagerContent by derivedStateOf(structuralEqualityPolicy()) {
+        PagerLayoutIntervalContent(latestContent(), key = key, pageCount = pageCount())
+    }
     private val keyToIndexMap: LazyLayoutKeyIndexMap by NearestRangeKeyIndexMapState(
         firstVisibleItemIndex = { state.firstVisiblePage },
         slidingWindowSize = { NearestItemsSlidingWindowSize },
@@ -203,8 +212,8 @@ private class PagerLayoutIntervalContent(
     val key: ((index: Int) -> Any)?,
     val pageCount: Int
 ) : LazyLayoutIntervalContent<PagerIntervalContent>() {
-    override val intervals: IntervalList<PagerIntervalContent>
-        get() = MutableIntervalList<PagerIntervalContent>().apply {
+    override val intervals: IntervalList<PagerIntervalContent> =
+        MutableIntervalList<PagerIntervalContent>().apply {
             addInterval(pageCount, PagerIntervalContent(key = key, item = pageContent))
         }
 }
@@ -221,7 +230,7 @@ private fun rememberPagerItemProvider(
     state: PagerState,
     pageContent: @Composable (page: Int) -> Unit,
     key: ((index: Int) -> Any)?,
-    pageCount: Int
+    pageCount: () -> Int
 ): PagerLazyLayoutItemProvider {
     val latestContent = rememberUpdatedState(pageContent)
     return remember(state, latestContent, key, pageCount) {
@@ -233,3 +242,27 @@ private fun rememberPagerItemProvider(
         )
     }
 }
+
+/**
+ * A modifier to detect up and down events in a Pager.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.dragDirectionDetector(state: PagerState) =
+    this then Modifier.pointerInput(state) {
+        coroutineScope {
+            awaitEachGesture {
+                val downEvent =
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                var upEventOrCancellation: PointerInputChange? = null
+                while (upEventOrCancellation == null) {
+                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                    if (event.changes.fastAll { it.changedToUp() }) {
+                        // All pointers are up
+                        upEventOrCancellation = event.changes[0]
+                    }
+                }
+
+                state.upDownDifference = upEventOrCancellation.position - downEvent.position
+            }
+        }
+    }
