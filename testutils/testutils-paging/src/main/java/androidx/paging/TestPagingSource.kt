@@ -16,8 +16,8 @@
 
 package androidx.paging
 
-import androidx.testutils.DirectDispatcher
-import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
@@ -33,7 +33,8 @@ class TestPagingSource(
     override val jumpingSupported: Boolean = true,
     val items: List<Int> = ITEMS,
     private val loadDelay: Long = 1000,
-    private val loadDispatcher: CoroutineDispatcher = DirectDispatcher
+    private val loadContext: CoroutineContext = EmptyCoroutineContext,
+    private val placeholdersEnabled: Boolean = true,
 ) : PagingSource<Int, Int>() {
     var errorNextLoad = false
     var nextLoadResult: LoadResult<Int, Int>? = null
@@ -59,7 +60,7 @@ class TestPagingSource(
         // execution of events.
         delay(loadDelay)
 
-        return withContext(loadDispatcher) { getLoadResult(params) }
+        return withContext(loadContext) { getLoadResult(params) }
     }
 
     private fun getLoadResult(params: LoadParams<Int>): LoadResult<Int, Int> {
@@ -86,8 +87,8 @@ class TestPagingSource(
             items.subList(start, end),
             if (start > 0) start - 1 else null,
             if (end < items.size) end else null,
-            start,
-            items.size - end
+            if (placeholdersEnabled) start else Int.MIN_VALUE,
+            if (placeholdersEnabled) (items.size - end) else Int.MIN_VALUE
         ).also {
             loadedPages.add(it)
         }

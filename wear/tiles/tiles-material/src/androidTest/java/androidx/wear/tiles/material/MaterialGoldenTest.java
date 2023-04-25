@@ -26,11 +26,9 @@ import android.util.DisplayMetrics;
 
 import androidx.annotation.Dimension;
 import androidx.test.filters.LargeTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.screenshot.AndroidXScreenshotTestRule;
-import androidx.wear.tiles.DeviceParametersBuilders;
-import androidx.wear.tiles.DeviceParametersBuilders.DeviceParameters;
-import androidx.wear.tiles.LayoutElementBuilders.LayoutElement;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,20 +36,23 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 @LargeTest
+@SuppressWarnings("deprecation")
 public class MaterialGoldenTest {
-    private final LayoutElement mLayoutElement;
+    private final androidx.wear.tiles.LayoutElementBuilders.LayoutElement mLayoutElement;
     private final String mExpected;
 
     @Rule
     public AndroidXScreenshotTestRule mScreenshotRule =
             new AndroidXScreenshotTestRule("wear/wear-tiles-material");
 
-    public MaterialGoldenTest(LayoutElement layoutElement, String expected) {
+    public MaterialGoldenTest(
+            String expected,
+            androidx.wear.tiles.LayoutElementBuilders.LayoutElement layoutElement) {
         mLayoutElement = layoutElement;
         mExpected = expected;
     }
@@ -61,7 +62,7 @@ public class MaterialGoldenTest {
         return (int) ((px - 0.5f) / scale);
     }
 
-    @Parameterized.Parameters(name = "{1}")
+    @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         Context context = InstrumentationRegistry.getInstrumentation().getContext();
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
@@ -78,25 +79,25 @@ public class MaterialGoldenTest {
                 .getDisplayMetrics()
                 .setTo(displayMetrics);
 
-
-        DeviceParameters deviceParameters =
-                new DeviceParameters.Builder()
+        androidx.wear.tiles.DeviceParametersBuilders.DeviceParameters deviceParameters =
+                new androidx.wear.tiles.DeviceParametersBuilders.DeviceParameters.Builder()
                         .setScreenWidthDp(pxToDp(SCREEN_WIDTH, scale))
                         .setScreenHeightDp(pxToDp(SCREEN_HEIGHT, scale))
                         .setScreenDensity(displayMetrics.density)
                         // Not important for components.
-                        .setScreenShape(DeviceParametersBuilders.SCREEN_SHAPE_RECT)
+                        .setScreenShape(
+                                androidx.wear.tiles.DeviceParametersBuilders.SCREEN_SHAPE_RECT)
                         .build();
 
-        HashMap<LayoutElement, String> testCases =
+        Map<String, androidx.wear.tiles.LayoutElementBuilders.LayoutElement> testCases =
                 generateTestCases(context, deviceParameters, "");
 
-        return testCases.entrySet()
-                .stream()
-                .map(test -> new Object[]{test.getKey(), test.getValue()})
+        return testCases.entrySet().stream()
+                .map(test -> new Object[] {test.getKey(), test.getValue()})
                 .collect(Collectors.toList());
     }
 
+    @SdkSuppress(maxSdkVersion = 32) // b/271486183
     @Test
     public void test() {
         runSingleScreenshotTest(mScreenshotRule, mLayoutElement, mExpected);

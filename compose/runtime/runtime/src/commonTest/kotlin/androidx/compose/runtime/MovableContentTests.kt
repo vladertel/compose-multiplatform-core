@@ -777,7 +777,6 @@ class MovableContentTests {
     }
 
     @Test
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun validateRecomposeScopesDoNotGetLost() = compositionTest {
         var isHorizontal by mutableStateOf(false)
         val displayValue = mutableStateOf(0)
@@ -807,7 +806,7 @@ class MovableContentTests {
 
         isHorizontal = true
         Snapshot.sendApplyNotifications()
-        testCoroutineScheduler.advanceTimeBy(10)
+        advanceTimeBy(10)
 
         displayValue.value++
         expectChanges()
@@ -1025,6 +1024,168 @@ class MovableContentTests {
         useInSub1 = false
         useInSub2 = false
         expectUnused()
+    }
+
+    @Test // Regression test for 230830644 and 235398298
+    fun deferredSubcompose_conditional_rootLevelChildren() = compositionTest {
+        var subcompose by mutableStateOf(false)
+        var lastPrivateState: State<Int> = mutableStateOf(0)
+
+        val content = movableContentOf {
+            lastPrivateState = remember { mutableStateOf(0) }
+            Text("Movable content")
+        }
+
+        compose {
+            Text("Main content start")
+            if (!subcompose) {
+                content()
+            }
+            Text("Main content end")
+            if (subcompose) {
+                DeferredSubcompose {
+                    Text("Sub-composed content start")
+                    content()
+                    Text("Sub-composed content end")
+                }
+            }
+        }
+
+        validate {
+            Text("Main content start")
+            if (!subcompose) {
+                Text("Movable content")
+            }
+            Text("Main content end")
+            if (subcompose) {
+                DeferredSubcompose {
+                    Text("Sub-composed content start")
+                    Text("Movable content")
+                    Text("Sub-composed content end")
+                }
+            }
+        }
+
+        val expectedState = lastPrivateState
+        subcompose = true
+        expectChanges()
+        revalidate()
+
+        assertEquals(expectedState, lastPrivateState, "Movable content was unexpectedly recreated")
+
+        subcompose = false
+        expectChanges()
+        revalidate()
+
+        assertEquals(expectedState, lastPrivateState, "Movable content was unexpectedly recreated")
+    }
+
+    @Test // Regression test for 230830644 and 235398298
+    fun deferredSubcompose_conditional_nestedChildren() = compositionTest {
+        var subcompose by mutableStateOf(false)
+        var lastPrivateState: State<Int> = mutableStateOf(0)
+
+        val content = movableContentOf {
+            lastPrivateState = remember { mutableStateOf(0) }
+            Text("Movable content")
+        }
+
+        compose {
+            Text("Main content start")
+            if (!subcompose) {
+                content()
+            }
+            Text("Main content end")
+            if (subcompose) {
+                DeferredSubcompose {
+                    Column {
+                        Text("Sub-composed content start")
+                        content()
+                        Text("Sub-composed content end")
+                    }
+                }
+            }
+        }
+
+        validate {
+            Text("Main content start")
+            if (!subcompose) {
+                Text("Movable content")
+            }
+            Text("Main content end")
+            if (subcompose) {
+                DeferredSubcompose {
+                    Column {
+                        Text("Sub-composed content start")
+                        Text("Movable content")
+                        Text("Sub-composed content end")
+                    }
+                }
+            }
+        }
+
+        val expectedState = lastPrivateState
+        subcompose = true
+        expectChanges()
+        revalidate()
+
+        assertEquals(expectedState, lastPrivateState, "Movable content was unexpectedly recreated")
+
+        subcompose = false
+        expectChanges()
+        revalidate()
+
+        assertEquals(expectedState, lastPrivateState, "Movable content was unexpectedly recreated")
+    }
+
+    @Test // Regression test for 230830644
+    fun deferredSubcompose_conditional_and_invalid() = compositionTest {
+        var subcompose by mutableStateOf(false)
+        var lastPrivateState: State<Int> = mutableStateOf(0)
+        var state by mutableStateOf("one")
+
+        val content = movableContentOf {
+            lastPrivateState = remember { mutableStateOf(0) }
+            Text("Movable content state: $state")
+        }
+
+        compose {
+            Text("Main content start")
+            if (!subcompose) {
+                content()
+            }
+            Text("Main content end")
+            if (subcompose) {
+                DeferredSubcompose {
+                    Text("Sub-composed content start")
+                    content()
+                    Text("Sub-composed content end")
+                }
+            }
+        }
+
+        validate {
+            Text("Main content start")
+            if (!subcompose) {
+                Text("Movable content state: $state")
+            }
+            Text("Main content end")
+            if (subcompose) {
+                DeferredSubcompose {
+                    Text("Sub-composed content start")
+                    Text("Movable content state: $state")
+                    Text("Sub-composed content end")
+                }
+            }
+        }
+
+        val expectedState = lastPrivateState
+        subcompose = true
+        state = "two"
+        expectChanges()
+        revalidate()
+
+        assertEquals(expectedState, lastPrivateState)
     }
 
     @Test
@@ -1284,6 +1445,102 @@ class MovableContentTests {
         hashList2.assertAllTheSame()
         assertNotEquals(hashList1.first(), hashList2.first())
     }
+
+    @Test
+    fun keyInsideMovableContentShouldntChangeWhenRecomposed() = compositionTest {
+        val hashList = mutableListOf<Int>()
+        val counter = mutableStateOf(0)
+        val movableContent = movableContentOf {
+            hashList.add(currentCompositeKeyHash)
+            Text("counter=${counter.value}")
+        }
+        compose {
+            movableContent()
+        }
+
+        validate {
+            Text("counter=${counter.value}")
+        }
+
+        counter.value++
+        expectChanges()
+        revalidate()
+
+        assertEquals(2, hashList.size)
+        assertEquals(hashList[0], hashList[1])
+    }
+
+    @Test
+    fun parameterPassingThroughDeferredSubcompose() = compositionTest {
+        var state by mutableStateOf(false)
+        var lastSeen: Boolean? = null
+        val content = movableContentOf { parameter: Boolean ->
+            Container {
+                lastSeen = parameter
+            }
+        }
+
+        compose {
+            if (state) {
+                content(true)
+            } else {
+                DeferredSubcompose {
+                    content(state)
+                }
+            }
+        }
+
+        advanceTimeBy(5_000)
+
+        assertEquals(state, lastSeen)
+
+        repeat(5) {
+            state = !state
+
+            expectChanges()
+
+            assertEquals(state, lastSeen, "Failed in iteration $it")
+        }
+    }
+
+    @Test
+    fun stateChangesWhilePendingMove() = compositionTest {
+        var state = 0
+        var lastSeen: Int? = null
+        var deferred by mutableStateOf(false)
+        var scope: RecomposeScope? = null
+
+        val content = movableContentOf {
+            Container {
+                lastSeen = state
+                scope = currentRecomposeScope
+            }
+        }
+
+        compose {
+            if (deferred) {
+                DeferredSubcompose {
+                    content()
+                }
+                SideEffect {
+                    state++
+                    scope?.invalidate()
+                }
+            } else {
+                content()
+            }
+        }
+
+        advanceTimeBy(5_000)
+
+        assertEquals(state, lastSeen)
+
+        deferred = true
+
+        advance()
+
+        assertEquals(state, lastSeen)
+    }
 }
 
 @Composable
@@ -1397,8 +1654,26 @@ private fun Subcompose(content: @Composable () -> Unit) {
     }
 }
 
+@Composable
+private fun DeferredSubcompose(content: @Composable () -> Unit) {
+    val host = View().also { it.name = "DeferredSubcompose" }
+    ComposeNode<View, ViewApplier>(factory = { host }, update = { })
+    val parent = rememberCompositionContext()
+    val composition = remember { Composition(ViewApplier(host), parent) }
+    LaunchedEffect(content as Any) {
+        composition.setContent(content)
+    }
+    DisposableEffect(Unit) {
+        onDispose { composition.dispose() }
+    }
+}
+
 private fun MockViewValidator.Subcompose(content: MockViewValidator.() -> Unit) {
     view("SubcomposeHost", content)
+}
+
+private fun MockViewValidator.DeferredSubcompose(content: MockViewValidator.() -> Unit) {
+    view("DeferredSubcompose", content)
 }
 
 class RememberedObject : RememberObserver {
@@ -1417,14 +1692,14 @@ class RememberedObject : RememberObserver {
     }
 
     override fun onForgotten() {
-        check(count > 0) { "Abandoned or forgotten mor times than remembered" }
+        check(count > 0) { "Abandoned or forgotten more times than remembered" }
         forgottenCount++
         count--
         if (count == 0) died = true
     }
 
     override fun onAbandoned() {
-        check(count > 0) { "Abandoned or forgotten mor times than remembered" }
+        check(count > 0) { "Abandoned or forgotten more times than remembered" }
         abandonedCount++
         count--
         if (count == 0) died = true

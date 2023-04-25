@@ -20,24 +20,25 @@ import COMMON
 import androidx.paging.DataSource
 import androidx.paging.PagingSource
 import androidx.room.Dao
+import androidx.room.compiler.codegen.XCodeBlock
+import androidx.room.compiler.codegen.XTypeName
+import androidx.room.compiler.codegen.XTypeName.Companion.PRIMITIVE_INT
 import androidx.room.compiler.processing.XProcessingEnv
 import androidx.room.compiler.processing.XRawType
 import androidx.room.compiler.processing.isTypeElement
 import androidx.room.compiler.processing.util.Source
 import androidx.room.compiler.processing.util.XTestInvocation
 import androidx.room.compiler.processing.util.runProcessorTest
+import androidx.room.ext.CommonTypeNames
 import androidx.room.ext.GuavaUtilConcurrentTypeNames
-import androidx.room.ext.L
 import androidx.room.ext.LifecyclesTypeNames
 import androidx.room.ext.PagingTypeNames
 import androidx.room.ext.ReactiveStreamsTypeNames
-import androidx.room.ext.RoomTypeNames
+import androidx.room.ext.RoomTypeNames.ROOM_DB
 import androidx.room.ext.RoomTypeNames.STRING_UTIL
 import androidx.room.ext.RxJava2TypeNames
 import androidx.room.ext.RxJava3TypeNames
-import androidx.room.ext.T
 import androidx.room.ext.implementsEqualsAndHashcode
-import androidx.room.ext.typeName
 import androidx.room.parser.SQLTypeAffinity
 import androidx.room.processor.Context
 import androidx.room.processor.CustomConverterProcessor
@@ -46,31 +47,38 @@ import androidx.room.processor.DaoProcessorTest
 import androidx.room.processor.ProcessorErrors
 import androidx.room.solver.binderprovider.DataSourceFactoryQueryResultBinderProvider
 import androidx.room.solver.binderprovider.DataSourceQueryResultBinderProvider
+import androidx.room.solver.binderprovider.ListenableFuturePagingSourceQueryResultBinderProvider
 import androidx.room.solver.binderprovider.LiveDataQueryResultBinderProvider
 import androidx.room.solver.binderprovider.PagingSourceQueryResultBinderProvider
+import androidx.room.solver.binderprovider.RxJava2PagingSourceQueryResultBinderProvider
+import androidx.room.solver.binderprovider.RxJava3PagingSourceQueryResultBinderProvider
 import androidx.room.solver.binderprovider.RxQueryResultBinderProvider
 import androidx.room.solver.query.parameter.CollectionQueryParameterAdapter
 import androidx.room.solver.query.result.MultiTypedPagingSourceQueryResultBinder
 import androidx.room.solver.shortcut.binderprovider.GuavaListenableFutureDeleteOrUpdateMethodBinderProvider
 import androidx.room.solver.shortcut.binderprovider.GuavaListenableFutureInsertMethodBinderProvider
+import androidx.room.solver.shortcut.binderprovider.GuavaListenableFutureUpsertMethodBinderProvider
 import androidx.room.solver.shortcut.binderprovider.RxCallableDeleteOrUpdateMethodBinderProvider
 import androidx.room.solver.shortcut.binderprovider.RxCallableInsertMethodBinderProvider
+import androidx.room.solver.shortcut.binderprovider.RxCallableUpsertMethodBinderProvider
 import androidx.room.solver.types.BoxedPrimitiveColumnTypeAdapter
+import androidx.room.solver.types.ByteBufferColumnTypeAdapter
+import androidx.room.solver.types.ColumnTypeAdapter
 import androidx.room.solver.types.CompositeAdapter
 import androidx.room.solver.types.CustomTypeConverterWrapper
 import androidx.room.solver.types.EnumColumnTypeAdapter
 import androidx.room.solver.types.PrimitiveColumnTypeAdapter
 import androidx.room.solver.types.SingleStatementTypeConverter
+import androidx.room.solver.types.StringColumnTypeAdapter
 import androidx.room.solver.types.TypeConverter
 import androidx.room.solver.types.UuidColumnTypeAdapter
+import androidx.room.solver.types.ValueClassConverterWrapper
 import androidx.room.testing.context
 import androidx.room.vo.BuiltInConverterFlags
 import androidx.room.vo.ReadQueryMethod
 import com.google.common.truth.Truth.assertThat
-import com.squareup.javapoet.CodeBlock
-import com.squareup.javapoet.TypeName
-import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.instanceOf
+import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.notNullValue
 import org.hamcrest.CoreMatchers.nullValue
 import org.hamcrest.MatcherAssert.assertThat
@@ -78,13 +86,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import testCodeGenScope
-import java.util.UUID
 
-@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 @RunWith(JUnit4::class)
 class TypeAdapterStoreTest {
     companion object {
-        fun tmp(index: Int) = CodeGenScope._tmpVar(index)
+        fun tmp(index: Int) = CodeGenScope.getTmpVarString(index)
     }
 
     @Test
@@ -149,7 +155,7 @@ class TypeAdapterStoreTest {
                 Context(invocation.processingEnv),
                 BuiltInConverterFlags.DEFAULT
             )
-            val primitiveType = invocation.processingEnv.requireType(TypeName.INT)
+            val primitiveType = invocation.processingEnv.requireType(XTypeName.PRIMITIVE_INT)
             val adapter = store.findColumnTypeAdapter(
                 primitiveType,
                 null,
@@ -179,12 +185,12 @@ class TypeAdapterStoreTest {
             assertThat(adapter, instanceOf(CompositeAdapter::class.java))
             val composite = adapter as CompositeAdapter
             assertThat(
-                composite.intoStatementConverter?.from?.typeName,
-                `is`(TypeName.BOOLEAN.box())
+                composite.intoStatementConverter?.from?.asTypeName(),
+                `is`(XTypeName.BOXED_BOOLEAN.copy(nullable = true))
             )
             assertThat(
-                composite.columnTypeAdapter.out.typeName,
-                `is`(TypeName.INT.box())
+                composite.columnTypeAdapter.out.asTypeName(),
+                `is`(XTypeName.BOXED_INT.copy(nullable = true))
             )
         }
     }
@@ -218,6 +224,117 @@ class TypeAdapterStoreTest {
     }
 
     @Test
+    fun testKotlinLangValueClassCompilesWithoutError() {
+        val source = Source.kotlin(
+            "Foo.kt",
+            """
+            import androidx.room.*
+            @JvmInline
+            value class IntValueClass(val data: Int)
+            @JvmInline
+            value class StringValueClass(val data: String)
+            class EntityWithValueClass {
+                val intData = IntValueClass(123)
+                val stringData = StringValueClass("bla")
+            }
+            """.trimIndent()
+        )
+        var results: Map<String, String?> = mutableMapOf()
+
+        runProcessorTest(
+            sources = listOf(source)
+        ) { invocation ->
+            val typeAdapterStore = TypeAdapterStore.create(
+                context = invocation.context,
+                builtInConverterFlags = BuiltInConverterFlags.DEFAULT
+            )
+            val subject = invocation.processingEnv.requireTypeElement("EntityWithValueClass")
+            results = subject.getAllFieldsIncludingPrivateSupers().associate { field ->
+                val columnAdapter = typeAdapterStore.findColumnTypeAdapter(
+                    out = field.type,
+                    affinity = null,
+                    false
+                )
+
+                val typeElementColumnAdapter: ColumnTypeAdapter? =
+                    if (columnAdapter is ValueClassConverterWrapper) {
+                        columnAdapter.valueTypeColumnAdapter
+                    } else {
+                        columnAdapter
+                    }
+
+                when (typeElementColumnAdapter) {
+                    is PrimitiveColumnTypeAdapter -> {
+                        field.name to "primitive"
+                    }
+
+                    is StringColumnTypeAdapter -> {
+                        field.name to "string"
+                    }
+
+                    else -> {
+                        field.name to null
+                    }
+                }
+            }
+        }
+        assertThat(results).containsExactlyEntriesIn(
+            mapOf(
+                "intData" to "primitive",
+                "stringData" to "string"
+            )
+        )
+    }
+
+    @Test
+    fun testValueClassWithDifferentTypeVal() {
+        val source = Source.kotlin(
+            "Foo.kt",
+            """
+            import androidx.room.*
+            @JvmInline
+            value class Foo(val value : Int) {
+                val double
+                    get() = value * 2
+            }
+            """.trimIndent()
+        )
+
+        runProcessorTest(
+            sources = listOf(source)
+        ) { invocation ->
+            TypeAdapterStore.create(
+                context = invocation.context,
+                builtInConverterFlags = BuiltInConverterFlags.DEFAULT
+            )
+            val typeElement = invocation
+                .processingEnv
+                .requireTypeElement("Foo")
+            assertThat(typeElement.getDeclaredFields()).hasSize(1)
+            assertThat(typeElement.getDeclaredFields().single().type.asTypeName())
+                .isEqualTo(PRIMITIVE_INT)
+        }
+    }
+
+    @Test
+    fun testJavaLangByteBufferCompilesWithoutError() {
+        runProcessorTest { invocation ->
+            val store = TypeAdapterStore.create(
+                Context(invocation.processingEnv),
+                BuiltInConverterFlags.DEFAULT
+            )
+            val byteBufferType = invocation.processingEnv.requireType(CommonTypeNames.BYTE_BUFFER)
+            val adapter = store.findColumnTypeAdapter(
+                byteBufferType,
+                null,
+                skipDefaultConverter = false
+            )
+            assertThat(adapter, notNullValue())
+            assertThat(adapter, instanceOf(ByteBufferColumnTypeAdapter::class.java))
+        }
+    }
+
+    @Test
     fun testJavaUtilUUIDCompilesWithoutError() {
         runProcessorTest { invocation ->
             val store = TypeAdapterStore.create(
@@ -226,7 +343,7 @@ class TypeAdapterStoreTest {
             )
             val uuid = invocation
                 .processingEnv
-                .requireType(UUID::class.typeName)
+                .requireType(CommonTypeNames.UUID)
             val adapter = store.findColumnTypeAdapter(
                 out = uuid,
                 affinity = null,
@@ -245,7 +362,7 @@ class TypeAdapterStoreTest {
                 Context(invocation.processingEnv),
                 BuiltInConverterFlags.DEFAULT
             )
-            val booleanType = invocation.processingEnv.requireType(TypeName.BOOLEAN)
+            val booleanType = invocation.processingEnv.requireType(XTypeName.PRIMITIVE_BOOLEAN)
             val adapter = store.findColumnTypeAdapter(
                 booleanType,
                 null,
@@ -404,30 +521,36 @@ class TypeAdapterStoreTest {
                 null,
                 skipDefaultConverter = false
             )
-            assertThat(adapter, notNullValue())
+            assertThat(adapter).isNotNull()
 
             val bindScope = testCodeGenScope()
             adapter!!.bindToStmt("stmt", "41", "fooVar", bindScope)
-            assertThat(
-                bindScope.generate().toString().trim(),
-                `is`(
-                    """
-                final java.lang.String ${tmp(0)} = androidx.room.util.StringUtil.joinIntoString(fooVar);
+            val expectedAdapterCode = if (invocation.isKsp) {
+                """
+                stmt.bindString(41, ${tmp(0)});
+                """.trimIndent()
+            } else {
+                """
                 if (${tmp(0)} == null) {
                   stmt.bindNull(41);
                 } else {
                   stmt.bindString(41, ${tmp(0)});
                 }
-                    """.trimIndent()
-                )
+                """.trimIndent()
+            }
+            assertThat(bindScope.generate().toString().trim()).isEqualTo(
+                """
+                |final java.lang.String ${tmp(0)} = androidx.room.util.StringUtil.joinIntoString(fooVar);
+                |$expectedAdapterCode
+                """.trimMargin()
             )
 
             val converter = store.typeConverterStore.findTypeConverter(
                 binders[0].from,
                 invocation.context.COMMON_TYPES.STRING
             )
-            assertThat(converter, notNullValue())
-            assertThat(store.typeConverterStore.reverse(converter!!), `is`(binders[1]))
+            assertThat(converter).isNotNull()
+            assertThat(store.typeConverterStore.reverse(converter!!)).isEqualTo(binders[1])
         }
     }
 
@@ -461,7 +584,6 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testMissingRx2Room() {
-        @Suppress("CHANGING_ARGUMENTS_EXECUTION_ORDER_FOR_NAMED_VARARGS")
         runProcessorTest(
             sources = listOf(COMMON.PUBLISHER, COMMON.RX2_FLOWABLE)
         ) { invocation ->
@@ -482,7 +604,6 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testMissingRx3Room() {
-        @Suppress("CHANGING_ARGUMENTS_EXECUTION_ORDER_FOR_NAMED_VARARGS")
         runProcessorTest(
             sources = listOf(COMMON.PUBLISHER, COMMON.RX3_FLOWABLE)
         ) { invocation ->
@@ -523,14 +644,90 @@ class TypeAdapterStoreTest {
     }
 
     @Test
+    fun testMissingRoomPagingGuava() {
+        runProcessorTest(
+            sources = listOf(COMMON.LISTENABLE_FUTURE_PAGING_SOURCE)
+        ) { invocation ->
+            val listenableFuturePagingSourceElement = invocation.processingEnv
+                .requireTypeElement(PagingTypeNames.LISTENABLE_FUTURE_PAGING_SOURCE)
+            val intType = invocation.processingEnv.requireType(Integer::class)
+            val listenableFuturePagingSourceIntIntType = invocation.processingEnv
+                .getDeclaredType(listenableFuturePagingSourceElement, intType, intType)
+
+            assertThat(listenableFuturePagingSourceElement, notNullValue())
+            assertThat(
+                ListenableFuturePagingSourceQueryResultBinderProvider(invocation.context)
+                    .matches(listenableFuturePagingSourceIntIntType),
+                `is`(true)
+            )
+            invocation.assertCompilationResult {
+                hasError(ProcessorErrors.MISSING_ROOM_PAGING_GUAVA_ARTIFACT)
+            }
+        }
+    }
+
+    @Test
+    fun testMissingRoomPagingRx2() {
+        runProcessorTest(
+            sources = listOf(COMMON.RX2_PAGING_SOURCE)
+        ) { invocation ->
+            val rx2PagingSourceElement = invocation.processingEnv
+                .requireTypeElement(PagingTypeNames.RX2_PAGING_SOURCE)
+            val intType = invocation.processingEnv.requireType(Integer::class)
+            val rx2PagingSourceIntIntType = invocation.processingEnv
+                .getDeclaredType(rx2PagingSourceElement, intType, intType)
+
+            assertThat(rx2PagingSourceElement, notNullValue())
+            assertThat(
+                RxJava2PagingSourceQueryResultBinderProvider(invocation.context)
+                    .matches(rx2PagingSourceIntIntType),
+                `is`(true)
+            )
+            invocation.assertCompilationResult {
+                hasError(ProcessorErrors.MISSING_ROOM_PAGING_RXJAVA2_ARTIFACT)
+            }
+        }
+    }
+
+    @Test
+    fun testMissingRoomPagingRx3() {
+        runProcessorTest(
+            sources = listOf(COMMON.RX3_PAGING_SOURCE)
+        ) { invocation ->
+            val rx3PagingSourceElement = invocation.processingEnv
+                .requireTypeElement(PagingTypeNames.RX3_PAGING_SOURCE)
+            val intType = invocation.processingEnv.requireType(Integer::class)
+            val rx3PagingSourceIntIntType = invocation.processingEnv
+                .getDeclaredType(rx3PagingSourceElement, intType, intType)
+
+            assertThat(rx3PagingSourceElement, notNullValue())
+            assertThat(
+                RxJava3PagingSourceQueryResultBinderProvider(invocation.context)
+                    .matches(rx3PagingSourceIntIntType),
+                `is`(true)
+            )
+            invocation.assertCompilationResult {
+                hasError(ProcessorErrors.MISSING_ROOM_PAGING_RXJAVA3_ARTIFACT)
+            }
+        }
+    }
+
+    @Test
     fun testFindPublisher() {
         listOf(
             COMMON.RX2_FLOWABLE to COMMON.RX2_ROOM,
             COMMON.RX3_FLOWABLE to COMMON.RX3_ROOM
         ).forEach { (rxTypeSrc, rxRoomSrc) ->
-            @Suppress("CHANGING_ARGUMENTS_EXECUTION_ORDER_FOR_NAMED_VARARGS")
             runProcessorTest(
-                sources = listOf(COMMON.PUBLISHER, rxTypeSrc, rxRoomSrc)
+                sources = listOf(
+                    COMMON.RX2_SINGLE,
+                    COMMON.RX3_SINGLE,
+                    COMMON.RX2_OBSERVABLE,
+                    COMMON.RX3_OBSERVABLE,
+                    COMMON.PUBLISHER,
+                    rxTypeSrc,
+                    rxRoomSrc
+                )
             ) { invocation ->
                 val publisher = invocation.processingEnv
                     .requireTypeElement(ReactiveStreamsTypeNames.PUBLISHER)
@@ -551,9 +748,16 @@ class TypeAdapterStoreTest {
             Triple(COMMON.RX2_FLOWABLE, COMMON.RX2_ROOM, RxJava2TypeNames.FLOWABLE),
             Triple(COMMON.RX3_FLOWABLE, COMMON.RX3_ROOM, RxJava3TypeNames.FLOWABLE)
         ).forEach { (rxTypeSrc, rxRoomSrc, rxTypeClassName) ->
-            @Suppress("CHANGING_ARGUMENTS_EXECUTION_ORDER_FOR_NAMED_VARARGS")
             runProcessorTest(
-                sources = listOf(COMMON.PUBLISHER, rxTypeSrc, rxRoomSrc)
+                sources = listOf(
+                    COMMON.RX2_SINGLE,
+                    COMMON.RX3_SINGLE,
+                    COMMON.RX2_OBSERVABLE,
+                    COMMON.RX3_OBSERVABLE,
+                    COMMON.PUBLISHER,
+                    rxTypeSrc,
+                    rxRoomSrc
+                )
             ) { invocation ->
                 val flowable = invocation.processingEnv.requireTypeElement(rxTypeClassName)
                 assertThat(
@@ -572,9 +776,16 @@ class TypeAdapterStoreTest {
             Triple(COMMON.RX2_OBSERVABLE, COMMON.RX2_ROOM, RxJava2TypeNames.OBSERVABLE),
             Triple(COMMON.RX3_OBSERVABLE, COMMON.RX3_ROOM, RxJava3TypeNames.OBSERVABLE)
         ).forEach { (rxTypeSrc, rxRoomSrc, rxTypeClassName) ->
-            @Suppress("CHANGING_ARGUMENTS_EXECUTION_ORDER_FOR_NAMED_VARARGS")
             runProcessorTest(
-                sources = listOf(rxTypeSrc, rxRoomSrc)
+                sources = listOf(
+                    COMMON.RX2_SINGLE,
+                    COMMON.RX3_SINGLE,
+                    COMMON.RX2_FLOWABLE,
+                    COMMON.RX3_FLOWABLE,
+                    COMMON.PUBLISHER,
+                    rxTypeSrc,
+                    rxRoomSrc
+                )
             ) { invocation ->
                 val observable = invocation.processingEnv.requireTypeElement(rxTypeClassName)
                 assertThat(observable, notNullValue())
@@ -594,7 +805,6 @@ class TypeAdapterStoreTest {
             Triple(COMMON.RX2_SINGLE, COMMON.RX2_ROOM, RxJava2TypeNames.SINGLE),
             Triple(COMMON.RX3_SINGLE, COMMON.RX3_ROOM, RxJava3TypeNames.SINGLE)
         ).forEach { (rxTypeSrc, _, rxTypeClassName) ->
-            @Suppress("CHANGING_ARGUMENTS_EXECUTION_ORDER_FOR_NAMED_VARARGS")
             runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
                 val single = invocation.processingEnv.requireTypeElement(rxTypeClassName)
                 assertThat(single, notNullValue())
@@ -717,6 +927,68 @@ class TypeAdapterStoreTest {
                     .matches(future.type),
                 `is`(true)
             )
+        }
+    }
+
+    @Test
+    fun testFindUpsertSingle() {
+        listOf(
+            Triple(COMMON.RX2_SINGLE, COMMON.RX2_ROOM, RxJava2TypeNames.SINGLE),
+            Triple(COMMON.RX3_SINGLE, COMMON.RX3_ROOM, RxJava3TypeNames.SINGLE)
+        ).forEach { (rxTypeSrc, _, rxTypeClassName) ->
+            runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
+                val single = invocation.processingEnv.requireTypeElement(rxTypeClassName)
+                assertThat(single).isNotNull()
+                assertThat(
+                    RxCallableUpsertMethodBinderProvider.getAll(invocation.context).any {
+                        it.matches(single.type)
+                    }).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun testFindUpsertMaybe() {
+        listOf(
+            Triple(COMMON.RX2_MAYBE, COMMON.RX2_ROOM, RxJava2TypeNames.MAYBE),
+            Triple(COMMON.RX3_MAYBE, COMMON.RX3_ROOM, RxJava3TypeNames.MAYBE)
+        ).forEach { (rxTypeSrc, _, rxTypeClassName) ->
+            runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
+                val maybe = invocation.processingEnv.requireTypeElement(rxTypeClassName)
+                assertThat(
+                    RxCallableUpsertMethodBinderProvider.getAll(invocation.context).any {
+                        it.matches(maybe.type)
+                    }).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun testFindUpsertCompletable() {
+        listOf(
+            Triple(COMMON.RX2_COMPLETABLE, COMMON.RX2_ROOM, RxJava2TypeNames.COMPLETABLE),
+            Triple(COMMON.RX3_COMPLETABLE, COMMON.RX3_ROOM, RxJava3TypeNames.COMPLETABLE)
+        ).forEach { (rxTypeSrc, _, rxTypeClassName) ->
+            runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
+                val completable = invocation.processingEnv.requireTypeElement(rxTypeClassName)
+                assertThat(
+                    RxCallableUpsertMethodBinderProvider.getAll(invocation.context).any {
+                        it.matches(completable.type)
+                    }).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun testFindUpsertListenableFuture() {
+        runProcessorTest(sources = listOf(COMMON.LISTENABLE_FUTURE)) {
+                invocation ->
+            val future = invocation.processingEnv
+                .requireTypeElement(GuavaUtilConcurrentTypeNames.LISTENABLE_FUTURE)
+            assertThat(
+                GuavaListenableFutureUpsertMethodBinderProvider(invocation.context).matches(
+                    future.type
+                )).isTrue()
         }
     }
 
@@ -862,6 +1134,144 @@ class TypeAdapterStoreTest {
     }
 
     @Test
+    fun findListenableFuturePagingSourceJavaCollectionValue() {
+        runProcessorTest(
+            sources = listOf(COMMON.LISTENABLE_FUTURE_PAGING_SOURCE)
+        ) { invocation ->
+            val listenableFuturePagingSourceElement = invocation.processingEnv
+                .requireTypeElement(PagingTypeNames.LISTENABLE_FUTURE_PAGING_SOURCE)
+            val intType = invocation.processingEnv.requireType(Integer::class)
+            val collectionType = invocation.processingEnv.requireType("java.util.Collection")
+            val listenableFuturePagingSourceIntCollectionType = invocation.processingEnv
+                .getDeclaredType(listenableFuturePagingSourceElement, intType, collectionType)
+
+            assertThat(listenableFuturePagingSourceIntCollectionType).isNotNull()
+            assertThat(
+                ListenableFuturePagingSourceQueryResultBinderProvider(invocation.context)
+                    .matches(listenableFuturePagingSourceIntCollectionType)
+            ).isTrue()
+            invocation.assertCompilationResult {
+                hasError(ProcessorErrors.PAGING_SPECIFY_PAGING_SOURCE_VALUE_TYPE)
+            }
+        }
+    }
+
+    @Test
+    fun findListenableFutureKotlinCollectionValue() {
+        runProcessorTest(
+            sources = listOf(COMMON.LISTENABLE_FUTURE_PAGING_SOURCE)
+        ) { invocation ->
+            val listenableFuturePagingSourceElement = invocation.processingEnv
+                .requireTypeElement(PagingTypeNames.LISTENABLE_FUTURE_PAGING_SOURCE)
+            val intType = invocation.processingEnv.requireType(Integer::class)
+            val kotlinCollectionType = invocation.processingEnv.requireType(Collection::class)
+            val listenableFuturePagingSourceIntCollectionType = invocation.processingEnv
+                .getDeclaredType(listenableFuturePagingSourceElement, intType, kotlinCollectionType)
+
+            assertThat(listenableFuturePagingSourceIntCollectionType).isNotNull()
+            assertThat(
+                ListenableFuturePagingSourceQueryResultBinderProvider(invocation.context)
+                    .matches(listenableFuturePagingSourceIntCollectionType)
+            ).isTrue()
+            invocation.assertCompilationResult {
+                hasError(ProcessorErrors.PAGING_SPECIFY_PAGING_SOURCE_VALUE_TYPE)
+            }
+        }
+    }
+
+    @Test
+    fun findRx2PagingSourceJavaCollectionValue() {
+        runProcessorTest(
+            sources = listOf(COMMON.RX2_PAGING_SOURCE)
+        ) { invocation ->
+            val rx2PagingSourceElement = invocation.processingEnv
+                .requireTypeElement(PagingTypeNames.RX2_PAGING_SOURCE)
+            val intType = invocation.processingEnv.requireType(Integer::class)
+            val collectionType = invocation.processingEnv.requireType("java.util.Collection")
+            val rx2PagingSourceIntCollectionType = invocation.processingEnv
+                .getDeclaredType(rx2PagingSourceElement, intType, collectionType)
+
+            assertThat(rx2PagingSourceElement).isNotNull()
+            assertThat(
+                RxJava2PagingSourceQueryResultBinderProvider(invocation.context)
+                    .matches(rx2PagingSourceIntCollectionType)
+            ).isTrue()
+            invocation.assertCompilationResult {
+                hasError(ProcessorErrors.PAGING_SPECIFY_PAGING_SOURCE_VALUE_TYPE)
+            }
+        }
+    }
+
+    @Test
+    fun findRx2PagingSourceKotlinCollectionValue() {
+        runProcessorTest(
+            sources = listOf(COMMON.RX2_PAGING_SOURCE)
+        ) { invocation ->
+            val rx2PagingSourceElement = invocation.processingEnv
+                .requireTypeElement(PagingTypeNames.RX2_PAGING_SOURCE)
+            val intType = invocation.processingEnv.requireType(Integer::class)
+            val kotlinCollectionType = invocation.processingEnv.requireType(Collection::class)
+            val rx2PagingSourceIntCollectionType = invocation.processingEnv
+                .getDeclaredType(rx2PagingSourceElement, intType, kotlinCollectionType)
+
+            assertThat(rx2PagingSourceElement).isNotNull()
+            assertThat(
+                RxJava2PagingSourceQueryResultBinderProvider(invocation.context)
+                    .matches(rx2PagingSourceIntCollectionType)
+            ).isTrue()
+            invocation.assertCompilationResult {
+                hasError(ProcessorErrors.PAGING_SPECIFY_PAGING_SOURCE_VALUE_TYPE)
+            }
+        }
+    }
+
+    @Test
+    fun findRx3PagingSourceJavaCollectionValue() {
+        runProcessorTest(
+            sources = listOf(COMMON.RX3_PAGING_SOURCE)
+        ) { invocation ->
+            val rx3PagingSourceElement = invocation.processingEnv
+                .requireTypeElement(PagingTypeNames.RX3_PAGING_SOURCE)
+            val intType = invocation.processingEnv.requireType(Integer::class)
+            val collectionType = invocation.processingEnv.requireType("java.util.Collection")
+            val rx3PagingSourceIntCollectionType = invocation.processingEnv
+                .getDeclaredType(rx3PagingSourceElement, intType, collectionType)
+
+            assertThat(rx3PagingSourceElement).isNotNull()
+            assertThat(
+                RxJava3PagingSourceQueryResultBinderProvider(invocation.context)
+                    .matches(rx3PagingSourceIntCollectionType)
+            ).isTrue()
+            invocation.assertCompilationResult {
+                hasError(ProcessorErrors.PAGING_SPECIFY_PAGING_SOURCE_VALUE_TYPE)
+            }
+        }
+    }
+
+    @Test
+    fun findRx3PagingSourceKotlinCollectionValue() {
+        runProcessorTest(
+            sources = listOf(COMMON.RX3_PAGING_SOURCE)
+        ) { invocation ->
+            val rx3PagingSourceElement = invocation.processingEnv
+                .requireTypeElement(PagingTypeNames.RX3_PAGING_SOURCE)
+            val intType = invocation.processingEnv.requireType(Integer::class)
+            val kotlinCollectionType = invocation.processingEnv.requireType(Collection::class)
+            val rx3PagingSourceIntCollectionType = invocation.processingEnv
+                .getDeclaredType(rx3PagingSourceElement, intType, kotlinCollectionType)
+
+            assertThat(rx3PagingSourceElement).isNotNull()
+            assertThat(
+                RxJava3PagingSourceQueryResultBinderProvider(invocation.context)
+                    .matches(rx3PagingSourceIntCollectionType)
+            ).isTrue()
+            invocation.assertCompilationResult {
+                hasError(ProcessorErrors.PAGING_SPECIFY_PAGING_SOURCE_VALUE_TYPE)
+            }
+        }
+    }
+
+    @Test
     fun testPagingSourceBinder() {
         val inputSource =
             Source.java(
@@ -882,6 +1292,7 @@ class TypeAdapterStoreTest {
                 COMMON.USER,
                 COMMON.PAGING_SOURCE,
                 COMMON.LIMIT_OFFSET_PAGING_SOURCE,
+                COMMON.LISTENABLE_FUTURE_PAGING_SOURCE,
             ),
         ) { invocation: XTestInvocation ->
             val dao = invocation.roundEnv
@@ -890,7 +1301,7 @@ class TypeAdapterStoreTest {
                 ).first()
             check(dao.isTypeElement())
             val dbType = invocation.context.processingEnv
-                .requireType(RoomTypeNames.ROOM_DB)
+                .requireType(ROOM_DB)
             val parser = DaoProcessor(
                 invocation.context,
                 dao, dbType, null,
@@ -901,11 +1312,164 @@ class TypeAdapterStoreTest {
             assertThat(binder is MultiTypedPagingSourceQueryResultBinder).isTrue()
 
             val pagingSourceXRawType: XRawType? = invocation.context.processingEnv
-                .findType(PagingTypeNames.PAGING_SOURCE)?.rawType
+                .findType(PagingTypeNames.PAGING_SOURCE.canonicalName)?.rawType
             val returnedXRawType = parsedDao.queryMethods
                 .filterIsInstance<ReadQueryMethod>().first().returnType.rawType
             // make sure returned type is the original PagingSource
             assertThat(returnedXRawType).isEqualTo(pagingSourceXRawType)
+
+            val listenableFuturePagingSourceXRawType: XRawType? = invocation.context.processingEnv
+                .findType(PagingTypeNames.LISTENABLE_FUTURE_PAGING_SOURCE.canonicalName)?.rawType
+            assertThat(listenableFuturePagingSourceXRawType!!.isAssignableFrom(returnedXRawType))
+                .isFalse()
+        }
+    }
+
+    @Test
+    fun testListenableFuturePagingSourceBinder() {
+        val inputSource =
+            Source.java(
+                qName = "foo.bar.MyDao",
+                code =
+                """
+                ${DaoProcessorTest.DAO_PREFIX}
+
+                @Dao abstract class MyDao {
+                    @Query("SELECT uid FROM User")
+                    abstract androidx.paging.ListenableFuturePagingSource<Integer, User> getAllIds();
+                }
+                    """.trimIndent()
+            )
+        runProcessorTest(
+            sources = listOf(
+                inputSource,
+                COMMON.USER,
+                COMMON.LISTENABLE_FUTURE_PAGING_SOURCE,
+                COMMON.LIMIT_OFFSET_LISTENABLE_FUTURE_PAGING_SOURCE,
+            ),
+        ) { invocation: XTestInvocation ->
+            val dao = invocation.roundEnv
+                .getElementsAnnotatedWith(
+                    Dao::class.qualifiedName!!
+                ).first()
+            check(dao.isTypeElement())
+            val dbType = invocation.context.processingEnv
+                .requireType(ROOM_DB)
+            val parser = DaoProcessor(
+                invocation.context,
+                dao, dbType, null,
+            )
+            val parsedDao = parser.process()
+            val binder = parsedDao.queryMethods.filterIsInstance<ReadQueryMethod>()
+                .first().queryResultBinder
+
+            // assert that room correctly binds to ListenableFuturePagingSource instead of
+            // its supertype PagingSource. ListenableFuturePagingSourceBinderProvider
+            // must be added into list of binder providers in TypeAdapterStore before
+            // generic PagingSource.
+            assertThat(binder is MultiTypedPagingSourceQueryResultBinder).isTrue()
+            val listenableFuturePagingSourceXRawType: XRawType? = invocation.context.processingEnv
+                .findType(PagingTypeNames.LISTENABLE_FUTURE_PAGING_SOURCE.canonicalName)?.rawType
+            val returnedXRawType = parsedDao.queryMethods
+                .filterIsInstance<ReadQueryMethod>().first().returnType.rawType
+            // make sure the actual returned type from Provider is ListenableFuturePagingSource
+            assertThat(returnedXRawType).isEqualTo(listenableFuturePagingSourceXRawType)
+        }
+    }
+
+    @Test
+    fun testRx2PagingSourceBinder() {
+        val inputSource =
+            Source.java(
+                qName = "foo.bar.MyDao",
+                code =
+                """
+                ${DaoProcessorTest.DAO_PREFIX}
+
+                @Dao abstract class MyDao {
+                    @Query("SELECT uid FROM User")
+                    abstract androidx.paging.rxjava2.RxPagingSource<Integer, User> getAllIds();
+                }
+                    """.trimIndent()
+            )
+        runProcessorTest(
+            sources = listOf(
+                inputSource,
+                COMMON.USER,
+                COMMON.RX2_PAGING_SOURCE,
+                COMMON.LIMIT_OFFSET_RX2_PAGING_SOURCE,
+            ),
+        ) { invocation: XTestInvocation ->
+            val dao = invocation.roundEnv
+                .getElementsAnnotatedWith(
+                    Dao::class.qualifiedName!!
+                ).first()
+            check(dao.isTypeElement())
+            val dbType = invocation.context.processingEnv
+                .requireType(ROOM_DB)
+            val parser = DaoProcessor(
+                invocation.context,
+                dao, dbType, null,
+            )
+            val parsedDao = parser.process()
+            val binder = parsedDao.queryMethods.filterIsInstance<ReadQueryMethod>()
+                .first().queryResultBinder
+
+            assertThat(binder is MultiTypedPagingSourceQueryResultBinder).isTrue()
+            val rxPagingSourceXRawType: XRawType? = invocation.context.processingEnv
+                .findType(PagingTypeNames.RX2_PAGING_SOURCE.canonicalName)?.rawType
+            val returnedXRawType = parsedDao.queryMethods
+                .filterIsInstance<ReadQueryMethod>().first().returnType.rawType
+            // make sure the actual returned type from Provider is a Rx2PagingSource
+            assertThat(returnedXRawType).isEqualTo(rxPagingSourceXRawType)
+        }
+    }
+
+    @Test
+    fun testRx3PagingSourceBinder() {
+        val inputSource =
+            Source.java(
+                qName = "foo.bar.MyDao",
+                code =
+                """
+                ${DaoProcessorTest.DAO_PREFIX}
+
+                @Dao abstract class MyDao {
+                    @Query("SELECT uid FROM User")
+                    abstract androidx.paging.rxjava3.RxPagingSource<Integer, User> getAllIds();
+                }
+                    """.trimIndent()
+            )
+        runProcessorTest(
+            sources = listOf(
+                inputSource,
+                COMMON.USER,
+                COMMON.RX3_PAGING_SOURCE,
+                COMMON.LIMIT_OFFSET_RX3_PAGING_SOURCE,
+            ),
+        ) { invocation: XTestInvocation ->
+            val dao = invocation.roundEnv
+                .getElementsAnnotatedWith(
+                    Dao::class.qualifiedName!!
+                ).first()
+            check(dao.isTypeElement())
+            val dbType = invocation.context.processingEnv
+                .requireType(ROOM_DB)
+            val parser = DaoProcessor(
+                invocation.context,
+                dao, dbType, null,
+            )
+            val parsedDao = parser.process()
+            val binder = parsedDao.queryMethods.filterIsInstance<ReadQueryMethod>()
+                .first().queryResultBinder
+
+            assertThat(binder is MultiTypedPagingSourceQueryResultBinder).isTrue()
+            val rxPagingSourceXRawType: XRawType? = invocation.context.processingEnv
+                .findType(PagingTypeNames.RX3_PAGING_SOURCE.canonicalName)?.rawType
+            val returnedXRawType = parsedDao.queryMethods
+                .filterIsInstance<ReadQueryMethod>().first().returnType.rawType
+            // make sure the actual returned type from Provider is a RxPagingSource
+            assertThat(returnedXRawType).isEqualTo(rxPagingSourceXRawType)
         }
     }
 
@@ -984,7 +1548,7 @@ class TypeAdapterStoreTest {
             collectionTypes.map { collectionType ->
                 invocation.processingEnv.getDeclaredType(
                     invocation.processingEnv.requireTypeElement(collectionType),
-                    invocation.processingEnv.requireType(TypeName.INT).boxed()
+                    invocation.processingEnv.requireType(XTypeName.PRIMITIVE_INT).boxed()
                 )
             }.forEach { type ->
                 val adapter = store.findQueryParameterAdapter(
@@ -1055,7 +1619,7 @@ class TypeAdapterStoreTest {
                     is CompositeAdapter -> {
                         when (val converter = binder.intoStatementConverter) {
                             null -> "composite null"
-                            is CustomTypeConverterWrapper -> converter.custom.methodName
+                            is CustomTypeConverterWrapper -> converter.custom.method.name
                             else -> "composite unknown"
                         }
                     }
@@ -1239,9 +1803,12 @@ class TypeAdapterStoreTest {
             listOfInts,
             invocation.context.COMMON_TYPES.STRING
         ) {
-            override fun buildStatement(inputVarName: String, scope: CodeGenScope): CodeBlock {
-                return CodeBlock.of(
-                    "$T.joinIntoString($L)", STRING_UTIL, inputVarName
+            override fun buildStatement(inputVarName: String, scope: CodeGenScope): XCodeBlock {
+                return XCodeBlock.of(
+                    scope.language,
+                    "%T.joinIntoString(%L)",
+                    STRING_UTIL,
+                    inputVarName
                 )
             }
         }
@@ -1249,9 +1816,11 @@ class TypeAdapterStoreTest {
         val stringToIntListConverter = object : SingleStatementTypeConverter(
             invocation.context.COMMON_TYPES.STRING, listOfInts
         ) {
-            override fun buildStatement(inputVarName: String, scope: CodeGenScope): CodeBlock {
-                return CodeBlock.of(
-                    "$T.splitToIntList($L)", STRING_UTIL,
+            override fun buildStatement(inputVarName: String, scope: CodeGenScope): XCodeBlock {
+                return XCodeBlock.of(
+                    scope.language,
+                    "%T.splitToIntList(%L)",
+                    STRING_UTIL,
                     inputVarName
                 )
             }
@@ -1264,13 +1833,18 @@ class TypeAdapterStoreTest {
         val tLong = env.requireType("java.lang.Long").makeNullable()
         return listOf(
             object : SingleStatementTypeConverter(tDate, tLong) {
-                override fun buildStatement(inputVarName: String, scope: CodeGenScope): CodeBlock {
-                    return CodeBlock.of("$L.time", inputVarName)
+                override fun buildStatement(inputVarName: String, scope: CodeGenScope): XCodeBlock {
+                    return XCodeBlock.of(scope.language, "%L.time", inputVarName)
                 }
             },
             object : SingleStatementTypeConverter(tLong, tDate) {
-                override fun buildStatement(inputVarName: String, scope: CodeGenScope): CodeBlock {
-                    return CodeBlock.of("new $T($L)", tDate.typeName, inputVarName)
+                override fun buildStatement(inputVarName: String, scope: CodeGenScope): XCodeBlock {
+                    return XCodeBlock.ofNewInstance(
+                        scope.language,
+                        tDate.asTypeName(),
+                        "%L",
+                        inputVarName
+                    )
                 }
             }
         )

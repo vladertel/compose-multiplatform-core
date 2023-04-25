@@ -22,6 +22,7 @@ import android.util.Size;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.camera.core.DynamicRange;
 
 import com.google.auto.value.AutoValue;
 /**
@@ -43,8 +44,10 @@ public abstract class AttachedSurfaceInfo {
     public static AttachedSurfaceInfo create(@NonNull SurfaceConfig surfaceConfig,
             int imageFormat,
             @NonNull Size size,
+            @NonNull DynamicRange dynamicRange,
             @Nullable Range<Integer> targetFrameRate) {
-        return new AutoValue_AttachedSurfaceInfo(surfaceConfig, imageFormat, size, targetFrameRate);
+        return new AutoValue_AttachedSurfaceInfo(surfaceConfig, imageFormat, size,
+                dynamicRange, targetFrameRate);
     }
 
     /** Returns the SurfaceConfig. */
@@ -58,10 +61,13 @@ public abstract class AttachedSurfaceInfo {
     @NonNull
     public abstract Size getSize();
 
+    /** Returns the dynamic range of this surface. */
+    @NonNull
+    public abstract DynamicRange getDynamicRange();
+
     /** Returns the configuration target frame rate. */
     @Nullable
     public abstract Range<Integer> getTargetFrameRate();
-
 }
 
 

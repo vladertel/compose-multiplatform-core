@@ -16,6 +16,7 @@
 package androidx.camera.integration.core
 
 import android.content.Context
+import android.graphics.ImageFormat
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Size
@@ -26,13 +27,16 @@ import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
+import androidx.camera.core.ExperimentalUseCaseApi
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageAnalysis.BackpressureStrategy
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.impl.ImageOutputConfig
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
+import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.testing.CameraPipeConfigTestRule
 import androidx.camera.testing.CameraUtil
 import androidx.camera.testing.CameraUtil.PreTestCameraIdList
 import androidx.camera.testing.LabTestRule
@@ -61,6 +65,11 @@ internal class ImageAnalysisTest(
     private val implName: String,
     private val cameraConfig: CameraXConfig
 ) {
+
+    @get:Rule
+    val cameraPipeConfigTestRule = CameraPipeConfigTestRule(
+        active = implName == CameraPipeConfig::class.simpleName,
+    )
 
     @get:Rule
     val cameraRule = CameraUtil.grantCameraPermissionAndPreTest(
@@ -102,6 +111,7 @@ internal class ImageAnalysisTest(
     @Before
     fun setUp(): Unit = runBlocking {
         ProcessCameraProvider.configureInstance(cameraConfig)
+
         cameraProvider = ProcessCameraProvider.getInstance(context)[10, TimeUnit.SECONDS]
         handlerThread = HandlerThread("AnalysisThread")
         handlerThread.start()
@@ -118,7 +128,6 @@ internal class ImageAnalysisTest(
     fun tearDown(): Unit = runBlocking {
         if (::cameraProvider.isInitialized) {
             withContext(Dispatchers.Main) {
-                cameraProvider.unbindAll()
                 cameraProvider.shutdown()[10, TimeUnit.SECONDS]
             }
         }
@@ -130,6 +139,8 @@ internal class ImageAnalysisTest(
 
     @Test
     fun exceedMaxImagesWithoutClosing_doNotCrash() = runBlocking {
+        assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_FRONT))
+
         // Arrange.
         val queueDepth = 3
         val semaphore = Semaphore(0)
@@ -215,6 +226,21 @@ internal class ImageAnalysisTest(
     }
 
     @Test
+    @ExperimentalUseCaseApi
+    fun canObtainBackgroundExecutor() {
+        val ioExecutor = CameraXExecutors.ioExecutor()
+        val imageAnalysis = ImageAnalysis.Builder()
+            .setBackgroundExecutor(ioExecutor).build()
+        val imageAnalysis2 = ImageAnalysis.Builder().build()
+
+        // check return when provided an Executor
+        assertThat(imageAnalysis.backgroundExecutor).isSameInstanceAs(ioExecutor)
+
+        // check default return
+        assertThat(imageAnalysis2.backgroundExecutor).isNull()
+    }
+
+    @Test
     fun canObtainDefaultImageQueueDepth() {
         val imageAnalysis = ImageAnalysis.Builder().build()
 
@@ -232,6 +258,20 @@ internal class ImageAnalysisTest(
         assertThat(config.targetAspectRatio).isEqualTo(AspectRatio.RATIO_4_3)
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
+    @Test
+    fun defaultAspectRatioWillBeSet_whenRatioDefaultIsSet() = runBlocking {
+        val useCase = ImageAnalysis.Builder()
+            .setTargetAspectRatio(AspectRatio.RATIO_DEFAULT)
+            .build()
+        withContext(Dispatchers.Main) {
+            cameraProvider.bindToLifecycle(fakeLifecycleOwner, DEFAULT_CAMERA_SELECTOR, useCase)
+        }
+        val config = useCase.currentConfig as ImageOutputConfig
+        assertThat(config.targetAspectRatio).isEqualTo(AspectRatio.RATIO_4_3)
+    }
+
+    @Suppress("DEPRECATION") // legacy resolution API
     @Test
     fun defaultAspectRatioWontBeSet_whenTargetResolutionIsSet() = runBlocking {
         assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_BACK))
@@ -261,6 +301,7 @@ internal class ImageAnalysisTest(
         assertThat(imageAnalysis.targetRotation).isEqualTo(Surface.ROTATION_90)
     }
 
+    @Suppress("DEPRECATION") // test for legacy resolution API
     @Test
     fun targetResolutionIsUpdatedAfterTargetRotationIsUpdated() = runBlocking {
         val imageAnalysis = ImageAnalysis.Builder()
@@ -376,6 +417,47 @@ internal class ImageAnalysisTest(
             )
         }
         assertThat(imageAnalysis.targetRotation).isEqualTo(Surface.ROTATION_180)
+    }
+
+    @Test
+    fun analyzerAnalyzesImages_withHighResolutionEnabled() = runBlocking {
+        // TODO(b/247492645) Remove camera-pipe-integration restriction after porting
+        //  ResolutionSelector logic
+        assumeTrue(implName != CameraPipeConfig::class.simpleName)
+
+        val maxHighResolutionOutputSize = CameraUtil.getMaxHighResolutionOutputSizeWithLensFacing(
+            DEFAULT_CAMERA_SELECTOR.lensFacing!!,
+            ImageFormat.YUV_420_888
+        )
+        // Only runs the test when the device has high resolution output sizes
+        assumeTrue(maxHighResolutionOutputSize != null)
+
+        val resolutionSelector = ResolutionSelector.Builder()
+            .setHighResolutionEnabledFlag(ResolutionSelector.HIGH_RESOLUTION_FLAG_ON)
+            .setResolutionFilter { _, _ ->
+                listOf(maxHighResolutionOutputSize)
+            }
+            .build()
+
+        val imageAnalysis = ImageAnalysis.Builder()
+            .setResolutionSelector(resolutionSelector)
+            .build()
+        withContext(Dispatchers.Main) {
+            cameraProvider.bindToLifecycle(
+                fakeLifecycleOwner,
+                DEFAULT_CAMERA_SELECTOR,
+                imageAnalysis
+            )
+        }
+        assertThat(imageAnalysis.resolutionInfo!!.resolution).isEqualTo(maxHighResolutionOutputSize)
+        imageAnalysis.setAnalyzer(CameraXExecutors.newHandlerExecutor(handler), analyzer)
+        analysisResultsSemaphore.tryAcquire(5, TimeUnit.SECONDS)
+        synchronized(analysisResultLock) {
+            assertThat(analysisResults).isNotEmpty()
+            assertThat(analysisResults.elementAt(0).resolution).isEqualTo(
+                maxHighResolutionOutputSize
+            )
+        }
     }
 
     private data class ImageProperties(

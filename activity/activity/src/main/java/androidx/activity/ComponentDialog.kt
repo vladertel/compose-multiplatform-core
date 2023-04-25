@@ -18,6 +18,7 @@ package androidx.activity
 
 import android.app.Dialog
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -26,7 +27,11 @@ import androidx.annotation.StyleRes
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
 /**
  * Base class for dialogs that enables composition of higher level components.
@@ -36,7 +41,8 @@ open class ComponentDialog @JvmOverloads constructor(
     @StyleRes themeResId: Int = 0
 ) : Dialog(context, themeResId),
     LifecycleOwner,
-    OnBackPressedDispatcherOwner {
+    OnBackPressedDispatcherOwner,
+    SavedStateRegistryOwner {
 
     private var _lifecycleRegistry: LifecycleRegistry? = null
     private val lifecycleRegistry: LifecycleRegistry
@@ -44,11 +50,28 @@ open class ComponentDialog @JvmOverloads constructor(
             _lifecycleRegistry = it
         }
 
-    final override fun getLifecycle(): Lifecycle = lifecycleRegistry
+    private val savedStateRegistryController: SavedStateRegistryController =
+        SavedStateRegistryController.create(this)
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateRegistryController.savedStateRegistry
 
+    override val lifecycle: Lifecycle
+        get() = lifecycleRegistry
+
+    override fun onSaveInstanceState(): Bundle {
+        val bundle = super.onSaveInstanceState()
+        savedStateRegistryController.performSave(bundle)
+        return bundle
+    }
+
+    @Suppress("ClassVerificationFailure") // needed for onBackInvokedDispatcher call
     @CallSuper
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackPressedDispatcher.setOnBackInvokedDispatcher(onBackInvokedDispatcher)
+        }
+        savedStateRegistryController.performRestore(savedInstanceState)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
     }
 
@@ -66,11 +89,10 @@ open class ComponentDialog @JvmOverloads constructor(
         super.onStop()
     }
 
-    private val onBackPressedDispatcher = OnBackPressedDispatcher {
+    @Suppress("DEPRECATION")
+    final override val onBackPressedDispatcher = OnBackPressedDispatcher {
         super.onBackPressed()
     }
-
-    final override fun getOnBackPressedDispatcher() = onBackPressedDispatcher
 
     @CallSuper
     override fun onBackPressed() {
@@ -78,27 +100,33 @@ open class ComponentDialog @JvmOverloads constructor(
     }
 
     override fun setContentView(layoutResID: Int) {
-        initViewTreeOwners()
+        initializeViewTreeOwners()
         super.setContentView(layoutResID)
     }
 
     override fun setContentView(view: View) {
-        initViewTreeOwners()
+        initializeViewTreeOwners()
         super.setContentView(view)
     }
 
     override fun setContentView(view: View, params: ViewGroup.LayoutParams?) {
-        initViewTreeOwners()
+        initializeViewTreeOwners()
         super.setContentView(view, params)
     }
 
     override fun addContentView(view: View, params: ViewGroup.LayoutParams?) {
-        initViewTreeOwners()
+        initializeViewTreeOwners()
         super.addContentView(view, params)
     }
 
-    private fun initViewTreeOwners() {
-        ViewTreeLifecycleOwner.set(window!!.decorView, this)
+    /**
+     * Sets the view tree owners before setting the content view so that the
+     * inflation process and attach listeners will see them already present.
+     */
+    @CallSuper
+    open fun initializeViewTreeOwners() {
+        window!!.decorView.setViewTreeLifecycleOwner(this)
         window!!.decorView.setViewTreeOnBackPressedDispatcherOwner(this)
+        window!!.decorView.setViewTreeSavedStateRegistryOwner(this)
     }
 }

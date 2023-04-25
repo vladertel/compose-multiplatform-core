@@ -22,11 +22,19 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import java.io.File
+import org.gradle.api.Task
+import org.gradle.kotlin.dsl.findByType
+import org.gradle.kotlin.dsl.get
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 
 /**
  * Allow java and Android libraries to bundle other projects inside the project jar/aar.
  */
 object BundleInsideHelper {
+    val CONFIGURATION_NAME = "bundleInside"
+    val REPACKAGE_TASK_NAME = "repackageBundledJars"
     /**
      * Creates a configuration for the users to use that will be used to bundle these dependency
      * jars inside of libs/ directory inside of the aar.
@@ -46,7 +54,7 @@ object BundleInsideHelper {
      */
     @JvmStatic
     fun Project.forInsideAar(relocations: List<Relocation>) {
-        val bundle = configurations.create("bundleInside")
+        val bundle = configurations.create(CONFIGURATION_NAME)
         val repackage = configureRepackageTaskForType(relocations, bundle)
         // Add to AGP's configuration so this jar get packaged inside of the aar.
         dependencies.add("implementation", files(repackage.flatMap { it.archiveFile }))
@@ -89,7 +97,7 @@ object BundleInsideHelper {
      */
     @JvmStatic
     fun Project.forInsideJar(from: String, to: String) {
-        val bundle = configurations.create("bundleInside")
+        val bundle = configurations.create(CONFIGURATION_NAME)
         val repackage = configureRepackageTaskForType(
             listOf(Relocation(from, to)),
             bundle
@@ -102,7 +110,15 @@ object BundleInsideHelper {
             it as Jar
             it.from(repackage.map { files(zipTree(it.archiveFile.get().asFile)) })
         }
-        configurations.getByName("apiElements") {
+        addArchivesToConfiguration("apiElements", jarTask)
+        addArchivesToConfiguration("runtimeElements", jarTask)
+    }
+
+    private fun Project.addArchivesToConfiguration(
+        configName: String,
+        jarTask: TaskProvider<Task>
+    ) {
+        configurations.getByName(configName) {
             it.outgoing.artifacts.clear()
             it.outgoing.artifact(
                 jarTask.flatMap { jarTask ->
@@ -111,15 +127,46 @@ object BundleInsideHelper {
                 }
             )
         }
-        configurations.getByName("runtimeElements") {
-            it.outgoing.artifacts.clear()
-            it.outgoing.artifact(
-                jarTask.flatMap { jarTask ->
-                    jarTask as Jar
-                    jarTask.archiveFile
-                }
-            )
+    }
+
+    /**
+     * KMP Version of [Project.forInsideJar]. See those docs for details.
+     *
+     * TODO(b/237104605): bundleInside is a global configuration.  Should figure out how to make it
+     * work properly with kmp and source sets so it can reside inside a sourceSet dependency.
+     */
+    @JvmStatic
+    fun Project.forInsideJarKmp(from: String, to: String) {
+        val kmpExtension = extensions.findByType<KotlinMultiplatformExtension>()
+            ?: error("kmp only")
+        val bundle = configurations.create(CONFIGURATION_NAME)
+        val repackage = configureRepackageTaskForType(
+            listOf(Relocation(from, to)),
+            bundle
+        )
+
+        // To account for KMP structure we need to find the jvm specific target
+        // and add the repackaged archive files to only their compilations.
+        val jvmTarget = kmpExtension.targets.firstOrNull {
+            it.platformType == KotlinPlatformType.jvm
+        } as? KotlinJvmTarget ?: error("cannot find jvm target")
+        jvmTarget.compilations["main"].defaultSourceSet {
+            dependencies {
+                compileOnly(files(repackage.flatMap { it.archiveFile }))
+            }
         }
+        jvmTarget.compilations["test"].defaultSourceSet {
+            dependencies {
+                implementation(files(repackage.flatMap { it.archiveFile }))
+            }
+        }
+        val jarTask = tasks.named(jvmTarget.artifactsTaskName)
+        jarTask.configure {
+            it as Jar
+            it.from(repackage.map { files(zipTree(it.archiveFile.get().asFile)) })
+        }
+        addArchivesToConfiguration("jvmApiElements", jarTask)
+        addArchivesToConfiguration("jvmRuntimeElements", jarTask)
     }
 
     /**
@@ -144,7 +191,7 @@ object BundleInsideHelper {
      */
     @JvmStatic
     fun Project.forInsideLintJar() {
-        val bundle = configurations.create("bundleInside")
+        val bundle = configurations.create(CONFIGURATION_NAME)
         val compileOnly = configurations.getByName("compileOnly")
         val testImplementation = configurations.getByName("testImplementation")
         // bundleInside dependencies should be included as compileOnly as well
@@ -177,7 +224,7 @@ object BundleInsideHelper {
         configuration: Configuration
     ): TaskProvider<ShadowJar> {
         return tasks.register(
-            "repackageBundledJars",
+            REPACKAGE_TASK_NAME,
             ShadowJar::class.java
         ) { task ->
             task.apply {

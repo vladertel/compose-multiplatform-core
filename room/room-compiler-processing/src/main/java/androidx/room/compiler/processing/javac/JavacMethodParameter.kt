@@ -18,28 +18,40 @@ package androidx.room.compiler.processing.javac
 
 import androidx.room.compiler.processing.XExecutableParameterElement
 import androidx.room.compiler.processing.XMemberContainer
-import androidx.room.compiler.processing.javac.kotlin.KmType
-import androidx.room.compiler.processing.javac.kotlin.KmValueParameter
+import androidx.room.compiler.processing.javac.kotlin.KmTypeContainer
+import androidx.room.compiler.processing.javac.kotlin.KmValueParameterContainer
 import androidx.room.compiler.processing.util.sanitizeAsJavaParameterName
 import javax.lang.model.element.VariableElement
 
 internal class JavacMethodParameter(
     env: JavacProcessingEnv,
     override val enclosingElement: JavacExecutableElement,
-    containing: JavacTypeElement,
     element: VariableElement,
-    kotlinMetadataFactory: () -> KmValueParameter?,
+    kotlinMetadataFactory: () -> KmValueParameterContainer?,
     val argIndex: Int
-) : JavacVariableElement(env, containing, element), XExecutableParameterElement {
+) : JavacVariableElement(env, element), XExecutableParameterElement {
+    override fun isContinuationParam() =
+        enclosingElement is JavacMethodElement &&
+        enclosingElement.isSuspendFunction() &&
+        enclosingElement.parameters.last() == this
 
-    private val kotlinMetadata by lazy { kotlinMetadataFactory() }
+    override fun isReceiverParam() =
+        enclosingElement is JavacMethodElement &&
+        enclosingElement.isExtensionFunction() &&
+        enclosingElement.parameters.first() == this
+
+    override fun isKotlinPropertyParam() =
+        enclosingElement is JavacMethodElement &&
+        enclosingElement.isKotlinPropertyMethod()
+
+    override val kotlinMetadata by lazy { kotlinMetadataFactory() }
 
     override val name: String
         get() = (kotlinMetadata?.name ?: super.name).sanitizeAsJavaParameterName(
             argIndex = argIndex
         )
 
-    override val kotlinType: KmType?
+    override val kotlinType: KmTypeContainer?
         get() = kotlinMetadata?.type
 
     override val hasDefaultValue: Boolean

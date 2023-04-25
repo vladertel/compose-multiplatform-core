@@ -1,5 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 7.3.0-alpha07" type="baseline" client="gradle" dependencies="false" name="AGP (7.3.0-alpha07)" variant="all" version="7.3.0-alpha07">
+<issues format="6" by="lint 8.0.0-beta03" type="baseline" client="gradle" dependencies="false" name="AGP (8.0.0-beta03)" variant="all" version="8.0.0-beta03">
+
+    <issue
+        id="BanThreadSleep"
+        message="Uses Thread.sleep()"
+        errorLine1="                Thread.sleep(TIME_SLICE);"
+        errorLine2="                       ~~~~~">
+        <location
+            file="src/main/java/androidx/media2/test/common/PollingCheck.java"/>
+    </issue>
+
+    <issue
+        id="RequireUnstableAidlAnnotation"
+        message="Unstable AIDL files must be annotated with `@RequiresOptIn` marker"
+        errorLine1="interface IRemoteMediaBrowserCompat {"
+        errorLine2="^">
+        <location
+            file="src/main/aidl/androidx/media2/test/common/IRemoteMediaBrowserCompat.aidl"/>
+    </issue>
+
+    <issue
+        id="RequireUnstableAidlAnnotation"
+        message="Unstable AIDL files must be annotated with `@RequiresOptIn` marker"
+        errorLine1="interface IRemoteMediaController {"
+        errorLine2="^">
+        <location
+            file="src/main/aidl/androidx/media2/test/common/IRemoteMediaController.aidl"/>
+    </issue>
+
+    <issue
+        id="RequireUnstableAidlAnnotation"
+        message="Unstable AIDL files must be annotated with `@RequiresOptIn` marker"
+        errorLine1="interface IRemoteMediaControllerCompat {"
+        errorLine2="^">
+        <location
+            file="src/main/aidl/androidx/media2/test/common/IRemoteMediaControllerCompat.aidl"/>
+    </issue>
+
+    <issue
+        id="RequireUnstableAidlAnnotation"
+        message="Unstable AIDL files must be annotated with `@RequiresOptIn` marker"
+        errorLine1="interface IRemoteMediaSession {"
+        errorLine2="^">
+        <location
+            file="src/main/aidl/androidx/media2/test/common/IRemoteMediaSession.aidl"/>
+    </issue>
+
+    <issue
+        id="RequireUnstableAidlAnnotation"
+        message="Unstable AIDL files must be annotated with `@RequiresOptIn` marker"
+        errorLine1="interface IRemoteMediaSessionCompat {"
+        errorLine2="^">
+        <location
+            file="src/main/aidl/androidx/media2/test/common/IRemoteMediaSessionCompat.aidl"/>
+    </issue>
 
     <issue
         id="UnknownNullness"
@@ -7,9 +61,7 @@
         errorLine1="    public static void waitFor(final PollingCheckCondition condition) {"
         errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/PollingCheck.java"
-            line="76"
-            column="38"/>
+            file="src/main/java/androidx/media2/test/common/PollingCheck.java"/>
     </issue>
 
     <issue
@@ -18,9 +70,7 @@
         errorLine1="    public static void waitFor(long timeout, final PollingCheckCondition condition) {"
         errorLine2="                                                   ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/PollingCheck.java"
-            line="90"
-            column="52"/>
+            file="src/main/java/androidx/media2/test/common/PollingCheck.java"/>
     </issue>
 
     <issue
@@ -29,9 +79,7 @@
         errorLine1="    public static boolean equals(Bundle a, Bundle b) {"
         errorLine2="                                 ~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="43"
-            column="34"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
     <issue
@@ -40,9 +88,7 @@
         errorLine1="    public static boolean equals(Bundle a, Bundle b) {"
         errorLine2="                                           ~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="43"
-            column="44"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
     <issue
@@ -51,9 +97,7 @@
         errorLine1="    public static boolean contains(Bundle a, Bundle b) {"
         errorLine2="                                   ~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="56"
-            column="36"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
     <issue
@@ -62,9 +106,7 @@
         errorLine1="    public static boolean contains(Bundle a, Bundle b) {"
         errorLine2="                                             ~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="56"
-            column="46"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
     <issue
@@ -73,9 +115,7 @@
         errorLine1="    public static boolean equals(Object a, Object b) {"
         errorLine2="                                 ~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="76"
-            column="34"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
     <issue
@@ -84,9 +124,7 @@
         errorLine1="    public static boolean equals(Object a, Object b) {"
         errorLine2="                                           ~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="76"
-            column="44"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
     <issue
@@ -95,9 +133,7 @@
         errorLine1="    public static Bundle createTestBundle() {"
         errorLine2="                  ~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="89"
-            column="19"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
     <issue
@@ -106,9 +142,7 @@
         errorLine1="    public static String getMediaIdInFakeList(int index) {"
         errorLine2="                  ~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="98"
-            column="19"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
     <issue
@@ -117,9 +151,7 @@
         errorLine1="        public SyncHandler(Looper looper) {"
         errorLine2="                           ~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="107"
-            column="28"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
     <issue
@@ -128,9 +160,7 @@
         errorLine1="        public void postAndSync(final Runnable runnable) throws InterruptedException {"
         errorLine2="                                      ~~~~~~~~">
         <location
-            file="src/main/java/androidx/media2/test/common/TestUtils.java"
-            line="111"
-            column="39"/>
+            file="src/main/java/androidx/media2/test/common/TestUtils.java"/>
     </issue>
 
 </issues>

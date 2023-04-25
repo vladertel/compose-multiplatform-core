@@ -16,8 +16,8 @@
 
 package androidx.room
 
+import androidx.kruth.assertThat
 import androidx.sqlite.db.SupportSQLiteOpenHelper
-import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -26,7 +26,6 @@ import kotlinx.coroutines.yield
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import java.util.concurrent.Callable
 import kotlin.coroutines.ContinuationInterceptor
 
 @RunWith(JUnit4::class)
@@ -43,7 +42,7 @@ class CoroutinesRoomTest {
             db = database,
             inTransaction = false,
             tableNames = arrayOf("Pet"),
-            callable = Callable {
+            callable = {
                 callableExecuted = true
                 expectedResult
             }
@@ -57,21 +56,21 @@ class CoroutinesRoomTest {
         }
         yield(); yield() // yield for async and flow
 
-        assertThat(invalidationTracker.observers.size).isEqualTo(1)
+        assertThat(invalidationTracker.observers).hasSize(1)
         assertThat(callableExecuted).isTrue()
 
         assertThat(job.await()).isEqualTo(expectedResult)
-        assertThat(invalidationTracker.observers.isEmpty()).isTrue()
+        assertThat(invalidationTracker.observers).isEmpty()
     }
 
     // Use runBlocking dispatcher as query dispatchers, keeps the tests consistent.
     private fun testRun(block: suspend CoroutineScope.() -> Unit) = runBlocking {
-        database.backingFieldMap["QueryDispatcher"] = coroutineContext[ContinuationInterceptor]
+        database.backingFieldMap["QueryDispatcher"] = coroutineContext[ContinuationInterceptor]!!
         block.invoke(this)
     }
 
     private class TestDatabase : RoomDatabase() {
-        override fun createOpenHelper(config: DatabaseConfiguration?): SupportSQLiteOpenHelper {
+        override fun createOpenHelper(config: DatabaseConfiguration): SupportSQLiteOpenHelper {
             throw UnsupportedOperationException("Shouldn't be called!")
         }
 

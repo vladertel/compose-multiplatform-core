@@ -21,40 +21,108 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 import androidx.benchmark.Shell
+import androidx.benchmark.macro.BatteryCharge.hasMinimumCharge
+import androidx.benchmark.macro.PowerMetric.Type
 import androidx.benchmark.macro.PowerRail.hasMetrics
 import androidx.benchmark.macro.perfetto.AudioUnderrunQuery
-import androidx.benchmark.macro.perfetto.EnergyQuery
+import androidx.benchmark.macro.perfetto.BatteryDischargeQuery
 import androidx.benchmark.macro.perfetto.FrameTimingQuery
 import androidx.benchmark.macro.perfetto.FrameTimingQuery.SubMetric
-import androidx.benchmark.macro.perfetto.PerfettoResultsParser.parseStartupResult
-import androidx.benchmark.macro.perfetto.PerfettoTraceProcessor
+import androidx.benchmark.macro.perfetto.FrameTimingQuery.getFrameSubMetrics
+import androidx.benchmark.macro.perfetto.MemoryCountersQuery
 import androidx.benchmark.macro.perfetto.PowerQuery
 import androidx.benchmark.macro.perfetto.StartupTimingQuery
-import androidx.test.platform.app.InstrumentationRegistry
+import androidx.benchmark.macro.perfetto.camelCase
+import androidx.benchmark.perfetto.PerfettoTraceProcessor
+import androidx.benchmark.perfetto.Slice
 
 /**
  * Metric interface.
  */
-public sealed class Metric {
+sealed class Metric {
+
     internal abstract fun configure(packageName: String)
 
     internal abstract fun start()
 
     internal abstract fun stop()
+
     /**
      * After stopping, collect metrics
      *
      * TODO: takes package for package level filtering, but probably want a
      *  general config object coming into [start].
      */
-    internal abstract fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult
+    internal abstract fun getResult(
+        captureInfo: CaptureInfo,
+        traceSession: PerfettoTraceProcessor.Session
+    ): List<Measurement>
 
-    internal data class CaptureInfo(
+    @ExperimentalMetricApi
+    data class CaptureInfo(
         val apiLevel: Int,
         val targetPackageName: String,
         val testPackageName: String,
         val startupMode: StartupMode?
     )
+
+    /**
+     * Represents a Metric's measurement of a single iteration.
+     *
+     * To validate results in tests, use [assertEqualMeasurements]
+     */
+    @ExperimentalMetricApi
+    data class Measurement internal constructor(
+        /**
+         * Unique name of the metric, should be camel case with abbreviated suffix,
+         * e.g. `startTimeNs`
+         */
+        val name: String,
+        /**
+         * Measurement values captured by the metric, length constraints defined by
+         * [requireSingleValue].
+         */
+        val data: List<Double>,
+        /**
+         * True if the [data] param is a single value per measurement, false if it contains an
+         * arbitrary number of samples.
+         */
+        val requireSingleValue: Boolean
+    ) {
+
+        /**
+         * Represents a measurement with a single value captured per iteration.
+         *
+         * For example, in a startup Macrobenchmark, [StartupTimingMetric] returns a single
+         * measurement for `timeToInitialDisplayMs`.
+         */
+        constructor(name: String, data: Double) : this(
+            name,
+            listOf(data),
+            requireSingleValue = true
+        )
+
+        /**
+         * Represents a measurement with a value sampled an arbitrary number of times per iteration.
+         *
+         * For example, in a jank Macrobenchmark, [FrameTimingMetric] can return multiple
+         * measurements for `frameOverrunMs` - one for each observed frame.
+         *
+         * When measurements are merged across multiple iterations, percentiles are extracted from
+         * the total pool of samples: P50, P90, P95, and P99.
+         */
+        constructor(name: String, dataSamples: List<Double>) : this(
+            name,
+            dataSamples,
+            requireSingleValue = false
+        )
+
+        init {
+            require(!requireSingleValue || data.size == 1) {
+                "Metric.Measurement must be in multi-sample mode, or include only one data item"
+            }
+        }
+    }
 }
 
 private fun Long.nsToDoubleMs(): Double = this / 1_000_000.0
@@ -79,128 +147,27 @@ private fun Long.nsToDoubleMs(): Double = this / 1_000_000.0
  */
 @ExperimentalMetricApi
 @Suppress("CanSealedSubClassBeObject")
-public class AudioUnderrunMetric : Metric() {
-    internal override fun configure(packageName: String) {
+class AudioUnderrunMetric : Metric() {
+    override fun configure(packageName: String) {
     }
 
-    internal override fun start() {
+    override fun start() {
     }
 
-    internal override fun stop() {
+    override fun stop() {
     }
 
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult {
-        val subMetrics = AudioUnderrunQuery.getSubMetrics(tracePath)
+    override fun getResult(
+        captureInfo: CaptureInfo,
+        traceSession: PerfettoTraceProcessor.Session
+    ): List<Measurement> {
+        val subMetrics = AudioUnderrunQuery.getSubMetrics(traceSession)
 
-        return IterationResult(
-            singleMetrics = mapOf(
-                "audioTotalMs" to subMetrics.totalMs.toDouble(),
-                "audioUnderrunMs" to subMetrics.zeroMs.toDouble()
-            ),
-            sampledMetrics = emptyMap(),
-            timelineRangeNs = null
+        return listOf(
+            Measurement("audioTotalMs", subMetrics.totalMs.toDouble()),
+            Measurement("audioUnderrunMs", subMetrics.zeroMs.toDouble())
         )
     }
-}
-
-/**
- * Legacy version of FrameTimingMetric, based on 'dumpsys gfxinfo' instead of trace data.
- *
- * Temporary - to be removed after transition to FrameTimingMetric
- */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-public class FrameTimingGfxInfoMetric : Metric() {
-    private lateinit var packageName: String
-    private val helper = JankCollectionHelper()
-
-    internal override fun configure(packageName: String) {
-        this.packageName = packageName
-        helper.addTrackedPackages(packageName)
-    }
-
-    internal override fun start() {
-        try {
-            helper.startCollecting()
-        } catch (exception: RuntimeException) {
-            // Ignore the exception that might result from trying to clear GfxInfo
-            // The current implementation of JankCollectionHelper throws a RuntimeException
-            // when that happens. This is safe to ignore because the app being benchmarked
-            // is not showing any UI when this happens typically.
-
-            // Once the MacroBenchmarkRule has the ability to setup the app in the right state via
-            // a designated setup block, we can get rid of this.
-            val instrumentation = InstrumentationRegistry.getInstrumentation()
-            if (instrumentation != null) {
-                if (!Shell.isPackageAlive(packageName)) {
-                    error(exception.message ?: "Assertion error, $packageName not running")
-                }
-            }
-        }
-    }
-
-    internal override fun stop() {
-        helper.stopCollecting()
-    }
-
-    /**
-     * Used to convert keys from platform to JSON format.
-     *
-     * This both converts `snake_case_format` to `camelCaseFormat`, and renames for clarity.
-     *
-     * Note that these will still output to inst results in snake_case, with `MetricNameUtils`
-     * via [androidx.benchmark.MetricResult.putInBundle].
-     */
-    private val keyRenameMap = mapOf(
-        "frame_render_time_percentile_50" to "frameTime50thPercentileMs",
-        "frame_render_time_percentile_90" to "frameTime90thPercentileMs",
-        "frame_render_time_percentile_95" to "frameTime95thPercentileMs",
-        "frame_render_time_percentile_99" to "frameTime99thPercentileMs",
-        "gpu_frame_render_time_percentile_50" to "gpuFrameTime50thPercentileMs",
-        "gpu_frame_render_time_percentile_90" to "gpuFrameTime90thPercentileMs",
-        "gpu_frame_render_time_percentile_95" to "gpuFrameTime95thPercentileMs",
-        "gpu_frame_render_time_percentile_99" to "gpuFrameTime99thPercentileMs",
-        "missed_vsync" to "vsyncMissedFrameCount",
-        "deadline_missed" to "deadlineMissedFrameCount",
-        "deadline_missed_legacy" to "deadlineMissedFrameCountLegacy",
-        "janky_frames_count" to "jankyFrameCount",
-        "janky_frames_legacy_count" to "jankyFrameCountLegacy",
-        "high_input_latency" to "highInputLatencyFrameCount",
-        "slow_ui_thread" to "slowUiThreadFrameCount",
-        "slow_bmp_upload" to "slowBitmapUploadFrameCount",
-        "slow_issue_draw_cmds" to "slowIssueDrawCommandsFrameCount",
-        "total_frames" to "totalFrameCount",
-        "janky_frames_percent" to "jankyFramePercent",
-        "janky_frames_legacy_percent" to "jankyFramePercentLegacy"
-    )
-
-    /**
-     * Filters output to only frameTimeXXthPercentileMs and totalFrameCount
-     */
-    private val keyAllowList = setOf(
-        "frameTime50thPercentileMs",
-        "frameTime90thPercentileMs",
-        "frameTime95thPercentileMs",
-        "frameTime99thPercentileMs",
-        "totalFrameCount"
-    )
-
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String) = IterationResult(
-        singleMetrics = helper.metrics
-            .map {
-                val prefix = "gfxinfo_${packageName}_"
-                val keyWithoutPrefix = it.key.removePrefix(prefix)
-
-                if (keyWithoutPrefix != it.key && keyRenameMap.containsKey(keyWithoutPrefix)) {
-                    keyRenameMap[keyWithoutPrefix]!! to it.value
-                } else {
-                    throw IllegalStateException("Unexpected key ${it.key}")
-                }
-            }
-            .toMap()
-            .filterKeys { keyAllowList.contains(it) },
-        sampledMetrics = emptyMap(),
-        timelineRangeNs = null
-    )
 }
 
 /**
@@ -209,7 +176,7 @@ public class FrameTimingGfxInfoMetric : Metric() {
  *
  * This outputs the following measurements:
  *
- * * `frameOverrunMs` (Requires API 29) - How much time a given frame missed its deadline by.
+ * * `frameOverrunMs` (Requires API 31) - How much time a given frame missed its deadline by.
  * Positive numbers indicate a dropped frame and visible jank / stutter, negative numbers indicate
  * how much faster than the deadline a frame was.
  *
@@ -217,34 +184,33 @@ public class FrameTimingGfxInfoMetric : Metric() {
  * Thread, and RenderThread.
  */
 @Suppress("CanSealedSubClassBeObject")
-public class FrameTimingMetric : Metric() {
-    internal override fun configure(packageName: String) {}
-    internal override fun start() {}
-    internal override fun stop() {}
+class FrameTimingMetric : Metric() {
+    override fun configure(packageName: String) {}
+    override fun start() {}
+    override fun stop() {}
 
     @SuppressLint("SyntheticAccessor")
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult {
-        val subMetricsMsMap = FrameTimingQuery.getFrameSubMetrics(
-            absoluteTracePath = tracePath,
+    override fun getResult(
+        captureInfo: CaptureInfo,
+        traceSession: PerfettoTraceProcessor.Session
+    ): List<Measurement> {
+        return FrameTimingQuery.getFrameData(
+            session = traceSession,
             captureApiLevel = Build.VERSION.SDK_INT,
             packageName = captureInfo.targetPackageName
         )
+            .getFrameSubMetrics(Build.VERSION.SDK_INT)
             .filterKeys { it == SubMetric.FrameDurationCpuNs || it == SubMetric.FrameOverrunNs }
-            .mapKeys {
-                if (it.key == SubMetric.FrameDurationCpuNs) {
-                    "frameDurationCpuMs"
-                } else {
-                    "frameOverrunMs"
-                }
+            .map {
+                Measurement(
+                    name = if (it.key == SubMetric.FrameDurationCpuNs) {
+                        "frameDurationCpuMs"
+                    } else {
+                        "frameOverrunMs"
+                    },
+                    dataSamples = it.value.map { timeNs -> timeNs.nsToDoubleMs() }
+                )
             }
-            .mapValues { entry ->
-                entry.value.map { timeNs -> timeNs.nsToDoubleMs() }
-            }
-        return IterationResult(
-            singleMetrics = emptyMap(),
-            sampledMetrics = subMetricsMsMap,
-            timelineRangeNs = null
-        )
     }
 }
 
@@ -262,38 +228,38 @@ public class FrameTimingMetric : Metric() {
  * measurement may not be available prior to API 29.
  */
 @Suppress("CanSealedSubClassBeObject")
-public class StartupTimingMetric : Metric() {
-    internal override fun configure(packageName: String) {
+class StartupTimingMetric : Metric() {
+    override fun configure(packageName: String) {
     }
 
-    internal override fun start() {
+    override fun start() {
     }
 
-    internal override fun stop() {
+    override fun stop() {
     }
 
     @SuppressLint("SyntheticAccessor")
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult {
+    override fun getResult(
+        captureInfo: CaptureInfo,
+        traceSession: PerfettoTraceProcessor.Session
+    ): List<Measurement> {
         return StartupTimingQuery.getFrameSubMetrics(
-            absoluteTracePath = tracePath,
+            session = traceSession,
             captureApiLevel = captureInfo.apiLevel,
             targetPackageName = captureInfo.targetPackageName,
-            testPackageName = captureInfo.testPackageName,
 
             // Pick an arbitrary startup mode if unspecified. In the future, consider throwing an
             // error if startup mode not defined
             startupMode = captureInfo.startupMode ?: StartupMode.COLD
         )?.run {
-            @Suppress("UNCHECKED_CAST")
-            IterationResult(
-                singleMetrics = mapOf(
-                    "timeToInitialDisplayMs" to timeToInitialDisplayNs.nsToDoubleMs(),
-                    "timeToFullDisplayMs" to timeToFullDisplayNs?.nsToDoubleMs()
-                ).filterValues { it != null } as Map<String, Double>,
-                sampledMetrics = emptyMap(),
-                timelineRangeNs = timelineRangeNs
-            )
-        } ?: IterationResult.EMPTY
+            mapOf(
+                "timeToInitialDisplayMs" to timeToInitialDisplayNs.nsToDoubleMs(),
+                "timeToFullDisplayMs" to timeToFullDisplayNs?.nsToDoubleMs()
+            ).filterValues { it != null }
+                .map {
+                    Measurement(it.key, it.value!!)
+                }
+        } ?: emptyList()
     }
 }
 
@@ -303,264 +269,435 @@ public class StartupTimingMetric : Metric() {
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 @Suppress("CanSealedSubClassBeObject")
 @RequiresApi(29)
-public class StartupTimingLegacyMetric : Metric() {
-    internal override fun configure(packageName: String) {
+class StartupTimingLegacyMetric : Metric() {
+    override fun configure(packageName: String) {
     }
 
-    internal override fun start() {
+    override fun start() {
     }
 
-    internal override fun stop() {
+    override fun stop() {
     }
 
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult {
-        val json = PerfettoTraceProcessor.getJsonMetrics(tracePath, "android_startup")
-        return parseStartupResult(json, captureInfo.targetPackageName)
+    override fun getResult(
+        captureInfo: CaptureInfo,
+        traceSession: PerfettoTraceProcessor.Session
+    ): List<Measurement> {
+        // Acquires perfetto metrics
+        val traceMetrics = traceSession.getTraceMetrics("android_startup")
+        val androidStartup = traceMetrics.android_startup
+            ?: throw IllegalStateException("No android_startup metric found.")
+        val appStartup =
+            androidStartup.startup.firstOrNull { it.package_name == captureInfo.targetPackageName }
+                ?: throw IllegalStateException(
+                    "Didn't find startup for pkg " +
+                        "${captureInfo.targetPackageName}, found startups for pkgs: " +
+                        "${androidStartup.startup.map { it.package_name }}"
+                )
+
+        // Extract app startup
+        val measurements = mutableListOf<Measurement>()
+
+        val durMs = appStartup.to_first_frame?.dur_ms
+        if (durMs != null) {
+            measurements.add(Measurement("startupMs", durMs))
+        }
+
+        val fullyDrawnMs = appStartup.report_fully_drawn?.dur_ms
+        if (fullyDrawnMs != null) {
+            measurements.add(Measurement("fullyDrawnMs", fullyDrawnMs))
+        }
+
+        return measurements
     }
 }
 
 /**
- * Captures the time taken by a trace section - a named begin / end pair matching the provided name.
+ * Metric which captures results from a Perfetto trace with custom [PerfettoTraceProcessor] queries.
  *
- * Always selects the first instance of a trace section captured during a measurement.
+ * This is a more customizable version of [TraceSectionMetric] which can perform arbitrary queries
+ * against the captured PerfettoTrace.
+ *
+ * Sample metric which finds the duration of the first "activityResume" trace section for the traced
+ * package:
+ * ```
+ * class ActivityResumeMetric : TraceMetric() {
+ *     override fun getResult(
+ *         captureInfo: CaptureInfo,
+ *         traceSession: PerfettoTraceProcessor.Session
+ *     ): Result {
+ *         val rowSequence = traceSession.query(
+ *             """
+ *             SELECT
+ *                 slice.name as name,
+ *                 slice.ts as ts,
+ *                 slice.dur as dur
+ *             FROM slice
+ *                 INNER JOIN thread_track on slice.track_id = thread_track.id
+ *                 INNER JOIN thread USING(utid)
+ *                 INNER JOIN process USING(upid)
+ *             WHERE
+ *                 process.name LIKE ${captureInfo.targetPackageName}
+ *                     AND slice.name LIKE "activityResume"
+ *             """.trimIndent()
+ *         )
+ *         // this metric queries a single slice type to produce submetrics, but could be extended
+ *         // to capture timing of every component of activity lifecycle
+ *         val activityResultNs = rowSequence.firstOrNull()?.double("dur")
+ *         return if (activityResultMs != null) {
+ *             Result("activityResumeMs", activityResultNs / 1_000_000.0)
+ *         } else {
+ *             Result()
+ *         }
+ *     }
+ * }
+ * ```
+ *
+ * @see PerfettoTraceProcessor
+ * @see PerfettoTraceProcessor.Session
+ * @see PerfettoTraceProcessor.Session.query
+ */
+@ExperimentalMetricApi
+abstract class TraceMetric : Metric() {
+    override fun configure(packageName: String) {
+    }
+
+    override fun start() {
+    }
+
+    override fun stop() {
+    }
+
+    /**
+     * Get the metric result for a given iteration given information about the target process and a TraceProcessor session
+     */
+    public abstract override fun getResult(
+        captureInfo: CaptureInfo,
+        traceSession: PerfettoTraceProcessor.Session
+    ): List<Measurement>
+}
+
+/**
+ * Captures the time taken by named trace section - a named begin / end pair matching the provided
+ * [sectionName].
+ *
+ * Select how matching sections are resolved into a duration metric with [mode].
  *
  * @see androidx.tracing.Trace.beginSection
  * @see androidx.tracing.Trace.endSection
  * @see androidx.tracing.trace
  */
-@RequiresApi(29) // Remove once b/182386956 fixed, as app tag may be needed for this to work.
 @ExperimentalMetricApi
-public class TraceSectionMetric(
-    private val sectionName: String
+class TraceSectionMetric(
+    private val sectionName: String,
+    private val mode: Mode = Mode.First
 ) : Metric() {
-    internal override fun configure(packageName: String) {
+    enum class Mode {
+        /**
+         * Captures the duration of the first instance of `sectionName` in the trace.
+         *
+         * When this mode is used, no measurement will be reported if the named section does
+         * not appear in the trace.
+         */
+        First,
+
+        /**
+         * Captures the sum of all instances of `sectionName` in the trace.
+         *
+         * When this mode is used, a measurement of `0` will be reported if the named section
+         * does not appear in the trace
+         */
+        Sum
     }
 
-    internal override fun start() {
+    override fun configure(packageName: String) {
     }
 
-    internal override fun stop() {
+    override fun start() {
+    }
+
+    override fun stop() {
     }
 
     @SuppressLint("SyntheticAccessor")
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult {
-        val slice = PerfettoTraceProcessor.querySlices(tracePath, sectionName).firstOrNull()
-        return if (slice == null) {
-            IterationResult.EMPTY
-        } else IterationResult(
-            singleMetrics = mapOf(
-                sectionName + "Ms" to slice.dur / 1_000_000.0
-            ),
-            sampledMetrics = emptyMap(),
-            timelineRangeNs = slice.ts..slice.endTs
+    override fun getResult(
+        captureInfo: CaptureInfo,
+        traceSession: PerfettoTraceProcessor.Session
+    ): List<Measurement> {
+        val slices = traceSession.querySlices(sectionName)
+
+        return when (mode) {
+            Mode.First -> {
+                val slice = slices.firstOrNull()
+                if (slice == null) {
+                    emptyList()
+                } else listOf(
+                    Measurement(
+                        name = sectionName + "Ms",
+                        data = slice.dur / 1_000_000.0
+                    )
+                )
+            }
+
+            Mode.Sum -> {
+                listOf(
+                    Measurement(
+                        name = sectionName + "Ms",
+                        // note, this duration assumes non-reentrant slices
+                        data = slices.sumOf { it.dur } / 1_000_000.0
+                    )
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Captures the change of power, energy or battery charge metrics over time for specified duration.
+ * A configurable output of power, energy, subsystems, and battery charge will be generated.
+ * Subsystem outputs will include the sum of all power or energy metrics within it.  A metric total
+ * will also be generated for power and energy, as well as a metric which is the sum of all
+ * unselected metrics.
+ *
+ * @param type Either [Type.Energy] or [Type.Power], which can be configured to show components
+ * of system power usage, or [Type.Battery], which will halt charging of device to measure power
+ * drain.
+ *
+ * For [Type.Energy] or [Type.Power], the sum of all categories will be displayed as a `Total`
+ * metric.  The sum of all unrequested categories will be displayed as an `Unselected` metric.  The
+ * subsystems that have not been categorized will be displayed as an `Uncategorized` metric.
+ *
+ * For [Type.Battery], the charge for the start of the run and the end of the run will be displayed.
+ * An additional `Diff` metric will be displayed to indicate the charge drain over the course of
+ * the test.
+ *
+ * The metrics will be stored in the format `<type><name><unit>`.  This outputs measurements like
+ * the following:
+ *
+ * Power metrics example:
+ * ```
+ * powerCategoryDisplayUw       min       128.2,   median       128.7,   max       129.8
+ * powerComponentCpuBigUw       min         1.9,   median         2.9,   max         3.4
+ * powerComponentCpuLittleUw    min        65.8,   median        76.2,   max        79.7
+ * powerComponentCpuMidUw       min        10.8,   median        13.3,   max        13.6
+ * powerTotalUw                 min       362.4,   median       395.2,   max       400.6
+ * powerUnselectedUw            min       155.3,   median       170.8,   max       177.8
+ * ```
+ *
+ * Energy metrics example:
+ * ```
+ * energyCategoryDisplayUws     min    610,086.0,   median    623,183.0,   max    627,259.0
+ * energyComponentCpuBigUws     min      9,233.0,   median     13,566.0,   max     16,536.0
+ * energyComponentCpuLittleUws  min    318,591.0,   median    368,211.0,   max    379,106.0
+ * energyComponentCpuMidUws     min     52,143.0,   median     64,462.0,   max     64,893.0
+ * energyTotalUws               min  1,755,261.0,   median  1,880,687.0,   max  1,935,402.0
+ * energyUnselectedUws          min    752,111.0,   median    813,036.0,   max    858,934.0
+ * ```
+ *
+ * Battery metrics example:
+ * ```
+ * batteryDiffMah       min         2.0,   median         2.0,   max         4.0
+ * batteryEndMah        min     3,266.0,   median     3,270.0,   max     3,276.0
+ * batteryStartMah      min     3,268.0,   median     3,274.0,   max     3,278.0
+ * ```
+ *
+ * This measurement is not available prior to API 29.
+ */
+@RequiresApi(29)
+@ExperimentalMetricApi
+class PowerMetric(
+    private val type: Type
+) : Metric() {
+
+    companion object {
+        internal const val MEASURE_BLOCK_SECTION_NAME = "measureBlock"
+
+        @Suppress("FunctionName")
+        @JvmStatic
+        fun Battery(): Type.Battery {
+            return Type.Battery()
+        }
+
+        @Suppress("FunctionName")
+        @JvmStatic
+        fun Energy(
+            categories: Map<PowerCategory, PowerCategoryDisplayLevel> = emptyMap()
+        ): Type.Energy {
+            return Type.Energy(categories)
+        }
+
+        @Suppress("FunctionName")
+        @JvmStatic
+        fun Power(
+            categories: Map<PowerCategory, PowerCategoryDisplayLevel> = emptyMap()
+        ): Type.Power {
+            return Type.Power(categories)
+        }
+    }
+
+    /**
+     * Configures the PowerMetric request.
+     *
+     * @param categories A map which is used to configure which metrics are displayed.  The key
+     * is a `PowerCategory` enum, which configures the subsystem category that will be displayed.
+     * The value is a `PowerCategoryDisplayLevel`, which configures whether each subsystem in the
+     * category will have metrics displayed independently or summed for a total metric of the
+     * category.
+     */
+    sealed class Type(var categories: Map<PowerCategory, PowerCategoryDisplayLevel> = emptyMap()) {
+        class Power(
+            powerCategories: Map<PowerCategory, PowerCategoryDisplayLevel> = emptyMap()
+        ) : Type(powerCategories)
+
+        class Energy(
+            energyCategories: Map<PowerCategory, PowerCategoryDisplayLevel> = emptyMap()
+        ) : Type(energyCategories)
+
+        class Battery : Type()
+    }
+
+    override fun configure(packageName: String) {
+        if (type is Type.Energy || type is Type.Power) {
+            hasMetrics(throwOnMissingMetrics = true)
+        } else {
+            hasMinimumCharge(throwOnMissingMetrics = true)
+        }
+    }
+
+    override fun start() {
+        if (type is Type.Battery) {
+            Shell.executeScriptSilent("setprop power.battery_input.suspended true")
+        }
+    }
+
+    override fun stop() {
+        if (type is Type.Battery) {
+            Shell.executeScriptSilent("setprop power.battery_input.suspended false")
+        }
+    }
+
+    override fun getResult(
+        captureInfo: CaptureInfo,
+        traceSession: PerfettoTraceProcessor.Session
+    ): List<Measurement> {
+        // collect metrics between trace point flags
+        val slice = traceSession.querySlices(MEASURE_BLOCK_SECTION_NAME)
+            .firstOrNull()
+            ?: return emptyList()
+
+        if (type is Type.Battery) {
+            return getBatteryDischargeMetrics(traceSession, slice)
+        }
+
+        return getPowerMetrics(traceSession, slice)
+    }
+
+    private fun getBatteryDischargeMetrics(
+        session: PerfettoTraceProcessor.Session,
+        slice: Slice
+    ): List<Measurement> {
+        val metrics = BatteryDischargeQuery.getBatteryDischargeMetrics(
+            session,
+            slice
         )
-    }
-}
-/**
- * Captures the change of power rails metrics over time for specified duration.
- *
- * This outputs measurements like the following:
- *
- * ```
- * odpmEnergyRailsCpuBigUws     min        99,545.0,    median       110,339.0,  max      316,444.0
- * odpmEnergyRailsAocLogicUws   min        81,548.0,    median       86,211.0,   max      87,650.0
- * ```
- *
- * * `name` - The name of the subsystem associated with the energy usage in camel case.
- *
- * * `energy` - The change in swpower usage over the course of the power test, measured in uWs.
- *
- * The outputs are stored in the format `odpmEnergy<name>Uws`.
- *
- * This measurement is not available prior to API 29.
- */
-@RequiresApi(29)
-@Suppress("CanSealedSubClassBeObject")
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-public class EnergyMetric : Metric() {
-
-    internal companion object {
-        internal const val MEASURE_BLOCK_SECTION_NAME = "measureBlock"
-    }
-
-    internal override fun configure(packageName: String) {
-         hasMetrics(throwOnMissingMetrics = true)
-    }
-
-    internal override fun start() {}
-
-    internal override fun stop() {}
-
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult {
-        // collect metrics between trace point flags
-        val slice = PerfettoTraceProcessor.querySlices(tracePath, MEASURE_BLOCK_SECTION_NAME)
-            .firstOrNull()
-            ?: return IterationResult.EMPTY
-
-        val metrics = EnergyQuery.getEnergyMetrics(tracePath, slice)
-        val metricMap = mutableMapOf<String, Double>()
-        for (metric in metrics) {
-            metricMap["odpmEnergy${metric.name}Uws"] = metric.energyUws
+        return metrics.map { measurement ->
+            Measurement(getLabel(measurement.name), measurement.chargeMah)
         }
-        return IterationResult(
-            singleMetrics = metricMap,
-            sampledMetrics = emptyMap())
-    }
-}
-/**
- * Captures the change of power rails metrics over time for specified duration.  All rails under
- * the same subsystem are added together for the total energy consumed in each subsystem.
- *
- * This outputs measurements like the following:
- *
- * ```
- * odpmTotalEnergyDdrUws      min        107,087.0,   median        133,942.0,  max       135,084.0
- * odpmTotalEnergyAocUws      min        81,548.0,    median        86,211.0,   max       87,650.0
- * ```
- *
- * * `name` - The name of the subsystem associated with the energy usage in camel case.
- *
- * * `energy` - The change in swpower usage over the course of the power test, measured in uWs.
- *
- * The outputs are stored in the format `odpmTotalEnergy<name>Uws`.
- *
- * This measurement is not available prior to API 29.
- */
-@RequiresApi(29)
-@Suppress("CanSealedSubClassBeObject")
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-public class TotalEnergyMetric : Metric() {
-
-    internal companion object {
-        internal const val MEASURE_BLOCK_SECTION_NAME = "measureBlock"
     }
 
-    internal override fun configure(packageName: String) {
-        hasMetrics(throwOnMissingMetrics = true)
-    }
+    private fun getPowerMetrics(
+        session: PerfettoTraceProcessor.Session,
+        slice: Slice
+    ): List<Measurement> {
+        val metrics = PowerQuery.getPowerMetrics(session, slice)
 
-    internal override fun start() {}
-
-    internal override fun stop() {}
-
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult {
-        // collect metrics between trace point flags
-        val slice = PerfettoTraceProcessor.querySlices(tracePath, MEASURE_BLOCK_SECTION_NAME)
-            .firstOrNull()
-            ?: return IterationResult.EMPTY
-
-        val metrics = EnergyQuery.getTotalEnergyMetrics(tracePath, slice)
-        val metricMap = mutableMapOf<String, Double>()
-        for (metric in metrics) {
-            metricMap["odpmTotalEnergy${metric.name}Uws"] = metric.energyUws
+        val metricMap: Map<String, Double> = getSpecifiedMetrics(metrics)
+        if (metricMap.isEmpty()) {
+            return emptyList()
         }
-        return IterationResult(
-            singleMetrics = metricMap,
-            sampledMetrics = emptyMap())
+
+        val extraMetrics: Map<String, Double> = getTotalAndUnselectedMetrics(metrics)
+
+        return (metricMap + extraMetrics).map {
+            Measurement(it.key, it.value)
+        }
+    }
+
+    private fun getLabel(metricName: String, displayType: String = ""): String {
+        return when (type) {
+            is Type.Power -> "power${displayType}${metricName}Uw"
+            is Type.Energy -> "energy${displayType}${metricName}Uws"
+            is Type.Battery -> "battery${metricName}Mah"
+        }
+    }
+
+    private fun getTotalAndUnselectedMetrics(
+        metrics: Map<PowerCategory, PowerQuery.CategoryMeasurement>
+    ): Map<String, Double> {
+        return mapOf(
+            getLabel("Total") to
+                metrics.values.fold(0.0) { total, next ->
+                    total + next.getValue(type)
+                },
+            getLabel("Unselected") to
+                metrics.filter { (category, _) ->
+                    !type.categories.containsKey(category)
+                }.values.fold(0.0) { total, next ->
+                    total + next.getValue(type)
+                }
+        ).filter { (_, measurement) ->
+            measurement != 0.0
+        }
+    }
+
+    private fun getSpecifiedMetrics(
+        metrics: Map<PowerCategory, PowerQuery.CategoryMeasurement>
+    ): Map<String, Double> {
+        return metrics.filter { (category, _) ->
+            type.categories.containsKey(category)
+        }.map { (category, measurement) ->
+            val sectionName = if (category == PowerCategory.UNCATEGORIZED) "" else "Category"
+            when (type.categories[category]) {
+                // if total category specified, create component of sum total of category
+                PowerCategoryDisplayLevel.TOTAL -> listOf(
+                    getLabel(
+                        category.toString().camelCase(), sectionName
+                    ) to measurement.components.fold(0.0) { total, next ->
+                        total + next.getValue(type)
+                    }
+                )
+                // if breakdown, append all ComponentMeasurements metrics from category
+                else -> measurement.components.map { component ->
+                    getLabel(
+                        component.name, "Component"
+                    ) to component.getValue(type)
+                }
+            }
+        }.flatten().associate { pair -> Pair(pair.first, pair.second) }
     }
 }
 
 /**
- * Captures the change of power rails metrics over time for specified duration.
- *
- * This outputs measurements like the following:
- *
- * ```
- * odpmPowerRailsCpuBigUw       min        22.1,        median        22.6,       max       67.6
- * odpmPowerRailsAocLogicUw     min        17.9,        median        18.1,       max       18.3
- * ```
- *
- * * `name` - The name of the subsystem associated with the power usage in camel case.
- *
- * * `power` - The energy used divided by the elapsed time, measured in mW.
- *
- * The outputs are stored in the format `odpmPower<name>Uw`.
- *
- * This measurement is not available prior to API 29.
+ * Captures the number of page faults over time for a target package name.
  */
-@RequiresApi(29)
-@Suppress("CanSealedSubClassBeObject")
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-public class PowerMetric : Metric() {
+@ExperimentalMetricApi
+class MemoryCountersMetric : TraceMetric() {
+    override fun getResult(
+        captureInfo: CaptureInfo,
+        traceSession: PerfettoTraceProcessor.Session
+    ): List<Measurement> {
+        val metrics = MemoryCountersQuery.getMemoryCounters(
+            session = traceSession,
+            targetPackageName = captureInfo.targetPackageName
+        ) ?: return listOf()
 
-    internal companion object {
-        internal const val MEASURE_BLOCK_SECTION_NAME = "measureBlock"
-    }
-
-    internal override fun configure(packageName: String) {
-        hasMetrics(throwOnMissingMetrics = true)
-    }
-
-    internal override fun start() {}
-
-    internal override fun stop() {}
-
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult {
-        // collect metrics between trace point flags
-        val slice = PerfettoTraceProcessor.querySlices(tracePath, MEASURE_BLOCK_SECTION_NAME)
-            .firstOrNull()
-            ?: return IterationResult.EMPTY
-
-        val metrics = PowerQuery.getPowerMetrics(tracePath, slice)
-        val metricMap = mutableMapOf<String, Double>()
-        for (metric in metrics) {
-            metricMap["odpmPower${metric.name}Uw"] = metric.powerUs
-        }
-        return IterationResult(
-            singleMetrics = metricMap,
-            sampledMetrics = emptyMap())
-    }
-}
-
-/**
- * Captures the change of power rails metrics over time for specified duration. All rails under
- * the same subsystem are added together for the total power consumed in each subsystem.
- *
- * This outputs measurements like the following:
- *
- * ```
- * odpmTotalPowerDisplayUw    min        138.5,       median        140.0,      max       140.6
- * odpmTotalPowerAocUw        min        17.9,        median        18.1,       max       18.3
- * ```
- *
- * * `name` - The name of the subsystem associated with the power usage in camel case.
- *
- * * `power` - The energy used divided by the elapsed time, measured in mW.
- *
- * The outputs are stored in the format `odpmTotalPower<name>Uw`.
- *
- * This measurement is not available prior to API 29.
- */
-@RequiresApi(29)
-@Suppress("CanSealedSubClassBeObject")
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-public class TotalPowerMetric : Metric() {
-
-    internal companion object {
-        internal const val MEASURE_BLOCK_SECTION_NAME = "measureBlock"
-    }
-
-    internal override fun configure(packageName: String) {
-        hasMetrics(throwOnMissingMetrics = true)
-    }
-
-    internal override fun start() {}
-
-    internal override fun stop() {}
-
-    internal override fun getMetrics(captureInfo: CaptureInfo, tracePath: String): IterationResult {
-        // collect metrics between trace point flags
-        val slice = PerfettoTraceProcessor.querySlices(tracePath, MEASURE_BLOCK_SECTION_NAME)
-            .firstOrNull()
-            ?: return IterationResult.EMPTY
-
-        val metrics = PowerQuery.getTotalPowerMetrics(tracePath, slice)
-        val metricMap = mutableMapOf<String, Double>()
-        for (metric in metrics) {
-            metricMap["odpmTotalPower${metric.name}Uw"] = metric.powerUs
-        }
-        return IterationResult(
-            singleMetrics = metricMap,
-            sampledMetrics = emptyMap())
+        return listOf(
+            Measurement("minorPageFaults", metrics.minorPageFaults),
+            Measurement("majorPageFaults", metrics.majorPageFaults),
+            Measurement("pageFaultsBackedBySwapCache", metrics.pageFaultsBackedBySwapCache),
+            Measurement("pageFaultsBackedByReadIO", metrics.pageFaultsBackedByReadIO),
+            Measurement("memoryCompactionEvents", metrics.memoryCompactionEvents),
+            Measurement("memoryReclaimEvents", metrics.memoryReclaimEvents),
+        )
     }
 }

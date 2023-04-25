@@ -20,6 +20,7 @@ import androidx.annotation.RequiresApi
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
+import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,6 +28,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @MediumTest
 class PlatformTypefacesTest {
+    val context = InstrumentationRegistry.getInstrumentation().context
+
     private fun assertSuffix(suffix: String, forRange: IntRange) {
         for (weight in forRange) {
             val base = "BASENAME[$weight]"
@@ -137,7 +140,9 @@ class PlatformTypefacesTest {
             val optionalOnDeviceFontFamilyTypeface = subject.optionalOnDeviceFontFamilyByName(
                 FontFamily.SansSerif.name,
                 FontWeight(weight),
-                FontStyle.Normal
+                FontStyle.Normal,
+                FontVariation.Settings(),
+                context
             )
             assertThat(genericFontFamilyTypeface).isEqualTo(optionalOnDeviceFontFamilyTypeface)
         }
@@ -155,7 +160,9 @@ class PlatformTypefacesTest {
             val optionalOnDeviceFontFamilyTypeface = subject.optionalOnDeviceFontFamilyByName(
                 FontFamily.Serif.name,
                 FontWeight(weight),
-                FontStyle.Normal
+                FontStyle.Normal,
+                FontVariation.Settings(),
+                context
             )
             assertThat(genericFontFamilyTypeface).isEqualTo(optionalOnDeviceFontFamilyTypeface)
         }
@@ -173,7 +180,9 @@ class PlatformTypefacesTest {
             val optionalOnDeviceFontFamilyTypeface = subject.optionalOnDeviceFontFamilyByName(
                 FontFamily.Monospace.name,
                 FontWeight(weight),
-                FontStyle.Normal
+                FontStyle.Normal,
+                FontVariation.Settings(),
+                context
             )
             assertThat(genericFontFamilyTypeface).isEqualTo(optionalOnDeviceFontFamilyTypeface)
         }
@@ -191,7 +200,9 @@ class PlatformTypefacesTest {
             val optionalOnDeviceFontFamilyTypeface = subject.optionalOnDeviceFontFamilyByName(
                 FontFamily.Cursive.name,
                 FontWeight(weight),
-                FontStyle.Normal
+                FontStyle.Normal,
+                FontVariation.Settings(),
+                context
             )
             assertThat(genericFontFamilyTypeface).isEqualTo(optionalOnDeviceFontFamilyTypeface)
         }

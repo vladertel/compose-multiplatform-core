@@ -23,11 +23,12 @@ import android.view.Surface
 import androidx.camera.camera2.pipe.compat.CameraCaptureSessionWrapper
 import androidx.camera.camera2.pipe.compat.CameraDeviceWrapper
 import androidx.camera.camera2.pipe.compat.OutputConfigurationWrapper
+import kotlin.reflect.KClass
 
 internal class FakeCaptureSessionWrapper(
     override val device: CameraDeviceWrapper,
     override val isReprocessable: Boolean = false,
-    override val inputSurface: Surface? = null
+    override val inputSurface: Surface? = null,
 ) : CameraCaptureSessionWrapper {
     var closed = false
     var lastSequenceNumber = 0
@@ -40,8 +41,11 @@ internal class FakeCaptureSessionWrapper(
     var stopRepeatingInvoked = false
     var abortCapturesInvoked = false
 
-    override fun abortCaptures() {
+    val unwrappedClasses = arrayListOf<Any>()
+
+    override fun abortCaptures(): Boolean {
         abortCapturesInvoked = true
+        return true
     }
 
     override fun capture(
@@ -92,20 +96,20 @@ internal class FakeCaptureSessionWrapper(
         return lastSequenceNumber
     }
 
-    override fun stopRepeating() {
+    override fun stopRepeating(): Boolean {
         stopRepeatingInvoked = true
+        return true
     }
 
-    override fun finalizeOutputConfigurations(outputConfigs: List<OutputConfigurationWrapper>) {
-        throw UnsupportedOperationException(
-            "finalizeOutputConfigurations is not supported"
-        )
+    override fun finalizeOutputConfigurations(
+        outputConfigs: List<OutputConfigurationWrapper>
+    ): Boolean {
+        throw UnsupportedOperationException("finalizeOutputConfigurations is not supported")
     }
 
-    override fun unwrap(): CameraCaptureSession? {
-        throw UnsupportedOperationException(
-            "FakeCaptureSessionWrapper does not wrap CameraCaptureSession"
-        )
+    override fun <T : Any> unwrapAs(type: KClass<T>): T? {
+        unwrappedClasses.add(type)
+        return null
     }
 
     override fun close() {

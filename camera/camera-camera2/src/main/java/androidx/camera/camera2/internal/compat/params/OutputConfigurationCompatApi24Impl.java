@@ -16,6 +16,7 @@
 
 package androidx.camera.camera2.internal.compat.params;
 
+import android.hardware.camera2.params.DynamicRangeProfiles;
 import android.hardware.camera2.params.OutputConfiguration;
 import android.view.Surface;
 
@@ -31,11 +32,16 @@ import java.util.Objects;
 /**
  * Implementation of the OutputConfiguration compat methods for API 24 and above.
  */
+@SuppressWarnings("unused")
 @RequiresApi(24)
 class OutputConfigurationCompatApi24Impl extends OutputConfigurationCompatBaseImpl {
 
     OutputConfigurationCompatApi24Impl(@NonNull Surface surface) {
         this(new OutputConfigurationParamsApi24(new OutputConfiguration(surface)));
+    }
+
+    OutputConfigurationCompatApi24Impl(int surfaceGroupId, @NonNull Surface surface) {
+        this(new OutputConfigurationParamsApi24(new OutputConfiguration(surfaceGroupId, surface)));
     }
 
     OutputConfigurationCompatApi24Impl(@NonNull Object outputConfiguration) {
@@ -77,6 +83,16 @@ class OutputConfigurationCompatApi24Impl extends OutputConfigurationCompatBaseIm
     }
 
     @Override
+    public long getDynamicRangeProfile() {
+        return ((OutputConfigurationParamsApi24) mObject).mDynamicRangeProfile;
+    }
+
+    @Override
+    public void setDynamicRangeProfile(long profile) {
+        ((OutputConfigurationParamsApi24) mObject).mDynamicRangeProfile = profile;
+    }
+
+    @Override
     @Nullable
     public Surface getSurface() {
         return ((OutputConfiguration) getOutputConfiguration()).getSurface();
@@ -93,18 +109,21 @@ class OutputConfigurationCompatApi24Impl extends OutputConfigurationCompatBaseIm
         return ((OutputConfiguration) getOutputConfiguration()).getSurfaceGroupId();
     }
 
+    @NonNull
     @Override
     public Object getOutputConfiguration() {
         Preconditions.checkArgument(mObject instanceof OutputConfigurationParamsApi24);
         return ((OutputConfigurationParamsApi24) mObject).mOutputConfiguration;
     }
 
-    @RequiresApi(21)
     private static final class OutputConfigurationParamsApi24 {
+        @NonNull
         final OutputConfiguration mOutputConfiguration;
+
         @Nullable
         String mPhysicalCameraId;
         boolean mIsShared;
+        long mDynamicRangeProfile = DynamicRangeProfiles.STANDARD;
 
         OutputConfigurationParamsApi24(@NonNull OutputConfiguration configuration) {
             mOutputConfiguration = configuration;
@@ -120,6 +139,7 @@ class OutputConfigurationCompatApi24Impl extends OutputConfigurationCompatBaseIm
 
             return Objects.equals(mOutputConfiguration, otherOutputConfig.mOutputConfiguration)
                     && mIsShared == otherOutputConfig.mIsShared
+                    && mDynamicRangeProfile == otherOutputConfig.mDynamicRangeProfile
                     && Objects.equals(mPhysicalCameraId, otherOutputConfig.mPhysicalCameraId);
 
         }
@@ -134,7 +154,8 @@ class OutputConfigurationCompatApi24Impl extends OutputConfigurationCompatBaseIm
             // (h * 31) XOR mPhysicalCameraId.hashCode()
             h = ((h << 5) - h)
                     ^ (mPhysicalCameraId == null ? 0 : mPhysicalCameraId.hashCode());
-
+            // (h * 31) XOR mDynamicRangeProfile
+            h = ((h << 5) - h) ^ Long.hashCode(mDynamicRangeProfile);
             return h;
         }
     }

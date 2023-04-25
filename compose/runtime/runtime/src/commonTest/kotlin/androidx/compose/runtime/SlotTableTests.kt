@@ -1241,7 +1241,7 @@ class SlotTableTests {
         sourceTable.write { writer ->
             writer.beginInsert()
             anchors.add(writer.anchor())
-            writer.startNode(10, 10)
+            writer.startNode(10, node = 10)
             writer.update(100)
             writer.update(200)
             writer.endGroup()
@@ -1398,6 +1398,56 @@ class SlotTableTests {
             val movedKey = movedKeys[index]
             assertEquals(sourceKey, movedKey, "Key at $index changed")
         }
+    }
+
+    @Test
+    fun testMovingFromMultiRootGroup() {
+        val sourceTable = SlotTable()
+        val destinationTable = SlotTable()
+
+        val anchors = mutableListOf<Anchor>()
+        sourceTable.write { writer ->
+            writer.insert {
+                writer.group(10) {
+                    anchors.add(writer.anchor(writer.parent))
+                    writer.group(100) {
+                        writer.group(1000) { }
+                        writer.group(1001) { }
+                        writer.group(1002) { }
+                        writer.group(10003) { }
+                    }
+                }
+                writer.group(20) {
+                    anchors.add(writer.anchor(writer.parent))
+                    writer.group(200) {
+                        writer.group(2000) { }
+                        writer.group(2001) { }
+                        writer.group(2002) { }
+                        writer.group(20003) { }
+                    }
+                }
+                writer.group(30) {
+                    anchors.add(writer.anchor(writer.parent))
+                    writer.group(300) {
+                        writer.group(3000) { }
+                        writer.group(3001) { }
+                        writer.group(3002) { }
+                        writer.group(30003) { }
+                    }
+                }
+            }
+        }
+        sourceTable.verifyWellFormed()
+
+        destinationTable.write { writer ->
+            for (anchor in anchors) {
+                writer.insert {
+                    writer.moveFrom(sourceTable, sourceTable.anchorIndex(anchor))
+                    sourceTable.verifyWellFormed()
+                }
+            }
+        }
+        destinationTable.verifyWellFormed()
     }
 
     @Test
@@ -3309,6 +3359,12 @@ class SlotTableTests {
     }
 
     @Test
+    fun canCheckAnEmptyTableForAMark() {
+        val table = SlotTable()
+        assertFalse(table.containsMark())
+    }
+
+    @Test
     fun canMarkAGroup() {
         val table = SlotTable()
         table.write { writer ->
@@ -3949,6 +4005,14 @@ class SlotTableTests {
     }
 }
 
+private const val NodeKey = 125
+
+private fun SlotWriter.startNode(key: Any?) =
+    startNode(NodeKey, key)
+
+private fun SlotWriter.startNode(key: Any?, node: Any?) =
+    startNode(NodeKey, key, node)
+
 @OptIn(InternalComposeApi::class)
 internal inline fun SlotWriter.group(block: () -> Unit) {
     startGroup()
@@ -3965,7 +4029,7 @@ internal inline fun SlotWriter.group(key: Int, block: () -> Unit) {
 
 @OptIn(InternalComposeApi::class)
 internal inline fun SlotWriter.nodeGroup(key: Int, node: Any, block: () -> Unit = { }) {
-    startNode(key, node)
+    startNode(NodeKey, key, node)
     block()
     endGroup()
 }
@@ -4034,7 +4098,7 @@ private fun testItems(): SlotTable {
         }
 
         fun element(key: Int, block: () -> Unit) {
-            writer.startNode(key, "node for key $key")
+            writer.startNode(key, node = "node for key $key")
             block()
             writer.endGroup()
         }

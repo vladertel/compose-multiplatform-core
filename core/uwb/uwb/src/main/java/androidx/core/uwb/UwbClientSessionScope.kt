@@ -25,19 +25,23 @@ interface UwbClientSessionScope {
      * one flow can be initiated. To consume the flow from multiple consumers,
      * convert the flow to a SharedFlow.
      *
-     * @throws [UwbRangingAlreadyStartedException] if a new flow was consumed again after the UWB
+     * @throws [IllegalStateException] if a new flow was consumed again after the UWB
      * ranging is already initiated.
      *
-     * @throws [UwbSystemCallbackException] if the backend UWB system has resulted in an error.
+     * @throws [androidx.core.uwb.exceptions.UwbSystemCallbackException] if the backend UWB system
+     * has resulted in an error.
      *
      * @throws [SecurityException] if ranging does not have the
      * android.permission.UWB_RANGING permission. Apps must
      * have requested and been granted this permission before calling this method.
      *
-     * @throws [IllegalArgumentException] if the client starts a controlee session
+     * @throws [IllegalArgumentException] if the client starts a ranging session
      * without setting complex channel and peer address.
+     *
+     * @throws [IllegalArgumentException] if the client starts a ranging session
+     * with invalid config id or ranging update type.
      */
-    fun initSession(parameters: RangingParameters): Flow<RangingResult>
+    fun prepareSession(parameters: RangingParameters): Flow<RangingResult>
 
     /** Returns the [RangingCapabilities] which the device supports. */
     val rangingCapabilities: RangingCapabilities

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 7.3.0-alpha07" type="baseline" client="gradle" dependencies="false" name="AGP (7.3.0-alpha07)" variant="all" version="7.3.0-alpha07">
+<issues format="6" by="lint 8.1.0-alpha07" type="baseline" client="gradle" dependencies="false" name="AGP (8.0.0-beta03)" variant="all" version="8.1.0-alpha07">
 
     <issue
         id="WrongConstant"
@@ -7,9 +7,1402 @@
         errorLine1="        return mSliceAction.getImageMode();"
         errorLine2="               ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SliceAction.java"
-            line="451"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction getPrimaryAction() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public List&lt;CellBuilder> getCells() {"
+        errorLine2="                             ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public CellBuilder getSeeMoreCell() {"
+        errorLine2="                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public PendingIntent getSeeMoreIntent() {"
+        errorLine2="                         ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public CharSequence getDescription() {"
+        errorLine2="                        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getLayoutDirection() {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public static final int TYPE_TEXT = 0;"
+        errorLine2="                                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public static final int TYPE_TITLE = 1;"
+        errorLine2="                                ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public static final int TYPE_IMAGE = 2;"
+        errorLine2="                                ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public static final int TYPE_OVERLAY = 3;"
+        errorLine2="                                ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public List&lt;Object> getObjects() {"
+        errorLine2="                            ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public List&lt;Integer> getTypes() {"
+        errorLine2="                             ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public List&lt;Boolean> getLoadings() {"
+        errorLine2="                             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getCellDescription() {"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public PendingIntent getContentIntent() {"
+        errorLine2="                             ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getTitle() {"
+        errorLine2="                            ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getSubtitle() {"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public SliceAction getSliceAction() {"
+        errorLine2="                           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class GridRowBuilderListV1Impl extends TemplateBuilderImpl {"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public void apply(@NonNull Slice.Builder b) {"
+        errorLine2="                    ~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public interface ListBuilder {"
+        errorLine2="                 ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public @interface ImageMode {"
+        errorLine2="                      ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public @interface LayoutDirection {}"
+        errorLine2="                      ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected TemplateBuilderImpl selectImpl() {"
+        errorLine2="                                  ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public androidx.slice.builders.impl.ListBuilder getImpl() {"
+        errorLine2="                                                    ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public @interface RangeMode {"
+        errorLine2="                      ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isTitleItemLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getTitleImageMode() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public IconCompat getTitleIcon() {"
+        errorLine2="                          ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getValue() {"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getMax() {"
+        errorLine2="                   ~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isValueSet() {"
+        errorLine2="                       ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getTitle() {"
+        errorLine2="                            ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getSubtitle() {"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public SliceAction getPrimaryAction() {"
+        errorLine2="                           ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getContentDescription() {"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getLayoutDirection() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getMode() {"
+        errorLine2="                   ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public static final int TYPE_ACTION = 2;"
+        errorLine2="                                ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getMin() {"
+        errorLine2="                   ~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getMax() {"
+        errorLine2="                   ~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public float getValue() {"
+        errorLine2="                     ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isValueSet() {"
+        errorLine2="                       ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public PendingIntent getAction() {"
+        errorLine2="                             ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getContentDescription() {"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public PendingIntent getInputAction() {"
+        errorLine2="                             ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getTitle() {"
+        errorLine2="                            ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getSubtitle() {"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public SliceAction getPrimaryAction() {"
+        errorLine2="                           ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isTitleItemLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getTitleImageMode() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public IconCompat getTitleIcon() {"
+        errorLine2="                          ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isTitleItemLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getTitleImageMode() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public IconCompat getTitleIcon() {"
+        errorLine2="                          ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public static final int TYPE_ACTION = 2;"
+        errorLine2="                                ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public List&lt;Object> getEndItems() {"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public List&lt;Integer> getEndTypes() {"
+        errorLine2="                             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public List&lt;Boolean> getEndLoads() {"
+        errorLine2="                             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getMin() {"
+        errorLine2="                   ~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getMax() {"
+        errorLine2="                   ~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getValue() {"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isValueSet() {"
+        errorLine2="                       ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getTitle() {"
+        errorLine2="                            ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getSubtitle() {"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public PendingIntent getAction() {"
+        errorLine2="                             ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public PendingIntent getInputAction() {"
+        errorLine2="                             ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public IconCompat getThumb() {"
+        errorLine2="                          ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public SliceAction getPrimaryAction() {"
+        errorLine2="                           ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getContentDescription() {"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getLayoutDirection() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public static final int TYPE_TIMESTAMP = 0;"
+        errorLine2="                                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public static final int TYPE_ICON = 1;"
+        errorLine2="                                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public static final int TYPE_ACTION = 2;"
+        errorLine2="                                ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public Uri getUri() {"
+        errorLine2="                   ~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isEndOfSection() {"
+        errorLine2="                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean hasEndActionOrToggle() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean hasEndImage() {"
+        errorLine2="                       ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean hasDefaultToggle() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean hasTimestamp() {"
+        errorLine2="                       ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public long getTimeStamp() {"
+        errorLine2="                    ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isTitleItemLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getTitleImageMode() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public IconCompat getTitleIcon() {"
+        errorLine2="                          ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public SliceAction getTitleAction() {"
+        errorLine2="                           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public SliceAction getPrimaryAction() {"
+        errorLine2="                           ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getTitle() {"
+        errorLine2="                            ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isTitleLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getSubtitle() {"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isSubtitleLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getContentDescription() {"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getLayoutDirection() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public List&lt;Object> getEndItems() {"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public List&lt;Integer> getEndTypes() {"
+        errorLine2="                             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public List&lt;Boolean> getEndLoads() {"
+        errorLine2="                             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isTitleActionLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public HeaderBuilder(@NonNull final Uri uri) {"
+        errorLine2="               ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public Uri getUri() {"
+        errorLine2="                   ~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getTitle() {"
+        errorLine2="                            ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isTitleLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getSubtitle() {"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isSubtitleLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getSummary() {"
+        errorLine2="                            ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public boolean isSummaryLoading() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public SliceAction getPrimaryAction() {"
+        errorLine2="                           ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public CharSequence getContentDescription() {"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getLayoutDirection() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/ListBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class ListBuilderBasicImpl extends TemplateBuilderImpl implements ListBuilder {"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/ListBuilderBasicImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class ListBuilderImpl extends TemplateBuilderImpl implements ListBuilder {"
+        errorLine2="             ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/ListBuilderImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class MessagingBasicImpl extends TemplateBuilderImpl implements"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public interface MessagingBuilder {"
+        errorLine2="                 ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/MessagingBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class MessagingListV1Impl extends TemplateBuilderImpl implements MessagingBuilder{"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class MessagingSliceBuilder extends TemplateSliceBuilder {"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected TemplateBuilderImpl selectImpl() {"
+        errorLine2="                                  ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class MessagingV1Impl extends TemplateBuilderImpl implements MessagingBuilder {"
+        errorLine2="             ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public List&lt;Pair&lt;String, CharSequence>> getOptions() {"
+        errorLine2="                                            ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction getPrimaryAction() {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public PendingIntent getInputAction() {"
+        errorLine2="                         ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public String getSelectedOption() {"
+        errorLine2="                  ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public CharSequence getTitle() {"
+        errorLine2="                        ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public CharSequence getSubtitle() {"
+        errorLine2="                        ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public CharSequence getContentDescription() {"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getLayoutDirection() {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void check() {"
+        errorLine2="                ~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class SelectionBuilderBasicImpl extends SelectionBuilderImpl {"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderBasicImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public abstract class SelectionBuilderImpl extends TemplateBuilderImpl {"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class SelectionBuilderListV2Impl extends SelectionBuilderImpl {"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderListV2Impl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction(@NonNull PendingIntent action, @NonNull Icon actionIcon,"
+        errorLine2="           ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction(@NonNull PendingIntent action, @NonNull Icon actionIcon,"
+        errorLine2="           ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction(@NonNull PendingIntent action, @NonNull Icon actionIcon,"
+        errorLine2="           ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction(@NonNull PendingIntent action, @NonNull IconCompat actionIcon,"
+        errorLine2="           ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction(@NonNull PendingIntent action, @NonNull IconCompat actionIcon,"
+        errorLine2="           ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction(@NonNull PendingIntent action, @NonNull IconCompat actionIcon,"
+        errorLine2="           ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction(@NonNull PendingIntent action, @NonNull CharSequence actionTitle,"
+        errorLine2="           ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction(@NonNull PendingIntent action, @NonNull CharSequence actionTitle,"
+        errorLine2="           ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static SliceAction createDatePicker(@NonNull PendingIntent action,"
+        errorLine2="                              ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static SliceAction createTimePicker(@NonNull PendingIntent action,"
+        errorLine2="                              ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public Slice buildSlice(@NonNull Slice.Builder builder) {"
+        errorLine2="                 ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceActionImpl getImpl() {"
+        errorLine2="                           ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setPrimaryAction(@NonNull Slice.Builder builder) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public abstract class TemplateBuilderImpl {"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public Slice.Builder getBuilder() {"
+        errorLine2="                         ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public Slice.Builder createChildBuilder() {"
+        errorLine2="                         ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public abstract void apply(@NonNull Slice.Builder builder);"
+        errorLine2="                         ~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public Clock getClock() {"
+        errorLine2="                 ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceSpec getSpec() {"
+        errorLine2="                     ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected ArrayList&lt;String> parseImageMode(int imageMode, boolean isLoading) {"
+        errorLine2="                                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected TemplateSliceBuilder(TemplateBuilderImpl impl) {"
+        errorLine2="              ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public TemplateSliceBuilder(Context context, Uri uri) {"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected Slice.Builder getBuilder() {"
+        errorLine2="                            ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    abstract void setImpl(TemplateBuilderImpl impl);"
+        errorLine2="                  ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected TemplateBuilderImpl selectImpl() {"
+        errorLine2="                                  ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected boolean checkCompatible(SliceSpec candidate) {"
+        errorLine2="                      ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected Clock getClock() {"
+        errorLine2="                    ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    static &lt;T> Pair&lt;SliceSpec, Class&lt;? extends TemplateBuilderImpl>> pair(SliceSpec spec,"
+        errorLine2="                                                                     ~~~~">
+        <location
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -18,9 +1411,7 @@
         errorLine1="        setTtl(ttl == null ? INFINITY : ttl.toMillis());"
         errorLine2="                                            ~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/ListBuilderBasicImpl.java"
-            line="247"
-            column="45"/>
+            file="src/main/java/androidx/slice/builders/impl/ListBuilderBasicImpl.java"/>
     </issue>
 
     <issue
@@ -29,9 +1420,7 @@
         errorLine1="        setTtl(ttl == null ? INFINITY : ttl.toMillis());"
         errorLine2="                                            ~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/ListBuilderImpl.java"
-            line="305"
-            column="45"/>
+            file="src/main/java/androidx/slice/builders/impl/ListBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -40,9 +1429,7 @@
         errorLine1="    public SliceAction getPrimaryAction() {"
         errorLine2="           ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="190"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -51,9 +1438,7 @@
         errorLine1="    public List&lt;CellBuilder> getCells() {"
         errorLine2="           ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="198"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -62,9 +1447,7 @@
         errorLine1="    public CellBuilder getSeeMoreCell() {"
         errorLine2="           ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="206"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -73,9 +1456,7 @@
         errorLine1="    public PendingIntent getSeeMoreIntent() {"
         errorLine2="           ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="214"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -84,9 +1465,7 @@
         errorLine1="    public CharSequence getDescription() {"
         errorLine2="           ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="222"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -95,9 +1474,7 @@
         errorLine1="        public List&lt;Object> getObjects() {"
         errorLine2="               ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="471"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -106,9 +1483,7 @@
         errorLine1="        public List&lt;Integer> getTypes() {"
         errorLine2="               ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="479"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -117,9 +1492,7 @@
         errorLine1="        public List&lt;Boolean> getLoadings() {"
         errorLine2="               ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="487"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -128,9 +1501,7 @@
         errorLine1="        public CharSequence getCellDescription() {"
         errorLine2="               ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="495"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -139,9 +1510,7 @@
         errorLine1="        public PendingIntent getContentIntent() {"
         errorLine2="               ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"
-            line="503"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/GridRowBuilder.java"/>
     </issue>
 
     <issue
@@ -150,9 +1519,7 @@
         errorLine1="    public GridRowBuilderListV1Impl(@NonNull ListBuilderImpl parent, GridRowBuilder builder) {"
         errorLine2="                                                                     ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"
-            line="56"
-            column="70"/>
+            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"/>
     </issue>
 
     <issue
@@ -161,9 +1528,7 @@
         errorLine1="    public void addCell(CellBuilder builder) {"
         errorLine2="                        ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"
-            line="89"
-            column="25"/>
+            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"/>
     </issue>
 
     <issue
@@ -172,9 +1537,7 @@
         errorLine1="    public void setSeeMoreAction(PendingIntent intent) {"
         errorLine2="                                 ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"
-            line="106"
-            column="34"/>
+            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"/>
     </issue>
 
     <issue
@@ -183,9 +1546,7 @@
         errorLine1="    public void setPrimaryAction(SliceAction action) {"
         errorLine2="                                 ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"
-            line="113"
-            column="34"/>
+            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"/>
     </issue>
 
     <issue
@@ -194,9 +1555,7 @@
         errorLine1="    public void setContentDescription(CharSequence description) {"
         errorLine2="                                      ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"
-            line="119"
-            column="39"/>
+            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"/>
     </issue>
 
     <issue
@@ -205,9 +1564,7 @@
         errorLine1="        public void fillFrom(CellBuilder builder) {"
         errorLine2="                             ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"
-            line="144"
-            column="30"/>
+            file="src/main/java/androidx/slice/builders/impl/GridRowBuilderListV1Impl.java"/>
     </issue>
 
     <issue
@@ -216,9 +1573,7 @@
         errorLine1="    public ListBuilderBasicImpl(Slice.Builder b, SliceSpec spec) {"
         errorLine2="                                ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/ListBuilderBasicImpl.java"
-            line="76"
-            column="33"/>
+            file="src/main/java/androidx/slice/builders/impl/ListBuilderBasicImpl.java"/>
     </issue>
 
     <issue
@@ -227,9 +1582,7 @@
         errorLine1="    public ListBuilderBasicImpl(Slice.Builder b, SliceSpec spec) {"
         errorLine2="                                                 ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/ListBuilderBasicImpl.java"
-            line="76"
-            column="50"/>
+            file="src/main/java/androidx/slice/builders/impl/ListBuilderBasicImpl.java"/>
     </issue>
 
     <issue
@@ -238,9 +1591,7 @@
         errorLine1="    public MessagingBasicImpl(Slice.Builder builder, SliceSpec spec) {"
         errorLine2="                              ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"
-            line="47"
-            column="31"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"/>
     </issue>
 
     <issue
@@ -249,9 +1600,7 @@
         errorLine1="    public MessagingBasicImpl(Slice.Builder builder, SliceSpec spec) {"
         errorLine2="                                                     ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"
-            line="47"
-            column="54"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"/>
     </issue>
 
     <issue
@@ -260,9 +1609,7 @@
         errorLine1="    public void add(TemplateBuilderImpl builder) {"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"
-            line="72"
-            column="21"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"/>
     </issue>
 
     <issue
@@ -271,9 +1618,7 @@
         errorLine1="    public TemplateBuilderImpl createMessageBuilder() {"
         errorLine2="           ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"
-            line="82"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"/>
     </issue>
 
     <issue
@@ -282,9 +1627,7 @@
         errorLine1="        public MessageBuilder(MessagingBasicImpl parent) {"
         errorLine2="                              ~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"
-            line="98"
-            column="31"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"/>
     </issue>
 
     <issue
@@ -293,9 +1636,7 @@
         errorLine1="        public void addSource(Icon source) {"
         errorLine2="                              ~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"
-            line="112"
-            column="31"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"/>
     </issue>
 
     <issue
@@ -304,9 +1645,7 @@
         errorLine1="        public void addText(CharSequence text) {"
         errorLine2="                            ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"
-            line="120"
-            column="29"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBasicImpl.java"/>
     </issue>
 
     <issue
@@ -315,9 +1654,7 @@
         errorLine1="    void add(TemplateBuilderImpl builder);"
         errorLine2="             ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBuilder.java"
-            line="35"
-            column="14"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBuilder.java"/>
     </issue>
 
     <issue
@@ -326,9 +1663,7 @@
         errorLine1="    TemplateBuilderImpl createMessageBuilder();"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBuilder.java"
-            line="40"
-            column="5"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBuilder.java"/>
     </issue>
 
     <issue
@@ -337,9 +1672,7 @@
         errorLine1="        void addSource(Icon source);"
         errorLine2="                       ~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBuilder.java"
-            line="50"
-            column="24"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBuilder.java"/>
     </issue>
 
     <issue
@@ -348,9 +1681,7 @@
         errorLine1="        void addText(CharSequence text);"
         errorLine2="                     ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingBuilder.java"
-            line="55"
-            column="22"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingBuilder.java"/>
     </issue>
 
     <issue
@@ -359,9 +1690,7 @@
         errorLine1="    public MessagingListV1Impl(Slice.Builder b, SliceSpec spec) {"
         errorLine2="                               ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"
-            line="43"
-            column="32"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"/>
     </issue>
 
     <issue
@@ -370,9 +1699,7 @@
         errorLine1="    public MessagingListV1Impl(Slice.Builder b, SliceSpec spec) {"
         errorLine2="                                                ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"
-            line="43"
-            column="49"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"/>
     </issue>
 
     <issue
@@ -381,9 +1708,7 @@
         errorLine1="    public void add(TemplateBuilderImpl builder) {"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"
-            line="52"
-            column="21"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"/>
     </issue>
 
     <issue
@@ -392,9 +1717,7 @@
         errorLine1="    public TemplateBuilderImpl createMessageBuilder() {"
         errorLine2="           ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"
-            line="60"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"/>
     </issue>
 
     <issue
@@ -403,9 +1726,7 @@
         errorLine1="        public MessageBuilder(MessagingListV1Impl parent) {"
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"
-            line="79"
-            column="31"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"/>
     </issue>
 
     <issue
@@ -414,9 +1735,7 @@
         errorLine1="        public void addSource(Icon source) {"
         errorLine2="                              ~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"
-            line="92"
-            column="31"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"/>
     </issue>
 
     <issue
@@ -425,9 +1744,7 @@
         errorLine1="        public void addText(CharSequence text) {"
         errorLine2="                            ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"
-            line="99"
-            column="29"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingListV1Impl.java"/>
     </issue>
 
     <issue
@@ -436,9 +1753,7 @@
         errorLine1="    public MessagingSliceBuilder add(MessageBuilder builder) {"
         errorLine2="           ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="66"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -447,9 +1762,7 @@
         errorLine1="    public MessagingSliceBuilder add(MessageBuilder builder) {"
         errorLine2="                                     ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="66"
-            column="38"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -458,9 +1771,7 @@
         errorLine1="    public MessagingSliceBuilder add(Consumer&lt;MessageBuilder> c) {"
         errorLine2="           ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="74"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -469,9 +1780,7 @@
         errorLine1="    public MessagingSliceBuilder add(Consumer&lt;MessageBuilder> c) {"
         errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="74"
-            column="38"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -480,9 +1789,7 @@
         errorLine1="    protected TemplateBuilderImpl selectImpl() {"
         errorLine2="              ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="90"
-            column="15"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -491,9 +1798,7 @@
         errorLine1="        public MessageBuilder(MessagingSliceBuilder parent) {"
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="111"
-            column="31"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -502,9 +1807,7 @@
         errorLine1="        public MessageBuilder addSource(Icon source) {"
         errorLine2="               ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="119"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -513,9 +1816,7 @@
         errorLine1="        public MessageBuilder addSource(Icon source) {"
         errorLine2="                                        ~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="119"
-            column="41"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -524,9 +1825,7 @@
         errorLine1="        public MessageBuilder addSource(IconCompat source) {"
         errorLine2="               ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="127"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -535,9 +1834,7 @@
         errorLine1="        public MessageBuilder addSource(IconCompat source) {"
         errorLine2="                                        ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="127"
-            column="41"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -546,9 +1843,7 @@
         errorLine1="        public MessageBuilder addText(CharSequence text) {"
         errorLine2="               ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="137"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -557,9 +1852,7 @@
         errorLine1="        public MessageBuilder addText(CharSequence text) {"
         errorLine2="                                      ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="137"
-            column="39"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -568,9 +1861,7 @@
         errorLine1="        public MessageBuilder addTimestamp(long timestamp) {"
         errorLine2="               ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"
-            line="145"
-            column="16"/>
+            file="src/main/java/androidx/slice/builders/MessagingSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -579,9 +1870,7 @@
         errorLine1="    public MessagingV1Impl(Slice.Builder b, SliceSpec spec) {"
         errorLine2="                           ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"
-            line="39"
-            column="28"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"/>
     </issue>
 
     <issue
@@ -590,9 +1879,7 @@
         errorLine1="    public MessagingV1Impl(Slice.Builder b, SliceSpec spec) {"
         errorLine2="                                            ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"
-            line="39"
-            column="45"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"/>
     </issue>
 
     <issue
@@ -601,9 +1888,7 @@
         errorLine1="    public void add(TemplateBuilderImpl builder) {"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"
-            line="46"
-            column="21"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"/>
     </issue>
 
     <issue
@@ -612,9 +1897,7 @@
         errorLine1="    public TemplateBuilderImpl createMessageBuilder() {"
         errorLine2="           ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"
-            line="60"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"/>
     </issue>
 
     <issue
@@ -623,9 +1906,7 @@
         errorLine1="        public MessageBuilder(MessagingV1Impl parent) {"
         errorLine2="                              ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"
-            line="70"
-            column="31"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"/>
     </issue>
 
     <issue
@@ -634,9 +1915,7 @@
         errorLine1="        public void addSource(Icon source) {"
         errorLine2="                              ~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"
-            line="78"
-            column="31"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"/>
     </issue>
 
     <issue
@@ -645,9 +1924,7 @@
         errorLine1="        public void addText(CharSequence text) {"
         errorLine2="                            ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"
-            line="86"
-            column="29"/>
+            file="src/main/java/androidx/slice/builders/impl/MessagingV1Impl.java"/>
     </issue>
 
     <issue
@@ -656,9 +1933,7 @@
         errorLine1="    public SelectionBuilder addOption(String optionKey, CharSequence optionText) {"
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="74"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -667,9 +1942,7 @@
         errorLine1="    public SelectionBuilder addOption(String optionKey, CharSequence optionText) {"
         errorLine2="                                      ~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="74"
-            column="39"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -678,9 +1951,7 @@
         errorLine1="    public SelectionBuilder addOption(String optionKey, CharSequence optionText) {"
         errorLine2="                                                        ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="74"
-            column="57"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -689,9 +1960,7 @@
         errorLine1="    public SelectionBuilder setPrimaryAction(@NonNull SliceAction primaryAction) {"
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="93"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -700,9 +1969,7 @@
         errorLine1="    public SelectionBuilder setInputAction(@NonNull PendingIntent inputAction) {"
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="107"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -711,9 +1978,7 @@
         errorLine1="    public SelectionBuilder setInputAction(@NonNull RemoteCallback inputAction) {"
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="121"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -722,9 +1987,7 @@
         errorLine1="    public SelectionBuilder setSelectedOption(String selectedOption) {"
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="132"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -733,9 +1996,7 @@
         errorLine1="    public SelectionBuilder setSelectedOption(String selectedOption) {"
         errorLine2="                                              ~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="132"
-            column="47"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -744,9 +2005,7 @@
         errorLine1="    public SelectionBuilder setTitle(@Nullable CharSequence title) {"
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="143"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -755,9 +2014,7 @@
         errorLine1="    public SelectionBuilder setSubtitle(@Nullable CharSequence subtitle) {"
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="154"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -766,9 +2023,7 @@
         errorLine1="    public SelectionBuilder setContentDescription(@Nullable CharSequence contentDescription) {"
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="165"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -777,9 +2032,7 @@
         errorLine1="    public SelectionBuilder setLayoutDirection("
         errorLine2="           ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="176"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -788,9 +2041,7 @@
         errorLine1="    public List&lt;Pair&lt;String, CharSequence>> getOptions() {"
         errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="186"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -799,9 +2050,7 @@
         errorLine1="    public SliceAction getPrimaryAction() {"
         errorLine2="           ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="194"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -810,9 +2059,7 @@
         errorLine1="    public PendingIntent getInputAction() {"
         errorLine2="           ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="202"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -821,9 +2068,7 @@
         errorLine1="    public String getSelectedOption() {"
         errorLine2="           ~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="210"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -832,9 +2077,7 @@
         errorLine1="    public CharSequence getTitle() {"
         errorLine2="           ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="218"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -843,9 +2086,7 @@
         errorLine1="    public CharSequence getSubtitle() {"
         errorLine2="           ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="226"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -854,9 +2095,7 @@
         errorLine1="    public CharSequence getContentDescription() {"
         errorLine2="           ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"
-            line="234"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/SelectionBuilder.java"/>
     </issue>
 
     <issue
@@ -865,9 +2104,7 @@
         errorLine1="    public SelectionBuilderBasicImpl(Slice.Builder sliceBuilder,"
         errorLine2="                                     ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderBasicImpl.java"
-            line="38"
-            column="38"/>
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderBasicImpl.java"/>
     </issue>
 
     <issue
@@ -876,9 +2113,7 @@
         errorLine1="                                     SelectionBuilder selectionBuilder) {"
         errorLine2="                                     ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderBasicImpl.java"
-            line="39"
-            column="38"/>
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderBasicImpl.java"/>
     </issue>
 
     <issue
@@ -887,9 +2122,7 @@
         errorLine1="    public SelectionBuilderImpl(Slice.Builder sliceBuilder,"
         errorLine2="                                ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderImpl.java"
-            line="35"
-            column="33"/>
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -898,9 +2131,7 @@
         errorLine1="                                SelectionBuilder selectionBuilder) {"
         errorLine2="                                ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderImpl.java"
-            line="36"
-            column="33"/>
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -909,9 +2140,7 @@
         errorLine1="    protected SelectionBuilder getSelectionBuilder() {"
         errorLine2="              ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderImpl.java"
-            line="48"
-            column="15"/>
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -920,9 +2149,7 @@
         errorLine1="    public SelectionBuilderListV2Impl(Slice.Builder parentSliceBuilder,"
         errorLine2="                                      ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderListV2Impl.java"
-            line="46"
-            column="39"/>
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderListV2Impl.java"/>
     </issue>
 
     <issue
@@ -931,9 +2158,7 @@
         errorLine1="                                  SelectionBuilder selectionBuilder) {"
         errorLine2="                                  ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderListV2Impl.java"
-            line="47"
-            column="35"/>
+            file="src/main/java/androidx/slice/builders/impl/SelectionBuilderListV2Impl.java"/>
     </issue>
 
     <issue
@@ -942,9 +2167,7 @@
         errorLine1="    public static SliceAction create(@NonNull PendingIntent action,"
         errorLine2="                  ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SliceAction.java"
-            line="174"
-            column="19"/>
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
     </issue>
 
     <issue
@@ -953,9 +2176,7 @@
         errorLine1="    public static SliceAction create(@NonNull RemoteCallback action,"
         errorLine2="                  ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SliceAction.java"
-            line="193"
-            column="19"/>
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
     </issue>
 
     <issue
@@ -964,9 +2185,7 @@
         errorLine1="    public static SliceAction createDeeplink(@NonNull PendingIntent action,"
         errorLine2="                  ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SliceAction.java"
-            line="243"
-            column="19"/>
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
     </issue>
 
     <issue
@@ -975,9 +2194,7 @@
         errorLine1="    public static SliceAction createDeeplink(@NonNull RemoteCallback action,"
         errorLine2="                  ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SliceAction.java"
-            line="265"
-            column="19"/>
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
     </issue>
 
     <issue
@@ -986,9 +2203,7 @@
         errorLine1="    public static SliceAction createToggle(@NonNull PendingIntent action,"
         errorLine2="                  ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SliceAction.java"
-            line="282"
-            column="19"/>
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
     </issue>
 
     <issue
@@ -997,9 +2212,7 @@
         errorLine1="    public static SliceAction createToggle(@NonNull RemoteCallback action,"
         errorLine2="                  ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SliceAction.java"
-            line="295"
-            column="19"/>
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
     </issue>
 
     <issue
@@ -1008,9 +2221,7 @@
         errorLine1="    public static SliceAction createToggle(@NonNull PendingIntent action,"
         errorLine2="                  ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SliceAction.java"
-            line="310"
-            column="19"/>
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
     </issue>
 
     <issue
@@ -1019,9 +2230,7 @@
         errorLine1="    public static SliceAction createToggle(@NonNull RemoteCallback action,"
         errorLine2="                  ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/SliceAction.java"
-            line="325"
-            column="19"/>
+            file="src/main/java/androidx/slice/builders/SliceAction.java"/>
     </issue>
 
     <issue
@@ -1030,9 +2239,7 @@
         errorLine1="    protected TemplateBuilderImpl(Slice.Builder b, SliceSpec spec) {"
         errorLine2="                                  ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="53"
-            column="35"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1041,9 +2248,7 @@
         errorLine1="    protected TemplateBuilderImpl(Slice.Builder b, SliceSpec spec) {"
         errorLine2="                                                   ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="53"
-            column="52"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1052,9 +2257,7 @@
         errorLine1="    protected TemplateBuilderImpl(Slice.Builder b, SliceSpec spec, Clock clock) {"
         errorLine2="                                  ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="57"
-            column="35"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1063,9 +2266,7 @@
         errorLine1="    protected TemplateBuilderImpl(Slice.Builder b, SliceSpec spec, Clock clock) {"
         errorLine2="                                                   ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="57"
-            column="52"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1074,9 +2275,7 @@
         errorLine1="    protected TemplateBuilderImpl(Slice.Builder b, SliceSpec spec, Clock clock) {"
         errorLine2="                                                                   ~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="57"
-            column="68"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1085,9 +2284,7 @@
         errorLine1="    protected void setBuilder(Slice.Builder builder) {"
         errorLine2="                              ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="63"
-            column="31"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1096,9 +2293,7 @@
         errorLine1="    public Slice build() {"
         errorLine2="           ~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="70"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1107,9 +2302,7 @@
         errorLine1="    public Slice.Builder getBuilder() {"
         errorLine2="           ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="80"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1118,9 +2311,7 @@
         errorLine1="    public Slice.Builder createChildBuilder() {"
         errorLine2="           ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="88"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1129,9 +2320,7 @@
         errorLine1="    public Clock getClock() {"
         errorLine2="           ~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="102"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1140,9 +2329,7 @@
         errorLine1="    public SliceSpec getSpec() {"
         errorLine2="           ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"
-            line="110"
-            column="12"/>
+            file="src/main/java/androidx/slice/builders/impl/TemplateBuilderImpl.java"/>
     </issue>
 
     <issue
@@ -1151,9 +2338,7 @@
         errorLine1="    protected TemplateSliceBuilder(TemplateBuilderImpl impl) {"
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"
-            line="57"
-            column="36"/>
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -1162,9 +2347,7 @@
         errorLine1="    public TemplateSliceBuilder(Context context, Uri uri) {"
         errorLine2="                                ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"
-            line="68"
-            column="33"/>
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -1173,9 +2356,7 @@
         errorLine1="    public TemplateSliceBuilder(Context context, Uri uri) {"
         errorLine2="                                                 ~~~">
         <location
-            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"
-            line="68"
-            column="50"/>
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -1184,9 +2365,7 @@
         errorLine1="    protected Slice.Builder getBuilder() {"
         errorLine2="              ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"
-            line="91"
-            column="15"/>
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -1195,9 +2374,7 @@
         errorLine1="    protected TemplateBuilderImpl selectImpl() {"
         errorLine2="              ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"
-            line="105"
-            column="15"/>
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -1206,9 +2383,7 @@
         errorLine1="    protected boolean checkCompatible(SliceSpec candidate) {"
         errorLine2="                                      ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"
-            line="113"
-            column="39"/>
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
     </issue>
 
     <issue
@@ -1217,9 +2392,7 @@
         errorLine1="    protected Clock getClock() {"
         errorLine2="              ~~~~~">
         <location
-            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"
-            line="135"
-            column="15"/>
+            file="src/main/java/androidx/slice/builders/TemplateSliceBuilder.java"/>
     </issue>
 
 </issues>

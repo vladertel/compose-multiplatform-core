@@ -16,11 +16,11 @@
 
 package androidx.build
 
+import java.io.File
+import java.util.Properties
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.plugins.ExtraPropertiesExtension
-import java.io.File
-import java.util.Properties
 
 /**
  * Writes the appropriate SDK path to local.properties file in specified location.
@@ -88,17 +88,6 @@ fun Project.getSdkPath(): File {
 }
 
 /**
- * @return the root project's platform-specific NDK path as a file.
- */
-fun Project.getNdkPath(): File {
-    val sdkPath = getSdkPath()
-    return getPathFromEnvironmentVariableOrNull("ANDROID_NDK_ROOT")
-        // One of the default paths when ndk is installed for the first time via sdkmanager.
-        ?: fileIfExistsOrNull(sdkPath, "ndk-bundle")
-        ?: File(sdkPath, "ndk")
-}
-
-/**
  * @return [File] representing the path stored in [envValue] if it exists, `null` otherwise.
  */
 private fun getPathFromEnvironmentVariableOrNull(envVar: String): File? {
@@ -137,7 +126,7 @@ private fun getSdkPathFromEnvironmentVariable(): File {
 /**
  * Sets the path to the canonical root project directory, e.g. {@code frameworks/support}.
  */
-fun Project.setSupportRootFolder(rootDir: File) {
+fun Project.setSupportRootFolder(rootDir: File?) {
     val extension = project.rootProject.property("ext") as ExtraPropertiesExtension
     return extension.set("supportRootFolder", rootDir)
 }
@@ -154,10 +143,25 @@ fun Project.getSupportRootFolder(): File {
 }
 
 /**
+ * Returns whether the path to the canonical root project directory has been set.
+ */
+fun Project.hasSupportRootFolder(): Boolean {
+    val extension = project.rootProject.property("ext") as ExtraPropertiesExtension
+    return extension.has("supportRootFolder")
+}
+
+/**
  * Returns the path to the checkout's root directory, e.g. where {@code repo init} was run.
  * <p>
  * This method assumes that the canonical root project directory is {@code frameworks/support}.
  */
 fun Project.getCheckoutRoot(): File {
     return project.getSupportRootFolder().parentFile.parentFile
+}
+
+/**
+ * Returns the path to the konan prebuilts folder (e.g. <root>/prebuilts/androidx/konan).
+ */
+fun Project.getKonanPrebuiltsFolder(): File {
+    return getPrebuiltsRoot().resolve("androidx/konan")
 }

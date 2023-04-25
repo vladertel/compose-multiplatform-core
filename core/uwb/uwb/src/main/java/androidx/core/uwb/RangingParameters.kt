@@ -19,8 +19,9 @@ package androidx.core.uwb
 /**
  * Set of parameters which should be passed to the UWB chip to start ranging.
  *
- * @property uwbConfigId
- * The UWB configuration ID. One ID specifies one fixed set of pre-defined parameters.
+ * @property uwbConfigType
+ * The UWB configuration type. One type specifies one fixed set of pre-defined parameters. The
+ * UWB config type includes [CONFIG_UNICAST_DS_TWR] and [CONFIG_MULTICAST_DS_TWR].
  *
  * @property sessionId
  * The ID of the ranging session. If the value is SESSION_ID_UNSET (0), it will
@@ -42,37 +43,51 @@ package androidx.core.uwb
  * @property peerDevices
  * The peers to perform ranging with. If using unicast, length should be 1.
  *
- * @property updateRate
- * The update rate of the ranging data
+ * @property updateRateType
+ * The update rate type of the ranging data. The update rate types include
+ * [RANGING_UPDATE_RATE_AUTOMATIC], [RANGING_UPDATE_RATE_FREQUENT], and
+ * [RANGING_UPDATE_RATE_INFREQUENT].
  */
 class RangingParameters(
-    val uwbConfigId: Int,
+    val uwbConfigType: Int,
     val sessionId: Int,
     val sessionKeyInfo: ByteArray?,
     val complexChannel: UwbComplexChannel?,
     val peerDevices: List<UwbDevice>,
-    val updateRate: Int
+    val updateRateType: Int
 ) {
 
     companion object {
 
         /**
-         * Pre-defined unicast STATIC STS DS-TWR ranging, deferred mode, ranging
-         * interval 240 ms.
+         * Pre-defined unicast STATIC STS DS-TWR ranging.
+         *
+         * deferred mode,
+         * ranging interval = 240 ms,
+         * slot duration = 2400 RSTU,
+         * slots per ranging round = 6
+         *
+         * All other MAC parameters use FiRa/UCI default values.
          *
          * <p> Typical use case: device tracking tags
          */
         @JvmField
-        internal val UWB_CONFIG_ID_1 = 1
+        val CONFIG_UNICAST_DS_TWR = 1
 
         /**
-         * Pre-defined one-to-many STATIC STS DS-TWR ranging, deferred mode, ranging
-         * interval 200 ms.
+         * Pre-defined one-to-many STATIC STS DS-TWR ranging
+         *
+         * deferred mode,
+         * ranging interval = 200 ms,
+         * slot duration = 2400 RSTU,
+         * slots per ranging round = 20
+         *
+         * All other MAC parameters use FiRa/UCI default values.
          *
          * <p> Typical use case: smart phone interacts with many smart devices
          */
         @JvmField
-        internal val UWB_CONFIG_ID_2 = 2
+        val CONFIG_MULTICAST_DS_TWR = 2
 
         /** Same as CONFIG_ID_1, except AoA data is not reported. */
         @JvmField

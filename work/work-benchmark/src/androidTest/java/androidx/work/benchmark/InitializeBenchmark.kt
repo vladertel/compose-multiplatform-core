@@ -26,16 +26,17 @@ import androidx.test.filters.LargeTest
 import androidx.work.Configuration
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
-import androidx.work.impl.WorkDatabasePathHelper
 import androidx.work.impl.WorkDatabase
+import androidx.work.impl.WorkDatabasePathHelper
 import androidx.work.impl.WorkManagerImpl
-import androidx.work.impl.utils.SerialExecutor
+import androidx.work.impl.utils.SerialExecutorImpl
+import androidx.work.impl.utils.taskexecutor.SerialExecutor
 import androidx.work.impl.utils.taskexecutor.TaskExecutor
+import java.util.concurrent.Executor
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.Executor
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
@@ -57,7 +58,7 @@ class InitializeBenchmark {
         // Use a DispatchingExecutor to avoid having to wait for all the tasks to be done
         // in the actual benchmark.
         executor = DispatchingExecutor()
-        val serialExecutor = SerialExecutor(executor)
+        val serialExecutor = SerialExecutorImpl(executor)
 
         taskExecutor = object : TaskExecutor {
             override fun getMainThreadExecutor(): Executor {
@@ -80,7 +81,8 @@ class InitializeBenchmark {
     fun initializeSimple() {
         benchmarkRule.measureRepeated {
             // Runs ForceStopRunnable
-            val database = WorkDatabase.create(context, configuration.taskExecutor, false)
+            val database = WorkDatabase.create(
+                context, configuration.taskExecutor, configuration.clock, false)
             WorkManagerImpl(context, configuration, taskExecutor, database)
             runWithTimingDisabled {
                 executor.runAllCommands()
@@ -94,7 +96,8 @@ class InitializeBenchmark {
     fun initializeWithWorkLeft() {
         val count = 20
         benchmarkRule.measureRepeated {
-            val database = WorkDatabase.create(context, configuration.taskExecutor, false)
+            val database = WorkDatabase.create(
+                context, configuration.taskExecutor, configuration.clock, false)
             runWithTimingDisabled {
                 for (i in 0 until count) {
                     val request = OneTimeWorkRequestBuilder<NoOpWorker>()

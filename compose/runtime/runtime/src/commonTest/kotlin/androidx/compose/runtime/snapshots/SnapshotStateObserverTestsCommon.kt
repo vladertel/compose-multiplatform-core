@@ -17,7 +17,12 @@
 package androidx.compose.runtime.snapshots
 
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.referentialEqualityPolicy
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.structuralEqualityPolicy
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -435,6 +440,353 @@ class SnapshotStateObserverTestsCommon {
             }
         }
         assertEquals(0, changes)
+    }
+
+    @Test
+    fun derivedStateOfInvalidatesObserver() {
+        var changes = 0
+
+        runSimpleTest { stateObserver, state ->
+            val derivedState = derivedStateOf { state.value }
+
+            stateObserver.observeReads("scope", { changes++ }) {
+                // read
+                derivedState.value
+            }
+        }
+        assertEquals(1, changes)
+    }
+
+    @Test
+    fun derivedStateOfReferentialChangeDoesNotInvalidateObserver() {
+        var changes = 0
+
+        runSimpleTest { stateObserver, _ ->
+            val state = mutableStateOf(mutableListOf(42), referentialEqualityPolicy())
+            val derivedState = derivedStateOf { state.value }
+
+            stateObserver.observeReads("scope", { changes++ }) {
+                // read
+                derivedState.value
+            }
+
+            state.value = mutableListOf(42)
+        }
+        assertEquals(0, changes)
+    }
+
+    @Test
+    fun nestedDerivedStateOfInvalidatesObserver() {
+        var changes = 0
+
+        runSimpleTest { stateObserver, state ->
+            val derivedState = derivedStateOf { state.value }
+            val derivedState2 = derivedStateOf { derivedState.value }
+
+            stateObserver.observeReads("scope", { changes++ }) {
+                // read
+                derivedState2.value
+            }
+        }
+        assertEquals(1, changes)
+    }
+
+    @Test
+    fun derivedStateOfWithReferentialMutationPolicy() {
+        var changes = 0
+
+        runSimpleTest { stateObserver, _ ->
+            val state = mutableStateOf(mutableListOf(1), referentialEqualityPolicy())
+            val derivedState = derivedStateOf(referentialEqualityPolicy()) { state.value }
+
+            stateObserver.observeReads("scope", { changes++ }) {
+                // read
+                derivedState.value
+            }
+
+            state.value = mutableListOf(1)
+        }
+        assertEquals(1, changes)
+    }
+
+    @Test
+    fun derivedStateOfWithStructuralMutationPolicy() {
+        var changes = 0
+
+        runSimpleTest { stateObserver, _ ->
+            val state = mutableStateOf(mutableListOf(1), referentialEqualityPolicy())
+            val derivedState = derivedStateOf(structuralEqualityPolicy()) { state.value }
+
+            stateObserver.observeReads("scope", { changes++ }) {
+                // read
+                derivedState.value
+            }
+
+            state.value = mutableListOf(1)
+        }
+        assertEquals(0, changes)
+    }
+
+    @Test
+    fun readingDerivedStateAndDependencyInvalidates() {
+        var changes = 0
+
+        runSimpleTest { stateObserver, state ->
+            val derivedState = derivedStateOf { state.value >= 0 }
+
+            stateObserver.observeReads("scope", { changes++ }) {
+                // read derived state
+                derivedState.value
+                // read dependency
+                state.value
+            }
+        }
+        assertEquals(1, changes)
+    }
+
+    @Test
+    fun readingDerivedStateWithDependencyChangeInvalidates() {
+        var changes = 0
+
+        runSimpleTest { stateObserver, state ->
+            val state2 = mutableStateOf(false)
+            val derivedState = derivedStateOf {
+                if (state2.value) {
+                    state.value
+                } else {
+                    null
+                }
+            }
+            val onChange: (String) -> Unit = { changes++ }
+
+            stateObserver.observeReads("scope", onChange) {
+                // read derived state
+                derivedState.value
+            }
+
+            state2.value = true
+            // advance snapshot
+            Snapshot.sendApplyNotifications()
+            Snapshot.notifyObjectsInitialized()
+
+            stateObserver.observeReads("scope", onChange) {
+                // read derived state
+                derivedState.value
+            }
+        }
+        assertEquals(2, changes)
+    }
+
+    @Test
+    fun readingDerivedStateConditionallyInvalidatesBothScopes() {
+        var changes = 0
+
+        runSimpleTest { stateObserver, state ->
+            val derivedState = derivedStateOf { state.value }
+
+            val onChange: (String) -> Unit = { changes++ }
+            stateObserver.observeReads("scope", onChange) {
+                // read derived state
+                derivedState.value
+            }
+
+            // read the same state in other scope
+            stateObserver.observeReads("other scope", onChange) {
+                derivedState.value
+            }
+
+            // advance snapshot to invalidate reads
+            Snapshot.notifyObjectsInitialized()
+
+            // stop observing state in other scope
+            stateObserver.observeReads("other scope", onChange) {
+                /* no-op */
+            }
+        }
+        assertEquals(1, changes)
+    }
+
+    @Test
+    fun testRecursiveApplyChanges_SingleRecursive() {
+        val stateObserver = SnapshotStateObserver { it() }
+        val state1 = mutableStateOf(0)
+        val state2 = mutableStateOf(0)
+        try {
+            stateObserver.start()
+            Snapshot.notifyObjectsInitialized()
+
+            val onChange: (String) -> Unit = { scope ->
+                if (scope == "scope" && state1.value < 2) {
+                    state1.value++
+                    Snapshot.sendApplyNotifications()
+                }
+            }
+
+            stateObserver.observeReads("scope", onChange) {
+                state1.value
+                state2.value
+            }
+
+            repeat(10) {
+                stateObserver.observeReads("scope $it", onChange) {
+                    state1.value
+                    state2.value
+                }
+            }
+
+            state1.value++
+            state2.value++
+
+            Snapshot.sendApplyNotifications()
+        } finally {
+            stateObserver.stop()
+        }
+    }
+
+    @Test
+    fun testRecursiveApplyChanges_MultiRecursive() {
+        val stateObserver = SnapshotStateObserver { it() }
+        val state1 = mutableStateOf(0)
+        val state2 = mutableStateOf(0)
+        val state3 = mutableStateOf(0)
+        val state4 = mutableStateOf(0)
+        try {
+            stateObserver.start()
+            Snapshot.notifyObjectsInitialized()
+
+            val onChange: (String) -> Unit = { scope ->
+                if (scope == "scope" && state1.value < 2) {
+                    state1.value++
+                    Snapshot.sendApplyNotifications()
+                    state2.value++
+                    Snapshot.sendApplyNotifications()
+                    state3.value++
+                    Snapshot.sendApplyNotifications()
+                    state4.value++
+                    Snapshot.sendApplyNotifications()
+                }
+            }
+
+            stateObserver.observeReads("scope", onChange) {
+                state1.value
+                state2.value
+                state3.value
+                state4.value
+            }
+
+            repeat(10) {
+                stateObserver.observeReads("scope $it", onChange) {
+                    state1.value
+                    state2.value
+                    state3.value
+                    state4.value
+                }
+            }
+
+            state1.value++
+            state2.value++
+            state3.value++
+            state4.value++
+
+            Snapshot.sendApplyNotifications()
+        } finally {
+            stateObserver.stop()
+        }
+    }
+
+    @Test
+    fun readingValueAfterClearInvalidates() {
+        var changes = 0
+
+        runSimpleTest { stateObserver, state ->
+            val changeBlock: (Any) -> Unit = { changes++ }
+            // record observation
+            stateObserver.observeReads("scope", changeBlock) {
+                // read state
+                state.value
+            }
+
+            // clear scope
+            stateObserver.clear("scope")
+
+            // record again
+            stateObserver.observeReads("scope", changeBlock) {
+                // read state
+                state.value
+            }
+        }
+        assertEquals(1, changes)
+    }
+
+    @Test
+    fun readingDerivedState_invalidatesWhenValueNotChanged() {
+        var changes = 0
+        val changeBlock: (Any) -> Unit = { changes++ }
+
+        runSimpleTest { stateObserver, state ->
+            var condition by mutableStateOf(false)
+            val derivedState = derivedStateOf {
+                // the same initial value for both branches
+                if (condition) state.value else 0
+            }
+
+            // record observation
+            stateObserver.observeReads("scope", changeBlock) {
+                // read state
+                derivedState.value
+            }
+
+            condition = true
+            Snapshot.sendApplyNotifications()
+        }
+        assertEquals(1, changes)
+    }
+
+    @Test
+    fun readingDerivedState_invalidatesIfReadBeforeSnapshotAdvance() {
+        var changes = 0
+        val changeBlock: (Any) -> Unit = {
+            if (it == "draw_1") {
+                changes++
+            }
+        }
+
+        runSimpleTest { stateObserver, layoutState ->
+            val derivedState = derivedStateOf {
+                layoutState.value
+            }
+
+            // record observation for a draw scope
+            stateObserver.observeReads("draw", changeBlock) {
+                derivedState.value
+            }
+
+            // record observation for a different draw scope
+            stateObserver.observeReads("draw_1", changeBlock) {
+                derivedState.value
+            }
+
+            Snapshot.sendApplyNotifications()
+
+            // record
+            layoutState.value += 1
+
+            // record observation for the first draw scope
+            stateObserver.observeReads("draw", changeBlock) {
+                // read state
+                derivedState.value
+            }
+
+            // second block should be invalidated after we read the value
+            assertEquals(1, changes)
+
+            // record observation for the second draw scope
+            stateObserver.observeReads("draw_1", changeBlock) {
+                // read state
+                derivedState.value
+            }
+        }
+        assertEquals(2, changes)
     }
 
     private fun runSimpleTest(

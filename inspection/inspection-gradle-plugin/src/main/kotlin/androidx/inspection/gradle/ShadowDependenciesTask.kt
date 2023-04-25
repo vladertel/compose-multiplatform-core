@@ -27,6 +27,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.FileTreeElement
+import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.TaskProvider
 import shadow.org.apache.tools.zip.ZipEntry
 import shadow.org.apache.tools.zip.ZipOutputStream
@@ -34,15 +35,15 @@ import shadow.org.apache.tools.zip.ZipOutputStream
 fun Project.registerShadowDependenciesTask(
     variant: Variant,
     jarName: String?,
-    zipTask: TaskProvider<CopyFixed>
+    zipTask: TaskProvider<Copy>
 ): TaskProvider<ShadowJar> {
     val versionTask = project.registerGenerateInspectionPlatformVersionTask(variant)
     return tasks.register(
-        variant.taskName("shadowDependencies"),
+        variant.taskName("inspectionShadowDependencies"),
         ShadowJar::class.java
     ) {
         it.dependsOn(versionTask)
-        val fileTree = project.fileTree(zipTask.get().outputDir)
+        val fileTree = project.fileTree(zipTask.get().destinationDir)
         fileTree.include("**/*.jar", "**/*.so")
         it.from(fileTree)
         it.from(versionTask.get().outputDir)

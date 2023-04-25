@@ -18,11 +18,11 @@ package androidx.compose.ui.text.android
 
 import android.graphics.Typeface
 import android.text.TextPaint
-import androidx.compose.ui.text.font.test.R
 import androidx.core.content.res.ResourcesCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.testutils.fonts.R
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -205,7 +205,8 @@ class FontPaddingTest {
             charSequence = text,
             textPaint = textPaint,
             includePadding = includePadding,
-            fallbackLineSpacing = false
+            fallbackLineSpacing = false,
+            width = fontSize * 1.5f
         )
     }
 }

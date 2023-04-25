@@ -74,8 +74,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMap
-import androidx.lifecycle.ViewTreeLifecycleOwner
-import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.findViewTreeViewModelStoreOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.findViewTreeSavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import java.util.UUID
@@ -113,8 +115,6 @@ class PopupProperties @ExperimentalComposeUiApi constructor(
     val securePolicy: SecureFlagPolicy = SecureFlagPolicy.Inherit,
     val excludeFromSystemGesture: Boolean = true,
     val clippingEnabled: Boolean = true,
-    @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-    @get:ExperimentalComposeUiApi
     val usePlatformDefaultWidth: Boolean = false
 ) {
     @OptIn(ExperimentalComposeUiApi::class)
@@ -135,7 +135,6 @@ class PopupProperties @ExperimentalComposeUiApi constructor(
         usePlatformDefaultWidth = false
     )
 
-    @OptIn(ExperimentalComposeUiApi::class)
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is PopupProperties) return false
@@ -151,7 +150,6 @@ class PopupProperties @ExperimentalComposeUiApi constructor(
         return true
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     override fun hashCode(): Int {
         var result = dismissOnBackPress.hashCode()
         result = 31 * result + focusable.hashCode()
@@ -410,7 +408,9 @@ internal class PopupLayout(
         parentLayoutCoordinates != null && popupContentSize != null
     }
 
-    private val maxSupportedElevation = 30.dp
+    // On systems older than Android S, there is a bug in the surface insets matrix math used by
+    // elevation, so high values of maxSupportedElevation break accessibility services: b/232788477.
+    private val maxSupportedElevation = 8.dp
 
     // The window visible frame used for the last popup position calculation.
     private val previousWindowVisibleFrame = Rect()
@@ -419,8 +419,8 @@ internal class PopupLayout(
 
     init {
         id = android.R.id.content
-        ViewTreeLifecycleOwner.set(this, ViewTreeLifecycleOwner.get(composeView))
-        ViewTreeViewModelStoreOwner.set(this, ViewTreeViewModelStoreOwner.get(composeView))
+        setViewTreeLifecycleOwner(composeView.findViewTreeLifecycleOwner())
+        setViewTreeViewModelStoreOwner(composeView.findViewTreeViewModelStoreOwner())
         setViewTreeSavedStateRegistryOwner(composeView.findViewTreeSavedStateRegistryOwner())
         // Set unique id for AbstractComposeView. This allows state restoration for the state
         // defined inside the Popup via rememberSaveable()
@@ -667,7 +667,7 @@ internal class PopupLayout(
      * Remove the view from the [WindowManager].
      */
     fun dismiss() {
-        ViewTreeLifecycleOwner.set(this, null)
+        setViewTreeLifecycleOwner(null)
         windowManager.removeViewImmediate(this)
     }
 

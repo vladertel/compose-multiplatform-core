@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.lazy.grid
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.Arrangement
@@ -47,9 +46,11 @@ import androidx.compose.ui.unit.dp
  * @param modifier the modifier to apply to this layout
  * @param state the state object to be used to control or observe the list's state
  * @param contentPadding specify a padding around the whole content
- * @param reverseLayout reverse the direction of scrolling and layout, when `true` items will be
- * composed from the end to the start and [LazyGridState.firstVisibleItemIndex] == 0 will mean
- * the first item is located at the end.
+ * @param reverseLayout reverse the direction of scrolling and layout. When `true`, items will be
+ * laid out in the reverse order  and [LazyGridState.firstVisibleItemIndex] == 0 means
+ * that grid is scrolled to the bottom. Note that [reverseLayout] does not change the behavior of
+ * [verticalArrangement],
+ * e.g. with [Arrangement.Top] (top) 123### (bottom) becomes (top) 321### (bottom).
  * @param verticalArrangement The vertical arrangement of the layout's children
  * @param horizontalArrangement The horizontal arrangement of the layout's children
  * @param flingBehavior logic describing fling behavior
@@ -71,9 +72,8 @@ fun LazyVerticalGrid(
     userScrollEnabled: Boolean = true,
     content: LazyGridScope.() -> Unit
 ) {
-    val slotSizesSums = rememberColumnWidthSums(columns, horizontalArrangement, contentPadding)
     LazyGrid(
-        slotSizesSums = slotSizesSums,
+        slots = rememberColumnWidthSums(columns, horizontalArrangement, contentPadding),
         modifier = modifier,
         state = state,
         contentPadding = contentPadding,
@@ -100,9 +100,10 @@ fun LazyVerticalGrid(
  * @param modifier the modifier to apply to this layout
  * @param state the state object to be used to control or observe the list's state
  * @param contentPadding specify a padding around the whole content
- * @param reverseLayout reverse the direction of scrolling and layout, when `true` items will be
- * composed from the end to the start and [LazyGridState.firstVisibleItemIndex] == 0 will mean
- * the first item is located at the end.
+ * @param reverseLayout reverse the direction of scrolling and layout. When `true`, items are
+ * laid out in the reverse order and [LazyGridState.firstVisibleItemIndex] == 0 means
+ * that grid is scrolled to the end. Note that [reverseLayout] does not change the behavior of
+ * [horizontalArrangement], e.g. with [Arrangement.Start] [123###] becomes [321###].
  * @param verticalArrangement The vertical arrangement of the layout's children
  * @param horizontalArrangement The horizontal arrangement of the layout's children
  * @param flingBehavior logic describing fling behavior
@@ -124,9 +125,8 @@ fun LazyHorizontalGrid(
     userScrollEnabled: Boolean = true,
     content: LazyGridScope.() -> Unit
 ) {
-    val slotSizesSums = rememberRowHeightSums(rows, verticalArrangement, contentPadding)
     LazyGrid(
-        slotSizesSums = slotSizesSums,
+        slots = rememberRowHeightSums(rows, verticalArrangement, contentPadding),
         modifier = modifier,
         state = state,
         contentPadding = contentPadding,
@@ -141,18 +141,17 @@ fun LazyHorizontalGrid(
 }
 
 /** Returns prefix sums of column widths. */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun rememberColumnWidthSums(
     columns: GridCells,
     horizontalArrangement: Arrangement.Horizontal,
     contentPadding: PaddingValues
-) = remember<Density.(Constraints) -> List<Int>>(
+) = remember<Density.(Constraints) -> LazyGridSlots>(
     columns,
     horizontalArrangement,
     contentPadding,
 ) {
-    { constraints ->
+    GridSlotCache { constraints ->
         require(constraints.maxWidth != Constraints.Infinity) {
             "LazyVerticalGrid's width should be bound by parent."
         }
@@ -163,28 +162,29 @@ private fun rememberColumnWidthSums(
             calculateCrossAxisCellSizes(
                 gridWidth,
                 horizontalArrangement.spacing.roundToPx()
-            ).toMutableList().apply {
-                for (i in 1 until size) {
-                    this[i] += this[i - 1]
+            ).toIntArray().let { sizes ->
+                val positions = IntArray(sizes.size)
+                with(horizontalArrangement) {
+                    arrange(gridWidth, sizes, LayoutDirection.Ltr, positions)
                 }
+                LazyGridSlots(sizes, positions)
             }
         }
     }
 }
 
 /** Returns prefix sums of row heights. */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun rememberRowHeightSums(
     rows: GridCells,
     verticalArrangement: Arrangement.Vertical,
     contentPadding: PaddingValues
-) = remember<Density.(Constraints) -> List<Int>>(
+) = remember<Density.(Constraints) -> LazyGridSlots>(
     rows,
     verticalArrangement,
     contentPadding,
 ) {
-    { constraints ->
+    GridSlotCache { constraints ->
         require(constraints.maxHeight != Constraints.Infinity) {
             "LazyHorizontalGrid's height should be bound by parent."
         }
@@ -195,10 +195,39 @@ private fun rememberRowHeightSums(
             calculateCrossAxisCellSizes(
                 gridHeight,
                 verticalArrangement.spacing.roundToPx()
-            ).toMutableList().apply {
-                for (i in 1 until size) {
-                    this[i] += this[i - 1]
+            ).toIntArray().let { sizes ->
+                val positions = IntArray(sizes.size)
+                with(verticalArrangement) {
+                    arrange(gridHeight, sizes, positions)
                 }
+                LazyGridSlots(sizes, positions)
+            }
+        }
+    }
+}
+
+/** measurement cache to avoid recalculating row/column sizes on each scroll. */
+private class GridSlotCache(
+    private val calculation: Density.(Constraints) -> LazyGridSlots
+) : (Density, Constraints) -> LazyGridSlots {
+    private var cachedConstraints = Constraints()
+    private var cachedDensity: Float = 0f
+    private var cachedSizes: LazyGridSlots? = null
+
+    override fun invoke(density: Density, constraints: Constraints): LazyGridSlots {
+        with(density) {
+            if (
+                cachedSizes != null &&
+                cachedConstraints == constraints &&
+                cachedDensity == this.density
+            ) {
+                return cachedSizes!!
+            }
+
+            cachedConstraints = constraints
+            cachedDensity = this.density
+            return calculation(constraints).also {
+                cachedSizes = it
             }
         }
     }
@@ -236,7 +265,7 @@ interface GridCells {
      */
     class Fixed(private val count: Int) : GridCells {
         init {
-            require(count > 0)
+            require(count > 0) { "Provided count $count should be larger than zero" }
         }
 
         override fun Density.calculateCrossAxisCellSizes(
@@ -266,7 +295,7 @@ interface GridCells {
      */
     class Adaptive(private val minSize: Dp) : GridCells {
         init {
-            require(minSize > 0.dp)
+            require(minSize > 0.dp) { "Provided min size $minSize should be larger than zero." }
         }
 
         override fun Density.calculateCrossAxisCellSizes(
@@ -283,6 +312,44 @@ interface GridCells {
 
         override fun equals(other: Any?): Boolean {
             return other is Adaptive && minSize == other.minSize
+        }
+    }
+
+    /**
+     * Defines a grid with as many rows or columns as possible on the condition that
+     * every cell takes exactly [size] space. The remaining space will be arranged through
+     * [LazyGrid] arrangements on corresponding axis. If [size] is larger than
+     * container size, the cell will be size to match the container.
+     *
+     * For example, for the vertical [LazyGrid] FixedSize(20.dp) would mean that
+     * there will be as many columns as possible and every column will be exactly 20.dp.
+     * If the screen is 88.dp wide tne there will be 4 columns 20.dp each with remaining 8.dp
+     * distributed through [Arrangement.Horizontal].
+     */
+    class FixedSize(private val size: Dp) : GridCells {
+        init {
+            require(size > 0.dp) { "Provided size $size should be larger than zero." }
+        }
+
+        override fun Density.calculateCrossAxisCellSizes(
+            availableSize: Int,
+            spacing: Int
+        ): List<Int> {
+            val cellSize = size.roundToPx()
+            return if (cellSize + spacing < availableSize + spacing) {
+                val cellCount = (availableSize + spacing) / (cellSize + spacing)
+                List(cellCount) { cellSize }
+            } else {
+                List(1) { availableSize }
+            }
+        }
+
+        override fun hashCode(): Int {
+            return size.hashCode()
+        }
+
+        override fun equals(other: Any?): Boolean {
+            return other is FixedSize && size == other.size
         }
     }
 }

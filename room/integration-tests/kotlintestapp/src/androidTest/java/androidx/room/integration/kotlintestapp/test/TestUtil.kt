@@ -16,18 +16,38 @@
 
 package androidx.room.integration.kotlintestapp.test
 
+import androidx.arch.core.executor.ArchTaskExecutor
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.Observer
 import androidx.room.integration.kotlintestapp.vo.Author
 import androidx.room.integration.kotlintestapp.vo.Book
 import androidx.room.integration.kotlintestapp.vo.BookAuthor
 import androidx.room.integration.kotlintestapp.vo.Lang
+import androidx.room.integration.kotlintestapp.vo.Pet
 import androidx.room.integration.kotlintestapp.vo.Publisher
+import java.util.Date
+import java.util.UUID
+import java.util.concurrent.FutureTask
 
 class TestUtil {
 
     companion object {
+        fun <T> observeOnMainThread(
+            liveData: LiveData<T>,
+            provider: LifecycleOwner,
+            observer: Observer<T>
+        ) {
+            val futureTask = FutureTask {
+                liveData.observe(provider, observer)
+            }
+            ArchTaskExecutor.getInstance().executeOnMainThread(futureTask)
+            futureTask.get()
+        }
 
         val PUBLISHER = Publisher("ph1", "publisher 1")
         val PUBLISHER2 = Publisher("ph2", "publisher 2")
+        val PUBLISHER3 = Publisher("ph3", "publisher 3")
 
         val AUTHOR_1 = Author("a1", "author 1")
         val AUTHOR_2 = Author("a2", "author 2")
@@ -48,5 +68,14 @@ class TestUtil {
         val BOOK_AUTHOR_1_1 = BookAuthor(BOOK_1.bookId, AUTHOR_1.authorId)
         val BOOK_AUTHOR_1_2 = BookAuthor(BOOK_1.bookId, AUTHOR_2.authorId)
         val BOOK_AUTHOR_2_2 = BookAuthor(BOOK_2.bookId, AUTHOR_2.authorId)
+
+        fun createPet(id: Int): Pet {
+            return Pet(
+                mPetId = id,
+                mUserId = id,
+                mName = UUID.randomUUID().toString(),
+                mAdoptionDate = Date()
+            )
+        }
     }
 }

@@ -21,15 +21,16 @@ import androidx.room.compiler.processing.XEquality
 import androidx.room.compiler.processing.XExecutableParameterElement
 import androidx.room.compiler.processing.XMemberContainer
 import androidx.room.compiler.processing.XType
+import androidx.room.compiler.processing.ksp.KSTypeVarianceResolverScope
 import androidx.room.compiler.processing.ksp.KspAnnotated
 import androidx.room.compiler.processing.ksp.KspAnnotated.UseSiteFilter.Companion.NO_USE_SITE
-import androidx.room.compiler.processing.ksp.KspJvmTypeResolutionScope
 import androidx.room.compiler.processing.ksp.KspMethodElement
 import androidx.room.compiler.processing.ksp.KspProcessingEnv
 import androidx.room.compiler.processing.ksp.KspType
 import androidx.room.compiler.processing.ksp.requireContinuationClass
 import androidx.room.compiler.processing.ksp.returnTypeAsMemberOf
 import androidx.room.compiler.processing.ksp.swapResolvedType
+import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.Variance
 
 /**
@@ -37,7 +38,7 @@ import com.google.devtools.ksp.symbol.Variance
  * this is what KAPT generates and Room needs it as long as it generates java code.
  */
 internal class KspSyntheticContinuationParameterElement(
-    private val env: KspProcessingEnv,
+    val env: KspProcessingEnv,
     override val enclosingElement: KspMethodElement
 ) : XExecutableParameterElement,
     XEquality,
@@ -46,58 +47,35 @@ internal class KspSyntheticContinuationParameterElement(
         delegate = null, // does not matter, this is synthetic and has no annotations.
         filter = NO_USE_SITE
     ) {
+    override fun isContinuationParam() = true
+
+    override fun isReceiverParam() = false
+
+    override fun isKotlinPropertyParam() = false
 
     override val name: String by lazy {
-        // KAPT uses `continuation` but it doesn't check for conflicts, we do.
-        var candidate = "continuation"
+        // KAPT uses `$completion` but it doesn't check for conflicts, we do. Be aware that before
+        // Kotlin 1.8.0 the param was named 'continuation'.
+        var candidate = PARAM_NAME
         var suffix = 0
         while (
             enclosingElement.declaration.parameters.any { it.name?.asString() == candidate }
         ) {
-            candidate = "continuation_$suffix"
+            candidate = PARAM_NAME + "_" + suffix
             suffix ++
         }
         candidate
     }
 
     override val equalityItems: Array<out Any?> by lazy {
-        arrayOf("continuation", enclosingElement)
+        arrayOf(PARAM_NAME, enclosingElement)
     }
 
     override val hasDefaultValue: Boolean
         get() = false
 
-    private val jvmTypeResolutionScope by lazy {
-        KspJvmTypeResolutionScope.MethodParameter(
-            kspExecutableElement = enclosingElement,
-            parameterIndex = enclosingElement.parameters.size - 1,
-            annotated = enclosingElement.declaration
-        )
-    }
-
-    override val type: XType by lazy {
-        val continuation = env.resolver.requireContinuationClass()
-        val asMember = enclosingElement.declaration.returnTypeAsMemberOf(
-            ksType = enclosingElement.containing.type?.ksType
-        )
-        val returnTypeRef = checkNotNull(enclosingElement.declaration.returnType) {
-            "cannot find return type reference for $this"
-        }
-        val returnTypeAsTypeArgument = env.resolver.getTypeArgument(
-            returnTypeRef.swapResolvedType(asMember),
-            // even though this will be CONTRAVARIANT when resolved to the JVM type, in Kotlin, it
-            // is still INVARIANT. (see [KSTypeVarianceResolver]
-            Variance.INVARIANT
-        )
-        val contType = continuation.asType(
-            listOf(
-                returnTypeAsTypeArgument
-            )
-        )
-        env.wrap(
-            ksType = contType,
-            allowPrimitives = false
-        ).withJvmTypeResolver(jvmTypeResolutionScope)
+    override val type: KspType by lazy {
+        asMemberOf(enclosingElement.enclosingElement.type?.ksType)
     }
 
     override val fallbackLocationText: String
@@ -111,10 +89,17 @@ internal class KspSyntheticContinuationParameterElement(
     }
 
     override fun asMemberOf(other: XType): KspType {
+        if (enclosingElement.enclosingElement.type?.isSameType(other) != false) {
+            return type
+        }
         check(other is KspType)
+        return asMemberOf(other.ksType)
+    }
+
+    private fun asMemberOf(ksType: KSType?): KspType {
         val continuation = env.resolver.requireContinuationClass()
         val asMember = enclosingElement.declaration.returnTypeAsMemberOf(
-            ksType = other.ksType
+            ksType = ksType
         )
         val returnTypeRef = checkNotNull(enclosingElement.declaration.returnType) {
             "cannot find return type reference for $this"
@@ -129,8 +114,13 @@ internal class KspSyntheticContinuationParameterElement(
         return env.wrap(
             ksType = contType,
             allowPrimitives = false
-        ).withJvmTypeResolver(
-            jvmTypeResolutionScope
+        ).copyWithScope(
+            KSTypeVarianceResolverScope.MethodParameter(
+                kspExecutableElement = enclosingElement,
+                parameterIndex = enclosingElement.parameters.size - 1,
+                annotated = enclosingElement.declaration,
+                container = ksType?.declaration
+            )
         )
     }
 
@@ -148,5 +138,9 @@ internal class KspSyntheticContinuationParameterElement(
 
     override fun hashCode(): Int {
         return XEquality.hashCode(equalityItems)
+    }
+
+    companion object {
+        const val PARAM_NAME = "\$completion"
     }
 }

@@ -22,6 +22,9 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.SessionConfiguration;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 /**
  * Provides interfaces that the OEM needs to implement to handle the state change.
  *
@@ -39,7 +42,8 @@ public interface ExtenderStateListener {
      * @param cameraCharacteristics The {@link CameraCharacteristics} of the camera.
      * @param context The {@link Context} used for CameraX.
      */
-    void onInit(String cameraId, CameraCharacteristics cameraCharacteristics, Context context);
+    void onInit(@NonNull String cameraId, @NonNull CameraCharacteristics cameraCharacteristics,
+            @NonNull Context context);
 
     /**
      * Notify to de-initialize the extension. This callback will be invoked after unbind.
@@ -58,6 +62,7 @@ public interface ExtenderStateListener {
      *
      * @return The request information to set the session wide camera parameters.
      */
+    @Nullable
     CaptureStageImpl onPresetSession();
 
     /**
@@ -69,6 +74,7 @@ public interface ExtenderStateListener {
      *
      * @return The request information to create a single capture request to camera device.
      */
+    @Nullable
     CaptureStageImpl onEnableSession();
 
     /**
@@ -79,5 +85,23 @@ public interface ExtenderStateListener {
      *
      * @return The request information to customize the session.
      */
+    @Nullable
     CaptureStageImpl onDisableSession();
+
+    /**
+     * This will be invoked before the {@link android.hardware.camera2.CameraCaptureSession} is
+     * initialized and must return a valid camera session type
+     * {@link android.hardware.camera2.params.SessionConfiguration#getSessionType}
+     * to be used to configure camera capture session. Both the preview and the image capture
+     * extender must return the same session type value for a specific extension type. If there
+     * is inconsistency between the session type values from preview and image extenders, then
+     * the session configuration will fail.
+     *
+     * @return Camera capture session type. Regular and vendor specific types are supported but
+     * not high speed values. The extension can return -1 in which case the camera capture session
+     * will be configured to use the default regular type.
+     *
+     * @since 1.4
+     */
+    int onSessionType();
 }

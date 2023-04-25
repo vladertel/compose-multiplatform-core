@@ -25,10 +25,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.testutils.assertAgainstGolden
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -37,6 +40,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.LayoutDirection
@@ -190,10 +194,7 @@ class SwitchScreenshotTest {
 
         rule.mainClock.autoAdvance = false
 
-        rule.onNode(isToggleable())
-            // split click into (down) and (move, up) to enforce a composition in between
-            .performTouchInput { down(center) }
-            .performTouchInput { move(); up() }
+        rule.onNode(isToggleable()).performClick()
 
         rule.waitForIdle()
         rule.mainClock.advanceTimeBy(milliseconds = 96)
@@ -219,10 +220,7 @@ class SwitchScreenshotTest {
 
         rule.mainClock.autoAdvance = false
 
-        rule.onNode(isToggleable())
-            // split click into (down) and (move, up) to enforce a composition in between
-            .performTouchInput { down(center) }
-            .performTouchInput { move(); up() }
+        rule.onNode(isToggleable()).performClick()
 
         rule.waitForIdle()
         rule.mainClock.advanceTimeBy(milliseconds = 96)
@@ -256,22 +254,23 @@ class SwitchScreenshotTest {
     @Test
     fun switchTest_focus() {
         val focusRequester = FocusRequester()
+        var localInputModeManager: InputModeManager? = null
 
         rule.setMaterialContent {
+            localInputModeManager = LocalInputModeManager.current
             Box(wrapperModifier) {
                 Switch(
                     checked = true,
                     onCheckedChange = { },
                     modifier = Modifier
-                        // Normally this is only focusable in non-touch mode, so let's force it to
-                        // always be focusable so we can test how it appears
-                        .focusProperties { canFocus = true }
                         .focusRequester(focusRequester)
                 )
             }
         }
 
         rule.runOnIdle {
+            @OptIn(ExperimentalComposeUiApi::class)
+            localInputModeManager!!.requestInputMode(InputMode.Keyboard)
             focusRequester.requestFocus()
         }
 

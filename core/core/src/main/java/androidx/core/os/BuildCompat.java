@@ -16,14 +16,18 @@
 
 package androidx.core.os;
 
+import static android.os.ext.SdkExtensions.getExtensionVersion;
+
 import android.annotation.SuppressLint;
 import android.os.Build;
 import android.os.Build.VERSION;
+import android.os.ext.SdkExtensions;
 
 import androidx.annotation.ChecksSdkIntAtLeast;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RequiresOptIn;
-import androidx.annotation.RestrictTo;
+import androidx.annotation.VisibleForTesting;
 
 import java.util.Locale;
 
@@ -46,7 +50,7 @@ public class BuildCompat {
      *
      * @hide
      */
-    @RestrictTo(RestrictTo.Scope.TESTS)
+    @VisibleForTesting
     protected static boolean isAtLeastPreReleaseCodename(@NonNull String codename,
             @NonNull String buildCodename) {
 
@@ -191,7 +195,8 @@ public class BuildCompat {
     @Deprecated
     public static boolean isAtLeastSv2() {
         return VERSION.SDK_INT >= 32
-                || (VERSION.SDK_INT >= 31 && isAtLeastPreReleaseCodename("Sv2", VERSION.CODENAME));
+                || (VERSION.SDK_INT >= 31
+                && isAtLeastPreReleaseCodename("Sv2", VERSION.CODENAME));
     }
 
     /**
@@ -202,9 +207,13 @@ public class BuildCompat {
      * removed and all calls must be replaced with {@code Build.VERSION.SDK_INT >= 33}.
      *
      * @return {@code true} if Tiramisu APIs are available for use, {@code false} otherwise
+     * @deprecated Android Tiramisu is a finalized release and this method is no longer necessary.
+     *             It will be removed in a future release of this library. Instead, use
+     *             {@code Build.VERSION.SDK_INT >= 33}.
      */
     @PrereleaseSdkCheck
     @ChecksSdkIntAtLeast(api = 33, codename = "Tiramisu")
+    @Deprecated
     public static boolean isAtLeastT() {
         return VERSION.SDK_INT >= 33
                 || (VERSION.SDK_INT >= 32
@@ -212,19 +221,36 @@ public class BuildCompat {
     }
 
     /**
-     * Checks if the device is running on a pre-release version of Android U.
+     * Checks if the device is running on a pre-release version of Android UpsideDownCake or a
+     * release version of Android UpsideDownCake or newer.
      * <p>
-     * <strong>Note:</strong> When Android U is finalized for release, this method will be
-     * removed and all calls must be replaced with {@code Build.VERSION.SDK_INT >=
-     * Build.VERSION_CODES.U}.
+     * <strong>Note:</strong> When Android UpsideDownCake is finalized for release, this method
+     * will be removed and all calls must be replaced with {@code Build.VERSION.SDK_INT >= 34}.
      *
-     * @return {@code true} if U APIs are available for use, {@code false} otherwise
+     * @return {@code true} if UpsideDownCake APIs are available for use, {@code false} otherwise
      */
     @PrereleaseSdkCheck
-    @ChecksSdkIntAtLeast(codename = "UpsideDownCake")
+    @ChecksSdkIntAtLeast(api = 34, codename = "UpsideDownCake")
     public static boolean isAtLeastU() {
-        return VERSION.SDK_INT >= 33
-                && isAtLeastPreReleaseCodename("UpsideDownCake", VERSION.CODENAME);
+        return VERSION.SDK_INT >= 34
+                || (VERSION.SDK_INT >= 33
+                && isAtLeastPreReleaseCodename("UpsideDownCake", VERSION.CODENAME));
+    }
+
+    /**
+     * Checks if the device is running on a pre-release version of Android VanillaIceCream.
+     * <p>
+     * <strong>Note:</strong> When Android anillaIceCream is finalized for release, this method will
+     * be removed and all calls must be replaced with {@code Build.VERSION.SDK_INT >=
+     * Build.VERSION_CODES.VANILLA_ICE_CREAM}.
+     *
+     * @return {@code true} if VanillaIceCream APIs are available for use, {@code false} otherwise
+     */
+    @PrereleaseSdkCheck
+    @ChecksSdkIntAtLeast(codename = "VanillaIceCream")
+    public static boolean isAtLeastV() {
+        return VERSION.SDK_INT >= 34
+                && isAtLeastPreReleaseCodename("VanillaIceCream", VERSION.CODENAME);
     }
 
     /**
@@ -237,4 +263,68 @@ public class BuildCompat {
      */
     @RequiresOptIn
     public @interface PrereleaseSdkCheck { }
+
+    /**
+     * The value of {@code SdkExtensions.getExtensionVersion(R)}. This is a convenience constant
+     * which provides the extension version in a similar style to {@code Build.VERSION.SDK_INT}.
+     * <p>
+     * Compared to calling {@code getExtensionVersion} directly, using this constant has the
+     * benefit of not having to verify the {@code getExtensionVersion} method is available.
+     *
+     * @return the version of the R extension, if it exists. 0 otherwise.
+     */
+    @ChecksSdkIntAtLeast(extension = Build.VERSION_CODES.R)
+    @SuppressLint("CompileTimeConstant")
+    public static final int R_EXTENSION_INT = VERSION.SDK_INT >= 30 ? Extensions30Impl.R : 0;
+
+    /**
+     * The value of {@code SdkExtensions.getExtensionVersion(S)}. This is a convenience constant
+     * which provides the extension version in a similar style to {@code Build.VERSION.SDK_INT}.
+     * <p>
+     * Compared to calling {@code getExtensionVersion} directly, using this constant has the
+     * benefit of not having to verify the {@code getExtensionVersion} method is available.
+     *
+     * @return the version of the S extension, if it exists. 0 otherwise.
+     */
+    @ChecksSdkIntAtLeast(extension = Build.VERSION_CODES.S)
+    @SuppressLint("CompileTimeConstant")
+    public static final int S_EXTENSION_INT = VERSION.SDK_INT >= 30 ? Extensions30Impl.S : 0;
+
+    /**
+     * The value of {@code SdkExtensions.getExtensionVersion(TIRAMISU)}. This is a convenience
+     * constant which provides the extension version in a similar style to
+     * {@code Build.VERSION.SDK_INT}.
+     * <p>
+     * Compared to calling {@code getExtensionVersion} directly, using this constant has the
+     * benefit of not having to verify the {@code getExtensionVersion} method is available.
+     *
+     * @return the version of the T extension, if it exists. 0 otherwise.
+     */
+    @ChecksSdkIntAtLeast(extension = Build.VERSION_CODES.TIRAMISU)
+    @SuppressLint("CompileTimeConstant")
+    public static final int T_EXTENSION_INT = VERSION.SDK_INT >= 30 ? Extensions30Impl.TIRAMISU : 0;
+
+    /**
+     * The value of {@code SdkExtensions.getExtensionVersion(AD_SERVICES)}. This is a convenience
+     * constant which provides the extension version in a similar style to
+     * {@code Build.VERSION.SDK_INT}.
+     * <p>
+     * Compared to calling {@code getExtensionVersion} directly, using this constant has the
+     * benefit of not having to verify the {@code getExtensionVersion} method is available.
+     *
+     * @return the version of the AdServices extension, if it exists. 0 otherwise.
+     */
+    @ChecksSdkIntAtLeast(extension = SdkExtensions.AD_SERVICES)
+    @SuppressLint("CompileTimeConstant")
+    public static final int AD_SERVICES_EXTENSION_INT =
+            VERSION.SDK_INT >= 30 ? Extensions30Impl.AD_SERVICES : 0;
+
+    @RequiresApi(30)
+    private static final class Extensions30Impl {
+        static final int R = getExtensionVersion(Build.VERSION_CODES.R);
+        static final int S = getExtensionVersion(Build.VERSION_CODES.S);
+        static final int TIRAMISU = getExtensionVersion(Build.VERSION_CODES.TIRAMISU);
+        static final int AD_SERVICES = getExtensionVersion(SdkExtensions.AD_SERVICES);
+    }
+
 }

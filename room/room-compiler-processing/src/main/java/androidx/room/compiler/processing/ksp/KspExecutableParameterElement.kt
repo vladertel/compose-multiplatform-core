@@ -24,6 +24,7 @@ import androidx.room.compiler.processing.ksp.KspAnnotated.UseSiteFilter.Companio
 import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticPropertyMethodElement
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSPropertySetter
+import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueParameter
 
 internal class KspExecutableParameterElement(
@@ -34,9 +35,11 @@ internal class KspExecutableParameterElement(
 ) : KspElement(env, parameter),
     XExecutableParameterElement,
     XAnnotated by KspAnnotated.create(env, parameter, NO_USE_SITE_OR_METHOD_PARAMETER) {
+    override fun isContinuationParam() = false
 
-    override val equalityItems: Array<out Any?>
-        get() = arrayOf(enclosingElement, parameter)
+    override fun isReceiverParam() = false
+
+    override fun isKotlinPropertyParam() = false
 
     override val name: String
         get() = parameter.name?.asString() ?: "_no_param_name"
@@ -44,24 +47,8 @@ internal class KspExecutableParameterElement(
     override val hasDefaultValue: Boolean
         get() = parameter.hasDefault
 
-    private val jvmTypeResolver by lazy {
-        KspJvmTypeResolutionScope.MethodParameter(
-            kspExecutableElement = enclosingElement,
-            parameterIndex = parameterIndex,
-            annotated = parameter.type
-        )
-    }
-
     override val type: KspType by lazy {
-        parameter.typeAsMemberOf(
-            functionDeclaration = enclosingElement.declaration,
-            ksType = enclosingElement.containing.type?.ksType
-        ).let {
-            env.wrap(
-                originatingReference = parameter.type,
-                ksType = it
-            ).withJvmTypeResolver(jvmTypeResolver)
-        }
+        asMemberOf(enclosingElement.enclosingElement.type?.ksType)
     }
 
     override val closestMemberContainer: XMemberContainer by lazy {
@@ -72,19 +59,28 @@ internal class KspExecutableParameterElement(
         get() = "$name in ${enclosingElement.fallbackLocationText}"
 
     override fun asMemberOf(other: XType): KspType {
-        if (enclosingElement.containing.type?.isSameType(other) != false) {
+        if (closestMemberContainer.type?.isSameType(other) != false) {
             return type
         }
         check(other is KspType)
-        return parameter.typeAsMemberOf(
-            functionDeclaration = enclosingElement.declaration,
-            ksType = other.ksType
-        ).let {
-            env.wrap(
-                originatingReference = parameter.type,
-                ksType = it
-            ).withJvmTypeResolver(jvmTypeResolver)
-        }
+        return asMemberOf(other.ksType)
+    }
+
+    private fun asMemberOf(ksType: KSType?): KspType {
+        return env.wrap(
+            originatingReference = parameter.type,
+            ksType = parameter.typeAsMemberOf(
+                functionDeclaration = enclosingElement.declaration,
+                ksType = ksType
+            )
+        ).copyWithScope(
+            KSTypeVarianceResolverScope.MethodParameter(
+                kspExecutableElement = enclosingElement,
+                parameterIndex = parameterIndex,
+                annotated = parameter.type,
+                container = ksType?.declaration
+            )
+        )
     }
 
     override fun kindName(): String {

@@ -16,7 +16,6 @@
 
 package androidx.wear.watchface.client.test
 
-import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -28,10 +27,11 @@ import androidx.wear.watchface.control.WatchFaceControlService
 import kotlinx.coroutines.MainScope
 
 /**
- * Test shim to allow us to connect to WatchFaceControlService from
- * [WatchFaceControlClientTest] and to optionally override the reported API version.
+ * Test shim to allow us to connect to WatchFaceControlService from [WatchFaceControlClientTest] and
+ * to optionally override the reported API version.
  */
-public class WatchFaceControlTestService : Service() {
+@RequiresApi(Build.VERSION_CODES.O_MR1)
+public class WatchFaceControlTestService : WatchFaceControlService() {
     public companion object {
         /**
          * If non-null this overrides the API version reported by [IWatchFaceInstanceServiceStub].
@@ -39,17 +39,20 @@ public class WatchFaceControlTestService : Service() {
         public var apiVersionOverride: Int? = null
     }
 
-    private val realService = object : WatchFaceControlService() {
-        override fun createServiceStub(): IWatchFaceInstanceServiceStub =
-            object : IWatchFaceInstanceServiceStub(this@WatchFaceControlTestService, MainScope()) {
+    private val realService =
+        @RequiresApi(Build.VERSION_CODES.O_MR1)
+        object : WatchFaceControlService() {
+            override fun createServiceStub(): IWatchFaceInstanceServiceStub =
                 @RequiresApi(Build.VERSION_CODES.O_MR1)
-                override fun getApiVersion(): Int = apiVersionOverride ?: super.getApiVersion()
-            }
+                object :
+                    IWatchFaceInstanceServiceStub(this@WatchFaceControlTestService, MainScope()) {
+                    override fun getApiVersion(): Int = apiVersionOverride ?: super.getApiVersion()
+                }
 
-        init {
-            setContext(ApplicationProvider.getApplicationContext<Context>())
+            init {
+                setContext(ApplicationProvider.getApplicationContext<Context>())
+            }
         }
-    }
 
     @RequiresApi(Build.VERSION_CODES.O_MR1)
     override fun onBind(intent: Intent?): IBinder? = realService.onBind(intent)

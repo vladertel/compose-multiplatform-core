@@ -17,6 +17,7 @@
 package androidx.compose.ui.focus
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.focus.FocusDirection.Companion.Previous
@@ -274,6 +275,72 @@ class OneDimensionalFocusSearchPreviousTest {
     }
 
     @Test
+    fun focusMovesToParent() {
+        // Arrange.
+        val (parent, child1, child2, child3) = List(4) { mutableStateOf(false) }
+        rule.setContentForTest {
+            FocusableBox(parent, 0, 0, 10, 10) {
+                FocusableBox(child1, 10, 0, 10, 10, initialFocus)
+                FocusableBox(child2, 20, 0, 10, 10)
+                FocusableBox(child3, 20, 0, 10, 10)
+            }
+        }
+
+        // Act.
+        val movedFocusSuccessfully = rule.runOnIdle { focusManager.moveFocus(Previous) }
+
+        // Assert.
+        rule.runOnIdle {
+            assertThat(movedFocusSuccessfully).isTrue()
+            assertThat(parent.value).isTrue()
+        }
+    }
+
+    @Test
+    fun focusMovesToParent_ignoresDeactivated() {
+        // Arrange.
+        val (item, parent, child1, child2) = List(4) { mutableStateOf(false) }
+        rule.setContentForTest {
+            FocusableBox(item, 0, 0, 10, 10)
+            FocusableBox(parent, 0, 0, 10, 10, deactivated = true) {
+                FocusableBox(child1, 10, 0, 10, 10, initialFocus)
+                FocusableBox(child2, 20, 0, 10, 10)
+            }
+        }
+
+        // Act.
+        val movedFocusSuccessfully = rule.runOnIdle { focusManager.moveFocus(Previous) }
+
+        // Assert.
+        rule.runOnIdle {
+            assertThat(movedFocusSuccessfully).isTrue()
+            assertThat(item.value).isTrue()
+        }
+    }
+
+    @Test
+    fun focusMovesToParent_ignoresDeactivated_andWrapsAround() {
+        // Arrange.
+        val (parent, child1, child2, child3) = List(4) { mutableStateOf(false) }
+        rule.setContentForTest {
+            FocusableBox(parent, 0, 0, 10, 10, deactivated = true) {
+                FocusableBox(child1, 10, 0, 10, 10, initialFocus)
+                FocusableBox(child2, 20, 0, 10, 10)
+                FocusableBox(child3, 0, 0, 10, 10)
+            }
+        }
+
+        // Act.
+        val movedFocusSuccessfully = rule.runOnIdle { focusManager.moveFocus(Previous) }
+
+        // Assert.
+        rule.runOnIdle {
+            assertThat(movedFocusSuccessfully).isTrue()
+            assertThat(child3.value).isTrue()
+        }
+    }
+
+    @Test
     fun focusWrapsAroundToLastItem() {
         // Arrange.
         val (item1, item2, item3) = List(3) { mutableStateOf(false) }
@@ -405,6 +472,80 @@ class OneDimensionalFocusSearchPreviousTest {
     }
 
     @Test
+    fun focusNextOrderAmongChildrenOfMultipleParents() {
+        // Arrange.
+        val focusState = List(12) { mutableStateOf(false) }
+        rule.setContentForTest {
+            Column {
+                Row {
+                    FocusableBox(focusState[0], 0, 0, 10, 10)
+                    FocusableBox(focusState[1], 10, 0, 10, 10)
+                    FocusableBox(focusState[2], 20, 0, 10, 10)
+                    FocusableBox(focusState[3], 30, 0, 10, 10)
+                }
+                Row {
+                    FocusableBox(focusState[4], 0, 10, 10, 10)
+                    FocusableBox(focusState[5], 10, 10, 10, 10)
+                    FocusableBox(focusState[6], 20, 10, 10, 10)
+                    FocusableBox(focusState[7], 30, 10, 10, 10)
+                }
+                Row {
+                    FocusableBox(focusState[8], 0, 20, 10, 10)
+                    FocusableBox(focusState[9], 10, 20, 10, 10)
+                    FocusableBox(focusState[10], 20, 20, 10, 10)
+                    FocusableBox(focusState[11], 30, 20, 10, 10, initialFocus)
+                }
+            }
+        }
+
+        for (itemNumber in 10 downTo 0) {
+            // Act.
+            rule.runOnIdle { focusManager.moveFocus(Previous) }
+
+            // Assert.
+            rule.runOnIdle { assertThat(focusState[itemNumber].value).isTrue() }
+        }
+    }
+
+    @Test
+    fun focusNextOrderAmongChildrenAtMultipleLevels() {
+        // Arrange.
+        val focusState = List(14) { mutableStateOf(false) }
+        rule.setContentForTest {
+            Column {
+                FocusableBox(focusState[0], 0, 0, 10, 10)
+                FocusableBox(focusState[1], 0, 10, 10, 10)
+                Row {
+                    FocusableBox(focusState[2], 0, 20, 10, 10)
+                    FocusableBox(focusState[3], 10, 20, 10, 10)
+                    Column {
+                        FocusableBox(focusState[4], 20, 20, 10, 10)
+                        FocusableBox(focusState[5], 20, 30, 10, 10)
+                        Row {
+                            FocusableBox(focusState[6], 20, 40, 10, 10)
+                            FocusableBox(focusState[7], 30, 40, 10, 10)
+                        }
+                        FocusableBox(focusState[8], 20, 50, 10, 10)
+                        FocusableBox(focusState[9], 20, 50, 10, 10)
+                    }
+                    FocusableBox(focusState[10], 20, 20, 10, 10)
+                    FocusableBox(focusState[11], 30, 20, 10, 10)
+                }
+                FocusableBox(focusState[12], 0, 30, 10, 10)
+                FocusableBox(focusState[13], 0, 40, 10, 10, initialFocus)
+            }
+        }
+
+        for (itemNumber in 12 downTo 0) {
+            // Act.
+            rule.runOnIdle { focusManager.moveFocus(Previous) }
+
+            // Assert.
+            rule.runOnIdle { assertThat(focusState[itemNumber].value).isTrue() }
+        }
+    }
+
+    @Test
     fun focusPreviousOrdering() {
         // Arrange.
         val (parent1, child1, child2, child3) = List(4) { mutableStateOf(false) }
@@ -498,6 +639,6 @@ class OneDimensionalFocusSearchPreviousTest {
             focusManager = LocalFocusManager.current
             composable()
         }
-        rule.runOnIdle { (focusManager as FocusManagerImpl).takeFocus() }
+        rule.runOnIdle { (focusManager as FocusOwnerImpl).takeFocus() }
     }
 }

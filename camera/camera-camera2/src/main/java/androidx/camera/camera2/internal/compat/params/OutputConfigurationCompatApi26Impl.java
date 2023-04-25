@@ -17,6 +17,7 @@
 package androidx.camera.camera2.internal.compat.params;
 
 import android.annotation.SuppressLint;
+import android.hardware.camera2.params.DynamicRangeProfiles;
 import android.hardware.camera2.params.OutputConfiguration;
 import android.view.Surface;
 
@@ -33,6 +34,7 @@ import java.util.Objects;
 /**
  * Implementation of the OutputConfiguration compat methods for API 26 and above.
  */
+@SuppressWarnings("unused")
 @RequiresApi(26)
 class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24Impl {
 
@@ -41,6 +43,10 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
 
     OutputConfigurationCompatApi26Impl(@NonNull Surface surface) {
         this(new OutputConfigurationParamsApi26(new OutputConfiguration(surface)));
+    }
+
+    OutputConfigurationCompatApi26Impl(int surfaceGroupId, @NonNull Surface surface) {
+        this(new OutputConfigurationParamsApi26(new OutputConfiguration(surfaceGroupId, surface)));
     }
 
     OutputConfigurationCompatApi26Impl(@NonNull Object outputConfiguration) {
@@ -57,20 +63,20 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
     // The following methods use reflection to call into the framework code, These methods are
     // only between API 26 and API 28, and are not guaranteed to work on API levels greater than 27.
     //=========================================================================================
-
+    @SuppressLint("SoonBlockedPrivateApi") // Only used between API 26 and 28
+    @SuppressWarnings("JavaReflectionMemberAccess")
     private static int getMaxSharedSurfaceCountApi26()
             throws NoSuchFieldException, IllegalAccessException {
-        @SuppressLint("SoonBlockedPrivateApi") // Only used between API 26 and 28
         Field maxSurfacesCountField = OutputConfiguration.class.getDeclaredField(
                 MAX_SHARED_SURFACES_COUNT_FIELD);
         maxSurfacesCountField.setAccessible(true);
         return maxSurfacesCountField.getInt(null);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressLint("SoonBlockedPrivateApi") // Only used between API 26 and 28
+    @SuppressWarnings({"JavaReflectionMemberAccess", "unchecked"})
     private static List<Surface> getMutableSurfaceListApi26(OutputConfiguration outputConfiguration)
             throws NoSuchFieldException, IllegalAccessException {
-        @SuppressLint("SoonBlockedPrivateApi") // Only used between API 26 and 28
         Field surfacesField = OutputConfiguration.class.getDeclaredField(SURFACES_FIELD);
         surfacesField.setAccessible(true);
         return (List<Surface>) surfacesField.get(outputConfiguration);
@@ -111,6 +117,16 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
     @Override
     public String getPhysicalCameraId() {
         return ((OutputConfigurationParamsApi26) mObject).mPhysicalCameraId;
+    }
+
+    @Override
+    public long getDynamicRangeProfile() {
+        return ((OutputConfigurationParamsApi26) mObject).mDynamicRangeProfile;
+    }
+
+    @Override
+    public void setDynamicRangeProfile(long profile) {
+        ((OutputConfigurationParamsApi26) mObject).mDynamicRangeProfile = profile;
     }
 
     /**
@@ -158,17 +174,21 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
         return ((OutputConfiguration) getOutputConfiguration()).getSurfaces();
     }
 
+    @NonNull
     @Override
     public Object getOutputConfiguration() {
         Preconditions.checkArgument(mObject instanceof OutputConfigurationParamsApi26);
         return ((OutputConfigurationParamsApi26) mObject).mOutputConfiguration;
     }
 
-    @RequiresApi(21)
     private static final class OutputConfigurationParamsApi26 {
+        @NonNull
         final OutputConfiguration mOutputConfiguration;
+
         @Nullable
         String mPhysicalCameraId;
+
+        long mDynamicRangeProfile = DynamicRangeProfiles.STANDARD;
 
         OutputConfigurationParamsApi26(@NonNull OutputConfiguration configuration) {
             mOutputConfiguration = configuration;
@@ -183,6 +203,7 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
             OutputConfigurationParamsApi26 otherOutputConfig = (OutputConfigurationParamsApi26) obj;
 
             return Objects.equals(mOutputConfiguration, otherOutputConfig.mOutputConfiguration)
+                    && mDynamicRangeProfile == otherOutputConfig.mDynamicRangeProfile
                     && Objects.equals(mPhysicalCameraId, otherOutputConfig.mPhysicalCameraId);
 
         }
@@ -196,7 +217,8 @@ class OutputConfigurationCompatApi26Impl extends OutputConfigurationCompatApi24I
             // (h * 31) XOR mPhysicalCameraId.hashCode()
             h = ((h << 5) - h)
                     ^ (mPhysicalCameraId == null ? 0 : mPhysicalCameraId.hashCode());
-
+            // (h * 31) XOR mDynamicRangeProfile
+            h = ((h << 5) - h) ^ Long.hashCode(mDynamicRangeProfile);
             return h;
         }
     }

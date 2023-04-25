@@ -22,9 +22,11 @@ import androidx.compose.compiler.plugins.kotlin.ComposeErrors.COMPOSABLE_PROPERT
 import androidx.compose.compiler.plugins.kotlin.ComposeErrors.COMPOSABLE_SUSPEND_FUN
 import androidx.compose.compiler.plugins.kotlin.ComposeErrors.COMPOSABLE_VAR
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.builtins.isFunctionType
 import org.jetbrains.kotlin.builtins.isSuspendFunctionType
 import org.jetbrains.kotlin.container.StorageComponentContainer
 import org.jetbrains.kotlin.container.useInstance
+import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.Modality
@@ -41,6 +43,8 @@ import org.jetbrains.kotlin.psi.KtPropertyAccessor
 import org.jetbrains.kotlin.resolve.checkers.DeclarationChecker
 import org.jetbrains.kotlin.resolve.checkers.DeclarationCheckerContext
 import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.typeUtil.supertypes
+import org.jetbrains.kotlin.util.OperatorNameConventions
 
 class ComposableDeclarationChecker : DeclarationChecker, StorageComponentContainerContributor {
     override fun registerModuleComponents(
@@ -78,13 +82,47 @@ class ComposableDeclarationChecker : DeclarationChecker, StorageComponentContain
         val hasComposableAnnotation = descriptor.hasComposableAnnotation()
         if (descriptor.overriddenDescriptors.isNotEmpty()) {
             val override = descriptor.overriddenDescriptors.first()
-            if (override.hasComposableAnnotation() != hasComposableAnnotation) {
+            val overrideFunctionIsComposable =
+                if (descriptor.isOperator && descriptor.name == OperatorNameConventions.INVOKE) {
+                    override.hasComposableAnnotation() || descriptor.let {
+                        val cls = descriptor.containingDeclaration as? ClassDescriptor
+                        cls?.run {
+                            defaultType.supertypes().any {
+                                it.isFunctionType &&
+                                    it.arguments.size == descriptor.arity + 1 &&
+                                    it.hasComposableAnnotation()
+                            }
+                        } ?: false
+                    }
+                } else {
+                    override.hasComposableAnnotation()
+                }
+            if (overrideFunctionIsComposable != hasComposableAnnotation) {
                 context.trace.report(
                     ComposeErrors.CONFLICTING_OVERLOADS.on(
                         declaration,
                         listOf(descriptor, override)
                     )
                 )
+            } else if (!descriptor.toScheme(null).canOverride(override.toScheme(null))) {
+                context.trace.report(
+                    ComposeErrors.COMPOSE_APPLIER_DECLARATION_MISMATCH.on(declaration)
+                )
+            }
+
+            descriptor.valueParameters.forEach { valueParameter ->
+                valueParameter.overriddenDescriptors.firstOrNull()?.let { overriddenParam ->
+                    val overrideIsComposable = overriddenParam.type.hasComposableAnnotation()
+                    val paramIsComposable = valueParameter.type.hasComposableAnnotation()
+                    if (paramIsComposable != overrideIsComposable) {
+                        context.trace.report(
+                            ComposeErrors.CONFLICTING_OVERLOADS.on(
+                                declaration,
+                                listOf(valueParameter, overriddenParam)
+                            )
+                        )
+                    }
+                }
             }
         }
         if (descriptor.isSuspend && hasComposableAnnotation) {
@@ -124,6 +162,18 @@ class ComposableDeclarationChecker : DeclarationChecker, StorageComponentContain
         ) {
             context.trace.report(
                 COMPOSABLE_FUN_MAIN.on(declaration.nameIdentifier ?: declaration)
+            )
+        }
+
+        if (
+            hasComposableAnnotation &&
+            descriptor.isOperator &&
+            descriptor.name == OperatorNameConventions.SET_VALUE
+        ) {
+            context.trace.report(
+                ComposeErrors.COMPOSE_INVALID_DELEGATE.on(
+                    declaration.nameIdentifier ?: declaration
+                )
             )
         }
     }
@@ -202,4 +252,9 @@ class ComposableDeclarationChecker : DeclarationChecker, StorageComponentContain
             context.trace.report(COMPOSABLE_VAR.on(name))
         }
     }
+
+    private val FunctionDescriptor.arity get(): Int =
+        if (extensionReceiverParameter != null) 1 else 0 +
+            contextReceiverParameters.size +
+            valueParameters.size
 }

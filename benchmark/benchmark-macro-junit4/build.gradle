@@ -37,12 +37,11 @@ dependencies {
     api("androidx.annotation:annotation:1.1.0")
     api(project(":benchmark:benchmark-macro"))
     implementation(project(":benchmark:benchmark-common"))
-    implementation("androidx.test:rules:1.3.0")
-    implementation("androidx.test:runner:1.3.0")
+    implementation("androidx.test:rules:1.5.0")
+    implementation("androidx.test:runner:1.5.0")
     implementation("androidx.test.uiautomator:uiautomator:2.2.0")
 
     androidTestImplementation(project(":internal-testutils-ktx"))
-    androidTestImplementation("androidx.test:rules:1.3.0")
     androidTestImplementation(libs.testExtJunit)
     androidTestImplementation(libs.testCore)
     androidTestImplementation(libs.testRunner)
@@ -56,14 +55,6 @@ dependencies {
 androidx {
     name = "Android Benchmark - Macrobenchmark JUnit4"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenGroup = LibraryGroups.BENCHMARK
     inceptionYear = "2020"
     description = "Android Benchmark - Macrobenchmark JUnit4"
-}
-
-// Allow usage of Kotlin's @OptIn.
-tasks.withType(KotlinCompile).configureEach {
-    kotlinOptions {
-        freeCompilerArgs += [ '-opt-in=kotlin.RequiresOptIn' ]
-    }
 }

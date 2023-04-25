@@ -16,7 +16,9 @@
 package androidx.camera.video.internal.encoder
 
 import android.media.MediaCodecInfo
+import android.os.Build
 import androidx.camera.core.impl.Observable.Observer
+import androidx.camera.core.impl.Timebase
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
 import androidx.camera.video.internal.BufferProvider
 import androidx.camera.video.internal.BufferProvider.State
@@ -31,6 +33,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -38,13 +41,13 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.junit.After
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
-import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.clearInvocations
 import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.never
@@ -60,6 +63,7 @@ class AudioEncoderTest {
     companion object {
         private const val MIME_TYPE = "audio/mp4a-latm"
         private const val ENCODER_PROFILE = MediaCodecInfo.CodecProfileLevel.AACObjectLC
+        private val INPUT_TIMEBASE = Timebase.UPTIME
         private const val BIT_RATE = 64000
         private const val SAMPLE_RATE = 44100
         private const val CHANNEL_COUNT = 1
@@ -83,6 +87,7 @@ class AudioEncoderTest {
             AudioEncoderConfig.builder()
                 .setMimeType(MIME_TYPE)
                 .setProfile(ENCODER_PROFILE)
+                .setInputTimebase(INPUT_TIMEBASE)
                 .setBitrate(BIT_RATE)
                 .setSampleRate(SAMPLE_RATE)
                 .setChannelCount(CHANNEL_COUNT)
@@ -98,10 +103,16 @@ class AudioEncoderTest {
     fun tearDown() {
         if (this::encoder.isInitialized) {
             encoder.release()
+            encoder.releasedFuture[10, TimeUnit.SECONDS]
         }
         if (this::fakeAudioLoop.isInitialized) {
             fakeAudioLoop.stop()
         }
+    }
+
+    @Test
+    fun canGetEncoderInfo() {
+        assertThat(encoder.encoderInfo).isNotNull()
     }
 
     @Test
@@ -119,6 +130,12 @@ class AudioEncoderTest {
 
     @Test
     fun canRestartEncoder() {
+        // Skip for b/269129619
+        assumeFalse(
+            "Skip test for Cuttlefish API 30 flaky native crash",
+            Build.MODEL.contains("Cuttlefish") && Build.VERSION.SDK_INT == 30
+        )
+
         // Arrange.
         fakeAudioLoop.start()
 
@@ -422,8 +439,9 @@ class AudioEncoderTest {
                 CameraXExecutors.ioExecutor().asCoroutineDispatcher()
             ) {
                 while (true) {
+                    val acquireFuture = bufferProvider.acquireBuffer()
                     try {
-                        val inputBuffer = bufferProvider.acquireBuffer().await()
+                        val inputBuffer = acquireFuture.await()
                         inputBuffer.apply {
                             byteBuffer.apply {
                                 put(
@@ -438,6 +456,15 @@ class AudioEncoderTest {
                             submit()
                         }
                     } catch (e: IllegalStateException) {
+                        if (e is CancellationException) {
+                            // When the fake loop is stopped, cancel acquired InputBuffer if any.
+                            if (!acquireFuture.cancel(true)) {
+                                try {
+                                    acquireFuture.await().cancel()
+                                } catch (ignored: Exception) {
+                                }
+                            }
+                        }
                         // For simplicity, AudioLoop doesn't monitor the encoder's state.
                         // When an IllegalStateException is thrown by encoder which is not started,
                         // AudioLoop should retry with a delay to avoid busy loop.

@@ -43,6 +43,7 @@ import androidx.annotation.VisibleForTesting;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.internal.annotation.CameraExecutor;
 import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat;
+import androidx.camera.camera2.internal.compat.workaround.FlashAvailabilityChecker;
 import androidx.camera.camera2.internal.compat.workaround.OverrideAeModeForStillCapture;
 import androidx.camera.camera2.internal.compat.workaround.UseTorchAsFlash;
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
@@ -127,6 +128,8 @@ class Camera2CapturePipeline {
     @NonNull
     private final UseTorchAsFlash mUseTorchAsFlash;
 
+    private final boolean mHasFlashUnit;
+
     @NonNull
     private final Quirks mCameraQuirk;
 
@@ -153,6 +156,7 @@ class Camera2CapturePipeline {
         mExecutor = executor;
         mCameraQuirk = cameraQuirks;
         mUseTorchAsFlash = new UseTorchAsFlash(cameraQuirks);
+        mHasFlashUnit = FlashAvailabilityChecker.isFlashAvailable(cameraCharacteristics::get);
     }
 
     @ExecutedBy("mExecutor")
@@ -183,11 +187,13 @@ class Camera2CapturePipeline {
             pipeline.addTask(new AfTask(mCameraControl));
         }
 
-        if (isTorchAsFlash(flashType)) {
-            pipeline.addTask(new TorchTask(mCameraControl, flashMode, mExecutor));
-        } else {
-            pipeline.addTask(new AePreCaptureTask(mCameraControl, flashMode, aeQuirk));
-        }
+        if (mHasFlashUnit) {
+            if (isTorchAsFlash(flashType)) {
+                pipeline.addTask(new TorchTask(mCameraControl, flashMode, mExecutor));
+            } else {
+                pipeline.addTask(new AePreCaptureTask(mCameraControl, flashMode, aeQuirk));
+            }
+        } // If there is no flash unit, skip the flash related task instead of failing the pipeline.
 
         return Futures.nonCancellationPropagating(
                 pipeline.executeCapture(captureConfigs, flashMode));
@@ -266,6 +272,7 @@ class Camera2CapturePipeline {
          *
          * @param timeout3A in nano seconds
          */
+        @SuppressWarnings("SameParameterValue")
         private void setTimeout3A(long timeout3A) {
             mTimeout3A = timeout3A;
         }
@@ -288,7 +295,7 @@ class Camera2CapturePipeline {
                     }
                     return mPipelineSubTask.preCapture(captureResult);
                 }, mExecutor).transformAsync(is3aConvergeRequired -> {
-                    if (is3aConvergeRequired) {
+                    if (Boolean.TRUE.equals(is3aConvergeRequired)) {
                         return waitForResult(mTimeout3A, mCameraControl,
                                 (result) -> is3AConverged(result, false));
                     }
@@ -301,9 +308,7 @@ class Camera2CapturePipeline {
 
 
             /* Always call postCapture(), it will unlock3A if it was locked in preCapture.*/
-            future.addListener(() -> {
-                mPipelineSubTask.postCapture();
-            }, mExecutor);
+            future.addListener(mPipelineSubTask::postCapture, mExecutor);
 
             return future;
         }
@@ -320,7 +325,9 @@ class Camera2CapturePipeline {
                 // Dequeue image from buffer and enqueue into image writer for reprocessing. If
                 // succeeded, retrieve capture result and set into capture config.
                 CameraCaptureResult cameraCaptureResult = null;
-                if (captureConfig.getTemplateType() == CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG) {
+                if (captureConfig.getTemplateType() == CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG
+                        && !mCameraControl.getZslControl().isZslDisabledByFlashMode()
+                        && !mCameraControl.getZslControl().isZslDisabledByUserCaseConfig()) {
                     ImageProxy imageProxy =
                             mCameraControl.getZslControl().dequeueImageFromBuffer();
                     boolean isSuccess = imageProxy != null
@@ -430,13 +437,19 @@ class Camera2CapturePipeline {
                 || AF_CONVERGED_STATE_SET.contains(captureResult.getAfState());
 
         boolean isAeReady;
+        boolean isAeModeOff = totalCaptureResult.get(CaptureResult.CONTROL_AE_MODE)
+                == CaptureResult.CONTROL_AE_MODE_OFF;
         if (isTorchAsFlash) {
-            isAeReady = AE_TORCH_AS_FLASH_CONVERGED_STATE_SET.contains(captureResult.getAeState());
+            isAeReady = isAeModeOff
+                    || AE_TORCH_AS_FLASH_CONVERGED_STATE_SET.contains(captureResult.getAeState());
         } else {
-            isAeReady = AE_CONVERGED_STATE_SET.contains(captureResult.getAeState());
+            isAeReady = isAeModeOff || AE_CONVERGED_STATE_SET.contains(captureResult.getAeState());
         }
 
-        boolean isAwbReady = AWB_CONVERGED_STATE_SET.contains(captureResult.getAwbState());
+        boolean isAwbModeOff = totalCaptureResult.get(CaptureResult.CONTROL_AWB_MODE)
+                == CaptureResult.CONTROL_AWB_MODE_OFF;
+        boolean isAwbReady = isAwbModeOff
+                || AWB_CONVERGED_STATE_SET.contains(captureResult.getAwbState());
 
         Logger.d(TAG, "checkCaptureResult, AE=" + captureResult.getAeState()
                 + " AF =" + captureResult.getAfState()

@@ -37,6 +37,7 @@ import androidx.car.app.CarToast;
 import androidx.car.app.Screen;
 import androidx.car.app.ScreenManager;
 import androidx.car.app.Session;
+import androidx.car.app.SessionInfo;
 import androidx.car.app.model.Action;
 import androidx.car.app.model.CarIcon;
 import androidx.car.app.model.Distance;
@@ -44,6 +45,7 @@ import androidx.car.app.navigation.model.Destination;
 import androidx.car.app.navigation.model.Step;
 import androidx.car.app.navigation.model.TravelEstimate;
 import androidx.car.app.sample.navigation.common.R;
+import androidx.car.app.sample.navigation.common.model.DemoScripts;
 import androidx.car.app.sample.navigation.common.model.Instruction;
 import androidx.car.app.sample.navigation.common.nav.NavigationService;
 import androidx.core.graphics.drawable.IconCompat;
@@ -62,6 +64,8 @@ class NavigationSession extends Session implements NavigationScreen.Listener {
 
     static final String URI_SCHEME = "samples";
     static final String URI_HOST = "navigation";
+
+    static final String EXECUTE_SCRIPT = "EXECUTE_SCRIPT";
 
     @Nullable
     NavigationScreen mNavigationScreen;
@@ -174,9 +178,11 @@ class NavigationSession extends Session implements NavigationScreen.Listener {
                 }
             };
 
-    NavigationSession() {
-        Lifecycle lifecycle = getLifecycle();
-        lifecycle.addObserver(mLifeCycleObserver);
+    NavigationSession(@NonNull SessionInfo sessionInfo) {
+        if (sessionInfo.getDisplayType() == SessionInfo.DISPLAY_TYPE_MAIN) {
+            Lifecycle lifecycle = getLifecycle();
+            lifecycle.addObserver(mLifeCycleObserver);
+        }
     }
 
     @Override
@@ -254,6 +260,10 @@ class NavigationSession extends Session implements NavigationScreen.Listener {
                     });
 
             return;
+        }
+
+        if (EXECUTE_SCRIPT.equals(intent.getAction())) {
+            executeScript(DemoScripts.getNavigateHome(getCarContext()));
         }
 
         // Process the intent from DeepLinkNotificationReceiver. Bring the routing screen back to

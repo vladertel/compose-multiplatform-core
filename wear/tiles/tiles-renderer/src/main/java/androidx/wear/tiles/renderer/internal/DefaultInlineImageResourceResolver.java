@@ -25,8 +25,8 @@ import android.graphics.drawable.Drawable;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.wear.tiles.proto.ResourceProto.ImageFormat;
-import androidx.wear.tiles.proto.ResourceProto.InlineImageResource;
+import androidx.wear.protolayout.proto.ResourceProto.ImageFormat;
+import androidx.wear.protolayout.proto.ResourceProto.InlineImageResource;
 import androidx.wear.tiles.renderer.internal.ResourceResolvers.InlineImageResourceResolver;
 import androidx.wear.tiles.renderer.internal.ResourceResolvers.ResourceAccessException;
 
@@ -35,6 +35,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import java.nio.ByteBuffer;
 
 /** Resource resolver for inline resources. */
+// TODO(b/276703002): Add support for ARGB_8888 images.
 public class DefaultInlineImageResourceResolver implements InlineImageResourceResolver {
     private static final int RGB565_BYTES_PER_PX = 2;
 
@@ -83,6 +84,7 @@ public class DefaultInlineImageResourceResolver implements InlineImageResourceRe
                 return Config.RGB_565;
             case IMAGE_FORMAT_UNDEFINED:
             case UNRECOGNIZED:
+            case IMAGE_FORMAT_ARGB_8888:
                 return null;
         }
 

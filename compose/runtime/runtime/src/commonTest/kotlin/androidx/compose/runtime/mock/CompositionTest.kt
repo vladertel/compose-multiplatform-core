@@ -42,7 +42,7 @@ fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runTest {
         // Create a test scope for the test using the test scope passed in by runTest
         val scope = object : CompositionTestScope, CoroutineScope by this@runTest {
             var composed = false
-            var composition: Composition? = null
+            override var composition: Composition? = null
 
             override lateinit var root: View
 
@@ -62,13 +62,15 @@ fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runTest {
                 val changeCount = recomposer.changeCount
                 Snapshot.sendApplyNotifications()
                 if (recomposer.hasPendingWork) {
-                    testScheduler.advanceTimeBy(5_000)
+                    advanceTimeBy(5_000)
                     check(ignorePendingWork || !recomposer.hasPendingWork) {
                         "Potentially infinite recomposition, still recomposing after advancing"
                     }
                 }
                 return recomposer.changeCount - changeCount
             }
+
+            override fun advanceTimeBy(amount: Long) = testScheduler.advanceTimeBy(amount)
 
             override fun advance(ignorePendingWork: Boolean) = advanceCount(ignorePendingWork) != 0L
 
@@ -113,6 +115,11 @@ interface CompositionTestScope : CoroutineScope {
     fun advanceCount(ignorePendingWork: Boolean = false): Long
 
     /**
+     * Advance the clock by [amount] ms
+     */
+    fun advanceTimeBy(amount: Long)
+
+    /**
      * Verify the composition is well-formed.
      */
     fun verifyConsistent()
@@ -126,6 +133,11 @@ interface CompositionTestScope : CoroutineScope {
      * The last validator used.
      */
     var validator: (MockViewValidator.() -> Unit)?
+
+    /**
+     * Access to the composition created for the call to [compose]
+     */
+    val composition: Composition?
 }
 
 /**

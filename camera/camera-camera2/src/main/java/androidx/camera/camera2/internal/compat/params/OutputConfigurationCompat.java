@@ -45,20 +45,33 @@ public final class OutputConfigurationCompat {
      */
     public static final int SURFACE_GROUP_ID_NONE = -1;
 
+    /**
+     * Invalid stream use case value.
+     *
+     * <p>An OutputConfiguration with this value indicates that the associated stream
+     * doesn't support stream use case.</p>
+     */
+    public static final int STREAM_USE_CASE_NONE = -1;
+
     private final OutputConfigurationCompatImpl mImpl;
 
     public OutputConfigurationCompat(@NonNull Surface surface) {
-        if (Build.VERSION.SDK_INT >= 28) {
-            mImpl = new OutputConfigurationCompatApi28Impl(surface);
+        this(SURFACE_GROUP_ID_NONE, surface);
+    }
+
+    public OutputConfigurationCompat(int surfaceGroupId, @NonNull Surface surface) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            mImpl = new OutputConfigurationCompatApi33Impl(surfaceGroupId, surface);
+        } else if (Build.VERSION.SDK_INT >= 28) {
+            mImpl = new OutputConfigurationCompatApi28Impl(surfaceGroupId, surface);
         } else if (Build.VERSION.SDK_INT >= 26) {
-            mImpl = new OutputConfigurationCompatApi26Impl(surface);
+            mImpl = new OutputConfigurationCompatApi26Impl(surfaceGroupId, surface);
         } else if (Build.VERSION.SDK_INT >= 24) {
-            mImpl = new OutputConfigurationCompatApi24Impl(surface);
+            mImpl = new OutputConfigurationCompatApi24Impl(surfaceGroupId, surface);
         } else {
             mImpl = new OutputConfigurationCompatBaseImpl(surface);
         }
     }
-
 
     /**
      * Create a new {@link OutputConfigurationCompat} instance, with desired Surface size and
@@ -94,7 +107,9 @@ public final class OutputConfigurationCompat {
     public <T> OutputConfigurationCompat(@NonNull Size surfaceSize, @NonNull Class<T> klass) {
         OutputConfiguration deferredConfig =
                 ApiCompat.Api26Impl.newOutputConfiguration(surfaceSize, klass);
-        if (Build.VERSION.SDK_INT >= 28) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            mImpl = OutputConfigurationCompatApi33Impl.wrap(deferredConfig);
+        } else if (Build.VERSION.SDK_INT >= 28) {
             mImpl = OutputConfigurationCompatApi28Impl.wrap(deferredConfig);
         } else {
             mImpl = OutputConfigurationCompatApi26Impl.wrap(deferredConfig);
@@ -123,7 +138,10 @@ public final class OutputConfigurationCompat {
         }
 
         OutputConfigurationCompatImpl outputConfigurationCompatImpl = null;
-        if (Build.VERSION.SDK_INT >= 28) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            outputConfigurationCompatImpl = OutputConfigurationCompatApi33Impl.wrap(
+                    (OutputConfiguration) outputConfiguration);
+        } else if (Build.VERSION.SDK_INT >= 28) {
             outputConfigurationCompatImpl = OutputConfigurationCompatApi28Impl.wrap(
                     (OutputConfiguration) outputConfiguration);
         } else if (Build.VERSION.SDK_INT >= 26) {
@@ -184,7 +202,6 @@ public final class OutputConfigurationCompat {
     /**
      * Retrieve the physical camera ID set by {@link #setPhysicalCameraId(String)}.
      *
-     * @hide Not supported on all API levels. Used for compatibility checks on lower API levels.
      */
     @RestrictTo(Scope.LIBRARY)
     @Nullable
@@ -332,6 +349,103 @@ public final class OutputConfigurationCompat {
     }
 
     /**
+     * Return current dynamic range profile.
+     *
+     * <p>On API level 32 and lower, this value will return what is set by
+     * {@link #setDynamicRangeProfile(long)}, but when the output configuration is used in a
+     * {@link SessionConfigurationCompat} that is used to
+     * {@link androidx.camera.camera2.internal.compat.CameraDeviceCompat#createCaptureSession(
+     * SessionConfigurationCompat) create a capture session}, the value will be ignored and
+     * camera will run the output as {@code STANDARD} dynamic range.
+     */
+    public long getDynamicRangeProfile() {
+        return mImpl.getDynamicRangeProfile();
+    }
+
+    /**
+     * Set a specific device supported dynamic range profile.
+     *
+     * <p>Clients can choose from any profile advertised as supported in
+     * {@link
+     * android.hardware.camera2.CameraCharacteristics#REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES}
+     * queried using
+     * {@link android.hardware.camera2.params.DynamicRangeProfiles#getSupportedProfiles()}. If this
+     * is not explicitly set, then the default profile will be
+     * {@link android.hardware.camera2.params.DynamicRangeProfiles#STANDARD}.
+     *
+     * <p>Do note that invalid combinations between the registered output surface pixel format and
+     * the configured dynamic range profile will cause capture session initialization failure.
+     * Invalid combinations include any 10-bit dynamic range profile advertised in
+     * {@link android.hardware.camera2.params.DynamicRangeProfiles#getSupportedProfiles()}
+     * combined with an output Surface pixel format
+     * different from {@link android.graphics.ImageFormat#PRIVATE} (the default for Surfaces
+     * initialized by {@link android.view.SurfaceView}, {@link android.view.TextureView},
+     * {@link android.media.MediaRecorder}, {@link android.media.MediaCodec} etc.) or
+     * {@link android.graphics.ImageFormat#YCBCR_P010}.
+     *
+     * <p>On API level 32 and lower, the only supported dynamic range is
+     * {@link android.hardware.camera2.params.DynamicRangeProfiles#STANDARD}. On those API
+     * levels, any other values will be ignored when the output configuring is used in a
+     * {@link SessionConfigurationCompat} that is used to
+     * {@link androidx.camera.camera2.internal.compat.CameraDeviceCompat#createCaptureSession(
+     * SessionConfigurationCompat) create a capture session}, and the
+     * dynamic range used by the camera will remain {@code STANDARD} dynamic range.
+     */
+    public void setDynamicRangeProfile(long profile) {
+        mImpl.setDynamicRangeProfile(profile);
+    }
+
+    /**
+     * Set the stream use case associated with this {@link OutputConfigurationCompat}.
+     *
+     * Stream use case is used to describe the purpose of the stream, whether it's for live
+     * preview, still image capture, video recording, or their combinations. This flag is
+     * useful
+     * for scenarios where the immediate consumer target isn't sufficient to indicate the
+     * stream's usage.
+     *
+     * The main difference between stream use case and capture intent is that the former
+     * enables
+     * the camera device to optimize camera hardware and software pipelines based on user
+     * scenarios for each stream, whereas the latter is mainly a hint to camera to decide
+     * optimal
+     * 3A strategy that's applicable to the whole session. The camera device carries out
+     * configurations such as selecting tuning parameters, choosing camera sensor mode, and
+     * constructing image processing pipeline based on the streams's use cases. Capture
+     * intents
+     * are then used to fine tune 3A behaviors such as adjusting AE/AF convergence speed, and
+     * capture intents may change during the lifetime of a session. For example, for a
+     * session
+     * with a PREVIEW_VIDEO_STILL use case stream and a STILL_CAPTURE use case stream, the
+     * capture intents may be PREVIEW with fast 3A convergence speed and flash metering with
+     * automatic control for live preview, STILL_CAPTURE with best 3A parameters for still
+     * photo
+     * capture, or VIDEO_RECORD with slower 3A convergence speed for better video playback
+     * experience.
+     *
+     * <p> Stream use case is a API 33 and above concept for optimizing image process pipeline
+     * for a given stream session. If not set,{@value #SURFACE_GROUP_ID_NONE} is used.
+     * </p>
+     *
+     * @param streamUseCase Stream use case for the stream session associated with this
+     *                      configuration.
+     */
+    public void setStreamUseCase(long streamUseCase) {
+        mImpl.setStreamUseCase(streamUseCase);
+    }
+
+    /**
+     * Set the stream use case associated with this {@link OutputConfigurationCompat}.
+     *
+     * @return the stream use case associated with this {@link OutputConfigurationCompat}.
+     * The default value is
+     * {@value #SURFACE_GROUP_ID_NONE}.
+     */
+    public long getStreamUseCase() {
+        return mImpl.getStreamUseCase();
+    }
+
+    /**
      * Check if this {@link OutputConfigurationCompat} is equal to another
      * {@link OutputConfigurationCompat}.
      *
@@ -384,6 +498,14 @@ public final class OutputConfigurationCompat {
         void removeSurface(@NonNull Surface surface);
 
         int getMaxSharedSurfaceCount();
+
+        long getDynamicRangeProfile();
+
+        void setDynamicRangeProfile(long profile);
+
+        void setStreamUseCase(long streamUseCase);
+
+        long getStreamUseCase();
 
         @Nullable
         Surface getSurface();

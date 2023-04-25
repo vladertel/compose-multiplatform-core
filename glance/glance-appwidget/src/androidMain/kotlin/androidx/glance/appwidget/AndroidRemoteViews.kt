@@ -20,6 +20,7 @@ import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.IdRes
 import androidx.compose.runtime.Composable
+import androidx.glance.Emittable
 import androidx.glance.EmittableWithChildren
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceNode
@@ -28,10 +29,14 @@ import androidx.glance.GlanceNode
  * Add [RemoteViews] into a glance composition.
  *
  * @param remoteViews the views to add to the composition.
+ * @param modifier modifier used to adjust the layout algorithm or draw decoration content.
  */
 @Composable
-fun AndroidRemoteViews(remoteViews: RemoteViews) {
-    AndroidRemoteViews(remoteViews, View.NO_ID) { }
+fun AndroidRemoteViews(
+    remoteViews: RemoteViews,
+    modifier: GlanceModifier = GlanceModifier
+) {
+    AndroidRemoteViews(remoteViews, View.NO_ID, modifier) { }
 }
 
 /**
@@ -42,11 +47,14 @@ fun AndroidRemoteViews(remoteViews: RemoteViews) {
  * pre-existing children of that view will be removed with [RemoteViews.removeAllViews], and
  * any children defined in the [content] block will be added with [RemoteViews.addView] (or
  * [RemoteViews.addStableView] if available on the system).
+ * @param modifier modifier used to adjust the layout algorithm or draw decoration content.
+ * @param content the content that will be added to the provided container.
  */
 @Composable
 fun AndroidRemoteViews(
     remoteViews: RemoteViews,
     @IdRes containerViewId: Int,
+    modifier: GlanceModifier = GlanceModifier,
     content: @Composable () -> Unit,
 ) {
     GlanceNode(
@@ -54,6 +62,7 @@ fun AndroidRemoteViews(
         update = {
             this.set(remoteViews) { this.remoteViews = it }
             this.set(containerViewId) { this.containerViewId = it }
+            this.set(modifier) { this.modifier = it }
         },
         content = content
     )
@@ -61,8 +70,22 @@ fun AndroidRemoteViews(
 
 internal class EmittableAndroidRemoteViews : EmittableWithChildren() {
     override var modifier: GlanceModifier = GlanceModifier
-
+    var containerViewId: Int = View.NO_ID
     lateinit var remoteViews: RemoteViews
 
-    var containerViewId: Int = View.NO_ID
+    override fun copy(): Emittable = EmittableAndroidRemoteViews().also {
+        it.modifier = modifier
+        if (::remoteViews.isInitialized) {
+            it.remoteViews = remoteViews
+        }
+        it.containerViewId = containerViewId
+        it.children.addAll(children.map { it.copy() })
+    }
+
+    override fun toString(): String = "AndroidRemoteViews(" +
+        "modifier=$modifier, " +
+        "containerViewId=$containerViewId, " +
+        "remoteViews=${if (::remoteViews.isInitialized) remoteViews else null}, " +
+        "children=[\n${childrenToString()}\n]" +
+        ")"
 }

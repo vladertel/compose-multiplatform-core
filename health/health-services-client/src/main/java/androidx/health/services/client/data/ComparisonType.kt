@@ -39,7 +39,6 @@ public class ComparisonType private constructor(public val id: Int, public val n
 
     override fun toString(): String = name
 
-    /** @hide */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     internal fun toProto(): DataProto.ComparisonType =
         when (this) {
@@ -56,7 +55,7 @@ public class ComparisonType private constructor(public val id: Int, public val n
         // which it did for UNKNOWN.
         // TODO(b/175064823): investigate adding EQUAL comparison type
 
-        /** The ComparisonType is unknown, or this library version is too old to recognize it. */
+        /** The comparison type is unknown, or this library version is too old to recognize it. */
         @JvmField
         public val UNKNOWN: ComparisonType = ComparisonType(0, "UNKNOWN")
 
@@ -81,7 +80,6 @@ public class ComparisonType private constructor(public val id: Int, public val n
         public val VALUES: List<ComparisonType> =
             listOf(GREATER_THAN, GREATER_THAN_OR_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL)
 
-        /** @hide */
         @RestrictTo(RestrictTo.Scope.LIBRARY)
         @JvmStatic
         internal fun fromProto(proto: DataProto.ComparisonType): ComparisonType =

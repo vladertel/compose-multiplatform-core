@@ -26,12 +26,10 @@ plugins {
 }
 
 dependencies {
-    kotlinPlugin(projectOrArtifact(":compose:compiler:compiler"))
-
     implementation(libs.kotlinStdlib)
-    api("androidx.compose.foundation:foundation:1.0.5")
+    api("androidx.compose.foundation:foundation:1.2.1")
     api(project(":paging:paging-common"))
-    api("androidx.compose.runtime:runtime:1.0.5")
+    api("androidx.compose.runtime:runtime:1.2.1")
 
     androidTestImplementation(projectOrArtifact(":compose:ui:ui-test-junit4"))
     androidTestImplementation(project(":compose:test-utils"))
@@ -47,7 +45,6 @@ androidx {
     name = "Android Paging-Compose"
     publish = Publish.SNAPSHOT_AND_RELEASE
     mavenVersion = LibraryVersions.PAGING_COMPOSE
-    mavenGroup = LibraryGroups.PAGING
     inceptionYear = "2020"
     description = "Compose integration with Paging"
     runApiTasks = new RunApiTasks.Yes()

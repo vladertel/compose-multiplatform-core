@@ -22,14 +22,16 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
-import androidx.wear.tiles.ActionBuilders.Action;
-import androidx.wear.tiles.ColorBuilders.ColorProp;
-import androidx.wear.tiles.DimensionBuilders.DpProp;
-import androidx.wear.tiles.TypeBuilders.BoolProp;
-import androidx.wear.tiles.proto.ModifiersProto;
-import androidx.wear.tiles.proto.TypesProto;
+import androidx.wear.protolayout.proto.ModifiersProto;
+import androidx.wear.protolayout.proto.TypesProto;
+import androidx.wear.protolayout.protobuf.ByteString;
 
-/** Builders for modifiers for composable layout elements. */
+/**
+ * Builders for modifiers for composable layout elements.
+ *
+ * @deprecated Use {@link androidx.wear.protolayout.ModifiersBuilders} instead.
+ */
+@Deprecated
 public final class ModifiersBuilders {
     private ModifiersBuilders() {}
 
@@ -55,22 +57,20 @@ public final class ModifiersBuilders {
          * Intended for testing purposes only.
          */
         @Nullable
-        public Action getOnClick() {
+        public ActionBuilders.Action getOnClick() {
             if (mImpl.hasOnClick()) {
-                return Action.fromActionProto(mImpl.getOnClick());
+                return ActionBuilders.Action.fromActionProto(mImpl.getOnClick());
             } else {
                 return null;
             }
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public static Clickable fromProto(@NonNull ModifiersProto.Clickable proto) {
             return new Clickable(proto);
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public ModifiersProto.Clickable toProto() {
@@ -95,7 +95,7 @@ public final class ModifiersBuilders {
              * Sets the action to perform when the element this modifier is attached to is clicked.
              */
             @NonNull
-            public Builder setOnClick(@NonNull Action onClick) {
+            public Builder setOnClick(@NonNull ActionBuilders.Action onClick) {
                 mImpl.setOnClick(onClick.toActionProto());
                 return this;
             }
@@ -126,17 +126,15 @@ public final class ModifiersBuilders {
          */
         @NonNull
         public String getContentDescription() {
-            return mImpl.getContentDescription();
+            return mImpl.getObsoleteContentDescription();
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public static Semantics fromProto(@NonNull ModifiersProto.Semantics proto) {
             return new Semantics(proto);
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public ModifiersProto.Semantics toProto() {
@@ -156,7 +154,7 @@ public final class ModifiersBuilders {
              */
             @NonNull
             public Builder setContentDescription(@NonNull String contentDescription) {
-                mImpl.setContentDescription(contentDescription);
+                mImpl.setObsoleteContentDescription(contentDescription);
                 return this;
             }
 
@@ -181,9 +179,9 @@ public final class ModifiersBuilders {
          * the value of "rtl_aware". Intended for testing purposes only.
          */
         @Nullable
-        public DpProp getEnd() {
+        public DimensionBuilders.DpProp getEnd() {
             if (mImpl.hasEnd()) {
-                return DpProp.fromProto(mImpl.getEnd());
+                return DimensionBuilders.DpProp.fromProto(mImpl.getEnd());
             } else {
                 return null;
             }
@@ -194,9 +192,9 @@ public final class ModifiersBuilders {
          * and the value of "rtl_aware". Intended for testing purposes only.
          */
         @Nullable
-        public DpProp getStart() {
+        public DimensionBuilders.DpProp getStart() {
             if (mImpl.hasStart()) {
-                return DpProp.fromProto(mImpl.getStart());
+                return DimensionBuilders.DpProp.fromProto(mImpl.getStart());
             } else {
                 return null;
             }
@@ -204,9 +202,9 @@ public final class ModifiersBuilders {
 
         /** Gets the padding at the top, in DP. Intended for testing purposes only. */
         @Nullable
-        public DpProp getTop() {
+        public DimensionBuilders.DpProp getTop() {
             if (mImpl.hasTop()) {
-                return DpProp.fromProto(mImpl.getTop());
+                return DimensionBuilders.DpProp.fromProto(mImpl.getTop());
             } else {
                 return null;
             }
@@ -214,9 +212,9 @@ public final class ModifiersBuilders {
 
         /** Gets the padding at the bottom, in DP. Intended for testing purposes only. */
         @Nullable
-        public DpProp getBottom() {
+        public DimensionBuilders.DpProp getBottom() {
             if (mImpl.hasBottom()) {
-                return DpProp.fromProto(mImpl.getBottom());
+                return DimensionBuilders.DpProp.fromProto(mImpl.getBottom());
             } else {
                 return null;
             }
@@ -229,22 +227,20 @@ public final class ModifiersBuilders {
          * map to left/right, accordingly. Intended for testing purposes only.
          */
         @Nullable
-        public BoolProp getRtlAware() {
+        public TypeBuilders.BoolProp getRtlAware() {
             if (mImpl.hasRtlAware()) {
-                return BoolProp.fromProto(mImpl.getRtlAware());
+                return TypeBuilders.BoolProp.fromProto(mImpl.getRtlAware());
             } else {
                 return null;
             }
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public static Padding fromProto(@NonNull ModifiersProto.Padding proto) {
             return new Padding(proto);
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public ModifiersProto.Padding toProto() {
@@ -263,7 +259,7 @@ public final class ModifiersBuilders {
              * and the value of "rtl_aware".
              */
             @NonNull
-            public Builder setEnd(@NonNull DpProp end) {
+            public Builder setEnd(@NonNull DimensionBuilders.DpProp end) {
                 mImpl.setEnd(end.toProto());
                 return this;
             }
@@ -273,21 +269,21 @@ public final class ModifiersBuilders {
              * DP and the value of "rtl_aware".
              */
             @NonNull
-            public Builder setStart(@NonNull DpProp start) {
+            public Builder setStart(@NonNull DimensionBuilders.DpProp start) {
                 mImpl.setStart(start.toProto());
                 return this;
             }
 
             /** Sets the padding at the top, in DP. */
             @NonNull
-            public Builder setTop(@NonNull DpProp top) {
+            public Builder setTop(@NonNull DimensionBuilders.DpProp top) {
                 mImpl.setTop(top.toProto());
                 return this;
             }
 
             /** Sets the padding at the bottom, in DP. */
             @NonNull
-            public Builder setBottom(@NonNull DpProp bottom) {
+            public Builder setBottom(@NonNull DimensionBuilders.DpProp bottom) {
                 mImpl.setBottom(bottom.toProto());
                 return this;
             }
@@ -299,7 +295,7 @@ public final class ModifiersBuilders {
              * always map to left/right, accordingly.
              */
             @NonNull
-            public Builder setRtlAware(@NonNull BoolProp rtlAware) {
+            public Builder setRtlAware(@NonNull TypeBuilders.BoolProp rtlAware) {
                 mImpl.setRtlAware(rtlAware.toProto());
                 return this;
             }
@@ -319,7 +315,7 @@ public final class ModifiersBuilders {
             /** Sets the padding for all sides of the content, in DP. */
             @NonNull
             @SuppressLint("MissingGetterMatchingBuilder")
-            public Builder setAll(@NonNull DpProp value) {
+            public Builder setAll(@NonNull DimensionBuilders.DpProp value) {
                 return setStart(value).setEnd(value).setTop(value).setBottom(value);
             }
 
@@ -341,9 +337,9 @@ public final class ModifiersBuilders {
 
         /** Gets the width of the border, in DP. Intended for testing purposes only. */
         @Nullable
-        public DpProp getWidth() {
+        public DimensionBuilders.DpProp getWidth() {
             if (mImpl.hasWidth()) {
-                return DpProp.fromProto(mImpl.getWidth());
+                return DimensionBuilders.DpProp.fromProto(mImpl.getWidth());
             } else {
                 return null;
             }
@@ -351,22 +347,20 @@ public final class ModifiersBuilders {
 
         /** Gets the color of the border. Intended for testing purposes only. */
         @Nullable
-        public ColorProp getColor() {
+        public ColorBuilders.ColorProp getColor() {
             if (mImpl.hasColor()) {
-                return ColorProp.fromProto(mImpl.getColor());
+                return ColorBuilders.ColorProp.fromProto(mImpl.getColor());
             } else {
                 return null;
             }
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public static Border fromProto(@NonNull ModifiersProto.Border proto) {
             return new Border(proto);
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public ModifiersProto.Border toProto() {
@@ -381,14 +375,14 @@ public final class ModifiersBuilders {
 
             /** Sets the width of the border, in DP. */
             @NonNull
-            public Builder setWidth(@NonNull DpProp width) {
+            public Builder setWidth(@NonNull DimensionBuilders.DpProp width) {
                 mImpl.setWidth(width.toProto());
                 return this;
             }
 
             /** Sets the color of the border. */
             @NonNull
-            public Builder setColor(@NonNull ColorProp color) {
+            public Builder setColor(@NonNull ColorBuilders.ColorProp color) {
                 mImpl.setColor(color.toProto());
                 return this;
             }
@@ -411,22 +405,20 @@ public final class ModifiersBuilders {
 
         /** Gets the radius of the corner in DP. Intended for testing purposes only. */
         @Nullable
-        public DpProp getRadius() {
+        public DimensionBuilders.DpProp getRadius() {
             if (mImpl.hasRadius()) {
-                return DpProp.fromProto(mImpl.getRadius());
+                return DimensionBuilders.DpProp.fromProto(mImpl.getRadius());
             } else {
                 return null;
             }
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public static Corner fromProto(@NonNull ModifiersProto.Corner proto) {
             return new Corner(proto);
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public ModifiersProto.Corner toProto() {
@@ -441,7 +433,7 @@ public final class ModifiersBuilders {
 
             /** Sets the radius of the corner in DP. */
             @NonNull
-            public Builder setRadius(@NonNull DpProp radius) {
+            public Builder setRadius(@NonNull DimensionBuilders.DpProp radius) {
                 mImpl.setRadius(radius.toProto());
                 return this;
             }
@@ -467,9 +459,9 @@ public final class ModifiersBuilders {
          * transparent. Intended for testing purposes only.
          */
         @Nullable
-        public ColorProp getColor() {
+        public ColorBuilders.ColorProp getColor() {
             if (mImpl.hasColor()) {
-                return ColorProp.fromProto(mImpl.getColor());
+                return ColorBuilders.ColorProp.fromProto(mImpl.getColor());
             } else {
                 return null;
             }
@@ -489,14 +481,12 @@ public final class ModifiersBuilders {
             }
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public static Background fromProto(@NonNull ModifiersProto.Background proto) {
             return new Background(proto);
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public ModifiersProto.Background toProto() {
@@ -515,7 +505,7 @@ public final class ModifiersBuilders {
              * transparent.
              */
             @NonNull
-            public Builder setColor(@NonNull ColorProp color) {
+            public Builder setColor(@NonNull ColorBuilders.ColorProp color) {
                 mImpl.setColor(color.toProto());
                 return this;
             }
@@ -535,6 +525,64 @@ public final class ModifiersBuilders {
             @NonNull
             public Background build() {
                 return Background.fromProto(mImpl.build());
+            }
+        }
+    }
+
+    /**
+     * Metadata about an element. For use by libraries building higher-level components only. This
+     * can be used to track component metadata.
+     */
+    public static final class ElementMetadata {
+        private final ModifiersProto.ElementMetadata mImpl;
+
+        private ElementMetadata(ModifiersProto.ElementMetadata impl) {
+            this.mImpl = impl;
+        }
+
+        /**
+         * Gets property describing the element with which it is associated. For use by libraries
+         * building higher-level components only. This can be used to track component metadata.
+         */
+        @NonNull
+        public byte[] getTagData() {
+            return mImpl.getTagData().toByteArray();
+        }
+
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public static ElementMetadata fromProto(@NonNull ModifiersProto.ElementMetadata proto) {
+            return new ElementMetadata(proto);
+        }
+
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public ModifiersProto.ElementMetadata toProto() {
+            return mImpl;
+        }
+
+        /** Builder for {@link ElementMetadata} */
+        public static final class Builder {
+            private final ModifiersProto.ElementMetadata.Builder mImpl =
+                    ModifiersProto.ElementMetadata.newBuilder();
+
+            public Builder() {}
+
+            /**
+             * Sets property describing the element with which it is associated. For use by
+             * libraries building higher-level components only. This can be used to track component
+             * metadata.
+             */
+            @NonNull
+            public Builder setTagData(@NonNull byte[] tagData) {
+                mImpl.setTagData(ByteString.copyFrom(tagData));
+                return this;
+            }
+
+            /** Builds an instance from accumulated values. */
+            @NonNull
+            public ElementMetadata build() {
+                return ElementMetadata.fromProto(mImpl.build());
             }
         }
     }
@@ -610,14 +658,25 @@ public final class ModifiersBuilders {
             }
         }
 
-        /** @hide */
+        /**
+         * Gets metadata about an element. For use by libraries building higher-level components
+         * only. This can be used to track component metadata.
+         */
+        @Nullable
+        public ElementMetadata getMetadata() {
+            if (mImpl.hasMetadata()) {
+                return ElementMetadata.fromProto(mImpl.getMetadata());
+            } else {
+                return null;
+            }
+        }
+
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public static Modifiers fromProto(@NonNull ModifiersProto.Modifiers proto) {
             return new Modifiers(proto);
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public ModifiersProto.Modifiers toProto() {
@@ -672,6 +731,16 @@ public final class ModifiersBuilders {
                 return this;
             }
 
+            /**
+             * Sets metadata about an element. For use by libraries building higher-level components
+             * only. This can be used to track component metadata.
+             */
+            @NonNull
+            public Builder setMetadata(@NonNull ElementMetadata metadata) {
+                mImpl.setMetadata(metadata.toProto());
+                return this;
+            }
+
             /** Builds an instance from accumulated values. */
             @NonNull
             public Modifiers build() {
@@ -717,14 +786,12 @@ public final class ModifiersBuilders {
             }
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public static ArcModifiers fromProto(@NonNull ModifiersProto.ArcModifiers proto) {
             return new ArcModifiers(proto);
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public ModifiersProto.ArcModifiers toProto() {
@@ -791,14 +858,12 @@ public final class ModifiersBuilders {
             }
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public static SpanModifiers fromProto(@NonNull ModifiersProto.SpanModifiers proto) {
             return new SpanModifiers(proto);
         }
 
-        /** @hide */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public ModifiersProto.SpanModifiers toProto() {

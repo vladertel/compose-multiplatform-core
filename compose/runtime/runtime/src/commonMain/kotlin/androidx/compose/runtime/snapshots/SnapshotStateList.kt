@@ -42,6 +42,23 @@ class SnapshotStateList<T> : MutableList<T>, StateObject {
         firstStateRecord = value as StateListStateRecord<T>
     }
 
+    /**
+     * Return a list containing all the elements of this list.
+     *
+     * The list returned is immutable and returned will not change even if the content of the list
+     * is changed in the same snapshot. It also will be the same instance until the content is
+     * changed. It is not, however, guaranteed to be the same instance for the same list as adding
+     * and removing the same item from the this list might produce a different instance with the
+     * same content.
+     *
+     * This operation is O(1) and does not involve a physically copying the list. It instead
+     * returns the underlying immutable list used internally to store the content of the list.
+     *
+     * It is recommended to use [toList] when using returning the value of this list from
+     * [androidx.compose.runtime.snapshotFlow].
+     */
+    fun toList(): List<T> = readable.list
+
     internal val modification: Int get() = withCurrent { modification }
 
     @Suppress("UNCHECKED_CAST")
@@ -89,8 +106,8 @@ class SnapshotStateList<T> : MutableList<T>, StateObject {
 
     override fun addAll(elements: Collection<T>) = conditionalUpdate { it.addAll(elements) }
     override fun clear() {
-        synchronized(sync) {
-            writable {
+        writable {
+            synchronized(sync) {
                 list = persistentListOf()
                 modification++
             }
@@ -150,8 +167,8 @@ class SnapshotStateList<T> : MutableList<T>, StateObject {
             val builder = oldList!!.builder()
             result = block(builder)
             val newList = builder.build()
-            if (newList == oldList || synchronized(sync) {
-                writable {
+            if (newList == oldList || writable {
+                 synchronized(sync) {
                     if (modification == currentModification) {
                         list = newList
                         modification++
@@ -184,8 +201,8 @@ class SnapshotStateList<T> : MutableList<T>, StateObject {
                     result = false
                     break
                 }
-                if (synchronized(sync) {
-                    writable {
+                if (writable {
+                    synchronized(sync) {
                         if (modification == currentModification) {
                             list = newList
                             modification++
