@@ -16,16 +16,15 @@
 
 package androidx.playground
 
+import androidx.build.SettingsParser
 import org.gradle.api.GradleException
 import org.gradle.api.initialization.Settings
-import org.gradle.api.model.ObjectFactory
 import java.io.File
 import java.util.Properties
 import javax.inject.Inject
 
 open class PlaygroundExtension @Inject constructor(
-    private val settings: Settings,
-    private val objectFactory: ObjectFactory
+    private val settings: Settings
 ) {
     private var supportRootDir: File? = null
 
@@ -93,6 +92,14 @@ open class PlaygroundExtension @Inject constructor(
             it.mavenCentral()
             it.gradlePluginPortal().content {
                 it.includeModule(
+                    "org.jetbrains.kotlinx",
+                    "kotlinx-benchmark-plugin"
+                )
+                it.includeModule(
+                    "org.jetbrains.kotlinx.benchmark",
+                    "org.jetbrains.kotlinx.benchmark.gradle.plugin"
+                )
+                it.includeModule(
                     "org.jetbrains.kotlin.plugin.serialization",
                     "org.jetbrains.kotlin.plugin.serialization.gradle.plugin"
                 )
@@ -117,15 +124,8 @@ open class PlaygroundExtension @Inject constructor(
 
         settings.rootProject.buildFileName = relativePathToBuild
 
-        val catalogFiles =
-            objectFactory.fileCollection().from("$supportRoot/gradle/libs.versions.toml")
-        settings.dependencyResolutionManagement {
-            it.versionCatalogs.create("libs").from(catalogFiles)
-        }
-
         includeProject(":lint-checks", "lint-checks")
         includeProject(":lint-checks:integration-tests", "lint-checks/integration-tests")
-        includeProject(":fakeannotations", "fakeannotations")
         includeProject(":internal-testutils-common", "testutils/testutils-common")
         includeProject(":internal-testutils-gradle-plugin", "testutils/testutils-gradle-plugin")
 
@@ -163,8 +163,7 @@ open class PlaygroundExtension @Inject constructor(
         if (name == ":compose:test-utils") return true
         if (name == ":compose:lint:common-test") return true
         if (name == ":test:screenshot:screenshot") return true
-        if (name == ":lifecycle:lifecycle-common") return true
-        if (name == ":lifecycle:lifecycle-common-java8") return true
+        if (name == ":test:screenshot:screenshot-proto") return true
         return false
     }
 }

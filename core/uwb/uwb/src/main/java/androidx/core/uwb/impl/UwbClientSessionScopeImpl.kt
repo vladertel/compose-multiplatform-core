@@ -20,18 +20,21 @@ import android.util.Log
 import androidx.core.uwb.RangingCapabilities
 import androidx.core.uwb.RangingMeasurement
 import androidx.core.uwb.RangingParameters
-import androidx.core.uwb.RangingResultPeerDisconnected
-import androidx.core.uwb.RangingResultPosition
+import androidx.core.uwb.RangingResult.RangingResultPosition
+import androidx.core.uwb.RangingResult.RangingResultPeerDisconnected
 import androidx.core.uwb.UwbAddress
 import androidx.core.uwb.UwbControleeSessionScope
-import androidx.core.uwb.exceptions.UwbRangingAlreadyStartedException
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.nearby.uwb.RangingPosition
 import com.google.android.gms.nearby.uwb.RangingSessionCallback
 import com.google.android.gms.nearby.uwb.UwbClient
 import com.google.android.gms.nearby.uwb.UwbComplexChannel
 import com.google.android.gms.nearby.uwb.UwbDevice
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import androidx.core.uwb.helper.handleApiException
 import kotlinx.coroutines.channels.awaitClose
 
@@ -45,21 +48,23 @@ internal class UwbClientSessionScopeImpl(
     }
     private var sessionStarted = false
 
-    override fun initSession(parameters: RangingParameters) = callbackFlow {
+    override fun prepareSession(parameters: RangingParameters) = callbackFlow {
         if (sessionStarted) {
-            throw UwbRangingAlreadyStartedException("Ranging has already started. To initiate " +
+            throw IllegalStateException("Ranging has already started. To initiate " +
                 "a new ranging session, create a new client session scope.")
         }
 
-        val configId = when (parameters.uwbConfigId) {
-            RangingParameters.UWB_CONFIG_ID_1 ->
+        val configId = when (parameters.uwbConfigType) {
+            RangingParameters.CONFIG_UNICAST_DS_TWR ->
                 com.google.android.gms.nearby.uwb.RangingParameters.UwbConfigId.CONFIG_ID_1
+            RangingParameters.CONFIG_MULTICAST_DS_TWR ->
+                com.google.android.gms.nearby.uwb.RangingParameters.UwbConfigId.CONFIG_ID_2
             RangingParameters.UWB_CONFIG_ID_3 ->
                 com.google.android.gms.nearby.uwb.RangingParameters.UwbConfigId.CONFIG_ID_3
             else ->
-                com.google.android.gms.nearby.uwb.RangingParameters.UwbConfigId.UNKNOWN
+                throw IllegalArgumentException("The selected UWB Config Id is not a valid id.")
         }
-        val updateRate = when (parameters.updateRate) {
+        val updateRate = when (parameters.updateRateType) {
             RangingParameters.RANGING_UPDATE_RATE_AUTOMATIC ->
                 com.google.android.gms.nearby.uwb.RangingParameters.RangingUpdateRate.AUTOMATIC
             RangingParameters.RANGING_UPDATE_RATE_FREQUENT ->
@@ -67,14 +72,13 @@ internal class UwbClientSessionScopeImpl(
             RangingParameters.RANGING_UPDATE_RATE_INFREQUENT ->
                 com.google.android.gms.nearby.uwb.RangingParameters.RangingUpdateRate.INFREQUENT
             else ->
-                com.google.android.gms.nearby.uwb.RangingParameters.RangingUpdateRate.UNKNOWN
+                throw IllegalArgumentException("The selected ranging update rate is not a valid" +
+                    " update rate.")
         }
         val parametersBuilder = com.google.android.gms.nearby.uwb.RangingParameters.Builder()
             .setSessionId(parameters.sessionId)
             .setUwbConfigId(configId)
             .setRangingUpdateRate(updateRate)
-            .setSessionKeyInfo(parameters.sessionKeyInfo)
-            .setUwbConfigId(parameters.uwbConfigId)
             .setComplexChannel(
                 parameters.complexChannel?.let {
                     UwbComplexChannel.Builder()
@@ -82,6 +86,9 @@ internal class UwbClientSessionScopeImpl(
                         .setPreambleIndex(it.preambleIndex)
                         .build()
                 })
+        if (parameters.sessionKeyInfo != null) {
+            parametersBuilder.setSessionKeyInfo(parameters.sessionKeyInfo)
+        }
         for (peer in parameters.peerDevices) {
             parametersBuilder.addPeerDevice(UwbDevice.createForAddress(peer.address.address))
         }
@@ -119,17 +126,19 @@ internal class UwbClientSessionScopeImpl(
             }
 
         try {
-            uwbClient.startRanging(parametersBuilder.build(), callback)
+            uwbClient.startRanging(parametersBuilder.build(), callback).await()
             sessionStarted = true
         } catch (e: ApiException) {
             handleApiException(e)
         }
 
         awaitClose {
-            try {
-                uwbClient.stopRanging(callback)
-            } catch (e: ApiException) {
-                handleApiException(e)
+            CoroutineScope(Dispatchers.Main.immediate).launch {
+                try {
+                    uwbClient.stopRanging(callback).await()
+                } catch (e: ApiException) {
+                    handleApiException(e)
+                }
             }
         }
     }

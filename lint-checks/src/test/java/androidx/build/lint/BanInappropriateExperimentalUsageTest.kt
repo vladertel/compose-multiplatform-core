@@ -18,8 +18,11 @@
 
 package androidx.build.lint
 
+import androidx.build.lint.BanInappropriateExperimentalUsage.Companion.getMavenCoordinatesFromPath
+import androidx.build.lint.BanInappropriateExperimentalUsage.Companion.isAnnotationAlwaysAllowed
+import androidx.build.lint.Stubs.Companion.JetpackOptIn
+import androidx.build.lint.Stubs.Companion.JetpackRequiresOptIn
 import com.android.tools.lint.checks.infrastructure.ProjectDescription
-import com.android.tools.lint.checks.infrastructure.TestFile
 import com.android.tools.lint.checks.infrastructure.TestMode
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,6 +45,46 @@ class BanInappropriateExperimentalUsageTest : AbstractLintDetectorTest(
     useIssues = listOf(BanInappropriateExperimentalUsage.ISSUE),
     stubs = arrayOf(Stubs.OptIn),
 ) {
+
+    @Test
+    fun `Check if annotation is always allowed`() {
+        /* ktlint-disable max-line-length */
+
+        // These annotations are used in AndroidX
+        assertTrue(isAnnotationAlwaysAllowed("com.google.devtools.ksp.KspExperimental"))
+        assertTrue(isAnnotationAlwaysAllowed("kotlin.contracts.ExperimentalContracts"))
+        assertTrue(isAnnotationAlwaysAllowed("kotlin.ExperimentalStdlibApi"))
+        assertTrue(isAnnotationAlwaysAllowed("kotlin.experimental.ExperimentalTypeInference"))
+        assertTrue(isAnnotationAlwaysAllowed("kotlinx.coroutines.DelicateCoroutinesApi"))
+        assertTrue(isAnnotationAlwaysAllowed("kotlinx.coroutines.ExperimentalCoroutinesApi"))
+        assertTrue(isAnnotationAlwaysAllowed("org.jetbrains.kotlin.extensions.internal.InternalNonStableExtensionPoints"))
+        assertTrue(isAnnotationAlwaysAllowed("org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI"))
+
+        assertFalse(isAnnotationAlwaysAllowed("androidx.foo.bar"))
+        assertFalse(isAnnotationAlwaysAllowed("com.google.foo.bar"))
+        /* ktlint-enable max-line-length */
+    }
+
+    @Test
+    fun `getLibraryFromPath should return correct Maven coordinates`() {
+        /* ktlint-disable max-line-length */
+        val paging = getMavenCoordinatesFromPath("/path/to/checkout/out/androidx/paging/paging-common/build/libs/paging-common-3.2.0-alpha01.jar")
+        val room = getMavenCoordinatesFromPath("/path/to/checkout/out/androidx/room/room-compiler-processing/build/libs/room-compiler-processing-2.5.0-alpha02.jar")
+        /* ktlint-enable max-line-length */
+
+        assertNotNull(paging!!)
+        assertEquals("androidx.paging", paging.groupId)
+        assertEquals("paging-common", paging.artifactId)
+        assertEquals("3.2.0-alpha01", paging.version)
+
+        assertNotNull(room!!)
+        assertEquals("androidx.room", room.groupId)
+        assertEquals("room-compiler-processing", room.artifactId)
+        assertEquals("2.5.0-alpha02", room.version)
+
+        val invalid = getMavenCoordinatesFromPath("/foo/bar/baz")
+        assertNull(invalid)
+    }
 
     @Test
     fun `Test same atomic module Experimental usage via Gradle model`() {
@@ -101,7 +144,7 @@ No warnings.
             .type(ProjectDescription.Type.LIBRARY)
             .report(false)
             .files(
-                ANDROIDX_REQUIRES_OPT_IN_KT,
+                JetpackRequiresOptIn,
                 ktSample("sample.annotation.provider.ExperimentalSampleAnnotation"),
                 javaSample("sample.annotation.provider.ExperimentalSampleAnnotationJava"),
                 javaSample("sample.annotation.provider.RequiresOptInSampleAnnotationJava"),
@@ -122,7 +165,7 @@ No warnings.
             .type(ProjectDescription.Type.LIBRARY)
             .dependsOn(provider)
             .files(
-                ANDROIDX_OPT_IN_KT,
+                JetpackOptIn,
                 ktSample("androidx.sample.consumer.OutsideGroupExperimentalAnnotatedClass"),
                 gradle(
                     """
@@ -164,61 +207,5 @@ No warnings.
 
         // TODO: Using TestMode.DEFAULT due to b/188814760; remove testModes once bug is resolved
         check(provider, consumer, testModes = listOf(TestMode.DEFAULT)).expect(expected)
-    }
-
-    companion object {
-        /**
-         * [TestFile] containing OptIn.kt from the AndroidX experimental annotation library.
-         */
-        val ANDROIDX_OPT_IN_KT: TestFile = kotlin(
-            """
-package androidx.annotation
-
-import kotlin.annotation.Retention
-import kotlin.annotation.Target
-import kotlin.reflect.KClass
-
-@Retention(AnnotationRetention.BINARY)
-@Target(
-    AnnotationTarget.CLASS,
-    AnnotationTarget.PROPERTY,
-    AnnotationTarget.LOCAL_VARIABLE,
-    AnnotationTarget.VALUE_PARAMETER,
-    AnnotationTarget.CONSTRUCTOR,
-    AnnotationTarget.FUNCTION,
-    AnnotationTarget.PROPERTY_GETTER,
-    AnnotationTarget.PROPERTY_SETTER,
-    AnnotationTarget.FILE,
-    AnnotationTarget.TYPEALIAS
-)
-public annotation class OptIn(
-    @get:Suppress("ArrayReturn")
-    vararg val markerClass: KClass<out Annotation>
-)
-            """.trimIndent()
-        )
-
-        /**
-         * [TestFile] containing RequiresOptIn.kt from the AndroidX experimental annotation library.
-         */
-        val ANDROIDX_REQUIRES_OPT_IN_KT: TestFile = kotlin(
-            """
-package androidx.annotation
-
-import kotlin.annotation.Retention
-import kotlin.annotation.Target
-
-@Retention(AnnotationRetention.BINARY)
-@Target(AnnotationTarget.ANNOTATION_CLASS)
-public annotation class RequiresOptIn(
-    val level: Level = Level.ERROR
-) {
-    public enum class Level {
-        WARNING,
-        ERROR
-    }
-}
-            """.trimIndent()
-        )
     }
 }

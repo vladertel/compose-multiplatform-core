@@ -15,22 +15,33 @@
  */
 
 import androidx.build.LibraryType
-import androidx.build.dependencies.DependenciesKt
 
 plugins {
     id("AndroidXPlugin")
     id("com.android.library")
     id("com.google.protobuf")
     id("org.jetbrains.kotlin.android")
+    id("androidx.stableaidl")
 }
 
 dependencies {
     api(libs.kotlinStdlib)
+    implementation(libs.kotlinCoroutinesCore)
     api("androidx.annotation:annotation:1.1.0")
     implementation(libs.guavaListenableFuture)
     implementation(libs.guavaAndroid)
     implementation("androidx.core:core-ktx:1.7.0")
+    implementation("androidx.concurrent:concurrent-futures-ktx:1.1.0")
     implementation(libs.protobufLite)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinReflect)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.testCore)
+    testImplementation(libs.truth)
+    testImplementation(libs.kotlinTest)
+    testImplementation(libs.kotlinCoroutinesTest)
+    testImplementation(libs.kotlinTest)
 }
 
 android {
@@ -39,6 +50,11 @@ android {
     }
     buildFeatures {
         aidl = true
+    }
+    buildTypes.all {
+        stableAidl {
+            version 1
+        }
     }
     namespace "androidx.health.services.client"
 }
@@ -66,7 +82,6 @@ androidx {
     name = "AndroidX Health Services Client Library"
     type = LibraryType.PUBLISHED_LIBRARY
     mavenVersion = LibraryVersions.HEALTH_SERVICES_CLIENT
-    mavenGroup = LibraryGroups.HEALTH
     inceptionYear = "2021"
     description = "This library helps developers create performant health applications in a platform agnostic way"
 }

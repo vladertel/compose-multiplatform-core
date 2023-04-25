@@ -30,7 +30,6 @@ import androidx.test.rule.GrantPermissionRule
 import androidx.tracing.Trace
 import androidx.tracing.trace
 import java.io.File
-import java.io.FileNotFoundException
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.rules.RuleChain
@@ -86,9 +85,12 @@ public class BenchmarkRule internal constructor(
      * (and would trigger warnings if they did, e.g. debuggable=true)
      * Is always true when called non-internally.
      */
-    private val enableReport: Boolean
+    private val enableReport: Boolean,
+    private val packages: List<String> = emptyList() // TODO: revisit if needed
 ) : TestRule {
     public constructor() : this(true)
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public constructor(packages: List<String>) : this(true, packages)
 
     internal // synthetic access
     val internalState = BenchmarkState()
@@ -209,8 +211,9 @@ public class BenchmarkRule internal constructor(
             var userspaceTrace: perfetto.protos.Trace? = null
 
             val tracePath = PerfettoCaptureWrapper().record(
-                benchmarkName = uniqueName,
-                packages = emptyList(), // NOTE: intentionally don't pass app package!
+                fileLabel = uniqueName,
+                appTagPackages = packages,
+                userspaceTracingPackage = null
             ) {
                 UserspaceTracing.commitToTrace() // clear buffer
 
@@ -220,24 +223,17 @@ public class BenchmarkRule internal constructor(
                 // that events won't lie outside the bounds of the trace content.
                 userspaceTrace = UserspaceTracing.commitToTrace()
             }?.apply {
-                // trace completed, and copied into app writeable dir
-
-                try {
-                    val file = File(this)
-
-                    file.appendBytes(userspaceTrace!!.encode())
-                    file.appendUiState(
-                        UiState(
-                            timelineStart = null,
-                            timelineEnd = null,
-                            highlightPackage = InstrumentationRegistry.getInstrumentation()
-                                .context.packageName
-                        )
+                // trace completed, and copied into shell writeable dir
+                val file = File(this)
+                file.appendBytes(userspaceTrace!!.encode())
+                file.appendUiState(
+                    UiState(
+                        timelineStart = null,
+                        timelineEnd = null,
+                        highlightPackage = InstrumentationRegistry.getInstrumentation()
+                            .context.packageName
                     )
-                } catch (exception: FileNotFoundException) {
-                    // TODO(b/227510293): fix record to return a null in this case
-                    Log.d(TAG, "Unable to add additional detail to captured trace $this")
-                }
+                )
             }
 
             if (enableReport) {

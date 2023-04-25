@@ -19,6 +19,9 @@ package androidx.compose.ui.text
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -41,6 +44,7 @@ import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
 class SpanStyleTest {
+    @OptIn(ExperimentalTextApi::class)
     @Test
     fun `constructor with default values`() {
         val style = SpanStyle()
@@ -55,6 +59,7 @@ class SpanStyleTest {
         assertThat(style.background).isEqualTo(Color.Unspecified)
         assertThat(style.textDecoration).isNull()
         assertThat(style.fontFamily).isNull()
+        assertThat(style.drawStyle).isNull()
     }
 
     @OptIn(ExperimentalTextApi::class)
@@ -65,6 +70,17 @@ class SpanStyleTest {
         val style = SpanStyle(brush = brush)
 
         assertThat(style.brush).isEqualTo(brush)
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    @Test
+    fun `constructor with customized brush and alpha`() {
+        val brush = Brush.linearGradient(colors = listOf(Color.Blue, Color.Red))
+
+        val style = SpanStyle(brush = brush, alpha = 0.3f)
+
+        assertThat(style.brush).isEqualTo(brush)
+        assertThat(style.alpha).isEqualTo(0.3f)
     }
 
     @OptIn(ExperimentalTextApi::class)
@@ -94,6 +110,17 @@ class SpanStyleTest {
         val style = SpanStyle(color = color)
 
         assertThat(style.color).isEqualTo(color)
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    @Test
+    fun `constructor with half-transparent color`() {
+        val color = Color.Red.copy(alpha = 0.5f)
+
+        val style = SpanStyle(color = color)
+
+        assertThat(style.color).isEqualTo(color)
+        assertThat(style.alpha).isWithin(1f / 256f).of(0.5f)
     }
 
     @Test
@@ -177,6 +204,16 @@ class SpanStyleTest {
         assertThat(style.fontFamily).isEqualTo(fontFamily)
     }
 
+    @OptIn(ExperimentalTextApi::class)
+    @Test
+    fun `constructor with customized drawStyle`() {
+        val stroke = Stroke(width = 4f)
+
+        val style = SpanStyle(drawStyle = stroke)
+
+        assertThat(style.drawStyle).isEqualTo(stroke)
+    }
+
     @Test
     fun `merge with empty other should return this`() {
         val style = SpanStyle()
@@ -187,7 +224,7 @@ class SpanStyleTest {
     }
 
     @Test
-    fun `merge with other's color is null should use this' color`() {
+    fun `merge with other's color is null should use this color`() {
         val style = SpanStyle(color = Color.Red)
 
         val newSpanStyle = style.merge(SpanStyle(color = Color.Unspecified))
@@ -414,7 +451,6 @@ class SpanStyleTest {
         assertThat(newSpanStyle.localeList).isEqualTo(otherStyle.localeList)
     }
 
-    @OptIn(ExperimentalTextApi::class)
     @Test
     fun `merge with null platformStyles has null platformStyle`() {
         val style = SpanStyle(platformStyle = null)
@@ -451,6 +487,60 @@ class SpanStyleTest {
 
         assertThat(mergedStyle.color).isEqualTo(Color.Unspecified)
         assertThat(mergedStyle.brush).isEqualTo(brush)
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    @Test
+    fun `merge brush with brush uses other's alpha`() {
+        val brush = Brush.linearGradient(listOf(Color.Blue, Color.Red))
+
+        val style = SpanStyle(brush = brush, alpha = 0.3f)
+        val otherStyle = SpanStyle(brush = brush, alpha = 0.6f)
+
+        val mergedStyle = style.merge(otherStyle)
+
+        assertThat(mergedStyle.color).isEqualTo(Color.Unspecified)
+        assertThat(mergedStyle.brush).isEqualTo(brush)
+        assertThat(mergedStyle.alpha).isEqualTo(0.6f)
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    @Test
+    fun `merge brush with brush uses current alpha if other's is NaN`() {
+        val brush = Brush.linearGradient(listOf(Color.Blue, Color.Red))
+
+        val style = SpanStyle(brush = brush, alpha = 0.3f)
+        val otherStyle = SpanStyle(brush = brush)
+
+        val mergedStyle = style.merge(otherStyle)
+
+        assertThat(mergedStyle.color).isEqualTo(Color.Unspecified)
+        assertThat(mergedStyle.brush).isEqualTo(brush)
+        assertThat(mergedStyle.alpha).isEqualTo(0.3f)
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    @Test
+    fun `merge with other's drawStyle is null should use this' drawStyle`() {
+        val drawStyle1 = Stroke(cap = StrokeCap.Butt)
+        val style = SpanStyle(drawStyle = drawStyle1)
+
+        val newSpanStyle = style.merge(SpanStyle(drawStyle = null))
+
+        assertThat(newSpanStyle.drawStyle).isEqualTo(drawStyle1)
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    @Test
+    fun `merge with other's drawStyle is set should use other's drawStyle`() {
+        val drawStyle1 = Stroke(cap = StrokeCap.Butt)
+        val drawStyle2 = Fill
+        val style = SpanStyle(drawStyle = drawStyle1)
+        val otherStyle = SpanStyle(drawStyle = drawStyle2)
+
+        val newSpanStyle = style.merge(otherStyle)
+
+        assertThat(newSpanStyle.drawStyle).isEqualTo(otherStyle.drawStyle)
     }
 
     @Test
@@ -790,7 +880,6 @@ class SpanStyleTest {
         assertThat(newSpanStyle.textDecoration).isEqualTo(decoration2)
     }
 
-    @OptIn(ExperimentalTextApi::class)
     @Test
     fun `lerp with null platformStyles have null platformStyle`() {
         val style = SpanStyle(platformStyle = null)

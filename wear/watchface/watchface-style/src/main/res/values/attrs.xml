@@ -14,10 +14,11 @@
   limitations under the License.
   -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <attr name="defaultOptionIndex" format="integer" />
     <attr name="displayName" format="string" />
-    <attr name="id" format="string" />
+    <attr name="nameForScreenReaders" format="string|reference" tools:ignore="MissingDefaultResource" />
+    <attr name="id" format="reference|string" />
     <attr name="description" format="string" />
     <attr name="accessibilityTraversalIndex" format="integer" />
     <attr name="affectedWatchFaceLayers">
@@ -154,13 +155,20 @@
     <!-- A ComplicationSlotOverlay node may have a single ComplicationSlotBounds child node without
     a complicationType attribute, or one ComplicationSlotBounds per complicationType. -->
     <declare-styleable name="ComplicationSlotOverlay">
-        <attr name="complicationSlotId" format="integer" />
+        <!-- If specified as a resource reference, the string resource should be locale
+        independent.-->
+        <attr name="complicationSlotId" format="integer|reference" />
         <!-- Optional, specifies whether in this ComplicationSlotsOption the specified complication
         slot should be enabled or not. -->
         <attr name="enabled" format="boolean" />
         <!-- Optional, specifies whether in this ComplicationSlotsOption the specified complication
         slot's accessibilityTraversalIndex should be modified. -->
         <attr name="accessibilityTraversalIndex" />
+        <!-- Optional, a resource reference that specifies the name of the complication slot -->
+        <attr name="name" format="reference"/>
+        <!-- Optional, a resource reference that specifies the screen readerr name of the
+        complication slot -->
+        <attr name="screenReaderName" format="reference"/>
     </declare-styleable>
 
     <!-- A ComplicationSlotsOption node should contain 1 or more child ComplicationSlotOverlay nodes
@@ -171,6 +179,9 @@
         <attr name="id" />
         <!-- A displayName is required. Consider referencing a string resource for localization. -->
         <attr name="displayName" />
+        <!-- A nameForScreenReaders is optional. Consider referencing a string resource for
+        localization. -->
+        <attr name="nameForScreenReaders" />
         <!-- A link to a companion editor icon is optional but encouraged. -->
         <attr name="android:icon" />
     </declare-styleable>
@@ -182,6 +193,9 @@
         <attr name="id" />
         <!-- A displayName is required. Consider referencing a string resource for localization. -->
         <attr name="displayName" />
+        <!-- A nameForScreenReaders is optional. Consider referencing a string resource for
+        localization. -->
+        <attr name="nameForScreenReaders" />
         <!-- A link to a companion editor icon is optional but encouraged. -->
         <attr name="android:icon" />
     </declare-styleable>

@@ -19,9 +19,12 @@ package androidx.compose.runtime.collection
 import androidx.compose.runtime.identityHashCode
 
 internal class IdentityArrayMap<Key : Any, Value : Any?>(capacity: Int = 16) {
-    internal var keys = arrayOfNulls<Any?>(capacity)
-    internal var values = arrayOfNulls<Any?>(capacity)
-    internal var size = 0
+    var keys = arrayOfNulls<Any?>(capacity)
+        private set
+    var values = arrayOfNulls<Any?>(capacity)
+        private set
+    var size = 0
+        private set
 
     fun isEmpty() = size == 0
     fun isNotEmpty() = size > 0
@@ -35,6 +38,10 @@ internal class IdentityArrayMap<Key : Any, Value : Any?>(capacity: Int = 16) {
     }
 
     operator fun set(key: Key, value: Value) {
+        val keys = keys
+        val values = values
+        val size = size
+
         val index = find(key)
         if (index >= 0) {
             values[index] = value
@@ -57,7 +64,7 @@ internal class IdentityArrayMap<Key : Any, Value : Any?>(capacity: Int = 16) {
                 )
             }
             destKeys[insertIndex] = key
-            keys = destKeys
+            this.keys = destKeys
             val destValues = if (resize) {
                 arrayOfNulls(size * 2)
             } else values
@@ -74,14 +81,15 @@ internal class IdentityArrayMap<Key : Any, Value : Any?>(capacity: Int = 16) {
                 )
             }
             destValues[insertIndex] = value
-            values = destValues
-            size++
+            this.values = destValues
+            this.size++
         }
     }
 
-    fun remove(key: Key): Boolean {
+    fun remove(key: Key): Value? {
         val index = find(key)
         if (index >= 0) {
+            val value = values[index]
             val size = size
             val keys = keys
             val values = values
@@ -101,20 +109,29 @@ internal class IdentityArrayMap<Key : Any, Value : Any?>(capacity: Int = 16) {
             keys[newSize] = null
             values[newSize] = null
             this.size = newSize
-            return true
+            @Suppress("UNCHECKED_CAST")
+            return value as Value
         }
-        return false
+        return null
     }
 
-    @Suppress("UNCHECKED_CAST")
-    inline fun removeValueIf(block: (value: Value) -> Boolean) {
+    fun clear() {
+        size = 0
+        keys.fill(null)
+        values.fill(null)
+    }
+
+    inline fun removeIf(block: (key: Key, value: Value) -> Boolean) {
         var current = 0
         for (index in 0 until size) {
+            @Suppress("UNCHECKED_CAST")
+            val key = keys[index] as Key
+            @Suppress("UNCHECKED_CAST")
             val value = values[index] as Value
-            if (!block(value)) {
+            if (!block(key, value)) {
                 if (current != index) {
-                    keys[current] = keys[index]
-                    values[current] = value
+                    keys[current] = key
+                    values[current] = values[index]
                 }
                 current++
             }
@@ -126,6 +143,10 @@ internal class IdentityArrayMap<Key : Any, Value : Any?>(capacity: Int = 16) {
             }
             size = current
         }
+    }
+
+    inline fun removeValueIf(block: (value: Value) -> Boolean) {
+        removeIf { _, value -> block(value) }
     }
 
     inline fun forEach(block: (key: Key, value: Value) -> Unit) {
@@ -144,6 +165,7 @@ internal class IdentityArrayMap<Key : Any, Value : Any?>(capacity: Int = 16) {
         var low = 0
         var high = size - 1
 
+        val keys = keys
         while (low <= high) {
             val mid = (low + high).ushr(1)
             val midKey = keys[mid]
@@ -166,6 +188,9 @@ internal class IdentityArrayMap<Key : Any, Value : Any?>(capacity: Int = 16) {
      * be returned, which is always after the last key with the same [identityHashCode].
      */
     private fun findExactIndex(midIndex: Int, key: Any?, keyHash: Int): Int {
+        val keys = keys
+        val size = size
+
         // hunt down first
         for (i in midIndex - 1 downTo 0) {
             val k = keys[i]

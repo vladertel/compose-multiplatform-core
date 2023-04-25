@@ -16,9 +16,11 @@
 
 package androidx.compose.compiler.plugins.kotlin
 
-class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
+import org.junit.Test
 
-    fun testImplicitlyPassedReceiverScope1() = doTest(
+class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
+    @Test
+    fun testImplicitlyPassedReceiverScope1() = check(
         """
             import androidx.compose.runtime.*
 
@@ -29,23 +31,25 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """
     )
 
-    fun testImplicitlyPassedReceiverScope2() = doTest(
+    @Test
+    fun testImplicitlyPassedReceiverScope2() = check(
         """
             import androidx.compose.runtime.*
 
             @Composable
             fun Int.Foo(content: @Composable Int.(foo: String) -> Unit) {
-                content(<!NO_VALUE_FOR_PARAMETER, NO_VALUE_FOR_PARAMETER!>)<!>
+                content<!NO_VALUE_FOR_PARAMETER, NO_VALUE_FOR_PARAMETER!>()<!>
             }
 
             @Composable
             fun Bar(content: @Composable Int.() -> Unit) {
-                content(<!NO_VALUE_FOR_PARAMETER!>)<!>
+                content<!NO_VALUE_FOR_PARAMETER!>()<!>
             }
         """
     )
 
-    fun testSmartCastsAndPunning() = doTest(
+    @Test
+    fun testSmartCastsAndPunning() = check(
         """
             import androidx.compose.runtime.*
 
@@ -63,7 +67,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """
     )
 
-    fun testExtensionInvoke() = doTest(
+    @Test
+    fun testExtensionInvoke() = check(
         """
             import androidx.compose.runtime.*
 
@@ -76,7 +81,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """
     )
 
-    fun testResolutionInsideWhenExpression() = doTest(
+    @Test
+    fun testResolutionInsideWhenExpression() = check(
         """
             import androidx.compose.runtime.*
             
@@ -91,7 +97,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """
     )
 
-    fun testUsedParameters() = doTest(
+    @Test
+    fun testUsedParameters() = check(
         """
             import androidx.compose.runtime.*
             import android.widget.LinearLayout
@@ -134,7 +141,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """
     )
 
-    fun testDispatchInvoke() = doTest(
+    @Test
+    fun testDispatchInvoke() = check(
         """
             import androidx.compose.runtime.*
 
@@ -150,7 +158,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """
     )
 
-    fun testDispatchAndExtensionReceiver() = doTest(
+    @Test
+    fun testDispatchAndExtensionReceiver() = check(
         """
             import androidx.compose.runtime.*
 
@@ -168,7 +177,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """
     )
 
-    fun testDispatchAndExtensionReceiverLocal() = doTest(
+    @Test
+    fun testDispatchAndExtensionReceiverLocal() = check(
         """
             import androidx.compose.runtime.*
 
@@ -184,7 +194,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """
     )
 
-    fun testMissingAttributes() = doTest(
+    @Test
+    fun testMissingAttributes() = check(
         """
             import androidx.compose.runtime.*
 
@@ -197,10 +208,10 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
             // otherwise correct file "red".
             @Composable fun Test(F: @Composable (x: Foo) -> Unit) {
                 // NOTE: constructor attributes and fn params get a "missing parameter" diagnostic
-                A(<!NO_VALUE_FOR_PARAMETER!>)<!>
+                A<!NO_VALUE_FOR_PARAMETER!>()<!>
 
                 // local
-                F(<!NO_VALUE_FOR_PARAMETER!>)<!>
+                F<!NO_VALUE_FOR_PARAMETER!>()<!>
 
                 val x = Foo(123)
 
@@ -213,7 +224,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """.trimIndent()
     )
 
-    fun testDuplicateAttributes() = doTest(
+    @Test
+    fun testDuplicateAttributes() = check(
         """
             import androidx.compose.runtime.*
 
@@ -232,7 +244,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """.trimIndent()
     )
 
-    fun testChildrenNamedAndBodyDuplicate() = doTest(
+    @Test
+    fun testChildrenNamedAndBodyDuplicate() = check(
         """
             import androidx.compose.runtime.*
 
@@ -245,7 +258,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """.trimIndent()
     )
 
-    fun testAbstractClassTags() = doTest(
+    @Test
+    fun testAbstractClassTags() = check(
         """
             import androidx.compose.runtime.*
             import android.content.Context
@@ -257,13 +271,14 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
 
             @Composable fun Test() {
                 <!CREATING_AN_INSTANCE_OF_ABSTRACT_CLASS!>Foo()<!>
-                <!CREATING_AN_INSTANCE_OF_ABSTRACT_CLASS!>Bar(<!NO_VALUE_FOR_PARAMETER!>)<!><!>
+                <!CREATING_AN_INSTANCE_OF_ABSTRACT_CLASS!>Bar<!NO_VALUE_FOR_PARAMETER!>()<!><!>
             }
 
         """.trimIndent()
     )
 
-    fun testGenerics() = doTest(
+    @Test
+    fun testGenerics() = check(
         """
             import androidx.compose.runtime.*
 
@@ -298,7 +313,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """.trimIndent()
     )
 
-    fun testUnresolvedAttributeValueResolvedTarget() = doTest(
+    @Test
+    fun testUnresolvedAttributeValueResolvedTarget() = check(
         """
             import androidx.compose.runtime.*
 
@@ -331,7 +347,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
     )
 
     // TODO(lmr): this triggers an exception!
-    fun testEmptyAttributeValue() = doTest(
+    @Test
+    fun testEmptyAttributeValue() = check(
         """
             import androidx.compose.runtime.*
 
@@ -341,7 +358,7 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
             }
 
             @Composable fun Test() {
-                Foo(abc=<!NO_VALUE_FOR_PARAMETER!>)<!>
+                Foo(<!NO_VALUE_FOR_PARAMETER!>abc=)<!>
 
                 // NOTE(lmr): even though there is NO diagnostic here, there *is* a parse
                 // error. This is intentional and done to mimic how kotlin handles function
@@ -349,10 +366,12 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
                 Foo(abc=123, xyz=)
             }
 
-        """.trimIndent()
+        """.trimIndent(),
+        ignoreParseErrors = true
     )
 
-    fun testMismatchedAttributes() = doTest(
+    @Test
+    fun testMismatchedAttributes() = check(
         """
             import androidx.compose.runtime.*
 
@@ -386,7 +405,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """.trimIndent()
     )
 
-    fun testErrorAttributeValue() = doTest(
+    @Test
+    fun testErrorAttributeValue() = check(
         """
             import androidx.compose.runtime.*
 
@@ -402,7 +422,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
         """.trimIndent()
     )
 
-    fun testUnresolvedQualifiedTag() = doTest(
+    @Test
+    fun testUnresolvedQualifiedTag() = check(
         """
             import androidx.compose.runtime.*
 
@@ -460,7 +481,8 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
     )
 
     // TODO(lmr): overloads creates resolution exception
-    fun testChildren() = doTest(
+    @Test
+    fun testChildren() = check(
         """
             import androidx.compose.runtime.*
             import android.widget.Button
@@ -480,7 +502,7 @@ class FcsTypeResolutionTests : AbstractComposeDiagnosticsTest() {
 
             @Composable fun Test() {
                 ChildrenRequired2 {}
-                ChildrenRequired2(<!NO_VALUE_FOR_PARAMETER!>)<!>
+                ChildrenRequired2<!NO_VALUE_FOR_PARAMETER!>()<!>
 
                 ChildrenOptional3 {}
                 ChildrenOptional3()

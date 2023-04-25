@@ -27,6 +27,7 @@
             android:label="@string/asynchronous_data_source_name"
             android:exported="true"
             android:icon="@drawable/circle"
+            android:directBootAware="true"
             android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
             <meta-data
                 android:name="android.support.wearable.complications.SUPPORTED_TYPES"
@@ -46,6 +47,7 @@
             android:label="@string/synchronous_data_source_name"
             android:exported="true"
             android:icon="@drawable/circle"
+            android:directBootAware="true"
             android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
             <meta-data
                 android:name="android.support.wearable.complications.SUPPORTED_TYPES"
@@ -68,6 +70,7 @@
             android:label="@string/background_data_source_name"
             android:exported="true"
             android:icon="@drawable/circle"
+            android:directBootAware="true"
             android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
             <meta-data
                 android:name="android.support.wearable.complications.SUPPORTED_TYPES"
@@ -87,13 +90,100 @@
             android:label="@string/immediate_data_source_name"
             android:exported="true"
             android:icon="@drawable/circle"
+            android:directBootAware="true"
             android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
             <meta-data
                 android:name="android.support.wearable.complications.SUPPORTED_TYPES"
                 android:value="SHORT_TEXT,LONG_TEXT"/>
             <meta-data
+                android:name="android.support.wearable.complications.TRUSTED_SUPPORTED_TYPES"
+                android:value="ICON"/>
+            <meta-data
+                android:name="android.support.wearable.complications.SAFE_WATCH_FACES"
+                android:value="androidx.wear.watchface.samples.test/androidx.wear.watchface.samples.ExampleCanvasAnalogWatchFaceService"/>
+            <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
                 android:value="10000"/>
+            <intent-filter>
+                <action android:name=
+                    "android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST"/>
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=
+                "androidx.wear.watchface.complications.datasource.samples.ColorRampDataSourceService"
+            android:label="@string/color_ramp_data_source_name"
+            android:exported="true"
+            android:icon="@drawable/circle"
+            android:directBootAware="true"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="RANGED_VALUE"/>
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0"/>
+            <intent-filter>
+                <action android:name=
+                    "android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST"/>
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=
+                "androidx.wear.watchface.complications.datasource.samples.NonInterpolatedColorRampDataSourceService"
+            android:label="@string/color_ramp2_data_source_name"
+            android:exported="true"
+            android:icon="@drawable/circle"
+            android:directBootAware="true"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="RANGED_VALUE"/>
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0"/>
+            <intent-filter>
+                <action android:name=
+                    "android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST"/>
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=
+                "androidx.wear.watchface.complications.datasource.samples.GoalProgressDataSourceService"
+            android:label="@string/goal_progress_data_source_name"
+            android:exported="true"
+            android:icon="@drawable/circle"
+            android:directBootAware="true"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="GOAL_PROGRESS"/>
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0"/>
+            <intent-filter>
+                <action android:name=
+                    "android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST"/>
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=
+                "androidx.wear.watchface.complications.datasource.samples.WeightedElementDataSourceService"
+            android:label="@string/weighted_elements_data_source_name"
+            android:exported="true"
+            android:icon="@drawable/circle"
+            android:directBootAware="true"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="WEIGHTED_ELEMENTS"/>
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0"/>
             <intent-filter>
                 <action android:name=
                     "android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST"/>
@@ -104,6 +194,7 @@
             android:label="@string/configurable_data_source_name"
             android:exported="true"
             android:icon="@drawable/circle"
+            android:directBootAware="true"
             android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
             <meta-data
                 android:name="android.support.wearable.complications.SUPPORTED_TYPES"

@@ -28,13 +28,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.tokens.SliderTokens
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.testutils.expectAssertionError
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -73,6 +78,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SliderTest {
     private val tag = "slider"
+    private val SliderTolerance = 0.003f
 
     @get:Rule
     val rule = createComposeRule()
@@ -212,7 +218,7 @@ class SliderTest {
                 expected = calculateFraction(left, right, centerX + 100 - slop)
             }
         rule.runOnIdle {
-            Truth.assertThat(state.value).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -247,7 +253,7 @@ class SliderTest {
                 expected = calculateFraction(left, right, centerX + 100 - slop)
             }
         rule.runOnIdle {
-            Truth.assertThat(state.value).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -276,7 +282,7 @@ class SliderTest {
                 expected = calculateFraction(left, right, centerX + 50)
             }
         rule.runOnIdle {
-            Truth.assertThat(state.value).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -333,7 +339,7 @@ class SliderTest {
             }
 
         rule.runOnIdle {
-            Truth.assertThat(state.value).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -364,7 +370,7 @@ class SliderTest {
             }
 
         rule.runOnIdle {
-            Truth.assertThat(state.value).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -399,7 +405,7 @@ class SliderTest {
                 expected = calculateFraction(left, right, centerX - 100 + slop)
             }
         rule.runOnIdle {
-            Truth.assertThat(state.value).isWithin(0.002f).of(expected)
+            Truth.assertThat(state.value).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -430,7 +436,7 @@ class SliderTest {
                 expected = calculateFraction(left, right, centerX - 50)
             }
         rule.runOnIdle {
-            Truth.assertThat(state.value).isWithin(0.002f).of(expected)
+            Truth.assertThat(state.value).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -451,6 +457,28 @@ class SliderTest {
             ) { Slider(value = state.value, onValueChange = { state.value = it }) }
             .assertHeightIsEqualTo(48.dp)
             .assertWidthIsEqualTo(100.dp)
+    }
+
+    @Test
+    fun slider_sizes_within_row() {
+        val rowWidth = 100.dp
+        val spacerWidth = 10.dp
+
+        rule.setMaterialContent(lightColorScheme()) {
+            Row(modifier = Modifier.requiredWidth(rowWidth)) {
+                Spacer(Modifier.width(spacerWidth))
+                Slider(
+                    modifier = Modifier.testTag(tag).weight(1f),
+                    value = 0f,
+                    onValueChange = {}
+                )
+                Spacer(Modifier.width(spacerWidth))
+            }
+        }
+
+        rule.onNodeWithTag(tag)
+            .assertWidthIsEqualTo(rowWidth - spacerWidth.times(2))
+            .assertHeightIsEqualTo(SliderTokens.HandleHeight)
     }
 
     @Test
@@ -515,6 +543,34 @@ class SliderTest {
             moveBy(Offset(50f, 50f))
             up()
         }
+
+        rule.runOnIdle {
+            Truth.assertThat(callCount.value).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun slider_setProgress_callsOnValueChangeFinished() {
+        val state = mutableStateOf(0f)
+        val callCount = mutableStateOf(0)
+
+        rule.setMaterialContent(lightColorScheme()) {
+            Slider(
+                modifier = Modifier.testTag(tag),
+                value = state.value,
+                onValueChangeFinished = {
+                    callCount.value += 1
+                },
+                onValueChange = { state.value = it }
+            )
+        }
+
+        rule.runOnIdle {
+            Truth.assertThat(callCount.value).isEqualTo(0)
+        }
+
+        rule.onNodeWithTag(tag)
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(0.8f) }
 
         rule.runOnIdle {
             Truth.assertThat(callCount.value).isEqualTo(1)
@@ -599,6 +655,98 @@ class SliderTest {
         }
     }
 
+    @Test
+    fun slider_zero_width() {
+        rule.setMaterialContentForSizeAssertions(
+            parentMaxHeight = 0.dp,
+            parentMaxWidth = 0.dp
+        ) { Slider(value = 1f, onValueChange = {}) }
+            .assertHeightIsEqualTo(0.dp)
+            .assertWidthIsEqualTo(0.dp)
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun slider_thumb_recomposition() {
+        val state = mutableStateOf(0f)
+        val recompositionCounter = SliderRecompositionCounter()
+
+        rule.setContent {
+            Slider(
+                modifier = Modifier.testTag(tag),
+                value = state.value,
+                onValueChange = { state.value = it },
+                thumb = { sliderPositions -> recompositionCounter.OuterContent(sliderPositions) }
+            )
+        }
+
+        rule.onNodeWithTag(tag)
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(100f, 0f))
+                moveBy(Offset(-100f, 0f))
+                moveBy(Offset(100f, 0f))
+            }
+        rule.runOnIdle {
+            Truth.assertThat(recompositionCounter.outerRecomposition).isEqualTo(1)
+            Truth.assertThat(recompositionCounter.innerRecomposition).isEqualTo(4)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun slider_track_recomposition() {
+        val state = mutableStateOf(0f)
+        val recompositionCounter = SliderRecompositionCounter()
+
+        rule.setContent {
+            Slider(
+                modifier = Modifier.testTag(tag),
+                value = state.value,
+                onValueChange = { state.value = it },
+                track = { sliderPositions -> recompositionCounter.OuterContent(sliderPositions) }
+            )
+        }
+
+        rule.onNodeWithTag(tag)
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(100f, 0f))
+                moveBy(Offset(-100f, 0f))
+                moveBy(Offset(100f, 0f))
+            }
+        rule.runOnIdle {
+            Truth.assertThat(recompositionCounter.outerRecomposition).isEqualTo(1)
+            Truth.assertThat(recompositionCounter.innerRecomposition).isEqualTo(4)
+        }
+    }
+
+    @Test
+    fun slider_parentWithInfiniteWidth_minWidth() {
+        val state = mutableStateOf(0f)
+        rule.setMaterialContentForSizeAssertions {
+            Box(modifier = Modifier.requiredWidth(Int.MAX_VALUE.dp)) {
+                Slider(value = state.value, onValueChange = { state.value = it })
+            }
+        }.assertWidthIsEqualTo(48.dp)
+    }
+
+    @Test
+    fun slider_rowWithInfiniteWidth() {
+        val state = mutableStateOf(0f)
+        expectAssertionError(false) {
+            rule.setContent {
+                Row(modifier = Modifier.requiredWidth(Int.MAX_VALUE.dp)) {
+                    Slider(
+                        modifier = Modifier.weight(1f),
+                        value = state.value,
+                        onValueChange = { state.value = it }
+                    )
+                }
+            }
+        }
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_dragThumb() {
@@ -609,7 +757,7 @@ class SliderTest {
             slop = LocalViewConfiguration.current.touchSlop
             RangeSlider(
                 modifier = Modifier.testTag(tag),
-                values = state.value,
+                value = state.value,
                 onValueChange = { state.value = it }
             )
         }
@@ -629,7 +777,7 @@ class SliderTest {
             }
         rule.runOnIdle {
             Truth.assertThat(state.value.start).isEqualTo(0f)
-            Truth.assertThat(state.value.endInclusive).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value.endInclusive).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -643,7 +791,7 @@ class SliderTest {
             slop = LocalViewConfiguration.current.touchSlop
             RangeSlider(
                 modifier = Modifier.testTag(tag),
-                values = state.value,
+                value = state.value,
                 onValueChange = { state.value = it }
             )
         }
@@ -667,7 +815,7 @@ class SliderTest {
             }
         rule.runOnIdle {
             Truth.assertThat(state.value.start).isEqualTo(0f)
-            Truth.assertThat(state.value.endInclusive).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value.endInclusive).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -681,7 +829,7 @@ class SliderTest {
             slop = LocalViewConfiguration.current.touchSlop
             RangeSlider(
                 modifier = Modifier.testTag(tag),
-                values = state.value,
+                value = state.value,
                 onValueChange = { state.value = it }
             )
         }
@@ -717,7 +865,7 @@ class SliderTest {
         rule.setMaterialContent(lightColorScheme()) {
             RangeSlider(
                 modifier = Modifier.testTag(tag),
-                values = state.value,
+                value = state.value,
                 onValueChange = { state.value = it }
             )
         }
@@ -735,7 +883,7 @@ class SliderTest {
                 expected = calculateFraction(left, right, centerX + 50)
             }
         rule.runOnIdle {
-            Truth.assertThat(state.value.endInclusive).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value.endInclusive).isWithin(SliderTolerance).of(expected)
             Truth.assertThat(state.value.start).isEqualTo(0f)
         }
     }
@@ -749,7 +897,7 @@ class SliderTest {
         rule.setMaterialContent(lightColorScheme()) {
             RangeSlider(
                 modifier = Modifier.testTag(tag),
-                values = state.value,
+                value = state.value,
                 onValueChange = { state.value = it },
                 valueRange = 0f..rangeEnd.value
             )
@@ -769,7 +917,7 @@ class SliderTest {
             }
 
         rule.runOnIdle {
-            Truth.assertThat(state.value.endInclusive).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value.endInclusive).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -784,7 +932,7 @@ class SliderTest {
                 slop = LocalViewConfiguration.current.touchSlop
                 RangeSlider(
                     modifier = Modifier.testTag(tag),
-                    values = state.value,
+                    value = state.value,
                     onValueChange = { state.value = it }
                 )
             }
@@ -807,7 +955,7 @@ class SliderTest {
             }
         rule.runOnIdle {
             Truth.assertThat(state.value.start).isEqualTo(0f)
-            Truth.assertThat(state.value.endInclusive).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value.endInclusive).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -822,7 +970,7 @@ class SliderTest {
                 slop = LocalViewConfiguration.current.touchSlop
                 RangeSlider(
                     modifier = Modifier.testTag(tag),
-                    values = state.value,
+                    value = state.value,
                     onValueChange = { state.value = it }
                 )
             }
@@ -848,7 +996,7 @@ class SliderTest {
             }
         rule.runOnIdle {
             Truth.assertThat(state.value.start).isEqualTo(0f)
-            Truth.assertThat(state.value.endInclusive).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value.endInclusive).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -862,7 +1010,7 @@ class SliderTest {
             slop = LocalViewConfiguration.current.touchSlop
             RangeSlider(
                 modifier = Modifier.testTag(tag),
-                values = state.value,
+                value = state.value,
                 onValueChange = { state.value = it }
             )
         }
@@ -884,7 +1032,7 @@ class SliderTest {
             }
         rule.runOnIdle {
             Truth.assertThat(state.value.start).isEqualTo(0.5f)
-            Truth.assertThat(state.value.endInclusive).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value.endInclusive).isWithin(SliderTolerance).of(expected)
         }
     }
 
@@ -898,7 +1046,7 @@ class SliderTest {
             slop = LocalViewConfiguration.current.touchSlop
             RangeSlider(
                 modifier = Modifier.testTag(tag),
-                values = state.value,
+                value = state.value,
                 onValueChange = { state.value = it }
             )
         }
@@ -919,7 +1067,7 @@ class SliderTest {
                 expected = calculateFraction(left, right, centerX - 100)
             }
         rule.runOnIdle {
-            Truth.assertThat(state.value.start).isWithin(0.001f).of(expected)
+            Truth.assertThat(state.value.start).isWithin(SliderTolerance).of(expected)
             Truth.assertThat(state.value.endInclusive).isEqualTo(0.5f)
         }
     }
@@ -936,11 +1084,14 @@ class SliderTest {
                 Row(Modifier.width(500.toDp())) {
                     Spacer(Modifier.requiredSize(100.toDp()))
                     RangeSlider(
-                        values = 0f..0.5f,
+                        value = 0f..0.5f,
                         onValueChange = {},
-                        modifier = Modifier.testTag(tag).weight(1f).onGloballyPositioned {
-                            sliderBounds = it.boundsInParent()
-                        }
+                        modifier = Modifier
+                            .testTag(tag)
+                            .weight(1f)
+                            .onGloballyPositioned {
+                                sliderBounds = it.boundsInParent()
+                            }
                     )
                     Spacer(Modifier.requiredSize(100.toDp()))
                 }
@@ -960,7 +1111,7 @@ class SliderTest {
 
         rule.setMaterialContent(lightColorScheme()) {
             RangeSlider(
-                modifier = Modifier.testTag(tag), values = state.value,
+                modifier = Modifier.testTag(tag), value = state.value,
                 onValueChange = { state.value = it }
             )
         }
@@ -1013,7 +1164,7 @@ class SliderTest {
         // Slider with [0,5,10,15,20] possible values
         rule.setMaterialContent(lightColorScheme()) {
             RangeSlider(
-                modifier = Modifier.testTag(tag), values = state.value,
+                modifier = Modifier.testTag(tag), value = state.value,
                 steps = 3,
                 valueRange = 0f..20f,
                 onValueChange = { state.value = it },
@@ -1028,7 +1179,7 @@ class SliderTest {
             ProgressBarRangeInfo(
                 5f,
                 0f..10f,
-                3
+                1
             )
         )
 
@@ -1036,7 +1187,7 @@ class SliderTest {
             ProgressBarRangeInfo(
                 10f,
                 5f..20f,
-                3,
+                2,
             )
         )
 
@@ -1047,9 +1198,128 @@ class SliderTest {
             .performSemanticsAction(SemanticsActions.SetProgress) { it(15f) }
 
         rule.onAllNodes(isFocusable(), true)[0]
-            .assertRangeInfoEquals(ProgressBarRangeInfo(10f, 0f..15f, 3))
+            .assertRangeInfoEquals(ProgressBarRangeInfo(10f, 0f..15f, 2))
 
         rule.onAllNodes(isFocusable(), true)[1]
-            .assertRangeInfoEquals(ProgressBarRangeInfo(15f, 10f..20f, 3))
+            .assertRangeInfoEquals(ProgressBarRangeInfo(15f, 10f..20f, 1))
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun rangeSlider_thumb_recomposition() {
+        val state = mutableStateOf(0f..100f)
+        val startRecompositionCounter = SliderRecompositionCounter()
+        val endRecompositionCounter = SliderRecompositionCounter()
+
+        rule.setContent {
+            RangeSlider(
+                modifier = Modifier.testTag(tag),
+                value = state.value,
+                onValueChange = { state.value = it },
+                valueRange = 0f..100f,
+                startThumb = { sliderPositions ->
+                    startRecompositionCounter.OuterContent(sliderPositions)
+                },
+                endThumb = { sliderPositions ->
+                    endRecompositionCounter.OuterContent(sliderPositions)
+                }
+            )
+        }
+
+        rule.onNodeWithTag(tag)
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(100f, 0f))
+                moveBy(Offset(-100f, 0f))
+                moveBy(Offset(100f, 0f))
+            }
+
+        rule.runOnIdle {
+            Truth.assertThat(startRecompositionCounter.outerRecomposition).isEqualTo(1)
+            Truth.assertThat(startRecompositionCounter.innerRecomposition).isEqualTo(3)
+            Truth.assertThat(endRecompositionCounter.outerRecomposition).isEqualTo(1)
+            Truth.assertThat(endRecompositionCounter.innerRecomposition).isEqualTo(3)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun rangeSlider_track_recomposition() {
+        val state = mutableStateOf(0f..100f)
+        val recompositionCounter = SliderRecompositionCounter()
+
+        rule.setContent {
+            RangeSlider(
+                modifier = Modifier.testTag(tag),
+                value = state.value,
+                onValueChange = { state.value = it },
+                valueRange = 0f..100f,
+                track = { sliderPositions ->
+                    recompositionCounter.OuterContent(sliderPositions)
+                }
+            )
+        }
+
+        rule.onNodeWithTag(tag)
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(100f, 0f))
+                moveBy(Offset(-100f, 0f))
+                moveBy(Offset(100f, 0f))
+            }
+
+        rule.runOnIdle {
+            Truth.assertThat(recompositionCounter.outerRecomposition).isEqualTo(1)
+            Truth.assertThat(recompositionCounter.innerRecomposition).isEqualTo(4)
+        }
+    }
+
+    @Test
+    fun rangeSlider_parentWithInfiniteWidth_minWidth() {
+        val state = mutableStateOf(0f..1f)
+        rule.setMaterialContentForSizeAssertions {
+            Box(modifier = Modifier.requiredWidth(Int.MAX_VALUE.dp)) {
+                RangeSlider(value = state.value, onValueChange = { state.value = it })
+            }
+        }.assertWidthIsEqualTo(48.dp)
+    }
+
+    @Test
+    fun rangeSlider_rowWithInfiniteWidth() {
+        val state = mutableStateOf(0f..1f)
+        expectAssertionError(false) {
+            rule.setContent {
+                Row(modifier = Modifier.requiredWidth(Int.MAX_VALUE.dp)) {
+                    RangeSlider(
+                        modifier = Modifier.weight(1f),
+                        value = state.value,
+                        onValueChange = { state.value = it }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Stable
+class SliderRecompositionCounter {
+    var innerRecomposition = 0
+    var outerRecomposition = 0
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun OuterContent(sliderPositions: SliderPositions) {
+        SideEffect { ++outerRecomposition }
+        Column {
+            Text("OuterContent")
+            InnerContent(sliderPositions)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun InnerContent(sliderPositions: SliderPositions) {
+        SideEffect { ++innerRecomposition }
+        Text("InnerContent: ${sliderPositions.activeRange}")
     }
 }

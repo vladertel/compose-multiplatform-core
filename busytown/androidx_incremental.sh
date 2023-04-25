@@ -39,7 +39,8 @@ function hashOutDir() {
   (cd $OUT_DIR && find -type f | grep -v "$hashFile" | xargs --no-run-if-empty -P 32 -n 64 sha1sum > $DIST_DIR/$hashFile)
   echo "done hashing out dir"
 }
-hashOutDir
+# disable temporarily b/276812697
+# hashOutDir
 
 # If we encounter a failure in postsubmit, we try a few things to determine if the failure is
 # reproducible
@@ -56,7 +57,7 @@ if ! impl/check_translations.sh; then
   EXIT_VALUE=1
 else
     # Run Gradle
-    if impl/build.sh $DIAGNOSE_ARG buildOnServer checkExternalLicenses listTaskOutputs validateProperties \
+    if impl/build.sh $DIAGNOSE_ARG buildOnServer checkExternalLicenses listTaskOutputs \
         --profile "$@"; then
     echo build succeeded
     EXIT_VALUE=0
@@ -66,7 +67,7 @@ else
     fi
 
     # Parse performance profile reports (generated with the --profile option above) and re-export the metrics in an easily machine-readable format for tracking
-    impl/parse_profile_htmls.sh
+    impl/parse_profile_data.sh
 fi
 
 echo "Completing $0 at $(date) with exit value $EXIT_VALUE"

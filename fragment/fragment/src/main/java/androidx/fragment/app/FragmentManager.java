@@ -86,6 +86,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -104,14 +105,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link FragmentActivity#getSupportFragmentManager}.
  */
 public abstract class FragmentManager implements FragmentResultOwner {
-    static final String SAVED_STATE_TAG = "android:support:fragments";
-    static final String FRAGMENT_MANAGER_STATE_TAG = "state";
-    static final String RESULT_NAME_PREFIX = "result_";
-    static final String FRAGMENT_STATE_TAG = "state";
-    static final String FRAGMENT_NAME_PREFIX = "fragment_";
+    private static final String SAVED_STATE_KEY = "android:support:fragments";
+    private static final String FRAGMENT_MANAGER_STATE_KEY = "state";
+    private static final String RESULT_KEY_PREFIX = "result_";
+    private static final String FRAGMENT_KEY_PREFIX = "fragment_";
+
     private static boolean DEBUG = false;
 
-    /** @hide */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     public static final String TAG = "FragmentManager";
 
@@ -128,7 +128,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
         FragmentManager.DEBUG = enabled;
     }
 
-    /** @hide */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     public static boolean isLoggingEnabled(int level) {
         return DEBUG || Log.isLoggable(TAG, level);
@@ -221,6 +220,25 @@ public abstract class FragmentManager implements FragmentResultOwner {
          */
         @MainThread
         void onBackStackChanged();
+
+        /**
+         * Called whenever the contents of the back stack are starting to be changed, before
+         * fragments being to move to their target states.
+         *
+         * @param fragment that is affected by the starting back stack change
+         * @param pop whether this back stack change is a pop
+         */
+        @MainThread
+        default void onBackStackChangeStarted(@NonNull Fragment fragment, boolean pop) { }
+
+        /**
+         * Called whenever the contents of a back stack change is committed.
+         *
+         * @param fragment that is affected by the committed back stack change
+         * @param pop whether this back stack change is a pop
+         */
+        @MainThread
+        default void onBackStackChangeCommitted(@NonNull Fragment fragment, boolean pop) { }
     }
 
     /**
@@ -447,18 +465,27 @@ public abstract class FragmentManager implements FragmentResultOwner {
             new CopyOnWriteArrayList<>();
 
     private final Consumer<Configuration> mOnConfigurationChangedListener = newConfig -> {
-        dispatchConfigurationChanged(newConfig);
+        if (isParentAdded()) {
+            dispatchConfigurationChanged(newConfig, false);
+        }
     };
     private final Consumer<Integer> mOnTrimMemoryListener = level -> {
-        if (level == ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
-            dispatchLowMemory();
+        if (isParentAdded() && level == ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
+            dispatchLowMemory(false);
         }
     };
     private final Consumer<MultiWindowModeChangedInfo> mOnMultiWindowModeChangedListener =
-            info -> dispatchMultiWindowModeChanged(info.isInMultiWindowMode());
+            info -> {
+                if (isParentAdded()) {
+                    dispatchMultiWindowModeChanged(info.isInMultiWindowMode(), false);
+                }
+            };
     private final Consumer<PictureInPictureModeChangedInfo>
-            mOnPictureInPictureModeChangedListener = info -> dispatchPictureInPictureModeChanged(
-                    info.isInPictureInPictureMode());
+            mOnPictureInPictureModeChangedListener = info -> {
+                if (isParentAdded()) {
+                    dispatchPictureInPictureModeChanged(info.isInPictureInPictureMode(), false);
+                }
+            };
 
     private final MenuProvider mMenuProvider = new MenuProvider() {
         @Override
@@ -561,7 +588,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
     }
 
     /**
-     * @hide -- remove once prebuilts are in.
      * @deprecated Use {@link #beginTransaction()}.
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
@@ -610,6 +636,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * @return Returns true if there were any pending transactions to be
      * executed.
      */
+    @MainThread
     public boolean executePendingTransactions() {
         boolean updates = execPendingActions(true);
         forcePostponedTransactions();
@@ -765,6 +792,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * afterwards without forcing the start of postponed Transactions.
      * @return Returns true if there was something popped, else false.
      */
+    @MainThread
     public boolean popBackStackImmediate() {
         return popBackStackImmediate(null, -1, 0);
     }
@@ -792,6 +820,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * afterwards without forcing the start of postponed Transactions.
      * @return Returns true if there was something popped, else false.
      */
+    @MainThread
     public boolean popBackStackImmediate(@Nullable String name, int flags) {
         return popBackStackImmediate(name, -1, flags);
     }
@@ -963,7 +992,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
                 }
             }
         };
-        lifecycle.addObserver(observer);
         LifecycleAwareResultListener storedListener = mResultListeners.put(requestKey,
                 new LifecycleAwareResultListener(lifecycle, listener, observer));
         if (storedListener != null) {
@@ -973,6 +1001,9 @@ public abstract class FragmentManager implements FragmentResultOwner {
             Log.v(FragmentManager.TAG, "Setting FragmentResultListener with key " + requestKey
                     + " lifecycleOwner " + lifecycle + " and listener " + listener);
         }
+        // Only add the observer after we've added the listener to the map
+        // to ensure that re-entrant removals actually have a registered listener to remove
+        lifecycle.addObserver(observer);
     }
 
     @Override
@@ -1056,7 +1087,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * @return the locally scoped {@link Fragment} to the given view, if found
      */
     @Nullable
-    private static Fragment findViewFragment(@NonNull View view) {
+    static Fragment findViewFragment(@NonNull View view) {
         while (view != null) {
             Fragment fragment = getViewFragment(view);
             if (fragment != null) {
@@ -1866,6 +1897,28 @@ public abstract class FragmentManager implements FragmentResultOwner {
         // The last operation determines the overall direction, this ensures that operations
         // such as push, push, pop, push are correctly considered a push
         boolean isPop = isRecordPop.get(endIndex - 1);
+
+        if (addToBackStack && mBackStackChangeListeners != null
+                && !mBackStackChangeListeners.isEmpty()) {
+            Set<Fragment> fragments = new LinkedHashSet<>();
+            // Build a list of fragments based on the records
+            for (BackStackRecord record : records) {
+                fragments.addAll(fragmentsFromRecord(record));
+            }
+            // Dispatch to all of the fragments in the list
+            for (OnBackStackChangedListener listener : mBackStackChangeListeners) {
+                // We give all fragment the back stack changed started signal first
+                for (Fragment fragment: fragments) {
+                    listener.onBackStackChangeStarted(fragment, isPop);
+                }
+            }
+            for (OnBackStackChangedListener listener : mBackStackChangeListeners) {
+                // Then we give them all the committed signal
+                for (Fragment fragment: fragments) {
+                    listener.onBackStackChangeCommitted(fragment, isPop);
+                }
+            }
+        }
         // Ensure that Fragments directly affected by operations
         // are moved to their expected state in operation order
         for (int index = startIndex; index < endIndex; index++) {
@@ -2080,6 +2133,17 @@ public abstract class FragmentManager implements FragmentResultOwner {
                 mBackStackChangeListeners.get(i).onBackStackChanged();
             }
         }
+    }
+
+    private Set<Fragment> fragmentsFromRecord(@NonNull BackStackRecord record) {
+        Set<Fragment> fragments = new HashSet<>();
+        for (int i = 0; i < record.mOps.size(); i++) {
+            Fragment f = record.mOps.get(i).mFragment;
+            if (f != null) {
+                fragments.add(f);
+            }
+        }
+        return fragments;
     }
 
     void addBackStackState(BackStackRecord state) {
@@ -2370,8 +2434,8 @@ public abstract class FragmentManager implements FragmentResultOwner {
         // First save all active fragments.
         ArrayList<String> active = mFragmentStore.saveActiveFragments();
 
-        // And grab all FragmentState objects
-        ArrayList<FragmentState> savedState = mFragmentStore.getAllSavedState();
+        // And grab all fragments' saved state bundles
+        HashMap<String, Bundle> savedState = mFragmentStore.getAllSavedState();
         if (savedState.isEmpty()) {
             if (isLoggingEnabled(Log.VERBOSE)) {
                 Log.v(TAG, "saveAllState: no fragments!");
@@ -2407,16 +2471,14 @@ public abstract class FragmentManager implements FragmentResultOwner {
             fms.mBackStackStateKeys.addAll(mBackStackStates.keySet());
             fms.mBackStackStates.addAll(mBackStackStates.values());
             fms.mLaunchedFragments = new ArrayList<>(mLaunchedFragments);
-            bundle.putParcelable(FRAGMENT_MANAGER_STATE_TAG, fms);
+            bundle.putParcelable(FRAGMENT_MANAGER_STATE_KEY, fms);
 
             for (String resultName : mResults.keySet()) {
-                bundle.putBundle(RESULT_NAME_PREFIX + resultName, mResults.get(resultName));
+                bundle.putBundle(RESULT_KEY_PREFIX + resultName, mResults.get(resultName));
             }
 
-            for (FragmentState state : savedState) {
-                Bundle fragmentBundle = new Bundle();
-                fragmentBundle.putParcelable(FRAGMENT_STATE_TAG, state);
-                bundle.putBundle(FRAGMENT_NAME_PREFIX + state.mWho, fragmentBundle);
+            for (String fWho : savedState.keySet()) {
+                bundle.putBundle(FRAGMENT_KEY_PREFIX + fWho, savedState.get(fWho));
             }
         }
 
@@ -2447,31 +2509,33 @@ public abstract class FragmentManager implements FragmentResultOwner {
         if (state == null) return;
         Bundle bundle = (Bundle) state;
 
+        // Restore the fragment results
         for (String bundleKey : bundle.keySet()) {
-            if (bundleKey.startsWith(RESULT_NAME_PREFIX)) {
+            if (bundleKey.startsWith(RESULT_KEY_PREFIX)) {
                 Bundle savedResult = bundle.getBundle(bundleKey);
                 if (savedResult != null) {
                     savedResult.setClassLoader(mHost.getContext().getClassLoader());
-                    String resultKey = bundleKey.substring(RESULT_NAME_PREFIX.length());
+                    String resultKey = bundleKey.substring(RESULT_KEY_PREFIX.length());
                     mResults.put(resultKey, savedResult);
                 }
             }
         }
 
-        // Restore the saved state of all fragments
-        ArrayList<FragmentState> allFragmentStates = new ArrayList<>();
+        // Restore the saved bundle for all fragments
+        HashMap<String, Bundle> allStateBundles = new HashMap<>();
         for (String bundleKey : bundle.keySet()) {
-            if (bundleKey.startsWith(FRAGMENT_NAME_PREFIX)) {
+            if (bundleKey.startsWith(FRAGMENT_KEY_PREFIX)) {
                 Bundle savedFragmentBundle = bundle.getBundle(bundleKey);
                 if (savedFragmentBundle != null) {
                     savedFragmentBundle.setClassLoader(mHost.getContext().getClassLoader());
-                    allFragmentStates.add(savedFragmentBundle.getParcelable(FRAGMENT_STATE_TAG));
+                    String fragmentKey = bundleKey.substring(FRAGMENT_KEY_PREFIX.length());
+                    allStateBundles.put(fragmentKey, savedFragmentBundle);
                 }
             }
         }
-        mFragmentStore.restoreSaveState(allFragmentStates);
+        mFragmentStore.restoreSaveState(allStateBundles);
 
-        FragmentManagerState fms = bundle.getParcelable(FRAGMENT_MANAGER_STATE_TAG);
+        FragmentManagerState fms = bundle.getParcelable(FRAGMENT_MANAGER_STATE_KEY);
         if (fms == null) return;
 
         // Build the full list of active fragments, instantiating them from
@@ -2479,9 +2543,11 @@ public abstract class FragmentManager implements FragmentResultOwner {
         mFragmentStore.resetActiveFragments();
         for (String who : fms.mActive) {
             // Retrieve any saved state, clearing it out for future calls
-            FragmentState fs = mFragmentStore.setSavedState(who, null);
-            if (fs != null) {
+            Bundle stateBundle = mFragmentStore.setSavedState(who, null);
+            if (stateBundle != null) {
                 FragmentStateManager fragmentStateManager;
+                FragmentState fs = stateBundle.getParcelable(
+                        FragmentStateManager.FRAGMENT_STATE_KEY);
                 Fragment retainedFragment = mNonConfig.findRetainedFragmentByWho(fs.mWho);
                 if (retainedFragment != null) {
                     if (isLoggingEnabled(Log.VERBOSE)) {
@@ -2489,13 +2555,14 @@ public abstract class FragmentManager implements FragmentResultOwner {
                                 + retainedFragment);
                     }
                     fragmentStateManager = new FragmentStateManager(mLifecycleCallbacksDispatcher,
-                            mFragmentStore, retainedFragment, fs);
+                            mFragmentStore, retainedFragment, stateBundle);
                 } else {
                     fragmentStateManager = new FragmentStateManager(mLifecycleCallbacksDispatcher,
                             mFragmentStore, mHost.getContext().getClassLoader(),
-                            getFragmentFactory(), fs);
+                            getFragmentFactory(), stateBundle);
                 }
                 Fragment f = fragmentStateManager.getFragment();
+                f.mSavedFragmentState = stateBundle;
                 f.mFragmentManager = this;
                 if (isLoggingEnabled(Log.VERBOSE)) {
                     Log.v(TAG, "restoreSaveState: active (" + f.mWho + "): " + f);
@@ -2569,7 +2636,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
         mLaunchedFragments = new ArrayDeque<>(fms.mLaunchedFragments);
     }
 
-    /** @hide */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @NonNull
     public FragmentHostCallback<?> getHost() {
@@ -2645,13 +2711,13 @@ public abstract class FragmentManager implements FragmentResultOwner {
         if (mHost instanceof SavedStateRegistryOwner && parent == null) {
             SavedStateRegistry registry =
                     ((SavedStateRegistryOwner) mHost).getSavedStateRegistry();
-            registry.registerSavedStateProvider(SAVED_STATE_TAG, () -> {
+            registry.registerSavedStateProvider(SAVED_STATE_KEY, () -> {
                         return saveAllStateInternal();
                     }
             );
 
             Bundle savedInstanceState = registry
-                    .consumeRestoredStateForKey(SAVED_STATE_TAG);
+                    .consumeRestoredStateForKey(SAVED_STATE_KEY);
             if (savedInstanceState != null) {
                 restoreSaveStateInternal(savedInstanceState);
             }
@@ -2803,12 +2869,12 @@ public abstract class FragmentManager implements FragmentResultOwner {
     }
 
     void launchStartActivityForResult(@NonNull Fragment f,
-            @SuppressLint("UnknownNullness") Intent intent,
+            @NonNull Intent intent,
             int requestCode, @Nullable Bundle options) {
         if (mStartActivityForResult != null) {
             LaunchedFragmentInfo info = new LaunchedFragmentInfo(f.mWho, requestCode);
             mLaunchedFragments.addLast(info);
-            if (intent != null && options != null) {
+            if (options != null) {
                 intent.putExtra(EXTRA_ACTIVITY_OPTIONS_BUNDLE, options);
             }
             mStartActivityForResult.launch(intent);
@@ -2819,7 +2885,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
 
     @SuppressWarnings("deprecation")
     void launchStartIntentSenderForResult(@NonNull Fragment f,
-            @SuppressLint("UnknownNullness") IntentSender intent,
+            @NonNull IntentSender intent,
             int requestCode, @Nullable Intent fillInIntent, int flagsMask, int flagsValues,
             int extraFlags, @Nullable Bundle options) throws IntentSender.SendIntentException {
         if (mStartIntentSenderForResult != null) {
@@ -2942,7 +3008,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
             onPictureInPictureModeChangedProvider.removeOnPictureInPictureModeChangedListener(
                     mOnPictureInPictureModeChangedListener);
         }
-        if (mHost instanceof MenuHost) {
+        if (mHost instanceof MenuHost && mParent == null) {
             ((MenuHost) mHost).removeMenuProvider(mMenuProvider);
         }
         mHost = null;
@@ -2976,34 +3042,71 @@ public abstract class FragmentManager implements FragmentResultOwner {
         execPendingActions(true);
     }
 
-    void dispatchMultiWindowModeChanged(boolean isInMultiWindowMode) {
+    void dispatchMultiWindowModeChanged(boolean isInMultiWindowMode, boolean recursive) {
+        if (recursive && mHost instanceof OnMultiWindowModeChangedProvider) {
+            throwException(new IllegalStateException("Do not call dispatchMultiWindowModeChanged() "
+                    + "on host. Host implements OnMultiWindowModeChangedProvider and automatically "
+                    + "dispatches multi-window mode changes to fragments."));
+        }
         for (Fragment f : mFragmentStore.getFragments()) {
             if (f != null) {
                 f.performMultiWindowModeChanged(isInMultiWindowMode);
+                if (recursive) {
+                    f.mChildFragmentManager.dispatchMultiWindowModeChanged(
+                            isInMultiWindowMode, true
+                    );
+                }
             }
         }
     }
 
-    void dispatchPictureInPictureModeChanged(boolean isInPictureInPictureMode) {
+    void dispatchPictureInPictureModeChanged(boolean isInPictureInPictureMode, boolean recursive) {
+        if (recursive && mHost instanceof OnPictureInPictureModeChangedProvider) {
+            throwException(new IllegalStateException("Do not call "
+                    + "dispatchPictureInPictureModeChanged() on host. Host implements "
+                    + "OnPictureInPictureModeChangedProvider and automatically dispatches "
+                    + "picture-in-picture mode changes to fragments."));
+        }
         for (Fragment f : mFragmentStore.getFragments()) {
             if (f != null) {
                 f.performPictureInPictureModeChanged(isInPictureInPictureMode);
+                if (recursive) {
+                    f.mChildFragmentManager.dispatchPictureInPictureModeChanged(
+                            isInPictureInPictureMode, true
+                    );
+                }
             }
         }
     }
 
-    void dispatchConfigurationChanged(@NonNull Configuration newConfig) {
+    void dispatchConfigurationChanged(@NonNull Configuration newConfig, boolean recursive) {
+        if (recursive && mHost instanceof OnConfigurationChangedProvider) {
+            throwException(new IllegalStateException("Do not call dispatchConfigurationChanged() "
+                    + "on host. Host implements OnConfigurationChangedProvider and automatically "
+                    + "dispatches configuration changes to fragments."));
+        }
         for (Fragment f : mFragmentStore.getFragments()) {
             if (f != null) {
                 f.performConfigurationChanged(newConfig);
+                if (recursive) {
+                    f.mChildFragmentManager.dispatchConfigurationChanged(newConfig, true);
+                }
             }
         }
     }
 
-    void dispatchLowMemory() {
+    void dispatchLowMemory(boolean recursive) {
+        if (recursive && mHost instanceof OnTrimMemoryProvider) {
+            throwException(new IllegalStateException("Do not call dispatchLowMemory() on host. "
+                    + "Host implements OnTrimMemoryProvider and automatically dispatches "
+                    + "low memory callbacks to fragments."));
+        }
         for (Fragment f : mFragmentStore.getFragments()) {
             if (f != null) {
                 f.performLowMemory();
+                if (recursive) {
+                    f.mChildFragmentManager.dispatchLowMemory(true);
+                }
             }
         }
     }
@@ -3311,6 +3414,14 @@ public abstract class FragmentManager implements FragmentResultOwner {
         if (f.mAdded && isMenuAvailable(f)) {
             mNeedMenuInvalidate = true;
         }
+    }
+
+    private boolean isParentAdded() {
+        // The root fragment manager is always considered added
+        if (mParent == null) {
+            return true;
+        }
+        return mParent.isAdded() && mParent.getParentFragmentManager().isParentAdded();
     }
 
     static int reverseTransit(int transit) {

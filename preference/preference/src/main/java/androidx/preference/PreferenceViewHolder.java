@@ -25,7 +25,7 @@ import android.widget.TextView;
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RestrictTo;
+import androidx.annotation.VisibleForTesting;
 import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -61,7 +61,7 @@ public class PreferenceViewHolder extends RecyclerView.ViewHolder {
     }
 
     /** @hide */
-    @RestrictTo(RestrictTo.Scope.TESTS)
+    @VisibleForTesting
     @NonNull
     public static PreferenceViewHolder createInstanceForTests(@NonNull View itemView) {
         return new PreferenceViewHolder(itemView);
@@ -74,6 +74,7 @@ public class PreferenceViewHolder extends RecyclerView.ViewHolder {
      * @param id Resource ID of the view to find
      * @return The view, or {@code null} if no view with the requested ID is found
      */
+    @Nullable
     public View findViewById(@IdRes int id) {
         final View cachedView = mCachedViews.get(id);
         if (cachedView != null) {

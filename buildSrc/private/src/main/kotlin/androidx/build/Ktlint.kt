@@ -18,12 +18,16 @@ package androidx.build
 
 import androidx.build.logging.TERMINAL_RED
 import androidx.build.logging.TERMINAL_RESET
+import java.io.File
+import java.nio.file.Paths
+import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
-import org.gradle.api.artifacts.VersionCatalogsExtension
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileTree
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
@@ -36,8 +40,6 @@ import org.gradle.api.tasks.StopExecutionException
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
 import org.gradle.process.ExecOperations
-import java.io.File
-import javax.inject.Inject
 
 val bundlingAttribute: Attribute<String> =
     Attribute.of(
@@ -45,15 +47,33 @@ val bundlingAttribute: Attribute<String> =
         String::class.java
     )
 
+/**
+ * Sets an explicit ktlint version on the given configuration to ensure all ktlint artifacts
+ * use the same version.
+ * Needed as an internal API to workaround b/234884534.
+ */
+internal fun Project.enforceKtlintVersion(
+    configuration: Configuration
+) {
+    val version = getVersionByName("ktlint")
+    configuration.resolutionStrategy.eachDependency { resolveDetails ->
+        if (resolveDetails.requested.group == "com.pinterest" ||
+            resolveDetails.requested.group == "com.pinterest.ktlint"
+        ) {
+            resolveDetails.useVersion(version)
+            resolveDetails.because("All ktlint artifacts should use the same version")
+        }
+    }
+}
+
 private fun Project.getKtlintConfiguration(): ConfigurableFileCollection {
     return files(
         configurations.findByName("ktlint") ?: configurations.create("ktlint") {
-            val version = project.extensions.getByType(
-                VersionCatalogsExtension::class.java
-            ).find("libs").get().findVersion("ktlint").get().requiredVersion
+            val version = getVersionByName("ktlint")
             val dependency = dependencies.create("com.pinterest:ktlint:$version")
             it.dependencies.add(dependency)
             it.attributes.attribute(bundlingAttribute, "external")
+            project.enforceKtlintVersion(it)
         }
     )
 }
@@ -65,33 +85,47 @@ private val DisabledRules = listOf(
     "final-newline",
     // TODO: reenable when https://github.com/pinterest/ktlint/issues/1221 is resolved
     "indent",
+    // TODO: reenable when 'indent' is also enabled, meanwhile its to keep the status-quo
+    //       see: https://github.com/pinterest/ktlint/releases/tag/0.45.0
+    "wrapping",
 ).joinToString(",")
 
-private const val ExcludeTestDataFiles = "**/test-data/**/*.kt"
-private const val ExcludeExternalFiles = "**/external/**/*.kt"
+private val ExcludedDirectories = listOf(
+    "test-data",
+    "external",
+)
+
+private val ExcludedDirectoryGlobs = ExcludedDirectories.map { "**/$it/**/*.kt" }
 private const val MainClass = "com.pinterest.ktlint.Main"
 private const val InputDir = "src"
 private const val IncludedFiles = "**/*.kt"
 
 fun Project.configureKtlint() {
+    // workaround for b/234884534
+    configurations.all {
+        enforceKtlintVersion(it)
+    }
     val outputDir = "${buildDir.relativeTo(projectDir)}/reports/ktlint/"
     val lintProvider = tasks.register("ktlint", KtlintCheckTask::class.java) { task ->
         task.report = File("${outputDir}ktlint-checkstyle-report.xml")
         task.ktlintClasspath.from(getKtlintConfiguration())
     }
-
-    // afterEvaluate because Gradle's default "check" task doesn't exist yet
-    afterEvaluate {
-        addToCheckTask(lintProvider)
-    }
-    addToBuildOnServer(lintProvider)
-
     tasks.register("ktlintFormat", KtlintFormatTask::class.java) { task ->
         task.report = File("${outputDir}ktlint-format-checkstyle-report.xml")
         task.ktlintClasspath.from(getKtlintConfiguration())
     }
+    // afterEvaluate because Gradle's default "check" task doesn't exist yet
+    afterEvaluate {
+        // multiplatform projects with no enabled platforms do not actually apply the kotlin plugin
+        // and therefore do not have the check task. They are skipped unless a platform is enabled.
+        if (project.tasks.findByName("check") != null) {
+            addToCheckTask(lintProvider)
+            addToBuildOnServer(lintProvider)
+        }
+    }
 }
 
+@CacheableTask
 abstract class BaseKtlintTask : DefaultTask() {
     @get:Inject
     abstract val execOperations: ExecOperations
@@ -99,22 +133,23 @@ abstract class BaseKtlintTask : DefaultTask() {
     @get:Classpath
     abstract val ktlintClasspath: ConfigurableFileCollection
 
+    @get:Inject
+    abstract val objects: ObjectFactory
+
     @[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
     fun getInputFiles(): FileTree? {
         val projectDirectory = overrideDirectory
         val subdirectories = overrideSubdirectories
-        if (projectDirectory == null || subdirectories == null || subdirectories.isEmpty()) {
+        if (projectDirectory == null || subdirectories.isNullOrEmpty()) {
             // If we have a valid override, use that as the default fileTree
-            return project.fileTree(
-                mutableMapOf(
-                    "dir" to InputDir, "include" to IncludedFiles,
-                    "exclude" to listOf(ExcludeTestDataFiles, ExcludeExternalFiles)
-                )
-            )
+            return objects.fileTree().setDir(InputDir).apply {
+                include(IncludedFiles)
+                exclude(ExcludedDirectoryGlobs)
+            }
         }
-        return project.fileTree(projectDirectory) { tree ->
+        return objects.fileTree().setDir(projectDirectory).apply {
             subdirectories.forEach {
-                tree.include("$it/src/**/*.kt")
+                include("$it/src/**/*.kt")
             }
         }
     }
@@ -149,8 +184,7 @@ abstract class BaseKtlintTask : DefaultTask() {
             subdirectories.map { arguments.add("$it/$InputDir/$IncludedFiles") }
         } ?: arguments.add("$InputDir/$IncludedFiles")
 
-        arguments.add("!$InputDir/$ExcludeTestDataFiles")
-        arguments.add("!$InputDir/$ExcludeExternalFiles")
+        ExcludedDirectoryGlobs.mapTo(arguments) { "!$InputDir/$it" }
         return arguments
     }
 }
@@ -201,11 +235,13 @@ abstract class KtlintFormatTask : BaseKtlintTask() {
             javaExecSpec.mainClass.set(MainClass)
             javaExecSpec.classpath = ktlintClasspath
             javaExecSpec.args = getArgsList(shouldFormat = true)
+            javaExecSpec.jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED")
             overrideDirectory?.let { javaExecSpec.workingDir = it }
         }
     }
 }
 
+@CacheableTask
 abstract class KtlintCheckFileTask : DefaultTask() {
     init {
         description = "Check Kotlin code style."
@@ -238,7 +274,13 @@ abstract class KtlintCheckFileTask : DefaultTask() {
     fun runKtlint() {
         if (files.isEmpty()) throw StopExecutionException()
         val kotlinFiles = files.filter { file ->
-            file.endsWith(".kt") || file.endsWith(".ktx")
+            val isKotlinFile = file.endsWith(".kt") || file.endsWith(".ktx")
+            val inExcludedDir =
+                Paths.get(file).any { subPath ->
+                    ExcludedDirectories.contains(subPath.toString())
+                }
+
+            isKotlinFile && !inExcludedDir
         }
         if (kotlinFiles.isEmpty()) throw StopExecutionException()
         val result = execOperations.javaexec { javaExecSpec ->
@@ -251,10 +293,6 @@ abstract class KtlintCheckFileTask : DefaultTask() {
             )
             args.addAll(kotlinFiles)
             if (format) args.add("-F")
-
-            // Note: These exclusions must come after the inputs.
-            args.add("!$ExcludeTestDataFiles")
-            args.add("!$ExcludeExternalFiles")
 
             javaExecSpec.args = args
             javaExecSpec.isIgnoreExitValue = true

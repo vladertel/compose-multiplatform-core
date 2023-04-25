@@ -19,7 +19,6 @@ import android.content.Context
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import androidx.annotation.RequiresApi
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontLoadingStrategy.Companion.Blocking
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
@@ -34,11 +33,10 @@ import java.io.File
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
-@OptIn(ExperimentalTextApi::class)
 class AndroidFontTest {
+    private var tempFile: File? = null
     private val context = InstrumentationRegistry.getInstrumentation().context
     private val assetFontPath = "subdirectory/asset_font.ttf"
-    private val tmpFontPath = "tmp_file_font.ttf"
 
     @Before
     fun setup() {
@@ -52,25 +50,22 @@ class AndroidFontTest {
     }
 
     private fun deleteFile() {
-        val fontFile = File(context.filesDir, tmpFontPath)
-        if (fontFile.exists()) {
-            fontFile.delete()
+        if (tempFile?.exists() == true) {
+            tempFile?.delete()
         }
     }
 
     private fun writeFile() {
+        tempFile = File.createTempFile("tmp_file_font", ".ttf", context.filesDir)
         context.assets.open(assetFontPath).use { input ->
             val bytes = input.readBytes()
-            context.openFileOutput(tmpFontPath, Context.MODE_PRIVATE).use { output ->
+            context.openFileOutput(tempFile?.name, Context.MODE_PRIVATE).use { output ->
                 output.write(bytes)
             }
         }
     }
 
     private fun makeAssetFont() = Font(assetFontPath, context.assets) as AndroidFont
-
-    @Suppress("DEPRECATION")
-    private fun makeAssetFontDeprecated() = Font(context.assets, assetFontPath) as AndroidFont
 
     @Test
     fun test_load_from_assets() {
@@ -99,30 +94,8 @@ class AndroidFontTest {
         font.typefaceLoader.loadBlocking(context, font)
     }
 
-    @Test
-    fun assetFont_isBlocking_Deprecated() {
-        val font = makeAssetFontDeprecated()
-        assertThat(font.loadingStrategy).isEqualTo(Blocking)
-    }
-
-    @Test
-    fun assetFont_returnsSameInstance_Deprecated() {
-        val font = makeAssetFontDeprecated()
-        val typeface1 = font.typefaceLoader.loadBlocking(context, font)
-        val typeface2 = font.typefaceLoader.loadBlocking(context, font)
-        assertThat(typeface1).isSameInstanceAs(typeface2)
-    }
-
-    @Test
-    fun assetFont_doesntThrowForAsync_Deprecated() {
-        val font = makeAssetFontDeprecated()
-        // don't care about result, but it's not supposed to throw
-        font.typefaceLoader.loadBlocking(context, font)
-    }
-
     private fun makeFileFont(): AndroidFont {
-        val fontFile = File(context.filesDir, tmpFontPath)
-        return Font(file = fontFile) as AndroidFont
+        return Font(tempFile!!) as AndroidFont
     }
 
     @Test
@@ -164,7 +137,7 @@ class AndroidFontTest {
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun makeFileDescriptorFont(): AndroidFont {
-        return context.openFileInput(tmpFontPath).use { inputStream ->
+        return context.openFileInput(tempFile?.name).use { inputStream ->
             Font(ParcelFileDescriptor.dup(inputStream.fd)) as AndroidFont
         }
     }

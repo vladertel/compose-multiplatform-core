@@ -76,6 +76,18 @@ internal fun CapturedInfo.checkDimensions(
     }
 }
 
+internal fun CapturedInfo.checkAngularDimensionsInPx(
+    expectedAngularSizeInPx: Float? = null,
+) {
+    if (expectedAngularSizeInPx != null) {
+        Assert.assertEquals(
+            expectedAngularSizeInPx / lastLayoutInfo!!.measureRadius,
+            lastLayoutInfo!!.sweepRadians,
+            FINE_FLOAT_TOLERANCE
+        )
+    }
+}
+
 internal fun CapturedInfo.checkParentDimensions(
     expectedAngleDegrees: Float? = null,
     expectedThicknessPx: Float? = null,
@@ -91,6 +103,18 @@ internal fun CapturedInfo.checkParentDimensions(
         Assert.assertEquals(
             expectedThicknessPx,
             parentThickness,
+            FINE_FLOAT_TOLERANCE
+        )
+    }
+}
+
+internal fun CapturedInfo.checkParentAngularDimensionsInPx(
+    expectedAngularSizeInPx: Float? = null,
+) {
+    if (expectedAngularSizeInPx != null) {
+        Assert.assertEquals(
+            expectedAngularSizeInPx / (parentOuterRadius),
+            parentSweepRadians,
             FINE_FLOAT_TOLERANCE
         )
     }
@@ -135,13 +159,11 @@ internal fun CurvedModifier.spy(capturedInfo: CapturedInfo) =
 internal class SpyCurvedChildWrapper(private val capturedInfo: CapturedInfo, wrapped: CurvedChild) :
     BaseCurvedChildWrapper(wrapped) {
 
-    override fun CurvedMeasureScope.initializeMeasure(
-        measurables: List<Measurable>,
-        index: Int
-    ): Int = with(wrapped) {
-        capturedInfo.measuresCount++
-        initializeMeasure(measurables, index)
-    }
+    override fun CurvedMeasureScope.initializeMeasure(measurables: Iterator<Measurable>) =
+        with(wrapped) {
+            capturedInfo.measuresCount++
+            initializeMeasure(measurables)
+        }
 
     override fun doRadialPosition(
         parentOuterRadius: Float,

@@ -36,6 +36,13 @@ class UseCaseConfigTest {
         val useCaseBuilder = FakeUseCaseConfig.Builder()
         val range = Range(10, 20)
         useCaseBuilder.mutableConfig.insertOption(UseCaseConfig.OPTION_TARGET_FRAME_RATE, range)
-        Truth.assertThat(useCaseBuilder.useCaseConfig.targetFramerate).isEqualTo(range)
+        Truth.assertThat(useCaseBuilder.useCaseConfig.targetFrameRate).isEqualTo(range)
+    }
+
+    @Test
+    fun canGetIsZslDisabled() {
+        val useCaseBuilder = FakeUseCaseConfig.Builder()
+        useCaseBuilder.mutableConfig.insertOption(UseCaseConfig.OPTION_ZSL_DISABLED, true)
+        Truth.assertThat(useCaseBuilder.useCaseConfig.isZslDisabled(false)).isTrue()
     }
 }

@@ -19,17 +19,23 @@ package androidx.room.compiler.processing.ksp
 import androidx.room.compiler.processing.XNullability
 import androidx.room.compiler.processing.tryBox
 import com.google.devtools.ksp.symbol.KSType
-import com.squareup.javapoet.TypeName
+import com.squareup.kotlinpoet.javapoet.JTypeName
+import com.squareup.kotlinpoet.javapoet.KTypeName
 
 internal class DefaultKspType(
     env: KspProcessingEnv,
     ksType: KSType,
-    jvmTypeResolver: KspJvmTypeResolver?
-) : KspType(env, ksType, jvmTypeResolver) {
-    override fun resolveTypeName(): TypeName {
+    scope: KSTypeVarianceResolverScope?
+) : KspType(env, ksType, scope) {
+
+    override fun resolveJTypeName(): JTypeName {
         // always box these. For primitives, typeName might return the primitive type but if we
         // wanted it to be a primitive, we would've resolved it to [KspPrimitiveType].
-        return ksType.typeName(env.resolver).tryBox()
+        return ksType.asJTypeName(env.resolver).tryBox()
+    }
+
+    override fun resolveKTypeName(): KTypeName {
+        return ksType.asKTypeName(env.resolver)
     }
 
     override fun boxed(): DefaultKspType {
@@ -40,15 +46,15 @@ internal class DefaultKspType(
         return DefaultKspType(
             env = env,
             ksType = ksType.withNullability(nullability),
-            jvmTypeResolver = jvmTypeResolver
+            scope = scope
         )
     }
 
-    override fun copyWithJvmTypeResolver(jvmTypeResolver: KspJvmTypeResolver): KspType {
+    override fun copyWithScope(scope: KSTypeVarianceResolverScope): KspType {
         return DefaultKspType(
             env = env,
             ksType = ksType,
-            jvmTypeResolver = jvmTypeResolver
+            scope = scope
         )
     }
 }

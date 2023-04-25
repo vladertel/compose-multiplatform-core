@@ -19,8 +19,10 @@ package androidx.compose.runtime.collection
 import androidx.compose.runtime.identityHashCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -34,6 +36,28 @@ class IdentityArraySetTest {
     fun emptyConstruction() {
         val s = IdentityArraySet<Stuff>()
         assertEquals(0, s.size)
+    }
+
+    @Test
+    fun get_indexWithinBounds_shouldNotThrow() {
+        list.forEach { set.add(it) }
+
+        assertNotNull(set.get(0))
+    }
+
+    @Test
+    fun get_indexOutOfBounds_shouldThrow() {
+        list.forEach { set.add(it) }
+
+        // Index less than 0
+        assertFailsWith<IndexOutOfBoundsException> {
+            set.get(-1)
+        }
+
+        // Index greater than size
+        assertFailsWith<IndexOutOfBoundsException> {
+            set.get(list.size + 1)
+        }
     }
 
     @Test
@@ -112,7 +136,7 @@ class IdentityArraySetTest {
 
         // Make sure we've removed both items
         assertEquals(list.size - 2, set.size)
-        set.forEach { assertNotEquals(10, it.item) }
+        set.fastForEach { assertNotEquals(10, it.item) }
         assertNull(set.values[set.size])
         assertNull(set.values[set.size + 1])
     }
@@ -126,7 +150,7 @@ class IdentityArraySetTest {
             verifierSet.add(stuff)
         }
         assertEquals(100, set.size)
-        set.forEach { verifierSet.remove(it) }
+        set.fastForEach { verifierSet.remove(it) }
         assertEquals(0, verifierSet.size)
     }
 
@@ -158,6 +182,54 @@ class IdentityArraySetTest {
         assertTrue(setOfT.containsAll(listOf(stuff[0], stuff[1], stuff[2])))
     }
 
+    @Test
+    fun addAll_Collection() {
+        set.addAll(list)
+
+        assertEquals(list.size, set.size)
+        for (value in list) {
+            assertTrue(value in set)
+        }
+    }
+
+    @Test
+    fun addAll_IdentityArraySet() {
+        val anotherSet = IdentityArraySet<Stuff>()
+        anotherSet.addAll(list)
+
+        set.addAll(anotherSet)
+
+        for (value in list) {
+            assertTrue(value in set)
+        }
+
+        set.addAll(anotherSet)
+
+        assertEquals(anotherSet.size, set.size)
+        for (value in list) {
+            assertTrue(value in set)
+        }
+
+        val stuff = Array(100) { Stuff(it) }
+        for (i in 0 until 100 step 2) {
+            anotherSet.add(stuff[i])
+        }
+        set.addAll(anotherSet)
+
+        for (i in stuff.indices) {
+            val value = stuff[i]
+            if (i % 2 == 0) {
+                assertTrue(value in set, "Expected to have element $i in $set")
+            } else {
+                assertFalse(value in set, "Didn't expect to have element $i in $set")
+            }
+        }
+
+        for (value in list) {
+            assertTrue(value in set)
+        }
+    }
+
     private fun testRemoveValueAtIndex(index: Int) {
         val value = set[index]
         val initialSize = set.size
@@ -165,7 +237,7 @@ class IdentityArraySetTest {
         assertEquals(initialSize - 1, set.size)
         assertTrue(removed)
         assertNull(set.values[set.size])
-        set.forEach { assertNotSame(value, it) }
+        set.fastForEach { assertNotSame(value, it) }
     }
 
     data class Stuff(val item: Int)

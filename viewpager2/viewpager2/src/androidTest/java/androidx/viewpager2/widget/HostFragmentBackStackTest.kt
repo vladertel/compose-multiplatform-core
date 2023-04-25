@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 class HostFragmentBackStackTest : BaseTest() {
     @Test
     fun test_sameFragment_multipleBackStackEntries() {
+        @Suppress("DEPRECATION")
         FragmentManager.enableDebugLogging(true)
         val containerId = ViewCompat.generateViewId()
         setUpTest(ORIENTATION_HORIZONTAL).apply {
@@ -63,8 +64,8 @@ class HostFragmentBackStackTest : BaseTest() {
                 activity.setContentView(container)
             }
 
-            val viewPagerFragment = ViewPagerFragment()
-            val blankFragment = Fragment()
+            val viewPagerFragment = runOnUiThreadSync { ViewPagerFragment() }
+            val blankFragment = runOnUiThreadSync { Fragment() }
 
             fun setActiveFragment(f: Fragment, targetPage: Int? = null) {
                 // set new active fragment

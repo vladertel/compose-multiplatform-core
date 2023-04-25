@@ -1,136 +1,265 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 7.3.0-alpha07" type="baseline" client="gradle" dependencies="false" name="AGP (7.3.0-alpha07)" variant="all" version="7.3.0-alpha07">
+<issues format="6" by="lint 8.1.0-alpha07" type="baseline" client="gradle" dependencies="false" name="AGP (8.0.0-beta03)" variant="all" version="8.1.0-alpha07">
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_short_days&quot; formatted=&quot;false&quot; msgid=&quot;3878057769320887026&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="class ComplicationData : Parcelable, Serializable {"
+        errorLine2="      ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/values-fr-rCA/complication_strings.xml"
-            line="4"
-            column="5"/>
+            file="src/main/java/android/support/wearable/complications/ComplicationData.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_short_days&quot; formatted=&quot;false&quot; msgid=&quot;3878057769320887026&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    annotation class ComplicationType"
+        errorLine2="                     ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/values-fr/complication_strings.xml"
-            line="4"
-            column="5"/>
+            file="src/main/java/android/support/wearable/complications/ComplicationData.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_short_hours&quot; formatted=&quot;false&quot; msgid=&quot;6016687406802669982&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    annotation class ImageStyle"
+        errorLine2="                     ~~~~~~~~~~">
         <location
-            file="src/main/res/values-fr-rCA/complication_strings.xml"
-            line="8"
-            column="5"/>
+            file="src/main/java/android/support/wearable/complications/ComplicationData.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_short_hours&quot; formatted=&quot;false&quot; msgid=&quot;6016687406802669982&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    fun toStringNoRedaction() = &quot;ComplicationData{mType=$type, mFields=$fields}&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/values-fr/complication_strings.xml"
-            line="8"
-            column="5"/>
+            file="src/main/java/android/support/wearable/complications/ComplicationData.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_short_minutes&quot; formatted=&quot;false&quot; msgid=&quot;6752732458902810711&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    infix fun equalsUnevaluated(other: ComplicationData): Boolean ="
+        errorLine2="              ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/values-fr-rCA/complication_strings.xml"
-            line="12"
-            column="5"/>
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_short_minutes&quot; formatted=&quot;false&quot; msgid=&quot;6752732458902810711&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
         <location
-            file="src/main/res/values-fr/complication_strings.xml"
-            line="12"
-            column="5"/>
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_words_days&quot; formatted=&quot;false&quot; msgid=&quot;5109682345086392533&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
         <location
-            file="src/main/res/values-fr-rCA/complication_strings.xml"
-            line="18"
-            column="5"/>
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_words_days&quot; formatted=&quot;false&quot; msgid=&quot;5109682345086392533&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
         <location
-            file="src/main/res/values-fr/complication_strings.xml"
-            line="18"
-            column="5"/>
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_words_hours&quot; formatted=&quot;false&quot; msgid=&quot;3172220157267000186&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
         <location
-            file="src/main/res/values-fr-rCA/complication_strings.xml"
-            line="22"
-            column="5"/>
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_words_hours&quot; formatted=&quot;false&quot; msgid=&quot;3172220157267000186&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
         <location
-            file="src/main/res/values-fr/complication_strings.xml"
-            line="22"
-            column="5"/>
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_words_minutes&quot; formatted=&quot;false&quot; msgid=&quot;529404827937478243&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public val valueExpression: DynamicFloat? = valueExpression"
+        errorLine2="               ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/values-fr-rCA/complication_strings.xml"
-            line="26"
-            column="5"/>
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
     </issue>
 
     <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;time_difference_words_minutes&quot; formatted=&quot;false&quot; msgid=&quot;529404827937478243&quot;>"
-        errorLine2="    ^">
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
         <location
-            file="src/main/res/values-fr/complication_strings.xml"
-            line="26"
-            column="5"/>
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public val valueExpression: DynamicFloat? = valueExpression"
+        errorLine2="               ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Data.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Image.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Image.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    @RestrictTo(RestrictTo.Scope.SUBCLASSES) public fun getTimeDependentText(): TimeDependentText"
+        errorLine2="                                                        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Text.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    override fun getTimeDependentText() = delegate.getTimeDependentText()"
+        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Text.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    override fun getTimeDependentText() = delegate.getTimeDependentText()"
+        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Text.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    override fun getTimeDependentText() = delegate.getTimeDependentText()"
+        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Text.kt"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public companion object {"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/wear/watchface/complications/data/Type.kt"/>
+    </issue>
+
+    <issue
+        id="RequireUnstableAidlAnnotation"
+        message="Unstable AIDL files must be annotated with `@RequiresOptIn` marker"
+        errorLine1="interface IComplicationManager {"
+        errorLine2="^">
+        <location
+            file="src/main/aidl/android/support/wearable/complications/IComplicationManager.aidl"/>
+    </issue>
+
+    <issue
+        id="RequireUnstableAidlAnnotation"
+        message="Unstable AIDL files must be annotated with `@RequiresOptIn` marker"
+        errorLine1="interface IComplicationProvider {"
+        errorLine2="^">
+        <location
+            file="src/main/aidl/android/support/wearable/complications/IComplicationProvider.aidl"/>
+    </issue>
+
+    <issue
+        id="RequireUnstableAidlAnnotation"
+        message="Unstable AIDL files must be annotated with `@RequiresOptIn` marker"
+        errorLine1="oneway interface IPreviewComplicationDataCallback {"
+        errorLine2="^">
+        <location
+            file="src/main/aidl/android/support/wearable/complications/IPreviewComplicationDataCallback.aidl"/>
+    </issue>
+
+    <issue
+        id="RequireUnstableAidlAnnotation"
+        message="Unstable AIDL files must be annotated with `@RequiresOptIn` marker"
+        errorLine1="interface IProviderInfoService {"
+        errorLine2="^">
+        <location
+            file="src/main/aidl/android/support/wearable/complications/IProviderInfoService.aidl"/>
     </issue>
 
 </issues>

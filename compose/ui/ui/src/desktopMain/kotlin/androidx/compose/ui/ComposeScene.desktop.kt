@@ -62,12 +62,14 @@ internal actual fun pointerInputEvent(
         eventType,
         timeMillis,
         listOf(
+            @OptIn(ExperimentalComposeUiApi::class)
             PointerInputEventData(
                 PointerId(pointerId),
                 timeMillis,
                 position,
                 position,
                 isMousePressed,
+                pressure = 1.0f,
                 type,
                 scrollDelta = scrollDelta
             )

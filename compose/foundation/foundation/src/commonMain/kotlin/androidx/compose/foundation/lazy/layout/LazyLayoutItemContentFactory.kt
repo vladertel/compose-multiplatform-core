@@ -19,12 +19,11 @@ package androidx.compose.foundation.lazy.layout
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.SaveableStateHolder
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Density
 
 /**
  * This class:
@@ -43,36 +42,20 @@ internal class LazyLayoutItemContentFactory(
     /** Contains the cached lambdas produced by the [itemProvider]. */
     private val lambdasCache = mutableMapOf<Any, CachedItemContent>()
 
-    /** Density used to obtain the cached lambdas. */
-    private var densityOfCachedLambdas = Density(0f, 0f)
-
-    /** Constraints used to obtain the cached lambdas. */
-    private var constraintsOfCachedLambdas = Constraints()
-
-    /**
-     * Invalidate the cached lambas if the density or constraints have changed.
-     * TODO(popam): probably LazyLayoutState should provide an invalidate() method instead.
-     */
-    fun onBeforeMeasure(density: Density, constraints: Constraints) {
-        if (density != densityOfCachedLambdas || constraints != constraintsOfCachedLambdas) {
-            densityOfCachedLambdas = density
-            constraintsOfCachedLambdas = constraints
-            lambdasCache.clear()
-        }
-    }
-
     /**
      * Returns the content type for the item with the given key. It is used to improve the item
      * compositions reusing efficiency.
      **/
     fun getContentType(key: Any?): Any? {
+        if (key == null) return null
+
         val cachedContent = lambdasCache[key]
         return if (cachedContent != null) {
             cachedContent.type
         } else {
             val itemProvider = itemProvider()
-            val index = itemProvider.keyToIndexMap[key]
-            if (index != null) {
+            val index = itemProvider.getIndex(key)
+            if (index != -1) {
                 itemProvider.getContentType(index)
             } else {
                 null
@@ -109,13 +92,14 @@ internal class LazyLayoutItemContentFactory(
 
         private fun createContentLambda() = @Composable {
             val itemProvider = itemProvider()
-            val index = itemProvider.keyToIndexMap[key]?.also {
+            val index = itemProvider.findIndexByKey(key, lastKnownIndex).also {
                 lastKnownIndex = it
-            } ?: lastKnownIndex
+            }
+
             if (index < itemProvider.itemCount) {
                 val key = itemProvider.getKey(index)
                 if (key == this.key) {
-                    saveableStateHolder.SaveableStateProvider(key) {
+                    StableSaveProvider(StableValue(saveableStateHolder), StableValue(key)) {
                         itemProvider.Item(index)
                     }
                 }
@@ -128,4 +112,21 @@ internal class LazyLayoutItemContentFactory(
             }
         }
     }
+}
+
+@Stable
+@JvmInline
+private value class StableValue<T>(val value: T)
+
+/**
+ * Hack around skippable functions to force restart for unstable saveable state holder that uses
+ * [Any] as key.
+ */
+@Composable
+private fun StableSaveProvider(
+    saveableStateHolder: StableValue<SaveableStateHolder>,
+    key: StableValue<Any>,
+    content: @Composable () -> Unit
+) {
+    saveableStateHolder.value.SaveableStateProvider(key.value, content)
 }

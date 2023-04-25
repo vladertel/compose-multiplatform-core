@@ -18,6 +18,7 @@ package androidx.compose.ui.text.input
 
 import androidx.compose.ui.text.TextRange
 import com.google.common.truth.Truth.assertThat
+import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -217,5 +218,83 @@ class DeleteSurroundingTextCommandTest {
         assertThat(eb.cursor).isEqualTo(2)
         assertThat(eb.compositionStart).isEqualTo(0)
         assertThat(eb.compositionEnd).isEqualTo(3)
+    }
+
+    @Test
+    fun throws_whenLengthBeforeInvalid() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            DeleteSurroundingTextCommand(lengthBeforeCursor = -42, lengthAfterCursor = 0)
+        }
+        assertThat(error).hasMessageThat().contains("-42")
+    }
+
+    @Test
+    fun throws_whenLengthAfterInvalid() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            DeleteSurroundingTextCommand(lengthBeforeCursor = 0, lengthAfterCursor = -42)
+        }
+        assertThat(error).hasMessageThat().contains("-42")
+    }
+
+    @Test
+    fun deletes_whenLengthAfterCursorOverflows_withMaxValue() {
+        val text = "abcde"
+        val textAfterDelete = "abcd"
+        val selection = TextRange(textAfterDelete.length)
+        val eb = EditingBuffer(text, selection)
+
+        DeleteSurroundingTextCommand(
+            lengthBeforeCursor = 0,
+            lengthAfterCursor = Int.MAX_VALUE
+        ).applyTo(eb)
+
+        assertThat(eb.toString()).isEqualTo(textAfterDelete)
+        assertThat(eb.cursor).isEqualTo(textAfterDelete.length)
+    }
+
+    @Test
+    fun deletes_whenLengthBeforeCursorOverflows_withMaxValue() {
+        val text = "abcde"
+        val selection = TextRange(1)
+        val eb = EditingBuffer(text, selection)
+
+        DeleteSurroundingTextCommand(
+            lengthBeforeCursor = Int.MAX_VALUE,
+            lengthAfterCursor = 0
+        ).applyTo(eb)
+
+        assertThat(eb.toString()).isEqualTo("bcde")
+        assertThat(eb.cursor).isEqualTo(0)
+    }
+
+    @Test
+    fun deletes_whenLengthAfterCursorOverflows() {
+        val text = "abcde"
+        val textAfterDelete = "abcd"
+        val selection = TextRange(textAfterDelete.length)
+        val eb = EditingBuffer(text, selection)
+
+        DeleteSurroundingTextCommand(
+            lengthBeforeCursor = 0,
+            lengthAfterCursor = Int.MAX_VALUE - 1
+        ).applyTo(eb)
+
+        assertThat(eb.toString()).isEqualTo(textAfterDelete)
+        assertThat(eb.cursor).isEqualTo(textAfterDelete.length)
+    }
+
+    @Test
+    fun deletes_whenLengthBeforeCursorOverflows() {
+        val text = "abcde"
+        val selection = TextRange(1)
+        val eb = EditingBuffer(text, selection)
+
+        DeleteSurroundingTextCommand(
+            lengthBeforeCursor = Int.MAX_VALUE - 1,
+            lengthAfterCursor = 0
+        ).applyTo(eb)
+
+        assertThat(eb.toString()).isEqualTo("bcde")
+        assertThat(eb.cursor).isEqualTo(0)
     }
 }

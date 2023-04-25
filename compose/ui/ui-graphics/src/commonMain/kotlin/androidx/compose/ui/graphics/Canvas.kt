@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.graphics.internal.JvmDefaultWithCompatibility
 
 /**
  * Create a new Canvas instance that targets its drawing commands
@@ -167,6 +168,7 @@ fun Canvas.scale(sx: Float, sy: Float = sx, pivotX: Float, pivotY: Float) {
  */
 expect val Canvas.nativeCanvas: NativeCanvas
 
+@JvmDefaultWithCompatibility
 interface Canvas {
 
     /**
@@ -326,6 +328,7 @@ interface Canvas {
      * @param top Top bound of the clip region
      * @param right Right bound of the clip region
      * @param bottom Bottom bound of the clip region
+     * @param clipOp Clipping operation to conduct on the given bounds, defaults to [ClipOp.Intersect]
      */
     fun clipRect(
         left: Float,
@@ -475,6 +478,7 @@ interface Canvas {
      * @param startAngle Starting angle of the arc relative to 3 o'clock
      * @param sweepAngle Sweep angle in degrees clockwise
      * @param useCenter Flag indicating whether or not to include the center of the oval in the
+     * @param paint Paint used to draw the arc.
      * arc, and close it if it is being stroked. This will draw a wedge.
      */
     fun drawArc(

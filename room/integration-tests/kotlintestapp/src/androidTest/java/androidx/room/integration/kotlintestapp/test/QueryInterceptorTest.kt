@@ -17,6 +17,7 @@
 package androidx.room.integration.kotlintestapp.test
 
 import androidx.arch.core.executor.testing.CountingTaskExecutorRule
+import androidx.kruth.assertThat
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -30,7 +31,6 @@ import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
-import com.google.common.truth.Truth.assertThat
 import com.google.common.util.concurrent.MoreExecutors
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -48,7 +48,7 @@ class QueryInterceptorTest {
     @JvmField
     val countingTaskExecutorRule = CountingTaskExecutorRule()
     lateinit var mDatabase: QueryInterceptorTestDatabase
-    var queryAndArgs = CopyOnWriteArrayList<Pair<String, ArrayList<Any>>>()
+    var queryAndArgs = CopyOnWriteArrayList<Pair<String, ArrayList<Any?>>>()
 
     @Entity(tableName = "queryInterceptorTestDatabase")
     data class QueryInterceptorEntity(@PrimaryKey val id: String, val description: String)
@@ -82,10 +82,12 @@ class QueryInterceptorTest {
             ApplicationProvider.getApplicationContext(),
             QueryInterceptorTestDatabase::class.java
         ).setQueryCallback(
-            RoomDatabase.QueryCallback { sqlQuery, bindArgs ->
-                val argTrace = ArrayList<Any>()
-                argTrace.addAll(bindArgs)
-                queryAndArgs.add(Pair(sqlQuery, argTrace))
+            object : RoomDatabase.QueryCallback {
+                override fun onQuery(sqlQuery: String, bindArgs: List<Any?>) {
+                    val argTrace = ArrayList<Any?>()
+                    argTrace.addAll(bindArgs)
+                    queryAndArgs.add(Pair(sqlQuery, argTrace))
+                }
             },
             MoreExecutors.directExecutor()
         ).build()
@@ -156,7 +158,7 @@ class QueryInterceptorTest {
             SimpleSQLiteQuery(
                 "INSERT OR ABORT INTO `queryInterceptorTestDatabase` (`id`,`description`) " +
                     "VALUES (?,?)",
-                arrayOf<Any>("3", "Description")
+                arrayOf("3", "Description")
             )
         )
         assertQueryLogged(
@@ -188,10 +190,12 @@ class QueryInterceptorTest {
             ApplicationProvider.getApplicationContext(),
             QueryInterceptorTestDatabase::class.java
         ).setQueryCallback(
-            RoomDatabase.QueryCallback { sqlQuery, bindArgs ->
-                val argTrace = ArrayList<Any>()
-                argTrace.addAll(bindArgs)
-                queryAndArgs.add(Pair(sqlQuery, argTrace))
+            object : RoomDatabase.QueryCallback {
+                override fun onQuery(sqlQuery: String, bindArgs: List<Any?>) {
+                    val argTrace = ArrayList<Any?>()
+                    argTrace.addAll(bindArgs)
+                    queryAndArgs.add(Pair(sqlQuery, argTrace))
+                }
             },
             MoreExecutors.directExecutor()
         )

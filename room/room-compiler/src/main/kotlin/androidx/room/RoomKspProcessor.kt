@@ -16,10 +16,12 @@
 
 package androidx.room
 
-import androidx.room.DatabaseProcessingStep.Companion.ENV_CONFIG
+import androidx.room.compiler.processing.XProcessingEnv
+import androidx.room.compiler.processing.XRoundEnv
 import androidx.room.compiler.processing.ksp.KspBasicAnnotationProcessor
 import androidx.room.processor.Context.BooleanProcessorOptions.USE_NULL_AWARE_CONVERTER
 import androidx.room.processor.ProcessorErrors
+import androidx.room.verifier.DatabaseVerifier
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
@@ -30,7 +32,10 @@ import javax.tools.Diagnostic
  */
 class RoomKspProcessor(
     environment: SymbolProcessorEnvironment
-) : KspBasicAnnotationProcessor(environment, ENV_CONFIG) {
+) : KspBasicAnnotationProcessor(
+    symbolProcessorEnvironment = environment,
+    config = DatabaseProcessingStep.getEnvConfig(environment.options)
+) {
     init {
         // print a warning if null aware converter is disabled because we'll remove that ability
         // soon.
@@ -50,6 +55,12 @@ class RoomKspProcessor(
     override fun processingSteps() = listOf(
         DatabaseProcessingStep()
     )
+
+    override fun postRound(env: XProcessingEnv, round: XRoundEnv) {
+        if (round.isProcessingOver) {
+            DatabaseVerifier.cleanup()
+        }
+    }
 
     class Provider : SymbolProcessorProvider {
         override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {

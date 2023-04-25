@@ -24,30 +24,37 @@ import com.google.common.collect.ImmutableList;
 
 import org.junit.Test;
 
+import java.util.Arrays;
+
 public class StopwatchTest {
     @Test
     public void testBuilder() {
         StopwatchLap lap1 = new StopwatchLap.Builder("namespace", "lap1")
                 .setLapNumber(1)
-                .setLapTimeMillis(1000)
-                .setAccumulatedLapTimeMillis(1000)
+                .setLapDurationMillis(1000)
+                .setAccumulatedLapDurationMillis(1000)
                 .build();
         StopwatchLap lap2 = new StopwatchLap.Builder("namespace", "lap2")
                 .setLapNumber(2)
-                .setLapTimeMillis(100)
-                .setAccumulatedLapTimeMillis(1100)
+                .setLapDurationMillis(100)
+                .setAccumulatedLapDurationMillis(1100)
                 .build();
         Stopwatch stopwatch = new Stopwatch.Builder("namespace", "id")
                 .setDocumentScore(1)
                 .setCreationTimestampMillis(100)
                 .setDocumentTtlMillis(6000)
                 .setName("my stopwatch")
+                .addAlternateName("my alternate stopwatch")
+                .addAlternateName("my alternate stopwatch 2")
+                .setDescription("this is my stopwatch")
+                .setImage("content://images/stopwatch1")
+                .setUrl("content://stopwatch/1")
                 .setBaseTimeMillis(
                         /*baseTimeMillis=*/10000,
                         /*baseTimeMillisInElapsedRealtime=*/1000,
                         /*bootCount=*/1)
                 .setStatus(Stopwatch.STATUS_RUNNING)
-                .setAccumulatedTimeMillis(1100)
+                .setAccumulatedDurationMillis(1100)
                 .setLaps(ImmutableList.of(lap1, lap2))
                 .build();
 
@@ -57,11 +64,17 @@ public class StopwatchTest {
         assertThat(stopwatch.getCreationTimestampMillis()).isEqualTo(100);
         assertThat(stopwatch.getDocumentTtlMillis()).isEqualTo(6000);
         assertThat(stopwatch.getName()).isEqualTo("my stopwatch");
+        assertThat(stopwatch.getAlternateNames()).isNotNull();
+        assertThat(stopwatch.getAlternateNames())
+                .containsExactly("my alternate stopwatch", "my alternate stopwatch 2");
+        assertThat(stopwatch.getDescription()).isEqualTo("this is my stopwatch");
+        assertThat(stopwatch.getImage()).isEqualTo("content://images/stopwatch1");
+        assertThat(stopwatch.getUrl()).isEqualTo("content://stopwatch/1");
         assertThat(stopwatch.getBaseTimeMillis()).isEqualTo(10000);
         assertThat(stopwatch.getBaseTimeMillisInElapsedRealtime()).isEqualTo(1000);
         assertThat(stopwatch.getBootCount()).isEqualTo(1);
         assertThat(stopwatch.getStatus()).isEqualTo(Stopwatch.STATUS_RUNNING);
-        assertThat(stopwatch.getAccumulatedTimeMillis()).isEqualTo(1100);
+        assertThat(stopwatch.getAccumulatedDurationMillis()).isEqualTo(1100);
         assertThat(stopwatch.getLaps()).containsExactly(lap1, lap2).inOrder();
     }
 
@@ -69,25 +82,30 @@ public class StopwatchTest {
     public void testBuilderCopy_allFieldsCopied() {
         StopwatchLap lap1 = new StopwatchLap.Builder("namespace", "lap1")
                 .setLapNumber(1)
-                .setLapTimeMillis(1000)
-                .setAccumulatedLapTimeMillis(1000)
+                .setLapDurationMillis(1000)
+                .setAccumulatedLapDurationMillis(1000)
                 .build();
         StopwatchLap lap2 = new StopwatchLap.Builder("namespace", "lap2")
                 .setLapNumber(2)
-                .setLapTimeMillis(100)
-                .setAccumulatedLapTimeMillis(1100)
+                .setLapDurationMillis(100)
+                .setAccumulatedLapDurationMillis(1100)
                 .build();
         Stopwatch stopwatch1 = new Stopwatch.Builder("namespace", "id")
                 .setDocumentScore(1)
                 .setCreationTimestampMillis(100)
                 .setDocumentTtlMillis(6000)
                 .setName("my stopwatch")
+                .addAlternateName("my alternate stopwatch")
+                .addAlternateName("my alternate stopwatch 2")
+                .setDescription("this is my stopwatch")
+                .setImage("content://images/stopwatch1")
+                .setUrl("content://stopwatch/1")
                 .setBaseTimeMillis(
                         /*baseTimeMillis=*/10000,
                         /*baseTimeMillisInElapsedRealtime=*/1000,
                         /*bootCount=*/1)
                 .setStatus(Stopwatch.STATUS_RUNNING)
-                .setAccumulatedTimeMillis(1100)
+                .setAccumulatedDurationMillis(1100)
                 .setLaps(ImmutableList.of(lap1, lap2))
                 .build();
         Stopwatch stopwatch2 = new Stopwatch.Builder(stopwatch1).build();
@@ -99,14 +117,19 @@ public class StopwatchTest {
                 .isEqualTo(stopwatch2.getCreationTimestampMillis());
         assertThat(stopwatch1.getDocumentTtlMillis()).isEqualTo(stopwatch2.getDocumentTtlMillis());
         assertThat(stopwatch1.getName()).isEqualTo(stopwatch2.getName());
+        assertThat(stopwatch1.getAlternateNames())
+                .containsExactlyElementsIn(stopwatch2.getAlternateNames());
+        assertThat(stopwatch1.getDescription()).isEqualTo(stopwatch2.getDescription());
+        assertThat(stopwatch1.getImage()).isEqualTo(stopwatch2.getImage());
+        assertThat(stopwatch1.getUrl()).isEqualTo(stopwatch2.getUrl());
         assertThat(stopwatch1.getBaseTimeMillis())
                 .isEqualTo(stopwatch2.getBaseTimeMillis());
         assertThat(stopwatch1.getBaseTimeMillisInElapsedRealtime())
                 .isEqualTo(stopwatch2.getBaseTimeMillisInElapsedRealtime());
         assertThat(stopwatch1.getBootCount()).isEqualTo(stopwatch2.getBootCount());
         assertThat(stopwatch1.getStatus()).isEqualTo(stopwatch2.getStatus());
-        assertThat(stopwatch1.getAccumulatedTimeMillis())
-                .isEqualTo(stopwatch2.getAccumulatedTimeMillis());
+        assertThat(stopwatch1.getAccumulatedDurationMillis())
+                .isEqualTo(stopwatch2.getAccumulatedDurationMillis());
         assertThat(stopwatch1.getLaps()).containsExactly(stopwatch2.getLaps().toArray()).inOrder();
     }
 
@@ -115,26 +138,31 @@ public class StopwatchTest {
         StopwatchLap lap1 = new StopwatchLap.Builder("namespace", "lap1")
                 .setCreationTimestampMillis(100)
                 .setLapNumber(1)
-                .setLapTimeMillis(1000)
-                .setAccumulatedLapTimeMillis(1000)
+                .setLapDurationMillis(1000)
+                .setAccumulatedLapDurationMillis(1000)
                 .build();
         StopwatchLap lap2 = new StopwatchLap.Builder("namespace", "lap2")
                 .setCreationTimestampMillis(100)
                 .setLapNumber(2)
-                .setLapTimeMillis(100)
-                .setAccumulatedLapTimeMillis(1100)
+                .setLapDurationMillis(100)
+                .setAccumulatedLapDurationMillis(1100)
                 .build();
         Stopwatch stopwatch = new Stopwatch.Builder("namespace", "id")
                 .setDocumentScore(1)
                 .setCreationTimestampMillis(100)
                 .setDocumentTtlMillis(6000)
                 .setName("my stopwatch")
+                .addAlternateName("my alternate stopwatch")
+                .addAlternateName("my alternate stopwatch 2")
+                .setDescription("this is my stopwatch")
+                .setImage("content://images/stopwatch1")
+                .setUrl("content://stopwatch/1")
                 .setBaseTimeMillis(
                         /*baseTimeMillis=*/10000,
                         /*baseTimeMillisInElapsedRealtime=*/1000,
                         /*bootCount=*/1)
                 .setStatus(Stopwatch.STATUS_RUNNING)
-                .setAccumulatedTimeMillis(1100)
+                .setAccumulatedDurationMillis(1100)
                 .setLaps(ImmutableList.of(lap1, lap2))
                 .build();
 
@@ -146,12 +174,21 @@ public class StopwatchTest {
         assertThat(genericDocument.getCreationTimestampMillis()).isEqualTo(100);
         assertThat(genericDocument.getTtlMillis()).isEqualTo(6000);
         assertThat(genericDocument.getPropertyString("name")).isEqualTo("my stopwatch");
+        assertThat(genericDocument.getPropertyStringArray("alternateNames")).isNotNull();
+        assertThat(Arrays.asList(genericDocument.getPropertyStringArray("alternateNames")))
+                .containsExactly("my alternate stopwatch", "my alternate stopwatch 2");
+        assertThat(genericDocument.getPropertyString("description"))
+                .isEqualTo("this is my stopwatch");
+        assertThat(genericDocument.getPropertyString("image"))
+                .isEqualTo("content://images/stopwatch1");
+        assertThat(genericDocument.getPropertyString("url"))
+                .isEqualTo("content://stopwatch/1");
         assertThat(genericDocument.getPropertyLong("baseTimeMillis")).isEqualTo(10000);
         assertThat(genericDocument.getPropertyLong("baseTimeMillisInElapsedRealtime"))
                 .isEqualTo(1000);
         assertThat(genericDocument.getPropertyLong("bootCount")).isEqualTo(1);
         assertThat(genericDocument.getPropertyLong("status")).isEqualTo(Stopwatch.STATUS_RUNNING);
-        assertThat(genericDocument.getPropertyLong("accumulatedTimeMillis"))
+        assertThat(genericDocument.getPropertyLong("accumulatedDurationMillis"))
                 .isEqualTo(1100);
         assertThat(genericDocument.getPropertyDocumentArray("laps")).asList().containsExactly(
                 GenericDocument.fromDocumentClass(lap1), GenericDocument.fromDocumentClass(lap2));

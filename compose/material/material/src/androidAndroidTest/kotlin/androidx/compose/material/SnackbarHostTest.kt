@@ -34,10 +34,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.filters.MediumTest
 import com.google.common.truth.Truth
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.eq
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
@@ -107,7 +107,7 @@ class SnackbarHostTest {
             }
         }
 
-        rule.waitUntil { parent.children.all { it.isCompleted } }
+        rule.waitUntil(timeoutMillis = 5_000) { parent.children.all { it.isCompleted } }
         Truth.assertThat(resultedInvocation).isEqualTo("0123456789")
     }
 
@@ -139,7 +139,8 @@ class SnackbarHostTest {
             Truth.assertThat(result).isEqualTo(SnackbarResult.Dismissed)
         }
 
-        rule.waitUntil(timeoutMillis = 5_000) { job2.isCompleted }
+        rule.mainClock.advanceTimeBy(5_000)
+        rule.waitUntil { job2.isCompleted }
     }
 
     @Test

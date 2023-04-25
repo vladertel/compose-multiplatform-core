@@ -23,7 +23,6 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.Paragraph
 import androidx.compose.ui.text.ParagraphIntrinsics
 import androidx.compose.ui.text.SpanStyle
@@ -52,7 +51,7 @@ class ParagraphBenchmark(
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "length={0} type={1} alphabet={2}")
-        fun initParameters(): List<Array<Any>> = cartesian(
+        fun initParameters(): List<Array<Any?>> = cartesian(
             arrayOf(512),
             arrayOf(TextType.PlainText),
             arrayOf(Alphabet.Latin, Alphabet.Cjk)
@@ -111,7 +110,6 @@ class ParagraphBenchmark(
         )
     }
 
-    @OptIn(ExperimentalTextApi::class)
     private fun paragraphIntrinsics(
         text: String,
         spanStyles: List<AnnotatedString.Range<SpanStyle>>

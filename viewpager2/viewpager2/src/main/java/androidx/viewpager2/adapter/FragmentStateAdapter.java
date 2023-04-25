@@ -34,6 +34,8 @@ import android.widget.FrameLayout;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
+import androidx.annotation.RequiresOptIn;
 import androidx.collection.ArraySet;
 import androidx.collection.LongSparseArray;
 import androidx.core.view.ViewCompat;
@@ -183,22 +185,10 @@ public abstract class FragmentStateAdapter extends
         ensureFragment(position);
 
         /** Special case when {@link RecyclerView} decides to keep the {@link container}
-         * attached to the window, but not to the view hierarchy (i.e. parent is null) */
+         * attached to the window, resulting in no {@link `onViewAttachedToWindow} callback later */
         final FrameLayout container = holder.getContainer();
         if (ViewCompat.isAttachedToWindow(container)) {
-            if (container.getParent() != null) {
-                throw new IllegalStateException("Design assumption violated.");
-            }
-            container.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
-                @Override
-                public void onLayoutChange(View v, int left, int top, int right, int bottom,
-                        int oldLeft, int oldTop, int oldRight, int oldBottom) {
-                    if (container.getParent() != null) {
-                        container.removeOnLayoutChangeListener(this);
-                        placeFragmentInViewHolder(holder);
-                    }
-                }
-            });
+            placeFragmentInViewHolder(holder);
         }
 
         gcFragments();
@@ -474,7 +464,12 @@ public abstract class FragmentStateAdapter extends
         }
 
         if (fragment.isAdded() && containsItem(itemId)) {
-            mSavedStates.put(itemId, mFragmentManager.saveFragmentInstanceState(fragment));
+            List<OnPostEventListener> onPost =
+                    mFragmentEventDispatcher.dispatchPreSavedInstanceState(fragment);
+            Fragment.SavedState savedState = mFragmentManager.saveFragmentInstanceState(fragment);
+            mFragmentEventDispatcher.dispatchPostEvents(onPost);
+
+            mSavedStates.put(itemId, savedState);
         }
         List<OnPostEventListener> onPost =
                 mFragmentEventDispatcher.dispatchPreRemoved(fragment);
@@ -837,6 +832,15 @@ public abstract class FragmentStateAdapter extends
             return result;
         }
 
+        @OptIn(markerClass = ExperimentalFragmentStateAdapterApi.class)
+        public List<OnPostEventListener> dispatchPreSavedInstanceState(Fragment fragment) {
+            List<OnPostEventListener> result = new ArrayList<>();
+            for (FragmentTransactionCallback callback : mCallbacks) {
+                result.add(callback.onFragmentPreSavedInstanceState(fragment));
+            }
+            return result;
+        }
+
         public List<OnPostEventListener> dispatchPreRemoved(Fragment fragment) {
             List<OnPostEventListener> result = new ArrayList<>();
             for (FragmentTransactionCallback callback : mCallbacks) {
@@ -866,6 +870,19 @@ public abstract class FragmentStateAdapter extends
          */
         @NonNull
         public OnPostEventListener onFragmentPreAdded(@NonNull Fragment fragment) {
+            return NO_OP;
+        }
+
+        /**
+         * Called right before Fragment's state is being saved through a
+         * {@link FragmentManager#saveFragmentInstanceState} call.
+         *
+         * @param fragment Fragment which state is being saved
+         * @return Listener called after the operation
+         */
+        @NonNull
+        @ExperimentalFragmentStateAdapterApi // Experimental in v1.1.*. To become stable in v1.2.*.
+        public OnPostEventListener onFragmentPreSavedInstanceState(@NonNull Fragment fragment) {
             return NO_OP;
         }
 
@@ -924,4 +941,7 @@ public abstract class FragmentStateAdapter extends
             @NonNull FragmentTransactionCallback callback) {
         mFragmentEventDispatcher.unregisterCallback(callback);
     }
+
+    @RequiresOptIn(level = RequiresOptIn.Level.WARNING)
+    public @interface ExperimentalFragmentStateAdapterApi { }
 }

@@ -24,7 +24,6 @@ import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.CameraProvider;
 import androidx.camera.core.CameraSelector;
@@ -57,8 +56,8 @@ import java.util.concurrent.ExecutionException;
  * Extensions</code> are {@link ExtensionMode#BOKEH}, {@link ExtensionMode#HDR},
  * {@link ExtensionMode#NIGHT}, {@link ExtensionMode#FACE_RETOUCH} and {@link ExtensionMode#AUTO}
  * . The known supported devices are listed in the
- * <a href="https://developer.android.com/training/camerax/devices">CameraX devices</a>
- * page.  Please see the ones that the <code>Extensions support</code> column is checked.
+ * <a href="https://developer.android.com/training/camera/supported-devices">Supported devices</a>
+ * page.
  *
  * <p><code>CameraX Extensions</code> are built on the top of <code>CameraX Core</code> libraries
  * . To enable an extension mode, an {@link ExtensionsManager} instance needs to be retrieved
@@ -277,7 +276,7 @@ public final class ExtensionsManager {
      */
     // TODO: Will need to be rewritten to be threadsafe with use in conjunction with
     //  ExtensionsManager.init(...) if this is to be released for use outside of testing.
-    @RestrictTo(RestrictTo.Scope.TESTS)
+    @VisibleForTesting
     @NonNull
     public ListenableFuture<Void> shutdown() {
         synchronized (EXTENSIONS_LOCK) {

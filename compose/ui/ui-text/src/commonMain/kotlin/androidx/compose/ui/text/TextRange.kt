@@ -108,7 +108,7 @@ fun TextRange(index: Int): TextRange = TextRange(start = index, end = index)
  * @param minimumValue the minimum value that [TextRange.start] or [TextRange.end] can be.
  * @param maximumValue the exclusive maximum value that [TextRange.start] or [TextRange.end] can be.
  */
-internal fun TextRange.constrain(minimumValue: Int, maximumValue: Int): TextRange {
+fun TextRange.constrain(minimumValue: Int, maximumValue: Int): TextRange {
     val newStart = start.coerceIn(minimumValue, maximumValue)
     val newEnd = end.coerceIn(minimumValue, maximumValue)
     if (newStart != start || newEnd != end) {
@@ -119,10 +119,10 @@ internal fun TextRange.constrain(minimumValue: Int, maximumValue: Int): TextRang
 
 private fun packWithCheck(start: Int, end: Int): Long {
     require(start >= 0) {
-        "start cannot be negative. [start: $start]"
+        "start cannot be negative. [start: $start, end: $end]"
     }
     require(end >= 0) {
-        "end cannot negative. [end: $end]"
+        "end cannot be negative. [start: $start, end: $end]"
     }
     return packInts(start, end)
 }

@@ -77,6 +77,11 @@ interface LayoutInfo {
      * Returns true if this layout is currently a part of the layout tree.
      */
     val isAttached: Boolean
+
+    /**
+     * Unique and stable id representing this node to the semantics system.
+     */
+    val semanticsId: Int
 }
 
 /**
@@ -86,4 +91,8 @@ class ModifierInfo(
     val modifier: Modifier,
     val coordinates: LayoutCoordinates,
     val extra: Any? = null
-)
+) {
+    override fun toString(): String {
+        return "ModifierInfo($modifier, $coordinates, $extra)"
+    }
+}

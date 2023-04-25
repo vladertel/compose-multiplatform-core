@@ -19,6 +19,22 @@ package androidx.build
 import androidx.build.dependencyTracker.AffectedModuleDetector
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.provider.Provider
+
+/**
+ * Whether to enable constraints for projects in same-version groups
+ *
+ * This is expected to be true during builds that publish artifacts externally
+ * This is expected to be false during most other builds because:
+ *   Developers may be interested in including only a subset of projects in ANDROIDX_PROJECTS to
+ *     make Studio run more quickly.
+ *   If a build contains only a subset of projects, we cannot necessarily add constraints between
+ *     all pairs of projects in the same group.
+ *   We want most builds to have high remote cache usage, so we want constraints to be
+ *     similar across most builds
+ * See go/androidx-group-constraints for more information
+ */
+const val ADD_GROUP_CONSTRAINTS = "androidx.constraints"
 
 /**
  * Setting this property makes Test tasks succeed even if there
@@ -31,11 +47,6 @@ const val TEST_FAILURES_DO_NOT_FAIL_TEST_TASK = "androidx.ignoreTestFailures"
  * Setting this property to false makes test tasks not display detailed output to stdout.
  */
 const val DISPLAY_TEST_OUTPUT = "androidx.displayTestOutput"
-
-/**
- * Setting this property turns javac and kotlinc warnings into errors that fail the build.
- */
-const val ALL_WARNINGS_AS_ERRORS = "androidx.allWarningsAsErrors"
 
 /**
  * Setting this property changes "url" property in publishing maven artifact metadata
@@ -69,12 +80,6 @@ const val ENABLE_COMPOSE_COMPILER_REPORTS = "androidx.enableComposeCompilerRepor
 const val ENABLE_DOCUMENTATION = "androidx.enableDocumentation"
 
 /**
- * Adjusts the set of projects participating in this build.
- * See settings.gradle for more information
- */
-const val PROJECT_SUBSET = "androidx.projects"
-
-/**
  * Setting this property puts a summary of the relevant failure messages into standard error
  */
 const val SUMMARIZE_STANDARD_ERROR = "androidx.summarizeStderr"
@@ -101,11 +106,6 @@ const val PLAYGROUND_SNAPSHOT_BUILD_ID = "androidx.playground.snapshotBuildId"
 const val PLAYGROUND_METALAVA_BUILD_ID = "androidx.playground.metalavaBuildId"
 
 /**
- * Build Id used to pull SNAPSHOT version of Dokka for Playground projects
- */
-const val PLAYGROUND_DOKKA_BUILD_ID = "androidx.playground.dokkaBuildId"
-
-/**
  * Filepath to the java agent of YourKit for profiling
  * If this value is set, profiling via YourKit will automatically be enabled
  */
@@ -130,29 +130,29 @@ const val VERIFY_UP_TO_DATE = "androidx.verifyUpToDate"
 const val KMP_GITHUB_BUILD = "androidx.github.build"
 
 /**
- * If true, include mac targets when building KMP
+ * If true, don't require lint-checks project to exist.  This should only be set in
+ * integration tests, to allow them to save time by not configuring extra projects.
  */
-const val KMP_ENABLE_MAC = "androidx.kmp.mac.enabled"
+const val ALLOW_MISSING_LINT_CHECKS_PROJECT = "androidx.allow.missing.lint"
 
 /**
- * If true, include js targets when building KMP
+ * If set to a uri, this is the location that will be used to download `xcodegen` when running
+ * Darwin benchmarks.
  */
-const val KMP_ENABLE_JS = "androidx.kmp.js.enabled"
+const val XCODEGEN_DOWNLOAD_URI = "androidx.benchmark.darwin.xcodeGenDownloadUri"
 
 /**
- * If true, include linux targets when building KMP
+ * If true, don't restrict usage of compileSdk property.
  */
-const val KMP_ENABLE_LINUX = "androidx.kmp.linux.enabled"
+const val ALLOW_CUSTOM_COMPILE_SDK = "androidx.allowCustomCompileSdk"
 
 /**
- * If true, include all native targets when building KMP.
- * Replaces KMP_ENABLE_MAC and KMP_ENABLE_LINUX in collections, and will eventually be
- * consolidated into the AndroidX plugin.
+ * Whether to update gradle signature verification metadata
  */
-const val KMP_ENABLE_NATIVE = "androidx.kmp.native.enabled"
+const val UPDATE_SIGNATURES = "androidx.update.signatures"
 
 val ALL_ANDROIDX_PROPERTIES = setOf(
-    ALL_WARNINGS_AS_ERRORS,
+    ADD_GROUP_CONSTRAINTS,
     ALTERNATIVE_PROJECT_URL,
     VERSION_EXTRA_CHECK_ENABLED,
     VALIDATE_PROJECT_STRUCTURE,
@@ -161,7 +161,6 @@ val ALL_ANDROIDX_PROPERTIES = setOf(
     ENABLE_COMPOSE_COMPILER_REPORTS,
     DISPLAY_TEST_OUTPUT,
     ENABLE_DOCUMENTATION,
-    PROJECT_SUBSET,
     STUDIO_TYPE,
     SUMMARIZE_STANDARD_ERROR,
     USE_MAX_DEP_VERSIONS,
@@ -173,14 +172,20 @@ val ALL_ANDROIDX_PROPERTIES = setOf(
     AffectedModuleDetector.BASE_COMMIT_ARG,
     PLAYGROUND_SNAPSHOT_BUILD_ID,
     PLAYGROUND_METALAVA_BUILD_ID,
-    PLAYGROUND_DOKKA_BUILD_ID,
     PROFILE_YOURKIT_AGENT_PATH,
     KMP_GITHUB_BUILD,
-    KMP_ENABLE_MAC,
-    KMP_ENABLE_JS,
-    KMP_ENABLE_LINUX,
-    KMP_ENABLE_NATIVE
+    ENABLED_KMP_TARGET_PLATFORMS,
+    ALLOW_MISSING_LINT_CHECKS_PROJECT,
+    XCODEGEN_DOWNLOAD_URI,
+    ALLOW_CUSTOM_COMPILE_SDK,
+    UPDATE_SIGNATURES
 )
+
+/**
+ * Whether to enable constraints for projects in same-version groups
+ * See the property definition for more details
+ */
+fun Project.shouldAddGroupConstraints() = booleanPropertyProvider(ADD_GROUP_CONSTRAINTS)
 
 /**
  * Returns alternative project url that will be used as "url" property
@@ -196,13 +201,13 @@ fun Project.getAlternativeProjectUrl(): String? =
  * (version is in format major.minor.patch-extra)
  */
 fun Project.isVersionExtraCheckEnabled(): Boolean =
-    (project.findProperty(VERSION_EXTRA_CHECK_ENABLED) as? String)?.toBoolean() ?: true
+    findBooleanProperty(VERSION_EXTRA_CHECK_ENABLED) ?: true
 
 /**
  * Validate the project structure against Jetpack guidelines
  */
 fun Project.isValidateProjectStructureEnabled(): Boolean =
-    (project.findProperty(VALIDATE_PROJECT_STRUCTURE) as? String)?.toBoolean() ?: true
+    findBooleanProperty(VALIDATE_PROJECT_STRUCTURE) ?: true
 
 /**
  * Validates that all properties passed by the user of the form "-Pandroidx.*" are not misspelled
@@ -230,9 +235,7 @@ fun Project.validateAllAndroidxArgumentsAreRecognized() {
  * results aren't considered build failures, and instead pass their test failures on via build
  * artifacts to be tracked and displayed on test dashboards in a different format
  */
-fun Project.isDisplayTestOutput(): Boolean =
-    (providers.gradleProperty(DISPLAY_TEST_OUTPUT).orNull)?.toBoolean()
-        ?: true
+fun Project.isDisplayTestOutput(): Boolean = findBooleanProperty(DISPLAY_TEST_OUTPUT) ?: true
 
 /**
  * Returns whether the project should write versioned API files, e.g. `1.1.0-alpha01.txt`.
@@ -242,7 +245,7 @@ fun Project.isDisplayTestOutput(): Boolean =
  * is `true`.
  */
 fun Project.isWriteVersionedApiFilesEnabled(): Boolean =
-    (project.findProperty(WRITE_VERSIONED_API_FILES) as? String)?.toBoolean() ?: true
+    findBooleanProperty(WRITE_VERSIONED_API_FILES) ?: true
 
 /**
  * Returns whether the project should generate documentation.
@@ -256,8 +259,29 @@ fun Project.isDocumentationEnabled(): Boolean {
 }
 
 /**
- * Returns whether the build is for checking forward compatibility across projets
+ * Returns whether the build is for checking forward compatibility across projects
  */
 fun Project.usingMaxDepVersions(): Boolean {
     return project.hasProperty(USE_MAX_DEP_VERSIONS)
+}
+
+/**
+ * Returns whether this is an integration test that is allowing lint checks to be skipped to
+ * save configuration time.
+ */
+fun Project.allowMissingLintProject() =
+    findBooleanProperty(ALLOW_MISSING_LINT_CHECKS_PROJECT) ?: false
+
+/**
+ * Whether libraries are allowed to customize the value of the compileSdk property.
+ */
+fun Project.isCustomCompileSdkAllowed(): Boolean =
+    findBooleanProperty(ALLOW_CUSTOM_COMPILE_SDK) ?: true
+
+fun Project.findBooleanProperty(propName: String) = (findProperty(propName) as? String)?.toBoolean()
+
+fun Project.booleanPropertyProvider(propName: String): Provider<Boolean> {
+    return project.providers.gradleProperty(propName).map { s ->
+        s.toBoolean()
+    }.orElse(false)
 }

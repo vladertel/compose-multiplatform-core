@@ -21,6 +21,7 @@ import static androidx.wear.tiles.material.RunnerUtils.SCREEN_WIDTH;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -32,17 +33,17 @@ import android.widget.FrameLayout.LayoutParams;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
-import androidx.wear.tiles.LayoutElementBuilders;
-import androidx.wear.tiles.LayoutElementBuilders.Layout;
-import androidx.wear.tiles.ResourceBuilders.AndroidImageResourceByResId;
-import androidx.wear.tiles.ResourceBuilders.ImageResource;
-import androidx.wear.tiles.ResourceBuilders.Resources;
+import androidx.wear.protolayout.LayoutElementBuilders;
+import androidx.wear.protolayout.LayoutElementBuilders.Layout;
+import androidx.wear.protolayout.ResourceBuilders.AndroidImageResourceByResId;
+import androidx.wear.protolayout.ResourceBuilders.ImageResource;
+import androidx.wear.protolayout.ResourceBuilders.Resources;
+import androidx.wear.protolayout.proto.LayoutElementProto.LayoutElement;
 import androidx.wear.tiles.material.R;
-import androidx.wear.tiles.proto.LayoutElementProto.LayoutElement;
 import androidx.wear.tiles.renderer.TileRenderer;
 
 import java.util.concurrent.Executor;
-
+import java.util.concurrent.TimeUnit;
 
 public class GoldenTestActivity extends Activity {
     private static final String ICON_ID = "tile_icon";
@@ -55,18 +56,18 @@ public class GoldenTestActivity extends Activity {
 
         LayoutElement layoutElementProto;
         try {
-            layoutElementProto =
-                    LayoutElement.parseFrom(layoutPayload);
+            layoutElementProto = LayoutElement.parseFrom(layoutPayload);
         } catch (Exception ex) {
             // It's a test, just rethrow.
             throw new IllegalArgumentException("Could not deserialize layout proto", ex);
         }
 
         LayoutElementBuilders.LayoutElement rootLayoutElement =
-                LayoutElementBuilders.LayoutElement.fromLayoutElementProto(layoutElementProto);
+                LayoutElementBuilders.layoutElementFromProto(layoutElementProto);
 
         Context appContext = getApplicationContext();
         FrameLayout root = new FrameLayout(appContext);
+        root.setBackgroundColor(Color.BLACK);
         root.setLayoutParams(new LayoutParams(SCREEN_WIDTH, SCREEN_HEIGHT));
 
         Layout layout = new Layout.Builder().setRoot(rootLayoutElement).build();
@@ -74,24 +75,25 @@ public class GoldenTestActivity extends Activity {
         Executor mainExecutor = ContextCompat.getMainExecutor(getApplicationContext());
 
         Resources resources = generateResources();
-        TileRenderer renderer =
-                new TileRenderer(
-                        appContext,
-                        layout,
-                        resources,
-                        mainExecutor,
-                        i -> {});
+        TileRenderer renderer = new TileRenderer(appContext, mainExecutor, i -> {});
 
-        View firstChild = renderer.inflate(root);
+       try {
+           View firstChild =
+                   renderer.inflateAsync(layout, resources, root).get(30, TimeUnit.MILLISECONDS);
 
-        // Simulate what the thing outside the renderer should do. Center the contents.
-        LayoutParams layoutParams = (LayoutParams) firstChild.getLayoutParams();
-        layoutParams.gravity = Gravity.CENTER;
+           // Simulate what the thing outside the renderer should do. Center the contents.
+           LayoutParams layoutParams = (LayoutParams) firstChild.getLayoutParams();
+           layoutParams.gravity = Gravity.CENTER;
+       } catch (Exception e) {
+           throw new IllegalStateException("Rendering of layout hasn't finished in time.", e);
+       }
 
         // Set the activity to be full screen so when we crop the Bitmap we don't get time bar etc.
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow()
+                .setFlags(
+                        WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                        WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         setContentView(root, new ViewGroup.LayoutParams(SCREEN_WIDTH, SCREEN_HEIGHT));
         super.onCreate(savedInstanceState);
@@ -118,4 +120,3 @@ public class GoldenTestActivity extends Activity {
                 .build();
     }
 }
-

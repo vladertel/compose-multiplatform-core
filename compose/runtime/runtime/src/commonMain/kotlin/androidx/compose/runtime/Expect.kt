@@ -16,6 +16,9 @@
 
 package androidx.compose.runtime
 
+import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.runtime.snapshots.SnapshotContextElement
+
 // TODO(aelias): Mark the typealiases internal when https://youtrack.jetbrains.com/issue/KT-36695 is fixed.
 // Currently, they behave as internal because the actual is internal, even though the expect is public.
 
@@ -78,6 +81,10 @@ internal fun AtomicInt.postIncrement(): Int = add(1) - 1
 
 internal expect fun ensureMutable(it: Any)
 
+internal expect class WeakReference<T : Any>(reference: T) {
+    fun get(): T?
+}
+
 @MustBeDocumented
 @Retention(AnnotationRetention.SOURCE)
 @Target(
@@ -117,3 +124,10 @@ internal expect fun <T> invokeComposableForResult(
     composer: Composer,
     composable: @Composable () -> T
 ): T
+
+@OptIn(ExperimentalComposeApi::class)
+internal expect class SnapshotContextElementImpl(
+    snapshot: Snapshot
+) : SnapshotContextElement
+
+internal expect fun logError(message: String, e: Throwable)

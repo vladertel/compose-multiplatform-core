@@ -16,14 +16,20 @@
 
 package androidx.camera.core.impl;
 
+import android.graphics.ImageFormat;
+import android.graphics.PixelFormat;
+import android.util.Size;
+
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.DynamicRange;
 import androidx.core.util.Preconditions;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 /**
@@ -33,17 +39,6 @@ import java.util.concurrent.Executor;
  */
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraInfoInternal extends CameraInfo {
-    /**
-     * Returns the LensFacing of this camera.
-     *
-     * @return One of {@link androidx.camera.core.CameraSelector#LENS_FACING_FRONT},
-     * {@link androidx.camera.core.CameraSelector#LENS_FACING_BACK}, or <code>null</code> if the
-     * LensFacing does not fall into one of these two categories.
-     */
-    // TODO(b/122975195): Remove @Nullable and null return type once we have a LensFacing type which
-    // can be used to represent non-BACK or FRONT facing lenses.
-    @Nullable
-    Integer getLensFacing();
 
     /**
      * Returns the camera id of this camera.
@@ -72,9 +67,39 @@ public interface CameraInfoInternal extends CameraInfo {
     @NonNull
     Quirks getCameraQuirks();
 
-    /** Returns the {@link CamcorderProfileProvider} associated with this camera. */
+    /** Returns the {@link EncoderProfilesProvider} associated with this camera. */
     @NonNull
-    CamcorderProfileProvider getCamcorderProfileProvider();
+    EncoderProfilesProvider getEncoderProfilesProvider();
+
+    /** Returns the {@link Timebase} of frame output by this camera. */
+    @NonNull
+    Timebase getTimebase();
+
+    /**
+     * Returns the supported resolutions of this camera based on the input image format.
+     *
+     * @param format an image format from {@link ImageFormat} or {@link PixelFormat}.
+     * @return a list of supported resolutions, or an empty list if the format is not supported.
+     */
+    @NonNull
+    List<Size> getSupportedResolutions(int format);
+
+    /**
+     * Returns the supported high resolutions of this camera based on the input image format.
+     *
+     * @param format an image format from {@link ImageFormat} or {@link PixelFormat}.
+     * @return a list of supported resolutions, or an empty list if the format is not supported.
+     */
+    @NonNull
+    List<Size> getSupportedHighResolutions(int format);
+
+    /**
+     * Returns the supported dynamic ranges of this camera.
+     *
+     * @return a set of supported dynamic range, or an empty set if no dynamic range is supported.
+     */
+    @NonNull
+    Set<DynamicRange> getSupportedDynamicRanges();
 
     /** {@inheritDoc} */
     @NonNull
@@ -94,6 +119,7 @@ public interface CameraInfoInternal extends CameraInfo {
                     throw new IllegalStateException("Unable to find camera with id " + cameraId
                             + " from list of available cameras.");
                 })
+                .addCameraFilter(new LensFacingCameraFilter(getLensFacing()))
                 .build();
     }
 }

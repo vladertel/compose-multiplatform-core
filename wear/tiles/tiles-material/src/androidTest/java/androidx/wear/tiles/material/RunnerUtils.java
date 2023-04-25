@@ -26,9 +26,9 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.screenshot.AndroidXScreenshotTestRule;
 import androidx.test.screenshot.matchers.MSSIMMatcher;
-import androidx.wear.tiles.LayoutElementBuilders;
 import androidx.wear.tiles.material.testapp.GoldenTestActivity;
 
+@SuppressWarnings("deprecation")
 public class RunnerUtils {
     // This isn't totally ideal right now. The screenshot tests run on a phone, so emulate some
     // watch dimensions here.
@@ -37,8 +37,9 @@ public class RunnerUtils {
 
     private RunnerUtils() {}
 
-    static void runSingleScreenshotTest(@NonNull AndroidXScreenshotTestRule rule,
-            @NonNull LayoutElementBuilders.LayoutElement layoutElement,
+    public static void runSingleScreenshotTest(
+            @NonNull AndroidXScreenshotTestRule rule,
+            @NonNull androidx.wear.tiles.LayoutElementBuilders.LayoutElement layoutElement,
             @NonNull String expected) {
         byte[] layoutElementPayload = layoutElement.toLayoutElementProto().toByteArray();
 
@@ -62,10 +63,15 @@ public class RunnerUtils {
             Log.e("MaterialGoldenTest", "Error sleeping", ex);
         }
 
-        Bitmap bitmap = Bitmap.createBitmap(
-                InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot(),
-                0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
-        );
+        Bitmap bitmap =
+                Bitmap.createBitmap(
+                        InstrumentationRegistry.getInstrumentation()
+                                .getUiAutomation()
+                                .takeScreenshot(),
+                        0,
+                        0,
+                        SCREEN_WIDTH,
+                        SCREEN_HEIGHT);
         rule.assertBitmapAgainstGolden(bitmap, expected, new MSSIMMatcher());
 
         // There's a weird bug (related to b/159805732) where, when calling .close() on

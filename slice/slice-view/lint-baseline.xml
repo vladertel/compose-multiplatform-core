@@ -1,5 +1,1661 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 7.3.0-alpha07" type="baseline" client="gradle" dependencies="false" name="AGP (7.3.0-alpha07)" variant="all" version="7.3.0-alpha07">
+<issues format="6" by="lint 8.1.0-alpha07" type="baseline" client="gradle" dependencies="false" name="AGP (8.0.0-beta03)" variant="all" version="8.1.0-alpha07">
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class ActionRow extends FrameLayout {"
+        errorLine2="             ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/ActionRow.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="class DisplayedListItems {"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/DisplayedListItems.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public @interface SliceRowType {}"
+        errorLine2="                      ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/EventInfo.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static final int ROW_TYPE_DATE_PICK = 7;"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/EventInfo.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static final int ROW_TYPE_TIME_PICK = 8;"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/EventInfo.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public @interface SliceActionType{}"
+        errorLine2="                      ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/EventInfo.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static final int ACTION_TYPE_DATE_PICK = 6;"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/EventInfo.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static final int ACTION_TYPE_TIME_PICK = 7;"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/EventInfo.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public @interface SliceButtonPosition {"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/EventInfo.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public GridContent(@NonNull SliceItem gridItem, int position) {"
+        errorLine2="           ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public CharSequence getTitle() {"
+        errorLine2="                        ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public ArrayList&lt;CellContent> getGridContent() {"
+        errorLine2="                                  ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceItem getContentIntent() {"
+        errorLine2="                     ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceItem getSeeMoreItem() {"
+        errorLine2="                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public boolean isAllImages() {"
+        errorLine2="                   ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getLargestImageMode() {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getMaxCellLineCount() {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public boolean hasImage() {"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public boolean getIsLastIndex() { return mIsLastIndex; }"
+        errorLine2="                   ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setIsLastIndex(boolean isLast) {"
+        errorLine2="                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getHeight(@NonNull SliceStyle style, @NonNull SliceViewPolicy policy) {"
+        errorLine2="               ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static class CellContent {"
+        errorLine2="                        ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected final View mForeground;"
+        errorLine2="                         ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mRowIndex;"
+        errorLine2="                  ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mRowCount;"
+        errorLine2="                  ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mMaxCells = -1;"
+        errorLine2="                  ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected @Nullable GridContent mGridContent;"
+        errorLine2="                                    ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected final int mLargeImageHeight;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected final int mSmallImageSize;"
+        errorLine2="                        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected final int mSmallImageMinWidth;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected final int mIconSize;"
+        errorLine2="                        ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected final LinearLayout mViewContainer;"
+        errorLine2="                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setInsets(int l, int t, int r, int b) {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setTint(@ColorInt int tintColor) {"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void onClick(@NonNull View view) {"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public boolean onTouch(@NonNull View view, @NonNull MotionEvent event) {"
+        errorLine2="                   ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getHiddenItemCount() {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class ListContent extends SliceContent {"
+        errorLine2="             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class LocationBasedViewTracker implements Runnable, View.OnLayoutChangeListener {"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static void trackInputFocused(ViewGroup parent) {"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static void trackA11yFocus(ViewGroup parent) {"
+        errorLine2="                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class MessageView extends SliceChildView {"
+        errorLine2="             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/MessageView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class RemoteInputView extends LinearLayout implements View.OnClickListener, TextWatcher {"
+        errorLine2="             ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setRevealParameters(int cx, int cy, int r) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static final boolean isConfirmKey(int keyCode) {"
+        errorLine2="                                ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class RowContent extends SliceContent {"
+        errorLine2="             ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getHeight(SliceStyle style, SliceViewPolicy policy) {"
+        errorLine2="               ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class RowStyle {"
+        errorLine2="             ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowStyle.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected Set&lt;SliceItem> mLoadingActions = new HashSet&lt;>();"
+        errorLine2="                             ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setStyle(SliceStyle styles, RowStyle rowStyle) {"
+        errorLine2="                ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setInsets(int l, int t, int r, int b) {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setTint(@ColorInt int tintColor) {"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceActions(List&lt;SliceAction> actions) {"
+        errorLine2="                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setShowLastUpdated(boolean showLastUpdated) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setAllowTwoLines(boolean allowTwoLines) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setLastUpdated(long lastUpdated) {"
+        errorLine2="                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setLoadingActions(Set&lt;SliceItem> actions) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void resetView() {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class ShortcutView extends SliceChildView {"
+        errorLine2="             ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/ShortcutView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class SliceActionView extends FrameLayout implements View.OnClickListener,"
+        errorLine2="             ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceActionView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setParents(SliceView parent, TemplateView templateView) {"
+        errorLine2="                ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setInsets(int l, int t, int r, int b) {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceObserver(SliceView.OnSliceActionListener observer) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceActions(List&lt;SliceAction> actions) {"
+        errorLine2="                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceItems(List&lt;SliceContent> slices, int color, int mode) {"
+        errorLine2="                ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setStyle(SliceStyle style) {"
+        errorLine2="                ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setPolicy(SliceViewPolicy p) {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setShowLastUpdated(boolean showLastUpdated) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setLastUpdated(long lastUpdated) {"
+        errorLine2="                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setLoadingActions(Set&lt;SliceItem> actions) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public Set&lt;SliceItem> getLoadingActions() {"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void onSliceActionLoading(SliceItem actionItem, int position) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setAllowTwoLines(boolean allowTwoLines) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void notifyHeaderChanged() {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {"
+        errorLine2="                           ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void onBindViewHolder(@NonNull SliceViewHolder holder, int position) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected static class SliceWrapper {"
+        errorLine2="                           ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public class SliceViewHolder extends RecyclerView.ViewHolder implements View.OnTouchListener,"
+        errorLine2="                 ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected SliceView.OnSliceActionListener mObserver;"
+        errorLine2="                                              ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mMode;"
+        errorLine2="                  ~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mTintColor = -1;"
+        errorLine2="                  ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected boolean mShowLastUpdated;"
+        errorLine2="                      ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected long mLastUpdated = -1;"
+        errorLine2="                   ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mInsetStart;"
+        errorLine2="                  ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mInsetTop;"
+        errorLine2="                  ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mInsetEnd;"
+        errorLine2="                  ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mInsetBottom;"
+        errorLine2="                  ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected SliceActionView.SliceActionLoadingListener mLoadingListener;"
+        errorLine2="                                                         ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected SliceStyle mSliceStyle;"
+        errorLine2="                         ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected RowStyle mRowStyle;"
+        errorLine2="                       ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected SliceViewPolicy mViewPolicy;"
+        errorLine2="                              ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceContent(ListContent content) {"
+        errorLine2="                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setInsets(int l, int t, int r, int b) {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceActions(List&lt;SliceAction> actions) {"
+        errorLine2="                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getMode() {"
+        errorLine2="               ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setTint(@ColorInt int tintColor) {"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setShowLastUpdated(boolean showLastUpdated) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setLastUpdated(long lastUpdated) {"
+        errorLine2="                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceActionListener(SliceView.OnSliceActionListener observer) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceActionLoadingListener(SliceActionView.SliceActionLoadingListener listener) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setActionLoading(SliceItem item) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setLoadingActions(Set&lt;SliceItem> loadingActions) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setAllowTwoLines(boolean allowTwoLines) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public Set&lt;SliceItem> getLoadingActions() {"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setStyle(SliceStyle styles, @NonNull RowStyle rowStyle) {"
+        errorLine2="                ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setPolicy(@Nullable SliceViewPolicy policy) {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getHiddenItemCount() {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected SliceItem mSliceItem;"
+        errorLine2="                        ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected SliceItem mColorItem;"
+        errorLine2="                        ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected SliceItem mLayoutDirItem;"
+        errorLine2="                        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected SliceItem mContentDescr;"
+        errorLine2="                        ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    protected int mRowIndex;"
+        errorLine2="                  ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceContent(@Nullable SliceItem item, int rowIndex) {"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceItem getSliceItem() {"
+        errorLine2="                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getAccentColor() {"
+        errorLine2="               ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getLayoutDir() {"
+        errorLine2="               ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public CharSequence getContentDescription() {"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getRowIndex() { return mRowIndex; }"
+        errorLine2="               ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getHeight(SliceStyle style, SliceViewPolicy policy) {"
+        errorLine2="               ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public boolean isValid() {"
+        errorLine2="                   ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceAction getShortcut(@Nullable Context context) {"
+        errorLine2="                       ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static final SliceSpec OLD_BASIC = new SliceSpec(&quot;androidx.app.slice.BASIC&quot;, 1);"
+        errorLine2="                                  ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static final SliceSpec OLD_LIST = new SliceSpec(&quot;androidx.app.slice.LIST&quot;, 1);"
+        errorLine2="                                  ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static final Set&lt;SliceSpec> SUPPORTED_SPECS = new ArraySet&lt;>("
+        errorLine2="                                       ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static CachedSliceLiveData fromStream(@NonNull Context context,"
+        errorLine2="                                      ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        protected synchronized void loadInitialSlice() {"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        protected void updateSlice() {"
+        errorLine2="                       ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public @interface SliceLoadingState{}"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceMetadata.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static List&lt;SliceAction> getSliceActions(@NonNull Slice slice) {"
+        errorLine2="                                    ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceMetadata.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public boolean isExpired() {"
+        errorLine2="                   ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceMetadata.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public boolean neverExpires() {"
+        errorLine2="                   ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceMetadata.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public long getTimeToExpiry() {"
+        errorLine2="                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceMetadata.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public ListContent getListContent() {"
+        errorLine2="                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceMetadata.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="class SliceMetrics {"
+        errorLine2="      ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceMetrics.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="class SliceMetricsWrapper extends SliceMetrics {"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceMetricsWrapper.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public SliceStructure(SliceItem s) {"
+        errorLine2="           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceStructure.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public Uri getUri() {"
+        errorLine2="               ~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceStructure.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class SliceStyle {"
+        errorLine2="             ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static IconCompat convert(Context context, IconCompat icon, SerializeOptions options) {"
+        errorLine2="                             ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static int parseImageMode(@NonNull SliceItem iconItem) {"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public void checkThrow(String format) {"
+        errorLine2="                    ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public @FormatMode int getActionMode() {"
+        errorLine2="                               ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public @FormatMode int getImageMode() {"
+        errorLine2="                               ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getMaxWidth() {"
+        errorLine2="                   ~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getMaxHeight() {"
+        errorLine2="                   ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public Bitmap.CompressFormat getFormat() {"
+        errorLine2="                                     ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public int getQuality() {"
+        errorLine2="                   ~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public SliceParseException(String s, Throwable e) {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="        public SliceParseException(String s) {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public @interface SliceMode {}"
+        errorLine2="                      ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public boolean isSliceViewClickable() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setClickInfo(int[] info) {"
+        errorLine2="                ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setMode(@SliceMode int mode, boolean animate) {"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setShowActionRow(boolean show) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public boolean isShowingActionRow() {"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static String modeToString(@SliceMode int mode) {"
+        errorLine2="                         ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public static final Comparator&lt;SliceAction> SLICE_ACTION_PRIORITY_COMPARATOR ="
+        errorLine2="                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    SliceViewManager() {"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceViewManager.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public abstract class SliceViewManagerBase extends SliceViewManager {"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceViewManagerBase.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="class SliceViewManagerCompat extends SliceViewManagerBase {"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceViewManagerCompat.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="class SliceViewManagerWrapper extends SliceViewManagerBase {"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceViewManagerWrapper.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class SliceViewPolicy {"
+        errorLine2="             ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceViewPolicy.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="public class SliceViewUtil {"
+        errorLine2="             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="class SliceXml {"
+        errorLine2="      ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/SliceXml.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setInsets(int l, int t, int r, int b) {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void onForegroundActivated(MotionEvent event) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setPolicy(SliceViewPolicy policy) {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setActionLoading(SliceItem item) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setLoadingActions(Set&lt;SliceItem> loadingActions) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public Set&lt;SliceItem> getLoadingActions() {"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setTint(int tint) {"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceActionListener(SliceView.OnSliceActionListener observer) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceActions(List&lt;SliceAction> actions) {"
+        errorLine2="                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setSliceContent(ListContent sliceContent) {"
+        errorLine2="                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setStyle(SliceStyle style, @NonNull RowStyle rowStyle) {"
+        errorLine2="                ~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setShowLastUpdated(boolean showLastUpdated) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setLastUpdated(long lastUpdated) {"
+        errorLine2="                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void setAllowTwoLines(boolean allowTwoLines) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void resetView() {"
+        errorLine2="                ~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void onScrollingChanged(boolean newScrolling) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void onMaxHeightChanged(int newNewHeight) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void onMaxSmallChanged(int newMaxSmallHeight) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public void onModeChanged(int newMode) {"
+        errorLine2="                ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
+
+    <issue
+        id="BanHideAnnotation"
+        message="@hide is not allowed in Javadoc"
+        errorLine1="    public int getHiddenItemCount() {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
+    </issue>
 
     <issue
         id="BanSynchronizedMethods"
@@ -7,9 +1663,7 @@
         errorLine1="        /**"
         errorLine2="        ^">
         <location
-            file="src/main/java/androidx/slice/widget/SliceLiveData.java"
-            line="210"
-            column="9"/>
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
     </issue>
 
     <issue
@@ -18,9 +1672,7 @@
         errorLine1="        if (input.getRemoteInput().getAllowFreeFormInput()) {"
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ActionRow.java"
-            line="162"
-            column="36"/>
+            file="src/main/java/androidx/slice/widget/ActionRow.java"/>
     </issue>
 
     <issue
@@ -29,9 +1681,7 @@
         errorLine1="            mForeground.getBackground().setHotspot(x, y);"
         errorLine2="                                        ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/GridRowView.java"
-            line="819"
-            column="41"/>
+            file="src/main/java/androidx/slice/widget/GridRowView.java"/>
     </issue>
 
     <issue
@@ -40,9 +1690,7 @@
         errorLine1="            view.performAccessibilityAction(ACTION_ACCESSIBILITY_FOCUS, null);"
         errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"
-            line="51"
-            column="18"/>
+            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"/>
     </issue>
 
     <issue
@@ -51,9 +1699,7 @@
         errorLine1="            if (child.isAccessibilityFocused()) {"
         errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"
-            line="140"
-            column="23"/>
+            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"/>
     </issue>
 
     <issue
@@ -62,9 +1708,7 @@
         errorLine1="                return isTemporarilyDetached();"
         errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="330"
-            column="24"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -73,9 +1717,7 @@
         errorLine1="        super(context, attrs, defStyleAttr, defStyleRes);"
         errorLine2="        ~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="203"
-            column="9"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -84,75 +1726,7 @@
         errorLine1="            mForeground.getBackground().setHotspot(x, y);"
         errorLine2="                                        ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="126"
-            column="41"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;abc_slice_duration_min&quot; formatted=&quot;false&quot; msgid=&quot;7664017844210142826&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-fr-rCA/strings.xml"
-            line="24"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;abc_slice_duration_min&quot; formatted=&quot;false&quot; msgid=&quot;7664017844210142826&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-fr/strings.xml"
-            line="24"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;abc_slice_duration_years&quot; formatted=&quot;false&quot; msgid=&quot;2628491538787454021&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-fr-rCA/strings.xml"
-            line="28"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;abc_slice_duration_years&quot; formatted=&quot;false&quot; msgid=&quot;2628491538787454021&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-fr/strings.xml"
-            line="28"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;abc_slice_duration_days&quot; formatted=&quot;false&quot; msgid=&quot;8356547162075064530&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-fr-rCA/strings.xml"
-            line="32"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="MissingQuantity"
-        message="For locale &quot;fr&quot; (French) the following quantities should also be defined: `many`"
-        errorLine1="    &lt;plurals name=&quot;abc_slice_duration_days&quot; formatted=&quot;false&quot; msgid=&quot;8356547162075064530&quot;>"
-        errorLine2="    ^">
-        <location
-            file="src/main/res/values-fr/strings.xml"
-            line="32"
-            column="5"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
     <issue
@@ -161,9 +1735,7 @@
         errorLine1="    public ActionRow(Context context, boolean fullActions) {"
         errorLine2="                     ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ActionRow.java"
-            line="68"
-            column="22"/>
+            file="src/main/java/androidx/slice/widget/ActionRow.java"/>
     </issue>
 
     <issue
@@ -172,9 +1744,7 @@
         errorLine1="    public int getHeight(SliceStyle style, SliceViewPolicy policy) {"
         errorLine2="                         ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="131"
-            column="26"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -183,9 +1753,7 @@
         errorLine1="    public int getHeight(SliceStyle style, SliceViewPolicy policy) {"
         errorLine2="                                           ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="131"
-            column="44"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -194,9 +1762,7 @@
         errorLine1="    public DisplayedListItems getRowItems(int availableHeight, SliceStyle style,"
         errorLine2="           ~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="144"
-            column="12"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -205,9 +1771,7 @@
         errorLine1="    public DisplayedListItems getRowItems(int availableHeight, SliceStyle style,"
         errorLine2="                                                               ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="144"
-            column="64"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -216,9 +1780,7 @@
         errorLine1="            SliceViewPolicy policy) {"
         errorLine2="            ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="145"
-            column="13"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -227,9 +1789,7 @@
         errorLine1="    public SliceContent getSeeMoreItem() {"
         errorLine2="           ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="180"
-            column="12"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -238,9 +1798,7 @@
         errorLine1="    public static int getRowType(SliceContent content, boolean isHeader,"
         errorLine2="                                 ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="253"
-            column="34"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -249,9 +1807,7 @@
         errorLine1="                                 List&lt;SliceAction> actions) {"
         errorLine2="                                 ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="254"
-            column="34"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -260,9 +1816,7 @@
         errorLine1="    public static int getListHeight(List&lt;SliceContent> listItems, SliceStyle style,"
         errorLine2="                                    ~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="293"
-            column="37"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -271,9 +1825,7 @@
         errorLine1="    public static int getListHeight(List&lt;SliceContent> listItems, SliceStyle style,"
         errorLine2="                                                                  ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="293"
-            column="67"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -282,9 +1834,7 @@
         errorLine1="            SliceViewPolicy policy) {"
         errorLine2="            ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ListContent.java"
-            line="294"
-            column="13"/>
+            file="src/main/java/androidx/slice/widget/ListContent.java"/>
     </issue>
 
     <issue
@@ -293,9 +1843,7 @@
         errorLine1="    public static void trackInputFocused(ViewGroup parent) {"
         errorLine2="                                         ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"
-            line="116"
-            column="42"/>
+            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"/>
     </issue>
 
     <issue
@@ -304,9 +1852,7 @@
         errorLine1="    public static void trackA11yFocus(ViewGroup parent) {"
         errorLine2="                                      ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"
-            line="128"
-            column="39"/>
+            file="src/main/java/androidx/slice/widget/LocationBasedViewTracker.java"/>
     </issue>
 
     <issue
@@ -315,9 +1861,7 @@
         errorLine1="    public MessageView(Context context) {"
         errorLine2="                       ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/MessageView.java"
-            line="49"
-            column="24"/>
+            file="src/main/java/androidx/slice/widget/MessageView.java"/>
     </issue>
 
     <issue
@@ -326,9 +1870,7 @@
         errorLine1="    public void setSliceItem(SliceContent content, boolean isHeader, int index,"
         errorLine2="                             ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/MessageView.java"
-            line="71"
-            column="30"/>
+            file="src/main/java/androidx/slice/widget/MessageView.java"/>
     </issue>
 
     <issue
@@ -337,9 +1879,7 @@
         errorLine1="            int rowCount, SliceView.OnSliceActionListener observer) {"
         errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/MessageView.java"
-            line="72"
-            column="27"/>
+            file="src/main/java/androidx/slice/widget/MessageView.java"/>
     </issue>
 
     <issue
@@ -348,9 +1888,7 @@
         errorLine1="    public RemoteInputView(Context context, AttributeSet attrs) {"
         errorLine2="                           ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="88"
-            column="28"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -359,9 +1897,7 @@
         errorLine1="    public RemoteInputView(Context context, AttributeSet attrs) {"
         errorLine2="                                            ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="88"
-            column="45"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -370,9 +1906,7 @@
         errorLine1="    public static RemoteInputView inflate(Context context, ViewGroup root) {"
         errorLine2="                  ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="163"
-            column="19"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -381,9 +1915,7 @@
         errorLine1="    public static RemoteInputView inflate(Context context, ViewGroup root) {"
         errorLine2="                                          ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="163"
-            column="43"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -392,9 +1924,7 @@
         errorLine1="    public static RemoteInputView inflate(Context context, ViewGroup root) {"
         errorLine2="                                                           ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="163"
-            column="60"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -403,9 +1933,7 @@
         errorLine1="    public void setAction(SliceItem action) {"
         errorLine2="                          ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="192"
-            column="27"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -414,9 +1942,7 @@
         errorLine1="    public void setRemoteInput(RemoteInput[] remoteInputs, RemoteInput remoteInput) {"
         errorLine2="                               ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="199"
-            column="32"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -425,9 +1951,7 @@
         errorLine1="    public void setRemoteInput(RemoteInput[] remoteInputs, RemoteInput remoteInput) {"
         errorLine2="                                                           ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="199"
-            column="60"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -436,9 +1960,7 @@
         errorLine1="        public RemoteEditText(Context context, AttributeSet attrs) {"
         errorLine2="                              ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="306"
-            column="31"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -447,9 +1969,7 @@
         errorLine1="        public RemoteEditText(Context context, AttributeSet attrs) {"
         errorLine2="                                               ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="306"
-            column="48"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -458,9 +1978,7 @@
         errorLine1="        protected void onVisibilityChanged(View changedView, int visibility) {"
         errorLine2="                                           ~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="336"
-            column="44"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -469,9 +1987,7 @@
         errorLine1="        protected void onFocusChanged(boolean focused, int direction, Rect previouslyFocusedRect) {"
         errorLine2="                                                                      ~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RemoteInputView.java"
-            line="345"
-            column="71"/>
+            file="src/main/java/androidx/slice/widget/RemoteInputView.java"/>
     </issue>
 
     <issue
@@ -480,9 +1996,7 @@
         errorLine1="    public RowContent(SliceItem rowSlice, int position) {"
         errorLine2="                      ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowContent.java"
-            line="82"
-            column="23"/>
+            file="src/main/java/androidx/slice/widget/RowContent.java"/>
     </issue>
 
     <issue
@@ -491,9 +2005,7 @@
         errorLine1="    public List&lt;SliceItem> getEndItems() {"
         errorLine2="           ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowContent.java"
-            line="337"
-            column="12"/>
+            file="src/main/java/androidx/slice/widget/RowContent.java"/>
     </issue>
 
     <issue
@@ -502,9 +2014,7 @@
         errorLine1="    public List&lt;SliceAction> getToggleItems() {"
         errorLine2="           ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowContent.java"
-            line="344"
-            column="12"/>
+            file="src/main/java/androidx/slice/widget/RowContent.java"/>
     </issue>
 
     <issue
@@ -513,9 +2023,7 @@
         errorLine1="    public int getHeight(SliceStyle style, SliceViewPolicy policy) {"
         errorLine2="                         ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowContent.java"
-            line="360"
-            column="26"/>
+            file="src/main/java/androidx/slice/widget/RowContent.java"/>
     </issue>
 
     <issue
@@ -524,9 +2032,7 @@
         errorLine1="    public int getHeight(SliceStyle style, SliceViewPolicy policy) {"
         errorLine2="                                           ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowContent.java"
-            line="360"
-            column="44"/>
+            file="src/main/java/androidx/slice/widget/RowContent.java"/>
     </issue>
 
     <issue
@@ -535,9 +2041,7 @@
         errorLine1="    public RowStyle(Context context, int resId, @NonNull SliceStyle sliceStyle) {"
         errorLine2="                    ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowStyle.java"
-            line="74"
-            column="21"/>
+            file="src/main/java/androidx/slice/widget/RowStyle.java"/>
     </issue>
 
     <issue
@@ -546,9 +2050,7 @@
         errorLine1="    protected Set&lt;SliceItem> mLoadingActions = new HashSet&lt;>();"
         errorLine2="              ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowView.java"
-            line="165"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
     </issue>
 
     <issue
@@ -557,9 +2059,7 @@
         errorLine1="    public void setStyle(SliceStyle styles, RowStyle rowStyle) {"
         errorLine2="                         ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowView.java"
-            line="243"
-            column="26"/>
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
     </issue>
 
     <issue
@@ -568,9 +2068,7 @@
         errorLine1="    public void setStyle(SliceStyle styles, RowStyle rowStyle) {"
         errorLine2="                                            ~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowView.java"
-            line="243"
-            column="45"/>
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
     </issue>
 
     <issue
@@ -579,9 +2077,7 @@
         errorLine1="    public void setSliceActions(List&lt;SliceAction> actions) {"
         errorLine2="                                ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowView.java"
-            line="409"
-            column="33"/>
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
     </issue>
 
     <issue
@@ -590,9 +2086,7 @@
         errorLine1="    public void setLoadingActions(Set&lt;SliceItem> actions) {"
         errorLine2="                                  ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/RowView.java"
-            line="1155"
-            column="35"/>
+            file="src/main/java/androidx/slice/widget/RowView.java"/>
     </issue>
 
     <issue
@@ -601,9 +2095,7 @@
         errorLine1="    public ShortcutView(Context context) {"
         errorLine2="                        ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ShortcutView.java"
-            line="58"
-            column="25"/>
+            file="src/main/java/androidx/slice/widget/ShortcutView.java"/>
     </issue>
 
     <issue
@@ -612,9 +2104,7 @@
         errorLine1="    public void setSliceContent(ListContent sliceContent) {"
         errorLine2="                                ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ShortcutView.java"
-            line="66"
-            column="33"/>
+            file="src/main/java/androidx/slice/widget/ShortcutView.java"/>
     </issue>
 
     <issue
@@ -623,9 +2113,7 @@
         errorLine1="    public void setLoadingActions(Set&lt;SliceItem> actions) {"
         errorLine2="                                  ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ShortcutView.java"
-            line="133"
-            column="35"/>
+            file="src/main/java/androidx/slice/widget/ShortcutView.java"/>
     </issue>
 
     <issue
@@ -634,9 +2122,7 @@
         errorLine1="    public Set&lt;SliceItem> getLoadingActions() {"
         errorLine2="           ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/ShortcutView.java"
-            line="138"
-            column="12"/>
+            file="src/main/java/androidx/slice/widget/ShortcutView.java"/>
     </issue>
 
     <issue
@@ -645,9 +2131,7 @@
         errorLine1="    public SliceActionView(Context context, SliceStyle style, RowStyle rowStyle) {"
         errorLine2="                           ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceActionView.java"
-            line="86"
-            column="28"/>
+            file="src/main/java/androidx/slice/widget/SliceActionView.java"/>
     </issue>
 
     <issue
@@ -656,9 +2140,7 @@
         errorLine1="    public SliceActionView(Context context, SliceStyle style, RowStyle rowStyle) {"
         errorLine2="                                            ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceActionView.java"
-            line="86"
-            column="45"/>
+            file="src/main/java/androidx/slice/widget/SliceActionView.java"/>
     </issue>
 
     <issue
@@ -667,9 +2149,7 @@
         errorLine1="    public SliceActionView(Context context, SliceStyle style, RowStyle rowStyle) {"
         errorLine2="                                                              ~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceActionView.java"
-            line="86"
-            column="63"/>
+            file="src/main/java/androidx/slice/widget/SliceActionView.java"/>
     </issue>
 
     <issue
@@ -678,9 +2158,7 @@
         errorLine1="    public void setAction(@NonNull SliceActionImpl action, EventInfo info,"
         errorLine2="                                                           ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceActionView.java"
-            line="102"
-            column="60"/>
+            file="src/main/java/androidx/slice/widget/SliceActionView.java"/>
     </issue>
 
     <issue
@@ -689,9 +2167,7 @@
         errorLine1="            SliceView.OnSliceActionListener listener, int color,"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceActionView.java"
-            line="103"
-            column="13"/>
+            file="src/main/java/androidx/slice/widget/SliceActionView.java"/>
     </issue>
 
     <issue
@@ -700,9 +2176,7 @@
         errorLine1="            SliceActionLoadingListener loadingListener) {"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceActionView.java"
-            line="104"
-            column="13"/>
+            file="src/main/java/androidx/slice/widget/SliceActionView.java"/>
     </issue>
 
     <issue
@@ -711,9 +2185,7 @@
         errorLine1="    public void setParents(SliceView parent, TemplateView templateView) {"
         errorLine2="                           ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="107"
-            column="28"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -722,9 +2194,7 @@
         errorLine1="    public void setParents(SliceView parent, TemplateView templateView) {"
         errorLine2="                                             ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="107"
-            column="46"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -733,9 +2203,7 @@
         errorLine1="    public void setSliceObserver(SliceView.OnSliceActionListener observer) {"
         errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="129"
-            column="34"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -744,9 +2212,7 @@
         errorLine1="    public void setSliceActions(List&lt;SliceAction> actions) {"
         errorLine2="                                ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="137"
-            column="33"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -755,9 +2221,7 @@
         errorLine1="    public void setSliceItems(List&lt;SliceContent> slices, int color, int mode) {"
         errorLine2="                              ~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="146"
-            column="31"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -766,9 +2230,7 @@
         errorLine1="    public void setStyle(SliceStyle style) {"
         errorLine2="                         ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="165"
-            column="26"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -777,9 +2239,7 @@
         errorLine1="    public void setPolicy(SliceViewPolicy p) {"
         errorLine2="                          ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="174"
-            column="27"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -788,9 +2248,7 @@
         errorLine1="    public void setLoadingActions(Set&lt;SliceItem> actions) {"
         errorLine2="                                  ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="204"
-            column="35"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -799,9 +2257,7 @@
         errorLine1="    public Set&lt;SliceItem> getLoadingActions() {"
         errorLine2="           ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="217"
-            column="12"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -810,9 +2266,7 @@
         errorLine1="    public void onSliceActionLoading(SliceItem actionItem, int position) {"
         errorLine2="                                     ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="225"
-            column="38"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -821,9 +2275,7 @@
         errorLine1="        public SliceViewHolder(View itemView) {"
         errorLine2="                               ~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceAdapter.java"
-            line="363"
-            column="32"/>
+            file="src/main/java/androidx/slice/widget/SliceAdapter.java"/>
     </issue>
 
     <issue
@@ -832,9 +2284,7 @@
         errorLine1="    protected SliceView.OnSliceActionListener mObserver;"
         errorLine2="              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="45"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -843,9 +2293,7 @@
         errorLine1="    protected SliceActionView.SliceActionLoadingListener mLoadingListener;"
         errorLine2="              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="81"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -854,9 +2302,7 @@
         errorLine1="    protected SliceStyle mSliceStyle;"
         errorLine2="              ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="85"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -865,9 +2311,7 @@
         errorLine1="    protected RowStyle mRowStyle;"
         errorLine2="              ~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="89"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -876,9 +2320,7 @@
         errorLine1="    protected SliceViewPolicy mViewPolicy;"
         errorLine2="              ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="93"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -887,9 +2329,7 @@
         errorLine1="    public void setSliceContent(ListContent content) {"
         errorLine2="                                ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="113"
-            column="33"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -898,9 +2338,7 @@
         errorLine1="    public void setSliceActions(List&lt;SliceAction> actions) {"
         errorLine2="                                ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="142"
-            column="33"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -909,9 +2347,7 @@
         errorLine1="    public void setSliceActionListener(SliceView.OnSliceActionListener observer) {"
         errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="186"
-            column="40"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -920,9 +2356,7 @@
         errorLine1="    public void setSliceActionLoadingListener(SliceActionView.SliceActionLoadingListener listener) {"
         errorLine2="                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="194"
-            column="47"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -931,9 +2365,7 @@
         errorLine1="    public void setActionLoading(SliceItem item) {"
         errorLine2="                                 ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="203"
-            column="34"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -942,9 +2374,7 @@
         errorLine1="    public void setLoadingActions(Set&lt;SliceItem> loadingActions) {"
         errorLine2="                                  ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="211"
-            column="35"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -953,9 +2383,7 @@
         errorLine1="    public Set&lt;SliceItem> getLoadingActions() {"
         errorLine2="           ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="227"
-            column="12"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -964,9 +2392,7 @@
         errorLine1="    public void setStyle(SliceStyle styles, @NonNull RowStyle rowStyle) {"
         errorLine2="                         ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceChildView.java"
-            line="236"
-            column="26"/>
+            file="src/main/java/androidx/slice/widget/SliceChildView.java"/>
     </issue>
 
     <issue
@@ -975,9 +2401,7 @@
         errorLine1="    protected SliceItem mSliceItem;"
         errorLine2="              ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceContent.java"
-            line="63"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
     </issue>
 
     <issue
@@ -986,9 +2410,7 @@
         errorLine1="    protected SliceItem mColorItem;"
         errorLine2="              ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceContent.java"
-            line="67"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
     </issue>
 
     <issue
@@ -997,9 +2419,7 @@
         errorLine1="    protected SliceItem mLayoutDirItem;"
         errorLine2="              ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceContent.java"
-            line="71"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
     </issue>
 
     <issue
@@ -1008,9 +2428,7 @@
         errorLine1="    protected SliceItem mContentDescr;"
         errorLine2="              ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceContent.java"
-            line="75"
-            column="15"/>
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
     </issue>
 
     <issue
@@ -1019,9 +2437,7 @@
         errorLine1="    public int getHeight(SliceStyle style, SliceViewPolicy policy) {"
         errorLine2="                         ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceContent.java"
-            line="154"
-            column="26"/>
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
     </issue>
 
     <issue
@@ -1030,9 +2446,7 @@
         errorLine1="    public int getHeight(SliceStyle style, SliceViewPolicy policy) {"
         errorLine2="                                           ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceContent.java"
-            line="154"
-            column="44"/>
+            file="src/main/java/androidx/slice/widget/SliceContent.java"/>
     </issue>
 
     <issue
@@ -1041,9 +2455,7 @@
         errorLine1="            @NonNull InputStream input, OnErrorListener listener) {"
         errorLine2="                                        ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceLiveData.java"
-            line="127"
-            column="41"/>
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
     </issue>
 
     <issue
@@ -1052,9 +2464,7 @@
         errorLine1="            @NonNull InputStream input, OnErrorListener listener) {"
         errorLine2="                                        ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceLiveData.java"
-            line="136"
-            column="41"/>
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
     </issue>
 
     <issue
@@ -1063,9 +2473,7 @@
         errorLine1="            SliceViewManager manager, @NonNull InputStream input, OnErrorListener listener) {"
         errorLine2="            ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceLiveData.java"
-            line="147"
-            column="13"/>
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
     </issue>
 
     <issue
@@ -1074,9 +2482,7 @@
         errorLine1="            SliceViewManager manager, @NonNull InputStream input, OnErrorListener listener) {"
         errorLine2="                                                                  ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceLiveData.java"
-            line="147"
-            column="67"/>
+            file="src/main/java/androidx/slice/widget/SliceLiveData.java"/>
     </issue>
 
     <issue
@@ -1085,9 +2491,7 @@
         errorLine1="    public List&lt;SliceAction> getToggles() {"
         errorLine2="           ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceMetadata.java"
-            line="246"
-            column="12"/>
+            file="src/main/java/androidx/slice/SliceMetadata.java"/>
     </issue>
 
     <issue
@@ -1096,9 +2500,7 @@
         errorLine1="    public boolean sendToggleAction(SliceAction toggleAction, boolean toggleValue)"
         errorLine2="                                    ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceMetadata.java"
-            line="276"
-            column="37"/>
+            file="src/main/java/androidx/slice/SliceMetadata.java"/>
     </issue>
 
     <issue
@@ -1107,9 +2509,7 @@
         errorLine1="    public ListContent getListContent() {"
         errorLine2="           ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceMetadata.java"
-            line="523"
-            column="12"/>
+            file="src/main/java/androidx/slice/SliceMetadata.java"/>
     </issue>
 
     <issue
@@ -1118,9 +2518,7 @@
         errorLine1="    public SliceStructure(Slice s) {"
         errorLine2="                          ~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceStructure.java"
-            line="50"
-            column="27"/>
+            file="src/main/java/androidx/slice/SliceStructure.java"/>
     </issue>
 
     <issue
@@ -1129,9 +2527,7 @@
         errorLine1="    public SliceStructure(SliceItem s) {"
         errorLine2="                          ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceStructure.java"
-            line="62"
-            column="27"/>
+            file="src/main/java/androidx/slice/SliceStructure.java"/>
     </issue>
 
     <issue
@@ -1140,9 +2536,7 @@
         errorLine1="    public SliceStyle(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {"
         errorLine2="                      ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="96"
-            column="23"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1151,9 +2545,7 @@
         errorLine1="    public SliceStyle(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {"
         errorLine2="                                       ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="96"
-            column="40"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1162,9 +2554,7 @@
         errorLine1="    public int getRowHeight(RowContent row, SliceViewPolicy policy) {"
         errorLine2="                            ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="323"
-            column="29"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1173,9 +2563,7 @@
         errorLine1="    public int getRowHeight(RowContent row, SliceViewPolicy policy) {"
         errorLine2="                                            ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="323"
-            column="45"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1184,9 +2572,7 @@
         errorLine1="    public int getGridHeight(GridContent grid, SliceViewPolicy policy) {"
         errorLine2="                             ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="361"
-            column="30"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1195,9 +2581,7 @@
         errorLine1="    public int getGridHeight(GridContent grid, SliceViewPolicy policy) {"
         errorLine2="                                               ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="361"
-            column="48"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1206,9 +2590,7 @@
         errorLine1="    public int getListHeight(ListContent list, SliceViewPolicy policy) {"
         errorLine2="                             ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="401"
-            column="30"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1217,9 +2599,7 @@
         errorLine1="    public int getListHeight(ListContent list, SliceViewPolicy policy) {"
         errorLine2="                                               ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="401"
-            column="48"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1228,9 +2608,7 @@
         errorLine1="    public int getListItemsHeight(List&lt;SliceContent> listItems, SliceViewPolicy policy) {"
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="432"
-            column="35"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1239,9 +2617,7 @@
         errorLine1="    public int getListItemsHeight(List&lt;SliceContent> listItems, SliceViewPolicy policy) {"
         errorLine2="                                                                ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="432"
-            column="65"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1250,9 +2626,7 @@
         errorLine1="    public DisplayedListItems getListItemsForNonScrollingList(ListContent list,"
         errorLine2="                                                              ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="459"
-            column="63"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1261,9 +2635,7 @@
         errorLine1="                                                             SliceViewPolicy policy) {"
         errorLine2="                                                             ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceStyle.java"
-            line="461"
-            column="62"/>
+            file="src/main/java/androidx/slice/widget/SliceStyle.java"/>
     </issue>
 
     <issue
@@ -1272,9 +2644,7 @@
         errorLine1="    public static IconCompat convert(Context context, IconCompat icon, SerializeOptions options) {"
         errorLine2="                  ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="245"
-            column="19"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1283,9 +2653,7 @@
         errorLine1="    public static IconCompat convert(Context context, IconCompat icon, SerializeOptions options) {"
         errorLine2="                                     ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="245"
-            column="38"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1294,9 +2662,7 @@
         errorLine1="    public static IconCompat convert(Context context, IconCompat icon, SerializeOptions options) {"
         errorLine2="                                                      ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="245"
-            column="55"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1305,9 +2671,7 @@
         errorLine1="    public static IconCompat convert(Context context, IconCompat icon, SerializeOptions options) {"
         errorLine2="                                                                       ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="245"
-            column="72"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1316,9 +2680,7 @@
         errorLine1="        public void checkThrow(String format) {"
         errorLine2="                               ~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="383"
-            column="32"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1327,9 +2689,7 @@
         errorLine1="        public Bitmap.CompressFormat getFormat() {"
         errorLine2="               ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="434"
-            column="16"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1338,9 +2698,7 @@
         errorLine1="        public SerializeOptions setActionMode(@FormatMode int mode) {"
         errorLine2="               ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="453"
-            column="16"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1349,9 +2707,7 @@
         errorLine1="        public SerializeOptions setImageMode(@FormatMode int mode) {"
         errorLine2="               ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="465"
-            column="16"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1360,9 +2716,7 @@
         errorLine1="        public SerializeOptions setMaxImageWidth(int width) {"
         errorLine2="               ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="477"
-            column="16"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1371,9 +2725,7 @@
         errorLine1="        public SerializeOptions setMaxImageHeight(int height) {"
         errorLine2="               ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="489"
-            column="16"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1382,9 +2734,7 @@
         errorLine1="        public SerializeOptions setImageConversionFormat(Bitmap.CompressFormat format,"
         errorLine2="               ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="502"
-            column="16"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1393,9 +2743,7 @@
         errorLine1="        public SerializeOptions setImageConversionFormat(Bitmap.CompressFormat format,"
         errorLine2="                                                         ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="502"
-            column="58"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1404,9 +2752,7 @@
         errorLine1="        void onSliceAction(Uri actionUri, Context context, Intent intent);"
         errorLine2="                           ~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="523"
-            column="28"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1415,9 +2761,7 @@
         errorLine1="        void onSliceAction(Uri actionUri, Context context, Intent intent);"
         errorLine2="                                          ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="523"
-            column="43"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1426,9 +2770,7 @@
         errorLine1="        void onSliceAction(Uri actionUri, Context context, Intent intent);"
         errorLine2="                                                           ~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="523"
-            column="60"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1437,9 +2779,7 @@
         errorLine1="        public SliceParseException(String s, Throwable e) {"
         errorLine2="                                   ~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="535"
-            column="36"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1448,9 +2788,7 @@
         errorLine1="        public SliceParseException(String s, Throwable e) {"
         errorLine2="                                             ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="535"
-            column="46"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1459,9 +2797,7 @@
         errorLine1="        public SliceParseException(String s) {"
         errorLine2="                                   ~~~~~~">
         <location
-            file="src/main/java/androidx/slice/SliceUtils.java"
-            line="543"
-            column="36"/>
+            file="src/main/java/androidx/slice/SliceUtils.java"/>
     </issue>
 
     <issue
@@ -1470,9 +2806,7 @@
         errorLine1="    public SliceView(Context context) {"
         errorLine2="                     ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="188"
-            column="22"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1481,9 +2815,7 @@
         errorLine1="    public SliceView(Context context, @Nullable AttributeSet attrs) {"
         errorLine2="                     ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="192"
-            column="22"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1492,9 +2824,7 @@
         errorLine1="    public SliceView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {"
         errorLine2="                     ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="196"
-            column="22"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1503,9 +2833,7 @@
         errorLine1="    public SliceView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {"
         errorLine2="                     ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="202"
-            column="22"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1514,9 +2842,7 @@
         errorLine1="    public SliceView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {"
         errorLine2="                                      ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="202"
-            column="39"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1525,9 +2851,7 @@
         errorLine1="    public void setClickInfo(int[] info) {"
         errorLine2="                             ~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="269"
-            column="30"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1536,9 +2860,7 @@
         errorLine1="    public void setOnClickListener(View.OnClickListener listener) {"
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="300"
-            column="36"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1547,9 +2869,7 @@
         errorLine1="    public void setOnLongClickListener(View.OnLongClickListener listener) {"
         errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="305"
-            column="40"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1558,9 +2878,7 @@
         errorLine1="    public static String modeToString(@SliceMode int mode) {"
         errorLine2="                  ~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="859"
-            column="19"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1569,9 +2887,7 @@
         errorLine1="    protected void onVisibilityChanged(View changedView, int visibility) {"
         errorLine2="                                       ~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceView.java"
-            line="900"
-            column="40"/>
+            file="src/main/java/androidx/slice/widget/SliceView.java"/>
     </issue>
 
     <issue
@@ -1580,9 +2896,7 @@
         errorLine1="    public void setListener(PolicyChangeListener listener) {"
         errorLine2="                            ~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewPolicy.java"
-            line="64"
-            column="29"/>
+            file="src/main/java/androidx/slice/widget/SliceViewPolicy.java"/>
     </issue>
 
     <issue
@@ -1591,9 +2905,7 @@
         errorLine1="    public static Drawable getDrawable(@NonNull Context context, @AttrRes int attr) {"
         errorLine2="                  ~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="135"
-            column="19"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1602,9 +2914,7 @@
         errorLine1="    public static IconCompat createIconFromDrawable(Drawable d) {"
         errorLine2="                  ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="146"
-            column="19"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1613,9 +2923,7 @@
         errorLine1="    public static IconCompat createIconFromDrawable(Drawable d) {"
         errorLine2="                                                    ~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="146"
-            column="53"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1624,9 +2932,7 @@
         errorLine1="            IconCompat icon, boolean isLarge, ViewGroup parent) {"
         errorLine2="            ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="161"
-            column="13"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1635,9 +2941,7 @@
         errorLine1="            IconCompat icon, boolean isLarge, ViewGroup parent) {"
         errorLine2="                                              ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="161"
-            column="47"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1646,9 +2950,7 @@
         errorLine1="    public static @NonNull Bitmap getCircularBitmap(Bitmap bitmap) {"
         errorLine2="                                                    ~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="185"
-            column="53"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1657,9 +2959,7 @@
         errorLine1="    public static CharSequence getTimestampString(Context context, long time) {"
         errorLine2="                  ~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="202"
-            column="19"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1668,9 +2968,7 @@
         errorLine1="    public static CharSequence getTimestampString(Context context, long time) {"
         errorLine2="                                                  ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="202"
-            column="51"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1679,9 +2977,7 @@
         errorLine1="    public static void tintIndeterminateProgressBar(Context context, ProgressBar bar) {"
         errorLine2="                                                    ~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="229"
-            column="53"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1690,9 +2986,7 @@
         errorLine1="    public static void tintIndeterminateProgressBar(Context context, ProgressBar bar) {"
         errorLine2="                                                                     ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"
-            line="229"
-            column="70"/>
+            file="src/main/java/androidx/slice/widget/SliceViewUtil.java"/>
     </issue>
 
     <issue
@@ -1701,9 +2995,7 @@
         errorLine1="    public void onForegroundActivated(MotionEvent event) {"
         errorLine2="                                      ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="116"
-            column="39"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
     <issue
@@ -1712,9 +3004,7 @@
         errorLine1="    public void setPolicy(SliceViewPolicy policy) {"
         errorLine2="                          ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="143"
-            column="27"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
     <issue
@@ -1723,9 +3013,7 @@
         errorLine1="    public void setActionLoading(SliceItem item) {"
         errorLine2="                                 ~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="154"
-            column="34"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
     <issue
@@ -1734,9 +3022,7 @@
         errorLine1="    public void setLoadingActions(Set&lt;SliceItem> loadingActions) {"
         errorLine2="                                  ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="163"
-            column="35"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
     <issue
@@ -1745,9 +3031,7 @@
         errorLine1="    public Set&lt;SliceItem> getLoadingActions() {"
         errorLine2="           ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="172"
-            column="12"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
     <issue
@@ -1756,9 +3040,7 @@
         errorLine1="    public void setSliceActionListener(SliceView.OnSliceActionListener observer) {"
         errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="190"
-            column="40"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
     <issue
@@ -1767,9 +3049,7 @@
         errorLine1="    public void setSliceActions(List&lt;SliceAction> actions) {"
         errorLine2="                                ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="202"
-            column="33"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
     <issue
@@ -1778,9 +3058,7 @@
         errorLine1="    public void setSliceContent(ListContent sliceContent) {"
         errorLine2="                                ~~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="211"
-            column="33"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
     <issue
@@ -1789,9 +3067,7 @@
         errorLine1="    public void setStyle(SliceStyle style, @NonNull RowStyle rowStyle) {"
         errorLine2="                         ~~~~~~~~~~">
         <location
-            file="src/main/java/androidx/slice/widget/TemplateView.java"
-            line="222"
-            column="26"/>
+            file="src/main/java/androidx/slice/widget/TemplateView.java"/>
     </issue>
 
 </issues>

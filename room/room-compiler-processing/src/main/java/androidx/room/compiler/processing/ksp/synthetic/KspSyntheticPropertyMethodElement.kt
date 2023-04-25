@@ -25,18 +25,19 @@ import androidx.room.compiler.processing.XMethodElement
 import androidx.room.compiler.processing.XMethodType
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeElement
+import androidx.room.compiler.processing.XTypeParameterElement
 import androidx.room.compiler.processing.javac.kotlin.JvmAbi
+import androidx.room.compiler.processing.ksp.KSTypeVarianceResolverScope
 import androidx.room.compiler.processing.ksp.KspAnnotated
 import androidx.room.compiler.processing.ksp.KspAnnotated.UseSiteFilter.Companion.NO_USE_SITE_OR_GETTER
 import androidx.room.compiler.processing.ksp.KspAnnotated.UseSiteFilter.Companion.NO_USE_SITE_OR_SETTER
 import androidx.room.compiler.processing.ksp.KspAnnotated.UseSiteFilter.Companion.NO_USE_SITE_OR_SET_PARAM
 import androidx.room.compiler.processing.ksp.KspFieldElement
 import androidx.room.compiler.processing.ksp.KspHasModifiers
-import androidx.room.compiler.processing.ksp.KspJvmTypeResolutionScope
 import androidx.room.compiler.processing.ksp.KspProcessingEnv
-import androidx.room.compiler.processing.ksp.KspTypeElement
 import androidx.room.compiler.processing.ksp.KspType
 import androidx.room.compiler.processing.ksp.findEnclosingMemberContainer
+import androidx.room.compiler.processing.ksp.jvmDescriptor
 import androidx.room.compiler.processing.ksp.overrides
 import androidx.room.compiler.processing.util.sanitizeAsJavaParameterName
 import com.google.devtools.ksp.KspExperimental
@@ -94,8 +95,9 @@ internal sealed class KspSyntheticPropertyMethodElement(
 
     final override val executableType: XMethodType by lazy {
         KspSyntheticPropertyMethodType.create(
+            env = env,
             element = this,
-            container = field.containing.type
+            container = field.enclosingElement.type
         )
     }
 
@@ -118,6 +120,7 @@ internal sealed class KspSyntheticPropertyMethodElement(
 
     final override fun asMemberOf(other: XType): XMethodType {
         return KspSyntheticPropertyMethodType.create(
+            env = env,
             element = this,
             container = other
         )
@@ -131,20 +134,17 @@ internal sealed class KspSyntheticPropertyMethodElement(
         return XEquality.hashCode(equalityItems)
     }
 
+    override fun toString(): String {
+        return jvmName
+    }
+
     final override fun overrides(other: XMethodElement, owner: XTypeElement): Boolean {
         return env.resolver.overrides(this, other)
     }
 
-    override fun copyTo(newContainer: XTypeElement): XMethodElement {
-        check(newContainer is KspTypeElement)
-        return create(
-            env = env,
-            field = field.copyTo(newContainer),
-            accessor = accessor
-        )
-    }
+    override fun isKotlinPropertyMethod() = true
 
-    private class Getter(
+    internal class Getter(
         env: KspProcessingEnv,
         field: KspFieldElement,
         override val accessor: KSPropertyGetter
@@ -162,9 +162,18 @@ internal sealed class KspSyntheticPropertyMethodElement(
         override val name: String by lazy {
             JvmAbi.computeGetterName(field.declaration.simpleName.asString())
         }
+
+        override val jvmDescriptor: String
+            get() = this.jvmDescriptor()
+
         override val returnType: XType by lazy {
-            field.type
+            field.type.copyWithScope(
+                KSTypeVarianceResolverScope.PropertyGetterMethodReturnType(this)
+            )
         }
+
+        override val typeParameters: List<XTypeParameterElement>
+            get() = emptyList()
 
         override val parameters: List<XExecutableParameterElement>
             get() = emptyList()
@@ -174,7 +183,7 @@ internal sealed class KspSyntheticPropertyMethodElement(
         }
     }
 
-    private class Setter(
+    internal class Setter(
         env: KspProcessingEnv,
         field: KspFieldElement,
         override val accessor: KSPropertySetter
@@ -192,9 +201,16 @@ internal sealed class KspSyntheticPropertyMethodElement(
         override val name by lazy {
             JvmAbi.computeSetterName(field.declaration.simpleName.asString())
         }
+
+        override val jvmDescriptor: String
+            get() = this.jvmDescriptor()
+
         override val returnType: XType by lazy {
             env.voidType
         }
+
+        override val typeParameters: List<XTypeParameterElement>
+            get() = emptyList()
 
         override val parameters: List<XExecutableParameterElement> by lazy {
             listOf(
@@ -218,10 +234,11 @@ internal sealed class KspSyntheticPropertyMethodElement(
                 delegate = enclosingElement.field.declaration.setter?.parameter,
                 filter = NO_USE_SITE_OR_SET_PARAM
             ) {
+            override fun isContinuationParam() = false
 
-            private val jvmTypeResolutionScope = KspJvmTypeResolutionScope.PropertySetterParameter(
-                declaration = enclosingElement
-            )
+            override fun isReceiverParam() = false
+
+            override fun isKotlinPropertyParam() = true
 
             override val name: String by lazy {
                 val originalName = enclosingElement.accessor.parameter.name?.asString()
@@ -229,8 +246,8 @@ internal sealed class KspSyntheticPropertyMethodElement(
             }
 
             override val type: KspType by lazy {
-                enclosingElement.field.type.withJvmTypeResolver(
-                    jvmTypeResolutionScope
+                enclosingElement.field.type.copyWithScope(
+                    KSTypeVarianceResolverScope.PropertySetterParameterType(enclosingElement)
                 )
             }
 
@@ -246,7 +263,9 @@ internal sealed class KspSyntheticPropertyMethodElement(
 
             override fun asMemberOf(other: XType): KspType {
                 return enclosingElement.field.asMemberOf(other)
-                    .withJvmTypeResolver(jvmTypeResolutionScope)
+                    .copyWithScope(
+                        KSTypeVarianceResolverScope.PropertySetterParameterType(enclosingElement)
+                    )
             }
 
             override val docComment: String?
@@ -275,9 +294,8 @@ internal sealed class KspSyntheticPropertyMethodElement(
             }
 
             val field = KspFieldElement(
-                env,
-                accessor.receiver,
-                enclosingType
+                env = env,
+                declaration = accessor.receiver,
             )
             return create(
                 env = env,

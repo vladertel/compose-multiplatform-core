@@ -40,11 +40,15 @@ import androidx.compose.ui.background
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.node.DelegatingNode
+import androidx.compose.ui.node.GlobalPositionAwareModifierNode
 import androidx.compose.ui.padding
 import androidx.compose.ui.platform.AndroidComposeView
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.elementFor
 import androidx.compose.ui.test.TestActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
@@ -52,10 +56,13 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.filters.FlakyTest
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.math.min
+import kotlin.math.sqrt
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -64,10 +71,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import kotlin.math.min
-import kotlin.math.sqrt
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
@@ -229,6 +232,39 @@ class OnGloballyPositionedTest {
     }
 
     @Test
+    fun callbacksAreCalledWhenLambdaChanges() {
+        var lambda1Called = false
+        val lambda1: (LayoutCoordinates) -> Unit = { lambda1Called = true }
+
+        var lambda2Called = false
+        val lambda2: (LayoutCoordinates) -> Unit = { lambda2Called = true }
+
+        val changeLambda = mutableStateOf(true)
+        val size = mutableStateOf(100.dp)
+        rule.setContent {
+            Box(
+                modifier = Modifier
+                    .size(size.value)
+                    .onGloballyPositioned(if (changeLambda.value) lambda1 else lambda2)
+            )
+        }
+
+        rule.runOnIdle {
+            assertTrue(lambda1Called)
+            assertFalse(lambda2Called)
+        }
+
+        lambda1Called = false
+        lambda2Called = false
+        changeLambda.value = false
+
+        rule.runOnIdle {
+            assertTrue(lambda2Called)
+            assertFalse(lambda1Called)
+        }
+    }
+
+    @Test
     fun testPositionInParent() {
         val positionedLatch = CountDownLatch(1)
         var coordinates: LayoutCoordinates? = null
@@ -236,12 +272,14 @@ class OnGloballyPositionedTest {
         rule.setContent {
             FixedSize(
                 10,
-                Modifier.padding(5).then(
-                    Modifier.onGloballyPositioned {
-                        coordinates = it
-                        positionedLatch.countDown()
-                    }
-                )
+                Modifier
+                    .padding(5)
+                    .then(
+                        Modifier.onGloballyPositioned {
+                            coordinates = it
+                            positionedLatch.countDown()
+                        }
+                    )
             ) {
             }
         }
@@ -267,12 +305,14 @@ class OnGloballyPositionedTest {
         rule.setContent {
             FixedSize(
                 10,
-                Modifier.padding(5).then(
-                    Modifier.onGloballyPositioned {
-                        coordinates = it
-                        positionedLatch.countDown()
-                    }
-                )
+                Modifier
+                    .padding(5)
+                    .then(
+                        Modifier.onGloballyPositioned {
+                            coordinates = it
+                            positionedLatch.countDown()
+                        }
+                    )
             ) {
             }
         }
@@ -332,6 +372,48 @@ class OnGloballyPositionedTest {
 
         rule.runOnIdle {
             assertEquals(view.getYInWindow(), coordinates!!.positionInWindow().y)
+        }
+    }
+
+    @Test
+    fun onPositionedCalledWhenLayerChanged() {
+        var positionedLatch = CountDownLatch(1)
+        var coordinates: LayoutCoordinates? = null
+        var offsetX by mutableStateOf(0f)
+
+        rule.setContent {
+            Layout(
+                {},
+                modifier = Modifier
+                    .graphicsLayer {
+                        translationX = offsetX
+                    }
+                    .onGloballyPositioned {
+                        coordinates = it
+                        positionedLatch.countDown()
+                    }
+            ) { _, _ ->
+                layout(100, 200) {}
+            }
+        }
+
+        rule.waitForIdle()
+
+        assertTrue(positionedLatch.await(1, TimeUnit.SECONDS))
+        positionedLatch = CountDownLatch(1)
+
+        rule.runOnIdle {
+            coordinates = null
+            offsetX = 5f
+        }
+
+        assertTrue(
+            "OnPositioned is not called when the container scrolled",
+            positionedLatch.await(1, TimeUnit.SECONDS)
+        )
+
+        rule.runOnIdle {
+            assertEquals(5f, coordinates!!.positionInRoot().x)
         }
     }
 
@@ -404,7 +486,8 @@ class OnGloballyPositionedTest {
                 DelayedMeasure(50) {
                     Box(Modifier.requiredSize(25.toDp())) {
                         Box(
-                            Modifier.requiredSize(size.toDp())
+                            Modifier
+                                .requiredSize(size.toDp())
                                 .onGloballyPositioned {
                                     coordinates1 = it
                                 }
@@ -412,7 +495,8 @@ class OnGloballyPositionedTest {
                     }
                     Box(Modifier.requiredSize(25.toDp())) {
                         Box(
-                            Modifier.requiredSize(size.toDp())
+                            Modifier
+                                .requiredSize(size.toDp())
                                 .onGloballyPositioned {
                                     coordinates2 = it
                                 }
@@ -447,7 +531,8 @@ class OnGloballyPositionedTest {
         rule.setContent {
             with(LocalDensity.current) {
                 Box(
-                    Modifier.fillMaxSize()
+                    Modifier
+                        .fillMaxSize()
                         .padding(start = paddingLeftPx.toDp(), top = paddingTopPx.toDp())
                         .onGloballyPositioned {
                             realLeft = it.positionInParent().x
@@ -464,6 +549,76 @@ class OnGloballyPositionedTest {
     }
 
     @Test
+    fun delegatedGloballyPositionedNode() {
+        val paddingLeftPx = 100.0f
+        val paddingTopPx = 120.0f
+        var realLeft: Float? = null
+        var realTop: Float? = null
+
+        val positionedLatch = CountDownLatch(1)
+        val node = object : DelegatingNode() {
+            val ogp = delegate(
+                object : GlobalPositionAwareModifierNode, Modifier.Node() {
+                    override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
+                        realLeft = coordinates.positionInParent().x
+                        realTop = coordinates.positionInParent().y
+                        positionedLatch.countDown()
+                    }
+                }
+            )
+        }
+        rule.setContent {
+            with(LocalDensity.current) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(start = paddingLeftPx.toDp(), top = paddingTopPx.toDp())
+                        .elementFor(node)
+                )
+            }
+        }
+        assertTrue(positionedLatch.await(1, TimeUnit.SECONDS))
+
+        assertThat(paddingLeftPx).isEqualTo(realLeft)
+        assertThat(paddingTopPx).isEqualTo(realTop)
+    }
+
+    @Test
+    fun delegatedMultipleGloballyPositionedNodes() {
+        val paddingLeftPx = 100.0f
+        val paddingTopPx = 120.0f
+
+        val positionedLatch = CountDownLatch(2)
+        val node = object : DelegatingNode() {
+            val a = delegate(
+                object : GlobalPositionAwareModifierNode, Modifier.Node() {
+                    override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
+                        positionedLatch.countDown()
+                    }
+                }
+            )
+            val b = delegate(
+                object : GlobalPositionAwareModifierNode, Modifier.Node() {
+                    override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
+                        positionedLatch.countDown()
+                    }
+                }
+            )
+        }
+        rule.setContent {
+            with(LocalDensity.current) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(start = paddingLeftPx.toDp(), top = paddingTopPx.toDp())
+                        .elementFor(node)
+                )
+            }
+        }
+        assertTrue(positionedLatch.await(1, TimeUnit.SECONDS))
+    }
+
+    @Test
     fun nestedLayoutCoordinates() {
         val firstPaddingPx = 10f
         val secondPaddingPx = 20f
@@ -475,16 +630,19 @@ class OnGloballyPositionedTest {
         rule.setContent {
             with(LocalDensity.current) {
                 Box(
-                    Modifier.padding(start = firstPaddingPx.toDp()).then(
-                        Modifier.onGloballyPositioned {
-                            gpCoordinates = it
-                            positionedLatch.countDown()
-                        }
-                    )
+                    Modifier
+                        .padding(start = firstPaddingPx.toDp())
+                        .then(
+                            Modifier.onGloballyPositioned {
+                                gpCoordinates = it
+                                positionedLatch.countDown()
+                            }
+                        )
                 ) {
                     Box(Modifier.padding(start = secondPaddingPx.toDp())) {
                         Box(
-                            Modifier.fillMaxSize()
+                            Modifier
+                                .fillMaxSize()
                                 .padding(start = thirdPaddingPx.toDp())
                                 .onGloballyPositioned {
                                     childCoordinates = it
@@ -507,7 +665,6 @@ class OnGloballyPositionedTest {
         assertThat(childCoordinates!!.positionInParent().x).isEqualTo(thirdPaddingPx)
     }
 
-    @FlakyTest(bugId = 213889751)
     @Test
     fun globalCoordinatesAreInActivityCoordinates() {
         val padding = 30
@@ -525,18 +682,21 @@ class OnGloballyPositionedTest {
 
             composeView.setContent {
                 Box(
-                    Modifier.fillMaxSize().onGloballyPositioned {
-                        val position = IntArray(2)
-                        composeView.getLocationInWindow(position)
-                        frameGlobalPosition = Offset(position[0].toFloat(), position[1].toFloat())
+                    Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned {
+                            val position = IntArray(2)
+                            composeView.getLocationInWindow(position)
+                            frameGlobalPosition =
+                                Offset(position[0].toFloat(), position[1].toFloat())
 
-                        realGlobalPosition = it.localToWindow(localPosition)
-                        realLocalPosition = it.windowToLocal(
-                            framePadding + frameGlobalPosition!!
-                        )
+                            realGlobalPosition = it.localToWindow(localPosition)
+                            realLocalPosition = it.windowToLocal(
+                                framePadding + frameGlobalPosition!!
+                            )
 
-                        positionedLatch.countDown()
-                    }
+                            positionedLatch.countDown()
+                        }
                 )
             }
         }
@@ -614,10 +774,12 @@ class OnGloballyPositionedTest {
                         Box(Modifier.requiredSize(10.toDp())) {
                             Box(Modifier.requiredSize(10.toDp())) {
                                 Box(
-                                    Modifier.onGloballyPositioned {
-                                        realLeft = it.positionInRoot().x
-                                        positionedLatch.countDown()
-                                    }.requiredSize(10.toDp())
+                                    Modifier
+                                        .onGloballyPositioned {
+                                            realLeft = it.positionInRoot().x
+                                            positionedLatch.countDown()
+                                        }
+                                        .requiredSize(10.toDp())
                                 )
                             }
                         }
@@ -668,9 +830,11 @@ class OnGloballyPositionedTest {
             view = LocalView.current
             FixedSize(
                 30,
-                Modifier.padding(10).onGloballyPositioned {
-                    coords = it
-                }
+                Modifier
+                    .padding(10)
+                    .onGloballyPositioned {
+                        coords = it
+                    }
             ) { /* no-op */ }
         }
 
@@ -723,9 +887,12 @@ class OnGloballyPositionedTest {
                 Popup(alignment = alignment) {
                     FixedSize(
                         30,
-                        Modifier.padding(10).background(Color.Red).onGloballyPositioned {
-                            coords = it
-                        }
+                        Modifier
+                            .padding(10)
+                            .background(Color.Red)
+                            .onGloballyPositioned {
+                                coords = it
+                            }
                     ) { /* no-op */ }
                 }
             }
@@ -825,6 +992,63 @@ class OnGloballyPositionedTest {
             remeasurementObj!!.forceRemeasure()
 
             assertNotNull(coords)
+        }
+    }
+
+    @Test
+    fun coordinatesAreNotAttachedWhenNodeIsRemovedFromHierarchy() {
+        var nodeIsNeeded by mutableStateOf(true)
+        lateinit var coordindates: LayoutCoordinates
+        rule.setContent {
+            if (nodeIsNeeded) {
+                Box(
+                    Modifier
+                        .onGloballyPositioned {
+                            // onGloballyPositioned is "attached" to the layout node itself
+                            // as there are no layout modifiers added after it
+                            coordindates = it
+                        }
+                )
+            }
+        }
+
+        rule.runOnIdle {
+            assertTrue(coordindates.isAttached)
+            nodeIsNeeded = false
+        }
+
+        rule.runOnIdle {
+            assertFalse(coordindates.isAttached)
+        }
+    }
+
+    @Test
+    fun coordinatesAreNotAttachedWhenModifierIsNotUsedAnymore() {
+        lateinit var coordindates: LayoutCoordinates
+        var modifier by mutableStateOf(
+            Modifier
+                .onGloballyPositioned {
+                    // onGloballyPositioned is "attached" to the next layout modifier
+                    coordindates = it
+                }
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    layout(placeable.width, placeable.height) {
+                        placeable.place(0, 0)
+                    }
+                }
+        )
+        rule.setContent {
+            Box(modifier)
+        }
+
+        rule.runOnIdle {
+            assertTrue(coordindates.isAttached)
+            modifier = Modifier
+        }
+
+        rule.runOnIdle {
+            assertFalse(coordindates.isAttached)
         }
     }
 }

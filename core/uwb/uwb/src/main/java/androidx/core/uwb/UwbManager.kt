@@ -19,6 +19,7 @@ package androidx.core.uwb
 import android.content.Context
 import androidx.core.uwb.impl.UwbManagerImpl
 
+@JvmDefaultWithCompatibility
 /**
  * Interface for getting UWB capabilities and interacting with nearby UWB devices to perform
  * ranging.
@@ -26,18 +27,35 @@ import androidx.core.uwb.impl.UwbManagerImpl
 interface UwbManager {
     companion object {
 
-        /** Creates a new UwbManager that is used for creating controlee client sessions. */
+        /** Creates a new UwbManager that is used for creating UWB client sessions. */
         @JvmStatic
-        fun getInstance(context: Context): UwbManager {
+        fun createInstance(context: Context): UwbManager {
             return UwbManagerImpl(context)
         }
     }
 
     /**
-     * Establishes a new [UwbClientSessionScope] that tracks the lifecycle of a UWB connection.
+     * @return a new [UwbClientSessionScope] that tracks the lifecycle of a UWB connection.
      *
-     * @throws [UwbServiceNotAvailableException] if the UWB is turned off.
-     * @throws [UwbHardwareNotAvailableException] if the hardware is not available on the device.
+     * @throws [androidx.core.uwb.exceptions.UwbServiceNotAvailableException] if the UWB is turned off.
+     * @throws [androidx.core.uwb.exceptions.UwbHardwareNotAvailableException] if the hardware is not available on the device.
      */
-    suspend fun <R> clientSessionScope(sessionHandler: suspend UwbClientSessionScope.() -> R): R
+    @Deprecated("Renamed to controleeSessionScope")
+    suspend fun clientSessionScope(): UwbClientSessionScope
+
+    /**
+     * @return a new [UwbControleeSessionScope] that tracks the lifecycle of a UWB connection.
+     *
+     * @throws [androidx.core.uwb.exceptions.UwbServiceNotAvailableException] if the UWB is turned off.
+     * @throws [androidx.core.uwb.exceptions.UwbHardwareNotAvailableException] if the hardware is not available on the device.
+     */
+    suspend fun controleeSessionScope(): UwbControleeSessionScope
+
+    /**
+     * @return a new [UwbControllerSessionScope] that tracks the lifecycle of a UWB connection.
+     *
+     * @throws [androidx.core.uwb.exceptions.UwbServiceNotAvailableException] if the UWB is turned off.
+     * @throws [androidx.core.uwb.exceptions.UwbHardwareNotAvailableException] if the hardware is not available on the device.
+     */
+    suspend fun controllerSessionScope(): UwbControllerSessionScope
 }

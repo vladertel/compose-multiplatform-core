@@ -19,8 +19,12 @@ package androidx.compose.ui.draw
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.AtLeastSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Padding
@@ -40,23 +44,29 @@ import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.padding
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.runOnUiThreadIR
 import androidx.compose.ui.test.TestActivity
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.waitAndScreenShot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
@@ -261,6 +271,7 @@ class ClipDrawTest {
         }
     }
 
+    @Ignore("Test disabled due to flakiness, see b/256950653")
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Test
     fun concaveClip() {
@@ -508,6 +519,48 @@ class ClipDrawTest {
         }
     }
 
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
+    fun resizingIsReflectedInGraphicsLayer() {
+        var sizePx by mutableStateOf(20)
+        rule.runOnUiThread {
+            activity.setContent {
+                Box(
+                    modifier = Modifier
+                        .background(Color.White)
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            layout(30, 30) {
+                                placeable.place(IntOffset.Zero)
+                            }
+                        }
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(Constraints.fixed(sizePx, sizePx))
+                            layout(
+                                constraints.constrainWidth(sizePx),
+                                constraints.constrainHeight(sizePx)
+                            ) {
+                                placeable.place(IntOffset.Zero)
+                            }
+                        }
+                        .clipToBounds()
+                        .fillColor(Color.Red)
+                )
+            }
+        }
+
+        takeScreenShot(30).apply {
+            assertRect(Color.Red, size = 20, centerX = 10, centerY = 10)
+        }
+
+        drawLatch = CountDownLatch(1)
+        sizePx = 30
+
+        takeScreenShot(30).apply {
+            assertRect(Color.Red, size = 30)
+        }
+    }
+
     private fun Modifier.fillColor(color: Color): Modifier {
         return drawBehind {
             drawRect(
@@ -519,6 +572,8 @@ class ClipDrawTest {
         }
     }
 
+    // waitAndScreenShot() requires API level 26
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun takeScreenShot(size: Int): Bitmap {
         Assert.assertTrue(drawLatch.await(1, TimeUnit.SECONDS))
         val bitmap = rule.waitAndScreenShot()

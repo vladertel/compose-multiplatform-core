@@ -53,17 +53,17 @@ package androidx.compose.foundation.layout {
     field public static final androidx.compose.foundation.layout.Arrangement.Absolute INSTANCE;
   }
 
-  @androidx.compose.runtime.Stable public static interface Arrangement.Horizontal {
+  @androidx.compose.runtime.Stable @kotlin.jvm.JvmDefaultWithCompatibility public static interface Arrangement.Horizontal {
     method public void arrange(androidx.compose.ui.unit.Density, int totalSize, int[] sizes, androidx.compose.ui.unit.LayoutDirection layoutDirection, int[] outPositions);
     method public default float getSpacing();
     property public default float spacing;
   }
 
-  @androidx.compose.runtime.Stable public static interface Arrangement.HorizontalOrVertical extends androidx.compose.foundation.layout.Arrangement.Horizontal androidx.compose.foundation.layout.Arrangement.Vertical {
+  @androidx.compose.runtime.Stable @kotlin.jvm.JvmDefaultWithCompatibility public static interface Arrangement.HorizontalOrVertical extends androidx.compose.foundation.layout.Arrangement.Horizontal androidx.compose.foundation.layout.Arrangement.Vertical {
     property public default float spacing;
   }
 
-  @androidx.compose.runtime.Stable public static interface Arrangement.Vertical {
+  @androidx.compose.runtime.Stable @kotlin.jvm.JvmDefaultWithCompatibility public static interface Arrangement.Vertical {
     method public void arrange(androidx.compose.ui.unit.Density, int totalSize, int[] sizes, int[] outPositions);
     method public default float getSpacing();
     property public default float spacing;
@@ -104,14 +104,25 @@ package androidx.compose.foundation.layout {
     method @androidx.compose.runtime.Composable public static inline void Column(optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.layout.Arrangement.Vertical verticalArrangement, optional androidx.compose.ui.Alignment.Horizontal horizontalAlignment, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.ColumnScope,kotlin.Unit> content);
   }
 
-  @androidx.compose.foundation.layout.LayoutScopeMarker @androidx.compose.runtime.Immutable public interface ColumnScope {
+  @androidx.compose.foundation.layout.LayoutScopeMarker @androidx.compose.runtime.Immutable @kotlin.jvm.JvmDefaultWithCompatibility public interface ColumnScope {
     method @androidx.compose.runtime.Stable public androidx.compose.ui.Modifier align(androidx.compose.ui.Modifier, androidx.compose.ui.Alignment.Horizontal alignment);
     method @androidx.compose.runtime.Stable public androidx.compose.ui.Modifier alignBy(androidx.compose.ui.Modifier, androidx.compose.ui.layout.VerticalAlignmentLine alignmentLine);
     method @androidx.compose.runtime.Stable public androidx.compose.ui.Modifier alignBy(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function1<? super androidx.compose.ui.layout.Measured,java.lang.Integer> alignmentLineBlock);
     method @androidx.compose.runtime.Stable public androidx.compose.ui.Modifier weight(androidx.compose.ui.Modifier, float weight, optional boolean fill);
   }
 
-  @kotlin.RequiresOptIn(message="The API of this layout is experimental and is likely to change in the future.") public @interface ExperimentalLayoutApi {
+  @kotlin.RequiresOptIn(message="The API of this layout is experimental and is likely to change in the future.") @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) public @interface ExperimentalLayoutApi {
+  }
+
+  @androidx.compose.foundation.layout.LayoutScopeMarker @androidx.compose.runtime.Immutable @kotlin.jvm.JvmDefaultWithCompatibility public interface FlowColumnScope extends androidx.compose.foundation.layout.ColumnScope {
+  }
+
+  public final class FlowLayoutKt {
+    method @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Composable public static inline void FlowColumn(optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.layout.Arrangement.Vertical verticalArrangement, optional androidx.compose.foundation.layout.Arrangement.Horizontal horizontalArrangement, optional int maxItemsInEachColumn, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.FlowColumnScope,kotlin.Unit> content);
+    method @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Composable public static inline void FlowRow(optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.layout.Arrangement.Horizontal horizontalArrangement, optional androidx.compose.foundation.layout.Arrangement.Vertical verticalArrangement, optional int maxItemsInEachRow, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.FlowRowScope,kotlin.Unit> content);
+  }
+
+  @androidx.compose.foundation.layout.LayoutScopeMarker @androidx.compose.runtime.Immutable @kotlin.jvm.JvmDefaultWithCompatibility public interface FlowRowScope extends androidx.compose.foundation.layout.RowScope {
   }
 
   public final class IntrinsicKt {
@@ -122,11 +133,24 @@ package androidx.compose.foundation.layout {
   }
 
   public enum IntrinsicSize {
+    method public static androidx.compose.foundation.layout.IntrinsicSize valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
+    method public static androidx.compose.foundation.layout.IntrinsicSize[] values();
     enum_constant public static final androidx.compose.foundation.layout.IntrinsicSize Max;
     enum_constant public static final androidx.compose.foundation.layout.IntrinsicSize Min;
   }
 
   @kotlin.DslMarker public @interface LayoutScopeMarker {
+  }
+
+  @androidx.compose.foundation.layout.ExperimentalLayoutApi public final class MutableWindowInsets implements androidx.compose.foundation.layout.WindowInsets {
+    ctor public MutableWindowInsets(optional androidx.compose.foundation.layout.WindowInsets initialInsets);
+    method public int getBottom(androidx.compose.ui.unit.Density density);
+    method public androidx.compose.foundation.layout.WindowInsets getInsets();
+    method public int getLeft(androidx.compose.ui.unit.Density density, androidx.compose.ui.unit.LayoutDirection layoutDirection);
+    method public int getRight(androidx.compose.ui.unit.Density density, androidx.compose.ui.unit.LayoutDirection layoutDirection);
+    method public int getTop(androidx.compose.ui.unit.Density density);
+    method public void setInsets(androidx.compose.foundation.layout.WindowInsets);
+    property public final androidx.compose.foundation.layout.WindowInsets insets;
   }
 
   public final class OffsetKt {
@@ -164,14 +188,11 @@ package androidx.compose.foundation.layout {
     method public float calculateTopPadding();
   }
 
-  public final class RowColumnImplKt {
-  }
-
   public final class RowKt {
     method @androidx.compose.runtime.Composable public static inline void Row(optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.layout.Arrangement.Horizontal horizontalArrangement, optional androidx.compose.ui.Alignment.Vertical verticalAlignment, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.RowScope,kotlin.Unit> content);
   }
 
-  @androidx.compose.foundation.layout.LayoutScopeMarker @androidx.compose.runtime.Immutable public interface RowScope {
+  @androidx.compose.foundation.layout.LayoutScopeMarker @androidx.compose.runtime.Immutable @kotlin.jvm.JvmDefaultWithCompatibility public interface RowScope {
     method @androidx.compose.runtime.Stable public androidx.compose.ui.Modifier align(androidx.compose.ui.Modifier, androidx.compose.ui.Alignment.Vertical alignment);
     method @androidx.compose.runtime.Stable public androidx.compose.ui.Modifier alignBy(androidx.compose.ui.Modifier, androidx.compose.ui.layout.HorizontalAlignmentLine alignmentLine);
     method @androidx.compose.runtime.Stable public androidx.compose.ui.Modifier alignBy(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function1<? super androidx.compose.ui.layout.Measured,java.lang.Integer> alignmentLineBlock);
@@ -236,9 +257,13 @@ package androidx.compose.foundation.layout {
   }
 
   public final class WindowInsetsPaddingKt {
-    method @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier consumedWindowInsets(androidx.compose.ui.Modifier, androidx.compose.foundation.layout.WindowInsets insets);
-    method @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier consumedWindowInsets(androidx.compose.ui.Modifier, androidx.compose.foundation.layout.PaddingValues paddingValues);
+    method @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier consumeWindowInsets(androidx.compose.ui.Modifier, androidx.compose.foundation.layout.WindowInsets insets);
+    method @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier consumeWindowInsets(androidx.compose.ui.Modifier, androidx.compose.foundation.layout.PaddingValues paddingValues);
+    method @Deprecated @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier consumedWindowInsets(androidx.compose.ui.Modifier, androidx.compose.foundation.layout.WindowInsets insets);
+    method @Deprecated @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier consumedWindowInsets(androidx.compose.ui.Modifier, androidx.compose.foundation.layout.PaddingValues paddingValues);
+    method @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier onConsumedWindowInsetsChanged(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.WindowInsets,kotlin.Unit> block);
     method @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier windowInsetsPadding(androidx.compose.ui.Modifier, androidx.compose.foundation.layout.WindowInsets insets);
+    method @Deprecated @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier withConsumedWindowInsets(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.WindowInsets,kotlin.Unit> block);
   }
 
   public final class WindowInsetsPadding_androidKt {
@@ -296,6 +321,8 @@ package androidx.compose.foundation.layout {
     method public static boolean getConsumeWindowInsets(androidx.compose.ui.platform.ComposeView);
     method @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static androidx.compose.foundation.layout.WindowInsets getDisplayCutout(androidx.compose.foundation.layout.WindowInsets.Companion);
     method @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static androidx.compose.foundation.layout.WindowInsets getIme(androidx.compose.foundation.layout.WindowInsets.Companion);
+    method @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static androidx.compose.foundation.layout.WindowInsets getImeAnimationSource(androidx.compose.foundation.layout.WindowInsets.Companion);
+    method @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static androidx.compose.foundation.layout.WindowInsets getImeAnimationTarget(androidx.compose.foundation.layout.WindowInsets.Companion);
     method @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static androidx.compose.foundation.layout.WindowInsets getMandatorySystemGestures(androidx.compose.foundation.layout.WindowInsets.Companion);
     method @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static androidx.compose.foundation.layout.WindowInsets getNavigationBars(androidx.compose.foundation.layout.WindowInsets.Companion);
     method @androidx.compose.foundation.layout.ExperimentalLayoutApi @androidx.compose.runtime.Composable @androidx.compose.runtime.NonRestartableComposable public static androidx.compose.foundation.layout.WindowInsets getNavigationBarsIgnoringVisibility(androidx.compose.foundation.layout.WindowInsets.Companion);
