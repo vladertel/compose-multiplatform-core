@@ -411,7 +411,7 @@ internal class LayoutNode(
         mLookaheadScope =
             parent?.mLookaheadScope ?: if (isLookaheadRoot) LookaheadScope(this) else null
 
-        nodes.attach(performInvalidations = false)
+        nodes.attach()
         _foldedChildren.forEach { child ->
             child.attach(owner)
         }
@@ -1379,7 +1379,7 @@ internal class LayoutNode(
             resetModifierState()
         }
         // resetModifierState detaches all nodes, so we need to re-attach them upon reuse.
-        nodes.attach(true)
+        nodes.attach()
     }
 
     override fun onDeactivate() {
