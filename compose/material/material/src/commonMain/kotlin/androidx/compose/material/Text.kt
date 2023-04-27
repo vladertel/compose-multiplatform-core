@@ -106,7 +106,7 @@ fun Text(
     softWrap: Boolean = true,
     maxLines: Int = Int.MAX_VALUE,
     minLines: Int = 1,
-    onTextLayout: (TextLayoutResult) -> Unit = {},
+    onTextLayout: ((TextLayoutResult) -> Unit)? = null,
     style: TextStyle = LocalTextStyle.current
 ) {
 
@@ -115,10 +115,11 @@ fun Text(
             LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
         }
     }
-    // NOTE(text-perf-review): It might be worthwhile writing a bespoke merge implementation that
-    // will avoid reallocating if all of the options here are the defaults
-    val mergedStyle = style.merge(
-        TextStyle(
+
+    BasicText(
+        text = text,
+        modifier = modifier,
+        style = style.merge(
             color = textColor,
             fontSize = fontSize,
             fontWeight = fontWeight,
@@ -128,12 +129,7 @@ fun Text(
             textDecoration = textDecoration,
             fontStyle = fontStyle,
             letterSpacing = letterSpacing
-        )
-    )
-    BasicText(
-        text = text,
-        modifier = modifier,
-        style = mergedStyle,
+        ),
         onTextLayout = onTextLayout,
         overflow = overflow,
         softWrap = softWrap,
@@ -266,10 +262,11 @@ fun Text(
             LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
         }
     }
-    // NOTE(text-perf-review): It might be worthwhile writing a bespoke merge implementation that
-    // will avoid reallocating if all of the options here are the defaults
-    val mergedStyle = style.merge(
-        TextStyle(
+
+    BasicText(
+        text = text,
+        modifier = modifier,
+        style = style.merge(
             color = textColor,
             fontSize = fontSize,
             fontWeight = fontWeight,
@@ -279,12 +276,7 @@ fun Text(
             textDecoration = textDecoration,
             fontStyle = fontStyle,
             letterSpacing = letterSpacing
-        )
-    )
-    BasicText(
-        text = text,
-        modifier = modifier,
-        style = mergedStyle,
+        ),
         onTextLayout = onTextLayout,
         overflow = overflow,
         softWrap = softWrap,

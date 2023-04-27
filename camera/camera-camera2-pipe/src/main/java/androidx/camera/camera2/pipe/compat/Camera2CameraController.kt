@@ -101,6 +101,7 @@ constructor(
             captureSequenceProcessorFactory,
             cameraSurfaceManager,
             timeSource,
+            config.flags,
             scope
         )
         currentSession = session

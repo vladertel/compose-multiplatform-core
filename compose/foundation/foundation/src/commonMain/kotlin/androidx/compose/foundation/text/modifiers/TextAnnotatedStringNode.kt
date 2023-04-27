@@ -18,9 +18,15 @@ package androidx.compose.foundation.text.modifiers
 
 import androidx.compose.foundation.text.DefaultMinLines
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.IntrinsicMeasurable
@@ -34,7 +40,7 @@ import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.SemanticsModifierNode
 import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.node.invalidateLayer
-import androidx.compose.ui.node.invalidateMeasurements
+import androidx.compose.ui.node.invalidateMeasurement
 import androidx.compose.ui.node.invalidateSemantics
 import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.semantics.getTextLayoutResult
@@ -42,9 +48,9 @@ import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextPainter
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
@@ -111,11 +117,11 @@ internal class TextAnnotatedStringNode(
         fontFamilyResolver: FontFamily.Resolver,
         overflow: TextOverflow
     ): Boolean {
-        var changed = false
-        if (this.style != style) {
-            this.style = style
-            changed = true
-        }
+        var changed: Boolean
+
+        changed = !this.style.hasSameLayoutAffectingAttributes(style)
+        this.style = style
+
         if (this.placeholders != placeholders) {
             this.placeholders = placeholders
             changed = true
@@ -200,9 +206,9 @@ internal class TextAnnotatedStringNode(
                 minLines = minLines,
                 placeholders = placeholders
             )
-            invalidateMeasurements()
-            invalidateDraw()
+            invalidateMeasurement()
         }
+        invalidateDraw()
     }
 
     private var _semanticsConfiguration: SemanticsConfiguration? = null
@@ -347,11 +353,53 @@ internal class TextAnnotatedStringNode(
     ) {
         return contentDrawScope.draw()
     }
-
     override fun ContentDrawScope.draw() {
         selectionController?.draw(this)
         drawIntoCanvas { canvas ->
-            TextPainter.paint(canvas, requireNotNull(layoutCache.textLayoutResult))
+            val textLayoutResult = layoutCache.textLayoutResult
+            val localParagraph = textLayoutResult.multiParagraph
+            val willClip = textLayoutResult.hasVisualOverflow && overflow != TextOverflow.Visible
+            if (willClip) {
+                val width = textLayoutResult.size.width.toFloat()
+                val height = textLayoutResult.size.height.toFloat()
+                val bounds = Rect(Offset.Zero, Size(width, height))
+                canvas.save()
+                canvas.clipRect(bounds)
+            }
+            try {
+                val textDecoration = style.textDecoration ?: TextDecoration.None
+                val shadow = style.shadow ?: Shadow.None
+                val drawStyle = style.drawStyle ?: Fill
+                val brush = style.brush
+                if (brush != null) {
+                    val alpha = style.alpha
+                    localParagraph.paint(
+                        canvas = canvas,
+                        brush = brush,
+                        alpha = alpha,
+                        shadow = shadow,
+                        drawStyle = drawStyle,
+                        decoration = textDecoration
+                    )
+                } else {
+                    val color = if (style.color.isSpecified) {
+                        style.color
+                    } else {
+                        Color.Black
+                    }
+                    localParagraph.paint(
+                        canvas = canvas,
+                        color = color,
+                        shadow = shadow,
+                        drawStyle = drawStyle,
+                        decoration = textDecoration
+                    )
+                }
+            } finally {
+                if (willClip) {
+                    canvas.restore()
+                }
+            }
         }
         if (!placeholders.isNullOrEmpty()) {
             drawContent()

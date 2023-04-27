@@ -16,6 +16,7 @@
 package androidx.appactions.interaction.capabilities.core.impl.task
 
 import android.util.SizeF
+import androidx.appactions.builtintypes.experimental.types.ListItem
 import androidx.appactions.interaction.capabilities.core.AppEntityListener
 import androidx.appactions.interaction.capabilities.core.Capability
 import androidx.appactions.interaction.capabilities.core.EntitySearchResult
@@ -25,7 +26,6 @@ import androidx.appactions.interaction.capabilities.core.HostProperties
 import androidx.appactions.interaction.capabilities.core.SessionContext
 import androidx.appactions.interaction.capabilities.core.ValidationResult
 import androidx.appactions.interaction.capabilities.core.ValueListener
-import androidx.appactions.interaction.capabilities.core.impl.CapabilitySession
 import androidx.appactions.interaction.capabilities.core.impl.ErrorStatusInternal
 import androidx.appactions.interaction.capabilities.core.impl.UiHandleRegistry
 import androidx.appactions.interaction.capabilities.core.impl.concurrent.Futures
@@ -47,8 +47,7 @@ import androidx.appactions.interaction.capabilities.core.testing.spec.Output
 import androidx.appactions.interaction.capabilities.core.testing.spec.TestEnum
 import androidx.appactions.interaction.capabilities.core.testing.spec.Properties
 import androidx.appactions.interaction.capabilities.core.values.EntityValue
-import androidx.appactions.interaction.capabilities.core.values.ListItem
-import androidx.appactions.interaction.capabilities.core.values.SearchAction
+import androidx.appactions.interaction.capabilities.core.SearchAction
 import androidx.appactions.interaction.capabilities.testing.internal.ArgumentUtils.buildRequestArgs
 import androidx.appactions.interaction.capabilities.testing.internal.ArgumentUtils.buildSearchActionParamValue
 import androidx.appactions.interaction.capabilities.testing.internal.FakeCallbackInternal
@@ -60,8 +59,8 @@ import androidx.appactions.interaction.proto.AppActionsContext.IntentParameter
 import androidx.appactions.interaction.proto.CurrentValue
 import androidx.appactions.interaction.proto.DisambiguationData
 import androidx.appactions.interaction.proto.Entity
+import androidx.appactions.interaction.proto.FulfillmentRequest.Fulfillment.Type.CANCEL
 import androidx.appactions.interaction.proto.FulfillmentRequest.Fulfillment.Type.SYNC
-import androidx.appactions.interaction.proto.FulfillmentRequest.Fulfillment.Type.TERMINATE
 import androidx.appactions.interaction.proto.FulfillmentRequest.Fulfillment.Type.UNKNOWN_TYPE
 import androidx.appactions.interaction.proto.FulfillmentResponse.StructuredOutput
 import androidx.appactions.interaction.proto.FulfillmentResponse.StructuredOutput.OutputValue
@@ -104,7 +103,7 @@ class TaskCapabilityImplTest {
     private val fakeSessionId = "fakeSessionId"
 
     @Test
-    fun getAppAction_smokeTest() {
+    fun appAction_smokeTest() {
         assertThat(capability.appAction)
             .isEqualTo(
                 AppAction.newBuilder()
@@ -118,6 +117,68 @@ class TaskCapabilityImplTest {
                     )
                     .build(),
             )
+    }
+
+    @Test
+    fun appAction_computedProperty() {
+        val mutableEntityList = mutableListOf<
+            androidx.appactions.interaction.capabilities.core.properties.Entity
+        >()
+        val capability = createCapability<EmptyTaskUpdater>(
+            Properties.newBuilder()
+                .setRequiredEntityField(
+                    Property.Builder<
+                        androidx.appactions.interaction.capabilities.core.properties.Entity
+                    >().setPossibleValueSupplier(
+                        mutableEntityList::toList
+                    ).build()
+                )
+                .build(),
+            sessionFactory =
+            {
+                object : ExecutionSession {
+                    override fun onExecuteAsync(arguments: Arguments) =
+                        Futures.immediateFuture(ExecutionResult.Builder<Output>().build())
+                }
+            },
+            sessionBridge = { TaskHandler.Builder<Confirmation>().build() },
+            sessionUpdaterSupplier = ::EmptyTaskUpdater,
+        )
+        mutableEntityList.add(
+            androidx.appactions.interaction.capabilities.core.properties.Entity.Builder()
+                .setName("entity1").build()
+        )
+
+        assertThat(capability.appAction).isEqualTo(
+            AppAction.newBuilder()
+                .setIdentifier("id")
+                .setName("actions.intent.TEST")
+                .addParams(
+                    IntentParameter.newBuilder()
+                        .setName("required")
+                        .addPossibleEntities(Entity.newBuilder().setName("entity1"))
+                )
+                .setTaskInfo(TaskInfo.newBuilder().setSupportsPartialFulfillment(true))
+                .build()
+        )
+
+        mutableEntityList.add(
+            androidx.appactions.interaction.capabilities.core.properties.Entity.Builder()
+                .setName("entity2").build()
+        )
+        assertThat(capability.appAction).isEqualTo(
+            AppAction.newBuilder()
+                .setIdentifier("id")
+                .setName("actions.intent.TEST")
+                .addParams(
+                    IntentParameter.newBuilder()
+                        .setName("required")
+                        .addPossibleEntities(Entity.newBuilder().setName("entity1"))
+                        .addPossibleEntities(Entity.newBuilder().setName("entity2"))
+                )
+                .setTaskInfo(TaskInfo.newBuilder().setSupportsPartialFulfillment(true))
+                .build()
+        )
     }
 
     @Test
@@ -147,6 +208,7 @@ class TaskCapabilityImplTest {
                         override fun onCreate(sessionContext: SessionContext) {
                             onCreateInvocationCount.incrementAndGet()
                         }
+
                         override fun onExecuteAsync(arguments: Arguments) =
                             Futures.immediateFuture(
                                 ExecutionResult.Builder<Output>().build(),
@@ -295,7 +357,7 @@ class TaskCapabilityImplTest {
     }
 
     @Test
-    fun slotFilling_getStatus_smokeTest() {
+    fun slotFilling_isActive_smokeTest() {
         val property: CapabilityTwoEntityValues.Properties =
             CapabilityTwoEntityValues.Properties.newBuilder()
                 .setSlotA(
@@ -347,7 +409,7 @@ class TaskCapabilityImplTest {
             )
 
         val session = capability.createSession(fakeSessionId, hostProperties)
-        assertThat(session.status).isEqualTo(CapabilitySession.Status.UNINITIATED)
+        assertThat(session.isActive).isTrue()
 
         // turn 1
         val callback = FakeCallbackInternal()
@@ -360,7 +422,7 @@ class TaskCapabilityImplTest {
             callback,
         )
         assertThat(callback.receiveResponse().fulfillmentResponse).isNotNull()
-        assertThat(session.status).isEqualTo(CapabilitySession.Status.IN_PROGRESS)
+        assertThat(session.isActive).isTrue()
 
         // turn 2
         val callback2 = FakeCallbackInternal()
@@ -375,16 +437,16 @@ class TaskCapabilityImplTest {
             callback2,
         )
         assertThat(callback2.receiveResponse().fulfillmentResponse).isNotNull()
-        assertThat(session.status).isEqualTo(CapabilitySession.Status.COMPLETED)
+        assertThat(session.isActive).isFalse()
 
         // turn 3
         val callback3 = FakeCallbackInternal()
         session.execute(
-            buildRequestArgs(TERMINATE),
+            buildRequestArgs(CANCEL),
             callback3,
         )
         assertThat(callback3.receiveResponse().fulfillmentResponse).isNotNull()
-        assertThat(session.status).isEqualTo(CapabilitySession.Status.DESTROYED)
+        assertThat(session.isActive).isFalse()
     }
 
     @Test
@@ -459,7 +521,7 @@ class TaskCapabilityImplTest {
         )
         assertThat(callback.receiveResponse().fulfillmentResponse).isNotNull()
         assertThat(onExecuteInvocationCount.get()).isEqualTo(0)
-        assertThat(getCurrentValues("slotA", session.state))
+        assertThat(getCurrentValues("slotA", session.state!!))
             .containsExactly(
                 CurrentValue.newBuilder()
                     .setValue(
@@ -468,7 +530,7 @@ class TaskCapabilityImplTest {
                     .setStatus(CurrentValue.Status.ACCEPTED)
                     .build(),
             )
-        assertThat(getCurrentValues("slotB", session.state))
+        assertThat(getCurrentValues("slotB", session.state!!))
             .containsExactly(
                 CurrentValue.newBuilder()
                     .setValue(
@@ -518,7 +580,7 @@ class TaskCapabilityImplTest {
             callback,
         )
         assertThat(callback.receiveResponse()).isNotNull()
-        assertThat(getCurrentValues("required", session.state))
+        assertThat(getCurrentValues("required", session.state!!))
             .containsExactly(
                 CurrentValue.newBuilder()
                     .setValue(
@@ -527,7 +589,7 @@ class TaskCapabilityImplTest {
                     .setStatus(CurrentValue.Status.ACCEPTED)
                     .build(),
             )
-        assertThat(getCurrentValues("optionalEnum", session.state)).isEmpty()
+        assertThat(getCurrentValues("optionalEnum", session.state!!)).isEmpty()
 
         // TURN 2.
         val callback2 = FakeCallbackInternal()
@@ -536,8 +598,8 @@ class TaskCapabilityImplTest {
             callback2,
         )
         assertThat(callback2.receiveResponse().fulfillmentResponse).isNotNull()
-        assertThat(getCurrentValues("required", session.state)).isEmpty()
-        assertThat(getCurrentValues("optionalEnum", session.state))
+        assertThat(getCurrentValues("required", session.state!!)).isEmpty()
+        assertThat(getCurrentValues("optionalEnum", session.state!!))
             .containsExactly(
                 CurrentValue.newBuilder()
                     .setValue(ParamValue.newBuilder().setIdentifier("VALUE_2"))
@@ -703,8 +765,9 @@ class TaskCapabilityImplTest {
                 .setListItem(Property.Builder<ListItem>().setRequired(true).build())
                 .setAnyString(Property.Builder<StringValue>().setRequired(true).build())
                 .build()
-        val item1: ListItem = ListItem.newBuilder().setName("red apple").setId("item1").build()
-        val item2: ListItem = ListItem.newBuilder().setName("green apple").setId("item2").build()
+        val item1: ListItem = ListItem.Builder().setName("red apple").setIdentifier("item1").build()
+        val item2: ListItem =
+            ListItem.Builder().setName("green apple").setIdentifier("item2").build()
         val onReceivedDeferred = CompletableDeferred<ListItem>()
         val onExecuteListItemDeferred = CompletableDeferred<ListItem>()
         val onExecuteStringDeferred = CompletableDeferred<String>()
@@ -1000,7 +1063,7 @@ class TaskCapabilityImplTest {
             }
 
         private fun <T> getTrivialSearchActionConverter() = SearchActionConverter {
-            SearchAction.newBuilder<T>().build()
+            SearchAction.Builder<T>().build()
         }
 
         private const val CAPABILITY_NAME = "actions.intent.TEST"

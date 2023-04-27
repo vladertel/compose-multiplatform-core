@@ -72,7 +72,6 @@ internal class AppInteractionServiceGrpcImpl(
         private const val TAG = "ActionsServiceGrpcImpl"
         private const val ERROR_NO_COLLECTION_SUPPORT = "Session doesn't support collection view"
         private const val ERROR_NO_UI = "No UI set"
-        private const val ERROR_MULTIPLE_UI_TYPES = "Multiple UI types used in current session"
         const val ERROR_NO_SESSION = "Session not available"
         const val ERROR_NO_FULFILLMENT_REQUEST = "Fulfillment request missing"
         const val ERROR_NO_ACTION_CAPABILITY = "Capability was not found"
@@ -174,16 +173,20 @@ internal class AppInteractionServiceGrpcImpl(
 
         override fun onError(t: Throwable) {
             respondWithError(t, startSessionResponseObserver)
-            currentSessionId?.let(::destroySession)
-            currentSessionId = null
+            currentSessionId?.let {
+                destroyAndRemoveSession(it)
+                UiSessions.removeUiCache(it)
+            }
         }
 
         override fun onCompleted() {
             synchronized(startSessionResponseObserver) {
                 startSessionResponseObserver.onCompleted()
             }
-            currentSessionId?.let(::destroySession)
-            currentSessionId = null
+            currentSessionId?.let {
+                destroyAndRemoveSession(it)
+                UiSessions.removeUiCache(it)
+            }
         }
     }
 
@@ -225,9 +228,7 @@ internal class AppInteractionServiceGrpcImpl(
                 responseObserver,
             )
         }
-        if (currentSession.status === CapabilitySession.Status.COMPLETED ||
-            currentSession.status === CapabilitySession.Status.DESTROYED
-        ) {
+        if (!currentSession.isActive) {
             return respondWithError(
                 StatusRuntimeException(
                     Status.FAILED_PRECONDITION.withDescription(ERROR_SESSION_ENDED),
@@ -251,6 +252,7 @@ internal class AppInteractionServiceGrpcImpl(
                                     .addAllViewIds(uiCache.getCachedChangedViewIds()),
                             )
                         }
+                        // TODO(b/278583168) fix read flag behavior
                         uiCache.resetUnreadUiResponse()
                     }
                     respondAndComplete(responseBuilder.build(), responseObserver)
@@ -282,8 +284,7 @@ internal class AppInteractionServiceGrpcImpl(
         responseObserver: StreamObserver<AppInteractionServiceProto.UiResponse>,
     ) {
         val sessionId = req.getSessionIdentifier()!!
-        val currentSession = SessionManager.getSession(sessionId)
-        if (currentSession == null) {
+        if (SessionManager.getSession(sessionId) == null) {
             return respondWithError(
                 StatusRuntimeException(
                     Status.FAILED_PRECONDITION.withDescription(ERROR_NO_SESSION),
@@ -291,63 +292,37 @@ internal class AppInteractionServiceGrpcImpl(
                 responseObserver,
             )
         }
-        if (currentSession.status === CapabilitySession.Status.COMPLETED) {
-            destroySession(req.getSessionIdentifier())
-            return respondWithError(
-                StatusRuntimeException(
-                    Status.FAILED_PRECONDITION.withDescription(ERROR_SESSION_ENDED),
-                ),
-                responseObserver,
-            )
-        }
         val uiCache = UiSessions.getUiCacheOrNull(sessionId)
         if (uiCache == null) {
-            destroySession(req.getSessionIdentifier())
             return respondWithError(
                 StatusRuntimeException(Status.INTERNAL.withDescription(ERROR_NO_UI)),
                 responseObserver,
             )
         }
-        val tileLayout = uiCache.getCachedTileLayout()
-        val remoteViewsSize = uiCache.getCachedRemoteViewsSize()
-        val remoteViews = uiCache.getCachedRemoteViews()
-        if (tileLayout != null && remoteViews != null) {
-            // TODO(b/272379825): Decide if this is really an invalid state.
-            // both types of UI are present, this is a misused of API. We will treat it as error.
-            destroySession(req.getSessionIdentifier())
+        val tileLayout = uiCache.cachedTileLayout
+        val remoteViews = uiCache.cachedRemoteViews
+        val remoteViewsSize = uiCache.cachedRemoteViewsSize
+
+        if (tileLayout == null && (remoteViews == null || remoteViewsSize == null)) {
+            UiSessions.removeUiCache(sessionId)
             return respondWithError(
-                StatusRuntimeException(
-                    Status.INTERNAL.withDescription(ERROR_MULTIPLE_UI_TYPES),
-                ),
-                responseObserver,
+                StatusRuntimeException(Status.INTERNAL.withDescription(ERROR_NO_UI)),
+                responseObserver
             )
         }
-        if (tileLayout != null) {
-            return respondAndComplete(
-                AppInteractionServiceProto.UiResponse.newBuilder()
-                    .setTileLayout(tileLayout.toProto())
-                    .build(),
-                responseObserver,
-            )
-        }
+        val uiResponseBuilder = AppInteractionServiceProto.UiResponse.newBuilder()
+        tileLayout?.let { uiResponseBuilder.tileLayout = it.toProto() }
         if (remoteViews != null && remoteViewsSize != null) {
             RemoteViewsOverMetadataInterceptor.setRemoteViews(remoteViews)
-            return respondAndComplete(
-                AppInteractionServiceProto.UiResponse.newBuilder()
-                    .setRemoteViewsInfo(
-                        RemoteViewsInfo.newBuilder()
-                            .setWidthDp(remoteViewsSize.getWidth())
-                            .setHeightDp(remoteViewsSize.getHeight()),
-                    )
-                    .build(),
-                responseObserver,
-            )
+            uiResponseBuilder
+                .setRemoteViewsInfo(
+                    RemoteViewsInfo.newBuilder()
+                        .setWidthDp(remoteViewsSize.width)
+                        .setHeightDp(remoteViewsSize.height)
+                )
+                .build()
         }
-        destroySession(req.getSessionIdentifier())
-        respondWithError(
-            StatusRuntimeException(Status.INTERNAL.withDescription(ERROR_NO_UI)),
-            responseObserver,
-        )
+        respondAndComplete(uiResponseBuilder.build(), responseObserver)
     }
 
     override fun requestCollection(
@@ -355,8 +330,7 @@ internal class AppInteractionServiceGrpcImpl(
         responseObserver: StreamObserver<CollectionResponse>,
     ) {
         val sessionId = req.getSessionIdentifier()!!
-        val currentSession = SessionManager.getSession(sessionId)
-        if (currentSession == null) {
+        if (SessionManager.getSession(sessionId) == null) {
             return respondWithError(
                 StatusRuntimeException(
                     Status.FAILED_PRECONDITION.withDescription(ERROR_NO_SESSION),
@@ -364,18 +338,8 @@ internal class AppInteractionServiceGrpcImpl(
                 responseObserver,
             )
         }
-        if (currentSession.status === CapabilitySession.Status.COMPLETED) {
-            destroySession(req.getSessionIdentifier())
-            return respondWithError(
-                StatusRuntimeException(
-                    Status.FAILED_PRECONDITION.withDescription(ERROR_SESSION_ENDED),
-                ),
-                responseObserver,
-            )
-        }
         val uiCache = UiSessions.getUiCacheOrNull(sessionId)
         if (uiCache == null) {
-            destroySession(req.getSessionIdentifier())
             return respondWithError(
                 StatusRuntimeException(Status.INTERNAL.withDescription(ERROR_NO_UI)),
                 responseObserver,
@@ -383,7 +347,6 @@ internal class AppInteractionServiceGrpcImpl(
         }
         val factory = uiCache.onGetViewFactoryInternal(req.getViewId())
         if (factory == null) {
-            destroySession(req.getSessionIdentifier())
             return respondWithError(
                 StatusRuntimeException(
                     Status.UNIMPLEMENTED.withDescription(ERROR_NO_COLLECTION_SUPPORT),
@@ -566,7 +529,11 @@ internal class AppInteractionServiceGrpcImpl(
         return builder.build()
     }
 
-    private fun destroySession(sessionId: String) {
+    /**
+     * Calls destroy on the session if it's found in SessionManager.
+     * Also removes the session from map.
+     */
+    internal fun destroyAndRemoveSession(sessionId: String) {
         SessionManager.getSession(sessionId)?.destroy()
         SessionManager.removeSession(sessionId)
     }

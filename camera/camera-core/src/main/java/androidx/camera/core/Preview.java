@@ -551,9 +551,8 @@ public final class Preview extends UseCase {
      * CameraSelector, UseCase...)} API, or null if the use case is not bound yet.
      */
     @Nullable
-    @Override
     public ResolutionInfo getResolutionInfo() {
-        return super.getResolutionInfo();
+        return getResolutionInfoInternal();
     }
 
     /**
@@ -939,6 +938,7 @@ public final class Preview extends UseCase {
          */
         @NonNull
         @Override
+        @Deprecated
         public Builder setTargetAspectRatio(@AspectRatio.Ratio int aspectRatio) {
             if (aspectRatio == AspectRatio.RATIO_DEFAULT) {
                 aspectRatio = Defaults.DEFAULT_ASPECT_RATIO;
@@ -1039,6 +1039,7 @@ public final class Preview extends UseCase {
          */
         @NonNull
         @Override
+        @Deprecated
         public Builder setTargetResolution(@NonNull Size resolution) {
             getMutableConfig()
                     .insertOption(ImageOutputConfig.OPTION_TARGET_RESOLUTION, resolution);

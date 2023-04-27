@@ -23,6 +23,7 @@ import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.snapping.MinFlingVelocityDp
 import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -69,6 +70,7 @@ open class BasePagerTest(private val config: ParamConfig) :
     lateinit var focusManager: FocusManager
     lateinit var firstItemFocusRequester: FocusRequester
     var composeView: View? = null
+    lateinit var pagerState: PagerState
 
     fun TouchInjectionScope.swipeWithVelocityAcrossMainAxis(velocity: Float, delta: Float? = null) {
         val end = if (delta == null) {
@@ -107,9 +109,10 @@ open class BasePagerTest(private val config: ParamConfig) :
         }
 
     internal fun createPager(
-        state: PagerState,
-        modifier: Modifier = Modifier,
+        initialPage: Int = 0,
+        initialPageOffsetFraction: Float = 0f,
         pageCount: () -> Int = { DefaultPageCount },
+        modifier: Modifier = Modifier,
         offscreenPageLimit: Int = config.beyondBoundsPageCount,
         pageSize: () -> PageSize = { PageSize.Fill },
         userScrollEnabled: Boolean = true,
@@ -119,17 +122,24 @@ open class BasePagerTest(private val config: ParamConfig) :
         contentPadding: PaddingValues = config.mainAxisContentPadding,
         pageSpacing: Dp = config.pageSpacing,
         reverseLayout: Boolean = config.reverseLayout,
+        snapVelocityThreshold: Dp = MinFlingVelocityDp,
+        snapPositionalThreshold: Float = 0.5f,
         key: ((index: Int) -> Any)? = null,
-        pageContent: @Composable (page: Int) -> Unit = { Page(index = it) }
+        pageContent: @Composable PagerScope.(page: Int) -> Unit = { Page(index = it) }
     ) {
 
         rule.setContent {
+            val state = rememberPagerState(initialPage, initialPageOffsetFraction, pageCount).also {
+                pagerState = it
+            }
             composeView = LocalView.current
             focusManager = LocalFocusManager.current
             val flingBehavior =
                 PagerDefaults.flingBehavior(
                     state = state,
-                    pagerSnapDistance = snappingPage
+                    pagerSnapDistance = snappingPage,
+                    snapVelocityThreshold = snapVelocityThreshold,
+                    snapPositionalThreshold = snapPositionalThreshold
                 )
             CompositionLocalProvider(
                 LocalLayoutDirection provides config.layoutDirection,
@@ -142,7 +152,6 @@ open class BasePagerTest(private val config: ParamConfig) :
                         .nestedScroll(nestedScrollConnection)
                 ) {
                     HorizontalOrVerticalPager(
-                        pageCount = pageCount(),
                         state = state,
                         beyondBoundsPageCount = offscreenPageLimit,
                         modifier = modifier
@@ -259,8 +268,7 @@ open class BasePagerTest(private val config: ParamConfig) :
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     internal fun HorizontalOrVerticalPager(
-        pageCount: Int,
-        state: PagerState = rememberPagerState(),
+        state: PagerState = rememberPagerState(pageCount = { DefaultPageCount }),
         modifier: Modifier = Modifier,
         userScrollEnabled: Boolean = true,
         reverseLayout: Boolean = false,
@@ -270,11 +278,10 @@ open class BasePagerTest(private val config: ParamConfig) :
         flingBehavior: SnapFlingBehavior = PagerDefaults.flingBehavior(state = state),
         pageSpacing: Dp = 0.dp,
         key: ((index: Int) -> Any)? = null,
-        pageContent: @Composable (pager: Int) -> Unit
+        pageContent: @Composable PagerScope.(pager: Int) -> Unit
     ) {
         if (vertical) {
             VerticalPager(
-                pageCount = pageCount,
                 state = state,
                 modifier = modifier,
                 userScrollEnabled = userScrollEnabled,
@@ -289,7 +296,6 @@ open class BasePagerTest(private val config: ParamConfig) :
             )
         } else {
             HorizontalPager(
-                pageCount = pageCount,
                 state = state,
                 modifier = modifier,
                 userScrollEnabled = userScrollEnabled,
@@ -370,7 +376,3 @@ internal fun testContentPaddings(orientation: Orientation) = listOf(
     PaddingValues(start = 16.dp),
     PaddingValues(end = 16.dp)
 )
-
-open class SingleOrientationPagerTest(
-    orientation: Orientation
-) : BasePagerTest(ParamConfig(orientation))

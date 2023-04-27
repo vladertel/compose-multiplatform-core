@@ -32,12 +32,14 @@ dependencies {
 
     if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
         /*
-         * When updating dependencies, make sure to make the an an analogous update in the
+         * When updating dependencies, make sure to make the analogous update in the
          * corresponding block below
          */
         implementation(libs.kotlinStdlibCommon)
 
         api("androidx.annotation:annotation:1.1.0")
+
+        api(project(":compose:foundation:foundation"))
     }
 }
 
@@ -49,12 +51,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
     kotlin {
         /*
-         * When updating dependencies, make sure to make the an an analogous update in the
+         * When updating dependencies, make sure to make the analogous update in the
          * corresponding block above
          */
         sourceSets {
             commonMain.dependencies {
                 implementation(libs.kotlinStdlibCommon)
+                api(project(":compose:foundation:foundation"))
             }
 
             androidMain.dependencies {
@@ -76,7 +79,7 @@ androidx {
     name = "Material Adaptive"
     mavenVersion = LibraryVersions.COMPOSE_MATERIAL3_ADAPTIVE
     type = LibraryType.PUBLISHED_LIBRARY
-    publish = Publish.SNAPSHOT_ONLY
+    publish = Publish.NONE
     inceptionYear = "2023"
     description = "Compose Material Design Adaptive Library"
 }

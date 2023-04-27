@@ -96,7 +96,7 @@ internal data class TextFieldDecoratorModifier(
         singleLine = singleLine,
     )
 
-    override fun update(node: TextFieldDecoratorModifierNode): TextFieldDecoratorModifierNode {
+    override fun update(node: TextFieldDecoratorModifierNode) {
         node.updateNode(
             textFieldState = textFieldState,
             textLayoutState = textLayoutState,
@@ -108,7 +108,6 @@ internal data class TextFieldDecoratorModifier(
             keyboardActions = keyboardActions,
             singleLine = singleLine,
         )
-        return node
     }
 
     override fun InspectorInfo.inspectableProperties() {
@@ -137,7 +136,7 @@ internal class TextFieldDecoratorModifierNode(
     KeyInputModifierNode,
     CompositionLocalConsumerModifierNode {
 
-    private val pointerInputNode = SuspendingPointerInputModifierNode {
+    private val pointerInputNode = delegate(SuspendingPointerInputModifierNode {
         detectTapAndPress(onTap = {
             if (!isFocused) {
                 requestFocus()
@@ -145,10 +144,7 @@ internal class TextFieldDecoratorModifierNode(
                 textInputSession?.showSoftwareKeyboard()
             }
         })
-    }
-        // TODO: remove `.node` after aosp/2462416 lands and merge everything into one delegated
-        //  block
-        .also { delegated { it.node } }
+    })
 
     var keyboardOptions: KeyboardOptions = keyboardOptions.withDefaultsFrom(filter?.keyboardOptions)
         private set

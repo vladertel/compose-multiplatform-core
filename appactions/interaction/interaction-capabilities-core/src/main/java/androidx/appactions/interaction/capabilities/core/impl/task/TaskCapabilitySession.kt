@@ -18,9 +18,9 @@ package androidx.appactions.interaction.capabilities.core.impl.task
 
 import androidx.annotation.GuardedBy
 import androidx.appactions.interaction.capabilities.core.BaseExecutionSession
-import androidx.appactions.interaction.capabilities.core.impl.CapabilitySession
 import androidx.appactions.interaction.capabilities.core.impl.ArgumentsWrapper
 import androidx.appactions.interaction.capabilities.core.impl.CallbackInternal
+import androidx.appactions.interaction.capabilities.core.impl.CapabilitySession
 import androidx.appactions.interaction.capabilities.core.impl.ErrorStatusInternal
 import androidx.appactions.interaction.capabilities.core.impl.TouchEventCallback
 import androidx.appactions.interaction.capabilities.core.impl.spec.ActionSpec
@@ -30,6 +30,7 @@ import androidx.appactions.interaction.proto.ParamValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 internal class TaskCapabilitySession<
@@ -48,12 +49,17 @@ internal class TaskCapabilitySession<
         get() = sessionOrchestrator.appDialogState
 
     // single-turn capability does not have status
-    override val status: CapabilitySession.Status
-        get() = sessionOrchestrator.status
+    override val isActive: Boolean
+        get() = when (sessionOrchestrator.status) {
+            TaskOrchestrator.Status.COMPLETED,
+            TaskOrchestrator.Status.DESTROYED -> false
+            else -> true
+        }
 
     override fun destroy() {
         // TODO(b/270751989): cancel current processing request immediately
         this.sessionOrchestrator.terminate()
+        scope.cancel()
     }
 
     override val uiHandle: Any = externalSession
@@ -67,16 +73,17 @@ internal class TaskCapabilitySession<
             ArgumentsT,
             OutputT,
             ConfirmationT,
-        > =
+            > =
         TaskOrchestrator(
             sessionId,
             actionSpec,
             appAction,
             taskHandler,
             externalSession,
+            scope,
         )
-
-    @GuardedBy("requestLock") private var pendingAssistantRequest: AssistantUpdateRequest? = null
+    @GuardedBy("requestLock")
+    private var pendingAssistantRequest: AssistantUpdateRequest? = null
     @GuardedBy("requestLock") private var pendingTouchEventRequest: TouchEventUpdateRequest? = null
 
     override fun execute(argumentsWrapper: ArgumentsWrapper, callback: CallbackInternal) {

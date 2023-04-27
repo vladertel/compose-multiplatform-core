@@ -286,8 +286,6 @@ class AndroidAccessibilityTest {
         val switchRoleNode = toggleableNode.replacedChildren.last()
         val switchRoleNodeInfo = provider.createAccessibilityNodeInfo(switchRoleNode.id)!!
         assertEquals("android.view.View", switchRoleNodeInfo.className)
-// TODO(aelias)
-        // assertEquals("Switch", switchRoleNodeInfo.roleDescription)
 
         val stateDescription = when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
@@ -551,13 +549,12 @@ class AndroidAccessibilityTest {
             )
         )
         if (Build.VERSION.SDK_INT >= 26) {
-            assertEquals(
-                listOf(
+            assertThat(accessibilityNodeInfo.availableExtraData)
+                .containsExactly(
+                    "androidx.compose.ui.semantics.id",
                     AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY,
                     "androidx.compose.ui.semantics.testTag"
-                ),
-                accessibilityNodeInfo.availableExtraData
-            )
+                )
         }
     }
 
@@ -1865,6 +1862,26 @@ class AndroidAccessibilityTest {
         )
         val testTagData = info.extras.getCharSequence(testTagKey)
         assertEquals(tag, testTagData.toString())
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Suppress("DEPRECATION")
+    fun getSemanticsNodeIdFromExtraData() {
+        container.setContent { BasicText("texy") }
+        val textNode = rule.onNodeWithText("texy").fetchSemanticsNode()
+        @Suppress("DEPRECATION") val info = AccessibilityNodeInfo.obtain()
+        val argument = Bundle()
+
+        val idKey = "androidx.compose.ui.semantics.id"
+        provider.addExtraDataToAccessibilityNodeInfo(
+            textNode.id,
+            info,
+            idKey,
+            argument
+        )
+
+        assertEquals(textNode.id, info.extras.getInt(idKey))
     }
 
     @Test
@@ -3752,8 +3769,8 @@ class AndroidAccessibilityTest {
         assertNotNull("Button has no children", lastChild)
         assertTrue("Last child should be fake Button role node", lastChild!!.isFake)
         assertEquals(
+            Role.Button,
             lastChild.unmergedConfig.getOrNull(SemanticsProperties.Role),
-            Role.Button
         )
     }
 

@@ -21,6 +21,7 @@ import static android.os.Looper.getMainLooper;
 import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 import static androidx.wear.protolayout.proto.ModifiersProto.SlideParentSnapOption.SLIDE_PARENT_SNAP_TO_INSIDE;
 import static androidx.wear.protolayout.proto.ModifiersProto.SlideParentSnapOption.SLIDE_PARENT_SNAP_TO_OUTSIDE;
+import static androidx.wear.protolayout.renderer.R.id.clickable_id_tag;
 import static androidx.wear.protolayout.renderer.helper.TestDsl.arc;
 import static androidx.wear.protolayout.renderer.helper.TestDsl.arcText;
 import static androidx.wear.protolayout.renderer.helper.TestDsl.box;
@@ -55,6 +56,7 @@ import android.os.Build.VERSION_CODES;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.text.TextUtils.TruncateAt;
+import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.MeasureSpec;
@@ -65,6 +67,7 @@ import android.widget.FrameLayout;
 import android.widget.FrameLayout.LayoutParams;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Space;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -114,6 +117,7 @@ import androidx.wear.protolayout.proto.DimensionProto.DegreesProp;
 import androidx.wear.protolayout.proto.DimensionProto.DpProp;
 import androidx.wear.protolayout.proto.DimensionProto.ExpandedAngularDimensionProp;
 import androidx.wear.protolayout.proto.DimensionProto.ExpandedDimensionProp;
+import androidx.wear.protolayout.proto.DimensionProto.ExtensionDimension;
 import androidx.wear.protolayout.proto.DimensionProto.ImageDimension;
 import androidx.wear.protolayout.proto.DimensionProto.ProportionalDimensionProp;
 import androidx.wear.protolayout.proto.DimensionProto.SpacerDimension;
@@ -127,6 +131,7 @@ import androidx.wear.protolayout.proto.LayoutElementProto.ArcText;
 import androidx.wear.protolayout.proto.LayoutElementProto.Box;
 import androidx.wear.protolayout.proto.LayoutElementProto.ColorFilter;
 import androidx.wear.protolayout.proto.LayoutElementProto.Column;
+import androidx.wear.protolayout.proto.LayoutElementProto.ExtensionLayoutElement;
 import androidx.wear.protolayout.proto.LayoutElementProto.FontStyle;
 import androidx.wear.protolayout.proto.LayoutElementProto.Image;
 import androidx.wear.protolayout.proto.LayoutElementProto.Layout;
@@ -199,6 +204,7 @@ import org.robolectric.shadows.ShadowPackageManager;
 import org.robolectric.shadows.ShadowSystemClock;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -215,8 +221,7 @@ public class ProtoLayoutInflaterTest {
     private static final int SCREEN_WIDTH = 400;
     private static final int SCREEN_HEIGHT = 400;
 
-    @Rule
-    public final Expect expect = Expect.create();
+    @Rule public final Expect expect = Expect.create();
 
     private final StateStore mStateStore = new StateStore(ImmutableMap.of());
     private ProtoLayoutDynamicDataPipeline mDataPipeline;
@@ -279,8 +284,8 @@ public class ProtoLayoutInflaterTest {
     public void inflate_textView_withObsoleteSemanticsContentDescription() {
         String textContents = "Hello World";
         String textDescription = "Hello World Text Element";
-        Semantics.Builder semantics =
-                Semantics.newBuilder().setObsoleteContentDescription(textDescription);
+        Semantics semantics =
+                Semantics.newBuilder().setObsoleteContentDescription(textDescription).build();
         LayoutElement root =
                 LayoutElement.newBuilder()
                         .setText(
@@ -318,10 +323,11 @@ public class ProtoLayoutInflaterTest {
         String staticDescription = "StaticDescription";
 
         StringProp descriptionProp = string(staticDescription).build();
-        Semantics.Builder semantics =
+        Semantics semantics =
                 Semantics.newBuilder()
                         .setObsoleteContentDescription("ObsoleteContentDescription")
-                        .setContentDescription(descriptionProp);
+                        .setContentDescription(descriptionProp)
+                        .build();
         LayoutElement root =
                 LayoutElement.newBuilder()
                         .setText(
@@ -381,10 +387,11 @@ public class ProtoLayoutInflaterTest {
                                         .build())
                         .build();
 
-        Semantics.Builder semantics =
+        Semantics semantics =
                 Semantics.newBuilder()
                         .setStateDescription(stateDescriptionProp)
-                        .setContentDescription(contentDescriptionProp);
+                        .setContentDescription(contentDescriptionProp)
+                        .build();
         LayoutElement root =
                 LayoutElement.newBuilder()
                         .setText(
@@ -453,8 +460,10 @@ public class ProtoLayoutInflaterTest {
 
     @Test
     public void inflate_box_withIllegalSize() {
-        LayoutElement.Builder textElement =
-                LayoutElement.newBuilder().setText(Text.newBuilder().setText(string("foo")));
+        LayoutElement textElement =
+                LayoutElement.newBuilder()
+                        .setText(Text.newBuilder().setText(string("foo")))
+                        .build();
         LayoutElement root =
                 LayoutElement.newBuilder()
                         .setBox(
@@ -466,10 +475,10 @@ public class ProtoLayoutInflaterTest {
                                                         .setBox(
                                                                 // Inner box's width set to
                                                                 // "expand". Having a single
-                                                                // "expand" element in a "wrap"
-                                                                // element is an undefined state, so
-                                                                // the outer box should not be
-                                                                // displayed.
+                                                                // "expand"
+                                                                // element in a "wrap" element is an
+                                                                // undefined state, so the outer box
+                                                                // should not be displayed.
                                                                 Box.newBuilder()
                                                                         .setWidth(expand())
                                                                         .addContents(textElement))))
@@ -484,10 +493,11 @@ public class ProtoLayoutInflaterTest {
     @Test
     public void inflate_box_withSemanticsModifier() {
         String textDescription = "this is a button";
-        Semantics.Builder semantics =
+        Semantics semantics =
                 Semantics.newBuilder()
                         .setContentDescription(string(textDescription))
-                        .setRole(SemanticsRole.SEMANTICS_ROLE_BUTTON);
+                        .setRole(SemanticsRole.SEMANTICS_ROLE_BUTTON)
+                        .build();
         String text = "some button";
         LayoutElement root =
                 LayoutElement.newBuilder()
@@ -518,11 +528,12 @@ public class ProtoLayoutInflaterTest {
     public void inflate_box_withSemanticsStateDescription() {
         String textDescription = "this is a switch";
         String offState = "off";
-        Semantics.Builder semantics =
+        Semantics semantics =
                 Semantics.newBuilder()
                         .setContentDescription(string(textDescription))
                         .setStateDescription(string(offState))
-                        .setRole(SemanticsRole.SEMANTICS_ROLE_SWITCH);
+                        .setRole(SemanticsRole.SEMANTICS_ROLE_SWITCH)
+                        .build();
         String text = "a switch";
         LayoutElement root =
                 LayoutElement.newBuilder()
@@ -759,7 +770,7 @@ public class ProtoLayoutInflaterTest {
         TextView tv = (TextView) rootLayout.getChildAt(0);
 
         // The clickable view must have the same tag as the corresponding layout clickable.
-        expect.that(tv.getTag(R.id.clickable_id_tag)).isEqualTo("foo");
+        expect.that(tv.getTag(clickable_id_tag)).isEqualTo("foo");
 
         // Ensure that the text still went through properly.
         expect.that(tv.getText().toString()).isEqualTo(textContents);
@@ -908,9 +919,9 @@ public class ProtoLayoutInflaterTest {
         State.Builder receivedState = State.newBuilder();
         FrameLayout rootLayout =
                 renderer(
-                        newRendererConfigBuilder(
-                                fingerprintedLayout(root), resourceResolvers())
-                                .setLoadActionListener(receivedState::mergeFrom))
+                                newRendererConfigBuilder(
+                                                fingerprintedLayout(root), resourceResolvers())
+                                        .setLoadActionListener(receivedState::mergeFrom))
                         .inflate();
 
         // Should be just a text view as the root.
@@ -920,7 +931,7 @@ public class ProtoLayoutInflaterTest {
         TextView tv = (TextView) rootLayout.getChildAt(0);
 
         // The clickable view must have the same tag as the corresponding layout clickable.
-        expect.that(tv.getTag(R.id.clickable_id_tag)).isEqualTo("foo");
+        expect.that(tv.getTag(clickable_id_tag)).isEqualTo("foo");
 
         // Ensure that the text still went through properly.
         expect.that(tv.getText().toString()).isEqualTo(textContents);
@@ -1092,11 +1103,9 @@ public class ProtoLayoutInflaterTest {
                                 Arc.newBuilder()
                                         .setAnchorAngle(degrees(0).build())
                                         .addContents(
-                                                ArcLayoutElement.newBuilder()
-                                                        .setSpacer(
-                                                                ArcSpacer.newBuilder()
-                                                                        .setLength(degrees(90))
-                                                                        .setThickness(dp(20)))))
+                                                arcLayoutElement(
+                                                        ArcSpacer.newBuilder()
+                                                                .setLength(degrees(90)))))
                         .build();
 
         FrameLayout rootLayout = renderer(fingerprintedLayout(root)).inflate();
@@ -1125,12 +1134,9 @@ public class ProtoLayoutInflaterTest {
                                         .setAnchorAngle(degrees(0).build())
                                         .setMaxAngle(DegreesProp.newBuilder().setValue(90f).build())
                                         .addContents(
-                                                ArcLayoutElement.newBuilder()
-                                                        .setSpacer(
-                                                                ArcSpacer.newBuilder()
-                                                                        .setAngularLength(
-                                                                                spacerLength)
-                                                                        .setThickness(dp(20))))
+                                                arcLayoutElement(
+                                                        ArcSpacer.newBuilder()
+                                                                .setAngularLength(spacerLength)))
                                         .addContents(
                                                 ArcLayoutElement.newBuilder()
                                                         .setLine(
@@ -1153,6 +1159,11 @@ public class ProtoLayoutInflaterTest {
 
         WearCurvedLineView line = (WearCurvedLineView) arcLayout.getChildAt(1);
         assertThat(line.getSweepAngleDegrees()).isEqualTo(60f);
+    }
+
+    @NonNull
+    private static ArcLayoutElement.Builder arcLayoutElement(ArcSpacer.Builder setAngularLength) {
+        return ArcLayoutElement.newBuilder().setSpacer(setAngularLength.setThickness(dp(20)));
     }
 
     @Test
@@ -1720,7 +1731,7 @@ public class ProtoLayoutInflaterTest {
 
     @Test
     public void inflate_spannable_onClickCanFire() {
-        StringProp.Builder text = string("Hello" + " World");
+        StringProp.Builder text = string("Hello World");
         LayoutElement root =
                 LayoutElement.newBuilder()
                         .setSpannable(
@@ -1737,11 +1748,11 @@ public class ProtoLayoutInflaterTest {
         List<Boolean> hasFiredList = new ArrayList<>();
         FrameLayout rootLayout =
                 renderer(
-                        newRendererConfigBuilder(
-                                fingerprintedLayout(root), resourceResolvers())
-                                .setLoadActionListener(p -> hasFiredList.add(true))
-                                .setProtoLayoutTheme(
-                                        loadTheme(R.style.MyProtoLayoutSansSerifTheme)))
+                                newRendererConfigBuilder(
+                                                fingerprintedLayout(root), resourceResolvers())
+                                        .setLoadActionListener(p -> hasFiredList.add(true))
+                                        .setProtoLayoutTheme(
+                                                loadTheme(R.style.MyProtoLayoutSansSerifTheme)))
                         .inflate();
 
         TextView tv = (TextView) rootLayout.getChildAt(0);
@@ -1951,9 +1962,11 @@ public class ProtoLayoutInflaterTest {
                                                         .setImage(
                                                                 Image.newBuilder()
                                                                         .setWidth(
-                                                                                linImageDim(dp(24)))
+                                                                                linImageDim(
+                                                                                        dp(24f)))
                                                                         .setHeight(
-                                                                                linImageDim(dp(24)))
+                                                                                linImageDim(
+                                                                                        dp(24f)))
                                                                         .setResourceId(
                                                                                 string("android"))))
                                         .addContents(LayoutElement.newBuilder().setImage(image)))
@@ -1961,80 +1974,10 @@ public class ProtoLayoutInflaterTest {
 
         FrameLayout rootLayout =
                 renderer(
-                        newRendererConfigBuilder(fingerprintedLayout(root))
-                                .setProtoLayoutTheme(
-                                        loadTheme(R.style.MyProtoLayoutSansSerifTheme)))
+                                newRendererConfigBuilder(fingerprintedLayout(root))
+                                        .setProtoLayoutTheme(
+                                                loadTheme(R.style.MyProtoLayoutSansSerifTheme)))
                         .inflate();
-
-        // Outer box should be 24dp
-        FrameLayout firstBox = (FrameLayout) rootLayout.getChildAt(0);
-        expect.that(firstBox.getWidth()).isEqualTo(24);
-        expect.that(firstBox.getHeight()).isEqualTo(24);
-
-        // Both children (images) should have the same dimensions as the FrameLayout.
-        RatioViewWrapper rvw1 = (RatioViewWrapper) firstBox.getChildAt(0);
-        RatioViewWrapper rvw2 = (RatioViewWrapper) firstBox.getChildAt(1);
-
-        expect.that(rvw1.getWidth()).isEqualTo(24);
-        expect.that(rvw1.getHeight()).isEqualTo(24);
-
-        expect.that(rvw2.getWidth()).isEqualTo(24);
-        expect.that(rvw2.getHeight()).isEqualTo(24);
-
-        ImageViewWithoutIntrinsicSizes image1 = (ImageViewWithoutIntrinsicSizes) rvw1.getChildAt(0);
-        ImageViewWithoutIntrinsicSizes image2 = (ImageViewWithoutIntrinsicSizes) rvw2.getChildAt(0);
-
-        expect.that(image1.getWidth()).isEqualTo(24);
-        expect.that(image1.getHeight()).isEqualTo(24);
-
-        expect.that(image2.getWidth()).isEqualTo(24);
-        expect.that(image2.getHeight()).isEqualTo(24);
-    }
-
-    @Test
-    public void inflate_image_undefinedSizeIgnoresIntrinsicSize() {
-        // This can happen in the case that a layout is ever inflated into a Scrolling layout. In
-        // that case, the scrolling layout will measure all children with height = UNDEFINED, which
-        // can lead to an Image still using its intrinsic size.
-        String resId = "large_image_120dp";
-        LayoutElement root =
-                LayoutElement.newBuilder()
-                        .setBox(
-                                Box.newBuilder()
-                                        .setWidth(wrap())
-                                        .setHeight(wrap())
-                                        .addContents(
-                                                LayoutElement.newBuilder()
-                                                        .setImage(
-                                                                Image.newBuilder()
-                                                                        .setWidth(
-                                                                                linImageDim(dp(24)))
-                                                                        .setHeight(
-                                                                                linImageDim(dp(24)))
-                                                                        .setResourceId(
-                                                                                string("android"))))
-                                        .addContents(
-                                                LayoutElement.newBuilder()
-                                                        .setImage(
-                                                                Image.newBuilder()
-                                                                        .setWidth(expandImage())
-                                                                        .setHeight(expandImage())
-                                                                        .setResourceId(
-                                                                                string(resId)))))
-                        .build();
-
-        FrameLayout rootLayout =
-                renderer(
-                        newRendererConfigBuilder(fingerprintedLayout(root))
-                                .setProtoLayoutTheme(
-                                        loadTheme(R.style.MyProtoLayoutSansSerifTheme)))
-                        .inflate();
-
-        // Re-measure the root layout with an UNDEFINED constraint...
-        int screenWidth = MeasureSpec.makeMeasureSpec(SCREEN_WIDTH, MeasureSpec.EXACTLY);
-        int screenHeight = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
-        rootLayout.measure(screenWidth, screenHeight);
-        rootLayout.layout(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         // Outer box should be 24dp
         FrameLayout firstBox = (FrameLayout) rootLayout.getChildAt(0);
@@ -2070,6 +2013,78 @@ public class ProtoLayoutInflaterTest {
     private static ContainerDimension.Builder wrap() {
         return ContainerDimension.newBuilder()
                 .setWrappedDimension(WrappedDimensionProp.getDefaultInstance());
+    }
+
+    @Test
+    public void inflate_image_undefinedSizeIgnoresIntrinsicSize() {
+        // This can happen in the case that a layout is ever inflated into a Scrolling layout. In
+        // that case, the scrolling layout will measure all children with height = UNDEFINED, which
+        // can lead to an Image still using its intrinsic size.
+        String resId = "large_image_120dp";
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setBox(
+                                Box.newBuilder()
+                                        .setWidth(wrap())
+                                        .setHeight(wrap())
+                                        .addContents(
+                                                LayoutElement.newBuilder()
+                                                        .setImage(
+                                                                Image.newBuilder()
+                                                                        .setWidth(
+                                                                                linImageDim(
+                                                                                        dp(24f)))
+                                                                        .setHeight(
+                                                                                linImageDim(
+                                                                                        dp(24f)))
+                                                                        .setResourceId(
+                                                                                string("android"))))
+                                        .addContents(
+                                                LayoutElement.newBuilder()
+                                                        .setImage(
+                                                                Image.newBuilder()
+                                                                        .setWidth(expandImage())
+                                                                        .setHeight(expandImage())
+                                                                        .setResourceId(
+                                                                                string(resId)))))
+                        .build();
+
+        FrameLayout rootLayout =
+                renderer(
+                                newRendererConfigBuilder(fingerprintedLayout(root))
+                                        .setProtoLayoutTheme(
+                                                loadTheme(R.style.MyProtoLayoutSansSerifTheme)))
+                        .inflate();
+
+        // Re-measure the root layout with an UNDEFINED constraint...
+        int screenWidth = MeasureSpec.makeMeasureSpec(SCREEN_WIDTH, MeasureSpec.EXACTLY);
+        int screenHeight = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+        rootLayout.measure(screenWidth, screenHeight);
+        rootLayout.layout(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+        // Outer box should be 24dp
+        FrameLayout firstBox = (FrameLayout) rootLayout.getChildAt(0);
+        expect.that(firstBox.getWidth()).isEqualTo(24);
+        expect.that(firstBox.getHeight()).isEqualTo(24);
+
+        // Both children (images) should have the same dimensions as the FrameLayout.
+        RatioViewWrapper rvw1 = (RatioViewWrapper) firstBox.getChildAt(0);
+        RatioViewWrapper rvw2 = (RatioViewWrapper) firstBox.getChildAt(1);
+
+        expect.that(rvw1.getWidth()).isEqualTo(24);
+        expect.that(rvw1.getHeight()).isEqualTo(24);
+
+        expect.that(rvw2.getWidth()).isEqualTo(24);
+        expect.that(rvw2.getHeight()).isEqualTo(24);
+
+        ImageViewWithoutIntrinsicSizes image1 = (ImageViewWithoutIntrinsicSizes) rvw1.getChildAt(0);
+        ImageViewWithoutIntrinsicSizes image2 = (ImageViewWithoutIntrinsicSizes) rvw2.getChildAt(0);
+
+        expect.that(image1.getWidth()).isEqualTo(24);
+        expect.that(image1.getHeight()).isEqualTo(24);
+
+        expect.that(image2.getWidth()).isEqualTo(24);
+        expect.that(image2.getHeight()).isEqualTo(24);
     }
 
     @Test
@@ -2203,6 +2218,19 @@ public class ProtoLayoutInflaterTest {
         assertThat(line.getMaxSweepAngleDegrees()).isEqualTo(0);
     }
 
+    @NonNull
+    private static DegreesProp.Builder degreesDynamic(DynamicFloat arcLength) {
+        return DegreesProp.newBuilder().setDynamicValue(arcLength);
+    }
+
+    @NonNull
+    private static DegreesProp.Builder degreesDynamic(
+            DynamicFloat arcLength, float valueForLayout) {
+        return DegreesProp.newBuilder()
+                .setValueForLayout(valueForLayout)
+                .setDynamicValue(arcLength);
+    }
+
     @Test
     public void inflate_arcLine_withoutValueForLayout_noLegacyMode_usesArcLength() {
         DynamicFloat arcLength =
@@ -2228,8 +2256,8 @@ public class ProtoLayoutInflaterTest {
 
         FrameLayout rootLayout =
                 renderer(
-                        newRendererConfigBuilder(fingerprintedLayout(root))
-                                .setAllowLayoutChangingBindsWithoutDefault(true))
+                                newRendererConfigBuilder(fingerprintedLayout(root))
+                                        .setAllowLayoutChangingBindsWithoutDefault(true))
                         .inflate();
 
         shadowOf(Looper.getMainLooper()).idle();
@@ -2238,19 +2266,6 @@ public class ProtoLayoutInflaterTest {
         WearCurvedLineView line = (WearCurvedLineView) arcLayout.getChildAt(0);
         assertThat(line.getSweepAngleDegrees()).isEqualTo(45f);
         assertThat(line.getLineSweepAngleDegrees()).isEqualTo(45f);
-    }
-
-    @NonNull
-    private static DegreesProp.Builder degreesDynamic(DynamicFloat arcLength) {
-        return DegreesProp.newBuilder().setDynamicValue(arcLength);
-    }
-
-    @NonNull
-    private static DegreesProp.Builder degreesDynamic(
-            DynamicFloat arcLength, float valueForLayout) {
-        return DegreesProp.newBuilder()
-                .setValueForLayout(valueForLayout)
-                .setDynamicValue(arcLength);
     }
 
     @Test
@@ -2338,13 +2353,86 @@ public class ProtoLayoutInflaterTest {
     }
 
     @Test
+    public void inflate_extension_onlySpaceIfNoExtension() {
+        byte[] payload = "Hello World".getBytes(StandardCharsets.UTF_8);
+        int size = 5;
+
+        ExtensionDimension dim =
+                ExtensionDimension.newBuilder().setLinearDimension(dp(size)).build();
+        LayoutElement rootElement =
+                LayoutElement.newBuilder()
+                        .setExtension(
+                                ExtensionLayoutElement.newBuilder()
+                                        .setExtensionId("foo")
+                                        .setPayload(ByteString.copyFrom(payload))
+                                        .setWidth(dim)
+                                        .setHeight(dim))
+                        .build();
+
+        FrameLayout inflatedLayout = renderer(fingerprintedLayout(rootElement)).inflate();
+
+        assertThat(inflatedLayout.getChildCount()).isEqualTo(1);
+        assertThat(inflatedLayout.getChildAt(0)).isInstanceOf(Space.class);
+
+        Space s = (Space) inflatedLayout.getChildAt(0);
+        assertThat(s.getMeasuredWidth()).isEqualTo(size);
+        assertThat(s.getMeasuredHeight()).isEqualTo(size);
+    }
+
+    @Test
+    public void inflate_rendererExtension_withExtension_callsExtension() {
+        List<Pair<byte[], String>> invokedExtensions = new ArrayList<>();
+
+        final byte[] payload = "Hello World".getBytes(StandardCharsets.UTF_8);
+        final int size = 5;
+        final String extensionId = "foo";
+
+        ExtensionDimension dim =
+                ExtensionDimension.newBuilder().setLinearDimension(dp(size)).build();
+        LayoutElement rootElement =
+                LayoutElement.newBuilder()
+                        .setExtension(
+                                ExtensionLayoutElement.newBuilder()
+                                        .setExtensionId(extensionId)
+                                        .setPayload(ByteString.copyFrom(payload))
+                                        .setWidth(dim)
+                                        .setHeight(dim))
+                        .build();
+
+        FrameLayout inflatedLayout =
+                renderer(
+                                newRendererConfigBuilder(fingerprintedLayout(rootElement))
+                                        .setExtensionViewProvider(
+                                                (extensionPayload, id) -> {
+                                                    invokedExtensions.add(
+                                                            new Pair<>(extensionPayload, id));
+                                                    TextView returnedView =
+                                                            new TextView(getApplicationContext());
+                                                    returnedView.setText("testing");
+
+                                                    return returnedView;
+                                                }))
+                        .inflate();
+
+        assertThat(inflatedLayout.getChildCount()).isEqualTo(1);
+        assertThat(inflatedLayout.getChildAt(0)).isInstanceOf(TextView.class);
+
+        TextView tv = (TextView) inflatedLayout.getChildAt(0);
+        assertThat(tv.getText().toString()).isEqualTo("testing");
+
+        assertThat(invokedExtensions).hasSize(1);
+        assertThat(invokedExtensions.get(0).first).isEqualTo(payload);
+        assertThat(invokedExtensions.get(0).second).isEqualTo(extensionId);
+    }
+
+    @Test
     public void inflateThenMutate_withChangeToText_causesUpdate() {
         Layout layout1 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Hello"), // 1.1
                                 text("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout1);
@@ -2359,10 +2447,10 @@ public class ProtoLayoutInflaterTest {
         // Produce a new layout with only one Text element changed.
         Layout layout2 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Hello"), // 1.1
                                 text("Mars") // 1.2
-                        ));
+                                ));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -2390,17 +2478,17 @@ public class ProtoLayoutInflaterTest {
     public void inflateThenMutate_withChangeToImageAndText_causesUpdate() {
         Layout layout1 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Hello"), // 1.1
-                                row(// 1.2
-                                        image(// 1.2.1
+                                row( // 1.2
+                                        image( // 1.2.1
                                                 props -> {
                                                     props.heightDp = 50;
                                                     props.widthDp = 50;
                                                 },
                                                 "android"),
                                         text("World") // 1.2.2
-                                )));
+                                        )));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout1);
@@ -2424,17 +2512,17 @@ public class ProtoLayoutInflaterTest {
         // Produce a new layout with one Text element and one Image changed.
         Layout layout2 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Hello"), // 1.1
-                                row(// 1.2
-                                        image(// 1.2.1
+                                row( // 1.2
+                                        image( // 1.2.1
                                                 props -> {
                                                     props.heightDp = 50;
                                                     props.widthDp = 50;
                                                 },
                                                 "large_image_120dp"),
                                         text("Mars") // 1.2.2
-                                )));
+                                        )));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -2462,7 +2550,8 @@ public class ProtoLayoutInflaterTest {
         assertThat(tv1AfterMutation.getText().toString()).isEqualTo("Hello");
         assertThat(tv2AfterMutation.getText().toString()).isEqualTo("Mars");
         // Can't get android resource ID from image, so use the size to infer that the image has
-        // been correctly updated to a different one:
+        // been
+        // correctly updated to a different one:
         assertThat(imageAfterMutation.getDrawable().getIntrinsicHeight()).isEqualTo(120);
         assertThat(imageAfterMutation.getDrawable().getIntrinsicWidth()).isEqualTo(120);
         assertThat(imageAfterMutation.getMeasuredHeight()).isEqualTo(50);
@@ -2473,11 +2562,11 @@ public class ProtoLayoutInflaterTest {
     public void inflateThenMutate_withChangeToProps_causesUpdate() {
         Layout layout1 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 props -> props.widthDp = 55,
                                 text("Hello"), // 1.1
                                 text("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout1);
@@ -2493,11 +2582,11 @@ public class ProtoLayoutInflaterTest {
         // Produce a new layout with only the props of the container changed.
         Layout layout2 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 props -> props.widthDp = 123,
                                 text("Hello"), // 1.1
                                 text("World") // 1.2
-                        ));
+                                ));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -2525,11 +2614,11 @@ public class ProtoLayoutInflaterTest {
     public void inflateThenMutate_withChangeToPropsAndOneChild_doesntUpdateAllChildren() {
         Layout layout1 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 props -> props.widthDp = 55,
                                 text("Hello"), // 1.1
                                 text("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout1);
@@ -2545,11 +2634,11 @@ public class ProtoLayoutInflaterTest {
         // Produce a new layout with the props of the container and one child changed.
         Layout layout2 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 props -> props.widthDp = 123,
                                 text("Hello"), // 1.1
                                 text("MARS") // 1.2
-                        ));
+                                ));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -2576,10 +2665,10 @@ public class ProtoLayoutInflaterTest {
     public void inflateThenMutate_withNoChange_producesNoOpMutation() {
         Layout layout =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Hello"), // 1.1
                                 text("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout);
@@ -2617,10 +2706,10 @@ public class ProtoLayoutInflaterTest {
     public void inflateThenMutate_withDifferentNumberOfChildren_causesUpdate() {
         Layout layout1 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Hello"), // 1.1
                                 text("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout1);
@@ -2635,12 +2724,12 @@ public class ProtoLayoutInflaterTest {
 
         Layout layout2 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Hello"), // 1.1
                                 text("World"), // 1.2
                                 text("and"), // 1.3
                                 text("Mars") // 1.4
-                        ));
+                                ));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -2668,10 +2757,10 @@ public class ProtoLayoutInflaterTest {
     public void inflateThenMutate_withDynamicText_dataPipelineIsUpdated() {
         Layout layout1 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 dynamicFixedText("Hello"), // 1.1
                                 dynamicFixedText("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout1);
@@ -2691,10 +2780,10 @@ public class ProtoLayoutInflaterTest {
 
         Layout layout2 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 dynamicFixedText("Hello"), // 1.1
                                 dynamicFixedText("Mars") // 1.2
-                        ));
+                                ));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -2726,11 +2815,11 @@ public class ProtoLayoutInflaterTest {
     public void inflateThenMutate_withSelfMutation_dataPipelineIsPreserved() {
         Layout layout1 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 props -> props.widthDp = 10,
                                 dynamicFixedText("Hello"), // 1.1
                                 dynamicFixedText("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout1);
@@ -2749,11 +2838,11 @@ public class ProtoLayoutInflaterTest {
         // Produce a new layout with the column width changed.
         Layout layout2 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 props -> props.widthDp = 20,
                                 dynamicFixedText("Hello"), // 1.1
                                 dynamicFixedText("World") // 1.2
-                        ));
+                                ));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -2786,10 +2875,10 @@ public class ProtoLayoutInflaterTest {
     public void reInflate_dataPipelineIsReset() {
         Layout layout =
                 layout(
-                        column(// 1
+                        column( // 1
                                 dynamicFixedText("Hello"), // 1.1
                                 dynamicFixedText("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout);
@@ -2828,10 +2917,10 @@ public class ProtoLayoutInflaterTest {
     public void inflateArcThenMutate_withChangeToText_causesUpdate() {
         Layout layout1 =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 arcText("Hello"), // 1.1
                                 arcText("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout1);
@@ -2847,10 +2936,10 @@ public class ProtoLayoutInflaterTest {
         // Produce a new layout with only one Text element changed.
         Layout layout2 =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 arcText("Hello"), // 1.1
                                 arcText("Mars") // 1.2
-                        ));
+                                ));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -2880,10 +2969,10 @@ public class ProtoLayoutInflaterTest {
     public void inflateArcThenMutate_withChangeToProps_causesUpdate() throws Exception {
         Layout layout1 =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 arcText("Hello"), // 1.1
                                 arcText("World") // 1.2
-                        ));
+                                ));
 
         // Check the premutation layout
         Renderer renderer = renderer(layout1);
@@ -2899,11 +2988,11 @@ public class ProtoLayoutInflaterTest {
 
         Layout layout2 =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 props -> props.anchorAngleDegrees = 35,
                                 arcText("Hello"), // 1.1
                                 arcText("World") // 1.2
-                        ));
+                                ));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -2932,22 +3021,22 @@ public class ProtoLayoutInflaterTest {
     public void viewChangesWhileComputingMutation_applyMutationFails() throws Exception {
         Layout layout1 =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 arcText("Hello"), // 1.1
                                 arcText("World") // 1.2
-                        ));
+                                ));
         Layout layout2 =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 props -> props.anchorAngleDegrees = 35,
                                 arcText("Hello"), // 1.1
                                 arcText("World") // 1.2
-                        ));
+                                ));
         Layout layout3 =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 arcText("Hello") // 1.1
-                        ));
+                                ));
         // Check the premutation layout
         Renderer renderer = renderer(layout1);
         ViewGroup inflatedViewParent1 = renderer.inflate();
@@ -2969,10 +3058,10 @@ public class ProtoLayoutInflaterTest {
     public void inflateArcThenMutate_withDifferentNumberOfChildren_causesUpdate() {
         Layout layout1 =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 arcText("Hello"), // 1.1
                                 arcText("World") // 1.2
-                        ));
+                                ));
 
         // Check the premutation layout
         Renderer renderer = renderer(layout1);
@@ -2987,12 +3076,12 @@ public class ProtoLayoutInflaterTest {
 
         Layout layout2 =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 arcText("Hello"), // 1.1
                                 arcText("World"), // 1.2
                                 arcText("and"), // 1.3
                                 arcText("Mars") // 1.4
-                        ));
+                                ));
 
         // Compute the mutation
         ViewGroupMutation mutation =
@@ -3021,10 +3110,10 @@ public class ProtoLayoutInflaterTest {
     public void inflateAndMutateTwice_causesTwoUpdates() throws Exception {
         Layout layout1 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Hello"), // 1.1
                                 text("World") // 1.2
-                        ));
+                                ));
 
         // Do the initial inflation.
         Renderer renderer = renderer(layout1);
@@ -3037,10 +3126,10 @@ public class ProtoLayoutInflaterTest {
 
         Layout layout2 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Goodbye"), // 1.1
                                 text("World") // 1.2
-                        ));
+                                ));
 
         // Apply first mutation
         ViewGroupMutation mutation1 =
@@ -3058,10 +3147,10 @@ public class ProtoLayoutInflaterTest {
 
         Layout layout3 =
                 layout(
-                        column(// 1
+                        column( // 1
                                 text("Hello"), // 1.1
                                 text("Mars") // 1.2
-                        ));
+                                ));
 
         // Apply second mutation
         ViewGroupMutation mutation2 =
@@ -3082,10 +3171,10 @@ public class ProtoLayoutInflaterTest {
     public void inflateArcThenMutate_withNoChange_producesNoOpMutation() {
         Layout layout =
                 layout(
-                        arc(// 1
+                        arc( // 1
                                 arcText("Hello"), // 1.1
                                 arcText("World") // 1.2
-                        ));
+                                ));
 
         // Check that we have the initial layout correctly rendered
         Renderer renderer = renderer(layout);
@@ -3114,7 +3203,7 @@ public class ProtoLayoutInflaterTest {
     public void boxWithChild_childChanges_appliesGravityToUpdatedChild() throws Exception {
         Layout layout1 =
                 layout(
-                        box(// 1
+                        box( // 1
                                 boxProps -> {
                                     boxProps.horizontalAlignment =
                                             HorizontalAlignment.HORIZONTAL_ALIGN_CENTER;
@@ -3122,12 +3211,12 @@ public class ProtoLayoutInflaterTest {
                                             VerticalAlignment.VERTICAL_ALIGN_CENTER;
                                 },
                                 text("Hello") // 1.1
-                        ));
+                                ));
         Renderer renderer = renderer(layout1);
         ViewGroup inflatedViewParent = renderer.inflate();
         Layout layout2 =
                 layout(
-                        box(// 1
+                        box( // 1
                                 boxProps -> {
                                     boxProps.horizontalAlignment =
                                             HorizontalAlignment.HORIZONTAL_ALIGN_CENTER;
@@ -3135,7 +3224,7 @@ public class ProtoLayoutInflaterTest {
                                             VerticalAlignment.VERTICAL_ALIGN_CENTER;
                                 },
                                 text("World") // 1.1
-                        ));
+                                ));
 
         ViewGroupMutation mutation =
                 renderer.mRenderer.computeMutation(
@@ -3156,7 +3245,7 @@ public class ProtoLayoutInflaterTest {
     public void boxWithChild_boxChanges_appliesNewGravityToChild() throws Exception {
         Layout layout1 =
                 layout(
-                        box(// 1
+                        box( // 1
                                 boxProps -> {
                                     boxProps.horizontalAlignment =
                                             HorizontalAlignment.HORIZONTAL_ALIGN_CENTER;
@@ -3164,12 +3253,12 @@ public class ProtoLayoutInflaterTest {
                                             VerticalAlignment.VERTICAL_ALIGN_CENTER;
                                 },
                                 text("Hello") // 1.1
-                        ));
+                                ));
         Renderer renderer = renderer(layout1);
         ViewGroup inflatedViewParent = renderer.inflate();
         Layout layout2 =
                 layout(
-                        box(// 1
+                        box( // 1
                                 boxProps -> {
                                     // A different set of alignments.
                                     boxProps.horizontalAlignment =
@@ -3178,7 +3267,7 @@ public class ProtoLayoutInflaterTest {
                                             VerticalAlignment.VERTICAL_ALIGN_BOTTOM;
                                 },
                                 text("Hello") // 1.1
-                        ));
+                                ));
 
         ViewGroupMutation mutation =
                 renderer.mRenderer.computeMutation(
@@ -3199,7 +3288,7 @@ public class ProtoLayoutInflaterTest {
     public void boxWithChild_bothChange_appliesNewGravityToUpdatedChild() throws Exception {
         Layout layout1 =
                 layout(
-                        box(// 1
+                        box( // 1
                                 boxProps -> {
                                     boxProps.horizontalAlignment =
                                             HorizontalAlignment.HORIZONTAL_ALIGN_CENTER;
@@ -3207,13 +3296,13 @@ public class ProtoLayoutInflaterTest {
                                             VerticalAlignment.VERTICAL_ALIGN_CENTER;
                                 },
                                 text("Hello") // 1.1
-                        ));
+                                ));
         // Do the initial inflation.
         Renderer renderer = renderer(layout1);
         ViewGroup inflatedViewParent = renderer.inflate();
         Layout layout2 =
                 layout(
-                        box(// 1
+                        box( // 1
                                 boxProps -> {
                                     // A different set of alignments.
                                     boxProps.horizontalAlignment =
@@ -3222,7 +3311,7 @@ public class ProtoLayoutInflaterTest {
                                             VerticalAlignment.VERTICAL_ALIGN_BOTTOM;
                                 },
                                 text("World") // 1.1
-                        ));
+                                ));
 
         ViewGroupMutation mutation =
                 renderer.mRenderer.computeMutation(
@@ -3268,10 +3357,9 @@ public class ProtoLayoutInflaterTest {
     ProtoLayoutInflater.Config.Builder newRendererConfigBuilder(
             Layout layout, ResourceResolvers.Builder resourceResolvers) {
         return new ProtoLayoutInflater.Config.Builder(
-                getApplicationContext(), layout, resourceResolvers.build())
+                        getApplicationContext(), layout, resourceResolvers.build())
                 .setClickableIdExtra(EXTRA_CLICKABLE_ID)
-                .setLoadActionListener(p -> {
-                })
+                .setLoadActionListener(p -> {})
                 .setLoadActionExecutor(ContextCompat.getMainExecutor(getApplicationContext()));
     }
 
@@ -3290,7 +3378,10 @@ public class ProtoLayoutInflaterTest {
             FixedQuotaManagerImpl quotaManager) {
         mDataPipeline =
                 new ProtoLayoutDynamicDataPipeline(
-                        /* canUpdateGateways= */ true, null, mStateStore, quotaManager);
+                        /* sensorGateway= */ null,
+                        mStateStore,
+                        quotaManager,
+                        new FixedQuotaManagerImpl(MAX_VALUE));
         rendererConfigBuilder.setDynamicDataPipeline(mDataPipeline);
         return new Renderer(rendererConfigBuilder.build(), mDataPipeline);
     }
@@ -3412,6 +3503,7 @@ public class ProtoLayoutInflaterTest {
                 .build();
     }
 
+    @NonNull
     private static Trigger onVisibleTrigger() {
         return Trigger.newBuilder()
                 .setOnVisibleTrigger(OnVisibleTrigger.getDefaultInstance())
@@ -3459,6 +3551,16 @@ public class ProtoLayoutInflaterTest {
                 (LinearLayout.LayoutParams) rowWithWeight.getLayoutParams();
 
         expect.that(linearLayoutParams.weight).isEqualTo(10.0f);
+    }
+
+    @NonNull
+    private static ContainerDimension expandWeight() {
+        return ContainerDimension.newBuilder()
+                .setExpandedDimension(
+                        ExpandedDimensionProp.newBuilder()
+                                .setLayoutWeight(FloatProp.newBuilder().setValue(10.0f).build())
+                                .build())
+                .build();
     }
 
     @Test
@@ -3527,15 +3629,6 @@ public class ProtoLayoutInflaterTest {
                 (LinearLayout.LayoutParams) boxWithWeight.getLayoutParams();
 
         expect.that(linearLayoutParams.weight).isEqualTo(10.0f);
-    }
-
-    private static ContainerDimension expandWeight() {
-        return ContainerDimension.newBuilder()
-                .setExpandedDimension(
-                        ExpandedDimensionProp.newBuilder()
-                                .setLayoutWeight(FloatProp.newBuilder().setValue(10.0f).build())
-                                .build())
-                .build();
     }
 
     @Test
@@ -3881,9 +3974,9 @@ public class ProtoLayoutInflaterTest {
         Renderer renderer =
                 renderer(
                         newRendererConfigBuilder(
-                                fingerprintedLayout(
-                                        getTextElementWithExitAnimation(
-                                                "Hello", /* iterations= */ 1)))
+                                        fingerprintedLayout(
+                                                getTextElementWithExitAnimation(
+                                                        "Hello", /* iterations= */ 1)))
                                 .setAnimationEnabled(false));
         mDataPipeline.setFullyVisible(true);
         FrameLayout inflatedViewParent = renderer.inflate();
@@ -4124,8 +4217,8 @@ public class ProtoLayoutInflaterTest {
                                         .setEnterTransition(
                                                 EnterTransition.newBuilder()
                                                         .setFadeIn(
-                                                                FadeInTransition.newBuilder()
-                                                                        .build())
+                                                                FadeInTransition
+                                                                        .getDefaultInstance())
                                                         .setSlideIn(
                                                                 SlideInTransition.newBuilder()
                                                                         .build())),

@@ -866,7 +866,7 @@ package androidx.core.app {
     method public static android.app.PendingIntent getActivities(android.content.Context, int, android.content.Intent![], int, boolean);
     method public static android.app.PendingIntent getActivity(android.content.Context, int, android.content.Intent, int, boolean);
     method public static android.app.PendingIntent getActivity(android.content.Context, int, android.content.Intent, int, android.os.Bundle, boolean);
-    method public static android.app.PendingIntent getBroadcast(android.content.Context, int, android.content.Intent, int, boolean);
+    method public static android.app.PendingIntent? getBroadcast(android.content.Context, int, android.content.Intent, int, boolean);
     method @RequiresApi(26) public static android.app.PendingIntent getForegroundService(android.content.Context, int, android.content.Intent, int, boolean);
     method public static android.app.PendingIntent getService(android.content.Context, int, android.content.Intent, int, boolean);
   }
@@ -2179,6 +2179,14 @@ package androidx.core.text {
 
 }
 
+package androidx.core.text.method {
+
+  public class LinkMovementMethodCompat extends android.text.method.LinkMovementMethod {
+    method public static androidx.core.text.method.LinkMovementMethodCompat getInstance();
+  }
+
+}
+
 package androidx.core.text.util {
 
   public final class LinkifyCompat {
@@ -2721,6 +2729,12 @@ package androidx.core.view {
     method public int computeVerticalScrollExtent();
     method public int computeVerticalScrollOffset();
     method public int computeVerticalScrollRange();
+  }
+
+  public final class SoftwareKeyboardControllerCompat {
+    ctor public SoftwareKeyboardControllerCompat(android.view.View);
+    method public void hide();
+    method public void show();
   }
 
   public interface TintableBackgroundView {

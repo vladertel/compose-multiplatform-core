@@ -8,16 +8,16 @@ package androidx.wear.protolayout.expression {
   }
 
   public static final class AnimationParameterBuilders.AnimationParameters {
-    method public int getDelayMillis();
-    method public int getDurationMillis();
+    method @IntRange(from=0) public long getDelayMillis();
+    method @IntRange(from=0) public long getDurationMillis();
     method public androidx.wear.protolayout.expression.AnimationParameterBuilders.Easing? getEasing();
   }
 
   public static final class AnimationParameterBuilders.AnimationParameters.Builder {
     ctor public AnimationParameterBuilders.AnimationParameters.Builder();
     method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationParameters build();
-    method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationParameters.Builder setDelayMillis(int);
-    method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationParameters.Builder setDurationMillis(int);
+    method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationParameters.Builder setDelayMillis(@IntRange(from=0) long);
+    method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationParameters.Builder setDurationMillis(@IntRange(from=0) long);
     method public androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationParameters.Builder setEasing(androidx.wear.protolayout.expression.AnimationParameterBuilders.Easing);
   }
 
@@ -124,11 +124,13 @@ package androidx.wear.protolayout.expression {
     method public default androidx.wear.protolayout.expression.DynamicBuilders.DynamicInt32 getIntDaysPart();
     method public default androidx.wear.protolayout.expression.DynamicBuilders.DynamicInt32 getMinutesPart();
     method public default androidx.wear.protolayout.expression.DynamicBuilders.DynamicInt32 getSecondsPart();
+    method public static androidx.wear.protolayout.expression.ConditionScopes.ConditionScope<androidx.wear.protolayout.expression.DynamicBuilders.DynamicDuration!,java.time.Duration!> onCondition(androidx.wear.protolayout.expression.DynamicBuilders.DynamicBool);
     method public default byte[] toDynamicDurationByteArray();
     method public default androidx.wear.protolayout.expression.DynamicBuilders.DynamicInt32 toIntDays();
     method public default androidx.wear.protolayout.expression.DynamicBuilders.DynamicInt32 toIntHours();
     method public default androidx.wear.protolayout.expression.DynamicBuilders.DynamicInt32 toIntMinutes();
     method public default androidx.wear.protolayout.expression.DynamicBuilders.DynamicInt32 toIntSeconds();
+    method public static androidx.wear.protolayout.expression.DynamicBuilders.DynamicDuration withSecondsPrecision(java.time.Duration);
   }
 
   public static interface DynamicBuilders.DynamicFloat extends androidx.wear.protolayout.expression.DynamicBuilders.DynamicType {
@@ -194,6 +196,7 @@ package androidx.wear.protolayout.expression {
   public static interface DynamicBuilders.DynamicInstant extends androidx.wear.protolayout.expression.DynamicBuilders.DynamicType {
     method public default androidx.wear.protolayout.expression.DynamicBuilders.DynamicDuration durationUntil(androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant);
     method public static androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant fromByteArray(byte[]);
+    method public static androidx.wear.protolayout.expression.ConditionScopes.ConditionScope<androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant!,java.time.Instant!> onCondition(androidx.wear.protolayout.expression.DynamicBuilders.DynamicBool);
     method public static androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant platformTimeWithSecondsPrecision();
     method public default byte[] toDynamicInstantByteArray();
     method public static androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant withSecondsPrecision(java.time.Instant);
@@ -270,6 +273,9 @@ package androidx.wear.protolayout.expression {
   }
 
   public static interface DynamicBuilders.DynamicType {
+  }
+
+  @RequiresOptIn(level=androidx.annotation.RequiresOptIn.Level.ERROR) @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS) @java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD, java.lang.annotation.ElementType.TYPE, java.lang.annotation.ElementType.FIELD}) public @interface ExperimentalProtoLayoutExtensionApi {
   }
 
   @androidx.wear.protolayout.expression.ProtoLayoutExperimental public class PlatformHealthSources {

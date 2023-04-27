@@ -20,7 +20,6 @@ import androidx.appactions.interaction.capabilities.core.BaseExecutionSession
 import androidx.appactions.interaction.capabilities.core.ConfirmationOutput
 import androidx.appactions.interaction.capabilities.core.ExecutionResult
 import androidx.appactions.interaction.capabilities.core.SessionContext
-import androidx.appactions.interaction.capabilities.core.impl.CapabilitySession
 import androidx.appactions.interaction.capabilities.core.impl.ArgumentsWrapper
 import androidx.appactions.interaction.capabilities.core.impl.ErrorStatusInternal
 import androidx.appactions.interaction.capabilities.core.impl.FulfillmentResult
@@ -28,12 +27,12 @@ import androidx.appactions.interaction.capabilities.core.impl.TouchEventCallback
 import androidx.appactions.interaction.capabilities.core.impl.UiHandleRegistry
 import androidx.appactions.interaction.capabilities.core.impl.exceptions.StructConversionException
 import androidx.appactions.interaction.capabilities.core.impl.spec.ActionSpec
-import androidx.appactions.interaction.capabilities.core.impl.utils.CapabilityLogger
-import androidx.appactions.interaction.capabilities.core.impl.utils.LoggerInternal
 import androidx.appactions.interaction.capabilities.core.impl.task.exceptions.InvalidResolverException
 import androidx.appactions.interaction.capabilities.core.impl.task.exceptions.MissingEntityConverterException
 import androidx.appactions.interaction.capabilities.core.impl.task.exceptions.MissingRequiredArgException
 import androidx.appactions.interaction.capabilities.core.impl.task.exceptions.MissingSearchActionConverterException
+import androidx.appactions.interaction.capabilities.core.impl.utils.CapabilityLogger
+import androidx.appactions.interaction.capabilities.core.impl.utils.LoggerInternal
 import androidx.appactions.interaction.proto.AppActionsContext
 import androidx.appactions.interaction.proto.CurrentValue
 import androidx.appactions.interaction.proto.FulfillmentRequest
@@ -43,7 +42,8 @@ import androidx.appactions.interaction.proto.TouchEventMetadata
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
-import kotlin.jvm.Throws
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.isActive
 
 /**
  * TaskOrchestrator is responsible for holding session state, and processing assistant / manual
@@ -60,7 +60,15 @@ internal class TaskOrchestrator<ArgumentsT, OutputT, ConfirmationT>(
     private val appAction: AppActionsContext.AppAction,
     private val taskHandler: TaskHandler<ConfirmationT>,
     private val externalSession: BaseExecutionSession<ArgumentsT, OutputT>,
+    private val scope: CoroutineScope,
 ) {
+    /** This enum describes the current status of the TaskOrchestrator. */
+    internal enum class Status {
+        UNINITIATED,
+        IN_PROGRESS,
+        COMPLETED,
+        DESTROYED,
+    }
     /**
      * A [reader-writer lock](https://en.wikipedia.org/wiki/Readers%E2%80%93writer_lock) to protect
      * the synchronizing operation on [currentValuesMap]
@@ -77,16 +85,16 @@ internal class TaskOrchestrator<ArgumentsT, OutputT, ConfirmationT>(
      * construction because the callback is not available at the time when the developer creates the
      * capability.
      */
-    private var mTouchEventCallback: TouchEventCallback? = null
+    private var touchEventCallback: TouchEventCallback? = null
 
     /** Current status of the overall task (i.e. status of the task). */
-    internal var status: CapabilitySession.Status = CapabilitySession.Status.UNINITIATED
+    internal var status: Status = Status.UNINITIATED
         private set
 
     // Set a TouchEventCallback instance. This callback is invoked when state changes from manual
     // input.
     internal fun setTouchEventCallback(touchEventCallback: TouchEventCallback?) {
-        mTouchEventCallback = touchEventCallback
+        this.touchEventCallback = touchEventCallback
     }
 
     private val inProgressLock = Any()
@@ -193,9 +201,9 @@ internal class TaskOrchestrator<ArgumentsT, OutputT, ConfirmationT>(
     ) = withUiHandleRegistered {
         val paramValuesMap = touchEventUpdateRequest.paramValuesMap
         if (
-            mTouchEventCallback == null ||
+            touchEventCallback == null ||
             paramValuesMap.isEmpty() ||
-            status !== CapabilitySession.Status.IN_PROGRESS
+            status !== Status.IN_PROGRESS
         ) {
             return@withUiHandleRegistered
         }
@@ -218,8 +226,8 @@ internal class TaskOrchestrator<ArgumentsT, OutputT, ConfirmationT>(
             }
             val fulfillmentResponse = maybeConfirmOrExecute()
             LoggerInternal.log(CapabilityLogger.LogLevel.INFO, LOG_TAG, "Manual input success")
-            if (mTouchEventCallback != null) {
-                mTouchEventCallback!!.onSuccess(
+            if (touchEventCallback != null) {
+                touchEventCallback!!.onSuccess(
                     fulfillmentResponse,
                     TouchEventMetadata.getDefaultInstance(),
                 )
@@ -232,8 +240,8 @@ internal class TaskOrchestrator<ArgumentsT, OutputT, ConfirmationT>(
             }
         } catch (t: Throwable) {
             LoggerInternal.log(CapabilityLogger.LogLevel.ERROR, LOG_TAG, "Manual input fail")
-            if (mTouchEventCallback != null) {
-                mTouchEventCallback!!.onError(ErrorStatusInternal.TOUCH_EVENT_REQUEST_FAILURE)
+            if (touchEventCallback != null) {
+                touchEventCallback!!.onError(ErrorStatusInternal.TOUCH_EVENT_REQUEST_FAILURE)
             } else {
                 LoggerInternal.log(
                     CapabilityLogger.LogLevel.ERROR,
@@ -247,7 +255,7 @@ internal class TaskOrchestrator<ArgumentsT, OutputT, ConfirmationT>(
     // TODO: add cleanup logic if any
     internal fun terminate() {
         externalSession.onDestroy()
-        status = CapabilitySession.Status.DESTROYED
+        status = Status.DESTROYED
     }
 
     /**
@@ -272,10 +280,10 @@ internal class TaskOrchestrator<ArgumentsT, OutputT, ConfirmationT>(
     }
 
     private fun maybeInitializeTask() {
-        if (status === CapabilitySession.Status.UNINITIATED) {
+        if (status === Status.UNINITIATED) {
             externalSession.onCreate(SessionContext())
         }
-        status = CapabilitySession.Status.IN_PROGRESS
+        status = Status.IN_PROGRESS
     }
 
     /**
@@ -342,6 +350,9 @@ internal class TaskOrchestrator<ArgumentsT, OutputT, ConfirmationT>(
     ) {
         var currentResult = SlotProcessingResult(true, emptyList())
         for ((name, fulfillmentValues) in fulfillmentValuesMap) {
+            if (!scope.isActive) {
+                break
+            }
             currentResult =
                 maybeProcessSlotAndUpdateCurrentValues(currentResult, name, fulfillmentValues)
         }
@@ -450,7 +461,7 @@ internal class TaskOrchestrator<ArgumentsT, OutputT, ConfirmationT>(
         finalArguments: Map<String, List<ParamValue>>,
     ): FulfillmentResponse {
         val result = externalSession.onExecute(actionSpec.buildArguments(finalArguments))
-        status = CapabilitySession.Status.COMPLETED
+        status = Status.COMPLETED
         val fulfillmentResponse =
             FulfillmentResponse.newBuilder().setStartDictation(result.shouldStartDictation)
         convertToExecutionOutput(result)?.let { fulfillmentResponse.executionOutput = it }
