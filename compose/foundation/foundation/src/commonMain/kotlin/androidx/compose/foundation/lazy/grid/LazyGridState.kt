@@ -24,6 +24,7 @@ import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.AwaitFirstLayoutModifier
+import androidx.compose.foundation.lazy.layout.LazyLayoutBeyondBoundsInfo
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState
 import androidx.compose.foundation.lazy.layout.LazyLayoutPinnedItemList
 import androidx.compose.foundation.lazy.layout.animateScrollToItem
@@ -200,7 +201,7 @@ class LazyGridState constructor(
      * The [Remeasurement] object associated with our layout. It allows us to remeasure
      * synchronously during scroll.
      */
-    private var remeasurement: Remeasurement? by mutableStateOf(null)
+    internal var remeasurement: Remeasurement? by mutableStateOf(null)
 
     /**
      * The modifier which provides [remeasurement].
@@ -223,7 +224,9 @@ class LazyGridState constructor(
     internal var prefetchInfoRetriever: (line: LineIndex) -> List<Pair<Int, Constraints>> by
         mutableStateOf({ emptyList() })
 
-    internal var placementAnimator by mutableStateOf<LazyGridItemPlacementAnimator?>(null)
+    internal val placementAnimator = LazyGridItemPlacementAnimator()
+
+    internal val beyondBoundsInfo = LazyLayoutBeyondBoundsInfo()
 
     private val animateScrollScope = LazyGridAnimateScrollScope(this)
 
@@ -254,7 +257,7 @@ class LazyGridState constructor(
     internal fun snapToItemIndexInternal(index: Int, scrollOffset: Int) {
         scrollPosition.requestPosition(ItemIndex(index), scrollOffset)
         // placement animation is not needed because we snap into a new position.
-        placementAnimator?.reset()
+        placementAnimator.reset()
         remeasurement?.forceRemeasure()
     }
 

@@ -39,6 +39,7 @@ import androidx.camera.camera2.Camera2Config
 import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
+import androidx.camera.core.DynamicRange
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.impl.ImageFormatConstants
@@ -169,6 +170,8 @@ class RecorderTest(
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+    // TODO(b/278168212): Only SDR is checked by now. Need to extend to HDR dynamic ranges.
+    private val dynamicRange = DynamicRange.SDR
     private val recordingsToStop = mutableListOf<RecordingProcess>()
 
     private lateinit var cameraUseCaseAdapter: CameraUseCaseAdapter
@@ -201,17 +204,18 @@ class RecorderTest(
         // Using Preview so that the surface provider could be set to control when to issue the
         // surface request.
         val cameraInfo = cameraUseCaseAdapter.cameraInfo
+        val videoCapabilities = Recorder.getVideoCapabilities(cameraInfo)
         val candidates = mutableSetOf<Size>().apply {
             if (testName.methodName == "setFileSizeLimit") {
-                QualitySelector.getResolution(cameraInfo, Quality.FHD)
-                    ?.let { add(it) }
-                QualitySelector.getResolution(cameraInfo, Quality.HD)
-                    ?.let { add(it) }
-                QualitySelector.getResolution(cameraInfo, Quality.SD)
-                    ?.let { add(it) }
+                videoCapabilities.getProfiles(Quality.FHD, dynamicRange)?.defaultVideoProfile
+                    ?.let { add(Size(it.width, it.height)) }
+                videoCapabilities.getProfiles(Quality.HD, dynamicRange)?.defaultVideoProfile
+                    ?.let { add(Size(it.width, it.height)) }
+                videoCapabilities.getProfiles(Quality.SD, dynamicRange)?.defaultVideoProfile
+                    ?.let { add(Size(it.width, it.height)) }
             }
-            QualitySelector.getResolution(cameraInfo, Quality.LOWEST)
-                ?.let { add(it) }
+            videoCapabilities.getProfiles(Quality.LOWEST, dynamicRange)?.defaultVideoProfile
+                ?.let { add(Size(it.width, it.height)) }
         }
         assumeTrue(candidates.isNotEmpty())
 
@@ -474,7 +478,10 @@ class RecorderTest(
         val recording = createRecordingProcess(outputOptions = outputOptions)
 
         // Act.
-        recording.startAndVerify()
+        // To avoid long timeout of finalize, verify the start event to ensure the recording is
+        // started. But don't verify the status count since we don't know how many status will
+        // reach the file size limit.
+        recording.startAndVerify(statusCount = 0)
         recording.verifyFinalize(timeoutMs = 60_000L) { finalize ->
             // Assert.
             assertThat(finalize.error).isEqualTo(ERROR_FILE_SIZE_LIMIT_REACHED)
@@ -1087,7 +1094,9 @@ class RecorderTest(
             recordingsToStop.add(this)
             if (verify) {
                 verifyStart()
-                verifyStatus(statusCount = statusCount, onStatus = onStatus)
+                if (statusCount > 0) {
+                    verifyStatus(statusCount = statusCount, onStatus = onStatus)
+                }
             }
         }
 

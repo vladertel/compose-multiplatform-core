@@ -22,7 +22,6 @@ import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusTargetModifierNode
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.input.pointer.PointerInputFilter
@@ -54,7 +53,6 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.simpleIdentityToString
 import androidx.compose.ui.semantics.generateSemanticsId
-import androidx.compose.ui.semantics.outerSemantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
@@ -420,8 +418,7 @@ internal class LayoutNode(
 
         this.owner = owner
         this.depth = (parent?.depth ?: -1) + 1
-        @OptIn(ExperimentalComposeUiApi::class)
-        if (outerSemantics != null) {
+        if (nodes.has(Nodes.Semantics)) {
             owner.onSemanticsChange()
         }
         owner.onAttach(this)
@@ -471,8 +468,7 @@ internal class LayoutNode(
         layoutDelegate.resetAlignmentLines()
         onDetach?.invoke(owner)
 
-        @OptIn(ExperimentalComposeUiApi::class)
-        if (outerSemantics != null) {
+        if (nodes.has(Nodes.Semantics)) {
             owner.onSemanticsChange()
         }
         nodes.detach()
@@ -888,10 +884,9 @@ internal class LayoutNode(
      * @param hitTestResult The collection that the hit [PointerInputFilter]s will be
      * added to if hit.
      */
-    @OptIn(ExperimentalComposeUiApi::class)
     internal fun hitTest(
         pointerPosition: Offset,
-        hitTestResult: HitTestResult<PointerInputModifierNode>,
+        hitTestResult: HitTestResult,
         isTouchEvent: Boolean = false,
         isInLayer: Boolean = true
     ) {
@@ -906,10 +901,9 @@ internal class LayoutNode(
     }
 
     @Suppress("UNUSED_PARAMETER")
-    @OptIn(ExperimentalComposeUiApi::class)
     internal fun hitTestSemantics(
         pointerPosition: Offset,
-        hitSemanticsEntities: HitTestResult<SemanticsModifierNode>,
+        hitSemanticsEntities: HitTestResult,
         isTouchEvent: Boolean = true,
         isInLayer: Boolean = true
     ) {
@@ -949,10 +943,17 @@ internal class LayoutNode(
     /**
      * Used to request a new measurement + layout pass from the owner.
      */
-    internal fun requestRemeasure(forceRequest: Boolean = false) {
+    internal fun requestRemeasure(
+        forceRequest: Boolean = false,
+        scheduleMeasureAndLayout: Boolean = true
+    ) {
         if (!ignoreRemeasureRequests && !isVirtual) {
             val owner = owner ?: return
-            owner.onRequestMeasure(this, forceRequest = forceRequest)
+            owner.onRequestMeasure(
+                layoutNode = this,
+                forceRequest = forceRequest,
+                scheduleMeasureAndLayout = scheduleMeasureAndLayout
+            )
             measurePassDelegate.invalidateIntrinsicsParent(forceRequest)
         }
     }
@@ -961,14 +962,22 @@ internal class LayoutNode(
      * Used to request a new lookahead measurement, lookahead layout, and subsequently
      * measure and layout from the owner.
      */
-    internal fun requestLookaheadRemeasure(forceRequest: Boolean = false) {
+    internal fun requestLookaheadRemeasure(
+        forceRequest: Boolean = false,
+        scheduleMeasureAndLayout: Boolean = true
+    ) {
         check(lookaheadRoot != null) {
             "Lookahead measure cannot be requested on a node that is not a part of the" +
                 "LookaheadLayout"
         }
         val owner = owner ?: return
         if (!ignoreRemeasureRequests && !isVirtual) {
-            owner.onRequestMeasure(this, affectsLookahead = true, forceRequest = forceRequest)
+            owner.onRequestMeasure(
+                layoutNode = this,
+                affectsLookahead = true,
+                forceRequest = forceRequest,
+                scheduleMeasureAndLayout = scheduleMeasureAndLayout
+            )
             lookaheadPassDelegate!!.invalidateIntrinsicsParent(forceRequest)
         }
     }
@@ -996,18 +1005,11 @@ internal class LayoutNode(
         }
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     private fun invalidateFocusOnDetach() {
-        if (nodes.has(FocusTarget)) {
-            nodes.tailToHead {
-                if (
-                    it.isKind(FocusTarget) &&
-                    it is FocusTargetModifierNode &&
-                    it.focusState.isFocused
-                ) {
-                    requireOwner().focusOwner.clearFocus(force = true, refreshFocusEvents = false)
-                    it.scheduleInvalidationForFocusEvents()
-                }
+        nodes.tailToHead(FocusTarget) {
+            if (it.focusState.isFocused) {
+                requireOwner().focusOwner.clearFocus(force = true, refreshFocusEvents = false)
+                it.scheduleInvalidationForFocusEvents()
             }
         }
     }
@@ -1067,7 +1069,7 @@ internal class LayoutNode(
         constraints: Constraints? = layoutDelegate.lastLookaheadConstraints
     ): Boolean {
         // Only lookahead remeasure when the constraints are valid and the node is in
-        // a LookaheadLayout (by checking whether the lookaheadScope is set)
+        // a LookaheadScope (by checking whether the lookaheadScope is set)
         return if (constraints != null && lookaheadRoot != null) {
             lookaheadPassDelegate!!.remeasure(constraints)
         } else {
@@ -1156,10 +1158,11 @@ internal class LayoutNode(
         layoutDelegate.markLookaheadMeasurePending()
 
     override fun forceRemeasure() {
+        // we do not schedule measure and layout as we are going to call it manually right after
         if (lookaheadRoot != null) {
-            requestLookaheadRemeasure()
+            requestLookaheadRemeasure(scheduleMeasureAndLayout = false)
         } else {
-            requestRemeasure()
+            requestRemeasure(scheduleMeasureAndLayout = false)
         }
         val lastConstraints = layoutDelegate.lastConstraints
         if (lastConstraints != null) {
@@ -1204,7 +1207,7 @@ internal class LayoutNode(
     private fun shouldInvalidateParentLayer(): Boolean {
         if (nodes.has(Nodes.Draw) && !nodes.has(Nodes.Layout)) return true
         nodes.headToTail {
-            if (it.isKind(Nodes.Layout) && it is LayoutModifierNode) {
+            if (it.isKind(Nodes.Layout)) {
                 if (it.requireCoordinator(Nodes.Layout).layer != null) {
                     return false
                 }

@@ -33,8 +33,8 @@ import androidx.camera.core.CameraEffect.VIDEO_CAPTURE
 import androidx.camera.core.ImageCapture.ImageCaptureRequest
 import androidx.camera.core.ImageCapture.ImageCaptureRequestProcessor
 import androidx.camera.core.ImageCapture.ImageCaptureRequestProcessor.ImageCaptor
-import androidx.camera.core.MirrorMode.MIRROR_MODE_ON_FRONT_ONLY
 import androidx.camera.core.MirrorMode.MIRROR_MODE_OFF
+import androidx.camera.core.MirrorMode.MIRROR_MODE_ON_FRONT_ONLY
 import androidx.camera.core.impl.CameraConfig
 import androidx.camera.core.impl.CameraFactory
 import androidx.camera.core.impl.CaptureConfig
@@ -45,6 +45,7 @@ import androidx.camera.core.impl.SessionProcessor
 import androidx.camera.core.impl.TagBundle
 import androidx.camera.core.impl.UseCaseConfig
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
+import androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor
 import androidx.camera.core.impl.utils.futures.Futures
 import androidx.camera.core.internal.CameraUseCaseAdapter
 import androidx.camera.core.internal.utils.SizeUtil
@@ -183,23 +184,6 @@ class ImageCaptureTest {
     }
 
     @Test
-    fun setTargetRotationDegrees() {
-        val imageCapture = ImageCapture.Builder().build()
-        imageCapture.setTargetRotationDegrees(45)
-        assertThat(imageCapture.targetRotation).isEqualTo(Surface.ROTATION_270)
-        imageCapture.setTargetRotationDegrees(135)
-        assertThat(imageCapture.targetRotation).isEqualTo(Surface.ROTATION_180)
-        imageCapture.setTargetRotationDegrees(225)
-        assertThat(imageCapture.targetRotation).isEqualTo(Surface.ROTATION_90)
-        imageCapture.setTargetRotationDegrees(315)
-        assertThat(imageCapture.targetRotation).isEqualTo(Surface.ROTATION_0)
-        imageCapture.setTargetRotationDegrees(405)
-        assertThat(imageCapture.targetRotation).isEqualTo(Surface.ROTATION_270)
-        imageCapture.setTargetRotationDegrees(-45)
-        assertThat(imageCapture.targetRotation).isEqualTo(Surface.ROTATION_0)
-    }
-
-    @Test
     fun defaultMirrorModeIsOff() {
         val imageCapture = ImageCapture.Builder().build()
         assertThat(imageCapture.mirrorModeInternal).isEqualTo(MIRROR_MODE_OFF)
@@ -306,36 +290,36 @@ class ImageCaptureTest {
     }
 
     @Test
-    fun useImageReaderProvider_pipelineDisabled() {
+    fun useImageReaderProvider_pipelineEnabled() {
         assertThat(
             bindImageCapture(
                 useProcessingPipeline = true,
                 bufferFormat = ImageFormat.JPEG,
                 imageReaderProxyProvider = getImageReaderProxyProvider(),
             ).isProcessingPipelineEnabled
-        ).isFalse()
+        ).isTrue()
     }
 
     @Test
-    fun yuvFormat_pipelineDisabled() {
+    fun yuvFormat_pipelineEnabled() {
         assertThat(
             bindImageCapture(
                 useProcessingPipeline = true,
                 bufferFormat = ImageFormat.YUV_420_888,
             ).isProcessingPipelineEnabled
-        ).isFalse()
+        ).isTrue()
     }
 
     @Config(minSdk = 28)
     @Test
-    fun extensionIsOn_pipelineDisabled() {
-        assertThat(
-            bindImageCapture(
-                useProcessingPipeline = true,
-                bufferFormat = ImageFormat.JPEG,
-                sessionProcessor = FakeSessionProcessor(null, null)
-            ).isProcessingPipelineEnabled
-        ).isFalse()
+    fun extensionIsOn_pipelineEnabled() {
+        val imageCapture = bindImageCapture(
+            useProcessingPipeline = true,
+            bufferFormat = ImageFormat.JPEG,
+            sessionProcessor = FakeSessionProcessor(null, null)
+        )
+        assertThat(imageCapture.isProcessingPipelineEnabled).isTrue()
+        assertThat(imageCapture.imagePipeline!!.expectsMetadata()).isFalse()
     }
 
     @Test
@@ -348,11 +332,10 @@ class ImageCaptureTest {
         )
 
         // Act
-        imageCapture.takePicture(executor, onImageCapturedCallback)
+        imageCapture.takePicture(mainThreadExecutor(), onImageCapturedCallback)
         // Send fake image.
         fakeImageReaderProxy?.triggerImageAvailable(TagBundle.create(Pair("TagBundleKey", 0)), 0)
         shadowOf(getMainLooper()).idle()
-        flushHandler(callbackHandler)
 
         // Assert.
         // The expected value is based on fitting the 1:1 view port into a rect with the size of
@@ -398,11 +381,10 @@ class ImageCaptureTest {
         )
 
         // Act
-        imageCapture.takePicture(executor, onImageCapturedCallback)
+        imageCapture.takePicture(mainThreadExecutor(), onImageCapturedCallback)
         // Send fake image.
         fakeImageReaderProxy?.triggerImageAvailable(TagBundle.create(Pair("TagBundleKey", 0)), 0)
         shadowOf(getMainLooper()).idle()
-        flushHandler(callbackHandler)
 
         // Assert.
         assertThat(capturedImage!!.width).isEqualTo(fakeImageReaderProxy?.width)
@@ -734,6 +716,7 @@ class ImageCaptureTest {
             .setTargetRotation(Surface.ROTATION_0)
             .setCaptureMode(captureMode)
             .setFlashMode(ImageCapture.FLASH_MODE_OFF)
+            .setIoExecutor(mainThreadExecutor())
             .setCaptureOptionUnpacker { _: UseCaseConfig<*>?, _: CaptureConfig.Builder? -> }
             .setSessionOptionUnpacker { _: Size, _: UseCaseConfig<*>?,
                 _: SessionConfig.Builder? ->

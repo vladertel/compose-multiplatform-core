@@ -17,12 +17,13 @@
 package androidx.appactions.interaction.capabilities.core.impl
 
 import androidx.annotation.RestrictTo
-import androidx.appactions.interaction.capabilities.core.CapabilityExecutor
+import androidx.appactions.interaction.capabilities.core.ExecutionCallback
 import androidx.appactions.interaction.capabilities.core.ExecutionResult
 import androidx.appactions.interaction.capabilities.core.impl.spec.ActionSpec
 import androidx.appactions.interaction.proto.AppActionsContext.AppDialogState
 import androidx.appactions.interaction.proto.FulfillmentResponse
 import androidx.appactions.interaction.proto.ParamValue
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -41,20 +42,16 @@ internal class SingleTurnCapabilitySession<
     >(
     override val sessionId: String,
     private val actionSpec: ActionSpec<*, ArgumentsT, OutputT>,
-    private val capabilityExecutor: CapabilityExecutor<ArgumentsT, OutputT>,
+    private val executionCallback: ExecutionCallback<ArgumentsT, OutputT>,
     private val mutex: Mutex,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) : CapabilitySession {
-    override val state: AppDialogState
-        get() {
-            throw UnsupportedOperationException()
-        }
-    override val status: CapabilitySession.Status
-        get() {
-            throw UnsupportedOperationException()
-        }
+    private val isActiveAtomic = AtomicBoolean(true)
 
-    override val uiHandle: Any = capabilityExecutor.uiHandle
+    override val state: AppDialogState? = null
+    override val isActive: Boolean get() = isActiveAtomic.get()
+
+    override val uiHandle: Any = executionCallback.uiHandle
 
     override fun destroy() {}
 
@@ -67,6 +64,10 @@ internal class SingleTurnCapabilitySession<
         argumentsWrapper: ArgumentsWrapper,
         callback: CallbackInternal,
     ) {
+        if (!isActiveAtomic.getAndSet(false)) {
+            callback.onError(ErrorStatusInternal.CANCELLED)
+            return
+        }
         val paramValuesMap: Map<String, List<ParamValue>> =
             argumentsWrapper.paramValues.mapValues { entry -> entry.value.mapNotNull { it.value } }
         val arguments = actionSpec.buildArguments(paramValuesMap)
@@ -74,7 +75,7 @@ internal class SingleTurnCapabilitySession<
             try {
                 mutex.lock(owner = this@SingleTurnCapabilitySession)
                 UiHandleRegistry.registerUiHandle(uiHandle, sessionId)
-                val output = capabilityExecutor.onExecute(arguments)
+                val output = executionCallback.onExecute(arguments)
                 callback.onSuccess(convertToFulfillmentResponse(output))
             } catch (t: Throwable) {
                 callback.onError(ErrorStatusInternal.CANCELLED)

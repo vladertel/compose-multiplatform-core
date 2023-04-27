@@ -28,6 +28,7 @@ import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.AwaitFirstLayoutModifier
+import androidx.compose.foundation.lazy.layout.LazyLayoutBeyondBoundsInfo
 import androidx.compose.foundation.lazy.layout.LazyLayoutPinnedItemList
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState
 import androidx.compose.runtime.Composable
@@ -40,6 +41,7 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.Remeasurement
 import androidx.compose.ui.layout.RemeasurementModifier
 import androidx.compose.ui.unit.Constraints
@@ -61,15 +63,92 @@ import kotlin.math.sign
  * @param initialPageOffsetFraction The offset of the initial page as a fraction of the page size.
  * This should vary between -0.5 and 0.5 and indicates how to offset the initial page from the
  * snapped position.
+ * @param pageCount The amount of pages this Pager will have.
  */
+@ExperimentalFoundationApi
+@Composable
+fun rememberPagerState(
+    initialPage: Int = 0,
+    initialPageOffsetFraction: Float = 0f,
+    pageCount: () -> Int
+): PagerState {
+    return rememberSaveable(saver = PagerStateImpl.Saver) {
+        PagerStateImpl(
+            initialPage,
+            initialPageOffsetFraction,
+            pageCount
+        )
+    }.apply {
+        pageCountState.value = pageCount
+    }
+}
+
+/**
+ * Creates and remember a [PagerState] to be used with a [Pager]
+ *
+ * Please refer to the sample to learn how to use this API.
+ * @sample androidx.compose.foundation.samples.PagerWithStateSample
+ *
+ * @param initialPage The pager that should be shown first.
+ * @param initialPageOffsetFraction The offset of the initial page as a fraction of the page size.
+ * This should vary between -0.5 and 0.5 and indicates how to offset the initial page from the
+ * snapped position.
+ */
+@Deprecated(
+    "Please use the overload where you can provide a source of truth for the pageCount.",
+    ReplaceWith(
+        """rememberPagerState(
+                initialPage = initialPage,
+                initialPageOffsetFraction = initialPageOffsetFraction
+            ){
+                // provide pageCount
+            }"""
+    )
+)
 @ExperimentalFoundationApi
 @Composable
 fun rememberPagerState(
     initialPage: Int = 0,
     initialPageOffsetFraction: Float = 0f
 ): PagerState {
-    return rememberSaveable(saver = PagerState.Saver) {
-        PagerState(initialPage = initialPage, initialPageOffsetFraction = initialPageOffsetFraction)
+    return rememberSaveable(saver = PagerStateImpl.Saver) {
+        PagerStateImpl(
+            initialPage = initialPage,
+            initialPageOffsetFraction = initialPageOffsetFraction
+        ) { 0 }
+    }
+}
+
+@ExperimentalFoundationApi
+internal class PagerStateImpl(
+    initialPage: Int,
+    initialPageOffsetFraction: Float,
+    updatedPageCount: () -> Int
+) : PagerState(initialPage, initialPageOffsetFraction) {
+
+    var pageCountState = mutableStateOf(updatedPageCount)
+    override val pageCount: Int get() = pageCountState.value.invoke()
+
+    companion object {
+        /**
+         * To keep current page and current page offset saved
+         */
+        val Saver: Saver<PagerStateImpl, *> = listSaver(
+            save = {
+                listOf(
+                    it.currentPage,
+                    it.currentPageOffsetFraction,
+                    it.pageCount
+                )
+            },
+            restore = {
+                PagerStateImpl(
+                    initialPage = it[0] as Int,
+                    initialPageOffsetFraction = it[1] as Float,
+                    updatedPageCount = { it[2] as Int }
+                )
+            }
+        )
     }
 }
 
@@ -81,10 +160,15 @@ fun rememberPagerState(
  */
 @ExperimentalFoundationApi
 @Stable
-class PagerState(
+abstract class PagerState(
     val initialPage: Int = 0,
     val initialPageOffsetFraction: Float = 0f
 ) : ScrollableState {
+
+    /**
+     * The total amount of pages present in this pager
+     */
+    abstract val pageCount: Int
 
     init {
         require(initialPageOffsetFraction in -0.5..0.5) {
@@ -93,6 +177,10 @@ class PagerState(
         }
     }
 
+    /**
+     * Difference between the last up and last down events of a scroll event.
+     */
+    internal var upDownDifference: Offset by mutableStateOf(Offset.Zero)
     internal var snapRemainingScrollOffset by mutableStateOf(0f)
 
     private val scrollPosition = PagerScrollPosition(initialPage, 0)
@@ -164,18 +252,6 @@ class PagerState(
         get() = with(density) {
             val minThreshold = minOf(DefaultPositionThreshold.toPx(), pageSize / 2f)
             minThreshold / pageSize.toFloat()
-        }
-
-    internal val pageCount: Int
-        get() = pagerLayoutInfoState.value.pagesCount
-
-    internal val firstVisiblePageInfo: PageInfo?
-        get() = visiblePages.lastOrNull {
-            density.calculateDistanceToDesiredSnapPosition(
-                pagerLayoutInfoState.value,
-                it,
-                SnapAlignmentStartToStart
-            ) <= 0
         }
 
     private val distanceToSnapPosition: Float
@@ -285,6 +361,8 @@ class PagerState(
     }
 
     internal val prefetchState = LazyLayoutPrefetchState()
+
+    internal val beyondBoundsInfo = LazyLayoutBeyondBoundsInfo()
 
     /**
      * Provides a modifier which allows to delay some interactions (e.g. scroll)
@@ -422,9 +500,9 @@ class PagerState(
     override val isScrollInProgress: Boolean
         get() = scrollableState.isScrollInProgress
 
-    override var canScrollForward: Boolean by mutableStateOf(false)
+    final override var canScrollForward: Boolean by mutableStateOf(false)
         private set
-    override var canScrollBackward: Boolean by mutableStateOf(false)
+    final override var canScrollBackward: Boolean by mutableStateOf(false)
         private set
 
     /**
@@ -530,24 +608,22 @@ class PagerState(
         }
     }
 
-    companion object {
-        /**
-         * To keep current page and current page offset saved
-         */
-        val Saver: Saver<PagerState, *> = listSaver(
-            save = {
-                listOf(
-                    it.currentPage,
-                    it.currentPageOffsetFraction
-                )
-            },
-            restore = {
-                PagerState(
-                    initialPage = it[0] as Int,
-                    initialPageOffsetFraction = it[1] as Float
-                )
-            }
-        )
+    /**
+     * An utility function to help to calculate a given page's offset. Since this is based off
+     * [currentPageOffsetFraction] the same concept applies: a fraction offset that represents
+     * how far [page] is from the settled position (represented by [currentPage] offset). The
+     * difference here is that [currentPageOffsetFraction] is a value between -0.5 and 0.5 and
+     * the value calculate by this function can be larger than these numbers if [page] is different
+     * than [currentPage].
+     *
+     * @param page The page to calculate the offset from. This should be between 0 and [pageCount].
+     * @return The offset of [page] with respect to [currentPage].
+     */
+    fun getOffsetFractionForPage(page: Int): Float {
+        require(page in 0..pageCount) {
+            "page $page is not within the range 0 to pageCount"
+        }
+        return (currentPage - page) + currentPageOffsetFraction
     }
 }
 

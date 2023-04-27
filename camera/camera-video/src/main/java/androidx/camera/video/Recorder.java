@@ -57,6 +57,8 @@ import androidx.annotation.RequiresPermission;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.AspectRatio;
+import androidx.camera.core.CameraInfo;
+import androidx.camera.core.DynamicRange;
 import androidx.camera.core.Logger;
 import androidx.camera.core.SurfaceRequest;
 import androidx.camera.core.impl.MutableStateObservable;
@@ -488,6 +490,13 @@ public final class Recorder implements VideoOutput {
     @Override
     public void onSourceStateChanged(@NonNull SourceState newState) {
         mSequentialExecutor.execute(() -> onSourceStateChangedInternal(newState));
+    }
+
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @Override
+    @NonNull
+    public VideoCapabilities getMediaCapabilities(@NonNull CameraInfo cameraInfo) {
+        return getVideoCapabilities(cameraInfo);
     }
 
     /**
@@ -1057,13 +1066,16 @@ public final class Recorder implements VideoOutput {
                 (transformationInfo) -> mSurfaceTransformationInfo = transformationInfo);
         Size surfaceSize = surfaceRequest.getResolution();
         // Fetch and cache nearest encoder profiles, if one exists.
-        LegacyVideoCapabilities capabilities =
-                LegacyVideoCapabilities.from(surfaceRequest.getCamera().getCameraInfo());
-        Quality highestSupportedQuality = capabilities.findHighestSupportedQualityFor(surfaceSize);
+        DynamicRange dynamicRange = surfaceRequest.getDynamicRange();
+        VideoCapabilities capabilities = getVideoCapabilities(
+                surfaceRequest.getCamera().getCameraInfo());
+        Quality highestSupportedQuality = capabilities.findHighestSupportedQualityFor(surfaceSize,
+                dynamicRange);
         Logger.d(TAG, "Using supported quality of " + highestSupportedQuality
                 + " for surface size " + surfaceSize);
         if (highestSupportedQuality != Quality.NONE) {
-            mResolvedEncoderProfiles = capabilities.getProfiles(highestSupportedQuality);
+            mResolvedEncoderProfiles = capabilities.getProfiles(highestSupportedQuality,
+                    dynamicRange);
             if (mResolvedEncoderProfiles == null) {
                 throw new AssertionError("Camera advertised available quality but did not "
                         + "produce EncoderProfiles  for advertised quality.");
@@ -2612,6 +2624,15 @@ public final class Recorder implements VideoOutput {
             }
         }
         return defaultMuxerFormat;
+    }
+
+    /**
+     * Gets the {@link VideoCapabilities} of Recorder.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @NonNull
+    public static VideoCapabilities getVideoCapabilities(@NonNull CameraInfo cameraInfo) {
+        return RecorderVideoCapabilities.from(cameraInfo);
     }
 
     @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java

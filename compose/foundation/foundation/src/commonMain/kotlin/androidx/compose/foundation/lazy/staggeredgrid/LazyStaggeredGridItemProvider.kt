@@ -31,10 +31,10 @@ import androidx.compose.runtime.rememberUpdatedState
 @OptIn(ExperimentalFoundationApi::class)
 internal interface LazyStaggeredGridItemProvider : LazyLayoutItemProvider {
     val spanProvider: LazyStaggeredGridSpanProvider
+    val keyToIndexMap: LazyLayoutKeyIndexMap
 }
 
 @Composable
-@ExperimentalFoundationApi
 internal fun rememberStaggeredGridItemProvider(
     state: LazyStaggeredGridState,
     content: LazyStaggeredGridScope.() -> Unit,
@@ -48,7 +48,7 @@ internal fun rememberStaggeredGridItemProvider(
     }
 }
 
-@ExperimentalFoundationApi
+@OptIn(ExperimentalFoundationApi::class)
 private class LazyStaggeredGridItemProviderImpl(
     private val state: LazyStaggeredGridState,
     private val latestContent: () -> (LazyStaggeredGridScope.() -> Unit)
@@ -57,7 +57,7 @@ private class LazyStaggeredGridItemProviderImpl(
         LazyStaggeredGridIntervalContent(latestContent())
     }
 
-    private val keyToIndexMap: LazyLayoutKeyIndexMap by NearestRangeKeyIndexMapState(
+    override val keyToIndexMap: LazyLayoutKeyIndexMap by NearestRangeKeyIndexMapState(
         firstVisibleItemIndex = { state.firstVisibleItemIndex },
         slidingWindowSize = { 90 },
         extraItemCount = { 200 },

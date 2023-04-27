@@ -107,8 +107,8 @@ package androidx.compose.ui {
     ctor public CombinedModifier(androidx.compose.ui.Modifier outer, androidx.compose.ui.Modifier inner);
     method public boolean all(kotlin.jvm.functions.Function1<? super androidx.compose.ui.Modifier.Element,java.lang.Boolean> predicate);
     method public boolean any(kotlin.jvm.functions.Function1<? super androidx.compose.ui.Modifier.Element,java.lang.Boolean> predicate);
-    method public <R> R! foldIn(R? initial, kotlin.jvm.functions.Function2<? super R,? super androidx.compose.ui.Modifier.Element,? extends R> operation);
-    method public <R> R! foldOut(R? initial, kotlin.jvm.functions.Function2<? super androidx.compose.ui.Modifier.Element,? super R,? extends R> operation);
+    method public <R> R foldIn(R initial, kotlin.jvm.functions.Function2<? super R,? super androidx.compose.ui.Modifier.Element,? extends R> operation);
+    method public <R> R foldOut(R initial, kotlin.jvm.functions.Function2<? super androidx.compose.ui.Modifier.Element,? super R,? extends R> operation);
   }
 
   public final class ComposedModifierKt {
@@ -120,8 +120,8 @@ package androidx.compose.ui {
   @androidx.compose.runtime.Stable @kotlin.jvm.JvmDefaultWithCompatibility public interface Modifier {
     method public boolean all(kotlin.jvm.functions.Function1<? super androidx.compose.ui.Modifier.Element,java.lang.Boolean> predicate);
     method public boolean any(kotlin.jvm.functions.Function1<? super androidx.compose.ui.Modifier.Element,java.lang.Boolean> predicate);
-    method public <R> R! foldIn(R? initial, kotlin.jvm.functions.Function2<? super R,? super androidx.compose.ui.Modifier.Element,? extends R> operation);
-    method public <R> R! foldOut(R? initial, kotlin.jvm.functions.Function2<? super androidx.compose.ui.Modifier.Element,? super R,? extends R> operation);
+    method public <R> R foldIn(R initial, kotlin.jvm.functions.Function2<? super R,? super androidx.compose.ui.Modifier.Element,? extends R> operation);
+    method public <R> R foldOut(R initial, kotlin.jvm.functions.Function2<? super androidx.compose.ui.Modifier.Element,? super R,? extends R> operation);
     method public default infix androidx.compose.ui.Modifier then(androidx.compose.ui.Modifier other);
     field public static final androidx.compose.ui.Modifier.Companion Companion;
   }
@@ -129,29 +129,30 @@ package androidx.compose.ui {
   public static final class Modifier.Companion implements androidx.compose.ui.Modifier {
     method public boolean all(kotlin.jvm.functions.Function1<? super androidx.compose.ui.Modifier.Element,java.lang.Boolean> predicate);
     method public boolean any(kotlin.jvm.functions.Function1<? super androidx.compose.ui.Modifier.Element,java.lang.Boolean> predicate);
-    method public <R> R! foldIn(R? initial, kotlin.jvm.functions.Function2<? super R,? super androidx.compose.ui.Modifier.Element,? extends R> operation);
-    method public <R> R! foldOut(R? initial, kotlin.jvm.functions.Function2<? super androidx.compose.ui.Modifier.Element,? super R,? extends R> operation);
+    method public <R> R foldIn(R initial, kotlin.jvm.functions.Function2<? super R,? super androidx.compose.ui.Modifier.Element,? extends R> operation);
+    method public <R> R foldOut(R initial, kotlin.jvm.functions.Function2<? super androidx.compose.ui.Modifier.Element,? super R,? extends R> operation);
   }
 
   @kotlin.jvm.JvmDefaultWithCompatibility public static interface Modifier.Element extends androidx.compose.ui.Modifier {
     method public default boolean all(kotlin.jvm.functions.Function1<? super androidx.compose.ui.Modifier.Element,java.lang.Boolean> predicate);
     method public default boolean any(kotlin.jvm.functions.Function1<? super androidx.compose.ui.Modifier.Element,java.lang.Boolean> predicate);
-    method public default <R> R! foldIn(R? initial, kotlin.jvm.functions.Function2<? super R,? super androidx.compose.ui.Modifier.Element,? extends R> operation);
-    method public default <R> R! foldOut(R? initial, kotlin.jvm.functions.Function2<? super androidx.compose.ui.Modifier.Element,? super R,? extends R> operation);
+    method public default <R> R foldIn(R initial, kotlin.jvm.functions.Function2<? super R,? super androidx.compose.ui.Modifier.Element,? extends R> operation);
+    method public default <R> R foldOut(R initial, kotlin.jvm.functions.Function2<? super androidx.compose.ui.Modifier.Element,? super R,? extends R> operation);
   }
 
   public abstract static class Modifier.Node implements androidx.compose.ui.node.DelegatableNode {
     ctor public Modifier.Node();
     method public final kotlinx.coroutines.CoroutineScope getCoroutineScope();
     method public final androidx.compose.ui.Modifier.Node getNode();
+    method public boolean getShouldAutoInvalidate();
     method public final boolean isAttached();
     method public void onAttach();
     method public void onDetach();
     method public void onReset();
-    method public final void sideEffect(kotlin.jvm.functions.Function0<kotlin.Unit> effect);
     property public final kotlinx.coroutines.CoroutineScope coroutineScope;
     property public final boolean isAttached;
     property public final androidx.compose.ui.Modifier.Node node;
+    property public boolean shouldAutoInvalidate;
   }
 
   @androidx.compose.runtime.Stable public interface MotionDurationScale extends kotlin.coroutines.CoroutineContext.Element {
@@ -608,7 +609,7 @@ package androidx.compose.ui.graphics.vector {
   }
 
   @kotlin.jvm.JvmDefaultWithCompatibility public interface VectorConfig {
-    method public default <T> T! getOrDefault(androidx.compose.ui.graphics.vector.VectorProperty<T> property, T? defaultValue);
+    method public default <T> T getOrDefault(androidx.compose.ui.graphics.vector.VectorProperty<T> property, T defaultValue);
   }
 
   @androidx.compose.runtime.Immutable public final class VectorGroup extends androidx.compose.ui.graphics.vector.VectorNode implements java.lang.Iterable<androidx.compose.ui.graphics.vector.VectorNode> kotlin.jvm.internal.markers.KMappedMarker {
@@ -1480,6 +1481,10 @@ package androidx.compose.ui.input.nestedscroll {
     method public static androidx.compose.ui.Modifier nestedScroll(androidx.compose.ui.Modifier, androidx.compose.ui.input.nestedscroll.NestedScrollConnection connection, optional androidx.compose.ui.input.nestedscroll.NestedScrollDispatcher? dispatcher);
   }
 
+  public final class NestedScrollNodeKt {
+    method public static androidx.compose.ui.node.DelegatableNode nestedScrollModifierNode(androidx.compose.ui.input.nestedscroll.NestedScrollConnection connection, androidx.compose.ui.input.nestedscroll.NestedScrollDispatcher? dispatcher);
+  }
+
   @kotlin.jvm.JvmInline public final value class NestedScrollSource {
     field public static final androidx.compose.ui.input.nestedscroll.NestedScrollSource.Companion Companion;
   }
@@ -2224,9 +2229,9 @@ package androidx.compose.ui.modifier {
   }
 
   public interface ModifierLocalNode extends androidx.compose.ui.modifier.ModifierLocalReadScope androidx.compose.ui.node.DelegatableNode {
-    method public default <T> T! getCurrent(androidx.compose.ui.modifier.ModifierLocal<T>);
+    method public default <T> T getCurrent(androidx.compose.ui.modifier.ModifierLocal<T>);
     method public default androidx.compose.ui.modifier.ModifierLocalMap getProvidedValues();
-    method public default <T> void provide(androidx.compose.ui.modifier.ModifierLocal<T> key, T? value);
+    method public default <T> void provide(androidx.compose.ui.modifier.ModifierLocal<T> key, T value);
     property public default androidx.compose.ui.modifier.ModifierLocalMap providedValues;
   }
 
@@ -2240,13 +2245,13 @@ package androidx.compose.ui.modifier {
 
   @androidx.compose.runtime.Stable @kotlin.jvm.JvmDefaultWithCompatibility public interface ModifierLocalProvider<T> extends androidx.compose.ui.Modifier.Element {
     method public androidx.compose.ui.modifier.ProvidableModifierLocal<T> getKey();
-    method public T! getValue();
+    method public T getValue();
     property public abstract androidx.compose.ui.modifier.ProvidableModifierLocal<T> key;
-    property public abstract T! value;
+    property public abstract T value;
   }
 
   public interface ModifierLocalReadScope {
-    method public <T> T! getCurrent(androidx.compose.ui.modifier.ModifierLocal<T>);
+    method public <T> T getCurrent(androidx.compose.ui.modifier.ModifierLocal<T>);
   }
 
   @androidx.compose.runtime.Stable public final class ProvidableModifierLocal<T> extends androidx.compose.ui.modifier.ModifierLocal<T> {
@@ -2261,7 +2266,7 @@ package androidx.compose.ui.node {
   }
 
   public final class CompositionLocalConsumerModifierNodeKt {
-    method public static <T> T! currentValueOf(androidx.compose.ui.node.CompositionLocalConsumerModifierNode, androidx.compose.runtime.CompositionLocal<T> local);
+    method public static <T> T currentValueOf(androidx.compose.ui.node.CompositionLocalConsumerModifierNode, androidx.compose.runtime.CompositionLocal<T> local);
   }
 
   public interface DelegatableNode {
@@ -2277,7 +2282,8 @@ package androidx.compose.ui.node {
 
   public abstract class DelegatingNode extends androidx.compose.ui.Modifier.Node {
     ctor public DelegatingNode();
-    method public final <T extends androidx.compose.ui.Modifier.Node> T delegated(kotlin.jvm.functions.Function0<? extends T> fn);
+    method protected final <T extends androidx.compose.ui.node.DelegatableNode> T delegate(T delegatableNode);
+    method protected final void undelegate(androidx.compose.ui.node.DelegatableNode instance);
   }
 
   public interface DrawModifierNode extends androidx.compose.ui.node.DelegatableNode {
@@ -2309,7 +2315,7 @@ package androidx.compose.ui.node {
 
   public final class LayoutModifierNodeKt {
     method public static void invalidateLayer(androidx.compose.ui.node.LayoutModifierNode);
-    method public static void invalidateMeasurements(androidx.compose.ui.node.LayoutModifierNode);
+    method public static void invalidateMeasurement(androidx.compose.ui.node.LayoutModifierNode);
     method public static void invalidatePlacement(androidx.compose.ui.node.LayoutModifierNode);
   }
 
@@ -2317,14 +2323,12 @@ package androidx.compose.ui.node {
     ctor public ModifierNodeElement();
     method public abstract N create();
     method public abstract boolean equals(Object? other);
-    method public boolean getAutoInvalidate();
     method public final kotlin.sequences.Sequence<androidx.compose.ui.platform.ValueElement> getInspectableElements();
     method public final String? getNameFallback();
     method public final Object? getValueOverride();
     method public abstract int hashCode();
     method public void inspectableProperties(androidx.compose.ui.platform.InspectorInfo);
-    method public abstract N update(N node);
-    property public boolean autoInvalidate;
+    method public abstract void update(N node);
     property public final kotlin.sequences.Sequence<androidx.compose.ui.platform.ValueElement> inspectableElements;
     property public final String? nameFallback;
     property public final Object? valueOverride;
@@ -2378,7 +2382,6 @@ package androidx.compose.ui.node {
   }
 
   public final class SemanticsModifierNodeKt {
-    method public static androidx.compose.ui.semantics.SemanticsConfiguration collapsedSemanticsConfiguration(androidx.compose.ui.node.SemanticsModifierNode);
     method public static void invalidateSemantics(androidx.compose.ui.node.SemanticsModifierNode);
   }
 
@@ -2885,13 +2888,13 @@ package androidx.compose.ui.semantics {
     ctor public SemanticsConfiguration();
     method public operator <T> boolean contains(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key);
     method public androidx.compose.ui.semantics.SemanticsConfiguration copy();
-    method public operator <T> T! get(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key);
-    method public <T> T! getOrElse(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key, kotlin.jvm.functions.Function0<? extends T> defaultValue);
+    method public operator <T> T get(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key);
+    method public <T> T getOrElse(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key, kotlin.jvm.functions.Function0<? extends T> defaultValue);
     method public <T> T? getOrElseNullable(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key, kotlin.jvm.functions.Function0<? extends T> defaultValue);
     method public boolean isClearingSemantics();
     method public boolean isMergingSemanticsOfDescendants();
     method public java.util.Iterator<java.util.Map.Entry<androidx.compose.ui.semantics.SemanticsPropertyKey<?>,java.lang.Object>> iterator();
-    method public <T> void set(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key, T? value);
+    method public <T> void set(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key, T value);
     method public void setClearingSemantics(boolean);
     method public void setMergingSemanticsOfDescendants(boolean);
     property public final boolean isClearingSemantics;
@@ -3092,14 +3095,14 @@ package androidx.compose.ui.semantics {
   public final class SemanticsPropertyKey<T> {
     ctor public SemanticsPropertyKey(String name, optional kotlin.jvm.functions.Function2<? super T,? super T,? extends T> mergePolicy);
     method public String getName();
-    method public operator T! getValue(androidx.compose.ui.semantics.SemanticsPropertyReceiver thisRef, kotlin.reflect.KProperty<?> property);
-    method public T? merge(T? parentValue, T? childValue);
-    method public operator void setValue(androidx.compose.ui.semantics.SemanticsPropertyReceiver thisRef, kotlin.reflect.KProperty<?> property, T? value);
+    method public operator T getValue(androidx.compose.ui.semantics.SemanticsPropertyReceiver thisRef, kotlin.reflect.KProperty<?> property);
+    method public T? merge(T? parentValue, T childValue);
+    method public operator void setValue(androidx.compose.ui.semantics.SemanticsPropertyReceiver thisRef, kotlin.reflect.KProperty<?> property, T value);
     property public final String name;
   }
 
   public interface SemanticsPropertyReceiver {
-    method public operator <T> void set(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key, T? value);
+    method public operator <T> void set(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key, T value);
   }
 
 }

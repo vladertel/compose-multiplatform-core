@@ -22,15 +22,13 @@ import androidx.appactions.interaction.capabilities.core.ValidationResult
 import androidx.appactions.interaction.capabilities.core.ValueListener
 import androidx.appactions.interaction.capabilities.core.impl.concurrent.Futures
 import androidx.appactions.interaction.capabilities.core.impl.converters.TypeConverters
-import androidx.appactions.interaction.capabilities.core.values.SearchAction
+import androidx.appactions.interaction.capabilities.core.SearchAction
 import androidx.appactions.interaction.capabilities.testing.internal.ArgumentUtils
 import androidx.appactions.interaction.capabilities.testing.internal.TestingUtils.awaitSync
 import androidx.appactions.interaction.proto.CurrentValue
 import androidx.appactions.interaction.proto.DisambiguationData
 import androidx.appactions.interaction.proto.Entity
 import androidx.appactions.interaction.proto.ParamValue
-import androidx.appactions.interaction.protobuf.Struct
-import androidx.appactions.interaction.protobuf.Value
 import com.google.common.truth.Truth.assertThat
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CompletableDeferred
@@ -132,7 +130,7 @@ class TaskSlotProcessorTest {
             )
         val taskParamMap: MutableMap<String, TaskParamBinding<*>> = HashMap()
         taskParamMap["singularValue"] = binding
-        val args = listOf(ParamValue.newBuilder().setIdentifier("testValue").build())
+        val args = listOf(ParamValue.newBuilder().setStringValue("testValue").build())
         val (isSuccessful, processedValues) =
             TaskSlotProcessor.processSlot(
                 "singularValue",
@@ -163,7 +161,7 @@ class TaskSlotProcessorTest {
             )
         val taskParamMap: MutableMap<String, TaskParamBinding<*>> = HashMap()
         taskParamMap["singularValue"] = binding
-        val args = listOf(ParamValue.newBuilder().setIdentifier("testValue").build())
+        val args = listOf(ParamValue.newBuilder().setStringValue("testValue").build())
         val (isSuccessful, processedValues) =
             TaskSlotProcessor.processSlot(
                 "singularValue",
@@ -199,8 +197,8 @@ class TaskSlotProcessorTest {
         taskParamMap["repeatedValue"] = binding
         val args =
             listOf(
-                ParamValue.newBuilder().setIdentifier("testValue1").build(),
-                ParamValue.newBuilder().setIdentifier("testValue2").build(),
+                ParamValue.newBuilder().setStringValue("testValue1").build(),
+                ParamValue.newBuilder().setStringValue("testValue2").build(),
             )
         val (isSuccessful, processedValues) =
             TaskSlotProcessor.processSlot(
@@ -247,8 +245,8 @@ class TaskSlotProcessorTest {
         taskParamMap["repeatedValue"] = binding
         val args =
             listOf(
-                ParamValue.newBuilder().setIdentifier("testValue1").build(),
-                ParamValue.newBuilder().setIdentifier("testValue2").build(),
+                ParamValue.newBuilder().setStringValue("testValue1").build(),
+                ParamValue.newBuilder().setStringValue("testValue2").build(),
             )
         val (isSuccessful, processedValues) =
             TaskSlotProcessor.processSlot(
@@ -304,13 +302,7 @@ class TaskSlotProcessorTest {
                     .setValue(
                         ParamValue.newBuilder()
                             .setIdentifier("id")
-                            .setStructValue(
-                                Struct.newBuilder()
-                                    .putFields(
-                                        "id",
-                                        Value.newBuilder().setStringValue("1234").build(),
-                                    ),
-                            ),
+                            .setStringValue("1234")
                     )
                     .build()
             val values =
@@ -328,7 +320,7 @@ class TaskSlotProcessorTest {
             val (isSuccessful, processedValues) =
                 TaskSlotProcessor.processSlot("assistantDrivenSlot", values, taskParamMap)
             assertThat(isSuccessful).isFalse()
-            assertThat(onReceivedDeferred.awaitSync()).isEqualTo("id")
+            assertThat(onReceivedDeferred.awaitSync()).isEqualTo("1234")
             assertThat(renderDeferred.awaitSync()).isEqualTo(listOf("entity-1", "entity-2"))
             assertThat(processedValues)
                 .containsExactly(
@@ -366,7 +358,7 @@ class TaskSlotProcessorTest {
                 TypeConverters.STRING_PARAM_VALUE_CONVERTER, // Not invoked
                 { Entity.getDefaultInstance() },
             ) {
-                SearchAction.newBuilder<String>().setQuery("A").setObject("nested").build()
+                SearchAction.Builder<String>().setQuery("A").setFilter("nested").build()
             }
         val taskParamMap: MutableMap<String, TaskParamBinding<*>> = HashMap()
         taskParamMap["appDrivenSlot"] = binding
@@ -384,7 +376,7 @@ class TaskSlotProcessorTest {
         assertThat(onReceivedDeferred.isCompleted).isFalse()
         assertThat(appSearchDeferred.isCompleted).isTrue()
         assertThat(appSearchDeferred.awaitSync())
-            .isEqualTo(SearchAction.newBuilder<String>().setQuery("A").setObject("nested").build())
+            .isEqualTo(SearchAction.Builder<String>().setQuery("A").setFilter("nested").build())
         assertThat(processedValues)
             .containsExactly(
                 CurrentValue.newBuilder()

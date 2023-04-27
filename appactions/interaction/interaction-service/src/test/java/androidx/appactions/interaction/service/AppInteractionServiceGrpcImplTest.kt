@@ -115,7 +115,7 @@ class AppInteractionServiceGrpcImplTest {
     }
 
     @Test
-    fun startUpSession_validRequest_shouldGetValidStartSessionResponse(): Unit = runBlocking {
+    fun startUpSession_validRequest_success(): Unit = runBlocking {
         val server =
             createInProcessServer(
                 AppInteractionServiceGrpcImpl(appInteractionService),
@@ -145,6 +145,11 @@ class AppInteractionServiceGrpcImplTest {
         val startSessionResponse = responseCaptor.firstValue
         assertThat(startSessionResponse).isEqualTo(StartSessionResponse.getDefaultInstance())
         verify(startSessionResponseObserver, times(1)).onNext(any())
+        assertThat(SessionManager.getSession(sessionId)).isNotNull()
+
+        // end startSession stream
+        startSessionRequestObserver.onCompleted()
+        assertThat(SessionManager.getSession(sessionId)).isNull()
 
         server.shutdownNow()
     }
@@ -321,7 +326,7 @@ class AppInteractionServiceGrpcImplTest {
 
         // Verify capability session is created
         val mockSession = createMockSession()
-        whenever(mockSession.status).thenReturn(CapabilitySession.Status.COMPLETED)
+        whenever(mockSession.isActive).thenReturn(false)
         whenever(capability1.createSession(any(), any())).thenReturn(mockSession)
         assertStartupSession(stub)
         verify(capability1, times(1)).createSession(any(), any())
@@ -392,7 +397,7 @@ class AppInteractionServiceGrpcImplTest {
         }
         whenever(mockSession.sessionId).thenReturn(sessionId)
         whenever(mockSession.state).thenReturn(AppDialogState.getDefaultInstance())
-        whenever(mockSession.status).thenReturn(CapabilitySession.Status.UNINITIATED)
+        whenever(mockSession.isActive).thenReturn(true)
         whenever(mockSession.uiHandle).thenReturn(Any())
         return mockSession
     }

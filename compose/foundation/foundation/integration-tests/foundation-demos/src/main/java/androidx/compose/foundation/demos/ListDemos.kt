@@ -1004,13 +1004,15 @@ private fun LazyStaggeredGridDemo() {
                                 StaggeredGridItemSpan.FullLine
                             else
                                 StaggeredGridItemSpan.SingleLane
-                        }
+                        },
+                        key = { indices.value[it % indices.value.size] }
                     ) {
                         var expanded by remember { mutableStateOf(false) }
                         val index = indices.value[it % indices.value.size]
                         val color = colors[index]
                         Box(
                             modifier = Modifier
+                                .animateItemPlacement()
                                 .height(if (!expanded) heights[index] else heights[index] * 2)
                                 .border(2.dp, color, RoundedCornerShape(5.dp))
                                 .clickable {
@@ -1068,7 +1070,7 @@ private fun AnimateItemPlacementDemo() {
                 .weight(1f), reverseLayout = reverse) {
             items(items, key = { it }) { item ->
                 val selected = selectedIndexes.getOrDefault(item, false)
-                val modifier = if (selected) Modifier.animateItemPlacement() else Modifier
+                val modifier = Modifier.animateItemPlacement()
                 var height by remember { mutableStateOf(40.dp) }
                 Row(
                     modifier

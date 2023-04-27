@@ -18,9 +18,9 @@ package androidx.appactions.interaction.capabilities.core.impl.converters;
 
 import static androidx.appactions.interaction.capabilities.core.impl.utils.ImmutableCollectors.toImmutableList;
 
+import androidx.appactions.builtintypes.experimental.types.Thing;
 import androidx.appactions.interaction.capabilities.core.impl.BuilderOf;
 import androidx.appactions.interaction.capabilities.core.impl.exceptions.StructConversionException;
-import androidx.appactions.interaction.capabilities.core.values.Thing;
 import androidx.appactions.interaction.protobuf.ListValue;
 import androidx.appactions.interaction.protobuf.Struct;
 import androidx.appactions.interaction.protobuf.Value;
@@ -80,7 +80,7 @@ final class TypeSpecBuilder<T, BuilderT> {
      * StructConversionException.
      *
      * @param struct the Struct to get values from.
-     * @param key the String key of the field to retrieve.
+     * @param key    the String key of the field to retrieve.
      */
     private static Value getFieldFromStruct(Struct struct, String key)
             throws StructConversionException {
@@ -97,18 +97,11 @@ final class TypeSpecBuilder<T, BuilderT> {
         return new TypeSpecBuilder<>(typeName, builderSupplier, BuilderT::build);
     }
 
-    /**
-     * Creates a new TypeSpecBuilder for a child class of Thing.
-     *
-     * <p>Comes with bindings for Thing fields.
-     */
-    static <T extends Thing, BuilderT extends Thing.Builder<BuilderT> & BuilderOf<T>>
-            TypeSpecBuilder<T, BuilderT> newBuilderForThing(
-                    String typeName, Supplier<BuilderT> builderSupplier) {
-        return newBuilder(typeName, builderSupplier)
-                .bindIdentifier(T::getId)
-                .bindStringField("identifier", T::getId, BuilderT::setId)
-                .bindStringField("name", T::getName, BuilderT::setName);
+    static <T, BuilderT> TypeSpecBuilder<T, BuilderT> newBuilder(
+            String typeName,
+            Supplier<BuilderT> builderSupplier,
+            Function<BuilderT, T> builderFinalizer) {
+        return new TypeSpecBuilder<>(typeName, builderSupplier, builderFinalizer);
     }
 
     /**
@@ -116,8 +109,7 @@ final class TypeSpecBuilder<T, BuilderT> {
      *
      * <p>Comes with bindings for Thing fields.
      */
-    static <T extends androidx.appactions.builtintypes.types.Thing,
-            BuilderT extends androidx.appactions.builtintypes.types.Thing.Builder<?>>
+    static <T extends Thing, BuilderT extends Thing.Builder<?>>
             TypeSpecBuilder<T, BuilderT> newBuilderForThing(
                     String typeName,
                     Supplier<BuilderT> builderSupplier,

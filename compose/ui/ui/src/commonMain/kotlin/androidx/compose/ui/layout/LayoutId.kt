@@ -37,8 +37,8 @@ private data class LayoutIdModifierElement(
 ) : ModifierNodeElement<LayoutIdModifier>() {
     override fun create() = LayoutIdModifier(layoutId)
 
-    override fun update(node: LayoutIdModifier): LayoutIdModifier = node.also {
-        it.layoutId = layoutId
+    override fun update(node: LayoutIdModifier) {
+        node.layoutId = layoutId
     }
 
     override fun InspectorInfo.inspectableProperties() {
@@ -52,7 +52,7 @@ private data class LayoutIdModifierElement(
  * will act as parent data, and can be used for example by parent layouts to associate
  * composable children to [Measurable]s when doing layout, as shown below.
  */
-private class LayoutIdModifier(
+internal class LayoutIdModifier(
     layoutId: Any,
 ) : ParentDataModifierNode, LayoutIdParentData, Modifier.Node() {
 

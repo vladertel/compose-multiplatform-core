@@ -26,6 +26,7 @@ import android.view.Surface
 import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraGraph.Constants3A.DEFAULT_FRAME_LIMIT
 import androidx.camera.camera2.pipe.CameraGraph.Constants3A.DEFAULT_TIME_LIMIT_NS
+import androidx.camera.camera2.pipe.CameraGraph.Flags.FinalizeSessionOnCloseBehavior.Companion.OFF
 import androidx.camera.camera2.pipe.GraphState.GraphStateStarting
 import androidx.camera.camera2.pipe.GraphState.GraphStateStopped
 import androidx.camera.camera2.pipe.GraphState.GraphStateStopping
@@ -151,7 +152,59 @@ interface CameraGraph : AutoCloseable {
          * - API levels: All
          */
         val quirkWaitForRepeatingRequestOnDisconnect: Boolean? = null,
-    )
+
+        /**
+         * A quirk that finalizes [androidx.camera.camera2.pipe.compat.CaptureSessionState] when
+         * the CameraGraph is stopped or closed. When a CameraGraph is started, the app might
+         * wait for the Surfaces to be released before setting the new Surfaces. This creates a
+         * potential deadlock, and this quirk is aimed to mitigate such behavior by releasing the
+         * Surfaces (finalizing the session) when the graph is stopped or closed.
+         *
+         * - Bug(s): b/277310425
+         * - Device(s): All (but behaviors might differ across devices)
+         * - API levels: All
+         */
+        val quirkFinalizeSessionOnCloseBehavior: FinalizeSessionOnCloseBehavior = OFF,
+
+        /**
+         * A quirk that closes the camera capture session when the CameraGraph is stopped or closed.
+         * This is needed in cases where the app that do not wish to receive further frames, or
+         * in cases where not closing the capture session before closing the camera device might
+         * cause the camera close call itself to hang indefinitely.
+         *
+         * - Bug(s): b/277310425, b/277310425
+         * - Device(s): Depends on the situation and the use case.
+         * - API levels: All
+         */
+        val quirkCloseCaptureSessionOnDisconnect: Boolean = false,
+    ) {
+
+        @JvmInline
+        value class FinalizeSessionOnCloseBehavior private constructor(val value: Int) {
+            companion object {
+                /**
+                 * OFF indicates that the CameraGraph only finalizes capture session under regular
+                 *  conditions, i.e., when the camera device is closed, or when a new capture
+                 *  session is created.
+                 */
+                val OFF = FinalizeSessionOnCloseBehavior(0)
+
+                /**
+                 * IMMEDIATE indicates that the CameraGraph will finalize the current session
+                 *  immediately when the CameraGraph is stopped or closed. This should be the
+                 *  default behavior for devices that allows for immediate Surface reuse.
+                 */
+                val IMMEDIATE = FinalizeSessionOnCloseBehavior(1)
+
+                /**
+                 * TIMEOUT indicates that the CameraGraph will finalize the current session on a 2s
+                 *  timeout when the CameraGraph is stopped or closed. This should only be enabled
+                 *  for devices that require waiting for Surfaces to be released.
+                 */
+                val TIMEOUT = FinalizeSessionOnCloseBehavior(2)
+            }
+        }
+    }
 
     enum class OperatingMode {
         NORMAL,

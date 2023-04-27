@@ -17,7 +17,7 @@
 package androidx.appactions.interaction.capabilities.core.impl
 
 import androidx.annotation.RestrictTo
-import androidx.appactions.interaction.capabilities.core.CapabilityExecutor
+import androidx.appactions.interaction.capabilities.core.ExecutionCallback
 import androidx.appactions.interaction.capabilities.core.Capability
 import androidx.appactions.interaction.capabilities.core.HostProperties
 import androidx.appactions.interaction.capabilities.core.impl.spec.ActionSpec
@@ -35,11 +35,11 @@ internal class SingleTurnCapabilityImpl<
     id: String,
     val actionSpec: ActionSpec<PropertyT, ArgumentsT, OutputT>,
     val property: PropertyT,
-    val capabilityExecutor: CapabilityExecutor<ArgumentsT, OutputT>,
+    val executionCallback: ExecutionCallback<ArgumentsT, OutputT>,
 ) : Capability(id) {
     private val mutex = Mutex()
 
-    override val appAction: AppAction =
+    override val appAction: AppAction get() =
         actionSpec.convertPropertyToProto(property).toBuilder()
             .setTaskInfo(TaskInfo.newBuilder().setSupportsPartialFulfillment(false))
             .setIdentifier(id)
@@ -52,7 +52,7 @@ internal class SingleTurnCapabilityImpl<
         return SingleTurnCapabilitySession(
             sessionId,
             actionSpec,
-            capabilityExecutor,
+            executionCallback,
             mutex,
         )
     }

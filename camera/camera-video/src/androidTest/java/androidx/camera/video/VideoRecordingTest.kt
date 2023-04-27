@@ -16,6 +16,10 @@
 
 package androidx.camera.video
 
+import androidx.camera.camera2.internal.compat.quirk.DeviceQuirks as Camera2DeviceQuirks
+import androidx.camera.camera2.internal.compat.quirk.ExtraCroppingQuirk as Camera2ExtraCroppingQuirk
+import androidx.camera.camera2.pipe.integration.compat.quirk.DeviceQuirks as PipeDeviceQuirks
+import androidx.camera.camera2.pipe.integration.compat.quirk.ExtraCroppingQuirk as PipeExtraCroppingQuirk
 import androidx.camera.testing.mocks.helpers.ArgumentCaptor as ArgumentCaptorCameraX
 import android.Manifest
 import android.content.Context
@@ -28,6 +32,7 @@ import android.util.Log
 import android.util.Rational
 import android.util.Size
 import android.view.Surface
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.Camera2Config
 import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.core.AspectRatio
@@ -35,6 +40,7 @@ import androidx.camera.core.Camera
 import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
+import androidx.camera.core.DynamicRange
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -139,10 +145,13 @@ class VideoRecordingTest(
 
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context: Context = ApplicationProvider.getApplicationContext()
+    // TODO(b/278168212): Only SDR is checked by now. Need to extend to HDR dynamic ranges.
+    private val dynamicRange = DynamicRange.SDR
     private lateinit var cameraProvider: ProcessCameraProvider
     private lateinit var lifecycleOwner: FakeLifecycleOwner
     private lateinit var preview: Preview
     private lateinit var cameraInfo: CameraInfo
+    private lateinit var videoCapabilities: VideoCapabilities
     private lateinit var camera: Camera
 
     private lateinit var latchForVideoSaved: CountDownLatch
@@ -204,6 +213,7 @@ class VideoRecordingTest(
             // Retrieves the target testing camera and camera info
             camera = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector)
             cameraInfo = camera.cameraInfo
+            videoCapabilities = Recorder.getVideoCapabilities(cameraInfo)
         }
 
         mockVideoRecordEventConsumer = MockConsumer<VideoRecordEvent>()
@@ -268,19 +278,15 @@ class VideoRecordingTest(
     @Test
     fun getCorrectResolution_when_setSupportedQuality() {
         // Pre-arrange.
-        assumeTrue(QualitySelector.getSupportedQualities(cameraInfo).isNotEmpty())
-        val qualityList = QualitySelector.getSupportedQualities(cameraInfo)
+        assumeExtraCroppingQuirk()
+        val qualityList = videoCapabilities.getSupportedQualities(dynamicRange)
+        assumeTrue(qualityList.isNotEmpty())
         Log.d(TAG, "CameraSelector: ${cameraSelector.lensFacing}, QualityList: $qualityList ")
 
         qualityList.forEach loop@{ quality ->
             // Arrange.
-            val targetResolution = QualitySelector.getResolution(cameraInfo, quality)
-            if (targetResolution == null) {
-                // If targetResolution is null, try next one
-                Log.e(TAG, "Unable to get resolution for the quality: $quality")
-                return@loop
-            }
-
+            val profile = videoCapabilities.getProfiles(quality, dynamicRange)!!.defaultVideoProfile
+            val targetResolution = Size(profile.width, profile.height)
             val recorder = Recorder.Builder()
                 .setQualitySelector(QualitySelector.from(quality)).build()
 
@@ -292,7 +298,6 @@ class VideoRecordingTest(
             }
 
             instrumentation.runOnMainSync {
-                cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     cameraSelector,
@@ -314,6 +319,9 @@ class VideoRecordingTest(
             verifyVideoResolution(getExpectedResolution(videoCapture), file)
 
             // Cleanup.
+            instrumentation.runOnMainSync {
+                cameraProvider.unbindAll()
+            }
             file.delete()
         }
     }
@@ -321,7 +329,8 @@ class VideoRecordingTest(
     @Test
     fun getCorrectResolution_when_setAspectRatio() {
         // Pre-arrange.
-        assumeTrue(QualitySelector.getSupportedQualities(cameraInfo).isNotEmpty())
+        assumeExtraCroppingQuirk()
+        assumeTrue(videoCapabilities.getSupportedQualities(dynamicRange).isNotEmpty())
 
         for (aspectRatio in listOf(AspectRatio.RATIO_4_3, AspectRatio.RATIO_16_9)) {
             // Arrange.
@@ -335,7 +344,6 @@ class VideoRecordingTest(
             }
 
             instrumentation.runOnMainSync {
-                cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     cameraSelector,
@@ -356,6 +364,9 @@ class VideoRecordingTest(
             verifyVideoAspectRatio(getExpectedAspectRatio(videoCapture)!!, file)
 
             // Cleanup.
+            instrumentation.runOnMainSync {
+                cameraProvider.unbindAll()
+            }
             file.delete()
         }
     }
@@ -363,15 +374,16 @@ class VideoRecordingTest(
     @Test
     fun getCorrectResolution_when_setCropRect() {
         assumeSuccessfulSurfaceProcessing()
+        assumeExtraCroppingQuirk()
 
         // Arrange.
-        assumeTrue(QualitySelector.getSupportedQualities(cameraInfo).isNotEmpty())
+        assumeTrue(videoCapabilities.getSupportedQualities(dynamicRange).isNotEmpty())
         val quality = Quality.LOWEST
-        val recorder = Recorder.Builder()
-            .setQualitySelector(QualitySelector.from(quality)).build()
+        val recorder = Recorder.Builder().setQualitySelector(QualitySelector.from(quality)).build()
         val videoCapture = VideoCapture.withOutput(recorder)
         // Arbitrary cropping
-        val targetResolution = QualitySelector.getResolution(cameraInfo, quality)!!
+        val profile = videoCapabilities.getProfiles(quality, dynamicRange)!!.defaultVideoProfile
+        val targetResolution = Size(profile.width, profile.height)
         val cropRect = Rect(6, 6, targetResolution.width - 7, targetResolution.height - 7)
         videoCapture.setViewPortCropRect(cropRect)
 
@@ -381,7 +393,6 @@ class VideoRecordingTest(
         )
 
         instrumentation.runOnMainSync {
-            cameraProvider.unbindAll()
             cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
@@ -989,7 +1000,7 @@ class VideoRecordingTest(
                 .toInt()
             val resolution = Size(width, height)
 
-            // Compare with the resolution of video and the targetResolution in QualitySelector
+            // Compare with the resolution of video and the targetResolution in VideoCapabilities.
             assertWithMessage(
                 TAG + ", verifyVideoResolution failure:" +
                     ", videoResolution: $resolution" +
@@ -1050,6 +1061,10 @@ class VideoRecordingTest(
             "Skip tests for Cuttlefish API 30 eglCreateWindowSurface issue",
             Build.MODEL.contains("Cuttlefish") && Build.VERSION.SDK_INT == 30
         )
+    }
+
+    private fun assumeExtraCroppingQuirk() {
+        assumeExtraCroppingQuirk(implName)
     }
 
     private class ImageSavedCallback :
@@ -1143,3 +1158,14 @@ internal fun MediaMetadataRetriever.hasVideo(): Boolean =
 
 internal fun MediaMetadataRetriever.getDuration(): Long? =
     extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong()
+
+@RequiresApi(21)
+fun assumeExtraCroppingQuirk(implName: String) {
+    val msg =
+        "Devices in ExtraCroppingQuirk will get a fixed resolution regardless of any settings"
+    if (implName.contains(CameraPipeConfig::class.simpleName!!)) {
+        assumeTrue(msg, PipeDeviceQuirks[PipeExtraCroppingQuirk::class.java] == null)
+    } else {
+        assumeTrue(msg, Camera2DeviceQuirks.get(Camera2ExtraCroppingQuirk::class.java) == null)
+    }
+}

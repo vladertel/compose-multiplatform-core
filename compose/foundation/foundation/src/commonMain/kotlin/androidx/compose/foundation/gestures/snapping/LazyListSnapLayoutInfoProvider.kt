@@ -46,8 +46,7 @@ import kotlin.math.sign
 @ExperimentalFoundationApi
 fun SnapLayoutInfoProvider(
     lazyListState: LazyListState,
-    positionInLayout: Density.(layoutSize: Float, itemSize: Float) -> Float =
-        { layoutSize, itemSize -> (layoutSize / 2f - itemSize / 2f) }
+    positionInLayout: SnapPositionInLayout = SnapPositionInLayout.CenterToCenter
 ): SnapLayoutInfoProvider = object : SnapLayoutInfoProvider {
 
     private val layoutInfo: LazyListLayoutInfo
@@ -66,7 +65,7 @@ fun SnapLayoutInfoProvider(
         }
     }
 
-    override fun Density.calculateSnappingOffsetBounds(): ClosedFloatingPointRange<Float> {
+    override fun Density.calculateSnappingOffset(currentVelocity: Float): Float {
         var lowerBoundOffset = Float.NEGATIVE_INFINITY
         var upperBoundOffset = Float.POSITIVE_INFINITY
 
@@ -85,7 +84,7 @@ fun SnapLayoutInfoProvider(
             }
         }
 
-        return lowerBoundOffset.rangeTo(upperBoundOffset)
+        return calculateFinalOffset(currentVelocity, lowerBoundOffset, upperBoundOffset)
     }
 
     override fun Density.calculateSnapStepSize(): Float = with(layoutInfo) {
@@ -111,16 +110,18 @@ fun rememberSnapFlingBehavior(lazyListState: LazyListState): FlingBehavior {
     return rememberSnapFlingBehavior(snappingLayout)
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 internal fun Density.calculateDistanceToDesiredSnapPosition(
     layoutInfo: LazyListLayoutInfo,
     item: LazyListItemInfo,
-    positionInLayout: Density.(layoutSize: Float, itemSize: Float) -> Float
+    positionInLayout: SnapPositionInLayout
 ): Float {
     val containerSize =
         with(layoutInfo) { singleAxisViewportSize - beforeContentPadding - afterContentPadding }
 
-    val desiredDistance =
-        positionInLayout(containerSize.toFloat(), item.size.toFloat())
+    val desiredDistance = with(positionInLayout) {
+        position(containerSize, item.size, item.index)
+    }.toFloat()
 
     val itemCurrentPosition = item.offset
     return itemCurrentPosition - desiredDistance
