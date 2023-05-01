@@ -378,7 +378,13 @@ if (!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
 project.afterEvaluate {
     //Disable jsWasmMain intermediate sourceset publication
-    tasks.named("compileJsWasmMainKotlinMetadata") {
+    //tasks.named("compileJsWasmMainKotlinMetadata") {
+//        enabled = false
+//    }
+}
+
+project.tasks.configureEach {
+    if (name == "compileJsWasmMainKotlinMetadata") {
         enabled = false
     }
 }
