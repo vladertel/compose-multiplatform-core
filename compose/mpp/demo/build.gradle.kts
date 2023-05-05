@@ -17,13 +17,14 @@
 import androidx.build.AndroidXComposePlugin
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     id("AndroidXPlugin")
     id("AndroidXComposePlugin")
     id("kotlin-multiplatform")
 //  [1.4 Update]  id("application")
-    kotlin("plugin.serialization") version "1.8.0"
+//    kotlin("plugin.serialization") version "1.8.0"
 }
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
@@ -52,6 +53,21 @@ kotlin {
     jvm("desktop")
     js(IR) {
         browser()
+        binaries.executable()
+    }
+    wasm() {
+        moduleName = "mpp-demo"
+        browser {
+            commonWebpackConfig {
+                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).copy(
+                    open = mapOf(
+                        "app" to mapOf(
+                            "name" to "google-chrome",
+                        )
+                    ),
+                )
+            }
+        }
         binaries.executable()
     }
     macosX64() {
@@ -132,7 +148,7 @@ kotlin {
                 implementation(project(":compose:ui:ui-graphics"))
                 implementation(project(":compose:ui:ui-text"))
                 implementation(libs.kotlinCoroutinesCore)
-                 api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.4.1")
+//                 api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.4.1")
             }
         }
 
@@ -155,6 +171,18 @@ kotlin {
             dependsOn(skikoMain)
             resources.setSrcDirs(resources.srcDirs)
             resources.srcDirs(unzipTask.map { it.destinationDir })
+            dependencies {
+                implementation(kotlin("stdlib-js"))
+            }
+        }
+
+        val wasmMain by getting {
+            dependsOn(skikoMain)
+            resources.setSrcDirs(resources.srcDirs)
+            resources.srcDirs(unzipTask.map { it.destinationDir })
+            dependencies {
+                implementation(kotlin("stdlib-wasm"))
+            }
         }
 
         val nativeMain by creating { dependsOn(skikoMain) }
@@ -240,4 +268,14 @@ tasks.create("runDesktop", JavaExec::class.java) {
     classpath =
         compilation.output.allOutputs +
             compilation.runtimeDependencyFiles
+}
+
+project.tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile>().configureEach {
+    kotlinOptions.freeCompilerArgs += listOf(
+//        "-Xklib-enable-signature-clash-checks=false",
+        //"-Xplugin=${project.properties["compose.plugin.path"]}",
+        "-Xir-dce",
+        "-Xwasm-generate-wat",
+        "-Xwasm-enable-array-range-checks"
+    )
 }

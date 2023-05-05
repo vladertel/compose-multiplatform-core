@@ -212,6 +212,12 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.kotlinTestJs)
                 }
             }
+            wasmTest {
+                dependencies {
+                    //implementation(libs.kotlinTestJs)
+                    implementation(libs.create("kotlinTestWasm"))
+                }
+            }
             nativeTest {
                 kotlin.srcDir("src/nativeTest/kotlin")
             }
@@ -239,7 +245,7 @@ androidx {
 
 // Workaround for older Node JS not available for macOS M1 machines.
 afterEvaluate {
-    rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin) {
-        rootProject.extensions.getByType(org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension).nodeVersion = "16.0.0"
-    }
+//    rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin) {
+//        rootProject.extensions.getByType(org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension).nodeVersion = "16.0.0"
+//    }
 }
