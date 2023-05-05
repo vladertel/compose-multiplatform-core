@@ -167,7 +167,7 @@ internal actual class ComposeWindow : UIViewController {
             },
         ).load()
         val rootView = UIView() // rootView needs to interop with UIKit
-        rootView.backgroundColor = UIColor.whiteColor
+        rootView.backgroundColor = UIColor.greenColor
         rootView.addSubview(skikoUIView)
         rootView.setAutoresizesSubviews(true)
         skikoUIView.setAutoresizingMask(
@@ -266,6 +266,9 @@ internal actual class ComposeWindow : UIViewController {
         val width = size.useContents { width } * scale
         val height = size.useContents { height } * scale
         layer.setSize(width.roundToInt(), height.roundToInt())
+        println("-------------------")
+        println("view before resize = ${view}")
+        println("To size width to height before redraw = ${width to height}")
         layer.layer.needRedraw() // TODO: remove? the following block should be enough
         withTransitionCoordinator.animateAlongsideTransition(animation = null) {
             // Docs: https://developer.apple.com/documentation/uikit/uiviewcontrollertransitioncoordinator/1619295-animatealongsidetransition
@@ -273,6 +276,7 @@ internal actual class ComposeWindow : UIViewController {
             // Consider adding redrawImmediately() in SkiaLayer for ios to sync with current frame.
             // This fixes an interop use case when Compose is embedded in SwiftUi.
             layer.layer.needRedraw()
+            println("view after resize = ${view}")
         }
         super.viewWillTransitionToSize(size, withTransitionCoordinator)
     }
