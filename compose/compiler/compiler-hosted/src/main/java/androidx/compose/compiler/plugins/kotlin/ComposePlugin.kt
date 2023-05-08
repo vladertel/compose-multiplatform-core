@@ -32,6 +32,7 @@ import org.jetbrains.kotlin.compiler.plugin.CliOptionProcessingException
 import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import org.jetbrains.kotlin.config.JVMConfigurationKeys
@@ -336,6 +337,9 @@ class ComposePluginRegistrar : CompilerPluginRegistrar() {
             val validateIr = configuration.getBoolean(
                 JVMConfigurationKeys.VALIDATE_IR
             )
+            val useK2 = configuration.getBoolean(
+                CommonConfigurationKeys.USE_FIR
+            )
 
             return ComposeIrGenerationExtension(
                 liveLiteralsEnabled = liveLiteralsEnabled,
@@ -347,6 +351,7 @@ class ComposePluginRegistrar : CompilerPluginRegistrar() {
                 metricsDestination = metricsDestination,
                 reportsDestination = reportsDestination,
                 validateIr = validateIr,
+                useK2 = useK2,
             )
         }
     }
