@@ -16,7 +16,7 @@
 
 package androidx.compose.compiler.plugins.kotlin.facade
 
-import androidx.compose.compiler.plugins.kotlin.ComposeComponentRegistrar
+import androidx.compose.compiler.plugins.kotlin.ComposePluginRegistrar
 import androidx.compose.compiler.plugins.kotlin.TestsCompilerError
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
@@ -116,7 +116,7 @@ abstract class KotlinCompilerFacade(val environment: KotlinCoreEnvironment) {
                 disposable, configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES
             )
 
-            ComposeComponentRegistrar.checkCompilerVersion(configuration)
+            ComposePluginRegistrar.checkCompilerVersion(configuration)
 
             environment.project.registerExtensions(configuration)
 

@@ -24,10 +24,11 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.io.FileUtil
 import java.io.File
 import java.net.URLClassLoader
-import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
 import org.jetbrains.kotlin.cli.jvm.config.configureJdkClasspathRoots
 import org.jetbrains.kotlin.codegen.GeneratedClassLoader
+import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import org.jetbrains.kotlin.compiler.plugin.registerExtensionsForTest
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.JVMConfigurationKeys
@@ -104,6 +105,7 @@ abstract class AbstractCompilerTest(val useFir: Boolean) {
 
     protected open fun CompilerConfiguration.updateConfiguration() {}
 
+    @OptIn(ExperimentalCompilerApi::class)
     private fun createCompilerFacade(
         additionalPaths: List<File> = listOf(),
         registerExtensions: (Project.(CompilerConfiguration) -> Unit)? = null
@@ -122,11 +124,11 @@ abstract class AbstractCompilerTest(val useFir: Boolean) {
             configureJdkClasspathRoots()
         },
         registerExtensions = registerExtensions ?: { configuration ->
-            ComposeComponentRegistrar.registerCommonExtensions(this)
-            IrGenerationExtension.registerExtension(
-                this,
-                ComposeComponentRegistrar.createComposeIrExtension(configuration)
-            )
+            registerExtensionsForTest(this, configuration) {
+                with(ComposePluginRegistrar()) {
+                    registerExtensions(it)
+                }
+            }
         }
     )
 
