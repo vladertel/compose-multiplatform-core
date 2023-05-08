@@ -16,12 +16,14 @@
 
 package androidx.compose.ui
 
-import androidx.compose.material.TextField
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.LocalTextStyle
+import androidx.compose.runtime.*
 import androidx.compose.ui.awt.ComposeWindow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
@@ -29,6 +31,24 @@ import androidx.compose.ui.window.runApplicationTest
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import org.junit.Test
+
+@Composable
+fun NoCaretTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = LocalTextStyle.current,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        textStyle = textStyle,
+        cursorBrush = SolidColor(Color.Unspecified),
+        visualTransformation = visualTransformation,
+    )
+}
 
 class TextFieldUndoTest {
     @Test
@@ -46,7 +66,7 @@ class TextFieldUndoTest {
 
                 var text by remember { mutableStateOf(testedTextValue) }
 
-                TextField(text, onValueChange = {
+                NoCaretTextField(text, onValueChange = {
                     text = it
                     testedTextValue = it
                 })
@@ -68,9 +88,9 @@ class TextFieldUndoTest {
 
         awaitIdle()
 
-        window!!.sendMouseEvent(MouseEvent.MOUSE_PRESSED, 10, 20, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
-        window!!.sendMouseEvent(MouseEvent.MOUSE_DRAGGED, 20, 20, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
-        window!!.sendMouseEvent(MouseEvent.MOUSE_RELEASED, 20, 20, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
+        window!!.sendMouseEvent(MouseEvent.MOUSE_PRESSED, 10, 5, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
+        window!!.sendMouseEvent(MouseEvent.MOUSE_DRAGGED, 20, 5, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
+        window!!.sendMouseEvent(MouseEvent.MOUSE_RELEASED, 20, 5, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
 
         awaitIdle()
 
@@ -78,7 +98,7 @@ class TextFieldUndoTest {
 
         awaitIdle()
 
-        assertThat(testedTextValue).isEqualTo("bcdef")
+        assertThat(testedTextValue).isEqualTo("acdef")
 
         val modifier = if (isMacOs) {
             KeyEvent.META_DOWN_MASK
