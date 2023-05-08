@@ -16,25 +16,46 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Recomposer
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.window.launchApplication as realLaunchApplication
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.LocalTextStyle
+import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.awaitEDT
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.VisualTransformation
 import java.awt.GraphicsEnvironment
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.takeWhile
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Assume.assumeFalse
-import androidx.compose.ui.window.launchApplication as realLaunchApplication
 
+
+/**
+ * TextField without a caret which doesn't awake composition from idle state for caret animation.
+ * Helps to avoid timeout error on [[WindowTestScope.awaitIdle]] during tests.
+ */
+@Composable
+fun NoCaretTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = LocalTextStyle.current,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        textStyle = textStyle,
+        cursorBrush = SolidColor(Color.Unspecified),
+        visualTransformation = visualTransformation,
+    )
+}
 
 internal fun runApplicationTest(
     /**
