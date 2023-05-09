@@ -62,6 +62,14 @@ class PrivacySandboxLibraryPluginTest {
                             jvmTarget=17
                         }
                     }
+                    
+                    // temporary workaround for misconfigured ksp task 
+                    // see https://github.com/google/ksp/issues/1288
+                    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+                        kotlinOptions {
+                            jvmTarget = "17"
+                        }
+                    }
             """
         )
 
