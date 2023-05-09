@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.awaitEDT
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import java.awt.GraphicsEnvironment
@@ -37,9 +38,10 @@ import org.junit.Assume.assumeFalse
 
 /**
  * TextField without a caret which doesn't awake composition from idle state for caret animation.
- * Helps to avoid timeout error on [[WindowTestScope.awaitIdle]] during tests.
+ * Helps to avoid timeout error on [WindowTestScope.awaitIdle] during tests.
  */
 @Composable
+@ExperimentalTestApi
 fun NoCaretTextField(
     value: String,
     onValueChange: (String) -> Unit,
