@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.awt.ComposeWindow
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.NoCaretTextField
 import androidx.compose.ui.window.Window
@@ -31,6 +32,7 @@ import java.awt.event.MouseEvent
 import org.junit.Test
 
 class TextFieldUndoTest {
+    @OptIn(ExperimentalTestApi::class)
     @Test
     fun `TextField undo works after cursor selection and cut`() = runApplicationTest {
         var window: ComposeWindow? = null
