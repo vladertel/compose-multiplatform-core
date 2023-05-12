@@ -132,8 +132,11 @@ abstract class AbstractCompilerTest(val useFir: Boolean) {
         }
     )
 
-    protected fun analyze(sourceFiles: List<SourceFile>): AnalysisResult =
-        createCompilerFacade().analyze(sourceFiles)
+    protected fun analyze(
+        platformSources: List<SourceFile>,
+        commonSources: List<SourceFile> = listOf()
+    ): AnalysisResult =
+        createCompilerFacade().analyze(platformSources, commonSources)
 
     protected fun compileToIr(
         sourceFiles: List<SourceFile>,
@@ -143,7 +146,8 @@ abstract class AbstractCompilerTest(val useFir: Boolean) {
         createCompilerFacade(additionalPaths, registerExtensions).compileToIr(sourceFiles)
 
     protected fun createClassLoader(
-        sourceFiles: List<SourceFile>,
+        platformSourceFiles: List<SourceFile>,
+        commonSourceFiles: List<SourceFile> = listOf(),
         additionalPaths: List<File> = listOf()
     ): GeneratedClassLoader {
         val classLoader = URLClassLoader(
@@ -153,7 +157,8 @@ abstract class AbstractCompilerTest(val useFir: Boolean) {
             null
         )
         return GeneratedClassLoader(
-            createCompilerFacade(additionalPaths).compile(sourceFiles).factory,
+            createCompilerFacade(additionalPaths)
+                .compile(platformSourceFiles, commonSourceFiles).factory,
             classLoader
         )
     }
