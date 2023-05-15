@@ -19,6 +19,7 @@ package androidx.compose.ui.graphics
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.util.lerp
 import kotlin.test.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -94,7 +95,7 @@ class ColorTest {
         assertEquals(1f, Color.White.luminance(), 0f)
     }
 
-    @Test
+    @Test @Ignore // TODO: remove ignore when KT-58681 is fixed
     fun testToString() {
         assertEquals("Color(1.0, 0.5019608, 0.0, 1.0, sRGB IEC61966-2.1)", srgbColor.toString())
     }
@@ -300,7 +301,7 @@ class ColorTest {
     }
 
     @OptIn(ExperimentalGraphicsApi::class)
-    @Test
+    @Test @Ignore // TODO: remove ignore when KT-58681 is fixed
     fun testHsvInSrgb() {
         assertEquals(Color.Transparent, Color.hsv(0f, 0f, 0f, 0f))
         assertEquals(Color.Black, Color.hsv(0f, 0f, 0f))
@@ -324,7 +325,7 @@ class ColorTest {
     }
 
     @OptIn(ExperimentalGraphicsApi::class)
-    @Test
+    @Test @Ignore // TODO: remove ignore when KT-58681 is fixed
     fun testHsvInLinearSrgb() {
         val lrgb = ColorSpaces.LinearSrgb
         val srgb = ColorSpaces.Srgb
@@ -349,7 +350,7 @@ class ColorTest {
     }
 
     @OptIn(ExperimentalGraphicsApi::class)
-    @Test
+    @Test @Ignore // TODO: remove ignore when KT-58681 is fixed
     fun testHslInSrgb() {
         assertEquals(Color.Transparent, Color.hsl(0f, 0f, 0f, 0f))
         assertEquals(Color.Black, Color.hsl(0f, 0f, 0f))
@@ -373,7 +374,7 @@ class ColorTest {
     }
 
     @OptIn(ExperimentalGraphicsApi::class)
-    @Test
+    @Test @Ignore // TODO: remove ignore when KT-58681 is fixed
     fun testHslInLinearSrgb() {
         val lrgb = ColorSpaces.LinearSrgb
         val srgb = ColorSpaces.Srgb
