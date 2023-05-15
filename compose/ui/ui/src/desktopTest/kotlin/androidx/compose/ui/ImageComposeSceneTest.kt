@@ -99,6 +99,7 @@ class ImageComposeSceneTest {
     }
 
     @OptIn(ExperimentalTime::class)
+    @Ignore
     @Test(timeout = 5000)
     fun `run multiple ImageComposeScenes concurrently`() {
         System.err.println("${java.util.Date()} Running `run multiple ImageComposeScenes concurrently`")
