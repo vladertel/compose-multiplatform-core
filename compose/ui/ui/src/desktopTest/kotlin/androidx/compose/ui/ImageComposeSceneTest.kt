@@ -101,6 +101,7 @@ class ImageComposeSceneTest {
     @OptIn(ExperimentalTime::class)
     @Test(timeout = 5000)
     fun `run multiple ImageComposeScenes concurrently`() {
+        System.err.println("${java.util.Date()} Running `run multiple ImageComposeScenes concurrently`")
         val service = Executors.newFixedThreadPool(50)
 
         for(i in 1..1000) {
@@ -118,6 +119,8 @@ class ImageComposeSceneTest {
 
         service.shutdown()
         service.awaitTermination(10000, TimeUnit.MILLISECONDS)
+        System.err.println("${java.util.Date()} Finished `run multiple ImageComposeScenes concurrently`")
+        assertThat(false)
     }
 
     @Test

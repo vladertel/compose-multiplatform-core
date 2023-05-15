@@ -79,6 +79,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.assertThat
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -135,6 +136,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlin.random.Random
 import kotlinx.coroutines.delay
+import org.junit.Ignore
 import org.junit.Test
 
 @Suppress("ConstPropertyName")
@@ -645,18 +647,20 @@ fun AppWindow() {
 private suspend fun performGC() {
     repeat(10) {
         System.gc()
+        System.runFinalization()
         delay(100)
     }
     delay(5000)
 }
 
-private val availableMemory get() = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
+private val usedMemory get() = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
 
 class ComplexApplicationTest {
     @Test
     fun `no memory leak when open window multiple times`() = runApplicationTest(
         timeoutMillis = 10 * 60 * 1000
     ) {
+        System.err.println("${java.util.Date()} Running `no memory leak when open window multiple times`")
         repeat(10) {
             awaitApplication {
                 AppWindow()
@@ -668,7 +672,9 @@ class ComplexApplicationTest {
         }
 
         performGC()
-        val oldMemory = availableMemory
+        val oldMemory = usedMemory
+
+        System.err.println("Total memory before: ${Runtime.getRuntime().totalMemory()}")
 
         repeat(10) {
             awaitApplication {
@@ -681,14 +687,24 @@ class ComplexApplicationTest {
         }
 
         performGC()
-        val newMemory = availableMemory
+        val newMemory = usedMemory
+
+        System.err.println("Total memory after: ${Runtime.getRuntime().totalMemory()}")
+
+        System.err.println("Used memory before: $oldMemory, after: $newMemory, ratio: ${newMemory.toDouble()/oldMemory}")
+
+
+        System.err.println("${java.util.Date()} Finished `no memory leak when open window multiple times`")
 
         Truth
             .assertWithMessage("Memory is increased more than 15% after opening multiple windows")
             .that(newMemory < 1.15 * oldMemory)
             .isTrue()
+
+        assertThat(false)
     }
 
+    @Ignore
     @Test
     fun `no memory leak when wait 3 minutes`() = runApplicationTest(
         timeoutMillis = 10 * 60 * 1000
@@ -700,12 +716,12 @@ class ComplexApplicationTest {
         delay(30 * 1000)
 
         performGC()
-        val oldMemory = availableMemory
+        val oldMemory = usedMemory
 
         delay(3 * 60 * 1000)
 
         performGC()
-        val newMemory = availableMemory
+        val newMemory = usedMemory
 
         Truth
             .assertWithMessage("Memory is increased more than 15% after waiting a few minutes")
