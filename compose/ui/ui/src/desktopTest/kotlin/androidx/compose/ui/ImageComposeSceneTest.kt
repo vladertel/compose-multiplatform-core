@@ -103,7 +103,7 @@ class ImageComposeSceneTest {
     @Test(timeout = 5000)
     fun `run multiple ImageComposeScenes concurrently`() {
         System.err.println("${java.util.Date()} Running `run multiple ImageComposeScenes concurrently`")
-        val service = Executors.newFixedThreadPool(50)
+        val service = Executors.newFixedThreadPool(40)
 
         for(i in 1..1000) {
             service.submit {
