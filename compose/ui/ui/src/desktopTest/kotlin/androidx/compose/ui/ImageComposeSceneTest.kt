@@ -101,7 +101,7 @@ class ImageComposeSceneTest {
     @OptIn(ExperimentalTime::class)
     @Test(timeout = 5000)
     fun `run multiple ImageComposeScenes concurrently`() {
-        val service = Executors.newFixedThreadPool(2)
+        val service = Executors.newFixedThreadPool(10)
 
         for(i in 1..1000) {
             service.submit {
