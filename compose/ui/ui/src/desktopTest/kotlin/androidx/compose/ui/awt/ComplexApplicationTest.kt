@@ -645,6 +645,7 @@ fun AppWindow() {
 private suspend fun performGC() {
     repeat(10) {
         System.gc()
+        System.runFinalization()
         delay(100)
     }
     delay(5000)
