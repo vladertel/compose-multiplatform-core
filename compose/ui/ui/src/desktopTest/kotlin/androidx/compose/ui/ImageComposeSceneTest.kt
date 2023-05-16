@@ -98,27 +98,27 @@ class ImageComposeSceneTest {
         }
     }
 
-//    @OptIn(ExperimentalTime::class)
-//    @Test(timeout = 5000)
-//    fun `run multiple ImageComposeScenes concurrently`() {
-//        val service = Executors.newFixedThreadPool(20)
-//
-//        for(i in 1..1000) {
-//            service.submit {
-//                val scene = ImageComposeScene(50, 50) {
-//                    Box(Modifier.fillMaxSize().background(Color.White)) {
-//                        CircularProgressIndicator()
-//                    }
-//                }
-//                scene.render() // start animation
-//                scene.render(50.milliseconds).close()
-//                scene.close()
-//            }
-//        }
-//
-//        service.shutdown()
-//        service.awaitTermination(10000, TimeUnit.MILLISECONDS)
-//    }
+    @OptIn(ExperimentalTime::class)
+    @Test(timeout = 5000)
+    fun `run multiple ImageComposeScenes concurrently`() {
+        val service = Executors.newFixedThreadPool(2)
+
+        for(i in 1..1000) {
+            service.submit {
+                val scene = ImageComposeScene(50, 50) {
+                    Box(Modifier.fillMaxSize().background(Color.White)) {
+                        CircularProgressIndicator()
+                    }
+                }
+                scene.render() // start animation
+                scene.render(50.milliseconds).close()
+                scene.close()
+            }
+        }
+
+        service.shutdown()
+        service.awaitTermination(10000, TimeUnit.MILLISECONDS)
+    }
 
     @Test
     fun `run multiple ImageComposeScene`() {
