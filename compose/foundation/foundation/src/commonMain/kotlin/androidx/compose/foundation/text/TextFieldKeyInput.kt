@@ -106,7 +106,10 @@ internal class TextFieldKeyInput(
                 KeyCommand.COPY -> selectionManager.copy(false)
                 // TODO(siyamed): cut & paste will cause a reset input
                 KeyCommand.PASTE -> selectionManager.paste()
-                KeyCommand.CUT -> selectionManager.cut()
+                KeyCommand.CUT -> {
+                    undoManager?.makeSnapshot(value)
+                    selectionManager.cut()
+                }
                 KeyCommand.LEFT_CHAR -> collapseLeftOr { moveCursorLeft() }
                 KeyCommand.RIGHT_CHAR -> collapseRightOr { moveCursorRight() }
                 KeyCommand.LEFT_WORD -> moveCursorLeftByWord()
