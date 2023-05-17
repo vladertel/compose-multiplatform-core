@@ -311,9 +311,6 @@ internal class TextFieldSelectionManager(
                     isStartHandle = false,
                     adjustment = adjustment
                 )
-
-                undoManager?.forceNextSnapshot()
-
                 return true
             }
             return false
