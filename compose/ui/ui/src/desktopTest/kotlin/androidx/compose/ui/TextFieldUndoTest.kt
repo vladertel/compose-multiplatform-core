@@ -29,6 +29,7 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.runApplicationTest
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import kotlinx.coroutines.delay
 import org.junit.Test
 
 class TextFieldUndoTest {
@@ -67,12 +68,19 @@ class TextFieldUndoTest {
         window!!.sendKeyTypedEvent('e')
         window!!.sendKeyTypedEvent('f')
 
+        val string = "abcdef"
 
         awaitIdle()
 
-        window!!.sendMouseEvent(MouseEvent.MOUSE_PRESSED, 10, 5, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
-        window!!.sendMouseEvent(MouseEvent.MOUSE_DRAGGED, 20, 5, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
-        window!!.sendMouseEvent(MouseEvent.MOUSE_RELEASED, 20, 5, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
+        val selectWithMouse = {
+            window!!.sendMouseEvent(MouseEvent.MOUSE_PRESSED, 10, 5, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
+            window!!.sendMouseEvent(MouseEvent.MOUSE_DRAGGED, 20, 5, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
+            window!!.sendMouseEvent(MouseEvent.MOUSE_RELEASED, 20, 5, modifiers = MouseEvent.BUTTON1_DOWN_MASK)
+        }
+
+        val stringWithMouseSelectedTextRemoved = "acdef"
+
+        selectWithMouse()
 
         awaitIdle()
 
@@ -80,7 +88,7 @@ class TextFieldUndoTest {
 
         awaitIdle()
 
-        assertThat(testedTextValue).isEqualTo("acdef")
+        assertThat(testedTextValue).isEqualTo(stringWithMouseSelectedTextRemoved)
 
         val modifier = if (isMacOs) {
             KeyEvent.META_DOWN_MASK
@@ -92,6 +100,22 @@ class TextFieldUndoTest {
 
         awaitIdle()
 
-        assertThat(testedTextValue).isEqualTo("abcdef")
+        assertThat(testedTextValue).isEqualTo(string)
+
+        delay(1000)
+
+        selectWithMouse()
+
+        window!!.sendKeyEvent(KeyEvent.VK_X, modifiers = modifier)
+
+        awaitIdle()
+
+        assertThat(testedTextValue).isEqualTo(stringWithMouseSelectedTextRemoved)
+
+        window!!.sendKeyEvent(KeyEvent.VK_Z, modifiers = modifier)
+
+        awaitIdle()
+
+        assertThat(testedTextValue).isEqualTo(string)
     }
 }
