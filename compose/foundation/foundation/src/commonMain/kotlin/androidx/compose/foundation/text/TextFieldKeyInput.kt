@@ -102,14 +102,24 @@ internal class TextFieldKeyInput(
         }
         var consumed = true
         commandExecutionContext {
+            if (command.editsText) {
+                /**
+                 * It's possible that current selection is based on a cursor input
+                 * which doesn't trigger new snapshot unlike [KeyCommand]'s based selection
+                 * during processing of which we call [UndoManager.forceNextSnapshot]
+                 * in the end of this method.
+                 *
+                 * We need to make a snapshot at this point to ensure that next [KeyCommand.UNDO],
+                 * if any comes, will change text value to a correct one
+                 */
+                undoManager?.makeSnapshot(value)
+            }
+
             when (command) {
                 KeyCommand.COPY -> selectionManager.copy(false)
                 // TODO(siyamed): cut & paste will cause a reset input
                 KeyCommand.PASTE -> selectionManager.paste()
-                KeyCommand.CUT -> {
-                    undoManager?.makeSnapshot(value)
-                    selectionManager.cut()
-                }
+                KeyCommand.CUT -> selectionManager.cut()
                 KeyCommand.LEFT_CHAR -> collapseLeftOr { moveCursorLeft() }
                 KeyCommand.RIGHT_CHAR -> collapseRightOr { moveCursorRight() }
                 KeyCommand.LEFT_WORD -> moveCursorLeftByWord()
@@ -133,7 +143,7 @@ internal class TextFieldKeyInput(
                             0
                         )
                     }?.apply()
-                KeyCommand.DELETE_NEXT_CHAR -> {
+                KeyCommand.DELETE_NEXT_CHAR ->
                     // Note that some software keyboards, such as Samsungs, go through this code
                     // path instead of making calls on the InputConnection directly.
                     deleteIfSelectedOr {
@@ -146,7 +156,6 @@ internal class TextFieldKeyInput(
                             null
                         }
                     }?.apply()
-                }
                 KeyCommand.DELETE_PREV_WORD ->
                     deleteIfSelectedOr {
                         getPreviousWordOffset()?.let {
@@ -201,16 +210,9 @@ internal class TextFieldKeyInput(
                 KeyCommand.SELECT_HOME -> moveCursorToHome().selectMovement()
                 KeyCommand.SELECT_END -> moveCursorToEnd().selectMovement()
                 KeyCommand.DESELECT -> deselect()
-                KeyCommand.UNDO -> {
-                    undoManager?.makeSnapshot(value)
-                    undoManager?.undo()?.let { this@TextFieldKeyInput.onValueChange(it) }
-                }
-                KeyCommand.REDO -> {
-                    undoManager?.redo()?.let { this@TextFieldKeyInput.onValueChange(it) }
-                }
-                KeyCommand.CHARACTER_PALETTE -> {
-                    showCharacterPalette()
-                }
+                KeyCommand.UNDO -> undoManager?.undo()?.let { this@TextFieldKeyInput.onValueChange(it) }
+                KeyCommand.REDO -> undoManager?.redo()?.let { this@TextFieldKeyInput.onValueChange(it) }
+                KeyCommand.CHARACTER_PALETTE -> showCharacterPalette()
             }
         }
         undoManager?.forceNextSnapshot()
