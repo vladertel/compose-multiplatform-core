@@ -1347,3 +1347,7 @@ Info: Unexpected error while reading deps\.ui\.inspection\.kotlin\.reflect\.jvm\
 Info: Unexpected error while reading deps\.ui\.inspection\.kotlin\.reflect\.jvm\.internal\.KCallableImpl's kotlin\.Metadata: null
 # b/271306193 remove after aosp/2589888 :emoji:emoji:spdxSbomForRelease
 spdx sboms require a version but project: noto\-emoji\-compat\-flatbuffers has no specified version
+# KT-59013 > Task :datastore:datastore-core-okio:linkDebugTestLinuxX64
+w: file://\$GRADLE_USER_HOME/daemon/[0-9]+\.[0-9]+/%[0-9]+Corg\.jetbrains\.kotlinx:atomicfu\-cinterop\-interop%[0-9]+E%[0-9]+@%[0-9]+CTypeDefinitionsConstructor 'ReplaceWith\.<init>' can not be called: The call site provides less value arguments \([0-9]+\) than the constructor requires \([0-9]+\)
+w: file://\$GRADLE_USER_HOME/daemon/[0-9]+\.[0-9]+/%[0-9]+Corg\.jetbrains\.kotlinx:atomicfu\-cinterop\-interop%[0-9]+E%[0-9]+@%[0-9]+CTypeDefinitions:[0-9]+:[0-9]+ Unusable annotation 'Deprecated\.<init>' has been removed from companion object 'mutex_node\.Companion'
+w: file://\$GRADLE_USER_HOME/daemon/[0-9]+\.[0-9]+/%[0-9]+Corg\.jetbrains\.kotlinx:atomicfu\-cinterop\-interop%[0-9]+E%[0-9]+@%[0-9]+CTypeDefinitions:[0-9]+:[0-9]+ Unusable annotation 'Deprecated\.<init>' has been removed from companion object 'lock_support\.Companion'
