@@ -43,6 +43,8 @@ fun Path.asSkiaPath(): org.jetbrains.skia.Path =
         throw UnsupportedOperationException("Unable to obtain org.jetbrains.skia.Path")
     }
 
+
+//TODO: coment bodies
 internal class SkiaBackedPath(
     internalPath: org.jetbrains.skia.Path = org.jetbrains.skia.Path()
 ) : Path {
@@ -68,35 +70,35 @@ internal class SkiaBackedPath(
         }
 
     override fun moveTo(x: Float, y: Float) {
-        internalPath.moveTo(x, y)
+//        internalPath.moveTo(x, y)
     }
 
     override fun relativeMoveTo(dx: Float, dy: Float) {
-        internalPath.rMoveTo(dx, dy)
+//        internalPath.rMoveTo(dx, dy)
     }
 
     override fun lineTo(x: Float, y: Float) {
-        internalPath.lineTo(x, y)
+//        internalPath.lineTo(x, y)
     }
 
     override fun relativeLineTo(dx: Float, dy: Float) {
-        internalPath.rLineTo(dx, dy)
+//        internalPath.rLineTo(dx, dy)
     }
 
     override fun quadraticBezierTo(x1: Float, y1: Float, x2: Float, y2: Float) {
-        internalPath.quadTo(x1, y1, x2, y2)
+//        internalPath.quadTo(x1, y1, x2, y2)
     }
 
     override fun relativeQuadraticBezierTo(dx1: Float, dy1: Float, dx2: Float, dy2: Float) {
-        internalPath.rQuadTo(dx1, dy1, dx2, dy2)
+//        internalPath.rQuadTo(dx1, dy1, dx2, dy2)
     }
 
     override fun cubicTo(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
-        internalPath.cubicTo(
-            x1, y1,
-            x2, y2,
-            x3, y3
-        )
+//        internalPath.cubicTo(
+//            x1, y1,
+//            x2, y2,
+//            x3, y3
+//        )
     }
 
     override fun relativeCubicTo(
@@ -107,11 +109,11 @@ internal class SkiaBackedPath(
         dx3: Float,
         dy3: Float
     ) {
-        internalPath.rCubicTo(
-            dx1, dy1,
-            dx2, dy2,
-            dx3, dy3
-        )
+//        internalPath.rCubicTo(
+//            dx1, dy1,
+//            dx2, dy2,
+//            dx3, dy3
+//        )
     }
 
     override fun arcTo(
@@ -120,40 +122,40 @@ internal class SkiaBackedPath(
         sweepAngleDegrees: Float,
         forceMoveTo: Boolean
     ) {
-        internalPath.arcTo(
-            rect.toSkiaRect(),
-            startAngleDegrees,
-            sweepAngleDegrees,
-            forceMoveTo
-        )
+//        internalPath.arcTo(
+//            rect.toSkiaRect(),
+//            startAngleDegrees,
+//            sweepAngleDegrees,
+//            forceMoveTo
+//        )
     }
 
     override fun addRect(rect: Rect) {
-        internalPath.addRect(rect.toSkiaRect(), PathDirection.COUNTER_CLOCKWISE)
+//        internalPath.addRect(rect.toSkiaRect(), PathDirection.COUNTER_CLOCKWISE)
     }
 
     override fun addOval(oval: Rect) {
-        internalPath.addOval(oval.toSkiaRect(), PathDirection.COUNTER_CLOCKWISE)
+//        internalPath.addOval(oval.toSkiaRect(), PathDirection.COUNTER_CLOCKWISE)
     }
 
     override fun addArcRad(oval: Rect, startAngleRadians: Float, sweepAngleRadians: Float) {
-        addArc(oval, degrees(startAngleRadians), degrees(sweepAngleRadians))
+//        addArc(oval, degrees(startAngleRadians), degrees(sweepAngleRadians))
     }
 
     override fun addArc(oval: Rect, startAngleDegrees: Float, sweepAngleDegrees: Float) {
-        internalPath.addArc(oval.toSkiaRect(), startAngleDegrees, sweepAngleDegrees)
+//        internalPath.addArc(oval.toSkiaRect(), startAngleDegrees, sweepAngleDegrees)
     }
 
     override fun addRoundRect(roundRect: RoundRect) {
-        internalPath.addRRect(roundRect.toSkiaRRect(), PathDirection.COUNTER_CLOCKWISE)
+//        internalPath.addRRect(roundRect.toSkiaRRect(), PathDirection.COUNTER_CLOCKWISE)
     }
 
     override fun addPath(path: Path, offset: Offset) {
-        internalPath.addPath(path.asSkiaPath(), offset.x, offset.y)
+//        internalPath.addPath(path.asSkiaPath(), offset.x, offset.y)
     }
 
     override fun close() {
-        internalPath.closePath()
+//        internalPath.closePath()
     }
 
     override fun reset() {
@@ -165,7 +167,7 @@ internal class SkiaBackedPath(
     }
 
     override fun translate(offset: Offset) {
-        internalPath.transform(Matrix33.makeTranslate(offset.x, offset.y))
+//        internalPath.transform(Matrix33.makeTranslate(offset.x, offset.y))
     }
 
     override fun getBounds(): Rect {
