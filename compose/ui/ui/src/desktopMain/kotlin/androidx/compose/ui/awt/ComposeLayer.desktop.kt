@@ -257,6 +257,12 @@ internal class ComposeLayer(
         }
     }
 
+
+    val fpsCounter = FPSCounter(
+        showLongFrames = true,
+        logOnTick = true
+    )
+
     init {
         _component.skikoView = object : SkikoView {
             override val input: SkikoInput
@@ -264,8 +270,12 @@ internal class ComposeLayer(
 
                 }
 
+            var numOfFrames = 0;
             override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
                 catchExceptions {
+                    numOfFrames += 1
+                    println(numOfFrames)
+                    fpsCounter.tick()
                     scene.render(canvas, nanoTime)
                 }
             }

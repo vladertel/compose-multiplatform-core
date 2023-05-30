@@ -30,16 +30,11 @@ import androidx.compose.ui.platform.Platform
 import androidx.compose.ui.unit.Density
 import kotlinx.coroutines.CoroutineDispatcher
 import org.jetbrains.skia.Canvas
-import org.jetbrains.skiko.SkiaLayer
-import org.jetbrains.skiko.SkikoView
-import org.jetbrains.skiko.SkikoKeyboardEvent
-import org.jetbrains.skiko.SkikoPointerEvent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.toDpRect
 import org.jetbrains.skia.Point
-import org.jetbrains.skiko.SkikoInput
-import org.jetbrains.skiko.currentNanoTime
+import org.jetbrains.skiko.*
 
 internal class ComposeLayer(
     internal val layer: SkiaLayer,
@@ -52,10 +47,20 @@ internal class ComposeLayer(
     // Should be set to an actual value by ComposeWindow implementation
     private var density = Density(1f)
 
+    val fpsCounter = FPSCounter(
+        showLongFrames = true,
+        logOnTick = true
+    )
+
     inner class ComponentImpl : SkikoView {
         override val input = this@ComposeLayer.input
 
+        var numOfFrames = 0;
+
         override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+            numOfFrames += 1
+            println(numOfFrames)
+            fpsCounter.tick()
             scene.render(canvas, nanoTime)
         }
 
