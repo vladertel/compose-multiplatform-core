@@ -77,7 +77,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     private val _focusListeners = mutableSetOf<FocusListener?>()
     private var _isFocusable = true
     private var _isRequestFocusEnabled = false
-    private var layer: ComposeLayer? = null
+    private var layer: ComposeSwingLayer? = null
     private val clipMap = mutableMapOf<Component, ClipComponent>()
     private var content: (@Composable () -> Unit)? = null
 
@@ -149,7 +149,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
         // After [super.addNotify] is called we can safely initialize the layer and composable
         // content.
-        layer = ComposeLayer(skiaLayerAnalytics).apply {
+        layer = ComposeSwingLayerImpl(skiaLayerAnalytics).apply {
             scene.releaseFocus()
             component.setSize(width, height)
             component.isFocusable = _isFocusable
