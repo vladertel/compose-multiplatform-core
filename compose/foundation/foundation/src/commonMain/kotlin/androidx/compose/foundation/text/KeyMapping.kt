@@ -94,6 +94,7 @@ internal fun commonKeyMapping(
                         MappedKeys.PageDown -> KeyCommand.SELECT_PAGE_DOWN
                         MappedKeys.MoveHome -> KeyCommand.SELECT_LINE_START
                         MappedKeys.MoveEnd -> KeyCommand.SELECT_LINE_END
+                        MappedKeys.Backspace -> KeyCommand.DELETE_PREV_CHAR
                         MappedKeys.Insert -> KeyCommand.PASTE
                         else -> null
                     }
