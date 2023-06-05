@@ -32,12 +32,15 @@ import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
 import androidx.compose.ui.unit.*
 import kotlin.math.roundToInt
+import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.useContents
 import org.jetbrains.skiko.SkikoUIView
 import org.jetbrains.skiko.TextActions
 import platform.CoreGraphics.CGPointMake
+import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGSize
 import platform.Foundation.*
 import platform.UIKit.*
 import platform.darwin.NSObject
@@ -95,6 +98,8 @@ internal actual class ComposeWindow : UIViewController {
         InterfaceOrientation.Portrait
     )
 
+    private var latestInterfaceOrientation = interfaceOrientationState.value
+
     /*
      * On iOS >= 13.0 interfaceOrientation will be deduced from [UIWindowScene] of [UIWindow]
      * to which our [ComposeWindow] is attached.
@@ -134,10 +139,14 @@ internal actual class ComposeWindow : UIViewController {
         }
 
     private val density: Density
-        get() = Density(layer.layer.contentScale, fontScale)
+        get() = Density(
+            density = view.window?.screen?.scale?.toFloat() ?: 1f,
+            fontScale = fontScale
+        )
 
     private lateinit var layer: ComposeLayer
     private lateinit var content: @Composable () -> Unit
+    private lateinit var skikoUIView: SkikoUIView
 
     private val keyboardVisibilityListener = object : NSObject() {
         @Suppress("unused")
@@ -189,11 +198,14 @@ internal actual class ComposeWindow : UIViewController {
 
     override fun loadView() {
         val skiaLayer = createSkiaLayer()
-        val skikoUIView = SkikoUIView(
+        skikoUIView = SkikoUIView(
             skiaLayer = skiaLayer,
             pointInside = { point, _ ->
                 !layer.hitInteropView(point, isTouchEvent = true)
             },
+            onLayout = { width, height ->
+                updateComposeLayer(width, height)
+            }
         ).load()
         val rootView = UIView() // rootView needs to interop with UIKit
         rootView.backgroundColor = UIColor.whiteColor
@@ -296,6 +308,39 @@ internal actual class ComposeWindow : UIViewController {
         })
     }
 
+    override fun viewWillTransitionToSize(
+        size: CValue<CGSize>,
+        withTransitionCoordinator: UIViewControllerTransitionCoordinatorProtocol
+    ) {
+        super.viewWillTransitionToSize(size, withTransitionCoordinator)
+
+        // view for animating smooth orientation change
+        val snapshotView = skikoUIView.snapshotViewAfterScreenUpdates(false)
+
+        snapshotView?.let {
+            // if skikoUIView layouts before next vsync and calls redraw, it will flicker for a frame
+            // duration until snapshotView is rendered in a view hierarchy
+            skikoUIView.preventDrawDispatchDuringCurrentFrame()
+
+            it.setOpaque(false)
+            it.setClipsToBounds(true)
+            view.addSubview(it)
+            it.setFrame(view.frame)
+
+            withTransitionCoordinator.animateAlongsideTransition(
+                animation = { _ ->
+                    size.useContents {
+                        it.setFrame(CGRectMake(0.0, 0.0, width, height))
+                    }
+                    it.alpha = 0.0
+                },
+                completion = { _ ->
+                    it.removeFromSuperview()
+                }
+            )
+        }
+    }
+
     override fun traitCollectionDidChange(previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
 
@@ -303,26 +348,22 @@ internal actual class ComposeWindow : UIViewController {
 
         if (newSizeCategory != null && previousTraitCollection?.preferredContentSizeCategory != newSizeCategory) {
             // will force a view to do layout on a next main runloop tick
-            // which will cause viewWillLayoutSubviews
+            // which will force layout of UISkikoView, which will complete and call [updateComposeLayer]
             // which will assign new density to layer (which takes new fontScale into consideration)
-            // and will force recomposition, because it will change
+            // which will change density state value inside composition and force recomposition
 
             view.setNeedsLayout()
         }
     }
 
-    override fun viewWillLayoutSubviews() {
-        super.viewWillLayoutSubviews()
-
-        // UIKit possesses all required info for layout at this point
+    // Update [ComposeLayer] with latest layout data
+    private fun updateComposeLayer(width: Int, height: Int) {
         currentInterfaceOrientation?.let {
             interfaceOrientationState.value = it
         }
 
-        val (width, height) = getViewFrameSize()
         layer.setDensity(density)
-        val scale = density.density
-        layer.setSize((width * scale).roundToInt(), (height * scale).roundToInt())
+        layer.setSize(width, height)
     }
 
     override fun viewDidAppear(animated: Boolean) {
