@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
 import androidx.compose.ui.unit.*
-import kotlin.math.roundToInt
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCAction
@@ -97,8 +96,6 @@ internal actual class ComposeWindow : UIViewController {
     private val interfaceOrientationState = mutableStateOf(
         InterfaceOrientation.Portrait
     )
-
-    private var latestInterfaceOrientation = interfaceOrientationState.value
 
     /*
      * On iOS >= 13.0 interfaceOrientation will be deduced from [UIWindowScene] of [UIWindow]
@@ -219,6 +216,7 @@ internal actual class ComposeWindow : UIViewController {
             skikoUIView.topAnchor.constraintEqualToAnchor(rootView.topAnchor),
             skikoUIView.bottomAnchor.constraintEqualToAnchor(rootView.bottomAnchor)
         ))
+        updateMetalLayerPresentationMode()
 
         view = rootView
         val uiKitTextInputService = UIKitTextInputService(
@@ -308,6 +306,25 @@ internal actual class ComposeWindow : UIViewController {
         })
     }
 
+    private var viewIsInSizeTransition = false
+        set(value) {
+            field = value
+
+            updateMetalLayerPresentationMode()
+        }
+
+    var hasActiveUIViewInterop = true
+        set(value) {
+            field = value
+
+            updateMetalLayerPresentationMode()
+        }
+
+    private fun updateMetalLayerPresentationMode() {
+        skikoUIView.metalLayer.presentsWithTransaction = viewIsInSizeTransition || hasActiveUIViewInterop
+        skikoUIView.metalLayer.setOpaque(!hasActiveUIViewInterop)
+    }
+
     override fun viewWillTransitionToSize(
         size: CValue<CGSize>,
         withTransitionCoordinator: UIViewControllerTransitionCoordinatorProtocol
@@ -317,11 +334,9 @@ internal actual class ComposeWindow : UIViewController {
         // view for animating smooth orientation change
         val snapshotView = skikoUIView.snapshotViewAfterScreenUpdates(false)
 
-        snapshotView?.let {
-            // if skikoUIView layouts before next vsync and calls redraw, it will flicker for a frame
-            // duration until snapshotView is rendered in a view hierarchy
-            skikoUIView.preventDrawDispatchDuringCurrentFrame()
+        viewIsInSizeTransition = true
 
+        snapshotView?.let {
             it.setOpaque(false)
             it.setClipsToBounds(true)
             view.addSubview(it)
@@ -336,6 +351,8 @@ internal actual class ComposeWindow : UIViewController {
                 },
                 completion = { _ ->
                     it.removeFromSuperview()
+
+                    viewIsInSizeTransition = false
                 }
             )
         }

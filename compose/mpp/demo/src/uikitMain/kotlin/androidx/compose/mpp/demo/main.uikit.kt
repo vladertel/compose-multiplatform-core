@@ -1,6 +1,7 @@
 // Use `xcodegen` first, then `open ./SkikoSample.xcodeproj` and then Run button in XCode.
 package androidx.compose.mpp.demo
 
+import ColumnWithNativeUIViewsExample
 import NativeModalWithNaviationExample
 import androidx.compose.runtime.*
 import androidx.compose.ui.main.defaultUIKitMain
@@ -24,7 +25,8 @@ fun IosDemo() {
 fun MultiplatformDemo() {
     val app = remember {
         App(extraScreens = listOf(
-            NativeModalWithNaviationExample
+            NativeModalWithNaviationExample,
+            ColumnWithNativeUIViewsExample
         ))
     }
     app.Content()
