@@ -322,7 +322,7 @@ internal actual class ComposeWindow : UIViewController {
 
     private fun updateMetalLayerPresentationMode() {
         skikoUIView.metalLayer.presentsWithTransaction = viewIsInSizeTransition || hasActiveUIViewInterop
-        skikoUIView.metalLayer.setOpaque(!hasActiveUIViewInterop)
+//        skikoUIView.metalLayer.setOpaque(!hasActiveUIViewInterop)
     }
 
     override fun viewWillTransitionToSize(
