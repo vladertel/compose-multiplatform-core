@@ -33,14 +33,22 @@ val ColumnWithNativeUIViewsExample = Screen.Example("Column with native UIViews"
 private fun ColumnWithNativeUIViews() {
     var value by remember { mutableStateOf("something") }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
-        items(300) { index ->
-            if (index % 2 == 0) {
+        items(10) { _ ->
+            Spacer(Modifier.fillMaxWidth().height(40.dp))
+        }
+
+        item {
+            Column(Modifier.fillMaxWidth()) {
                 Text(value, Modifier.fillMaxWidth().height(40.dp))
-            } else {
+
                 ComposeUITextField(value, {
                     value = it
                 }, Modifier.fillMaxWidth().height(40.dp))
             }
+        }
+
+        items(40) { _ ->
+            Spacer(Modifier.fillMaxWidth().height(40.dp))
         }
     }
 }
