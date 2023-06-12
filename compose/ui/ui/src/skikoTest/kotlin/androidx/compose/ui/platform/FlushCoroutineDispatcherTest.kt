@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.platform
 
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -28,7 +27,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class FlushCoroutineDispatcherTest {
 
     @Test
@@ -79,29 +78,27 @@ class FlushCoroutineDispatcherTest {
     }
 
     @Test
-    fun flushing_in_another_thread() {
+    fun flushing_in_another_thread() = runTest {
         val actualNumbers = mutableListOf<Int>()
         lateinit var dispatcher: FlushCoroutineDispatcher
         val random = Random(123)
 
-        runTest {
-            withContext(Dispatchers.Default) {
-                dispatcher = FlushCoroutineDispatcher(this)
+        withContext(Dispatchers.Default) {
+            dispatcher = FlushCoroutineDispatcher(this)
 
-                val addJob = launch(dispatcher) {
-                    repeat(10000) {
-                        actualNumbers.add(it)
-                        repeat(random.nextInt(5)) {
-                            yield()
-                        }
-                    }
-                }
-
-                launch {
-                    while (addJob.isActive) {
-                        dispatcher.flush()
+            val addJob = launch(dispatcher) {
+                repeat(10000) {
+                    actualNumbers.add(it)
+                    repeat(random.nextInt(5)) {
                         yield()
                     }
+                }
+            }
+
+            launch {
+                while (addJob.isActive) {
+                    dispatcher.flush()
+                    yield()
                 }
             }
         }

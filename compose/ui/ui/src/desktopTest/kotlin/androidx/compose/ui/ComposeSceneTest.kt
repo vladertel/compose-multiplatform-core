@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +58,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.keyEvent
@@ -152,6 +155,22 @@ class ComposeSceneTest {
         assertFalse(hasRenders())
     }
 
+    // https://github.com/JetBrains/compose-multiplatform/issues/3137
+    @Test
+    fun `rendering of Text state change`() = renderingTest(width = 400, height = 200) {
+        var text by mutableStateOf("before")
+        setContent {
+            Text(text)
+        }
+        awaitNextRender()
+        val before = surface.makeImageSnapshot().toComposeImageBitmap().toPixelMap().buffer
+
+        text = "after"
+        awaitNextRender()
+        val after = surface.makeImageSnapshot().toComposeImageBitmap().toPixelMap().buffer
+        assertThat(after).isNotEqualTo(before)
+    }
+
     @Test(timeout = 5000)
     fun `rendering of Layout state change`() = renderingTest(width = 40, height = 40) {
         var width by mutableStateOf(10)
@@ -161,8 +180,8 @@ class ComposeSceneTest {
             Row(Modifier.height(height.dp)) {
                 Layout({
                     Box(Modifier.fillMaxSize().background(Color.Green))
-                }) { measureables, constraints ->
-                    val placeables = measureables.map { it.measure(constraints) }
+                }) { measurables, constraints ->
+                    val placeables = measurables.map { it.measure(constraints) }
                     layout(width, constraints.maxHeight) {
                         placeables.forEach { it.place(x, 0) }
                     }

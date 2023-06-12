@@ -20,7 +20,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.PointerMatcher
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -33,18 +32,14 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
 import kotlin.math.ceil
-import kotlin.test.Ignore
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 
 @Suppress("DEPRECATION")
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 class DragGestureTest {
 
     @Test
@@ -128,6 +123,7 @@ class DragGestureTest {
         }
     }
 
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     @Test
     fun draggable_by_mouse_secondary_button_ignores_primary_button() {
         val density = Density(1f)
@@ -178,6 +174,69 @@ class DragGestureTest {
             )
             assertEquals(Offset(5f, 5f), dragStartResult)
         }
+    }
+
+    private fun assertDragSucceeds(
+        density: Density,
+        startOffset: Offset,
+        endOffset: Offset
+    ){
+        ImageComposeScene(
+            width = 100,
+            height = 100,
+            density = density
+        ).use { scene ->
+
+            var dragStarted = false
+            var dragged = false
+            var dragEnded = false
+
+            scene.setContent {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp, 40.dp)
+                        .onDrag(
+                            enabled = true,
+                            onDragStart = { dragStarted = true },
+                            onDragEnd = { dragEnded = true },
+                            onDrag = { dragged = true }
+                        )
+                )
+            }
+
+            scene.sendPointerEvent(PointerEventType.Move, startOffset)
+            scene.sendPointerEvent(PointerEventType.Press, startOffset, button = PointerButton.Primary)
+            scene.sendPointerEvent(PointerEventType.Move, endOffset)
+            scene.sendPointerEvent(PointerEventType.Release,endOffset, button = PointerButton.Primary)
+
+            assertTrue(dragStarted)
+            assertTrue(dragged)
+            assertTrue(dragEnded)
+        }
+    }
+
+    @Test
+    fun vertical_drag_passes_slop() {
+        val density = Density(1f)
+        val viewConfiguration = DefaultViewConfiguration(density)
+        val startOffset = Offset(5f, 5f)
+        assertDragSucceeds(
+            density = density,
+            startOffset = startOffset,
+            endOffset = startOffset + Offset(0f, viewConfiguration.touchSlop + 1f)
+        )
+    }
+
+    @Test
+    fun horizontal_drag_passes_slop() {
+        val density = Density(1f)
+        val viewConfiguration = DefaultViewConfiguration(density)
+        val startOffset = Offset(5f, 5f)
+        assertDragSucceeds(
+            density = density,
+            startOffset = startOffset,
+            endOffset = startOffset + Offset(viewConfiguration.touchSlop + 1f, 0f)
+        )
     }
 
     @Test
@@ -267,6 +326,7 @@ class DragGestureTest {
         }
     }
 
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     @Test
     fun draggable_by_touch_ignores_mouse() {
         val density = Density(1f)

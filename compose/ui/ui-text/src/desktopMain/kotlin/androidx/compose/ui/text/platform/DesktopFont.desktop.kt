@@ -15,64 +15,19 @@
  */
 package androidx.compose.ui.text.platform
 
-import androidx.compose.ui.text.Cache
+import org.jetbrains.skia.Typeface as SkTypeface
 import androidx.compose.ui.text.ExperimentalTextApi
-import androidx.compose.ui.text.ExpireAfterAccessCache
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontListFontFamily
-import androidx.compose.ui.text.font.FontLoadingStrategy
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.*
 import androidx.compose.ui.util.fastForEach
 import java.io.File
 import java.security.MessageDigest
 import org.jetbrains.skia.Data
 import org.jetbrains.skia.makeFromFile
-import org.jetbrains.skia.Typeface as SkTypeface
 
 actual sealed class PlatformFont : Font {
     actual abstract val identity: String
     internal actual val cacheKey: String
         get() = "${this::class.qualifiedName}|$identity"
-}
-
-internal actual val GenericFontFamiliesMapping by lazy {
-    when (Platform.Current) {
-        Platform.Windows ->
-            mapOf(
-                FontFamily.SansSerif.name to listOf("Arial"),
-                FontFamily.Serif.name to listOf("Times New Roman"),
-                FontFamily.Monospace.name to listOf("Consolas"),
-                FontFamily.Cursive.name to listOf("Comic Sans MS")
-            )
-        Platform.MacOS ->
-            mapOf(
-                FontFamily.SansSerif.name to listOf(
-                    "System Font",
-                    "Helvetica Neue",
-                    "Helvetica"
-                ),
-                FontFamily.Serif.name to listOf("Times"),
-                FontFamily.Monospace.name to listOf("Courier"),
-                FontFamily.Cursive.name to listOf("Apple Chancery")
-            )
-        Platform.Linux ->
-            mapOf(
-                FontFamily.SansSerif.name to listOf("Noto Sans", "DejaVu Sans"),
-                FontFamily.Serif.name to listOf("Noto Serif", "DejaVu Serif", "Times New Roman"),
-                FontFamily.Monospace.name to listOf("Noto Sans Mono", "DejaVu Sans Mono"),
-                // better alternative?
-                FontFamily.Cursive.name to listOf("Comic Sans MS")
-            )
-        Platform.Unknown ->
-            mapOf(
-                FontFamily.SansSerif.name to listOf("Arial"),
-                FontFamily.Serif.name to listOf("Times New Roman"),
-                FontFamily.Monospace.name to listOf("Consolas"),
-                FontFamily.Cursive.name to listOf("Comic Sans MS")
-            )
-    }
 }
 
 /**
@@ -106,9 +61,7 @@ class ResourceFont internal constructor(
 
         if (name != other.name) return false
         if (weight != other.weight) return false
-        if (style != other.style) return false
-
-        return true
+        return style == other.style
     }
 
     override fun hashCode(): Int {
@@ -170,9 +123,7 @@ class FileFont internal constructor(
 
         if (file != other.file) return false
         if (weight != other.weight) return false
-        if (style != other.style) return false
-
-        return true
+        return style == other.style
     }
 
     override fun hashCode(): Int {
@@ -204,37 +155,16 @@ fun Font(
     style: FontStyle = FontStyle.Normal
 ): Font = FileFont(file, weight, style)
 
-internal actual fun FontListFontFamily.makeAlias(): String {
-    val digest = MessageDigest.getInstance("SHA-256")
-    fonts.fastForEach { font ->
-        when (font) {
-            is PlatformFont -> {
-                digest.update(font.identity.toByteArray())
-            }
-        }
-    }
-    return "-compose-${digest.digest().toHexString()}"
-}
-
-private fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
-
-internal actual fun loadFromTypefacesCache(font: Font): SkTypeface {
+internal actual fun loadTypeface(font: Font): SkTypeface {
     if (font !is PlatformFont) {
         throw IllegalArgumentException("Unsupported font type: $font")
     }
-    return typefacesCache.get(font.cacheKey) {
-        when (font) {
-            is ResourceFont -> typefaceResource(font.name)
-            is FileFont -> SkTypeface.makeFromFile(font.file.toString())
-            is LoadedFont -> SkTypeface.makeFromData(Data.makeFromBytes(font.data))
-        }
+    return when (font) {
+        is ResourceFont -> typefaceResource(font.name)
+        is FileFont -> SkTypeface.makeFromFile(font.file.toString())
+        is LoadedFont -> SkTypeface.makeFromData(Data.makeFromBytes(font.data))
     }
 }
-
-internal actual val typefacesCache: Cache<String, SkTypeface> =
-    ExpireAfterAccessCache<String, SkTypeface>(
-        60_000_000_000 // 1 minute
-    )
 
 private fun typefaceResource(resourceName: String): SkTypeface {
     val contextClassLoader = Thread.currentThread().contextClassLoader!!
@@ -246,21 +176,12 @@ private fun typefaceResource(resourceName: String): SkTypeface {
     return SkTypeface.makeFromData(Data.makeFromBytes(bytes))
 }
 
-private enum class Platform {
-    Linux,
-    Windows,
-    MacOS,
-    Unknown;
-
-    companion object {
-        val Current by lazy {
-            val name = System.getProperty("os.name")
-            when {
-                name.startsWith("Linux") -> Linux
-                name.startsWith("Win") -> Windows
-                name == "Mac OS X" -> MacOS
-                else -> Unknown
-            }
-        }
+internal actual fun currentPlatform(): Platform {
+    val name = System.getProperty("os.name")
+    return when {
+        name.startsWith("Linux") -> Platform.Linux
+        name.startsWith("Win") -> Platform.Windows
+        name == "Mac OS X" -> Platform.MacOS
+        else -> Platform.Unknown
     }
 }

@@ -150,12 +150,10 @@ class ComposeScene internal constructor(
         check(!isClosed) { "ComposeScene is closed" }
         isInvalidationDisabled = true
         val result = try {
-            // We must see the actual state before we will do [block]
-            // TODO(https://github.com/JetBrains/compose-jb/issues/1854) get rid of synchronized.
-            synchronized(GlobalSnapshotManager.sync) {
-                Snapshot.sendApplyNotifications()
-            }
-            snapshotChanges.perform()
+            // Try to get see the up-to-date state before running block
+            // Note that this doesn't guarantee it, if sendApplyNotifications is called concurrently
+            // in a different thread than this code.
+            sendAndPerformSnapshotChanges()
             block()
         } finally {
             isInvalidationDisabled = false
@@ -185,11 +183,16 @@ class ComposeScene internal constructor(
         invalidateIfNeeded()
     }
 
-    private val list = LinkedHashSet<SkiaBasedOwner>()
+    /**
+     * Contains all registered [SkiaBasedOwner] (main frame, popups, etc.) in order of registration.
+     * So that Popup opened from main owner will have bigger index.
+     * This logic is used by accessibility.
+     */
+    internal val owners = mutableListOf<SkiaBasedOwner>()
     private val listCopy = mutableListOf<SkiaBasedOwner>()
 
     private inline fun forEachOwner(action: (SkiaBasedOwner) -> Unit) {
-        listCopy.addAll(list)
+        listCopy.addAll(owners)
         listCopy.forEach(action)
         listCopy.clear()
     }
@@ -199,7 +202,7 @@ class ComposeScene internal constructor(
      * will be added. If there is an any [Popup] is present in the content, it will be added as
      * another [RootForTest]
      */
-    val roots: Set<RootForTest> get() = list
+    val roots: Set<RootForTest> get() = owners.toSet()
 
     private val defaultPointerStateTracker = DefaultPointerStateTracker()
 
@@ -278,7 +281,7 @@ class ComposeScene internal constructor(
 
     internal fun attach(owner: SkiaBasedOwner) {
         check(!isClosed) { "ComposeScene is closed" }
-        list.add(owner)
+        owners.add(owner)
         owner.requestLayout = ::requestLayout
         owner.requestDraw = ::requestDraw
         owner.dispatchSnapshotChanges = snapshotChanges::add
@@ -296,13 +299,13 @@ class ComposeScene internal constructor(
 
     internal fun detach(owner: SkiaBasedOwner) {
         check(!isClosed) { "ComposeScene is closed" }
-        list.remove(owner)
+        owners.remove(owner)
         owner.dispatchSnapshotChanges = null
         owner.requestDraw = null
         owner.requestLayout = null
         invalidateIfNeeded()
         if (owner == focusedOwner) {
-            focusedOwner = list.lastOrNull { it.isFocusable }
+            focusedOwner = owners.lastOrNull { it.isFocusable }
         }
         if (owner == lastMoveOwner) {
             lastMoveOwner = null
@@ -364,8 +367,8 @@ class ComposeScene internal constructor(
             platform,
             platform.focusManager,
             pointerPositionUpdater,
-            density,
-            IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect(),
+            initDensity = density,
+            bounds = IntSize(constraints.maxWidth, constraints.maxHeight).toIntRect(),
             onPreviewKeyEvent = onPreviewKeyEvent,
             onKeyEvent = onKeyEvent,
         )
@@ -409,15 +412,25 @@ class ComposeScene internal constructor(
         }
 
     /**
+     * Sends any pending apply notifications and performs the changes they cause.
+     */
+    private fun sendAndPerformSnapshotChanges() {
+        Snapshot.sendApplyNotifications()
+        snapshotChanges.perform()
+    }
+
+    /**
      * Render the current content on [canvas]. Passed [nanoTime] will be used to drive all
      * animations in the content (or any other code, which uses [withFrameNanos]
      */
     fun render(canvas: Canvas, nanoTime: Long): Unit = postponeInvalidation {
         recomposeDispatcher.flush()
-        frameClock.sendFrame(nanoTime)
+        frameClock.sendFrame(nanoTime) // Recomposition
+        sendAndPerformSnapshotChanges() // Apply changes from recomposition phase to layout phase
         needLayout = false
         forEachOwner { it.measureAndLayout() }
         pointerPositionUpdater.update()
+        sendAndPerformSnapshotChanges()  // Apply changes from layout phase to draw phase
         needDraw = false
         forEachOwner { it.draw(canvas) }
         forEachOwner { it.clearInvalidObservations() }
@@ -427,11 +440,11 @@ class ComposeScene internal constructor(
     private var pressOwner: SkiaBasedOwner? = null
     private var lastMoveOwner: SkiaBasedOwner? = null
     private fun hoveredOwner(event: PointerInputEvent): SkiaBasedOwner? =
-        list.lastOrNull { it.isHovered(event.pointers.first().position) }
+        owners.lastOrNull { it.isHovered(event.pointers.first().position) }
 
     private fun SkiaBasedOwner?.isAbove(
         targetOwner: SkiaBasedOwner?
-    ) = this != null && targetOwner != null && list.indexOf(this) > list.indexOf(targetOwner)
+    ) = this != null && targetOwner != null && owners.indexOf(this) > owners.indexOf(targetOwner)
 
     // TODO(demin): return Boolean (when it is consumed)
     /**
@@ -638,7 +651,7 @@ class ComposeScene internal constructor(
      */
     @ExperimentalComposeUiApi
     fun releaseFocus() {
-        list.forEach {
+        owners.forEach {
             it.focusOwner.releaseFocus()
         }
         isFocused = false
@@ -646,7 +659,7 @@ class ComposeScene internal constructor(
 
     @ExperimentalComposeUiApi
     fun requestFocus() {
-        list.findLast { it.isFocusable }?.focusOwner?.takeFocus()
+        owners.findLast { it.isFocusable }?.focusOwner?.takeFocus()
         isFocused = true
     }
 
@@ -660,7 +673,7 @@ class ComposeScene internal constructor(
      */
     @ExperimentalComposeUiApi
     fun moveFocus(focusDirection: FocusDirection): Boolean =
-        list.lastOrNull()?.focusOwner?.moveFocus(focusDirection) ?: false
+        owners.lastOrNull()?.focusOwner?.moveFocus(focusDirection) ?: false
 
     /**
      * Represents pointer such as mouse cursor, or touch/stylus press.

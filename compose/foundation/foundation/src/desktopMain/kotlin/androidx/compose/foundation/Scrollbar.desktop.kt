@@ -18,11 +18,7 @@ package androidx.compose.foundation
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.TweenSpec
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.awaitHorizontalDragOrCancellation
-import androidx.compose.foundation.gestures.awaitVerticalDragOrCancellation
-import androidx.compose.foundation.gestures.drag
-import androidx.compose.foundation.gestures.forEachGesture
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -783,13 +779,14 @@ interface ScrollbarAdapter {
 
 }
 
-private fun computeSliderPositionAndSize(sliderAdapter: SliderAdapter): Pair<Int, Int> {
-    val adapterPosition = sliderAdapter.position
-    val position = adapterPosition.roundToInt()
-    val size = (sliderAdapter.thumbSize + adapterPosition - position).roundToInt()
+private fun thumbPixelRange(sliderAdapter: SliderAdapter): IntRange {
+    val start = sliderAdapter.position.roundToInt()
+    val endExclusive = start + sliderAdapter.thumbSize.roundToInt()
 
-    return Pair(position, size)
+    return start until endExclusive
 }
+
+private val IntRange.size get() = last + 1 - first
 
 private fun verticalMeasurePolicy(
     sliderAdapter: SliderAdapter,
@@ -797,16 +794,16 @@ private fun verticalMeasurePolicy(
     scrollThickness: Int
 ) = MeasurePolicy { measurables, constraints ->
     setContainerSize(constraints.maxHeight)
-    val (position, height) = computeSliderPositionAndSize(sliderAdapter)
+    val pixelRange = thumbPixelRange(sliderAdapter)
 
     val placeable = measurables.first().measure(
         Constraints.fixed(
             constraints.constrainWidth(scrollThickness),
-            height
+            pixelRange.size
         )
     )
     layout(placeable.width, constraints.maxHeight) {
-        placeable.place(0, position)
+        placeable.place(0, pixelRange.first)
     }
 }
 
@@ -816,16 +813,16 @@ private fun horizontalMeasurePolicy(
     scrollThickness: Int
 ) = MeasurePolicy { measurables, constraints ->
     setContainerSize(constraints.maxWidth)
-    val (position, width) = computeSliderPositionAndSize(sliderAdapter)
+    val pixelRange = thumbPixelRange(sliderAdapter)
 
     val placeable = measurables.first().measure(
         Constraints.fixed(
-            width,
+            pixelRange.size,
             constraints.constrainHeight(scrollThickness)
         )
     )
     layout(constraints.maxWidth, placeable.height) {
-        placeable.place(position, 0)
+        placeable.place(pixelRange.first, 0)
     }
 }
 
@@ -839,25 +836,23 @@ private fun Modifier.scrollbarDrag(
     val currentSliderAdapter by rememberUpdatedState(sliderAdapter)
 
     pointerInput(Unit) {
-        forEachGesture {
-            awaitPointerEventScope {
-                val down = awaitFirstDown(requireUnconsumed = false)
-                val interaction = DragInteraction.Start()
-                currentInteractionSource.tryEmit(interaction)
-                currentDraggedInteraction.value = interaction
-                currentSliderAdapter.onDragStarted()
-                val isSuccess = drag(down.id) { change ->
-                    currentSliderAdapter.onDragDelta(change.positionChange())
-                    change.consume()
-                }
-                val finishInteraction = if (isSuccess) {
-                    DragInteraction.Stop(interaction)
-                } else {
-                    DragInteraction.Cancel(interaction)
-                }
-                currentInteractionSource.tryEmit(finishInteraction)
-                currentDraggedInteraction.value = null
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            val interaction = DragInteraction.Start()
+            currentInteractionSource.tryEmit(interaction)
+            currentDraggedInteraction.value = interaction
+            currentSliderAdapter.onDragStarted()
+            val isSuccess = drag(down.id) { change ->
+                currentSliderAdapter.onDragDelta(change.positionChange())
+                change.consume()
             }
+            val finishInteraction = if (isSuccess) {
+                DragInteraction.Stop(interaction)
+            } else {
+                DragInteraction.Cancel(interaction)
+            }
+            currentInteractionSource.tryEmit(finishInteraction)
+            currentDraggedInteraction.value = null
         }
     }
 }
@@ -905,10 +900,10 @@ private class TrackPressScroller(
      * Calculates the direction of scrolling towards the given offset (in pixels).
      */
     private fun directionOfScrollTowards(offset: Float): Int {
-        val thumbRange = sliderAdapter.bounds
+        val pixelRange = thumbPixelRange(sliderAdapter)
         return when {
-            offset < thumbRange.start -> -1
-            offset > thumbRange.endInclusive -> 1
+            offset < pixelRange.first -> -1
+            offset > pixelRange.last -> 1
             else -> 0
         }
     }
@@ -996,27 +991,25 @@ private suspend fun PointerInputScope.detectScrollViaTrackGestures(
 ) {
     fun Offset.onScrollAxis() = if (isVertical) y else x
 
-    forEachGesture {
-        awaitPointerEventScope {
-            val down = awaitFirstDown()
-            scroller.onPress(down.position.onScrollAxis())
+    awaitEachGesture {
+        val down = awaitFirstDown()
+        scroller.onPress(down.position.onScrollAxis())
 
-            while (true) {
-                val drag =
-                    if (isVertical)
-                        awaitVerticalDragOrCancellation(down.id)
-                    else
-                        awaitHorizontalDragOrCancellation(down.id)
+        while (true) {
+            val drag =
+                if (isVertical)
+                    awaitVerticalDragOrCancellation(down.id)
+                else
+                    awaitHorizontalDragOrCancellation(down.id)
 
-                if (drag == null) {
-                    scroller.onGestureCancelled()
-                    break
-                } else if (!drag.pressed) {
-                    scroller.onRelease()
-                    break
-                } else
-                    scroller.onMovePressed(drag.position.onScrollAxis())
-            }
+            if (drag == null) {
+                scroller.onGestureCancelled()
+                break
+            } else if (!drag.pressed) {
+                scroller.onRelease()
+                break
+            } else
+                scroller.onMovePressed(drag.position.onScrollAxis())
         }
     }
 }

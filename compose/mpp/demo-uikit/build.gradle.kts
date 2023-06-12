@@ -1,5 +1,4 @@
 import androidx.build.AndroidXComposePlugin
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("AndroidXPlugin")
@@ -14,6 +13,7 @@ val developmentTeamToRunOnRealDevice = "JMS9FA69HB"
 val runOnDevice = developmentTeamToRunOnRealDevice.isNotEmpty()
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
+
 
 dependencies {
 
@@ -111,6 +111,8 @@ apple {
 
         buildSettings.DEVELOPMENT_TEAM(developmentTeamToRunOnRealDevice)
         buildSettings.DEPLOYMENT_TARGET("15.0")
+
+        // TODO: add 'CADisableMinimumFrameDurationOnPhone' set to 'YES'
 
         dependencies {
             // Here we can add additional dependencies to Swift sourceSet

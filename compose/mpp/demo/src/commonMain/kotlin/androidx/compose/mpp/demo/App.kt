@@ -1,10 +1,9 @@
 package androidx.compose.mpp.demo
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,65 +14,117 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-class App(
-    private val initialScreenName: String? = null
-) {
-    private val MainScreen = Screen("Demo") { Main() }
+val MainScreen = Screen.Selection(
+    "Demo",
+    Screen.Example("Example1") { Example1() },
+    Screen.Example("ImageViewer") { ImageViewer() },
+    Screen.Example("RoundedCornerCrashOnJS") { RoundedCornerCrashOnJS() },
+    Screen.Example("TextDirection") { TextDirection() },
+    Screen.Example("FontFamilies") { FontFamilies() },
+    Screen.Example("LottieAnimation") { LottieAnimation() },
+    Screen.ScaffoldExample("ApplicationLayouts") { ApplicationLayouts(it) },
+    Screen.Example("GraphicsLayerSettings") { GraphicsLayerSettings() },
+    LazyLayouts,
+)
 
-    private val screens = listOf(
-        Screen("Example1") { Example1() },
-        Screen("ImageViewer") { ImageViewer() },
-        Screen("RoundedCornerCrashOnJS") { RoundedCornerCrashOnJS() },
-    )
+sealed interface Screen {
+    val title: String
 
-    private class Screen(val title: String, val content: @Composable () -> Unit)
+    class Example(override val title: String, val content: @Composable () -> Unit) : Screen
+    class ScaffoldExample(override val title: String, val content: @Composable (back: () -> Unit) -> Unit) : Screen
+    class Selection(override val title: String, val screens: List<Screen>) : Screen {
+        constructor(title: String, vararg screens: Screen) : this(title, listOf(*screens))
 
-    private var screen: Screen by mutableStateOf(
-        if (initialScreenName != null) {
-            screens.find { it.title == initialScreenName }!!
-        } else {
-            MainScreen
+        fun mergedWith(screens: List<Screen>): Selection {
+            return Selection(title, this.screens + screens)
         }
-    )
+    }
+}
 
-    @Composable
-    fun Content() {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(screen.title) },
-                    navigationIcon = if (screen != MainScreen) {
-                        {
-                            Icon(
-                                Icons.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                modifier = Modifier.clickable { screen = MainScreen }
-                            )
-                        }
-                    } else {
-                        null
-                    }
-                )
+class App(
+    initialScreenName: String? = null,
+    extraScreens: List<Screen> = listOf()
+) {
+    private val navigationStack: SnapshotStateList<Screen> = mutableStateListOf(MainScreen.mergedWith(extraScreens))
+
+    init {
+        if (initialScreenName != null) {
+            var currentScreen = navigationStack.first()
+            initialScreenName.split("/").forEach { target ->
+                val selectionScreen = currentScreen as Screen.Selection
+                currentScreen = selectionScreen.screens.find { it.title == target }!!
+                navigationStack.add(currentScreen)
             }
-        ) {
-            screen.content()
         }
     }
 
     @Composable
-    fun Main() {
-        LazyColumn(Modifier.fillMaxSize()) {
-            items(screens) {
-                Text(it.title, Modifier.clickable { screen = it }.padding(16.dp).fillMaxWidth())
+    fun Content() {
+        when (val screen = navigationStack.last()) {
+            is Screen.Example -> {
+                ExampleScaffold {
+                    screen.content()
+                }
+            }
+
+            is Screen.ScaffoldExample -> {
+                screen.content { navigationStack.removeLast() }
+            }
+
+            is Screen.Selection -> {
+                SelectionScaffold {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        items(screen.screens) {
+                            Text(it.title, Modifier.clickable {
+                                navigationStack.add(it)
+                            }.padding(16.dp).fillMaxWidth())
+                        }
+                    }
+                }
             }
         }
+    }
+
+    @Composable
+    private fun ExampleScaffold(
+        content: @Composable (PaddingValues) -> Unit
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        val title = navigationStack.drop(1).joinToString("/") { it.title }
+                        Text(title)
+                    },
+                    navigationIcon = {
+                        Icon(
+                            Icons.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            modifier = Modifier.clickable { navigationStack.removeLast() }
+                        )
+                    }
+                )
+            },
+            content = content
+        )
+    }
+
+    @Composable
+    private fun SelectionScaffold(
+        content: @Composable (PaddingValues) -> Unit
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(navigationStack.first().title) },
+                )
+            },
+            content = content
+        )
     }
 }

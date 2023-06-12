@@ -47,11 +47,7 @@ import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
 import platform.UIKit.UIColor
 import platform.UIKit.UIView
-import platform.UIKit.addSubview
 import platform.UIKit.backgroundColor
-import platform.UIKit.insertSubview
-import platform.UIKit.removeFromSuperview
-import platform.UIKit.setFrame
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
@@ -116,7 +112,7 @@ fun <T : UIView> UIKitView(
         }
     )
 
-    DisposableEffect(factory, onRelease) {
+    DisposableEffect(Unit) {
         componentInfo.component = factory()
         componentInfo.container = UIView().apply {
             addSubview(componentInfo.component)
@@ -129,6 +125,7 @@ fun <T : UIView> UIKitView(
             onRelease(componentInfo.component)
         }
     }
+
     LaunchedEffect(background) {
         if (background == Color.Unspecified) {
             componentInfo.container.backgroundColor = root.backgroundColor
@@ -136,6 +133,7 @@ fun <T : UIView> UIKitView(
             componentInfo.container.backgroundColor = parseColor(background)
         }
     }
+
     SideEffect {
         componentInfo.updater.update = update
     }
