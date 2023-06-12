@@ -18,17 +18,10 @@
 
 package androidx.compose.ui.awt
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.window.density
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
-import java.awt.Window
-import java.awt.event.WindowEvent
-import java.awt.event.WindowFocusListener
-import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
 import javax.accessibility.AccessibleContext
 import javax.swing.JComponent
@@ -41,7 +34,7 @@ import org.jetbrains.skiko.swing.SkiaSwingLayerComponent
 internal class ComposeSwingLayer(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
 ) : ComposeLayer() {
-    private val _component = ComponentImpl()
+    private val _component = ComposeSwingSkiaLayer()
     val component: SkiaSwingLayerComponent get() = _component
 
     override val componentLayer: JComponent
@@ -65,34 +58,27 @@ internal class ComposeSwingLayer(
         _component.dispose()
     }
 
+    /**
+     * See also backendLayer for standalone compose [androidx.compose.ui.awt.ComposeWindowLayer.ComposeWindowSkiaLayer]
+     */
     @OptIn(ExperimentalSkikoApi::class)
-    private inner class ComponentImpl :
+    private inner class ComposeSwingSkiaLayer :
         SkiaSwingLayer(skikoView = skikoView, analytics = skiaLayerAnalytics) {
-        private var window: Window? = null
-        private var windowListener = object : WindowFocusListener {
-            override fun windowGainedFocus(e: WindowEvent) = refreshWindowFocus()
-            override fun windowLostFocus(e: WindowEvent) = refreshWindowFocus()
-        }
-
         override fun addNotify() {
             super.addNotify()
-            resetDensity()
+            resetSceneDensity()
             initContent()
             updateSceneSize()
-            window = SwingUtilities.getWindowAncestor(this)
-            window?.addWindowFocusListener(windowListener)
-            refreshWindowFocus()
+            updateWindowState(SwingUtilities.getWindowAncestor(this))
         }
 
         override fun removeNotify() {
-            window?.removeWindowFocusListener(windowListener)
-            window = null
-            refreshWindowFocus()
+            updateWindowState(window = null)
             super.removeNotify()
         }
 
         override fun paint(g: Graphics) {
-            resetDensity()
+            resetSceneDensity()
             super.paint(g)
         }
 
@@ -103,30 +89,8 @@ internal class ComposeSwingLayer(
             updateSceneSize()
         }
 
-        private fun updateSceneSize() {
-            this@ComposeSwingLayer.scene.constraints = Constraints(
-                maxWidth = (width * density.density).toInt().coerceAtLeast(0),
-                maxHeight = (height * density.density).toInt().coerceAtLeast(0)
-            )
-        }
-
         override fun getPreferredSize(): Dimension {
-            return if (isPreferredSizeSet) super.getPreferredSize() else Dimension(
-                (this@ComposeSwingLayer.scene.contentSize.width / density.density).toInt(),
-                (this@ComposeSwingLayer.scene.contentSize.height / density.density).toInt()
-            )
-        }
-
-        private fun resetDensity() {
-            if (this@ComposeSwingLayer.scene.density != density) {
-                this@ComposeSwingLayer.scene.density = density
-                updateSceneSize()
-            }
-        }
-
-        private fun refreshWindowFocus() {
-            platform.windowInfo.isWindowFocused = window?.isFocused ?: false
-            keyboardModifiersRequireUpdate = true
+            return if (isPreferredSizeSet) super.getPreferredSize() else sceneDimension
         }
 
         override fun getAccessibleContext(): AccessibleContext? {

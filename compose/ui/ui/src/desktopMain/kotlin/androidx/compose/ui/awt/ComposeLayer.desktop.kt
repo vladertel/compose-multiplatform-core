@@ -29,16 +29,14 @@ import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.toPointerKeyboardModifiers
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.layoutDirection
-import java.awt.Component
-import java.awt.Cursor
-import java.awt.Point
-import java.awt.Toolkit
+import java.awt.*
 import java.awt.event.*
 import java.awt.event.KeyEvent
 import java.awt.im.InputMethodRequests
@@ -69,6 +67,13 @@ internal abstract class ComposeLayer {
     protected abstract val focusComponentDelegate: Component
 
     protected var currentInputMethodRequests: InputMethodRequests? = null
+
+    private val windowFocusListener = object : WindowFocusListener {
+        override fun windowGainedFocus(e: WindowEvent) = refreshWindowFocus()
+        override fun windowLostFocus(e: WindowEvent) = refreshWindowFocus()
+    }
+
+    private var window: Window? = null
 
     private val platformComponent: PlatformComponent = object : PlatformComponent {
         override fun enableInput(inputMethodRequests: InputMethodRequests) {
@@ -137,6 +142,12 @@ internal abstract class ComposeLayer {
             }
         }
     }
+
+    protected val sceneDimension: Dimension
+        get() = Dimension(
+            (scene.contentSize.width / componentLayer.density.density).toInt(),
+            (scene.contentSize.height / componentLayer.density.density).toInt()
+        )
 
     private val density get() = platformComponent.density.density
 
@@ -275,6 +286,37 @@ internal abstract class ComposeLayer {
 
     private fun setCurrentKeyboardModifiers(modifiers: PointerKeyboardModifiers) {
         platform.windowInfo.keyboardModifiers = modifiers
+    }
+
+    protected fun updateSceneSize() {
+        scene.constraints = Constraints(
+            maxWidth = (componentLayer.width * componentLayer.density.density).toInt()
+                .coerceAtLeast(0),
+            maxHeight = (componentLayer.height * componentLayer.density.density).toInt()
+                .coerceAtLeast(0)
+        )
+    }
+
+    protected fun resetSceneDensity() {
+        if (scene.density != componentLayer.density) {
+            scene.density = componentLayer.density
+            updateSceneSize()
+        }
+    }
+
+    protected fun updateWindowState(window: Window?) {
+        if (window != null) {
+            window.addWindowFocusListener(windowFocusListener)
+        } else {
+            window?.removeWindowFocusListener(windowFocusListener)
+        }
+        this.window = window
+        refreshWindowFocus()
+    }
+
+    private fun refreshWindowFocus() {
+        platform.windowInfo.isWindowFocused = window?.isFocused ?: false
+        keyboardModifiersRequireUpdate = true
     }
 
     protected inner class DesktopPlatform : Platform by Platform.Empty {
