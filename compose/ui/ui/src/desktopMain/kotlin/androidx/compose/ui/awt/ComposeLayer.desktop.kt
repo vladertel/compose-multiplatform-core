@@ -51,6 +51,12 @@ import org.jetbrains.skiko.SkikoInput
 import org.jetbrains.skiko.SkikoView
 import org.jetbrains.skiko.hostOs
 
+/**
+ * Provides a base implementation for integrating a Compose scene with AWT/Swing.
+ * It allows setting Compose content by [setContent], this content should be drawn on [componentLayer].
+ *
+ * Inheritors should call [attachComposeToComponent], so events that came to [componentLayer] will be transferred to [ComposeScene]
+ */
 internal abstract class ComposeLayer {
     private var isDisposed = false
 

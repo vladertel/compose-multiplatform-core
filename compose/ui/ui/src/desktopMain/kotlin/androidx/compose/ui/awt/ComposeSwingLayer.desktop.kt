@@ -31,6 +31,14 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
 import org.jetbrains.skiko.swing.SkiaSwingLayer
 import org.jetbrains.skiko.swing.SkiaSwingLayerComponent
 
+/**
+ * Provides [component] that can be used as a Swing component.
+ * Content set in [setContent] will be drawn on this [component].
+ *
+ * [ComposeSwingLayer] provides smooth integration with Swing, so z-ordering, double-buffering etc. from Swing will be taken into account.
+ *
+ * However, if smooth interop with Swing is not needed, consider using [androidx.compose.ui.awt.ComposeWindowLayer]
+ */
 internal class ComposeSwingLayer(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
 ) : ComposeLayer() {

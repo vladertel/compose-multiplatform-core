@@ -26,6 +26,11 @@ import javax.swing.SwingUtilities
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkiaLayerAnalytics
 
+/**
+ * Provides a heavyweight AWT [component] used to render content (from [setContent]) on-screen with Skia.
+ *
+ * If smooth interop with Swing is needed, consider using [androidx.compose.ui.awt.ComposeWindowLayer]
+ */
 internal class ComposeWindowLayer(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
 ) : ComposeLayer() {
