@@ -68,8 +68,6 @@ internal class ComposeSwingLayer(
     @OptIn(ExperimentalSkikoApi::class)
     private inner class ComponentImpl :
         SkiaSwingLayer(skikoView = skikoView, analytics = skiaLayerAnalytics) {
-        var currentInputMethodRequests: InputMethodRequests? = null
-
         private var window: Window? = null
         private var windowListener = object : WindowFocusListener {
             override fun windowGainedFocus(e: WindowEvent) = refreshWindowFocus()
