@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalComposeUiApi::class)
-
 package androidx.compose.ui.awt
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.window.density
 import java.awt.Component
@@ -28,48 +25,48 @@ import java.awt.Graphics
 import java.awt.Window
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
-import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
-import javax.accessibility.AccessibleContext
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
-import org.jetbrains.skiko.ExperimentalSkikoApi
+import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkiaLayerAnalytics
-import org.jetbrains.skiko.swing.SkiaSwingLayer
-import org.jetbrains.skiko.swing.SkiaSwingLayerComponent
 
-internal class ComposeSwingLayer(
+internal class ComposeWindowLayer(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
 ) : ComposeLayer() {
     private val _component = ComponentImpl()
-    val component: SkiaSwingLayerComponent get() = _component
+    val component: SkiaLayer get() = _component
 
     override val componentLayer: JComponent
         get() = _component
     override val focusComponentDelegate: Component
-        get() = _component
+        get() = _component.canvas
+
+    var compositionLocalContext: CompositionLocalContext? by scene::compositionLocalContext
+
+    init {
+        _component.skikoView = skikoView
+        attachComposeToComponent()
+    }
 
     override fun requestNativeFocusOnAccessible(accessible: Accessible) {
-        // TODO: support a11y
+        _component.requestNativeFocusOnAccessible(accessible)
     }
 
     override fun onComposeInvalidation() {
-        _component.repaint()
-    }
-
-    init {
-        attachComposeToComponent()
+        _component.needRedraw()
     }
 
     override fun disposeComponentLayer() {
         _component.dispose()
     }
 
-    @OptIn(ExperimentalSkikoApi::class)
     private inner class ComponentImpl :
-        SkiaSwingLayer(skikoView = skikoView, analytics = skiaLayerAnalytics) {
-        var currentInputMethodRequests: InputMethodRequests? = null
-
+        SkiaLayer(
+            externalAccessibleFactory = { sceneAccessible },
+            analytics = skiaLayerAnalytics
+        ),
+        Accessible {
         private var window: Window? = null
         private var windowListener = object : WindowFocusListener {
             override fun windowGainedFocus(e: WindowEvent) = refreshWindowFocus()
@@ -106,7 +103,7 @@ internal class ComposeSwingLayer(
         }
 
         private fun updateSceneSize() {
-            this@ComposeSwingLayer.scene.constraints = Constraints(
+            this@ComposeWindowLayer.scene.constraints = Constraints(
                 maxWidth = (width * density.density).toInt().coerceAtLeast(0),
                 maxHeight = (height * density.density).toInt().coerceAtLeast(0)
             )
@@ -114,25 +111,21 @@ internal class ComposeSwingLayer(
 
         override fun getPreferredSize(): Dimension {
             return if (isPreferredSizeSet) super.getPreferredSize() else Dimension(
-                (this@ComposeSwingLayer.scene.contentSize.width / density.density).toInt(),
-                (this@ComposeSwingLayer.scene.contentSize.height / density.density).toInt()
+                (this@ComposeWindowLayer.scene.contentSize.width / density.density).toInt(),
+                (this@ComposeWindowLayer.scene.contentSize.height / density.density).toInt()
             )
         }
 
         private fun resetDensity() {
-            if (this@ComposeSwingLayer.scene.density != density) {
-                this@ComposeSwingLayer.scene.density = density
+            if (this@ComposeWindowLayer.scene.density != density) {
+                this@ComposeWindowLayer.scene.density = density
                 updateSceneSize()
             }
         }
 
         private fun refreshWindowFocus() {
-            platform.windowInfo.isWindowFocused = window?.isFocused ?: false
+            this@ComposeWindowLayer.platform.windowInfo.isWindowFocused = window?.isFocused ?: false
             keyboardModifiersRequireUpdate = true
-        }
-
-        override fun getAccessibleContext(): AccessibleContext? {
-            return sceneAccessible.accessibleContext
         }
     }
 }

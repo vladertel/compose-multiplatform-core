@@ -149,7 +149,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
         // After [super.addNotify] is called we can safely initialize the layer and composable
         // content.
-        layer = ComposeSwingLayerImpl(skiaLayerAnalytics).apply {
+        layer = ComposeSwingLayer(skiaLayerAnalytics).apply {
             scene.releaseFocus()
             component.setSize(width, height)
             component.isFocusable = _isFocusable
