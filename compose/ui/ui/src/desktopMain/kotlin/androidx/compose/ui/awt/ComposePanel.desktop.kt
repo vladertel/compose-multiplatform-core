@@ -20,17 +20,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.window.WindowExceptionHandler
-import org.jetbrains.skiko.ClipComponent
-import org.jetbrains.skiko.GraphicsApi
-import java.awt.Color
-import java.awt.Component
-import java.awt.Container
-import java.awt.Dimension
-import java.awt.FocusTraversalPolicy
+import java.awt.*
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
+import javax.swing.JComponent
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities.isEventDispatchThread
+import org.jetbrains.skiko.ClipComponent
+import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayerAnalytics
 
 /**
@@ -77,7 +74,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     private val _focusListeners = mutableSetOf<FocusListener?>()
     private var _isFocusable = true
     private var _isRequestFocusEnabled = false
-    private var layer: ComposeSwingLayer? = null
+    private var layer: ComposeLayer<JComponent>? = null
     private val clipMap = mutableMapOf<Component, ClipComponent>()
     private var content: (@Composable () -> Unit)? = null
 
@@ -133,23 +130,35 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
         }
         val clipComponent = ClipComponent(component)
         clipMap[component] = clipComponent
-        layer!!.component.clipComponents.add(clipComponent)
+        layer!!.clipComponents.add(clipComponent)
         return super.add(component, Integer.valueOf(0))
     }
 
     override fun remove(component: Component) {
-        layer!!.component.clipComponents.remove(clipMap[component]!!)
+        layer!!.clipComponents.remove(clipMap[component]!!)
         clipMap.remove(component)
         super.remove(component)
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     override fun addNotify() {
         super.addNotify()
 
         // After [super.addNotify] is called we can safely initialize the layer and composable
         // content.
-        layer = ComposeSwingLayer(skiaLayerAnalytics).apply {
+        layer = createComposeLayer()
+        initContent()
+        super.add(layer!!.component, Integer.valueOf(1))
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    private fun createComposeLayer(): ComposeLayer<JComponent> {
+        val renderOnGraphics = System.getProperty("compose.swing.render.on.graphics") == "true"
+        val layer: ComposeLayer<JComponent> = if (renderOnGraphics) {
+            ComposeSwingLayer(skiaLayerAnalytics)
+        } else {
+            ComposeWindowLayer(skiaLayerAnalytics)
+        }
+        return layer.apply {
             scene.releaseFocus()
             component.setSize(width, height)
             component.isFocusable = _isFocusable
@@ -161,14 +170,16 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
                     // The focus can be switched from the child component inside SwingPanel.
                     // In that case, SwingPanel will take care of it.
                     if (!isParentOf(e.oppositeComponent)) {
-                        layer?.scene?.requestFocus()
+                        layer.scene.requestFocus()
                         when (e.cause) {
                             FocusEvent.Cause.TRAVERSAL_FORWARD -> {
-                                layer?.scene?.moveFocus(FocusDirection.Next)
+                                layer.scene.moveFocus(FocusDirection.Next)
                             }
+
                             FocusEvent.Cause.TRAVERSAL_BACKWARD -> {
-                                layer?.scene?.moveFocus(FocusDirection.Previous)
+                                layer.scene.moveFocus(FocusDirection.Previous)
                             }
+
                             else -> Unit
                         }
                     }
@@ -177,8 +188,6 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
                 override fun focusLost(e: FocusEvent) = Unit
             })
         }
-        initContent()
-        super.add(layer!!.component, Integer.valueOf(1))
     }
 
     override fun removeNotify() {
@@ -257,5 +266,5 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
      * environment variable.
      */
     val renderApi: GraphicsApi
-        get() = if (layer != null) layer!!.component.renderApi else GraphicsApi.UNKNOWN
+        get() = if (layer != null) layer!!.renderApi else GraphicsApi.UNKNOWN
 }

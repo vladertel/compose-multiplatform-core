@@ -49,7 +49,7 @@ internal class ComposeWindowDelegate(
     // (see https://github.com/JetBrains/compose-jb/issues/1688),
     // so we nullify layer on dispose, to prevent keeping
     // big objects in memory (like the whole LayoutNode tree of the window)
-    private var _layer: ComposeWindowLayer? = ComposeWindowLayer(skiaLayerAnalytics)
+    private var _layer: ComposeLayer<SkiaLayer>? = ComposeWindowLayer(skiaLayerAnalytics)
     private val layer
         get() = requireNotNull(_layer) {
             "ComposeLayer is disposed"
@@ -67,12 +67,12 @@ internal class ComposeWindowDelegate(
         override fun add(component: Component): Component {
             val clipComponent = ClipComponent(component)
             clipMap[component] = clipComponent
-            layer.component.clipComponents.add(clipComponent)
+            layer.clipComponents.add(clipComponent)
             return add(component, Integer.valueOf(0))
         }
 
         override fun remove(component: Component) {
-            layer.component.clipComponents.remove(clipMap[component]!!)
+            layer.clipComponents.remove(clipMap[component]!!)
             clipMap.remove(component)
             super.remove(component)
         }
@@ -223,7 +223,7 @@ internal class ComposeWindowDelegate(
         get() = layer.component.windowHandle
 
     val renderApi: GraphicsApi
-        get() = layer.component.renderApi
+        get() = layer.renderApi
 
     var isTransparent: Boolean
         get() = layer.component.transparency

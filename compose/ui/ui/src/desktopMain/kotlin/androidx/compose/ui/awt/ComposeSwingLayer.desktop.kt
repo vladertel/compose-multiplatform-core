@@ -24,9 +24,10 @@ import java.awt.Dimension
 import java.awt.Graphics
 import javax.accessibility.Accessible
 import javax.accessibility.AccessibleContext
-import javax.swing.JComponent
 import javax.swing.SwingUtilities
+import org.jetbrains.skiko.ClipRectangle
 import org.jetbrains.skiko.ExperimentalSkikoApi
+import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayerAnalytics
 import org.jetbrains.skiko.swing.SkiaSwingLayer
 import org.jetbrains.skiko.swing.SkiaSwingLayerComponent
@@ -41,12 +42,16 @@ import org.jetbrains.skiko.swing.SkiaSwingLayerComponent
  */
 internal class ComposeSwingLayer(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
-) : ComposeLayer() {
+) : ComposeLayer<SkiaSwingLayerComponent>() {
     private val _component = ComposeSwingSkiaLayer()
-    val component: SkiaSwingLayerComponent get() = _component
+    override val component: SkiaSwingLayerComponent get() = _component
 
-    override val componentLayer: JComponent
-        get() = _component
+    override val renderApi: GraphicsApi
+        get() = _component.renderApi
+
+    override val clipComponents: MutableList<ClipRectangle>
+        get() = _component.clipComponents
+
     override val focusComponentDelegate: Component
         get() = _component
 

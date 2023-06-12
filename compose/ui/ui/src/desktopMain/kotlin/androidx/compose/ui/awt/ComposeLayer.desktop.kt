@@ -20,6 +20,7 @@ package androidx.compose.ui.awt
 
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.focus.FocusDirection
@@ -37,6 +38,7 @@ import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.layoutDirection
 import java.awt.*
+import java.awt.Cursor
 import java.awt.event.*
 import java.awt.event.KeyEvent
 import java.awt.im.InputMethodRequests
@@ -46,18 +48,15 @@ import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineExceptionHandler
 import org.jetbrains.skia.Canvas
-import org.jetbrains.skiko.MainUIDispatcher
-import org.jetbrains.skiko.SkikoInput
-import org.jetbrains.skiko.SkikoView
-import org.jetbrains.skiko.hostOs
+import org.jetbrains.skiko.*
 
 /**
  * Provides a base implementation for integrating a Compose scene with AWT/Swing.
- * It allows setting Compose content by [setContent], this content should be drawn on [componentLayer].
+ * It allows setting Compose content by [setContent], this content should be drawn on [component].
  *
- * Inheritors should call [attachComposeToComponent], so events that came to [componentLayer] will be transferred to [ComposeScene]
+ * Inheritors should call [attachComposeToComponent], so events that came to [component] will be transferred to [ComposeScene]
  */
-internal abstract class ComposeLayer {
+internal abstract class ComposeLayer<out T : JComponent> {
     private var isDisposed = false
 
     val sceneAccessible = ComposeSceneAccessible(
@@ -65,7 +64,11 @@ internal abstract class ComposeLayer {
         mainOwnerProvider = { scene.mainOwner }
     )
 
-    protected abstract val componentLayer: JComponent
+    abstract val component: T
+
+    abstract val renderApi: GraphicsApi
+
+    abstract val clipComponents: MutableList<ClipRectangle>
 
     // Needed for case when componentLayer is a wrapper for another Component that need to acquire focus events
     // e.g. canvas in case of ComposeWindowLayer
@@ -84,9 +87,9 @@ internal abstract class ComposeLayer {
     private val platformComponent: PlatformComponent = object : PlatformComponent {
         override fun enableInput(inputMethodRequests: InputMethodRequests) {
             currentInputMethodRequests = inputMethodRequests
-            componentLayer.enableInputMethods(true)
+            component.enableInputMethods(true)
             val focusGainedEvent = FocusEvent(focusComponentDelegate, FocusEvent.FOCUS_GAINED)
-            componentLayer.inputContext.dispatchEvent(focusGainedEvent)
+            component.inputContext.dispatchEvent(focusGainedEvent)
         }
 
         override fun disableInput() {
@@ -94,9 +97,9 @@ internal abstract class ComposeLayer {
         }
 
         override val locationOnScreen: Point
-            get() = componentLayer.locationOnScreen
+            get() = component.locationOnScreen
         override val density: Density
-            get() = componentLayer.density
+            get() = component.density
     }
 
     protected abstract fun requestNativeFocusOnAccessible(accessible: Accessible)
@@ -136,6 +139,8 @@ internal abstract class ComposeLayer {
         },
     )
 
+    var compositionLocalContext: CompositionLocalContext? by scene::compositionLocalContext
+
     protected val skikoView = object : SkikoView {
         override val input: SkikoInput
             get() = object : SkikoInput {
@@ -151,8 +156,8 @@ internal abstract class ComposeLayer {
 
     protected val sceneDimension: Dimension
         get() = Dimension(
-            (scene.contentSize.width / componentLayer.density.density).toInt(),
-            (scene.contentSize.height / componentLayer.density.density).toInt()
+            (scene.contentSize.width / component.density.density).toInt(),
+            (scene.contentSize.height / component.density.density).toInt()
         )
 
     private val density get() = platformComponent.density.density
@@ -172,7 +177,7 @@ internal abstract class ComposeLayer {
 
     @OptIn(ExperimentalComposeUiApi::class)
     protected fun attachComposeToComponent() {
-        componentLayer.addInputMethodListener(object : InputMethodListener {
+        component.addInputMethodListener(object : InputMethodListener {
             override fun caretPositionChanged(event: InputMethodEvent?) {
                 if (isDisposed) return
                 // Which OSes and which input method could produce such events? We need to have some
@@ -187,7 +192,7 @@ internal abstract class ComposeLayer {
             }
         })
 
-        componentLayer.addFocusListener(object : FocusListener {
+        component.addFocusListener(object : FocusListener {
             override fun focusGained(e: FocusEvent) {
                 // We don't reset focus for Compose when the component loses focus temporary.
                 // Partially because we don't support restoring focus after clearing it.
@@ -207,29 +212,29 @@ internal abstract class ComposeLayer {
             }
         })
 
-        componentLayer.addMouseListener(object : MouseAdapter() {
+        component.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) = Unit
             override fun mousePressed(event: MouseEvent) = onMouseEvent(event)
             override fun mouseReleased(event: MouseEvent) = onMouseEvent(event)
             override fun mouseEntered(event: MouseEvent) = onMouseEvent(event)
             override fun mouseExited(event: MouseEvent) = onMouseEvent(event)
         })
-        componentLayer.addMouseMotionListener(object : MouseMotionAdapter() {
+        component.addMouseMotionListener(object : MouseMotionAdapter() {
             override fun mouseDragged(event: MouseEvent) = onMouseEvent(event)
             override fun mouseMoved(event: MouseEvent) = onMouseEvent(event)
         })
-        componentLayer.addMouseWheelListener { event ->
+        component.addMouseWheelListener { event ->
             onMouseWheelEvent(event)
         }
-        componentLayer.focusTraversalKeysEnabled = false
-        componentLayer.addKeyListener(object : KeyAdapter() {
+        component.focusTraversalKeysEnabled = false
+        component.addKeyListener(object : KeyAdapter() {
             override fun keyPressed(event: KeyEvent) = onKeyEvent(event)
             override fun keyReleased(event: KeyEvent) = onKeyEvent(event)
             override fun keyTyped(event: KeyEvent) = onKeyEvent(event)
         })
     }
 
-    private fun onMouseEvent(event: MouseEvent) = catchExceptions {
+    private fun onMouseEvent(event: MouseEvent): Unit = catchExceptions {
         // AWT can send events after the window is disposed
         if (isDisposed) return@catchExceptions
         if (keyboardModifiersRequireUpdate) {
@@ -239,7 +244,7 @@ internal abstract class ComposeLayer {
         scene.onMouseEvent(density, event)
     }
 
-    private fun onMouseWheelEvent(event: MouseWheelEvent) = catchExceptions {
+    private fun onMouseWheelEvent(event: MouseWheelEvent): Unit = catchExceptions {
         if (isDisposed) return@catchExceptions
         scene.onMouseWheelEvent(density, event)
     }
@@ -284,7 +289,7 @@ internal abstract class ComposeLayer {
     private var _initContent: (() -> Unit)? = null
 
     protected fun initContent() {
-        if (componentLayer.isDisplayable) {
+        if (component.isDisplayable) {
             _initContent?.invoke()
             _initContent = null
         }
@@ -296,16 +301,16 @@ internal abstract class ComposeLayer {
 
     protected fun updateSceneSize() {
         scene.constraints = Constraints(
-            maxWidth = (componentLayer.width * componentLayer.density.density).toInt()
+            maxWidth = (component.width * component.density.density).toInt()
                 .coerceAtLeast(0),
-            maxHeight = (componentLayer.height * componentLayer.density.density).toInt()
+            maxHeight = (component.height * component.density.density).toInt()
                 .coerceAtLeast(0)
         )
     }
 
     protected fun resetSceneDensity() {
-        if (scene.density != componentLayer.density) {
-            scene.density = componentLayer.density
+        if (scene.density != component.density) {
+            scene.density = component.density
             updateSceneSize()
         }
     }
@@ -324,7 +329,7 @@ internal abstract class ComposeLayer {
 
     protected inner class DesktopPlatform : Platform by Platform.Empty {
         override fun setPointerIcon(pointerIcon: PointerIcon) {
-            componentLayer.cursor =
+            component.cursor =
                 (pointerIcon as? AwtCursor)?.cursor ?: Cursor(Cursor.DEFAULT_CURSOR)
         }
 
@@ -338,20 +343,20 @@ internal abstract class ComposeLayer {
         override val textInputService = PlatformInput(platformComponent)
 
         override val layoutDirection: LayoutDirection
-            get() = componentLayer.layoutDirection
+            get() = component.layoutDirection
 
         override val focusManager = object : FocusManager {
             override fun clearFocus(force: Boolean) {
-                val root = componentLayer.rootPane
+                val root = component.rootPane
                 root?.focusTraversalPolicy?.getDefaultComponent(root)?.requestFocusInWindow()
             }
 
             override fun moveFocus(focusDirection: FocusDirection): Boolean =
                 when (focusDirection) {
                     FocusDirection.Next -> {
-                        val toFocus = componentLayer.focusCycleRootAncestor?.let { root ->
+                        val toFocus = component.focusCycleRootAncestor?.let { root ->
                             val policy = root.focusTraversalPolicy
-                            policy.getComponentAfter(root, componentLayer)
+                            policy.getComponentAfter(root, component)
                                 ?: policy.getDefaultComponent(root)
                         }
                         val hasFocus = toFocus?.hasFocus() == true
@@ -359,9 +364,9 @@ internal abstract class ComposeLayer {
                     }
 
                     FocusDirection.Previous -> {
-                        val toFocus = componentLayer.focusCycleRootAncestor?.let { root ->
+                        val toFocus = component.focusCycleRootAncestor?.let { root ->
                             val policy = root.focusTraversalPolicy
-                            policy.getComponentBefore(root, componentLayer)
+                            policy.getComponentBefore(root, component)
                                 ?: policy.getDefaultComponent(root)
                         }
                         val hasFocus = toFocus?.hasFocus() == true
@@ -373,7 +378,7 @@ internal abstract class ComposeLayer {
         }
 
         override fun requestFocusForOwner(): Boolean {
-            return componentLayer.hasFocus() || componentLayer.requestFocusInWindow()
+            return component.hasFocus() || component.requestFocusInWindow()
         }
 
         override val viewConfiguration = object : ViewConfiguration {

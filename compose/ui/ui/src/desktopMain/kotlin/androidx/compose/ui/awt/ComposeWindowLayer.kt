@@ -16,13 +16,13 @@
 
 package androidx.compose.ui.awt
 
-import androidx.compose.runtime.CompositionLocalContext
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
 import javax.accessibility.Accessible
-import javax.swing.JComponent
 import javax.swing.SwingUtilities
+import org.jetbrains.skiko.ClipRectangle
+import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkiaLayerAnalytics
 
@@ -33,16 +33,18 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
  */
 internal class ComposeWindowLayer(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
-) : ComposeLayer() {
+) : ComposeLayer<SkiaLayer>() {
     private val _component = ComposeWindowSkiaLayer()
-    val component: SkiaLayer get() = _component
+    override val component: SkiaLayer get() = _component
 
-    override val componentLayer: JComponent
-        get() = _component
+    override val renderApi: GraphicsApi
+        get() = _component.renderApi
+
+    override val clipComponents: MutableList<ClipRectangle>
+        get() = _component.clipComponents
+
     override val focusComponentDelegate: Component
         get() = _component.canvas
-
-    var compositionLocalContext: CompositionLocalContext? by scene::compositionLocalContext
 
     init {
         _component.skikoView = skikoView
