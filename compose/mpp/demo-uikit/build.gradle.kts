@@ -9,7 +9,7 @@ plugins {
 
 // Value of the TEAM_ID like in Config.xcconfig
 // https://github.com/JetBrains/compose-multiplatform-template#running-on-a-real-ios-device
-val developmentTeamToRunOnRealDevice = "JMS9FA69HB"
+val developmentTeamToRunOnRealDevice = ""
 val runOnDevice = developmentTeamToRunOnRealDevice.isNotEmpty()
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
@@ -22,6 +22,9 @@ dependencies {
 repositories {
     mavenLocal()
 }
+
+println("-----JVM ARCH----")
+println(System.getProperty("os.arch"))
 
 kotlin {
     if (runOnDevice) {
