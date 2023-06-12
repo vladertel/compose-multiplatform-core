@@ -162,7 +162,7 @@ internal abstract class ComposeLayer {
      * TODO: needs to be set `true` when focus changes:
      * (Window focus change is implemented in JB fork, but not upstreamed yet).
      */
-    protected var keyboardModifiersRequireUpdate = false
+    private var keyboardModifiersRequireUpdate = false
 
     @OptIn(ExperimentalComposeUiApi::class)
     protected fun attachComposeToComponent() {
@@ -305,11 +305,8 @@ internal abstract class ComposeLayer {
     }
 
     protected fun updateWindowState(window: Window?) {
-        if (window != null) {
-            window.addWindowFocusListener(windowFocusListener)
-        } else {
-            window?.removeWindowFocusListener(windowFocusListener)
-        }
+        this.window?.removeWindowFocusListener(windowFocusListener)
+        window?.addWindowFocusListener(windowFocusListener)
         this.window = window
         refreshWindowFocus()
     }
@@ -382,8 +379,6 @@ internal abstract class ComposeLayer {
     }
 }
 
-@Suppress("ControlFlowWithEmptyBody")
-@OptIn(ExperimentalComposeUiApi::class)
 private fun ComposeScene.onMouseEvent(
     density: Float,
     event: MouseEvent
@@ -409,7 +404,6 @@ private fun ComposeScene.onMouseEvent(
     )
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 private fun MouseEvent.getPointerButton(): PointerButton? {
     if (button == MouseEvent.NOBUTTON) return null
     return when (button) {
@@ -419,8 +413,6 @@ private fun MouseEvent.getPointerButton(): PointerButton? {
     }
 }
 
-@Suppress("ControlFlowWithEmptyBody")
-@OptIn(ExperimentalComposeUiApi::class)
 private fun ComposeScene.onMouseWheelEvent(
     density: Float,
     event: MouseWheelEvent
@@ -442,7 +434,6 @@ private fun ComposeScene.onMouseWheelEvent(
 }
 
 
-@OptIn(ExperimentalComposeUiApi::class)
 private val MouseEvent.buttons get() = PointerButtons(
     // We should check [event.button] because of case where [event.modifiersEx] does not provide
     // info about the pressed mouse button when using touchpad on MacOS 12 (AWT only).
@@ -462,7 +453,6 @@ private val MouseEvent.buttons get() = PointerButtons(
         || (id == MouseEvent.MOUSE_PRESSED && button == 5),
 )
 
-@OptIn(ExperimentalComposeUiApi::class)
 private val MouseEvent.keyboardModifiers get() = PointerKeyboardModifiers(
     isCtrlPressed = (modifiersEx and InputEvent.CTRL_DOWN_MASK) != 0,
     isMetaPressed = (modifiersEx and InputEvent.META_DOWN_MASK) != 0,
