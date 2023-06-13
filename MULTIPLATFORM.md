@@ -89,3 +89,14 @@ Run native macos Arm64 sample:
 ```bash
 ./gradlew :compose:mpp:demo:runDebugExecutableMacosArm64
 ```
+
+#### Run iOS demo-uikit sample
+ - Open root of repository with AppCode, install plugin **Kotlin Multiplatform Mobile** for AppCode.
+ - Increase AppCode IDE memory more that 10GB.
+ - Restart AppCode.
+ - Wait while project synchronization with Gradle
+ - [Optional] To run on real iOS device 
+   - Device should be at least with iOS 16.5. And Xcode should be at least 14.3
+   - Find your TEAM_ID with instruction https://github.com/JetBrains/compose-multiplatform-template#running-on-a-real-ios-device
+   - Create file project.properties in the root of repository. Add property `TEAM_ID=[your team id]`
+ - Choose run configuration iOS App and start
