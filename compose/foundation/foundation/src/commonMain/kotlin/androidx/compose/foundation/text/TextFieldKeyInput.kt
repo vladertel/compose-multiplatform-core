@@ -204,9 +204,15 @@ internal class TextFieldKeyInput(
                 KeyCommand.SELECT_HOME -> moveCursorToHome().selectMovement()
                 KeyCommand.SELECT_END -> moveCursorToEnd().selectMovement()
                 KeyCommand.DESELECT -> deselect()
-                KeyCommand.UNDO -> undoManager?.undo()?.let { this@TextFieldKeyInput.onValueChange(it) }
-                KeyCommand.REDO -> undoManager?.redo()?.let { this@TextFieldKeyInput.onValueChange(it) }
-                KeyCommand.CHARACTER_PALETTE -> showCharacterPalette()
+                KeyCommand.UNDO -> {
+                    undoManager?.undo()?.let { this@TextFieldKeyInput.onValueChange(it) }
+                }
+                KeyCommand.REDO -> {
+                    undoManager?.redo()?.let { this@TextFieldKeyInput.onValueChange(it) }
+                }
+                KeyCommand.CHARACTER_PALETTE -> {
+                    showCharacterPalette()
+                }
             }
         }
         undoManager?.forceNextSnapshot()
