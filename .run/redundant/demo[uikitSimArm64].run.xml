@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="demo[uikitSimArm64]" type="KonanRunConfiguration" factoryName="KonanApp" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" folderName="redundant">
+    <executable TARGET="ios_simulator_arm64" TARGET_NAME="uikitSimArm64" EXECUTABLE_NAME="demo" PROJECT_PREFIX=":compose:mpp:demo:" IS_TEST="false">
+      <variant NAME="Debug" GRADLE_TASK=":compose:mpp:demo:linkDebugExecutableUikitSimArm64" FILE="$PROJECT_DIR$/out/androidx/compose/mpp/demo/build/bin/uikitSimArm64/debugExecutable/demo.kexe" WORKING_DIR="" PROGRAM_PARAMS="">
+        <envs />
+      </variant>
+      <variant NAME="Release" GRADLE_TASK=":compose:mpp:demo:linkReleaseExecutableUikitSimArm64" FILE="$PROJECT_DIR$/out/androidx/compose/mpp/demo/build/bin/uikitSimArm64/releaseExecutable/demo.kexe" WORKING_DIR="" PROGRAM_PARAMS="">
+        <envs />
+      </variant>
+    </executable>
+    <variant NAME="Debug" GRADLE_TASK=":compose:mpp:demo:linkDebugExecutableUikitSimArm64" FILE="$PROJECT_DIR$/out/androidx/compose/mpp/demo/build/bin/uikitSimArm64/debugExecutable/demo.kexe" WORKING_DIR="" PROGRAM_PARAMS="">
+      <envs />
+    </variant>
+    <method v="2">
+      <option name="com.jetbrains.mpp.KonanBuildTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
