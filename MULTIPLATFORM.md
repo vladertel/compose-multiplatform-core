@@ -106,4 +106,4 @@ Run script:
 ```bash 
 ./compose/mpp/demo/regenerate_xcode_project.sh
  ```
-Wait while Xcode is opening, and press run button
+Wait while Xcode is opening, and press run button.
