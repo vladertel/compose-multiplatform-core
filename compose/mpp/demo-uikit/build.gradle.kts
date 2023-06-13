@@ -1,4 +1,5 @@
 import androidx.build.AndroidXComposePlugin
+import java.util.Properties
 
 plugins {
     id("AndroidXPlugin")
@@ -9,11 +10,7 @@ plugins {
 
 // Value of the TEAM_ID like in Config.xcconfig
 // https://github.com/JetBrains/compose-multiplatform-template#running-on-a-real-ios-device
-//val developmentTeamToRunOnRealDevice = ""
-val developmentTeamToRunOnRealDevice = "JMS9FA69HB"
-//val developmentTeamToRunOnRealDevice = "63NQLFUT39"
-
-val runOnDevice = developmentTeamToRunOnRealDevice.isNotEmpty()
+val runOnDevice = findProperty("xcode.arch") == "arm64"
 val isArm64Host = System.getProperty("os.arch") == "aarch64"
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
@@ -26,11 +23,6 @@ dependencies {
 repositories {
     mavenLocal()
 }
-
-println("-----JVM ARCH----")
-println(System.getProperty("os.arch"))
-println("project.property(\"xcode.arch\"): ${project.property("xcode.arch")}")
-println("__IS_NOT_SIMULATOR: " + System.getenv("__IS_NOT_SIMULATOR"))
 
 kotlin {
     val additionalCompilerArgs = listOf(
@@ -111,7 +103,11 @@ apple {
         sceneDelegateClass = "SceneDelegate"
         launchStoryboard = "LaunchScreen"
 
-        buildSettings.DEVELOPMENT_TEAM(developmentTeamToRunOnRealDevice)
+        Properties().also {
+            it.load(rootProject.file("project.properties").reader())
+        }.getProperty("TEAM_ID")?.let {
+            buildSettings.DEVELOPMENT_TEAM(it)
+        }
         buildSettings.DEPLOYMENT_TARGET("15.0")
 
         // TODO: add 'CADisableMinimumFrameDurationOnPhone' set to 'YES'
