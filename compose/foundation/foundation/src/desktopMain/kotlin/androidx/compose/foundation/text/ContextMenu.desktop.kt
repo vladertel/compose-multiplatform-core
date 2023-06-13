@@ -89,6 +89,7 @@ private val TextFieldSelectionManager.textManager get() = object : TextManager {
     override val cut: (() -> Unit)? get() =
         if (!value.selection.collapsed && editable && !isPassword) {
             {
+                undoManager?.makeSnapshot(value)
                 cut()
                 focusRequester?.requestFocus()
             }
@@ -109,6 +110,7 @@ private val TextFieldSelectionManager.textManager get() = object : TextManager {
     override val paste: (() -> Unit)? get() =
         if (editable && clipboardManager?.getText() != null) {
             {
+                undoManager?.makeSnapshot(value)
                 paste()
                 focusRequester?.requestFocus()
             }

@@ -170,6 +170,9 @@ internal class TextFieldSelectionManager(
 
         override fun onStart(startPoint: Offset) {
             if (draggingHandle != null) return
+
+            undoManager?.makeSnapshot(value)
+
             // While selecting by long-press-dragging, the "end" of the selection is always the one
             // being controlled by the drag.
             draggingHandle = Handle.SelectionEnd
@@ -297,6 +300,8 @@ internal class TextFieldSelectionManager(
             downPosition: Offset,
             adjustment: SelectionAdjustment
         ): Boolean {
+            undoManager?.makeSnapshot(value)
+
             focusRequester?.requestFocus()
 
             dragBeginPosition = downPosition
@@ -355,6 +360,7 @@ internal class TextFieldSelectionManager(
             }
 
             override fun onStart(startPoint: Offset) {
+                undoManager?.makeSnapshot(value)
                 // The position of the character where the drag gesture should begin. This is in
                 // the composable coordinates.
                 dragBeginPosition = getAdjustedCoordinates(getHandlePosition(isStartHandle))
@@ -418,6 +424,7 @@ internal class TextFieldSelectionManager(
         }
 
         override fun onStart(startPoint: Offset) {
+            undoManager?.makeSnapshot(value)
             // The position of the character where the drag gesture should begin. This is in
             // the composable coordinates.
             dragBeginPosition = getAdjustedCoordinates(getHandlePosition(true))
@@ -649,6 +656,7 @@ internal class TextFieldSelectionManager(
 
         val cut: (() -> Unit)? = if (!value.selection.collapsed && editable && !isPassword) {
             {
+                undoManager?.makeSnapshot(value)
                 cut()
                 hideSelectionToolbar()
             }
@@ -656,6 +664,7 @@ internal class TextFieldSelectionManager(
 
         val paste: (() -> Unit)? = if (editable && clipboardManager?.hasText() == true) {
             {
+                undoManager?.makeSnapshot(value)
                 paste()
                 hideSelectionToolbar()
             }

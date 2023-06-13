@@ -505,6 +505,7 @@ internal fun CoreTextField(
             }
             if (enabled && !readOnly) {
                 cutText {
+                    undoManager.makeSnapshot(value)
                     manager.cut()
                     true
                 }
@@ -512,6 +513,7 @@ internal fun CoreTextField(
         }
         if (enabled && !readOnly) {
             pasteText {
+                undoManager.makeSnapshot(value)
                 manager.paste()
                 true
             }
