@@ -9,8 +9,12 @@ plugins {
 
 // Value of the TEAM_ID like in Config.xcconfig
 // https://github.com/JetBrains/compose-multiplatform-template#running-on-a-real-ios-device
-val developmentTeamToRunOnRealDevice = ""
+//val developmentTeamToRunOnRealDevice = ""
+val developmentTeamToRunOnRealDevice = "JMS9FA69HB"
+//val developmentTeamToRunOnRealDevice = "63NQLFUT39"
+
 val runOnDevice = developmentTeamToRunOnRealDevice.isNotEmpty()
+val isArm64Host = System.getProperty("os.arch") == "aarch64"
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
@@ -25,32 +29,31 @@ repositories {
 
 println("-----JVM ARCH----")
 println(System.getProperty("os.arch"))
+println("project.property(\"xcode.arch\"): ${project.property("xcode.arch")}")
+println("__IS_NOT_SIMULATOR: " + System.getenv("__IS_NOT_SIMULATOR"))
 
 kotlin {
+    val additionalCompilerArgs = listOf(
+        "-linker-option", "-framework", "-linker-option", "Metal",
+        "-linker-option", "-framework", "-linker-option", "CoreText",
+        "-linker-option", "-framework", "-linker-option", "CoreGraphics"
+    )
     if (runOnDevice) {
         ios("uikitArm64") {
             binaries {
                 framework {
                     baseName = "shared"
-                    freeCompilerArgs += listOf(
-                        "-linker-option", "-framework", "-linker-option", "Metal",
-                        "-linker-option", "-framework", "-linker-option", "CoreText",
-                        "-linker-option", "-framework", "-linker-option", "CoreGraphics"
-                    )
+                    freeCompilerArgs += additionalCompilerArgs
                 }
             }
         }
     } else {
-        if (System.getProperty("os.arch") == "aarch64") {
+        if (isArm64Host) {
             iosSimulatorArm64("uikitSimArm64") {
                 binaries {
                     framework {
                         baseName = "shared"
-                        freeCompilerArgs += listOf(
-                            "-linker-option", "-framework", "-linker-option", "Metal",
-                            "-linker-option", "-framework", "-linker-option", "CoreText",
-                            "-linker-option", "-framework", "-linker-option", "CoreGraphics"
-                        )
+                        freeCompilerArgs += additionalCompilerArgs
                     }
                 }
             }
@@ -59,11 +62,7 @@ kotlin {
                 binaries {
                     framework {
                         baseName = "shared"
-                        freeCompilerArgs += listOf(
-                            "-linker-option", "-framework", "-linker-option", "Metal",
-                            "-linker-option", "-framework", "-linker-option", "CoreText",
-                            "-linker-option", "-framework", "-linker-option", "CoreGraphics"
-                        )
+                        freeCompilerArgs += additionalCompilerArgs
                     }
                 }
             }
@@ -96,7 +95,7 @@ kotlin {
         if (runOnDevice) {
             val uikitArm64Main by getting { dependsOn(uikitMain) }
         } else {
-            if (System.getProperty("os.arch") == "aarch64") {
+            if (isArm64Host) {
                 val uikitSimArm64Main by getting { dependsOn(uikitMain) }
             } else {
                 val uikitX64Main by getting { dependsOn(uikitMain) }
