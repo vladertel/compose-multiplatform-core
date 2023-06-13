@@ -104,7 +104,7 @@ internal class TextFieldKeyInput(
         commandExecutionContext {
             if (command.editsText) {
                 /*
-                 * Make snapshot immediately for editing commands
+                 * Make snapshot immediately before editing commands
                  */
                 undoManager?.makeSnapshot(value)
             }
