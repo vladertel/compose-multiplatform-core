@@ -137,7 +137,7 @@ internal class TextFieldKeyInput(
                             0
                         )
                     }?.apply()
-                KeyCommand.DELETE_NEXT_CHAR ->
+                KeyCommand.DELETE_NEXT_CHAR -> {
                     // Note that some software keyboards, such as Samsungs, go through this code
                     // path instead of making calls on the InputConnection directly.
                     deleteIfSelectedOr {
@@ -150,6 +150,7 @@ internal class TextFieldKeyInput(
                             null
                         }
                     }?.apply()
+                }
                 KeyCommand.DELETE_PREV_WORD ->
                     deleteIfSelectedOr {
                         getPreviousWordOffset()?.let {
