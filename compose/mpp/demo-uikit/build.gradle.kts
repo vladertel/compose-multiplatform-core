@@ -48,7 +48,7 @@ kotlin {
                 }
             }
         } else {
-            iosX64("uikitX64") {
+            ios() {
                 binaries {
                     framework {
                         baseName = "shared"
@@ -88,7 +88,7 @@ kotlin {
             if (isArm64Host) {
                 val uikitSimArm64Main by getting { dependsOn(uikitMain) }
             } else {
-                val uikitX64Main by getting { dependsOn(uikitMain) }
+                val iosMain by getting { dependsOn(uikitMain) }
             }
         }
     }
