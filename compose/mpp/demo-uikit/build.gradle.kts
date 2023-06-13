@@ -102,10 +102,13 @@ apple {
         launchStoryboard = "LaunchScreen"
 
         val projectProperties = Properties()
-        projectProperties.load(rootProject.file("project.properties").reader())
-        val teamId = projectProperties.getProperty("TEAM_ID")
-        if (teamId != null) {
-            buildSettings.DEVELOPMENT_TEAM(teamId)
+        val projectPropertiesFile = rootProject.file("project.properties")
+        if (projectPropertiesFile.exists()) {
+            projectProperties.load(projectPropertiesFile.reader())
+            val teamId = projectProperties.getProperty("TEAM_ID")
+            if (teamId != null) {
+                buildSettings.DEVELOPMENT_TEAM(teamId)
+            }
         }
         buildSettings.DEPLOYMENT_TARGET("15.0")
 
