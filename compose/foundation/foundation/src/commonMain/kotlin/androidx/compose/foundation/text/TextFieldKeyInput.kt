@@ -103,9 +103,7 @@ internal class TextFieldKeyInput(
         var consumed = true
         commandExecutionContext {
             if (command.editsText) {
-                /*
-                 * Make snapshot immediately before editing commands
-                 */
+                // Make snapshot immediately before editing commands
                 undoManager?.makeSnapshot(value)
             }
 
