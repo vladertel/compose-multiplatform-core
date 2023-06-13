@@ -8,8 +8,6 @@ plugins {
     id("org.jetbrains.gradle.apple.applePlugin") version "222.4550-0.21"
 }
 
-// Value of the TEAM_ID like in Config.xcconfig
-// https://github.com/JetBrains/compose-multiplatform-template#running-on-a-real-ios-device
 val runOnDevice = findProperty("xcode.arch") == "arm64"
 val isArm64Host = System.getProperty("os.arch") == "aarch64"
 
@@ -105,8 +103,8 @@ apple {
 
         Properties().also {
             it.load(rootProject.file("project.properties").reader())
-        }.getProperty("TEAM_ID")?.let {
-            buildSettings.DEVELOPMENT_TEAM(it)
+        }.getProperty("TEAM_ID")?.let { teamId ->
+            buildSettings.DEVELOPMENT_TEAM(teamId)
         }
         buildSettings.DEPLOYMENT_TARGET("15.0")
 
