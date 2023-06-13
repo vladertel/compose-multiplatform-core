@@ -136,16 +136,14 @@ internal class TextFieldKeyInput(
                 KeyCommand.LINE_RIGHT -> moveCursorToLineRightSide()
                 KeyCommand.HOME -> moveCursorToHome()
                 KeyCommand.END -> moveCursorToEnd()
-                KeyCommand.DELETE_PREV_CHAR -> {
+                KeyCommand.DELETE_PREV_CHAR ->
                     deleteIfSelectedOr {
                         DeleteSurroundingTextCommand(
                             selection.end - getPrecedingCharacterIndex(),
                             0
                         )
                     }?.apply()
-                }
-
-                KeyCommand.DELETE_NEXT_CHAR -> {
+                KeyCommand.DELETE_NEXT_CHAR ->
                     // Note that some software keyboards, such as Samsungs, go through this code
                     // path instead of making calls on the InputConnection directly.
                     deleteIfSelectedOr {
@@ -158,56 +156,42 @@ internal class TextFieldKeyInput(
                             null
                         }
                     }?.apply()
-                }
-
-                KeyCommand.DELETE_PREV_WORD -> {
+                KeyCommand.DELETE_PREV_WORD ->
                     deleteIfSelectedOr {
                         getPreviousWordOffset()?.let {
                             DeleteSurroundingTextCommand(selection.end - it, 0)
                         }
                     }?.apply()
-                }
-
-                KeyCommand.DELETE_NEXT_WORD -> {
+                KeyCommand.DELETE_NEXT_WORD ->
                     deleteIfSelectedOr {
                         getNextWordOffset()?.let {
                             DeleteSurroundingTextCommand(0, it - selection.end)
                         }
                     }?.apply()
-                }
-
-                KeyCommand.DELETE_FROM_LINE_START -> {
+                KeyCommand.DELETE_FROM_LINE_START ->
                     deleteIfSelectedOr {
                         getLineStartByOffset()?.let {
                             DeleteSurroundingTextCommand(selection.end - it, 0)
                         }
                     }?.apply()
-                }
-
-                KeyCommand.DELETE_TO_LINE_END -> {
+                KeyCommand.DELETE_TO_LINE_END ->
                     deleteIfSelectedOr {
                         getLineEndByOffset()?.let {
                             DeleteSurroundingTextCommand(0, it - selection.end)
                         }
                     }?.apply()
-                }
-
-                KeyCommand.NEW_LINE -> {
+                KeyCommand.NEW_LINE ->
                     if (!singleLine) {
                         CommitTextCommand("\n", 1).apply()
                     } else {
                         consumed = false
                     }
-                }
-
-                KeyCommand.TAB -> {
+                KeyCommand.TAB ->
                     if (!singleLine) {
                         CommitTextCommand("\t", 1).apply()
                     } else {
                         consumed = false
                     }
-                }
-
                 KeyCommand.SELECT_ALL -> selectAll()
                 KeyCommand.SELECT_LEFT_CHAR -> moveCursorLeft().selectMovement()
                 KeyCommand.SELECT_RIGHT_CHAR -> moveCursorRight().selectMovement()
@@ -226,14 +210,8 @@ internal class TextFieldKeyInput(
                 KeyCommand.SELECT_HOME -> moveCursorToHome().selectMovement()
                 KeyCommand.SELECT_END -> moveCursorToEnd().selectMovement()
                 KeyCommand.DESELECT -> deselect()
-                KeyCommand.UNDO -> {
-                    undoManager?.undo()?.let { this@TextFieldKeyInput.onValueChange(it) }
-                }
-
-                KeyCommand.REDO -> {
-                    undoManager?.redo()?.let { this@TextFieldKeyInput.onValueChange(it) }
-                }
-
+                KeyCommand.UNDO -> undoManager?.undo()?.let { this@TextFieldKeyInput.onValueChange(it) }
+                KeyCommand.REDO -> undoManager?.redo()?.let { this@TextFieldKeyInput.onValueChange(it) }
                 KeyCommand.CHARACTER_PALETTE -> showCharacterPalette()
             }
         }
