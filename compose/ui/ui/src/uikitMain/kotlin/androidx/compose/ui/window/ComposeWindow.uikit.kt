@@ -144,6 +144,7 @@ internal actual class ComposeWindow : UIViewController {
     private lateinit var layer: ComposeLayer
     private lateinit var content: @Composable () -> Unit
     private lateinit var skikoUIView: SkikoUIView
+    private var sceneEmbeddedUIViews: Set<UIView> = setOf()
 
     private val keyboardVisibilityListener = object : NSObject() {
         @Suppress("unused")
@@ -322,7 +323,7 @@ internal actual class ComposeWindow : UIViewController {
 
     private fun updateMetalLayerPresentationMode() {
         skikoUIView.metalLayer.presentsWithTransaction = viewIsInSizeTransition || hasActiveUIViewInterop
-//        skikoUIView.metalLayer.setOpaque(!hasActiveUIViewInterop)
+        skikoUIView.metalLayer.setOpaque(!hasActiveUIViewInterop)
     }
 
     override fun viewWillTransitionToSize(

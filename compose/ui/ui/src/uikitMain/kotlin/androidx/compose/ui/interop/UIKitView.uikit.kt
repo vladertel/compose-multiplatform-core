@@ -94,14 +94,17 @@ fun <T : UIView> UIKitView(
                 val rect = newRectInPixels / density
                 componentInfo.container.setFrame(rect.toCGRect())
                 if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
-                    onResize(
-                        componentInfo.component,
-                        CGRectMake(0.0, 0.0, rect.width.toDouble(), rect.height.toDouble()),
-                    )
+                    componentInfo.frame = CGRectMake(0.0, 0.0, rect.width.toDouble(), rect.height.toDouble())
                 }
                 rectInPixels = newRectInPixels
+
+                println("UITextField rect: $rectInPixels")
             }
         }.drawBehind {
+            onResize(
+                componentInfo.component,
+                componentInfo.frame
+            )
             drawRect(Color.Transparent, blendMode = BlendMode.DstAtop) // draw transparent hole
         }.let {
             if (interactive) {
@@ -159,6 +162,7 @@ private fun parseColor(color: Color): UIColor {
 private class ComponentInfo<T : UIView> {
     lateinit var container: UIView
     lateinit var component: T
+    lateinit var frame: CValue<CGRect>
     lateinit var updater: Updater<T>
 }
 

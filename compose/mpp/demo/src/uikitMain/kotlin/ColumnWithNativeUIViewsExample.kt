@@ -1,3 +1,4 @@
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -6,7 +7,10 @@ import androidx.compose.material.Text
 import androidx.compose.mpp.demo.Screen
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.ComposeUITextField
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 
 /*
@@ -39,7 +43,19 @@ private fun ColumnWithNativeUIViews() {
 
         item {
             Column(Modifier.fillMaxWidth()) {
-                Text(value, Modifier.fillMaxWidth().height(40.dp))
+                Box(Modifier.background(Color.Black).fillMaxWidth().height(1.dp))
+
+                Spacer(Modifier.fillMaxWidth().height(5.dp))
+
+                Box(Modifier.background(Color.Black).fillMaxWidth().height(1.dp))
+
+                Spacer(Modifier.fillMaxWidth().height(5.dp))
+
+                Box(Modifier.background(Color.Black).fillMaxWidth().height(1.dp))
+
+                Text(value, Modifier.fillMaxWidth().height(40.dp).onGloballyPositioned {
+                    println("Text rect: ${it.localToWindow(Offset.Zero)}")
+                })
 
                 ComposeUITextField(value, {
                     value = it
