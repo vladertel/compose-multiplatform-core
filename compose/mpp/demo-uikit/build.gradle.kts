@@ -101,9 +101,10 @@ apple {
         sceneDelegateClass = "SceneDelegate"
         launchStoryboard = "LaunchScreen"
 
-        Properties().also {
-            it.load(rootProject.file("project.properties").reader())
-        }.getProperty("TEAM_ID")?.let { teamId ->
+        val projectProperties = Properties()
+        projectProperties.load(rootProject.file("project.properties").reader())
+        val teamId = projectProperties.getProperty("TEAM_ID")
+        if (teamId != null) {
             buildSettings.DEVELOPMENT_TEAM(teamId)
         }
         buildSettings.DEPLOYMENT_TARGET("15.0")
