@@ -102,8 +102,8 @@ Run native macos Arm64 sample:
  - Choose run configuration iOS App and start
 
 #### Run mpp/demo sample on iOS with Xcode
- - Run script
+Run script:
 ```bash 
 ./compose/mpp/demo/regenerate_xcode_project.sh
  ```
- - Wait while Xcode is opening, and press run button
+Wait while Xcode is opening, and press run button
