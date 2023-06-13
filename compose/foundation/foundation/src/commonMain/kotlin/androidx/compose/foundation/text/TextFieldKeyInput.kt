@@ -103,14 +103,8 @@ internal class TextFieldKeyInput(
         var consumed = true
         commandExecutionContext {
             if (command.editsText) {
-                /**
-                 * It's possible that current selection is based on a cursor input
-                 * which doesn't trigger new snapshot unlike [KeyCommand]'s based selection
-                 * during processing of which we call [UndoManager.forceNextSnapshot]
-                 * in the end of this method.
-                 *
-                 * We need to make a snapshot at this point to ensure that next [KeyCommand.UNDO],
-                 * if any comes, will change text value to a correct one
+                /*
+                 * Make snapshot immediately for editing commands
                  */
                 undoManager?.makeSnapshot(value)
             }
