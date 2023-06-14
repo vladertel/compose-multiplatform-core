@@ -5,31 +5,32 @@ plugins {
     id("AndroidXPlugin")
     id("AndroidXComposePlugin")
     id("kotlin-multiplatform")
-    id("org.jetbrains.gradle.apple.applePlugin") version "222.4550-0.21"
+    id("org.jetbrains.gradle.apple.applePlugin") version "222.4550-0.21-dev-0"
 }
-
-val runOnDevice = findProperty("xcode.arch") == "arm64"
-val isArm64Host = System.getProperty("os.arch") == "aarch64"
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
-
-
-dependencies {
-
-}
 
 repositories {
     mavenLocal()
 }
 
 kotlin {
+    val isArm64Host = System.getProperty("os.arch") == "aarch64"
     val additionalCompilerArgs = listOf(
         "-linker-option", "-framework", "-linker-option", "Metal",
         "-linker-option", "-framework", "-linker-option", "CoreText",
         "-linker-option", "-framework", "-linker-option", "CoreGraphics"
     )
-    if (runOnDevice) {
-        ios("uikitArm64") {
+    iosArm64 {
+        binaries {
+            framework {
+                baseName = "shared"
+                freeCompilerArgs += additionalCompilerArgs
+            }
+        }
+    }
+    if (isArm64Host) {
+        iosSimulatorArm64 {
             binaries {
                 framework {
                     baseName = "shared"
@@ -38,22 +39,11 @@ kotlin {
             }
         }
     } else {
-        if (isArm64Host) {
-            iosSimulatorArm64("uikitSimArm64") {
-                binaries {
-                    framework {
-                        baseName = "shared"
-                        freeCompilerArgs += additionalCompilerArgs
-                    }
-                }
-            }
-        } else {
-            ios() {
-                binaries {
-                    framework {
-                        baseName = "shared"
-                        freeCompilerArgs += additionalCompilerArgs
-                    }
+        iosX64 {
+            binaries {
+                framework {
+                    baseName = "shared"
+                    freeCompilerArgs += additionalCompilerArgs
                 }
             }
         }
@@ -82,14 +72,11 @@ kotlin {
         val nativeMain by creating { dependsOn(skikoMain) }
         val darwinMain by creating { dependsOn(nativeMain) }
         val uikitMain by creating { dependsOn(darwinMain) }
-        if (runOnDevice) {
-            val uikitArm64Main by getting { dependsOn(uikitMain) }
+        val iosArm64Main by getting { dependsOn(uikitMain) }
+        if (isArm64Host) {
+            val iosSimulatorArm64Main by getting { dependsOn(uikitMain) }
         } else {
-            if (isArm64Host) {
-                val uikitSimArm64Main by getting { dependsOn(uikitMain) }
-            } else {
-                val iosMain by getting { dependsOn(uikitMain) }
-            }
+            val iosX64Main by getting { dependsOn(uikitMain) }
         }
     }
 }
@@ -117,5 +104,22 @@ apple {
         dependencies {
             // Here we can add additional dependencies to Swift sourceSet
         }
+    }
+}
+
+// TODO: Workaround, see https://youtrack.jetbrains.com/issue/KT-55751
+val myAttribute = Attribute.of("myOwnAttribute", String::class.java)
+// replace releaseFrameworkIosFat by the name of the first configuration that conflicts
+configurations.named("releaseFrameworkIosFat").configure {
+    attributes {
+        // put a unique attribute
+        attribute(myAttribute, "release-all")
+    }
+}
+
+// replace debugFrameworkIosFat by the name of the second configuration that conflicts
+configurations.named("debugFrameworkIosFat").configure {
+    attributes {
+        attribute(myAttribute, "debug-all")
     }
 }
