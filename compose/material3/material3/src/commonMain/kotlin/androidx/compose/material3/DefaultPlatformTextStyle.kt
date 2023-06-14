@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,9 @@
 
 package androidx.compose.material3
 
-import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.text.PlatformTextStyle
 
-internal expect val KeyEvent.isDirectionUp: Boolean
-internal expect val KeyEvent.isDirectionDown: Boolean
-internal expect val KeyEvent.isDirectionRight: Boolean
-internal expect val KeyEvent.isDirectionLeft: Boolean
-internal expect val KeyEvent.isHome: Boolean
-internal expect val KeyEvent.isMoveEnd: Boolean
-internal expect val KeyEvent.isPgUp: Boolean
-internal expect val KeyEvent.isPgDn: Boolean
-internal expect val KeyEvent.isEsc: Boolean
+/**
+ * Returns Default [PlatformTextStyle].
+ */
+internal expect fun defaultPlatformTextStyle(): PlatformTextStyle?
