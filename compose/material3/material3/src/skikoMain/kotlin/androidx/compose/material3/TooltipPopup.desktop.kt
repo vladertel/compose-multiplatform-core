@@ -16,11 +16,18 @@
 
 package androidx.compose.material3
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
 
-internal actual val WindowInsets.Companion.systemBarsForVisualComponents
-    @Composable
-    get(): WindowInsets = WindowInsets.systemBars
+@Composable
+@ExperimentalMaterial3Api
+internal actual fun TooltipPopup(
+    popupPositionProvider: PopupPositionProvider,
+    onDismissRequest: () -> Unit,
+    content: @Composable () -> Unit
+) = Popup(
+    popupPositionProvider = popupPositionProvider,
+    onDismissRequest = onDismissRequest,
+    content = content
+)

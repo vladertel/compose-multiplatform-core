@@ -16,11 +16,9 @@
 
 package androidx.compose.material3
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.ReadOnlyComposable
 
-internal actual val WindowInsets.Companion.systemBarsForVisualComponents
+internal actual val is24HourFormat: Boolean
     @Composable
-    get(): WindowInsets = WindowInsets.systemBars
+    @ReadOnlyComposable get() = false

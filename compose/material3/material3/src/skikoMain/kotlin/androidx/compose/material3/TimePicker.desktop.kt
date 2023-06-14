@@ -16,11 +16,6 @@
 
 package androidx.compose.material3
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
-
-internal actual val WindowInsets.Companion.systemBarsForVisualComponents
-    @Composable
-    get(): WindowInsets = WindowInsets.systemBars
+@OptIn(ExperimentalMaterial3Api::class)
+internal actual val defaultTimePickerLayoutType: TimePickerLayoutType =
+    TimePickerLayoutType.Vertical

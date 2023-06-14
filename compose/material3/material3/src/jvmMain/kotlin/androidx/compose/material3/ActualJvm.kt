@@ -1,3 +1,5 @@
+// ktlint-disable filename
+
 /*
  * Copyright 2023 The Android Open Source Project
  *
@@ -16,11 +18,8 @@
 
 package androidx.compose.material3
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
-
-internal actual val WindowInsets.Companion.systemBarsForVisualComponents
-    @Composable
-    get(): WindowInsets = WindowInsets.systemBars
+/* Copy of androidx.compose.material.ActualJvm, mirrored from Foundation. This is used for the
+   M2/M3-internal copy of MutatorMutex.
+ */
+internal actual typealias InternalAtomicReference<V> =
+    java.util.concurrent.atomic.AtomicReference<V>
