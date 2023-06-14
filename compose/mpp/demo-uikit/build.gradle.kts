@@ -88,14 +88,20 @@ apple {
         sceneDelegateClass = "SceneDelegate"
         launchStoryboard = "LaunchScreen"
 
+        val runOnDevice = findProperty("xcode.arch") == "arm64"
         val projectProperties = Properties()
         val projectPropertiesFile = rootProject.file("project.properties")
         if (projectPropertiesFile.exists()) {
             projectProperties.load(projectPropertiesFile.reader())
-            val teamId = projectProperties.getProperty("TEAM_ID")
-            if (teamId != null) {
-                buildSettings.DEVELOPMENT_TEAM(teamId)
-            }
+        } else {
+            projectPropertiesFile.createNewFile()
+        }
+        val teamId = projectProperties.getProperty("TEAM_ID")
+        if (runOnDevice && teamId == null) {
+            error("Add TEAM_ID=... to file ${projectPropertiesFile.absolutePath}")
+        }
+        if (teamId != null) {
+            buildSettings.DEVELOPMENT_TEAM(teamId)
         }
         buildSettings.DEPLOYMENT_TARGET("15.0")
 

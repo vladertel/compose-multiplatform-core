@@ -109,3 +109,9 @@ Run script:
 ./compose/mpp/demo/regenerate_xcode_project.sh
  ```
 Wait while Xcode is opening, and press run button.
+
+### Clean IDE and Gradle cache
+ - Close project
+ - ```bash 
+   ./cleanTempFiles.sh
+   ```
