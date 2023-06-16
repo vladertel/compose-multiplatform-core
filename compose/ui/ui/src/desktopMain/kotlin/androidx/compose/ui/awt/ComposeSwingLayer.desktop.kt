@@ -42,7 +42,7 @@ import org.jetbrains.skiko.swing.SkiaSwingLayerComponent
  */
 internal class ComposeSwingLayer(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
-) : ComposeLayer<SkiaSwingLayerComponent>() {
+) : ComposeLayer() {
     private val _component = ComposeSwingSkiaLayer()
     override val component: SkiaSwingLayerComponent get() = _component
 

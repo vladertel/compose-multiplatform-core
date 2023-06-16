@@ -33,7 +33,7 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
  */
 internal class ComposeWindowLayer(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
-) : ComposeLayer<SkiaLayer>() {
+) : ComposeLayer() {
     private val _component = ComposeWindowSkiaLayer()
     override val component: SkiaLayer get() = _component
 

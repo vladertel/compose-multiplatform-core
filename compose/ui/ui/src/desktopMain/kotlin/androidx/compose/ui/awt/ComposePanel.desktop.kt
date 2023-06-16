@@ -74,7 +74,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     private val _focusListeners = mutableSetOf<FocusListener?>()
     private var _isFocusable = true
     private var _isRequestFocusEnabled = false
-    private var layer: ComposeLayer<JComponent>? = null
+    private var layer: ComposeLayer? = null
     private val clipMap = mutableMapOf<Component, ClipComponent>()
     private var content: (@Composable () -> Unit)? = null
 
@@ -151,9 +151,9 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     @OptIn(ExperimentalComposeUiApi::class)
-    private fun createComposeLayer(): ComposeLayer<JComponent> {
+    private fun createComposeLayer(): ComposeLayer {
         val renderOnGraphics = System.getProperty("compose.swing.render.on.graphics") == "true"
-        val layer: ComposeLayer<JComponent> = if (renderOnGraphics) {
+        val layer: ComposeLayer = if (renderOnGraphics) {
             ComposeSwingLayer(skiaLayerAnalytics)
         } else {
             ComposeWindowLayer(skiaLayerAnalytics)
