@@ -98,6 +98,7 @@ internal abstract class ComposeLayer {
 
         override val locationOnScreen: Point
             get() = component.locationOnScreen
+
         override val density: Density
             get() = component.density
     }
