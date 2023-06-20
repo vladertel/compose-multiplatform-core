@@ -5,7 +5,7 @@ plugins {
     id("AndroidXPlugin")
     id("AndroidXComposePlugin")
     id("kotlin-multiplatform")
-    id("org.jetbrains.gradle.apple.applePlugin") version "222.4550-0.21-dev-0"
+    id("org.jetbrains.gradle.apple.applePlugin") version "222.4550-0.22"
 }
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
