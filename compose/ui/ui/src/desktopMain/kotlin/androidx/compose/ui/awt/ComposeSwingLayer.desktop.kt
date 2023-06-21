@@ -83,11 +83,11 @@ internal class ComposeSwingLayer(
             resetSceneDensity()
             initContent()
             updateSceneSize()
-            updateWindowState(SwingUtilities.getWindowAncestor(this))
+            setParentWindow(SwingUtilities.getWindowAncestor(this))
         }
 
         override fun removeNotify() {
-            updateWindowState(window = null)
+            setParentWindow(window = null)
             super.removeNotify()
         }
 

@@ -314,7 +314,7 @@ internal abstract class ComposeLayer {
         }
     }
 
-    protected fun updateWindowState(window: Window?) {
+    protected fun setParentWindow(window: Window?) {
         this.window?.removeWindowFocusListener(windowFocusListener)
         window?.addWindowFocusListener(windowFocusListener)
         this.window = window
