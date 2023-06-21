@@ -152,7 +152,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
     @OptIn(ExperimentalComposeUiApi::class)
     private fun createComposeLayer(): ComposeLayer {
-        val renderOnGraphics = System.getProperty("compose.swing.render.on.graphics") == "true"
+        val renderOnGraphics = System.getProperty("compose.swing.render.on.graphics").toBoolean()
         val layer: ComposeLayer = if (renderOnGraphics) {
             ComposeSwingLayer(skiaLayerAnalytics)
         } else {
