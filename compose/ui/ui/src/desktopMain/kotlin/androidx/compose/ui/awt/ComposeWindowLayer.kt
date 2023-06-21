@@ -72,6 +72,7 @@ internal class ComposeWindowLayer(
             analytics = skiaLayerAnalytics
         ),
         Accessible {
+
         override fun addNotify() {
             super.addNotify()
             resetSceneDensity()

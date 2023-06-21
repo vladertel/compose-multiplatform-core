@@ -77,6 +77,7 @@ internal class ComposeSwingLayer(
     @OptIn(ExperimentalSkikoApi::class)
     private inner class ComposeSwingSkiaLayer :
         SkiaSwingLayer(skikoView = skikoView, analytics = skiaLayerAnalytics) {
+
         override fun addNotify() {
             super.addNotify()
             resetSceneDensity()
