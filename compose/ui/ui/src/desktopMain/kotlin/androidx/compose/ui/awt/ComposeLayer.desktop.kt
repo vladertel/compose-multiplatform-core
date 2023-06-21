@@ -302,10 +302,8 @@ internal abstract class ComposeLayer {
 
     protected fun updateSceneSize() {
         scene.constraints = Constraints(
-            maxWidth = (component.width * component.density.density).toInt()
-                .coerceAtLeast(0),
-            maxHeight = (component.height * component.density.density).toInt()
-                .coerceAtLeast(0)
+            maxWidth = (component.width * scene.density.density).toInt(),
+            maxHeight = (component.height * scene.density.density).toInt()
         )
     }
 
