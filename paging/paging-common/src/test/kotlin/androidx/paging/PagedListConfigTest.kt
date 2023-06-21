@@ -16,12 +16,9 @@
 
 package androidx.paging
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@RunWith(JUnit4::class)
 class PagedListConfigTest {
     @Test
     fun defaults() {

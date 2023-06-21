@@ -18,9 +18,9 @@ package androidx.room.compiler.processing.javac
 
 import androidx.room.compiler.processing.InternalXAnnotation
 import androidx.room.compiler.processing.XAnnotationBox
+import androidx.room.compiler.processing.XAnnotationValue
 import androidx.room.compiler.processing.XNullability
 import androidx.room.compiler.processing.XType
-import androidx.room.compiler.processing.XAnnotationValue
 import androidx.room.compiler.processing.compat.XConverters.toXProcessing
 import com.google.auto.common.AnnotationMirrors
 import com.google.auto.common.MoreTypes
@@ -39,6 +39,14 @@ internal class JavacAnnotation(
 
     override val type: XType by lazy {
         JavacDeclaredType(env, mirror.annotationType, XNullability.NONNULL)
+    }
+
+    override val declaredAnnotationValues: List<XAnnotationValue> by lazy {
+        // getElementValues returns values of this annotation's element, only those elements with
+        // values explicitly present in the annotation are included, not those that are implicitly
+        // assuming their default values.
+        val explicitValues = mirror.getElementValues().keys.map { it.simpleName.toString() }
+        annotationValues.filter { explicitValues.contains(it.name) }
     }
 
     override val annotationValues: List<XAnnotationValue> by lazy {

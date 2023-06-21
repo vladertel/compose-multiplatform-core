@@ -23,6 +23,8 @@ import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -39,14 +41,13 @@ import android.os.Parcel
 import android.provider.Settings
 import android.support.wearable.complications.ComplicationData as WireComplicationData
 import android.support.wearable.complications.ComplicationText as WireComplicationText
-import android.content.IntentFilter
-import android.content.pm.ServiceInfo
 import android.support.wearable.watchface.Constants
 import android.support.wearable.watchface.IWatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
 import android.support.wearable.watchface.accessibility.ContentDescriptionLabel
 import android.view.Choreographer
 import android.view.Surface
+import android.view.SurfaceControl
 import android.view.SurfaceHolder
 import android.view.WindowInsets
 import android.view.accessibility.AccessibilityManager
@@ -98,6 +99,7 @@ import androidx.wear.watchface.style.WatchFaceLayer
 import androidx.wear.watchface.style.data.UserStyleWireFormat
 import com.google.common.truth.Truth.assertThat
 import java.io.StringWriter
+import java.lang.reflect.Field
 import java.nio.ByteBuffer
 import java.time.Instant
 import java.time.ZoneId
@@ -750,6 +752,18 @@ public class WatchFaceServiceTest {
         }
 
         if (this::engineWrapper.isInitialized && !engineWrapper.destroyed) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                /*
+                 (TODO: b/264994539) - Explicitly releasing the mSurfaceControl field,
+                 accessed via reflection. Remove when a proper fix is found
+                */
+                val mSurfaceControlObject: Field = WatchFaceService.EngineWrapper::class
+                    .java.superclass // android.service.wallpaper.WallpaperService$Engine
+                    .getDeclaredField("mSurfaceControl")
+                mSurfaceControlObject.isAccessible = true
+                (mSurfaceControlObject.get(engineWrapper) as SurfaceControl).release()
+            }
+
             engineWrapper.onDestroy()
         }
 
@@ -3760,21 +3774,22 @@ public class WatchFaceServiceTest {
     @Config(sdk = [Build.VERSION_CODES.R])
     public fun directBoot() {
         val instanceId = "DirectBootInstance"
-        val params = WallpaperInteractiveWatchFaceInstanceParams(
-            instanceId,
-            DeviceConfig(false, false, 0, 0),
-            WatchUiState(false, 0),
-            UserStyle(
-                hashMapOf(
-                    colorStyleSetting to blueStyleOption,
-                    watchHandStyleSetting to gothicStyleOption
-                )
+        val params =
+            WallpaperInteractiveWatchFaceInstanceParams(
+                instanceId,
+                DeviceConfig(false, false, 0, 0),
+                WatchUiState(false, 0),
+                UserStyle(
+                        hashMapOf(
+                            colorStyleSetting to blueStyleOption,
+                            watchHandStyleSetting to gothicStyleOption
+                        )
+                    )
+                    .toWireFormat(),
+                null,
+                null,
+                null
             )
-                .toWireFormat(),
-            null,
-            null,
-            null
-        )
         testWatchFaceService =
             TestWatchFaceService(
                 WatchFaceType.ANALOG,
@@ -5215,19 +5230,19 @@ public class WatchFaceServiceTest {
         complicationSlotsManager.selectComplicationDataForInstant(Instant.ofEpochSecond(999))
         assertThat(getLeftShortTextComplicationDataText()).isEqualTo("A")
         assertThat(
-            engineWrapper.contentDescriptionLabels[1]
-                .text
-                .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
-        )
+                engineWrapper.contentDescriptionLabels[1]
+                    .text
+                    .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
+            )
             .isEqualTo("A")
 
         complicationSlotsManager.selectComplicationDataForInstant(Instant.ofEpochSecond(1000))
         assertThat(getLeftShortTextComplicationDataText()).isEqualTo("B")
         assertThat(
-            engineWrapper.contentDescriptionLabels[1]
-                .text
-                .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
-        )
+                engineWrapper.contentDescriptionLabels[1]
+                    .text
+                    .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
+            )
             .isEqualTo("B")
 
         complicationSlotsManager.selectComplicationDataForInstant(Instant.ofEpochSecond(1999))
@@ -5236,10 +5251,10 @@ public class WatchFaceServiceTest {
         complicationSlotsManager.selectComplicationDataForInstant(Instant.ofEpochSecond(2000))
         assertThat(getLeftShortTextComplicationDataText()).isEqualTo("C")
         assertThat(
-            engineWrapper.contentDescriptionLabels[1]
-                .text
-                .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
-        )
+                engineWrapper.contentDescriptionLabels[1]
+                    .text
+                    .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
+            )
             .isEqualTo("C")
 
         complicationSlotsManager.selectComplicationDataForInstant(Instant.ofEpochSecond(2999))
@@ -5248,10 +5263,10 @@ public class WatchFaceServiceTest {
         complicationSlotsManager.selectComplicationDataForInstant(Instant.ofEpochSecond(3000))
         assertThat(getLeftShortTextComplicationDataText()).isEqualTo("B")
         assertThat(
-            engineWrapper.contentDescriptionLabels[1]
-                .text
-                .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
-        )
+                engineWrapper.contentDescriptionLabels[1]
+                    .text
+                    .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
+            )
             .isEqualTo("B")
 
         complicationSlotsManager.selectComplicationDataForInstant(Instant.ofEpochSecond(3999))
@@ -5260,10 +5275,10 @@ public class WatchFaceServiceTest {
         complicationSlotsManager.selectComplicationDataForInstant(Instant.ofEpochSecond(4000))
         assertThat(getLeftShortTextComplicationDataText()).isEqualTo("A")
         assertThat(
-            engineWrapper.contentDescriptionLabels[1]
-                .text
-                .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
-        )
+                engineWrapper.contentDescriptionLabels[1]
+                    .text
+                    .getTextAt(ApplicationProvider.getApplicationContext<Context>().resources, 0)
+            )
             .isEqualTo("A")
     }
 
@@ -6556,13 +6571,14 @@ public class WatchFaceServiceTest {
         lateinit var delegate: WatchFace.EditorDelegate
 
         val shadowPackageManager = shadowOf(context.packageManager)
-        val controlServiceComponent = ComponentName(
-            context, TestWatchFaceControlService::class.java
+        val controlServiceComponent =
+            ComponentName(context, TestWatchFaceControlService::class.java)
+        shadowPackageManager.addOrUpdateService(
+            ServiceInfo().apply {
+                packageName = controlServiceComponent.packageName
+                name = controlServiceComponent.className
+            }
         )
-        shadowPackageManager.addOrUpdateService(ServiceInfo().apply {
-            packageName = controlServiceComponent.packageName
-            name = controlServiceComponent.className
-        })
         shadowPackageManager.addIntentFilterForService(
             controlServiceComponent,
             IntentFilter(WatchFaceControlService.ACTION_WATCHFACE_CONTROL_SERVICE)
@@ -6632,19 +6648,20 @@ public class WatchFaceServiceTest {
         engineWrapper.onSurfaceChanged(surfaceHolder, 0, 100, 100)
         engineWrapper.onVisibilityChanged(true)
 
-        val callback = object : IPendingInteractiveWatchFace.Stub() {
-            override fun getApiVersion() = IPendingInteractiveWatchFace.API_VERSION
+        val callback =
+            object : IPendingInteractiveWatchFace.Stub() {
+                override fun getApiVersion() = IPendingInteractiveWatchFace.API_VERSION
 
-            override fun onInteractiveWatchFaceCreated(
-                iInteractiveWatchFace: IInteractiveWatchFace
-            ) {
-                interactiveWatchFaceInstance = iInteractiveWatchFace
-            }
+                override fun onInteractiveWatchFaceCreated(
+                    iInteractiveWatchFace: IInteractiveWatchFace
+                ) {
+                    interactiveWatchFaceInstance = iInteractiveWatchFace
+                }
 
-            override fun onInteractiveWatchFaceCrashed(exception: CrashInfoParcel?) {
-                fail("WatchFace crashed: $exception")
+                override fun onInteractiveWatchFaceCrashed(exception: CrashInfoParcel?) {
+                    fail("WatchFace crashed: $exception")
+                }
             }
-        }
 
         InteractiveInstanceManager
             .getExistingInstanceOrSetPendingWallpaperInteractiveWatchFaceInstance(

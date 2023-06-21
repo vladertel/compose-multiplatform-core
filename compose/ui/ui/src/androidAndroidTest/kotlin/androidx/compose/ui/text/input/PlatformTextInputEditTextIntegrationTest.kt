@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalPlatformTextInputPluginRegistry
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.insertTextAtCursor
-import androidx.compose.ui.semantics.performImeAction
+import androidx.compose.ui.semantics.onImeAction
 import androidx.compose.ui.semantics.requestFocus
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setSelection
@@ -194,7 +194,7 @@ class PlatformTextInputEditTextIntegrationTest {
                     }
                     return@setSelection false
                 }
-                performImeAction {
+                onImeAction(ImeAction.Go) {
                     editText.onEditorAction(ExpectedActionCode)
                     true
                 }

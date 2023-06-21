@@ -19,6 +19,7 @@ package androidx.compose.foundation.pager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.fastFilter
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.snapping.calculateDistanceToDesiredSnapPosition
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.lazy.layout.LazyLayoutMeasureScope
 import androidx.compose.ui.Alignment
@@ -58,8 +59,8 @@ internal fun LazyLayoutMeasureScope.measurePager(
     pinnedPages: List<Int>,
     layout: (Int, Int, Placeable.PlacementScope.() -> Unit) -> MeasureResult
 ): PagerMeasureResult {
-    require(beforeContentPadding >= 0)
-    require(afterContentPadding >= 0)
+    require(beforeContentPadding >= 0) { "negative beforeContentPadding" }
+    require(afterContentPadding >= 0) { "negative afterContentPadding" }
     val pageSizeWithSpacing = (pageAvailableSize + spaceBetweenPages).coerceAtLeast(0)
     debugLog { "Remeasuring..." }
     return if (pageCount <= 0) {
@@ -118,7 +119,7 @@ internal fun LazyLayoutMeasureScope.measurePager(
         }
 
         // this will contain all the measured pages representing the visible pages
-        val visiblePages = mutableListOf<MeasuredPage>()
+        val visiblePages = ArrayDeque<MeasuredPage>()
 
         // define min and max offsets
         val minOffset = -beforeContentPadding + if (spaceBetweenPages < 0) spaceBetweenPages else 0
@@ -145,8 +146,6 @@ internal fun LazyLayoutMeasureScope.measurePager(
                 orientation = orientation,
                 horizontalAlignment = horizontalAlignment,
                 verticalAlignment = verticalAlignment,
-                afterContentPadding = afterContentPadding,
-                beforeContentPadding = beforeContentPadding,
                 layoutDirection = layoutDirection,
                 reverseLayout = reverseLayout,
                 pageAvailableSize = pageAvailableSize
@@ -193,13 +192,17 @@ internal fun LazyLayoutMeasureScope.measurePager(
                 orientation = orientation,
                 horizontalAlignment = horizontalAlignment,
                 verticalAlignment = verticalAlignment,
-                afterContentPadding = afterContentPadding,
-                beforeContentPadding = beforeContentPadding,
                 layoutDirection = layoutDirection,
                 reverseLayout = reverseLayout,
                 pageAvailableSize = pageAvailableSize
             )
-            currentMainAxisOffset += pageSizeWithSpacing
+
+            // do not add space to the last page
+            currentMainAxisOffset += if (index == pageCount - 1) {
+                pageAvailableSize
+            } else {
+                pageSizeWithSpacing
+            }
 
             if (currentMainAxisOffset <= minOffset && index != pageCount - 1) {
                 // this page is offscreen and will not be placed. advance firstVisiblePage
@@ -231,8 +234,6 @@ internal fun LazyLayoutMeasureScope.measurePager(
                     orientation = orientation,
                     horizontalAlignment = horizontalAlignment,
                     verticalAlignment = verticalAlignment,
-                    afterContentPadding = afterContentPadding,
-                    beforeContentPadding = beforeContentPadding,
                     layoutDirection = layoutDirection,
                     reverseLayout = reverseLayout,
                     pageAvailableSize = pageAvailableSize
@@ -263,7 +264,7 @@ internal fun LazyLayoutMeasureScope.measurePager(
         }
 
         // the initial offset for pages from visiblePages list
-        require(currentFirstPageScrollOffset >= 0)
+        require(currentFirstPageScrollOffset >= 0) { "invalid currentFirstPageScrollOffset" }
         val visiblePagesScrollOffset = -currentFirstPageScrollOffset
         var firstPage = visiblePages.first()
 
@@ -297,8 +298,6 @@ internal fun LazyLayoutMeasureScope.measurePager(
                 orientation = orientation,
                 horizontalAlignment = horizontalAlignment,
                 verticalAlignment = verticalAlignment,
-                afterContentPadding = afterContentPadding,
-                beforeContentPadding = beforeContentPadding,
                 layoutDirection = layoutDirection,
                 reverseLayout = reverseLayout,
                 pageAvailableSize = pageAvailableSize
@@ -325,8 +324,6 @@ internal fun LazyLayoutMeasureScope.measurePager(
                 orientation = orientation,
                 horizontalAlignment = horizontalAlignment,
                 verticalAlignment = verticalAlignment,
-                afterContentPadding = afterContentPadding,
-                beforeContentPadding = beforeContentPadding,
                 layoutDirection = layoutDirection,
                 reverseLayout = reverseLayout,
                 pageAvailableSize = pageAvailableSize
@@ -349,6 +346,7 @@ internal fun LazyLayoutMeasureScope.measurePager(
                 else
                     currentMainAxisOffset
             )
+
         val layoutHeight = constraints
             .constrainHeight(
                 if (orientation == Orientation.Vertical)
@@ -381,12 +379,13 @@ internal fun LazyLayoutMeasureScope.measurePager(
         val closestPageToSnapPosition = visiblePagesInfo.fastMaxBy {
             -abs(
                 calculateDistanceToDesiredSnapPosition(
-                    viewPortSize,
-                    beforeContentPadding,
-                    afterContentPadding,
-                    pageAvailableSize,
-                    it,
-                    SnapAlignmentStartToStart
+                    mainAxisViewPortSize = viewPortSize,
+                    beforeContentPadding = beforeContentPadding,
+                    afterContentPadding = afterContentPadding,
+                    itemSize = pageAvailableSize,
+                    itemOffset = it.offset,
+                    itemIndex = it.index,
+                    snapPositionInLayout = SnapAlignmentStartToStart
                 )
             )
         }
@@ -415,24 +414,6 @@ internal fun LazyLayoutMeasureScope.measurePager(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-private fun Density.calculateDistanceToDesiredSnapPosition(
-    axisViewPortSize: Int,
-    beforeContentPadding: Int,
-    afterContentPadding: Int,
-    pageSize: Int,
-    page: PageInfo,
-    positionInLayout: Density.(layoutSize: Float, itemSize: Float) -> Float
-): Float {
-    val containerSize = axisViewPortSize - beforeContentPadding - afterContentPadding
-
-    val desiredDistance =
-        positionInLayout(containerSize.toFloat(), pageSize.toFloat())
-
-    val itemCurrentPosition = page.offset
-    return itemCurrentPosition - desiredDistance
-}
-
 private fun createPagesAfterList(
     currentLastPage: Int,
     pagesCount: Int,
@@ -444,18 +425,15 @@ private fun createPagesAfterList(
 
     val end = minOf(currentLastPage + beyondBoundsPageCount, pagesCount - 1)
 
-    fun addPage(index: Int) {
-        if (list == null) list = mutableListOf()
-        requireNotNull(list).add(getAndMeasure(index))
-    }
-
     for (i in currentLastPage + 1..end) {
-        addPage(i)
+        if (list == null) list = mutableListOf()
+        list.add(getAndMeasure(i))
     }
 
     pinnedPages.fastForEach { pageIndex ->
         if (pageIndex in (end + 1) until pagesCount) {
-            addPage(pageIndex)
+            if (list == null) list = mutableListOf()
+            list?.add(getAndMeasure(pageIndex))
         }
     }
 
@@ -472,20 +450,15 @@ private fun createPagesBeforeList(
 
     val start = maxOf(0, currentFirstPage - beyondBoundsPageCount)
 
-    fun addPage(index: Int) {
-        if (list == null) list = mutableListOf()
-        requireNotNull(list).add(
-            getAndMeasure(index)
-        )
-    }
-
     for (i in currentFirstPage - 1 downTo start) {
-        addPage(i)
+        if (list == null) list = mutableListOf()
+        list.add(getAndMeasure(i))
     }
 
     pinnedPages.fastForEach { pageIndex ->
         if (pageIndex < start) {
-            addPage(pageIndex)
+            if (list == null) list = mutableListOf()
+            list?.add(getAndMeasure(pageIndex))
         }
     }
 
@@ -501,8 +474,6 @@ private fun LazyLayoutMeasureScope.getAndMeasure(
     orientation: Orientation,
     horizontalAlignment: Alignment.Horizontal?,
     verticalAlignment: Alignment.Vertical?,
-    afterContentPadding: Int,
-    beforeContentPadding: Int,
     layoutDirection: LayoutDirection,
     reverseLayout: Boolean,
     pageAvailableSize: Int
@@ -516,8 +487,6 @@ private fun LazyLayoutMeasureScope.getAndMeasure(
         visualOffset = visualPageOffset,
         horizontalAlignment = horizontalAlignment,
         verticalAlignment = verticalAlignment,
-        afterContentPadding = afterContentPadding,
-        beforeContentPadding = beforeContentPadding,
         layoutDirection = layoutDirection,
         reverseLayout = reverseLayout,
         size = pageAvailableSize,
@@ -541,18 +510,18 @@ private fun LazyLayoutMeasureScope.calculatePagesOffsets(
     density: Density,
     spaceBetweenPages: Int,
     pageAvailableSize: Int
-): MutableList<PositionedPage> {
+): MutableList<MeasuredPage> {
     val pageSizeWithSpacing = (pageAvailableSize + spaceBetweenPages)
     val mainAxisLayoutSize = if (orientation == Orientation.Vertical) layoutHeight else layoutWidth
     val hasSpareSpace = finalMainAxisOffset < minOf(mainAxisLayoutSize, maxOffset)
     if (hasSpareSpace) {
-        check(pagesScrollOffset == 0)
+        check(pagesScrollOffset == 0) { "non-zero pagesScrollOffset" }
     }
     val positionedPages =
-        ArrayList<PositionedPage>(pages.size + extraPagesBefore.size + extraPagesAfter.size)
+        ArrayList<MeasuredPage>(pages.size + extraPagesBefore.size + extraPagesAfter.size)
 
     if (hasSpareSpace) {
-        require(extraPagesBefore.isEmpty() && extraPagesAfter.isEmpty())
+        require(extraPagesBefore.isEmpty() && extraPagesAfter.isEmpty()) { "No extra pages" }
 
         val pagesCount = pages.size
         fun Int.reverseAware() =
@@ -583,23 +552,27 @@ private fun LazyLayoutMeasureScope.calculatePagesOffsets(
             } else {
                 absoluteOffset
             }
-            positionedPages.add(page.position(relativeOffset, layoutWidth, layoutHeight))
+            page.position(relativeOffset, layoutWidth, layoutHeight)
+            positionedPages.add(page)
         }
     } else {
         var currentMainAxis = pagesScrollOffset
         extraPagesBefore.fastForEach {
             currentMainAxis -= pageSizeWithSpacing
-            positionedPages.add(it.position(currentMainAxis, layoutWidth, layoutHeight))
+            it.position(currentMainAxis, layoutWidth, layoutHeight)
+            positionedPages.add(it)
         }
 
         currentMainAxis = pagesScrollOffset
         pages.fastForEach {
-            positionedPages.add(it.position(currentMainAxis, layoutWidth, layoutHeight))
+            it.position(currentMainAxis, layoutWidth, layoutHeight)
+            positionedPages.add(it)
             currentMainAxis += pageSizeWithSpacing
         }
 
         extraPagesAfter.fastForEach {
-            positionedPages.add(it.position(currentMainAxis, layoutWidth, layoutHeight))
+            it.position(currentMainAxis, layoutWidth, layoutHeight)
+            positionedPages.add(it)
             currentMainAxis += pageSizeWithSpacing
         }
     }

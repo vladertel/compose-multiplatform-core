@@ -27,7 +27,7 @@ import com.google.devtools.ksp.symbol.Origin
  * Provides KSType resolution scope for a type.
  */
 internal sealed class KSTypeVarianceResolverScope(
-    private val annotated: KSAnnotated,
+    val annotated: KSAnnotated,
     private val container: KSDeclaration?,
     private val asMemberOf: KspType?
 ) {
@@ -36,8 +36,18 @@ internal sealed class KSTypeVarianceResolverScope(
      * parameter is in kotlin or the containing class, which inherited the method, is in kotlin.
      */
     val needsWildcardResolution: Boolean by lazy {
-        (annotated.isInKotlinCode() || container?.isInKotlinCode() == true) &&
-            !annotated.hasSuppressWildcardsAnnotationInHierarchy()
+        annotated.isInKotlinCode() || container?.isInKotlinCode() == true
+    }
+
+    val hasSuppressWildcards: Boolean by lazy {
+        val nodeForSuppressionCheck = when (this) {
+            // For property setter and getter methods skip to the enclosing class to check for
+            // suppression annotations to match KAPT.
+            is PropertySetterParameterType,
+            is PropertyGetterMethodReturnType -> annotated.parent?.parent as? KSAnnotated
+            else -> annotated
+        }
+        nodeForSuppressionCheck?.hasSuppressWildcardsAnnotationInHierarchy() == true
     }
 
     private fun KSAnnotated.isInKotlinCode(): Boolean {
@@ -60,7 +70,7 @@ internal sealed class KSTypeVarianceResolverScope(
     abstract fun isValOrReturnType(): Boolean
 
     /** Returns the scope of the `asMemberOf` container type. */
-    fun asMemberOfScopeOrSelf(): KSTypeVarianceResolverScope? {
+    fun asMemberOfScopeOrSelf(): KSTypeVarianceResolverScope {
         return asMemberOf?.scope ?: this
     }
 

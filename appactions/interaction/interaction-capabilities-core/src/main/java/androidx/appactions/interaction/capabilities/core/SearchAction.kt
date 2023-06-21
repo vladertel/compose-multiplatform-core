@@ -16,9 +16,12 @@
 
 package androidx.appactions.interaction.capabilities.core
 
+import androidx.annotation.RestrictTo
+
 /**
  * A request to perform a search for in-app entities.
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class SearchAction<FilterT> internal constructor(
     val query: String?,
     val filter: FilterT?
@@ -30,6 +33,12 @@ class SearchAction<FilterT> internal constructor(
         if (this.query != other.query) return false
         if (this.filter != other.filter) return false
         return true
+    }
+
+    override fun hashCode(): Int {
+        var result = query?.hashCode() ?: 0
+        result += 31 * (filter?.hashCode() ?: 0)
+        return result
     }
 
     /** Builder class for Entity. */

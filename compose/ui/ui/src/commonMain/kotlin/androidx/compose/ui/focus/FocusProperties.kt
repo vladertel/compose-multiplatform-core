@@ -181,13 +181,12 @@ fun Modifier.focusProperties(
     scope: FocusProperties.() -> Unit
 ): Modifier = this then FocusPropertiesElement(scope)
 
-@OptIn(ExperimentalComposeUiApi::class)
 private data class FocusPropertiesElement(
     val scope: FocusProperties.() -> Unit
-) : ModifierNodeElement<FocusPropertiesModifierNodeImpl>() {
-    override fun create() = FocusPropertiesModifierNodeImpl(scope)
+) : ModifierNodeElement<FocusPropertiesNode>() {
+    override fun create() = FocusPropertiesNode(scope)
 
-    override fun update(node: FocusPropertiesModifierNodeImpl) {
+    override fun update(node: FocusPropertiesNode) {
         node.focusPropertiesScope = scope
     }
 
@@ -197,12 +196,11 @@ private data class FocusPropertiesElement(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
-private class FocusPropertiesModifierNodeImpl(
+private class FocusPropertiesNode(
     var focusPropertiesScope: FocusProperties.() -> Unit,
 ) : FocusPropertiesModifierNode, Modifier.Node() {
 
-    override fun modifyFocusProperties(focusProperties: FocusProperties) {
+    override fun applyFocusProperties(focusProperties: FocusProperties) {
         focusProperties.apply(focusPropertiesScope)
     }
 }

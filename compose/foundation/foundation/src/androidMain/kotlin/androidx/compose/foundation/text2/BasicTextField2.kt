@@ -27,14 +27,16 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.InternalFoundationTextApi
+import androidx.compose.foundation.text.CursorHandle
+import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.TextDelegate
 import androidx.compose.foundation.text.heightInLines
+import androidx.compose.foundation.text.isInTouchMode
+import androidx.compose.foundation.text.selection.SelectionHandleInfo
+import androidx.compose.foundation.text.selection.SelectionHandleInfoKey
 import androidx.compose.foundation.text.textFieldMinSize
 import androidx.compose.foundation.text2.input.CodepointTransformation
-import androidx.compose.foundation.text2.input.SingleLineCodepointTransformation
 import androidx.compose.foundation.text2.input.TextEditFilter
 import androidx.compose.foundation.text2.input.TextFieldLineLimits
 import androidx.compose.foundation.text2.input.TextFieldLineLimits.MultiLine
@@ -43,8 +45,9 @@ import androidx.compose.foundation.text2.input.TextFieldState
 import androidx.compose.foundation.text2.input.internal.AndroidTextInputPlugin
 import androidx.compose.foundation.text2.input.internal.TextFieldCoreModifier
 import androidx.compose.foundation.text2.input.internal.TextFieldDecoratorModifier
+import androidx.compose.foundation.text2.input.internal.TextFieldTextLayoutModifier
 import androidx.compose.foundation.text2.input.internal.TextLayoutState
-import androidx.compose.foundation.text2.input.toVisualText
+import androidx.compose.foundation.text2.selection.TextFieldSelectionState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -52,20 +55,17 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.FirstBaseline
-import androidx.compose.ui.layout.LastBaseline
-import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalPlatformTextInputPluginRegistry
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Density
-import kotlin.math.roundToInt
 
 /**
  * BasicTextField2 is a new text input Composable under heavy development. Please refrain from
@@ -128,7 +128,6 @@ import kotlin.math.roundToInt
  * innerTextField exactly once.
  */
 @ExperimentalFoundationApi
-@OptIn(InternalFoundationTextApi::class)
 @Composable
 fun BasicTextField2(
     state: TextFieldState,
@@ -152,7 +151,6 @@ fun BasicTextField2(
     val textInputAdapter = LocalPlatformTextInputPluginRegistry.takeIf { enabled && !readOnly }
         ?.current?.rememberAdapter(AndroidTextInputPlugin)
 
-    val fontFamilyResolver = LocalFontFamilyResolver.current
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
     val singleLine = lineLimits == SingleLine
@@ -162,18 +160,12 @@ fun BasicTextField2(
 
     val orientation = if (singleLine) Orientation.Horizontal else Orientation.Vertical
 
-    val textLayoutState = remember {
-        TextLayoutState(
-            TextDelegate(
-                text = AnnotatedString(state.text.toString()),
-                style = textStyle,
-                density = density,
-                fontFamilyResolver = fontFamilyResolver,
-                softWrap = true,
-                placeholders = emptyList()
-            )
-        )
+    val textLayoutState = remember { TextLayoutState() }
+
+    val textFieldSelectionState = remember(state, textLayoutState, density) {
+        TextFieldSelectionState(state, textLayoutState, density)
     }
+    textFieldSelectionState.hapticFeedBack = LocalHapticFeedback.current
 
     val decorationModifiers = modifier
         .then(
@@ -181,6 +173,7 @@ fun BasicTextField2(
             TextFieldDecoratorModifier(
                 textFieldState = state,
                 textLayoutState = textLayoutState,
+                textFieldSelectionState = textFieldSelectionState,
                 textInputAdapter = textInputAdapter,
                 filter = filter,
                 enabled = enabled,
@@ -203,7 +196,9 @@ fun BasicTextField2(
             enabled = enabled && scrollState.maxValue > 0
         )
 
-    Box(decorationModifiers) {
+    val isFocused = interactionSource.collectIsFocusedAsState().value
+
+    Box(decorationModifiers, propagateMinConstraints = true) {
         decorationBox(innerTextField = {
             val minLines: Int
             val maxLines: Int
@@ -215,59 +210,66 @@ fun BasicTextField2(
                 maxLines = 1
             }
 
-            val coreModifiers = Modifier
-                .heightInLines(
-                    textStyle = textStyle,
-                    minLines = minLines,
-                    maxLines = maxLines
-                )
-                .textFieldMinSize(textStyle)
-                .clipToBounds()
-                .then(
-                    TextFieldCoreModifier(
-                        isFocused = interactionSource.collectIsFocusedAsState().value,
+            Box(
+                propagateMinConstraints = true,
+                modifier = Modifier
+                    .heightInLines(
+                        textStyle = textStyle,
+                        minLines = minLines,
+                        maxLines = maxLines
+                    )
+                    .textFieldMinSize(textStyle)
+                    .clipToBounds()
+                    .then(
+                        TextFieldCoreModifier(
+                            isFocused = isFocused,
+                            textLayoutState = textLayoutState,
+                            textFieldState = state,
+                            textFieldSelectionState = textFieldSelectionState,
+                            cursorBrush = cursorBrush,
+                            writeable = enabled && !readOnly,
+                            scrollState = scrollState,
+                            orientation = orientation
+                        )
+                    )
+            ) {
+                Box(
+                    modifier = TextFieldTextLayoutModifier(
                         textLayoutState = textLayoutState,
                         textFieldState = state,
-                        cursorBrush = cursorBrush,
-                        writeable = enabled && !readOnly,
-                        scrollState = scrollState,
-                        orientation = orientation
+                        codepointTransformation = codepointTransformation,
+                        textStyle = textStyle,
+                        singleLine = singleLine,
+                        onTextLayout = onTextLayout
                     )
                 )
 
-            Layout(modifier = coreModifiers) { _, constraints ->
-                val result = with(textLayoutState) {
-                    // First prefer provided codepointTransformation if not null, e.g.
-                    // BasicSecureTextField would send Password Transformation.
-                    // Second, apply a SingleLineCodepointTransformation if text field is configured
-                    // to be single line.
-                    // Else, don't apply any visual transformation.
-                    val appliedCodepointTransformation = codepointTransformation
-                         ?: SingleLineCodepointTransformation.takeIf { lineLimits == SingleLine }
-
-                    val visualText = state.text.toVisualText(appliedCodepointTransformation)
-                    layout(
-                        text = AnnotatedString(visualText.toString()),
-                        textStyle = textStyle,
-                        softWrap = !singleLine,
-                        density = density,
-                        fontFamilyResolver = fontFamilyResolver,
-                        constraints = constraints,
-                        onTextLayout = onTextLayout
+                if (enabled && isFocused && !readOnly && textFieldSelectionState.isInTouchMode) {
+                    TextFieldCursorHandle(
+                        selectionState = textFieldSelectionState
                     )
                 }
-
-                // TODO: min height
-
-                layout(
-                    width = result.size.width,
-                    height = result.size.height,
-                    alignmentLines = mapOf(
-                        FirstBaseline to result.firstBaseline.roundToInt(),
-                        LastBaseline to result.lastBaseline.roundToInt()
-                    )
-                ) {}
             }
         })
+    }
+}
+
+@Composable
+internal fun TextFieldCursorHandle(selectionState: TextFieldSelectionState) {
+    if (selectionState.cursorHandleVisible) {
+        CursorHandle(
+            handlePosition = selectionState.cursorRect.bottomCenter,
+            modifier = Modifier
+                .semantics {
+                    this[SelectionHandleInfoKey] = SelectionHandleInfo(
+                        handle = Handle.Cursor,
+                        position = selectionState.cursorRect.bottomCenter
+                    )
+                }
+                .pointerInput(selectionState) {
+                    with(selectionState) { detectCursorHandleDragGestures() }
+                },
+            content = null
+        )
     }
 }

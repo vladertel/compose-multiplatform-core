@@ -17,7 +17,6 @@
 package androidx.compose.foundation.text2.input.internal
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.text.TextLayoutResultProxy
 import androidx.compose.foundation.text.findFollowingBreak
 import androidx.compose.foundation.text.findParagraphEnd
 import androidx.compose.foundation.text.findParagraphStart
@@ -25,7 +24,6 @@ import androidx.compose.foundation.text.findPrecedingBreak
 import androidx.compose.foundation.text2.input.TextFieldState
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.ResolvedTextDirection
@@ -110,26 +108,28 @@ internal class TextFieldPreparedSelection(
      * Executes PageUp key
      */
     fun moveCursorUpByPage() = applyIfNotEmpty(false) {
-        textLayoutState.proxy?.jumpByPagesOffset(-1)?.let { setCursor(it) }
+        setCursor(textLayoutState.jumpByPagesOffset(-1))
     }
 
     /**
      * Executes PageDown key
      */
     fun moveCursorDownByPage() = applyIfNotEmpty(false) {
-        textLayoutState.proxy?.jumpByPagesOffset(1)?.let { setCursor(it) }
+        setCursor(textLayoutState.jumpByPagesOffset(1))
     }
 
     /**
      * Returns a cursor position after jumping back or forth by [pagesAmount] number of pages,
      * where `page` is the visible amount of space in the text field. Visible rectangle is
-     * calculated by the coordinates of decoration box around the TextField.
+     * calculated by the coordinates of decoration box around the TextField. If text layout has not
+     * been measured yet, this function returns the current offset.
      */
-    private fun TextLayoutResultProxy.jumpByPagesOffset(pagesAmount: Int): Int {
+    private fun TextLayoutState.jumpByPagesOffset(pagesAmount: Int): Int {
+        val currentOffset = initialValue.selectionInChars.end
         val visibleInnerTextFieldRect = innerTextFieldCoordinates?.let { inner ->
             decorationBoxCoordinates?.localBoundingBoxOf(inner)
-        } ?: Rect.Zero
-        val currentOffset = initialValue.selectionInChars.end
+        } ?: return currentOffset
+        val value = layoutResult ?: return currentOffset
         val currentPos = value.getCursorRect(currentOffset)
         val newPos = currentPos.translate(
             translateX = 0f,
@@ -284,11 +284,19 @@ internal class TextFieldPreparedSelection(
     }
 
     fun moveCursorPrevByParagraph() = applyIfNotEmpty {
-        setCursor(getParagraphStart())
+        var paragraphStart = text.findParagraphStart(selection.min)
+        if (paragraphStart == selection.min && paragraphStart != 0) {
+            paragraphStart = text.findParagraphStart(paragraphStart - 1)
+        }
+        setCursor(paragraphStart)
     }
 
     fun moveCursorNextByParagraph() = applyIfNotEmpty {
-        setCursor(getParagraphEnd())
+        var paragraphEnd = text.findParagraphEnd(selection.max)
+        if (paragraphEnd == selection.max && paragraphEnd != text.length) {
+            paragraphEnd = text.findParagraphEnd(paragraphEnd + 1)
+        }
+        setCursor(paragraphEnd)
     }
 
     fun moveCursorUpByLine() = applyIfNotEmpty(false) {
@@ -410,10 +418,6 @@ internal class TextFieldPreparedSelection(
     }
 
     private fun charOffset(offset: Int) = offset.coerceAtMost(text.length - 1)
-
-    private fun getParagraphStart() = text.findParagraphStart(selection.min)
-
-    private fun getParagraphEnd() = text.findParagraphEnd(selection.max)
 
     companion object {
         /**

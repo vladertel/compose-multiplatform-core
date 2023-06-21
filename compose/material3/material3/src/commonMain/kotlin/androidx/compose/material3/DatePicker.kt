@@ -16,7 +16,8 @@
 
 package androidx.compose.material3
 
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.DecayAnimationSpec
 import androidx.compose.animation.core.Spring
@@ -27,6 +28,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.FlingBehavior
@@ -107,9 +111,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import java.lang.Integer.max
-import java.text.NumberFormat
-import java.util.Locale
+import kotlin.math.max
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -282,22 +284,29 @@ interface DatePickerFormatter {
      * January 2023).
      *
      * @param monthMillis timestamp in _UTC_ milliseconds from the epoch that represents the month
-     * @param locale a [Locale] to use when formatting the month and year
+     * @param locale a [CalendarLocale] to use when formatting the month and year
+     *
+     * @see defaultLocale
      */
-    fun formatMonthYear(@Suppress("AutoBoxing") monthMillis: Long?, locale: Locale): String?
+    fun formatMonthYear(
+        @Suppress("AutoBoxing") monthMillis: Long?,
+        locale: CalendarLocale
+    ): String?
 
     /**
      * Format a given [dateMillis] to a string representation of the date (i.e. Mar 27, 2021).
      *
      * @param dateMillis timestamp in _UTC_ milliseconds from the epoch that represents the date
-     * @param locale a [Locale] to use when formatting the date
+     * @param locale a [CalendarLocale] to use when formatting the date
      * @param forContentDescription indicates that the requested formatting is for content
      * description. In these cases, the output may include a more descriptive wording that will be
      * passed to a screen readers.
+     *
+     * @see defaultLocale
      */
     fun formatDate(
         @Suppress("AutoBoxing") dateMillis: Long?,
-        locale: Locale,
+        locale: CalendarLocale,
         forContentDescription: Boolean = false
     ): String?
 }
@@ -631,37 +640,72 @@ object DatePickerDefaults {
 /**
  * Represents the colors used by the date picker.
  *
- * See [DatePickerDefaults.colors] for the default implementation that follows Material
- * specifications.
+ * @constructor create an instance with arbitrary colors, see [DatePickerDefaults.colors] for the
+ * default implementation that follows Material specifications.
+ *
+ * @param containerColor the color used for the date picker's background
+ * @param titleContentColor the color used for the date picker's title
+ * @param headlineContentColor the color used for the date picker's headline
+ * @param weekdayContentColor the color used for the weekday letters
+ * @param subheadContentColor the color used for the month and year subhead labels that appear
+ * when months are displayed at a `DateRangePicker`.
+ * @param navigationContentColor the content color used for the year selection menu button and
+ * the months arrow navigation when displayed at a `DatePicker`.
+ * @param yearContentColor the color used for a year item content
+ * @param disabledYearContentColor the color used for a disabled year item content
+ * @param currentYearContentColor the color used for the current year content when selecting a
+ * year
+ * @param selectedYearContentColor the color used for a selected year item content
+ * @param disabledSelectedYearContentColor the color used for a disabled selected year item
+ * content
+ * @param selectedYearContainerColor the color used for a selected year item container
+ * @param disabledSelectedYearContainerColor the color used for a disabled selected year item
+ * container
+ * @param dayContentColor the color used for days content
+ * @param disabledDayContentColor the color used for disabled days content
+ * @param selectedDayContentColor the color used for selected days content
+ * @param disabledSelectedDayContentColor the color used for disabled selected days content
+ * @param selectedDayContainerColor the color used for a selected day container
+ * @param disabledSelectedDayContainerColor the color used for a disabled selected day container
+ * @param todayContentColor the color used for the day that marks the current date
+ * @param todayDateBorderColor the color used for the border of the day that marks the current
+ * date
+ * @param dayInSelectionRangeContentColor the content color used for days that are within a date
+ * range selection
+ * @param dayInSelectionRangeContainerColor the container color used for days that are within a
+ * date range selection
+ * @param dividerColor the color used for the dividers used at the date pickers
+ * @param dateTextFieldColors the [TextFieldColors] defaults for the date text field when in
+ * [DisplayMode.Input]. See [OutlinedTextFieldDefaults.colors].
  */
 @ExperimentalMaterial3Api
 @Immutable
-class DatePickerColors internal constructor(
-    internal val containerColor: Color,
-    internal val titleContentColor: Color,
-    internal val headlineContentColor: Color,
-    internal val weekdayContentColor: Color,
-    internal val subheadContentColor: Color,
-    internal val navigationContentColor: Color,
-    private val yearContentColor: Color,
-    private val disabledYearContentColor: Color,
-    private val currentYearContentColor: Color,
-    private val selectedYearContentColor: Color,
-    private val disabledSelectedYearContentColor: Color,
-    private val selectedYearContainerColor: Color,
-    private val disabledSelectedYearContainerColor: Color,
-    private val dayContentColor: Color,
-    private val disabledDayContentColor: Color,
-    private val selectedDayContentColor: Color,
-    private val disabledSelectedDayContentColor: Color,
-    private val selectedDayContainerColor: Color,
-    private val disabledSelectedDayContainerColor: Color,
-    private val todayContentColor: Color,
-    internal val todayDateBorderColor: Color,
-    internal val dayInSelectionRangeContainerColor: Color,
-    private val dayInSelectionRangeContentColor: Color,
-    internal val dividerColor: Color,
-    internal val dateTextFieldColors: TextFieldColors
+class DatePickerColors constructor(
+    val containerColor: Color,
+    val titleContentColor: Color,
+    val headlineContentColor: Color,
+    val weekdayContentColor: Color,
+    val subheadContentColor: Color,
+    val navigationContentColor: Color,
+    val yearContentColor: Color,
+    val disabledYearContentColor: Color,
+    val currentYearContentColor: Color,
+    val selectedYearContentColor: Color,
+    val disabledSelectedYearContentColor: Color,
+    val selectedYearContainerColor: Color,
+    val disabledSelectedYearContainerColor: Color,
+    val dayContentColor: Color,
+    val disabledDayContentColor: Color,
+    val selectedDayContentColor: Color,
+    val disabledSelectedDayContentColor: Color,
+    val selectedDayContainerColor: Color,
+    val disabledSelectedDayContainerColor: Color,
+    val todayContentColor: Color,
+    val todayDateBorderColor: Color,
+    val dayInSelectionRangeContainerColor: Color,
+    val dayInSelectionRangeContentColor: Color,
+    val dividerColor: Color,
+    val dateTextFieldColors: TextFieldColors
 ) {
     /**
      * Represents the content color for a calendar day.
@@ -1021,7 +1065,7 @@ private class DatePickerFormatterImpl constructor(
 
     override fun formatMonthYear(
         monthMillis: Long?,
-        locale: Locale
+        locale: CalendarLocale
     ): String? {
         if (monthMillis == null) return null
         return formatWithSkeleton(monthMillis, yearSelectionSkeleton, locale)
@@ -1029,7 +1073,7 @@ private class DatePickerFormatterImpl constructor(
 
     override fun formatDate(
         dateMillis: Long?,
-        locale: Locale,
+        locale: CalendarLocale,
         forContentDescription: Boolean
     ): String? {
         if (dateMillis == null) return null
@@ -1080,7 +1124,10 @@ internal fun DateEntryContainer(
     Column(
         modifier = modifier
             .sizeIn(minWidth = DatePickerModalTokens.ContainerWidth)
-            .semantics { isContainer = true }
+            .semantics {
+                @Suppress("DEPRECATION")
+                isContainer = true
+            }
     ) {
         DatePickerHeader(
             modifier = Modifier,
@@ -1161,12 +1208,55 @@ private fun SwitchableDateEntryContent(
     selectableDates: SelectableDates,
     colors: DatePickerColors
 ) {
-    // TODO(b/266480386): Apply the motion spec for this once we have it. Consider replacing this
-    //  with AnimatedContent when it's out of experimental.
-    Crossfade(
+    // Parallax effect offset that will slightly scroll in and out the navigation part of the picker
+    // when the display mode changes.
+    val parallaxTarget = with(LocalDensity.current) { -48.dp.roundToPx() }
+    AnimatedContent(
         targetState = displayMode,
-        animationSpec = spring(),
-        modifier = Modifier.semantics { isContainer = true }) { mode ->
+        modifier = Modifier.semantics {
+            @Suppress("DEPRECATION")
+            isContainer = true
+        },
+        transitionSpec = {
+            // When animating the input mode, fade out the calendar picker and slide in the text
+            // field from the bottom with a delay to show up after the picker is hidden.
+            if (targetState == DisplayMode.Input) {
+                slideInVertically { height -> height } + fadeIn(
+                    animationSpec = tween(
+                        durationMillis = MotionTokens.DurationShort2.toInt(),
+                        delayMillis = MotionTokens.DurationShort2.toInt()
+                    )
+                ) togetherWith fadeOut(
+                    tween(durationMillis = MotionTokens.DurationShort2.toInt())
+                ) + slideOutVertically(targetOffsetY = { _ -> parallaxTarget })
+            } else {
+                // When animating the picker mode, slide out text field and fade in calendar
+                // picker with a delay to show up after the text field is hidden.
+                slideInVertically(
+                    animationSpec = tween(
+                        delayMillis = MotionTokens.DurationShort1.toInt()
+                    ),
+                    initialOffsetY = { _ -> parallaxTarget }
+                ) + fadeIn(
+                    animationSpec = tween(
+                        durationMillis = MotionTokens.DurationShort2.toInt(),
+                        delayMillis = MotionTokens.DurationShort2.toInt()
+                    )
+                ) togetherWith slideOutVertically(targetOffsetY = { fullHeight -> fullHeight }) +
+                    fadeOut(animationSpec = tween(MotionTokens.DurationShort2.toInt()))
+            }.using(
+                SizeTransform(
+                    clip = true,
+                    sizeAnimationSpec = { _, _ ->
+                        tween(
+                            MotionTokens.DurationLong2.toInt(),
+                            easing = MotionTokens.EasingEmphasizedDecelerateCubicBezier
+                        )
+                    })
+            )
+        },
+        label = "DatePickerDisplayModeAnimation"
+    ) { mode ->
         when (mode) {
             DisplayMode.Picker -> DatePickerContent(
                 selectedDateMillis = selectedDateMillis,
@@ -1723,11 +1813,10 @@ private fun YearPicker(
                 )
             )
         // Match the years container color to any elevated surface color that is composed under it.
-        val containerColor = if (colors.containerColor == MaterialTheme.colorScheme.surface) {
-            MaterialTheme.colorScheme.surfaceColorAtElevation(LocalAbsoluteTonalElevation.current)
-        } else {
-            colors.containerColor
-        }
+        val containerColor = MaterialTheme.colorScheme.applyTonalElevation(
+            backgroundColor = colors.containerColor,
+            elevation = LocalAbsoluteTonalElevation.current
+        )
         val coroutineScope = rememberCoroutineScope()
         val scrollToEarlierYearsLabel = getString(Strings.DatePickerScrollToShowEarlierYears)
         val scrollToLaterYearsLabel = getString(Strings.DatePickerScrollToShowLaterYears)
@@ -1977,16 +2066,6 @@ private fun customScrollActions(
             action = scrollDownAction
         )
     )
-}
-
-/**
- * Returns a string representation of an integer at the current Locale.
- */
-internal fun Int.toLocalString(): String {
-    val formatter = NumberFormat.getIntegerInstance()
-    // Eliminate any use of delimiters when formatting the integer.
-    formatter.isGroupingUsed = false
-    return formatter.format(this)
 }
 
 internal val RecommendedSizeForAccessibility = 48.dp

@@ -265,7 +265,7 @@ public abstract class UseCase {
         if (mergedConfig.containsOption(ImageOutputConfig.OPTION_RESOLUTION_SELECTOR)
                 && mergedConfig.retrieveOption(
                 ImageOutputConfig.OPTION_RESOLUTION_SELECTOR).getAllowedResolutionMode()
-                != ResolutionSelector.ALLOWED_RESOLUTIONS_NORMAL) {
+                != ResolutionSelector.PREFER_CAPTURE_RATE_OVER_HIGHER_RESOLUTION) {
             mergedConfig.insertOption(UseCaseConfig.OPTION_ZSL_DISABLED, true);
         }
 
@@ -699,6 +699,32 @@ public abstract class UseCase {
     protected StreamSpec onSuggestedStreamSpecUpdated(@NonNull StreamSpec suggestedStreamSpec) {
         return suggestedStreamSpec;
     }
+
+    /**
+     * Update the implementation options of the stream specification for the UseCase.
+     *
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public void updateSuggestedStreamSpecImplementationOptions(@NonNull Config config) {
+        mAttachedStreamSpec = onSuggestedStreamSpecImplementationOptionsUpdated(config);
+    }
+
+    /**
+     * Called when updating the stream specifications' implementation options of existing use cases
+     * via {@code CameraUseCaseAdapter#updateUseCases}.
+     *
+     * @param config The new implementationOptions for the stream specification.
+     */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
+    protected StreamSpec onSuggestedStreamSpecImplementationOptionsUpdated(@NonNull Config config) {
+        if (mAttachedStreamSpec == null) {
+            throw new UnsupportedOperationException("Attempt to update the implementation options "
+                    + "for a use case without attached stream specifications.");
+        }
+        return mAttachedStreamSpec.toBuilder().setImplementationOptions(config).build();
+    }
+
 
     /**
      * Called when CameraControlInternal is attached into the UseCase. UseCase may need to

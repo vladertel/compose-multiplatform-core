@@ -41,4 +41,5 @@
     <string name="mr_dialog_groupable_header" msgid="4307018456678388936">"បញ្ចូលឧបករណ៍"</string>
     <string name="mr_dialog_transferable_header" msgid="6068257520605505468">"លេងនៅ​លើក្រុម"</string>
     <string name="mr_cast_dialog_title_view_placeholder" msgid="2175930138959078155">"មិនមានព័ត៌មានទេ"</string>
+    <string name="mr_chooser_zero_routes_found_title" msgid="5213435473397442608">"មិន​មាន​ឧបករណ៍​ទេ"</string>
 </resources>

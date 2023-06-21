@@ -36,9 +36,24 @@ fun assertThat(actual: Boolean?): BooleanSubject {
     return BooleanSubject(actual)
 }
 
+fun assertThat(actual: Double?): DoubleSubject {
+    return DoubleSubject(actual)
+}
+
 fun assertThat(actual: String?): StringSubject {
     return StringSubject(actual)
 }
 
 fun <T> assertThat(actual: Iterable<T>?): IterableSubject<T> =
     IterableSubject(actual)
+
+fun <K, V> assertThat(actual: Map<K, V>?): MapSubject<K, V> =
+    MapSubject(actual)
+
+/**
+ * Begins an assertion that, if it fails, will prepend the given message to the failure message.
+ */
+fun assertWithMessage(messageToPrepend: String): StandardSubjectBuilder =
+    StandardSubjectBuilder(
+        metadata = FailureMetadata(messagesToPrepend = listOf(messageToPrepend)),
+    )

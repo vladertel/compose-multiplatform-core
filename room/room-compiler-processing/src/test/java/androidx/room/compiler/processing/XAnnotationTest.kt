@@ -598,7 +598,7 @@ class XAnnotationTest(
             """.trimIndent()
         )
         val javaSrc = Source.java(
-            "JavaClass.java",
+            "JavaClass",
             """
             import androidx.room.compiler.processing.testcode.JavaAnnotationWithDefaults;
             @JavaAnnotationWithDefaults
@@ -641,6 +641,11 @@ class XAnnotationTest(
                         ).isEqualTo(
                             listOf(LinkedHashMap::class.asKTypeName())
                         )
+                    } else {
+                        assertThat(annotation.toAnnotationSpec(includeDefaultValues = false))
+                            .isEqualTo(JAnnotationSpec.get(annotation.toJavac()))
+                        assertThat(annotation.toAnnotationSpec())
+                            .isNotEqualTo(JAnnotationSpec.get(annotation.toJavac()))
                     }
 
                     val enumValueEntry = annotation.getAsEnum("enumVal")
@@ -648,7 +653,6 @@ class XAnnotationTest(
                     val javaEnumType = invocation.processingEnv.requireTypeElement(JavaEnum::class)
                     assertThat(enumValueEntry.enclosingElement)
                         .isEqualTo(javaEnumType)
-
                     val enumList = annotation.getAsEnumList("enumArrayVal")
                     assertThat(enumList[0].name).isEqualTo("VAL1")
                     assertThat(enumList[1].name).isEqualTo("VAL2")
@@ -681,7 +685,7 @@ class XAnnotationTest(
     fun javaPrimitiveArray() {
         // TODO: expand this test for other primitive types: 179081610
         val javaSrc = Source.java(
-            "JavaSubject.java",
+            "JavaSubject",
             """
             import androidx.room.compiler.processing.testcode.*;
             class JavaSubject {
@@ -720,7 +724,7 @@ class XAnnotationTest(
     @Test
     fun javaEnum() {
         val javaSrc = Source.java(
-            "JavaSubject.java",
+            "JavaSubject",
             """
             import androidx.room.compiler.processing.testcode.*;
             class JavaSubject {
@@ -759,7 +763,7 @@ class XAnnotationTest(
     @Test
     fun javaEnumArray() {
         val javaSrc = Source.java(
-            "JavaSubject.java",
+            "JavaSubject",
             """
             import androidx.room.compiler.processing.testcode.*;
             class JavaSubject {
@@ -1151,7 +1155,7 @@ class XAnnotationTest(
             """.trimIndent()
         )
         val javaSource = Source.java(
-            "foo.bar.Subject.java",
+            "foo.bar.Subject",
             """
             package foo.bar;
             import java.lang.annotation.ElementType;
@@ -1232,7 +1236,7 @@ class XAnnotationTest(
             """.trimIndent()
         )
         val javaSource = Source.java(
-            "foo.bar.Subject.java",
+            "foo.bar.Subject",
             """
             package foo.bar;
             import java.lang.annotation.ElementType;

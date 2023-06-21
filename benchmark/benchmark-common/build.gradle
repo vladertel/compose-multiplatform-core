@@ -37,6 +37,19 @@ android {
         )
     }
     namespace "androidx.benchmark"
+    defaultConfig {
+        externalNativeBuild {
+            cmake {
+                cppFlags ''
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version libs.versions.cmake.get()
+        }
+    }
 }
 
 wire {
@@ -56,7 +69,7 @@ dependencies {
     api("androidx.annotation:annotation:1.1.0")
     api("androidx.annotation:annotation-experimental:1.0.0")
     implementation("androidx.tracing:tracing-ktx:1.0.0")
-    implementation(project(":tracing:tracing-perfetto-common"))
+    implementation(project(":tracing:tracing-perfetto-handshake"))
     implementation(libs.testMonitor)
     implementation(libs.wireRuntime)
 
@@ -66,19 +79,25 @@ dependencies {
 }
 
 androidx {
-    name = "Android Benchmark - Common"
+    name = "Benchmark - Common"
     publish = Publish.SNAPSHOT_AND_RELEASE
     inceptionYear = "2018"
     description = "Android Benchmark - Common"
 }
 
+tasks.withType(KotlinCompile).configureEach {
+    kotlinOptions {
+        // Enable using experimental APIs from within same version group
+        freeCompilerArgs += [
+                "-opt-in=androidx.benchmark.perfetto.ExperimentalPerfettoCaptureApi"
+        ]
+    }
+}
+
 // https://github.com/square/wire/issues/1947
 // Remove when we upgrade to fixed wire library
 afterEvaluate {
-    tasks.named("compileReleaseKotlin").configure {
-        it.dependsOn("generateDebugProtos")
-    }
-    tasks.named("compileDebugKotlin").configure {
-        it.dependsOn("generateReleaseProtos")
-    }
+    tasks.named("compileReleaseKotlin").configure {it.dependsOn("generateDebugProtos")}
+    tasks.named("compileDebugKotlin").configure {it.dependsOn("generateReleaseProtos")}
+    tasks.named("generateKmpDocs").configure {it.dependsOn("generateDebugProtos", "generateReleaseProtos")}
 }

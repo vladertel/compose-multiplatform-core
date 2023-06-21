@@ -22,11 +22,11 @@ import androidx.camera.camera2.pipe.FrameInfo
 import androidx.camera.camera2.pipe.FrameNumber
 import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.RequestMetadata
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class VerifyResultListener(capturesCount: Int) : Request.Listener {
@@ -36,8 +36,10 @@ class VerifyResultListener(capturesCount: Int) : Request.Listener {
     private val waitingCount = atomic(capturesCount)
     private val failureException =
         TimeoutException("Test doesn't complete after waiting for $capturesCount frames.")
-    @Volatile private var startReceiving = false
-    @Volatile private var _verifyBlock: (
+    @Volatile
+    private var startReceiving = false
+    @Volatile
+    private var _verifyBlock: (
         captureRequest: RequestMetadata,
         captureResult: FrameInfo
     ) -> Boolean = { _, _ -> false }
@@ -77,6 +79,10 @@ class VerifyResultListener(capturesCount: Int) : Request.Listener {
         }
     }
 
+    @Deprecated(
+        message = "Migrating to using RequestFailureWrapper instead of CaptureFailure",
+        level = DeprecationLevel.WARNING
+    )
     override fun onFailed(
         requestMetadata: RequestMetadata,
         frameNumber: FrameNumber,

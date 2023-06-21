@@ -18,12 +18,12 @@ package androidx.build
 
 import androidx.build.gradle.isRoot
 import groovy.xml.DOMBuilder
+import java.net.URI
+import java.net.URL
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.RepositoryHandler
-import java.net.URI
-import java.net.URL
 
 /**
  * This plugin is used in Playground projects and adds functionality like resolving to snapshot
@@ -152,7 +152,7 @@ class AndroidXPlaygroundRootImplPlugin : Plugin<Project> {
             includeGroupRegex = """com\.android\.tools\.metalava"""
         )
         val prebuilts = PlaygroundRepository(
-            "https://androidx.dev/storage/prebuilts/androidx/internal/repository",
+            INTERNAL_PREBUILTS_REPO_URL,
             includeGroupRegex = """androidx\..*"""
         )
         val dokka = PlaygroundRepository(
@@ -226,5 +226,7 @@ class AndroidXPlaygroundRootImplPlugin : Plugin<Project> {
             }
         }
         const val SNAPSHOT_MARKER = "REPLACE_WITH_SNAPSHOT"
+        const val INTERNAL_PREBUILTS_REPO_URL =
+            "https://androidx.dev/storage/prebuilts/androidx/internal/repository"
     }
 }

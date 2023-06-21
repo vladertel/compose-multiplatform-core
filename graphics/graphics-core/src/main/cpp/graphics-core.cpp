@@ -29,9 +29,9 @@
 #include <android/hardware_buffer_jni.h>
 #include <android/log.h>
 #include <android/sync.h>
+#include <sys/system_properties.h>
 #include "egl_utils.h"
 #include "sync_fence.h"
-#include "buffer_transform_hint_resolver.h"
 
 #define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
@@ -291,8 +291,12 @@ void JniBindings_nSetBuffer(JNIEnv *env, jclass, jlong surfaceTransaction,
     if (android_get_device_api_level() >= 29) {
         auto transaction = reinterpret_cast<ASurfaceTransaction *>(surfaceTransaction);
         auto sc = reinterpret_cast<ASurfaceControl *>(surfaceControl);
-        auto hardwareBuffer = AHardwareBuffer_fromHardwareBuffer(env, hBuffer);
-        auto fence_fd = dup_fence_fd(env, syncFence);
+        AHardwareBuffer* hardwareBuffer;
+        auto fence_fd = -1;
+        if (hBuffer) {
+            hardwareBuffer = AHardwareBuffer_fromHardwareBuffer(env, hBuffer);
+            fence_fd = dup_fence_fd(env, syncFence);
+        }
         ASurfaceTransaction_setBuffer(transaction, sc, hardwareBuffer, fence_fd);
     }
 }
@@ -438,6 +442,12 @@ void JniBindings_nSetGeometry(JNIEnv *env, jclass,
     ASurfaceTransaction_setGeometry(st, sc, src, dest, transformation);
 }
 
+jstring JniBindings_nGetDisplayOrientation(JNIEnv *env, jclass) {
+    char name[PROP_VALUE_MAX];
+    __system_property_get("ro.surface_flinger.primary_display_orientation", name);
+    return (*env).NewStringUTF(name);
+}
+
 void loadRectInfo(JNIEnv *env) {
     gRectInfo.clazz = env->FindClass("android/graphics/Rect");
 
@@ -558,6 +568,11 @@ static const JNINativeMethod JNI_METHOD_TABLE[] = {
                 "nSetGeometry",
                 "(JJIIIII)V",
                 (void *) JniBindings_nSetGeometry
+        },
+        {
+            "nGetDisplayOrientation",
+                "()Ljava/lang/String;",
+                (void *)JniBindings_nGetDisplayOrientation
         }
 };
 
@@ -586,10 +601,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
     }
 
     if (loadSyncFenceMethods(env) != JNI_OK) {
-        return JNI_ERR;
-    }
-
-    if (loadBufferTransformHintResolverMethods(env) != JNI_OK) {
         return JNI_ERR;
     }
 

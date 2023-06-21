@@ -18,6 +18,8 @@ package androidx.build.metalava
 
 import androidx.build.checkapi.ApiBaselinesLocation
 import androidx.build.checkapi.ApiLocation
+import java.io.File
+import javax.inject.Inject
 import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
@@ -29,8 +31,6 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.workers.WorkerExecutor
-import java.io.File
-import javax.inject.Inject
 
 @CacheableTask
 abstract class UpdateApiLintBaselineTask @Inject constructor(
@@ -60,8 +60,10 @@ abstract class UpdateApiLintBaselineTask @Inject constructor(
         val baselineFile = baselines.get().apiLintFile
         val checkArgs = getGenerateApiArgs(
             bootClasspath, dependencyClasspath,
-            sourcePaths.files.filter { it.exists() }, null, GenerateApiMode.ExperimentalApi,
+            sourcePaths.files.filter { it.exists() }, null, GenerateApiMode.PublicApi,
             ApiLintMode.CheckBaseline(baselineFile, targetsJavaConsumers.get()),
+            // API version history doesn't need to be generated
+            emptyList(),
             manifestPath.orNull?.asFile?.absolutePath
         )
         val args = checkArgs + getCommonBaselineUpdateArgs(baselineFile)

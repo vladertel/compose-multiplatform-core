@@ -32,15 +32,14 @@ object DeviceInfo {
         Build.MODEL.contains("google_sdk") ||
         Build.MODEL.contains("sdk_gphone64") ||
         Build.MODEL.contains("Emulator") ||
-        Build.MODEL.contains("Android SDK built for x86") ||
-        Build.MODEL.contains("Android SDK built for arm64") ||
+        Build.MODEL.contains("Android SDK built for") ||
         Build.MANUFACTURER.contains("Genymotion") ||
         Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic") ||
         "google_sdk" == Build.PRODUCT
 
     val isEngBuild = Build.FINGERPRINT.contains(":eng/")
 
-    val isRooted =
+    val isRooted = Build.FINGERPRINT.contains(":userdebug/") ||
         arrayOf(
             "/system/app/Superuser.apk",
             "/sbin/su",

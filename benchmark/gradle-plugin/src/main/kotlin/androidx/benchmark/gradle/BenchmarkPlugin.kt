@@ -35,10 +35,6 @@ class BenchmarkPlugin : Plugin<Project> {
         // required BaseExtension from AGP can be found by registering project configuration as a
         // PluginManager callback.
 
-        project.pluginManager.withPlugin("com.android.application") {
-            configureWithAndroidPlugin(project)
-        }
-
         project.pluginManager.withPlugin("com.android.library") {
             configureWithAndroidPlugin(project)
         }
@@ -46,12 +42,12 @@ class BenchmarkPlugin : Plugin<Project> {
         // Verify that the configuration from this plugin dependent on AGP was successfully applied.
         project.afterEvaluate {
             if (!foundAndroidPlugin) {
-                throw StopExecutionException(
-                    """A required plugin, com.android.application or com.android.library was not
-                        found. The androidx.benchmark plugin currently only supports android
-                        application or library modules. Ensure that a required plugin is applied
-                        in the project build.gradle file."""
-                        .trimIndent()
+                throw StopExecutionException("""
+                        The androidx.benchmark plugin currently supports only android library
+                        modules. Ensure that `com.android.library` is applied in the project
+                        build.gradle file. Note that to run macrobenchmarks, this plugin is not
+                        required.
+                        """.trimIndent()
                 )
             }
         }

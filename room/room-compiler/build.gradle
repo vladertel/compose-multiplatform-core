@@ -291,7 +291,7 @@ tasks.withType(KotlinCompile).configureEach {
 
 tasks.withType(Test).configureEach {
     it.systemProperty("androidx.room.compiler.processing.strict", "true")
-    it.maxParallelForks(3)
+    it.maxParallelForks(5)
     if (project.providers.environmentVariable("GITHUB_ACTIONS").present) {
         // limit memory usage to avoid running out of memory in the docker container.
         it.maxHeapSize("512m")
@@ -299,7 +299,7 @@ tasks.withType(Test).configureEach {
 }
 
 androidx {
-    name = "Android Room Compiler"
+    name = "Room Compiler"
     type = LibraryType.ANNOTATION_PROCESSOR
     inceptionYear = "2017"
     description = "Android Room annotation processor"

@@ -18,7 +18,7 @@ package androidx.compose.foundation.text2.input
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.constrain
+import androidx.compose.ui.text.coerceIn
 
 /**
  * An immutable snapshot of the contents of a [TextFieldState].
@@ -86,9 +86,9 @@ private class TextFieldCharSequenceWrapper(
     override val length: Int
         get() = text.length
 
-    override val selectionInChars: TextRange = selection.constrain(0, text.length)
+    override val selectionInChars: TextRange = selection.coerceIn(0, text.length)
 
-    override val compositionInChars: TextRange? = composition?.constrain(0, text.length)
+    override val compositionInChars: TextRange? = composition?.coerceIn(0, text.length)
 
     override operator fun get(index: Int): Char = text[index]
 
