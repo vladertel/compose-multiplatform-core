@@ -16,48 +16,61 @@
 
 package androidx.bluetooth.integration.testapp.ui.advertiser
 
+// TODO(ofy) Migrate to androidx.bluetooth.BluetoothLe once Gatt Server API is in place
+import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattService
+import android.bluetooth.BluetoothManager
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.bluetooth.AdvertiseResult
 import androidx.bluetooth.BluetoothLe
 import androidx.bluetooth.integration.testapp.R
 import androidx.bluetooth.integration.testapp.databinding.FragmentAdvertiserBinding
+import androidx.bluetooth.integration.testapp.experimental.BluetoothLe as BluetoothLeExperimental
 import androidx.bluetooth.integration.testapp.ui.common.getColor
 import androidx.bluetooth.integration.testapp.ui.common.setViewEditText
 import androidx.bluetooth.integration.testapp.ui.common.toast
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
-
+import androidx.fragment.app.viewModels
+import com.google.android.material.tabs.TabLayout
+import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-import java.util.UUID
-
 class AdvertiserFragment : Fragment() {
 
     private companion object {
         private const val TAG = "AdvertiserFragment"
+
+        private const val TAB_ADVERTISER_POSITION = 0
     }
 
-    private lateinit var advertiserViewModel: AdvertiserViewModel
-
     private lateinit var bluetoothLe: BluetoothLe
+
+    // TODO(ofy) Migrate to androidx.bluetooth.BluetoothLe once scan API is in place
+    private lateinit var bluetoothLeExperimental: BluetoothLeExperimental
 
     private var advertiseDataAdapter: AdvertiseDataAdapter? = null
 
     private val advertiseScope = CoroutineScope(Dispatchers.Main + Job())
     private var advertiseJob: Job? = null
+
+    private val gattServerScope = CoroutineScope(Dispatchers.Main + Job())
+    private var gattServerJob: Job? = null
 
     private var isAdvertising: Boolean = false
         set(value) {
@@ -71,7 +84,6 @@ class AdvertiserFragment : Fragment() {
                 advertiseJob?.cancel()
                 advertiseJob = null
             }
-            _binding?.textInputEditTextDisplayName?.isEnabled = !value
             _binding?.checkBoxIncludeDeviceName?.isEnabled = !value
             _binding?.checkBoxConnectable?.isEnabled = !value
             _binding?.checkBoxDiscoverable?.isEnabled = !value
@@ -79,9 +91,42 @@ class AdvertiserFragment : Fragment() {
             _binding?.viewRecyclerViewOverlay?.isVisible = value
         }
 
-    private var _binding: FragmentAdvertiserBinding? = null
+    private var isGattServerOpen: Boolean = false
+        set(value) {
+            field = value
+            if (value) {
+                _binding?.buttonGattServer?.text = getString(R.string.stop_gatt_server)
+                _binding?.buttonGattServer?.backgroundTintList = getColor(R.color.red_500)
+            } else {
+                _binding?.buttonGattServer?.text = getString(R.string.open_gatt_server)
+                _binding?.buttonGattServer?.backgroundTintList = getColor(R.color.indigo_500)
+                gattServerJob?.cancel()
+                gattServerJob = null
+            }
+        }
 
-    // This property is only valid between onCreateView and onDestroyView.
+    private var showingAdvertiser: Boolean = false
+        set(value) {
+            field = value
+            _binding?.layoutAdvertiser?.isVisible = value
+            _binding?.layoutGattServer?.isVisible = !value
+        }
+
+    private val onTabSelectedListener = object : TabLayout.OnTabSelectedListener {
+        override fun onTabSelected(tab: TabLayout.Tab) {
+            showingAdvertiser = tab.position == TAB_ADVERTISER_POSITION
+        }
+
+        override fun onTabUnselected(tab: TabLayout.Tab) {
+        }
+
+        override fun onTabReselected(tab: TabLayout.Tab) {
+        }
+    }
+
+    private val viewModel: AdvertiserViewModel by viewModels()
+
+    private var _binding: FragmentAdvertiserBinding? = null
     private val binding get() = _binding!!
 
     override fun onCreateView(
@@ -89,24 +134,24 @@ class AdvertiserFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        advertiserViewModel = ViewModelProvider(this)[AdvertiserViewModel::class.java]
-
         bluetoothLe = BluetoothLe(requireContext())
+
+        bluetoothLeExperimental = BluetoothLeExperimental(requireContext())
 
         _binding = FragmentAdvertiserBinding.inflate(inflater, container, false)
 
-        initData()
+        binding.tabLayout.addOnTabSelectedListener(onTabSelectedListener)
 
         binding.checkBoxIncludeDeviceName.setOnCheckedChangeListener { _, isChecked ->
-            advertiserViewModel.includeDeviceName = isChecked
+            viewModel.includeDeviceName = isChecked
         }
 
         binding.checkBoxConnectable.setOnCheckedChangeListener { _, isChecked ->
-            advertiserViewModel.connectable = isChecked
+            viewModel.connectable = isChecked
         }
 
         binding.checkBoxDiscoverable.setOnCheckedChangeListener { _, isChecked ->
-            advertiserViewModel.discoverable = isChecked
+            viewModel.discoverable = isChecked
         }
 
         binding.buttonAddData.setOnClickListener {
@@ -124,7 +169,7 @@ class AdvertiserFragment : Fragment() {
         }
 
         advertiseDataAdapter = AdvertiseDataAdapter(
-            advertiserViewModel.advertiseData,
+            viewModel.advertiseData,
             ::onClickRemoveAdvertiseData
         )
         binding.recyclerViewAdvertiseData.adapter = advertiseDataAdapter
@@ -137,6 +182,16 @@ class AdvertiserFragment : Fragment() {
             }
         }
 
+        binding.buttonGattServer.setOnClickListener {
+            if (gattServerJob?.isActive == true) {
+                isGattServerOpen = false
+            } else {
+                openGattServer()
+            }
+        }
+
+        initData()
+
         return binding.root
     }
 
@@ -147,9 +202,20 @@ class AdvertiserFragment : Fragment() {
     }
 
     private fun initData() {
-        binding.checkBoxIncludeDeviceName.isChecked = advertiserViewModel.includeDeviceName
-        binding.checkBoxConnectable.isChecked = advertiserViewModel.connectable
-        binding.checkBoxDiscoverable.isChecked = advertiserViewModel.discoverable
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.BLUETOOTH_CONNECT
+            )
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            binding.textInputEditTextDisplayName.setText(
+                (requireContext().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager)
+                    .adapter.name
+            )
+        }
+        binding.checkBoxIncludeDeviceName.isChecked = viewModel.includeDeviceName
+        binding.checkBoxConnectable.isChecked = viewModel.connectable
+        binding.checkBoxDiscoverable.isChecked = viewModel.discoverable
     }
 
     private fun showDialogFor(title: String) {
@@ -170,7 +236,7 @@ class AdvertiserFragment : Fragment() {
             .setPositiveButton(getString(R.string.add)) { _, _ ->
                 val editTextInput = editText.text.toString()
 
-                advertiserViewModel.serviceUuids.add(UUID.fromString(editTextInput))
+                viewModel.serviceUuids.add(UUID.fromString(editTextInput))
                 refreshAdvertiseData()
             }
             .setNegativeButton(getString(R.string.cancel), null)
@@ -195,7 +261,7 @@ class AdvertiserFragment : Fragment() {
                     UUID.fromString(editTextUuidOrServiceNameInput),
                     editTextDataHexInput.toByteArray()
                 )
-                advertiserViewModel.serviceDatas.add(serviceData)
+                viewModel.serviceDatas.add(serviceData)
             }
             .setNegativeButton(getString(R.string.cancel), null)
             .create()
@@ -220,7 +286,7 @@ class AdvertiserFragment : Fragment() {
                     editText16BitCompanyIdentifierInput.toInt(),
                     editTextDataHexInput.toByteArray()
                 )
-                advertiserViewModel.manufacturerDatas.add(manufacturerData)
+                viewModel.manufacturerDatas.add(manufacturerData)
             }
             .setNegativeButton(getString(R.string.cancel), null)
             .create()
@@ -229,13 +295,13 @@ class AdvertiserFragment : Fragment() {
 
     @SuppressLint("NotifyDataSetChanged")
     private fun refreshAdvertiseData() {
-        advertiseDataAdapter?.advertiseData = advertiserViewModel.advertiseData
+        advertiseDataAdapter?.advertiseData = viewModel.advertiseData
         advertiseDataAdapter?.notifyDataSetChanged()
     }
 
     private fun onClickRemoveAdvertiseData(index: Int) {
-        advertiserViewModel.removeAdvertiseDataAtIndex(index)
-        advertiseDataAdapter?.advertiseData = advertiserViewModel.advertiseData
+        viewModel.removeAdvertiseDataAtIndex(index)
+        advertiseDataAdapter?.advertiseData = viewModel.advertiseData
         advertiseDataAdapter?.notifyItemRemoved(index)
     }
 
@@ -245,7 +311,7 @@ class AdvertiserFragment : Fragment() {
         advertiseJob = advertiseScope.launch {
             isAdvertising = true
 
-            bluetoothLe.advertise(advertiserViewModel.advertiseParams)
+            bluetoothLe.advertise(viewModel.advertiseParams)
                 .collect {
                     Log.d(TAG, "AdvertiseResult collected: $it")
 
@@ -271,6 +337,29 @@ class AdvertiserFragment : Fragment() {
                         }
                     }
                 }
+        }
+    }
+
+    private fun openGattServer() {
+        Log.d(TAG, "openGattServer() called")
+
+        val sampleService =
+            BluetoothGattService(UUID.randomUUID(), BluetoothGattService.SERVICE_TYPE_PRIMARY)
+        val sampleCharacteristic = BluetoothGattCharacteristic(
+            UUID.randomUUID(),
+            BluetoothGattCharacteristic.PROPERTY_READ,
+            BluetoothGattCharacteristic.PERMISSION_READ
+        )
+        sampleService.addCharacteristic(sampleCharacteristic)
+
+        val services = listOf(sampleService)
+
+        gattServerJob = gattServerScope.launch {
+            isGattServerOpen = true
+
+            bluetoothLeExperimental.gattServer(services).collect { gattServerCallback ->
+                Log.d(TAG, "openGattServer() called with: gattServerCallback = $gattServerCallback")
+            }
         }
     }
 }

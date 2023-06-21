@@ -21,16 +21,16 @@ import io.reactivex.Completable
 import io.reactivex.Flowable
 import io.reactivex.Single
 import io.reactivex.disposables.Disposable
+import io.reactivex.functions.Function
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.job
 import kotlinx.coroutines.rx2.asFlowable
 import kotlinx.coroutines.rx2.asSingle
 import kotlinx.coroutines.rx2.await
-import io.reactivex.functions.Function
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.job
 import kotlinx.coroutines.rx2.rxCompletable
 
 /**
@@ -48,11 +48,11 @@ public class RxDataStore<T : Any> private constructor(
     private val scope: CoroutineScope
 ) : Disposable {
 
-    /**
-     * @hide for datastore-preferences-rxjava2 artifact only
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     companion object {
+        /**
+         * Visible for datastore-preferences-rxjava2 artifact only
+         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public fun <T : Any> create(delegateDs: DataStore<T>, scope: CoroutineScope):
             RxDataStore<T> {
                 return RxDataStore<T>(delegateDs, scope)

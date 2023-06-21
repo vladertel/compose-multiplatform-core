@@ -32,7 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
@@ -40,6 +39,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.AutoCenteringParams
@@ -49,6 +50,11 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyListScope
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.foundation.lazy.ScalingParams
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.integration.demos.common.ActivityDemo
+import androidx.wear.compose.integration.demos.common.ComposableDemo
+import androidx.wear.compose.integration.demos.common.Demo
+import androidx.wear.compose.integration.demos.common.DemoCategory
+import androidx.wear.compose.integration.demos.common.DemoParameters
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.ListHeader
@@ -136,7 +142,8 @@ internal fun BoxScope.DisplayDemoList(
                     style = MaterialTheme.typography.caption1,
                     color = Color.White,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().semantics { heading() }
+
                 )
             }
         }
@@ -154,13 +161,13 @@ internal fun BoxScope.DisplayDemoList(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            if (demo.description != null) {
+            demo.description?.let { description ->
                 item {
                     CompositionLocalProvider(
                         LocalTextStyle provides MaterialTheme.typography.caption3
                     ) {
                         Text(
-                            text = demo.description,
+                            text = description,
                             modifier = Modifier.fillMaxWidth().align(Alignment.Center),
                             textAlign = TextAlign.Center
                         )
@@ -187,7 +194,6 @@ internal fun swipeDismissStateWithNavigation(
 
 internal data class TimestampedDelta(val time: Long, val delta: Float)
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Suppress("ComposableModifierFactory")
 @Composable
 fun Modifier.rsbScroll(

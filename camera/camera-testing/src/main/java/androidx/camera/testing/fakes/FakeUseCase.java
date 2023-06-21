@@ -73,6 +73,7 @@ public class FakeUseCase extends UseCase {
     public FakeUseCase() {
         this(new FakeUseCaseConfig.Builder()
                 .setSurfaceOccupancyPriority(DEFAULT_SURFACE_OCCUPANCY_PRIORITY)
+                .setCaptureType(CaptureType.PREVIEW)
                 .getUseCaseConfig());
     }
 
@@ -85,6 +86,7 @@ public class FakeUseCase extends UseCase {
     @Override
     public UseCaseConfig.Builder<?, ?, ?> getUseCaseConfigBuilder(@NonNull Config config) {
         return new FakeUseCaseConfig.Builder(config)
+                .setCaptureType(mCaptureType)
                 .setSessionOptionUnpacker((resolution, useCaseConfig, sessionConfigBuilder) -> {
                 });
     }

@@ -43,7 +43,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -187,7 +187,7 @@ fun RowScope.NavigationBarItem(
         }
     }
 
-    var itemWidth by remember { mutableStateOf(0) }
+    var itemWidth by remember { mutableIntStateOf(0) }
 
     Box(
         modifier
@@ -331,15 +331,28 @@ object NavigationBarItemDefaults {
     )
 }
 
+/**
+ * Represents the colors of the various elements of a navigation item.
+ *
+ * @constructor create an instance with arbitrary colors.
+ *
+ * @param selectedIconColor the color to use for the icon when the item is selected.
+ * @param selectedTextColor the color to use for the text label when the item is selected.
+ * @param selectedIndicatorColor the color to use for the indicator when the item is selected.
+ * @param unselectedIconColor the color to use for the icon when the item is unselected.
+ * @param unselectedTextColor the color to use for the text label when the item is unselected.
+ * @param disabledIconColor the color to use for the icon when the item is disabled.
+ * @param disabledTextColor the color to use for the text label when the item is disabled.
+*/
 @Stable
-class NavigationBarItemColors internal constructor(
-    private val selectedIconColor: Color,
-    private val selectedTextColor: Color,
-    private val selectedIndicatorColor: Color,
-    private val unselectedIconColor: Color,
-    private val unselectedTextColor: Color,
-    private val disabledIconColor: Color,
-    private val disabledTextColor: Color,
+class NavigationBarItemColors constructor(
+    val selectedIconColor: Color,
+    val selectedTextColor: Color,
+    val selectedIndicatorColor: Color,
+    val unselectedIconColor: Color,
+    val unselectedTextColor: Color,
+    val disabledIconColor: Color,
+    val disabledTextColor: Color,
 ) {
     /**
      * Represents the icon color for this item, depending on whether it is [selected].
@@ -535,8 +548,8 @@ private fun MeasureScope.placeIcon(
  * [animationProgress].
  *
  * When [alwaysShowLabel] is true, the positions do not move. The [iconPlaceable] will be placed
- * near the top of the item and the [labelPlaceable] will be placed near the bottom, according to
- * the spec.
+ * near the top of the item and the [labelPlaceable] will be placed beneath it with padding,
+ * according to the spec.
  *
  * When [animationProgress] is 1 (representing the selected state), the positions will be the same
  * as above.
@@ -573,11 +586,13 @@ private fun MeasureScope.placeLabelAndIcon(
 ): MeasureResult {
     val height = constraints.maxHeight
 
-    // Label should be `ItemVerticalPadding` from the bottom
-    val labelY = height - labelPlaceable.height - NavigationBarItemVerticalPadding.roundToPx()
+    val contentTotalHeight = iconPlaceable.height + IndicatorVerticalPadding.roundToPx() +
+        NavigationBarIndicatorToLabelPadding.roundToPx() + labelPlaceable.height
+    val contentVerticalPadding = ((height - contentTotalHeight) / 2)
+        .coerceAtLeast(IndicatorVerticalPadding.roundToPx())
 
-    // Icon (when selected) should be `ItemVerticalPadding` from the top
-    val selectedIconY = NavigationBarItemVerticalPadding.roundToPx()
+    // Icon (when selected) should be `contentVerticalPadding` from top
+    val selectedIconY = contentVerticalPadding
     val unselectedIconY =
         if (alwaysShowLabel) selectedIconY else (height - iconPlaceable.height) / 2
 
@@ -587,6 +602,10 @@ private fun MeasureScope.placeLabelAndIcon(
     // The interpolated fraction of iconDistance that all placeables need to move based on
     // animationProgress.
     val offset = (iconDistance * (1 - animationProgress)).roundToInt()
+
+    // Label should be fixed padding below icon
+    val labelY = selectedIconY + iconPlaceable.height + IndicatorVerticalPadding.roundToPx() +
+        NavigationBarIndicatorToLabelPadding.roundToPx()
 
     val containerWidth = constraints.maxWidth
 
@@ -626,12 +645,13 @@ private const val ItemAnimationDurationMillis: Int = 100
 internal val NavigationBarItemHorizontalPadding: Dp = 8.dp
 
 /*@VisibleForTesting*/
-internal val NavigationBarItemVerticalPadding: Dp = 16.dp
+internal val NavigationBarIndicatorToLabelPadding: Dp = 4.dp
 
 private val IndicatorHorizontalPadding: Dp =
     (NavigationBarTokens.ActiveIndicatorWidth - NavigationBarTokens.IconSize) / 2
 
-private val IndicatorVerticalPadding: Dp =
+/*@VisibleForTesting*/
+internal val IndicatorVerticalPadding: Dp =
     (NavigationBarTokens.ActiveIndicatorHeight - NavigationBarTokens.IconSize) / 2
 
 private val IndicatorVerticalOffset: Dp = 12.dp

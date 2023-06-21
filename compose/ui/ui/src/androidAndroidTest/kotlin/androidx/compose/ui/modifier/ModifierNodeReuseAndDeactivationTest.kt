@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalComposeUiApi::class)
-
 package androidx.compose.ui.modifier
 
 import androidx.compose.runtime.Applier
@@ -43,7 +41,7 @@ import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.ModifierNodeElement
-import androidx.compose.ui.node.ObserverNode
+import androidx.compose.ui.node.ObserverModifierNode
 import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertLeftPositionInRootIsEqualTo
@@ -339,7 +337,7 @@ class ModifierNodeReuseAndDeactivationTest {
             ReusableContentHost(active) {
                 ReusableContent(reuseKey) {
                     Layout(
-                        modifier = StatelessModifierElement(onInvalidate),
+                        modifier = StatelessElement(onInvalidate),
                         measurePolicy = MeasurePolicy
                     )
                 }
@@ -376,7 +374,7 @@ class ModifierNodeReuseAndDeactivationTest {
             ReusableContentHost(active) {
                 ReusableContent(reuseKey) {
                     Layout(
-                        modifier = StatelessModifierElement(onInvalidate, size),
+                        modifier = StatelessElement(onInvalidate, size),
                         measurePolicy = MeasurePolicy
                     )
                 }
@@ -411,7 +409,7 @@ class ModifierNodeReuseAndDeactivationTest {
         rule.setContent {
             ReusableContent(reuseKey) {
                 Layout(
-                    modifier = DelegatingModifierElement(onReset),
+                    modifier = DelegatingElement(onReset),
                     measurePolicy = MeasurePolicy
                 )
             }
@@ -443,7 +441,7 @@ class ModifierNodeReuseAndDeactivationTest {
             ReusableContentHost(active) {
                 ReusableContent(0) {
                     Layout(
-                        modifier = LayerModifierElement(layerBlock),
+                        modifier = LayerElement(layerBlock),
                         measurePolicy = MeasurePolicy
                     )
                 }
@@ -490,7 +488,7 @@ class ModifierNodeReuseAndDeactivationTest {
             ReusableContentHost(active) {
                 ReusableContent(0) {
                     Layout(
-                        modifier = LayoutModifierElement(measureBlock),
+                        modifier = LayoutElement(measureBlock),
                         measurePolicy = MeasurePolicy
                     )
                 }
@@ -620,7 +618,7 @@ class ModifierNodeReuseAndDeactivationTest {
             ReusableContentHost(active) {
                 ReusableContent(0) {
                     Layout(
-                        modifier = DrawModifierElement(drawBlock),
+                        modifier = DrawElement(drawBlock),
                         measurePolicy = MeasurePolicy
                     )
                 }
@@ -750,7 +748,7 @@ class ModifierNodeReuseAndDeactivationTest {
             ReusableContentHost(active) {
                 ReusableContent(0) {
                     Layout(
-                        modifier = ObserverModifierElement(observedBlock),
+                        modifier = ObserverElement(observedBlock),
                         measurePolicy = MeasurePolicy
                     )
                 }
@@ -792,6 +790,7 @@ class ModifierNodeReuseAndDeactivationTest {
         rule.setContent {
             ReusableContentHost(active) {
                 ReusableContent(0) {
+                    @OptIn(ExperimentalComposeUiApi::class)
                     Layout(
                         modifier = Modifier
                             .modifierLocalProvider(key) { providedValue }
@@ -923,10 +922,10 @@ private val MeasurePolicy = MeasurePolicy { _, _ ->
     layout(100, 100) { }
 }
 
-private data class StatelessModifierElement(
+private data class StatelessElement(
     private val onInvalidate: () -> Unit,
     private val size: Int = 10
-) : ModifierNodeElement<StatelessModifierElement.Node>() {
+) : ModifierNodeElement<StatelessElement.Node>() {
     override fun create() = Node(size, onInvalidate)
 
     override fun update(node: Node) {
@@ -948,9 +947,9 @@ private data class StatelessModifierElement(
     }
 }
 
-private data class DelegatingModifierElement(
+private data class DelegatingElement(
     private val onDelegatedNodeReset: () -> Unit,
-) : ModifierNodeElement<DelegatingModifierElement.Node>() {
+) : ModifierNodeElement<DelegatingElement.Node>() {
     override fun create() = Node(onDelegatedNodeReset)
 
     override fun update(node: Node) {
@@ -968,9 +967,9 @@ private data class DelegatingModifierElement(
     }
 }
 
-private data class LayerModifierElement(
+private data class LayerElement(
     private val layerBlock: () -> Unit,
-) : ModifierNodeElement<LayerModifierElement.Node>() {
+) : ModifierNodeElement<LayerElement.Node>() {
     override fun create() = Node(layerBlock)
 
     override fun update(node: Node) {
@@ -992,16 +991,16 @@ private data class LayerModifierElement(
     }
 }
 
-private data class ObserverModifierElement(
+private data class ObserverElement(
     private val observedBlock: () -> Unit,
-) : ModifierNodeElement<ObserverModifierElement.Node>() {
+) : ModifierNodeElement<ObserverElement.Node>() {
     override fun create() = Node(observedBlock)
 
     override fun update(node: Node) {
         node.observedBlock = observedBlock
     }
 
-    class Node(var observedBlock: () -> Unit) : Modifier.Node(), ObserverNode {
+    class Node(var observedBlock: () -> Unit) : Modifier.Node(), ObserverModifierNode {
 
         override fun onAttach() {
             observe()
@@ -1019,9 +1018,9 @@ private data class ObserverModifierElement(
     }
 }
 
-private data class LayoutModifierElement(
+private data class LayoutElement(
     private val measureBlock: () -> Unit,
-) : ModifierNodeElement<LayoutModifierElement.Node>() {
+) : ModifierNodeElement<LayoutElement.Node>() {
     override fun create() = Node(measureBlock)
 
     override fun update(node: Node) {
@@ -1057,9 +1056,9 @@ private data class OldLayoutModifier(
     }
 }
 
-private data class DrawModifierElement(
+private data class DrawElement(
     private val drawBlock: () -> Unit,
-) : ModifierNodeElement<DrawModifierElement.Node>() {
+) : ModifierNodeElement<DrawElement.Node>() {
     override fun create() = Node(drawBlock)
 
     override fun update(node: Node) {

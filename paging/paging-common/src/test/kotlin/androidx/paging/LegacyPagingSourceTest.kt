@@ -16,29 +16,26 @@
 
 package androidx.paging
 
+import androidx.kruth.assertThat
 import androidx.paging.PagingSource.LoadResult.Page
-import com.google.common.truth.Truth.assertThat
+import java.util.concurrent.Executors
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlin.test.fail
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
-import org.junit.Assert
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
-import java.util.concurrent.Executors
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(JUnit4::class)
 class LegacyPagingSourceTest {
     private val fakePagingState = PagingState(
         pages = listOf(
@@ -93,21 +90,21 @@ class LegacyPagingSourceTest {
                 params: LoadInitialParams<Int>,
                 callback: LoadInitialCallback<String>
             ) {
-                Assert.fail("loadInitial not expected")
+                fail("loadInitial not expected")
             }
 
             override fun loadAfter(
                 params: LoadParams<Int>,
                 callback: LoadCallback<String>
             ) {
-                Assert.fail("loadAfter not expected")
+                fail("loadAfter not expected")
             }
 
             override fun loadBefore(
                 params: LoadParams<Int>,
                 callback: LoadCallback<String>
             ) {
-                Assert.fail("loadBefore not expected")
+                fail("loadBefore not expected")
             }
 
             override fun getKey(item: String) = item.hashCode()
@@ -141,21 +138,21 @@ class LegacyPagingSourceTest {
                 params: LoadInitialParams<Int>,
                 callback: LoadInitialCallback<Int, String>
             ) {
-                Assert.fail("loadInitial not expected")
+                fail("loadInitial not expected")
             }
 
             override fun loadBefore(
                 params: LoadParams<Int>,
                 callback: LoadCallback<Int, String>
             ) {
-                Assert.fail("loadBefore not expected")
+                fail("loadBefore not expected")
             }
 
             override fun loadAfter(
                 params: LoadParams<Int>,
                 callback: LoadCallback<Int, String>
             ) {
-                Assert.fail("loadAfter not expected")
+                fail("loadAfter not expected")
             }
         }
         val pagingSource = LegacyPagingSource(
@@ -290,7 +287,7 @@ class LegacyPagingSourceTest {
 
     @Suppress("DEPRECATION")
     @Test
-    fun createDataSourceOnFetchDispatcher() {
+    fun createDataSourceOnFetchDispatcher() = runTest {
         val methodCalls = mutableMapOf<String, MutableList<Thread>>()
 
         val dataSourceFactory = object : DataSource.Factory<Int, String>() {
@@ -320,14 +317,12 @@ class LegacyPagingSourceTest {
         )
         // collect from pager. we take only 2 paging data generations and only take 1 PageEvent
         // from them
-        runBlocking {
-            pager.flow.take(2).collectLatest { pagingData ->
-                // wait until first insert happens
-                pagingData.flow.filter {
-                    it is PageEvent.Insert
-                }.first()
-                pagingData.uiReceiver.refresh()
-            }
+        pager.flow.take(2).collectLatest { pagingData ->
+            // wait until first insert happens
+            pagingData.flow.filter {
+                it is PageEvent.Insert
+            }.first()
+            pagingData.uiReceiver.refresh()
         }
         // validate method calls (to ensure test did run as expected) and their threads.
         assertThat(methodCalls["<init>"]).hasSize(2)
@@ -391,14 +386,14 @@ class LegacyPagingSourceTest {
                 callback: LoadInitialCallback<String>
             ) {
                 if (!expectInitialLoad) {
-                    Assert.fail("loadInitial not expected")
+                    fail("loadInitial not expected")
                 } else {
                     callback.onResult(listOf(), 0)
                 }
             }
 
             override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<String>) {
-                Assert.fail("loadRange not expected")
+                fail("loadRange not expected")
             }
         }
 

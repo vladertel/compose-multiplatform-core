@@ -455,7 +455,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                   A(%composer, 0)
                   if (condition) {
                     sourceInformationMarkerEnd(%composer)
-                    return
+                    return@M3
                   }
                   A(%composer, 0)
                   sourceInformationMarkerEnd(%composer)
@@ -504,7 +504,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                         if (isTraceInProgress()) {
                           traceEventEnd()
                         }
-                        return
+                        return@composableLambdaInstance
                       }
                       sourceInformationMarkerEnd(%composer)
                     }, %composer, 0)
@@ -575,7 +575,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                     sourceInformationMarkerStart(%composer, <>, "C:Test.kt")
                     if (condition) {
                       sourceInformationMarkerEnd(%composer)
-                      return
+                      return@M1
                     }
                     sourceInformationMarkerEnd(%composer)
                   }, %composer, 0)
@@ -636,7 +636,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                     sourceInformationMarkerStart(%composer, <>, "C:Test.kt")
                     if (condition) {
                       %composer.endToMarker(tmp0_marker)
-                      return
+                      return@M3
                     }
                     sourceInformationMarkerEnd(%composer)
                   }, %composer, 0)
@@ -773,7 +773,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                   A(%composer, 0)
                   if (condition) {
                     sourceInformationMarkerEnd(%composer)
-                    return
+                    return@M3
                   }
                   A(%composer, 0)
                   sourceInformationMarkerEnd(%composer)
@@ -783,7 +783,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                   A(%composer, 0)
                   if (condition) {
                     sourceInformationMarkerEnd(%composer)
-                    return
+                    return@M3
                   }
                   A(%composer, 0)
                   sourceInformationMarkerEnd(%composer)
@@ -908,7 +908,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                 sourceInformationMarkerStart(%composer, <>, "C<A()>:Test.kt")
                 if (condition) {
                   sourceInformationMarkerEnd(%composer)
-                  return
+                  return@FakeBox
                 }
                 A(%composer, 0)
                 sourceInformationMarkerEnd(%composer)
@@ -1081,7 +1081,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                   sourceInformationMarkerStart(%composer, <>, "C<A()>:Test.kt")
                   if (condition) {
                     sourceInformationMarkerEnd(%composer)
-                    return
+                    return@IW
                   }
                   A(%composer, 0)
                   sourceInformationMarkerEnd(%composer)
@@ -1242,7 +1242,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                   Identity {
                     if (condition) {
                       sourceInformationMarkerEnd(%composer)
-                      return
+                      return@M1
                     }
                   }
                   sourceInformationMarkerEnd(%composer)
@@ -6175,7 +6175,7 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
                     sourceInformationMarkerStart(%composer, <>, "C:Test.kt")
                     if (true) {
                       %composer.endToMarker(tmp0_marker)
-                      return
+                      return@Inline1
                     }
                     sourceInformationMarkerEnd(%composer)
                   }, %composer, 0)
@@ -6340,6 +6340,73 @@ class ControlFlowTransformTests : AbstractControlFlowTransformTests() {
              }
            }
         """.trimIndent(),
-        dumpTree = true
+    )
+
+    @Test
+    fun testEarlyReturnFromWhenStatement() = verifyComposeIrTransform(
+        source = """
+            import androidx.compose.runtime.*
+
+            @Composable
+            private fun Test(param: String?) {
+                val state = remember { mutableStateOf(false) }
+                when (state.value) {
+                    true -> return Text(text = "true")
+                    else -> Text(text = "false")
+                }
+            }
+        """,
+        extra = """
+            import androidx.compose.runtime.*
+
+            @Composable fun Text(text: String) {}
+        """,
+        expectedTransformed = """
+            @Composable
+            private fun Test(param: String?, %composer: Composer?, %changed: Int) {
+              %composer = %composer.startRestartGroup(<>)
+              sourceInformation(%composer, "C(Test)<rememb...>:Test.kt")
+              if (%changed and 0b0001 !== 0 || !%composer.skipping) {
+                if (isTraceInProgress()) {
+                  traceEventStart(<>, %changed, -1, <>)
+                }
+                val state = remember({
+                  mutableStateOf(
+                    value = false
+                  )
+                }, %composer, 0)
+                val tmp0_subject = state.value
+                when {
+                  tmp0_subject == true -> {
+                    %composer.startReplaceableGroup(<>)
+                    sourceInformation(%composer, "<Text(t...>")
+                    val tmp0_return = Text("true", %composer, 0b0110)
+                    %composer.endReplaceableGroup()
+                    if (isTraceInProgress()) {
+                      traceEventEnd()
+                    }
+                    %composer.endRestartGroup()?.updateScope { %composer: Composer?, %force: Int ->
+                      Test(param, %composer, updateChangedFlags(%changed or 0b0001))
+                    }
+                    return tmp0_return
+                  }
+                  else -> {
+                    %composer.startReplaceableGroup(<>)
+                    sourceInformation(%composer, "<Text(t...>")
+                    Text("false", %composer, 0b0110)
+                    %composer.endReplaceableGroup()
+                  }
+                }
+                if (isTraceInProgress()) {
+                  traceEventEnd()
+                }
+              } else {
+                %composer.skipToGroupEnd()
+              }
+              %composer.endRestartGroup()?.updateScope { %composer: Composer?, %force: Int ->
+                Test(param, %composer, updateChangedFlags(%changed or 0b0001))
+              }
+            }
+        """.trimIndent(),
     )
 }

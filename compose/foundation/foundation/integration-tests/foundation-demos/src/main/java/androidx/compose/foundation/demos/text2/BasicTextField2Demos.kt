@@ -19,6 +19,7 @@ package androidx.compose.foundation.demos.text2
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.demos.text.TagLine
+import androidx.compose.foundation.demos.text.fontSize8
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
@@ -30,10 +31,11 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 
 @Composable
 fun BasicTextField2Demos() {
@@ -67,7 +69,7 @@ fun SingleLineBasicTextField2() {
     BasicTextField2(
         state = state,
         modifier = demoTextFieldModifiers,
-        textStyle = LocalTextStyle.current,
+        textStyle = TextStyle(fontSize = fontSize8),
         lineLimits = TextFieldLineLimits.SingleLine
     )
 }
@@ -75,7 +77,7 @@ fun SingleLineBasicTextField2() {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StateTogglingBasicTextField2() {
-    var counter by remember { mutableStateOf(0) }
+    var counter by remember { mutableIntStateOf(0) }
     val states = remember { listOf(TextFieldState(), TextFieldState()) }
     val state = states[counter]
     Text("Click to toggle state: $counter", modifier = Modifier.clickable {

@@ -18,6 +18,10 @@ package androidx.compose.foundation.lazy.list
 
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.scrollBy
@@ -45,7 +49,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -65,14 +71,15 @@ import androidx.compose.ui.unit.round
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runners.Parameterized
-import kotlin.math.roundToInt
 import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
@@ -81,6 +88,7 @@ class LazyListAnimateItemPlacementTest(private val config: Config) {
 
     private val isVertical: Boolean get() = config.isVertical
     private val reverseLayout: Boolean get() = config.reverseLayout
+    private val isInLookaheadScope: Boolean get() = config.isInLookaheadScope
 
     @get:Rule
     val rule = createComposeRule()
@@ -1703,6 +1711,58 @@ class LazyListAnimateItemPlacementTest(private val config: Config) {
         }
     }
 
+    @Test
+    fun interruptedSizeChange() {
+        var item0Size by mutableStateOf(itemSizeDp)
+        val animSpec = spring(visibilityThreshold = IntOffset.VisibilityThreshold)
+        rule.setContent {
+            LazyList {
+                items(2, key = { it }) {
+                    Item(it, if (it == 0) item0Size else itemSizeDp, animSpec = animSpec)
+                }
+            }
+        }
+
+        rule.runOnUiThread {
+            item0Size = itemSize2Dp
+        }
+
+        rule.waitForIdle()
+        rule.mainClock.advanceTimeByFrame()
+        onAnimationFrame(duration = FrameDuration) { fraction ->
+            if (fraction == 0f) {
+                assertPositions(0 to 0f, 1 to itemSize)
+            } else {
+                assertThat(fraction).isEqualTo(1f)
+                val valueAfterOneFrame =
+                    animSpec.getValueAtFrame(1, from = itemSize, to = itemSize2)
+                assertPositions(0 to 0f, 1 to valueAfterOneFrame, fraction = fraction)
+            }
+        }
+
+        rule.runOnUiThread {
+            item0Size = 0.dp
+        }
+
+        rule.waitForIdle()
+        val startValue = animSpec.getValueAtFrame(2, from = itemSize, to = itemSize2)
+        val startVelocity = animSpec.getVelocityAtFrame(2, from = itemSize, to = itemSize2)
+        onAnimationFrame(duration = FrameDuration) { fraction ->
+            if (fraction == 0f) {
+                assertPositions(0 to 0f, 1 to startValue)
+            } else {
+                assertThat(fraction).isEqualTo(1f)
+                val valueAfterThreeFrames = animSpec.getValueAtFrame(
+                    1,
+                    from = startValue,
+                    to = 0f,
+                    initialVelocity = startVelocity
+                )
+                assertPositions(0 to 0f, 1 to valueAfterThreeFrames)
+            }
+        }
+    }
+
     private fun assertPositions(
         vararg expected: Pair<Any, Float>,
         crossAxis: List<Pair<Any, Float>>? = null,
@@ -1777,12 +1837,15 @@ class LazyListAnimateItemPlacementTest(private val config: Config) {
         for (i in 0..duration step FrameDuration) {
             val fraction = i / duration.toFloat()
             onFrame(fraction)
-            rule.mainClock.advanceTimeBy(FrameDuration)
-            expectedTime += FrameDuration
-            assertThat(expectedTime).isEqualTo(rule.mainClock.currentTime)
+            if (i < duration) {
+                rule.mainClock.advanceTimeBy(FrameDuration)
+                expectedTime += FrameDuration
+                assertThat(expectedTime).isEqualTo(rule.mainClock.currentTime)
+            }
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     private fun LazyList(
         arrangement: Arrangement.HorizontalOrVertical? = null,
@@ -1795,63 +1858,70 @@ class LazyListAnimateItemPlacementTest(private val config: Config) {
         endPadding: Dp = 0.dp,
         content: LazyListScope.() -> Unit
     ) {
-        state = rememberLazyListState(startIndex)
-        if (isVertical) {
-            val verticalArrangement =
-                arrangement ?: if (!reverseLayout) Arrangement.Top else Arrangement.Bottom
-            val horizontalAlignment = if (crossAxisAlignment == CrossAxisAlignment.Start) {
-                Alignment.Start
-            } else if (crossAxisAlignment == CrossAxisAlignment.Center) {
-                Alignment.CenterHorizontally
-            } else {
-                Alignment.End
-            }
-            LazyColumn(
-                state = state,
-                modifier = Modifier
-                    .requiredHeightIn(min = minSize, max = maxSize)
-                    .then(
-                        if (crossAxisSize != Dp.Unspecified) {
-                            Modifier.requiredWidth(crossAxisSize)
-                        } else {
-                            Modifier.fillMaxWidth()
-                        }
-                    )
-                    .testTag(ContainerTag),
-                verticalArrangement = verticalArrangement,
-                horizontalAlignment = horizontalAlignment,
-                reverseLayout = reverseLayout,
-                contentPadding = PaddingValues(top = startPadding, bottom = endPadding),
-                content = content
-            )
+        val container: @Composable (@Composable () -> Unit) -> Unit = if (isInLookaheadScope) {
+            { LookaheadScope { it() } }
         } else {
-            val horizontalArrangement =
-                arrangement ?: if (!reverseLayout) Arrangement.Start else Arrangement.End
-            val verticalAlignment = if (crossAxisAlignment == CrossAxisAlignment.Start) {
-                Alignment.Top
-            } else if (crossAxisAlignment == CrossAxisAlignment.Center) {
-                Alignment.CenterVertically
+            { it() }
+        }
+        container {
+            state = rememberLazyListState(startIndex)
+            if (isVertical) {
+                val verticalArrangement =
+                    arrangement ?: if (!reverseLayout) Arrangement.Top else Arrangement.Bottom
+                val horizontalAlignment = if (crossAxisAlignment == CrossAxisAlignment.Start) {
+                    Alignment.Start
+                } else if (crossAxisAlignment == CrossAxisAlignment.Center) {
+                    Alignment.CenterHorizontally
+                } else {
+                    Alignment.End
+                }
+                LazyColumn(
+                    state = state,
+                    modifier = Modifier
+                        .requiredHeightIn(min = minSize, max = maxSize)
+                        .then(
+                            if (crossAxisSize != Dp.Unspecified) {
+                                Modifier.requiredWidth(crossAxisSize)
+                            } else {
+                                Modifier.fillMaxWidth()
+                            }
+                        )
+                        .testTag(ContainerTag),
+                    verticalArrangement = verticalArrangement,
+                    horizontalAlignment = horizontalAlignment,
+                    reverseLayout = reverseLayout,
+                    contentPadding = PaddingValues(top = startPadding, bottom = endPadding),
+                    content = content
+                )
             } else {
-                Alignment.Bottom
+                val horizontalArrangement =
+                    arrangement ?: if (!reverseLayout) Arrangement.Start else Arrangement.End
+                val verticalAlignment = if (crossAxisAlignment == CrossAxisAlignment.Start) {
+                    Alignment.Top
+                } else if (crossAxisAlignment == CrossAxisAlignment.Center) {
+                    Alignment.CenterVertically
+                } else {
+                    Alignment.Bottom
+                }
+                LazyRow(
+                    state = state,
+                    modifier = Modifier
+                        .requiredWidthIn(min = minSize, max = maxSize)
+                        .then(
+                            if (crossAxisSize != Dp.Unspecified) {
+                                Modifier.requiredHeight(crossAxisSize)
+                            } else {
+                                Modifier.fillMaxHeight()
+                            }
+                        )
+                        .testTag(ContainerTag),
+                    horizontalArrangement = horizontalArrangement,
+                    verticalAlignment = verticalAlignment,
+                    reverseLayout = reverseLayout,
+                    contentPadding = PaddingValues(start = startPadding, end = endPadding),
+                    content = content
+                )
             }
-            LazyRow(
-                state = state,
-                modifier = Modifier
-                    .requiredWidthIn(min = minSize, max = maxSize)
-                    .then(
-                        if (crossAxisSize != Dp.Unspecified) {
-                            Modifier.requiredHeight(crossAxisSize)
-                        } else {
-                            Modifier.fillMaxHeight()
-                        }
-                    )
-                    .testTag(ContainerTag),
-                horizontalArrangement = horizontalArrangement,
-                verticalAlignment = verticalAlignment,
-                reverseLayout = reverseLayout,
-                contentPadding = PaddingValues(start = startPadding, end = endPadding),
-                content = content
-            )
         }
     }
 
@@ -1893,19 +1963,22 @@ class LazyListAnimateItemPlacementTest(private val config: Config) {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun params() = arrayOf(
-            Config(isVertical = true, reverseLayout = false),
-            Config(isVertical = false, reverseLayout = false),
-            Config(isVertical = true, reverseLayout = true),
-            Config(isVertical = false, reverseLayout = true),
+            Config(isVertical = true, reverseLayout = false, isInLookaheadScope = false),
+            Config(isVertical = false, reverseLayout = false, isInLookaheadScope = false),
+            Config(isVertical = true, reverseLayout = true, isInLookaheadScope = false),
+            Config(isVertical = false, reverseLayout = true, isInLookaheadScope = false),
+            Config(isVertical = true, reverseLayout = false, isInLookaheadScope = true)
         )
 
         class Config(
             val isVertical: Boolean,
-            val reverseLayout: Boolean
+            val reverseLayout: Boolean,
+            val isInLookaheadScope: Boolean
         ) {
             override fun toString() =
                 (if (isVertical) "LazyColumn" else "LazyRow") +
-                    (if (reverseLayout) "(reverse)" else "")
+                    (if (reverseLayout) "(reverse)" else "") +
+                    (if (isInLookaheadScope) "(in LookaheadScope)" else "")
         }
     }
 }
@@ -1922,4 +1995,52 @@ private enum class CrossAxisAlignment {
     Start,
     End,
     Center
+}
+
+internal fun SpringSpec<IntOffset>.getValueAtFrame(
+    frameCount: Int,
+    from: Float,
+    to: Float,
+    initialVelocity: IntOffset = IntOffset.Zero
+): Float {
+    val frameInNanos = TimeUnit.MILLISECONDS.toNanos(FrameDuration)
+    val vectorized = vectorize(converter = IntOffset.VectorConverter)
+    return IntOffset.VectorConverter.convertFromVector(
+        vectorized.getValueFromNanos(
+            playTimeNanos = frameInNanos * frameCount,
+            initialValue = IntOffset.VectorConverter.convertToVector(
+                IntOffset(0, from.toInt())
+            ),
+            targetValue = IntOffset.VectorConverter.convertToVector(
+                IntOffset(0, to.toInt())
+            ),
+            initialVelocity = IntOffset.VectorConverter.convertToVector(
+                initialVelocity
+            )
+        )
+    ).y.toFloat()
+}
+
+internal fun SpringSpec<IntOffset>.getVelocityAtFrame(
+    frameCount: Int,
+    from: Float,
+    to: Float,
+    initialVelocity: IntOffset = IntOffset.Zero
+): IntOffset {
+    val frameInNanos = TimeUnit.MILLISECONDS.toNanos(FrameDuration)
+    val vectorized = vectorize(converter = IntOffset.VectorConverter)
+    return IntOffset.VectorConverter.convertFromVector(
+        vectorized.getVelocityFromNanos(
+            playTimeNanos = frameInNanos * frameCount,
+            initialValue = IntOffset.VectorConverter.convertToVector(
+                IntOffset(0, from.toInt())
+            ),
+            targetValue = IntOffset.VectorConverter.convertToVector(
+                IntOffset(0, to.toInt())
+            ),
+            initialVelocity = IntOffset.VectorConverter.convertToVector(
+                initialVelocity
+            )
+        )
+    )
 }

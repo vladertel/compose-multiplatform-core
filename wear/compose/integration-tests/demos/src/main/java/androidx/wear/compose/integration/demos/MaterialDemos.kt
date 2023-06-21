@@ -27,6 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.integration.demos.common.Centralize
+import androidx.wear.compose.integration.demos.common.ComposableDemo
+import androidx.wear.compose.integration.demos.common.DemoCategory
 import androidx.wear.compose.material.samples.AlertDialogSample
 import androidx.wear.compose.material.samples.AlertWithButtons
 import androidx.wear.compose.material.samples.AlertWithChips
@@ -36,9 +39,9 @@ import androidx.wear.compose.material.samples.AutoCenteringPickerGroup
 import androidx.wear.compose.material.samples.ButtonWithIcon
 import androidx.wear.compose.material.samples.ButtonWithText
 import androidx.wear.compose.material.samples.ChipWithIconAndLabel
-import androidx.wear.compose.material.samples.ChipWithIconAndLabelsAndOverlaidPlaceholder
 import androidx.wear.compose.material.samples.ChipWithIconAndLabelAndPlaceholders
 import androidx.wear.compose.material.samples.ChipWithIconAndLabels
+import androidx.wear.compose.material.samples.ChipWithIconAndLabelsAndOverlaidPlaceholder
 import androidx.wear.compose.material.samples.CircularProgressIndicatorFullscreenWithGap
 import androidx.wear.compose.material.samples.CircularProgressIndicatorWithAnimation
 import androidx.wear.compose.material.samples.CompactButtonWithIcon
@@ -118,6 +121,9 @@ internal val SwipeToDismissDemos =
                     ComposableDemo("EdgeSwipeToDismiss modifier") { params ->
                         EdgeSwipeDemo(params.swipeToDismissBoxState)
                     },
+                    ComposableDemo("Nested SwipeToDismissBox") {
+                        NestedSwipeToDismissDemo()
+                    }
                 )
             )
         )

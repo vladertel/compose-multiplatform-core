@@ -32,6 +32,21 @@ class TextAnnotatedStringNodeInvalidationTest : NodeInvalidationTestParent() {
         )
     }
 
+    override fun Any.invalidateAll() {
+        this as TextAnnotatedStringNode
+        doInvalidations(
+            drawChanged = true,
+            textChanged = true,
+            layoutChanged = true,
+            callbacksChanged = true
+        )
+    }
+
+    override fun Any.updateDrawArgs(drawParams: DrawParams): Boolean {
+        this as TextAnnotatedStringNode
+        return updateDraw(drawParams.color, drawParams.style)
+    }
+
     override fun createSubject(params: Params): Any {
         return TextAnnotatedStringNode(
             text = AnnotatedString(text = params.text),
@@ -42,6 +57,20 @@ class TextAnnotatedStringNodeInvalidationTest : NodeInvalidationTestParent() {
             softWrap = params.softWrap,
             maxLines = params.maxLines,
             minLines = params.minLines
+        )
+    }
+
+    override fun createSubject(params: Params, drawParams: DrawParams): Any {
+        return TextAnnotatedStringNode(
+            text = AnnotatedString(text = params.text),
+            style = params.style,
+            fontFamilyResolver = params.fontFamilyResolver,
+            onTextLayout = null,
+            overflow = params.overflow,
+            softWrap = params.softWrap,
+            maxLines = params.maxLines,
+            minLines = params.minLines,
+            overrideColor = drawParams.color
         )
     }
 }

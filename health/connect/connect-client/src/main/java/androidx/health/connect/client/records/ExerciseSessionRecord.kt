@@ -34,7 +34,9 @@ import java.time.ZoneOffset
  *
  * @sample androidx.health.connect.client.samples.ReadExerciseSessions
  */
-public class ExerciseSessionRecord(
+public class ExerciseSessionRecord
+@RestrictTo(RestrictTo.Scope.LIBRARY)
+constructor(
     override val startTime: Instant,
     override val startZoneOffset: ZoneOffset?,
     override val endTime: Instant,
@@ -46,10 +48,129 @@ public class ExerciseSessionRecord(
     /** Additional notes for the session. Optional field. */
     public val notes: String? = null,
     override val metadata: Metadata = Metadata.EMPTY,
+    /**
+     * [ExerciseSegment]s of the session. Optional field. Time in segments should be within the
+     * parent session, and should not overlap with each other.
+     */
+    public val segments: List<ExerciseSegment> = emptyList(),
+    /**
+     * [ExerciseLap]s of the session. Optional field. Time in laps should be within the parent
+     * session, and should not overlap with each other.
+     */
+    public val laps: List<ExerciseLap> = emptyList(),
+    @get:RestrictTo(RestrictTo.Scope.LIBRARY)
+    /** [ExerciseRoute]s of the session. Optional field. */
+    public val route: ExerciseRoute? = null,
+    @get:RestrictTo(RestrictTo.Scope.LIBRARY)
+    /**
+     * Indicates whether or not the underlying [ExerciseSessionRecord] has a route, even it's not
+     * present because lack of permission.
+     */
+    public val hasRoute: Boolean = false,
 ) : IntervalRecord {
+
+    public constructor(
+        startTime: Instant,
+        startZoneOffset: ZoneOffset?,
+        endTime: Instant,
+        endZoneOffset: ZoneOffset?,
+        /** Type of exercise (e.g. walking, swimming). Required field. */
+        exerciseType: Int,
+        /** Title of the session. Optional field. */
+        title: String? = null,
+        /** Additional notes for the session. Optional field. */
+        notes: String? = null,
+        metadata: Metadata = Metadata.EMPTY,
+        segments: List<ExerciseSegment> = emptyList(),
+        laps: List<ExerciseLap> = emptyList(),
+    ) : this(
+        startTime,
+        startZoneOffset,
+        endTime,
+        endZoneOffset,
+        exerciseType,
+        title,
+        notes,
+        metadata,
+        segments,
+        laps,
+        null
+    )
+
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public constructor(
+        startTime: Instant,
+        startZoneOffset: ZoneOffset?,
+        endTime: Instant,
+        endZoneOffset: ZoneOffset?,
+        /** Type of exercise (e.g. walking, swimming). Required field. */
+        exerciseType: Int,
+        /** Title of the session. Optional field. */
+        title: String? = null,
+        /** Additional notes for the session. Optional field. */
+        notes: String? = null,
+        metadata: Metadata = Metadata.EMPTY,
+        segments: List<ExerciseSegment> = emptyList(),
+        laps: List<ExerciseLap> = emptyList(),
+        route: ExerciseRoute? = null,
+    ) : this(
+        startTime,
+        startZoneOffset,
+        endTime,
+        endZoneOffset,
+        exerciseType,
+        title,
+        notes,
+        metadata,
+        segments,
+        laps,
+        route,
+        route != null
+    )
 
     init {
         require(startTime.isBefore(endTime)) { "startTime must be before endTime." }
+        if (segments.isNotEmpty()) {
+            var sortedSegments = segments.sortedWith { a, b -> a.startTime.compareTo(b.startTime) }
+            for (i in 0 until sortedSegments.lastIndex) {
+                require(!sortedSegments[i].endTime.isAfter(sortedSegments[i + 1].startTime)) {
+                    "segments can not overlap."
+                }
+            }
+            // check all segments are within parent session duration
+            require(!sortedSegments.first().startTime.isBefore(startTime)) {
+                "segments can not be out of parent time range."
+            }
+            require(!sortedSegments.last().endTime.isAfter(endTime)) {
+                "segments can not be out of parent time range."
+            }
+            for (segment in sortedSegments) {
+                require(segment.isCompatibleWith(exerciseType)) {
+                    "segmentType and sessionType is not compatible."
+                }
+            }
+        }
+        if (laps.isNotEmpty()) {
+            val sortedLaps = laps.sortedWith { a, b -> a.startTime.compareTo(b.startTime) }
+            for (i in 0 until sortedLaps.lastIndex) {
+                require(!sortedLaps[i].endTime.isAfter(sortedLaps[i + 1].startTime)) {
+                    "laps can not overlap."
+                }
+            }
+            // check all laps are within parent session duration
+            require(!sortedLaps.first().startTime.isBefore(startTime)) {
+                "laps can not be out of parent time range."
+            }
+            require(!sortedLaps.last().endTime.isAfter(endTime)) {
+                "laps can not be out of parent time range."
+            }
+        }
+        require(route == null || hasRoute) { "hasRoute must be true if the route is not null" }
+        if (route != null) {
+            require(route.isWithin(startTime, endTime)) {
+                "route can not be out of parent time range."
+            }
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -64,6 +185,10 @@ public class ExerciseSessionRecord(
         if (endTime != other.endTime) return false
         if (endZoneOffset != other.endZoneOffset) return false
         if (metadata != other.metadata) return false
+        if (segments != other.segments) return false
+        if (laps != other.laps) return false
+        if (route != other.route) return false
+        if (hasRoute != other.hasRoute) return false
 
         return true
     }
@@ -272,69 +397,69 @@ public class ExerciseSessionRecord(
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @IntDef(
         value =
-        [
-            EXERCISE_TYPE_BADMINTON,
-            EXERCISE_TYPE_BASEBALL,
-            EXERCISE_TYPE_BASKETBALL,
-            EXERCISE_TYPE_BIKING,
-            EXERCISE_TYPE_BIKING_STATIONARY,
-            EXERCISE_TYPE_BOOT_CAMP,
-            EXERCISE_TYPE_BOXING,
-            EXERCISE_TYPE_CALISTHENICS,
-            EXERCISE_TYPE_CRICKET,
-            EXERCISE_TYPE_DANCING,
-            EXERCISE_TYPE_ELLIPTICAL,
-            EXERCISE_TYPE_EXERCISE_CLASS,
-            EXERCISE_TYPE_FENCING,
-            EXERCISE_TYPE_FOOTBALL_AMERICAN,
-            EXERCISE_TYPE_FOOTBALL_AUSTRALIAN,
-            EXERCISE_TYPE_FRISBEE_DISC,
-            EXERCISE_TYPE_GOLF,
-            EXERCISE_TYPE_GUIDED_BREATHING,
-            EXERCISE_TYPE_GYMNASTICS,
-            EXERCISE_TYPE_HANDBALL,
-            EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING,
-            EXERCISE_TYPE_HIKING,
-            EXERCISE_TYPE_ICE_HOCKEY,
-            EXERCISE_TYPE_ICE_SKATING,
-            EXERCISE_TYPE_MARTIAL_ARTS,
-            EXERCISE_TYPE_PADDLING,
-            EXERCISE_TYPE_PARAGLIDING,
-            EXERCISE_TYPE_PILATES,
-            EXERCISE_TYPE_RACQUETBALL,
-            EXERCISE_TYPE_ROCK_CLIMBING,
-            EXERCISE_TYPE_ROLLER_HOCKEY,
-            EXERCISE_TYPE_ROWING,
-            EXERCISE_TYPE_ROWING_MACHINE,
-            EXERCISE_TYPE_RUGBY,
-            EXERCISE_TYPE_RUNNING,
-            EXERCISE_TYPE_RUNNING_TREADMILL,
-            EXERCISE_TYPE_SAILING,
-            EXERCISE_TYPE_SCUBA_DIVING,
-            EXERCISE_TYPE_SKATING,
-            EXERCISE_TYPE_SKIING,
-            EXERCISE_TYPE_SNOWBOARDING,
-            EXERCISE_TYPE_SNOWSHOEING,
-            EXERCISE_TYPE_SOCCER,
-            EXERCISE_TYPE_SOFTBALL,
-            EXERCISE_TYPE_SQUASH,
-            EXERCISE_TYPE_STAIR_CLIMBING,
-            EXERCISE_TYPE_STAIR_CLIMBING_MACHINE,
-            EXERCISE_TYPE_STRENGTH_TRAINING,
-            EXERCISE_TYPE_STRETCHING,
-            EXERCISE_TYPE_SURFING,
-            EXERCISE_TYPE_SWIMMING_OPEN_WATER,
-            EXERCISE_TYPE_SWIMMING_POOL,
-            EXERCISE_TYPE_TABLE_TENNIS,
-            EXERCISE_TYPE_TENNIS,
-            EXERCISE_TYPE_VOLLEYBALL,
-            EXERCISE_TYPE_WALKING,
-            EXERCISE_TYPE_WATER_POLO,
-            EXERCISE_TYPE_WEIGHTLIFTING,
-            EXERCISE_TYPE_WHEELCHAIR,
-            EXERCISE_TYPE_OTHER_WORKOUT,
-            EXERCISE_TYPE_YOGA,
-        ]
+            [
+                EXERCISE_TYPE_BADMINTON,
+                EXERCISE_TYPE_BASEBALL,
+                EXERCISE_TYPE_BASKETBALL,
+                EXERCISE_TYPE_BIKING,
+                EXERCISE_TYPE_BIKING_STATIONARY,
+                EXERCISE_TYPE_BOOT_CAMP,
+                EXERCISE_TYPE_BOXING,
+                EXERCISE_TYPE_CALISTHENICS,
+                EXERCISE_TYPE_CRICKET,
+                EXERCISE_TYPE_DANCING,
+                EXERCISE_TYPE_ELLIPTICAL,
+                EXERCISE_TYPE_EXERCISE_CLASS,
+                EXERCISE_TYPE_FENCING,
+                EXERCISE_TYPE_FOOTBALL_AMERICAN,
+                EXERCISE_TYPE_FOOTBALL_AUSTRALIAN,
+                EXERCISE_TYPE_FRISBEE_DISC,
+                EXERCISE_TYPE_GOLF,
+                EXERCISE_TYPE_GUIDED_BREATHING,
+                EXERCISE_TYPE_GYMNASTICS,
+                EXERCISE_TYPE_HANDBALL,
+                EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING,
+                EXERCISE_TYPE_HIKING,
+                EXERCISE_TYPE_ICE_HOCKEY,
+                EXERCISE_TYPE_ICE_SKATING,
+                EXERCISE_TYPE_MARTIAL_ARTS,
+                EXERCISE_TYPE_PADDLING,
+                EXERCISE_TYPE_PARAGLIDING,
+                EXERCISE_TYPE_PILATES,
+                EXERCISE_TYPE_RACQUETBALL,
+                EXERCISE_TYPE_ROCK_CLIMBING,
+                EXERCISE_TYPE_ROLLER_HOCKEY,
+                EXERCISE_TYPE_ROWING,
+                EXERCISE_TYPE_ROWING_MACHINE,
+                EXERCISE_TYPE_RUGBY,
+                EXERCISE_TYPE_RUNNING,
+                EXERCISE_TYPE_RUNNING_TREADMILL,
+                EXERCISE_TYPE_SAILING,
+                EXERCISE_TYPE_SCUBA_DIVING,
+                EXERCISE_TYPE_SKATING,
+                EXERCISE_TYPE_SKIING,
+                EXERCISE_TYPE_SNOWBOARDING,
+                EXERCISE_TYPE_SNOWSHOEING,
+                EXERCISE_TYPE_SOCCER,
+                EXERCISE_TYPE_SOFTBALL,
+                EXERCISE_TYPE_SQUASH,
+                EXERCISE_TYPE_STAIR_CLIMBING,
+                EXERCISE_TYPE_STAIR_CLIMBING_MACHINE,
+                EXERCISE_TYPE_STRENGTH_TRAINING,
+                EXERCISE_TYPE_STRETCHING,
+                EXERCISE_TYPE_SURFING,
+                EXERCISE_TYPE_SWIMMING_OPEN_WATER,
+                EXERCISE_TYPE_SWIMMING_POOL,
+                EXERCISE_TYPE_TABLE_TENNIS,
+                EXERCISE_TYPE_TENNIS,
+                EXERCISE_TYPE_VOLLEYBALL,
+                EXERCISE_TYPE_WALKING,
+                EXERCISE_TYPE_WATER_POLO,
+                EXERCISE_TYPE_WEIGHTLIFTING,
+                EXERCISE_TYPE_WHEELCHAIR,
+                EXERCISE_TYPE_OTHER_WORKOUT,
+                EXERCISE_TYPE_YOGA,
+            ]
     )
     annotation class ExerciseTypes
 }

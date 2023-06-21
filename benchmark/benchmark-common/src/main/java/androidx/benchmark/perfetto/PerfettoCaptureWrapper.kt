@@ -54,23 +54,21 @@ class PerfettoCaptureWrapper {
 
     @RequiresApi(23)
     private fun start(
-        appTagPackages: List<String>,
+        config: PerfettoConfig,
         userspaceTracingPackage: String?
     ): Boolean {
         capture?.apply {
-            if (Build.VERSION.SDK_INT >= 23) {
-                Log.d(LOG_TAG, "Recording perfetto trace")
-                if (userspaceTracingPackage != null &&
-                    Build.VERSION.SDK_INT >= 30
-                ) {
-                    val result = enableAndroidxTracingPerfetto(
-                        targetPackage = userspaceTracingPackage,
-                        provideBinariesIfMissing = true
-                    ) ?: "Success"
-                    Log.d(LOG_TAG, "Enable full tracing result=$result")
-                }
-                start(appTagPackages)
+            Log.d(LOG_TAG, "Recording perfetto trace")
+            if (userspaceTracingPackage != null &&
+                Build.VERSION.SDK_INT >= 30
+            ) {
+                val result = enableAndroidxTracingPerfetto(
+                    targetPackage = userspaceTracingPackage,
+                    provideBinariesIfMissing = true
+                ) ?: "Success"
+                Log.d(LOG_TAG, "Enable full tracing result=$result")
             }
+            start(config)
         }
 
         return true
@@ -94,13 +92,14 @@ class PerfettoCaptureWrapper {
 
     fun record(
         fileLabel: String,
-        appTagPackages: List<String>,
+        config: PerfettoConfig,
         userspaceTracingPackage: String?,
         traceCallback: ((String) -> Unit)? = null,
+        enableTracing: Boolean = true,
         block: () -> Unit
     ): String? {
-        // skip if Perfetto not supported, or on Cuttlefish (where tracing doesn't work)
-        if (Build.VERSION.SDK_INT < 23 || !isAbiSupported()) {
+        // skip if Perfetto not supported, or if caller opts out
+        if (Build.VERSION.SDK_INT < 23 || !isAbiSupported() || !enableTracing) {
             block()
             return null
         }
@@ -125,7 +124,7 @@ class PerfettoCaptureWrapper {
         val path: String
         try {
             propOverride?.forceValue()
-            start(appTagPackages, userspaceTracingPackage)
+            start(config, userspaceTracingPackage)
             try {
                 block()
             } finally {

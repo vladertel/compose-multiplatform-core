@@ -34,7 +34,7 @@ import androidx.compose.foundation.text2.input.mask
 import androidx.compose.foundation.text2.input.then
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -259,7 +259,7 @@ internal class PasswordRevealFilter(
     val scheduleHide: () -> Unit
 ) : TextEditFilter {
     // TODO: Consider setting this as a tracking annotation in AnnotatedString.
-    internal var revealCodepointIndex by mutableStateOf(-1)
+    internal var revealCodepointIndex by mutableIntStateOf(-1)
         private set
 
     override fun filter(

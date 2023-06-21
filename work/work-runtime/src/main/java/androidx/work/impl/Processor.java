@@ -206,7 +206,7 @@ public class Processor implements ExecutionListener, ForegroundProcessor {
      * @param token The work to stop
      * @return {@code true} if the work was stopped successfully
      */
-    public boolean stopForegroundWork(@NonNull StartStopToken token) {
+    public boolean stopForegroundWork(@NonNull StartStopToken token, int reason) {
         String id = token.getId().getWorkSpecId();
         WorkerWrapper wrapper = null;
         synchronized (mLock) {
@@ -220,7 +220,7 @@ public class Processor implements ExecutionListener, ForegroundProcessor {
         // This is because calling interrupt() eventually calls ListenableWorker.onStopped()
         // If onStopped() takes too long, there is a good chance this causes an ANR
         // in Processor.onExecuted().
-        return interrupt(id, wrapper);
+        return interrupt(id, wrapper, reason);
     }
 
     /**
@@ -229,7 +229,7 @@ public class Processor implements ExecutionListener, ForegroundProcessor {
      * @param runId The work id to stop
      * @return {@code true} if the work was stopped successfully
      */
-    public boolean stopWork(@NonNull StartStopToken runId) {
+    public boolean stopWork(@NonNull StartStopToken runId, int reason) {
         String id = runId.getId().getWorkSpecId();
         WorkerWrapper wrapper = null;
         synchronized (mLock) {
@@ -253,7 +253,7 @@ public class Processor implements ExecutionListener, ForegroundProcessor {
         // This is because calling interrupt() eventually calls ListenableWorker.onStopped()
         // If onStopped() takes too long, there is a good chance this causes an ANR
         // in Processor.onExecuted().
-        return interrupt(id, wrapper);
+        return interrupt(id, wrapper, reason);
     }
 
     /**
@@ -262,7 +262,7 @@ public class Processor implements ExecutionListener, ForegroundProcessor {
      * @param id The work id to stop and cancel
      * @return {@code true} if the work was stopped successfully
      */
-    public boolean stopAndCancelWork(@NonNull String id) {
+    public boolean stopAndCancelWork(@NonNull String id, int reason) {
         WorkerWrapper wrapper = null;
         boolean isForegroundWork = false;
         synchronized (mLock) {
@@ -283,7 +283,7 @@ public class Processor implements ExecutionListener, ForegroundProcessor {
         // This is because calling interrupt() eventually calls ListenableWorker.onStopped()
         // If onStopped() takes too long, there is a good chance this causes an ANR
         // in Processor.onExecuted().
-        boolean interrupted = interrupt(id, wrapper);
+        boolean interrupted = interrupt(id, wrapper, reason);
         if (isForegroundWork) {
             stopForegroundService();
         }
@@ -293,8 +293,9 @@ public class Processor implements ExecutionListener, ForegroundProcessor {
     @Override
     public void stopForeground(@NonNull String workSpecId) {
         synchronized (mLock) {
-            mForegroundWorkMap.remove(workSpecId);
-            stopForegroundService();
+            if (mForegroundWorkMap.remove(workSpecId) != null) {
+                stopForegroundService();
+            }
         }
     }
 
@@ -328,17 +329,6 @@ public class Processor implements ExecutionListener, ForegroundProcessor {
         synchronized (mLock) {
             return mEnqueuedWorkMap.containsKey(workSpecId)
                     || mForegroundWorkMap.containsKey(workSpecId);
-        }
-    }
-
-    /**
-     * @param workSpecId The {@link androidx.work.impl.model.WorkSpec} id
-     * @return {@code true} if the id was enqueued as foreground work in the processor.
-     */
-    @Override
-    public boolean isEnqueuedInForeground(@NonNull String workSpecId) {
-        synchronized (mLock) {
-            return mForegroundWorkMap.containsKey(workSpecId);
         }
     }
 
@@ -436,9 +426,10 @@ public class Processor implements ExecutionListener, ForegroundProcessor {
      * @param wrapper The {@link WorkerWrapper}
      * @return {@code true} if the work was stopped successfully
      */
-    private static boolean interrupt(@NonNull String id, @Nullable WorkerWrapper wrapper) {
+    private static boolean interrupt(@NonNull String id,
+            @Nullable WorkerWrapper wrapper, int stopReason) {
         if (wrapper != null) {
-            wrapper.interrupt();
+            wrapper.interrupt(stopReason);
             Logger.get().debug(TAG, "WorkerWrapper interrupted for " + id);
             return true;
         } else {

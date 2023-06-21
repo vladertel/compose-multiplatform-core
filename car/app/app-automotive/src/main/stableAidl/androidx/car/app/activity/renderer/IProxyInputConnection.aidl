@@ -23,13 +23,13 @@ import android.view.inputmethod.CorrectionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
+import androidx.car.app.serialization.Bundleable;
 
 /**
  * Proxies the {@link InputConnection} method invocations from {@link CarAppActivity} across a
  * binder interface to the host renderer.
- *
- * @hide
  */
+@JavaPassthrough(annotation="@androidx.annotation.RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY)")
 interface IProxyInputConnection {
     /** Proxies a call to {@link InputConnection#getTextBeforeCursor}. */
     CharSequence getTextBeforeCursor(int length, int flags) = 1;
@@ -102,4 +102,23 @@ interface IProxyInputConnection {
 
     /** Returns the {@link EditorInfo} associated with the input connection. */
     EditorInfo getEditorInfo() = 24;
+
+    /**
+     * Proxies a call to {@link InputConnection#getSurroundingText}.
+     * Note that this returns a {@link Bundleable} that wraps a {@link SurroundingText} since the
+     * latter is only available on Android S+. Note that this returns {@code null} when an
+     * exception is thrown.
+     */
+    Bundleable getSurroundingText(int beforeLength, int afterLength, int flags) = 25;
+
+    /**
+     * Proxies a call to {@link InputConnection#deleteSurroundingTextInCodePoints}.
+     */
+    boolean deleteSurroundingTextInCodePoints(int beforeLength, int afterLength) = 26;
+
+    /**
+     * Proxies a call to {@link InputConnection#commitContent}.
+     * Note that this uses a {@link Bundleable} to wrap an {@link InputContentInfo}.
+     */
+    boolean commitContent(in Bundleable inputContentInfoBundleable, int flags, in Bundle opts) = 27;
 }

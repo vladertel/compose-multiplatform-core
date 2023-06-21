@@ -2137,8 +2137,8 @@ class ComposableFunctionBodyTransformer(
         // boxed, then we don't want to unnecessarily _unbox_ it. Note that if Kotlin allows for
         // an overridden equals method of inline classes in the future, we may have to avoid the
         // boxing in a different way.
-        val type = value.type.unboxInlineClass()
         val expr = value.unboxValueIfInline()
+        val type = expr.type
         val descriptor = type
             .toPrimitiveType()
             .let { changedPrimitiveFunctions[it] }
@@ -2508,6 +2508,10 @@ class ComposableFunctionBodyTransformer(
         var scope: Scope? = currentScope
         loop@ while (scope != null) {
             when (scope) {
+                is Scope.CallScope,
+                is Scope.ReturnScope -> {
+                    // Ignore
+                }
                 is Scope.FunctionScope -> {
                     scope.markCoalescableGroup(coalescableScope, realizeGroup, makeEnd)
                     if (!scope.isInlinedLambda) {
@@ -2517,9 +2521,6 @@ class ComposableFunctionBodyTransformer(
                 is Scope.BlockScope -> {
                     scope.markCoalescableGroup(coalescableScope, realizeGroup, makeEnd)
                     break@loop
-                }
-                is Scope.CallScope -> {
-                    // Ignore
                 }
                 else -> error("Unexpected scope type")
             }
@@ -3425,12 +3426,14 @@ class ComposableFunctionBodyTransformer(
 
     override fun visitReturn(expression: IrReturn): IrExpression {
         if (!isInComposableScope) return super.visitReturn(expression)
-        expression.transformChildrenVoid()
+        val scope = Scope.ReturnScope(expression)
+        withScope(scope) {
+            expression.transformChildrenVoid()
+        }
         val endBlock = mutableStatementContainer()
         encounteredReturn(expression.returnTargetSymbol) { endBlock.statements.add(it) }
-        return if (expression.value.type
-            .also { if (it is IrSimpleType) it.classifier }
-            .isUnitOrNullableUnit()
+        return if (
+            !scope.hasComposableCalls && expression.value.type.isUnitOrNullableUnit()
         ) {
             expression.wrap(listOf(endBlock))
         } else {
@@ -3852,9 +3855,7 @@ class ComposableFunctionBodyTransformer(
                 for (param in function.valueParameters) {
                     val paramName = param.name.asString()
                     when {
-                        !paramName.startsWith('$') &&
-                            !paramName.startsWith("_context_receiver_") ->
-                            realValueParamCount++
+                        paramName.startsWith("_context_receiver_") -> Unit
                         paramName == KtxNameConventions.COMPOSER_PARAMETER.identifier ->
                             composerParameter = param
                         paramName.startsWith(KtxNameConventions.DEFAULT_PARAMETER.identifier) ->
@@ -3864,7 +3865,8 @@ class ComposableFunctionBodyTransformer(
                         paramName.startsWith("\$anonymous\$parameter") -> Unit
                         paramName.startsWith("\$name\$for\$destructuring") -> Unit
                         paramName.startsWith("\$noName_") -> Unit
-                        else -> Unit
+                        paramName == "\$this" -> Unit
+                        else -> realValueParamCount++
                     }
                 }
                 slotCount = realValueParamCount
@@ -4180,6 +4182,16 @@ class ComposableFunctionBodyTransformer(
             private fun getNameForTemporary(nameHint: String?) =
                 functionScope?.getNameForTemporary(nameHint)
                     ?: error("Expected to be in a function")
+        }
+
+        class ReturnScope(
+            val expression: IrReturn
+        ) : BlockScope("return") {
+            override fun sourceLocationOf(call: IrElement): SourceLocation =
+                when (val parent = parent) {
+                    is BlockScope -> parent.sourceLocationOf(call)
+                    else -> super.sourceLocationOf(call)
+                }
         }
 
         class ComposableLambdaScope : BlockScope("composableLambda") {

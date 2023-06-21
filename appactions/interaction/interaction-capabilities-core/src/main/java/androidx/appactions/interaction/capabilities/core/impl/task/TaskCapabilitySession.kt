@@ -39,9 +39,9 @@ internal class TaskCapabilitySession<
     ConfirmationT,
 >(
     override val sessionId: String,
-    actionSpec: ActionSpec<*, ArgumentsT, OutputT>,
+    actionSpec: ActionSpec<ArgumentsT, OutputT>,
     appAction: AppAction,
-    taskHandler: TaskHandler<ConfirmationT>,
+    taskHandler: TaskHandler<ArgumentsT, ConfirmationT>,
     externalSession: BaseExecutionSession<ArgumentsT, OutputT>,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) : CapabilitySession, TaskUpdateHandler {
@@ -51,13 +51,11 @@ internal class TaskCapabilitySession<
     // single-turn capability does not have status
     override val isActive: Boolean
         get() = when (sessionOrchestrator.status) {
-            TaskOrchestrator.Status.COMPLETED,
             TaskOrchestrator.Status.DESTROYED -> false
             else -> true
         }
 
     override fun destroy() {
-        // TODO(b/270751989): cancel current processing request immediately
         this.sessionOrchestrator.terminate()
         scope.cancel()
     }
@@ -107,7 +105,7 @@ internal class TaskCapabilitySession<
      */
     private fun enqueueAssistantRequest(request: AssistantUpdateRequest) {
         synchronized(requestLock) {
-            pendingAssistantRequest?.callbackInternal?.onError(ErrorStatusInternal.CANCELLED)
+            pendingAssistantRequest?.callbackInternal?.onError(ErrorStatusInternal.CANCELED)
             pendingAssistantRequest = request
             dispatchPendingRequestIfIdle()
         }

@@ -117,6 +117,11 @@ class BluetoothLe(private val context: Context) {
             value: ByteArray,
             writeType: Int
         ): Result<Unit>
+        suspend fun readDescriptor(descriptor: BluetoothGattDescriptor): Result<ByteArray>
+        suspend fun writeDescriptor(
+            descriptor: BluetoothGattDescriptor,
+            value: ByteArray
+        ): Result<Unit>
         fun subscribeToCharacteristic(characteristic: BluetoothGattCharacteristic): Flow<ByteArray>
         suspend fun awaitClose(onClosed: () -> Unit)
     }
@@ -124,13 +129,13 @@ class BluetoothLe(private val context: Context) {
     suspend fun <R> connectGatt(
         context: Context,
         device: BluetoothDevice,
-        block: GattClientScope.() -> R
-    ) {
-        GattClientImpl().connect(context, device, block)
+        block: suspend GattClientScope.() -> R
+    ): R? {
+        return GattClientImpl().connect(context, device, block)
     }
 
     @SuppressLint("MissingPermission")
-    fun gattServer(): Flow<GattServerCallback> =
+    fun gattServer(services: List<BluetoothGattService> = emptyList()): Flow<GattServerCallback> =
         callbackFlow {
             val callback = object : BluetoothGattServerCallback() {
                 override fun onConnectionStateChange(
@@ -271,6 +276,7 @@ class BluetoothLe(private val context: Context) {
             }
 
             val bluetoothGattServer = bluetoothManager?.openGattServer(context, callback)
+            services.forEach { bluetoothGattServer?.addService(it) }
 
             awaitClose {
                 Log.d(TAG, "awaitClose() called")

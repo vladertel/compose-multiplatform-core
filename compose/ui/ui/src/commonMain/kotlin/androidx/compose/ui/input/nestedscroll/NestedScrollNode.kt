@@ -18,8 +18,7 @@ package androidx.compose.ui.input.nestedscroll
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.modifier.ModifierLocalMap
-import androidx.compose.ui.modifier.ModifierLocalNode
+import androidx.compose.ui.modifier.ModifierLocalModifierNode
 import androidx.compose.ui.modifier.modifierLocalMapOf
 import androidx.compose.ui.modifier.modifierLocalOf
 import androidx.compose.ui.node.DelegatableNode
@@ -46,7 +45,7 @@ fun nestedScrollModifierNode(
 internal class NestedScrollNode(
     var connection: NestedScrollConnection,
     dispatcher: NestedScrollDispatcher?
-) : ModifierLocalNode, NestedScrollConnection, DelegatableNode, Modifier.Node() {
+) : ModifierLocalModifierNode, NestedScrollConnection, DelegatableNode, Modifier.Node() {
 
     // Resolved dispatcher for re-use in case of null dispatcher is passed.
     private var resolvedDispatcher: NestedScrollDispatcher
@@ -61,8 +60,8 @@ internal class NestedScrollNode(
     private val parentConnection: NestedScrollConnection?
         get() = if (isAttached) ModifierLocalNestedScroll.current else null
 
-    override val providedValues: ModifierLocalMap
-        get() = modifierLocalMapOf(ModifierLocalNestedScroll to this)
+    // Avoid get() to prevent constant allocations for static map.
+    override val providedValues = modifierLocalMapOf(entry = ModifierLocalNestedScroll to this)
 
     private val nestedCoroutineScope: CoroutineScope
         get() = parentModifierLocal?.nestedCoroutineScope
@@ -129,9 +128,10 @@ internal class NestedScrollNode(
     }
 
     override fun onAttach() {
-        assert(resolvedDispatcher.modifierLocalNode == null) {
-            "This dispatcher should only be used by a single Modifier.nestedScroll."
-        }
+        // NOTE: It is possible for the dispatcher of a yet-to-be-removed node above this one in the
+        // chain is being used here where the dispatcher's modifierLocalNode will not be null. As a
+        // result, we should not check to see if the dispatcher's node is null, we should just set
+        // it assuming that it is not going to be used by the previous node anymore.
         updateDispatcherFields()
     }
 
@@ -150,7 +150,10 @@ internal class NestedScrollNode(
     }
 
     private fun resetDispatcherFields() {
-        resolvedDispatcher.modifierLocalNode = null
+        // only null this out if the modifier local node is what we set it to, since it is possible
+        // it has already been reused in a different node
+        if (resolvedDispatcher.modifierLocalNode === this)
+            resolvedDispatcher.modifierLocalNode = null
     }
 
     internal fun updateNode(

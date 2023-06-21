@@ -33,6 +33,7 @@ import androidx.benchmark.UserspaceTracing
 import androidx.benchmark.checkAndGetSuppressionState
 import androidx.benchmark.conditionalError
 import androidx.benchmark.perfetto.PerfettoCaptureWrapper
+import androidx.benchmark.perfetto.PerfettoConfig
 import androidx.benchmark.perfetto.PerfettoTrace
 import androidx.benchmark.perfetto.PerfettoTraceProcessor
 import androidx.benchmark.perfetto.UiState
@@ -134,10 +135,27 @@ internal fun checkErrors(packageName: String): ConfigurationError.SuppressionSta
                         experimentalProperties["android.experimental.self-instrumenting"] = true
                     }
                 """.trimIndent()
+            ),
+            conditionalError(
+                hasError = Arguments.methodTracingEnabled(),
+                id = "METHOD-TRACING-ENABLED",
+                summary = "Method tracing is enabled during a Macrobenchmark",
+                message = """
+                    The Macrobenchmark run for $packageName has method tracing enabled.
+                    This causes the VM will run more slowly than usual, so the metrics from the
+                    trace files should only be considered in relative terms
+                    (e.g. was run #1 faster than run #2). Also, these metrics cannot be compared
+                    with benchmark runs that don't have method tracing enabled.
+                """.trimIndent()
             )
         ).sortedBy { it.id }
 
-    return errors.checkAndGetSuppressionState(Arguments.suppressedErrors)
+    // These error ids are really warnings. In that, we don't need developers to have to
+    // explicitly suppress them using test instrumentation arguments.
+    // TODO: Introduce a better way to surface warnings.
+    val warnings = setOf("METHOD-TRACING-ENABLED")
+
+    return errors.checkAndGetSuppressionState(Arguments.suppressedErrors + warnings)
 }
 
 /**
@@ -168,13 +186,17 @@ private fun macrobenchmark(
 
     val suppressionState = checkErrors(packageName)
     var warningMessage = suppressionState?.warningMessage ?: ""
-
     // skip benchmark if not supported by vm settings
     compilationMode.assumeSupportedWithVmSettings()
 
     val startTime = System.nanoTime()
-    val scope = MacrobenchmarkScope(packageName, launchWithClearTask)
-
+    // Ensure method tracing is explicitly enabled and that we are not running in dry run mode.
+    val launchWithMethodTracing = Arguments.methodTracingEnabled()
+    val scope = MacrobenchmarkScope(
+        packageName,
+        launchWithClearTask = launchWithClearTask
+    )
+    scope.launchWithMethodTracing = launchWithMethodTracing
     // Ensure the device is awake
     scope.device.wakeUp()
 
@@ -200,7 +222,8 @@ private fun macrobenchmark(
             it.configure(packageName)
         }
         val measurements = PerfettoTraceProcessor.runServer {
-            List(if (Arguments.dryRunMode) 1 else iterations) { iteration ->
+            val runIterations = if (Arguments.dryRunMode) 1 else iterations
+            List(runIterations) { iteration ->
                 // Wake the device to ensure it stays awake with large iteration count
                 userspaceTrace("wake device") {
                     scope.device.wakeUp()
@@ -212,24 +235,27 @@ private fun macrobenchmark(
                 }
 
                 val iterString = iteration.toString().padStart(3, '0')
+                val fileLabel = "${uniqueName}_iter$iterString"
                 val tracePath = perfettoCollector.record(
-                    fileLabel = "${uniqueName}_iter$iterString",
-
-                    /**
-                     * Prior to API 24, every package name was joined into a single setprop which
-                     * can overflow, and disable *ALL* app level tracing.
-                     *
-                     * For safety here, we only trace the macrobench package on newer platforms,
-                     * and use reflection in the macrobench test process to trace important
-                     * sections
-                     *
-                     * @see androidx.benchmark.macro.perfetto.ForceTracing
-                     */
-                    appTagPackages = if (Build.VERSION.SDK_INT >= 24) {
-                        listOf(packageName, macrobenchPackageName)
-                    } else {
-                        listOf(packageName)
-                    },
+                    fileLabel = fileLabel,
+                    config = PerfettoConfig.Benchmark(
+                        /**
+                         * Prior to API 24, every package name was joined into a single setprop
+                         * which can overflow, and disable *ALL* app level tracing.
+                         *
+                         * For safety here, we only trace the macrobench package on newer platforms,
+                         * and use reflection in the macrobench test process to trace important
+                         * sections
+                         *
+                         * @see androidx.benchmark.macro.perfetto.ForceTracing
+                         */
+                        appTagPackages = if (Build.VERSION.SDK_INT >= 24) {
+                            listOf(packageName, macrobenchPackageName)
+                        } else {
+                            listOf(packageName)
+                        },
+                        useStackSamplingConfig = true
+                    ),
                     userspaceTracingPackage = userspaceTracingPackage
                 ) {
                     try {
@@ -245,6 +271,9 @@ private fun macrobenchmark(
                         trace("stop metrics") {
                             metrics.forEach {
                                 it.stop()
+                            }
+                            if (launchWithMethodTracing) {
+                                scope.stopMethodTracing()
                             }
                         }
                     }
@@ -285,7 +314,6 @@ private fun macrobenchmark(
                     appendUiState(uiState)
                 }
                 Log.d(TAG, "Iteration $iteration captured $uiState")
-
                 // report just the metrics
                 measurementList
             }.mergeMultiIterResults()

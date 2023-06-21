@@ -16,12 +16,9 @@
 
 package androidx.paging
 
-import org.junit.Assert
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@RunWith(JUnit4::class)
 class PagedListConfigBuilderTest {
     @Test
     fun defaults() {
@@ -29,12 +26,12 @@ class PagedListConfigBuilderTest {
         val config = PagedList.Config.Builder()
             .setPageSize(10)
             .build()
-        Assert.assertEquals(10, config.pageSize)
-        Assert.assertEquals(30, config.initialLoadSizeHint)
-        Assert.assertEquals(true, config.enablePlaceholders)
-        Assert.assertEquals(10, config.prefetchDistance)
+        assertEquals(10, config.pageSize)
+        assertEquals(30, config.initialLoadSizeHint)
+        assertEquals(true, config.enablePlaceholders)
+        assertEquals(10, config.prefetchDistance)
         @Suppress("DEPRECATION")
-        Assert.assertEquals(PagedList.Config.MAX_SIZE_UNBOUNDED, config.maxSize)
+        assertEquals(PagedList.Config.MAX_SIZE_UNBOUNDED, config.maxSize)
     }
 
     @Test(expected = IllegalArgumentException::class)

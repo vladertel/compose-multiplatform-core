@@ -676,7 +676,7 @@ class SliderTest {
                 modifier = Modifier.testTag(tag),
                 value = state.value,
                 onValueChange = { state.value = it },
-                thumb = { sliderPositions -> recompositionCounter.OuterContent(sliderPositions) }
+                thumb = { sliderState -> recompositionCounter.OuterContent(sliderState) }
             )
         }
 
@@ -704,7 +704,7 @@ class SliderTest {
                 modifier = Modifier.testTag(tag),
                 value = state.value,
                 onValueChange = { state.value = it },
-                track = { sliderPositions -> recompositionCounter.OuterContent(sliderPositions) }
+                track = { sliderState -> recompositionCounter.OuterContent(sliderState) }
             )
         }
 
@@ -747,7 +747,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_dragThumb() {
         val state = mutableStateOf(0f..1f)
@@ -758,7 +757,7 @@ class SliderTest {
             RangeSlider(
                 modifier = Modifier.testTag(tag),
                 value = state.value,
-                onValueChange = { state.value = it }
+                onValueChange = { range -> state.value = range }
             )
         }
 
@@ -781,7 +780,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_drag_out_of_bounds() {
         val state = mutableStateOf(0f..1f)
@@ -792,7 +790,7 @@ class SliderTest {
             RangeSlider(
                 modifier = Modifier.testTag(tag),
                 value = state.value,
-                onValueChange = { state.value = it }
+                onValueChange = { range -> state.value = range }
             )
         }
 
@@ -819,7 +817,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_drag_overlap_thumbs() {
         val state = mutableStateOf(0.5f..1f)
@@ -830,7 +827,7 @@ class SliderTest {
             RangeSlider(
                 modifier = Modifier.testTag(tag),
                 value = state.value,
-                onValueChange = { state.value = it }
+                onValueChange = { range -> state.value = range }
             )
         }
 
@@ -857,7 +854,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_tap() {
         val state = mutableStateOf(0f..1f)
@@ -866,7 +862,7 @@ class SliderTest {
             RangeSlider(
                 modifier = Modifier.testTag(tag),
                 value = state.value,
-                onValueChange = { state.value = it }
+                onValueChange = { range -> state.value = range }
             )
         }
 
@@ -888,7 +884,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_tap_rangeChange() {
         val state = mutableStateOf(0f..25f)
@@ -898,7 +893,7 @@ class SliderTest {
             RangeSlider(
                 modifier = Modifier.testTag(tag),
                 value = state.value,
-                onValueChange = { state.value = it },
+                onValueChange = { range -> state.value = range },
                 valueRange = 0f..rangeEnd.value
             )
         }
@@ -921,7 +916,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_drag_rtl() {
         val state = mutableStateOf(0f..1f)
@@ -933,7 +927,7 @@ class SliderTest {
                 RangeSlider(
                     modifier = Modifier.testTag(tag),
                     value = state.value,
-                    onValueChange = { state.value = it }
+                    onValueChange = { range -> state.value = range }
                 )
             }
         }
@@ -959,7 +953,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_drag_out_of_bounds_rtl() {
         val state = mutableStateOf(0f..1f)
@@ -971,7 +964,7 @@ class SliderTest {
                 RangeSlider(
                     modifier = Modifier.testTag(tag),
                     value = state.value,
-                    onValueChange = { state.value = it }
+                    onValueChange = { range -> state.value = range }
                 )
             }
         }
@@ -1000,7 +993,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_closeThumbs_dragRight() {
         val state = mutableStateOf(0.5f..0.5f)
@@ -1011,7 +1003,7 @@ class SliderTest {
             RangeSlider(
                 modifier = Modifier.testTag(tag),
                 value = state.value,
-                onValueChange = { state.value = it }
+                onValueChange = { range -> state.value = range }
             )
         }
 
@@ -1036,7 +1028,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_closeThumbs_dragLeft() {
         val state = mutableStateOf(0.5f..0.5f)
@@ -1047,7 +1038,7 @@ class SliderTest {
             RangeSlider(
                 modifier = Modifier.testTag(tag),
                 value = state.value,
-                onValueChange = { state.value = it }
+                onValueChange = { range -> state.value = range }
             )
         }
 
@@ -1075,7 +1066,6 @@ class SliderTest {
     /**
      * Regression test for bug: 210289161 where RangeSlider was ignoring some modifiers like weight.
      */
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_weightModifier() {
         var sliderBounds = Rect(0f, 0f, 0f, 0f)
@@ -1085,7 +1075,7 @@ class SliderTest {
                     Spacer(Modifier.requiredSize(100.toDp()))
                     RangeSlider(
                         value = 0f..0.5f,
-                        onValueChange = {},
+                        onValueChange = { _ -> },
                         modifier = Modifier
                             .testTag(tag)
                             .weight(1f)
@@ -1104,7 +1094,6 @@ class SliderTest {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_semantics_continuous() {
         val state = mutableStateOf(0f..1f)
@@ -1112,7 +1101,7 @@ class SliderTest {
         rule.setMaterialContent(lightColorScheme()) {
             RangeSlider(
                 modifier = Modifier.testTag(tag), value = state.value,
-                onValueChange = { state.value = it }
+                onValueChange = { range -> state.value = range }
             )
         }
 
@@ -1157,7 +1146,6 @@ class SliderTest {
             .assertRangeInfoEquals(ProgressBarRangeInfo(0.8f, 0.6f..1f, 0))
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun rangeSlider_semantics_stepped() {
         val state = mutableStateOf(0f..20f)
@@ -1167,7 +1155,7 @@ class SliderTest {
                 modifier = Modifier.testTag(tag), value = state.value,
                 steps = 3,
                 valueRange = 0f..20f,
-                onValueChange = { state.value = it },
+                onValueChange = { range -> state.value = range },
             )
         }
 
@@ -1208,8 +1196,8 @@ class SliderTest {
     @Test
     fun rangeSlider_thumb_recomposition() {
         val state = mutableStateOf(0f..100f)
-        val startRecompositionCounter = SliderRecompositionCounter()
-        val endRecompositionCounter = SliderRecompositionCounter()
+        val startRecompositionCounter = RangeSliderRecompositionCounter()
+        val endRecompositionCounter = RangeSliderRecompositionCounter()
 
         rule.setContent {
             RangeSlider(
@@ -1217,11 +1205,11 @@ class SliderTest {
                 value = state.value,
                 onValueChange = { state.value = it },
                 valueRange = 0f..100f,
-                startThumb = { sliderPositions ->
-                    startRecompositionCounter.OuterContent(sliderPositions)
+                startThumb = { rangeSliderState ->
+                    startRecompositionCounter.OuterContent(rangeSliderState)
                 },
-                endThumb = { sliderPositions ->
-                    endRecompositionCounter.OuterContent(sliderPositions)
+                endThumb = { rangeSliderState ->
+                    endRecompositionCounter.OuterContent(rangeSliderState)
                 }
             )
         }
@@ -1236,9 +1224,9 @@ class SliderTest {
 
         rule.runOnIdle {
             Truth.assertThat(startRecompositionCounter.outerRecomposition).isEqualTo(1)
-            Truth.assertThat(startRecompositionCounter.innerRecomposition).isEqualTo(3)
+            Truth.assertThat(startRecompositionCounter.innerRecomposition).isEqualTo(2)
             Truth.assertThat(endRecompositionCounter.outerRecomposition).isEqualTo(1)
-            Truth.assertThat(endRecompositionCounter.innerRecomposition).isEqualTo(3)
+            Truth.assertThat(endRecompositionCounter.innerRecomposition).isEqualTo(2)
         }
     }
 
@@ -1246,7 +1234,7 @@ class SliderTest {
     @Test
     fun rangeSlider_track_recomposition() {
         val state = mutableStateOf(0f..100f)
-        val recompositionCounter = SliderRecompositionCounter()
+        val recompositionCounter = RangeSliderRecompositionCounter()
 
         rule.setContent {
             RangeSlider(
@@ -1254,8 +1242,8 @@ class SliderTest {
                 value = state.value,
                 onValueChange = { state.value = it },
                 valueRange = 0f..100f,
-                track = { sliderPositions ->
-                    recompositionCounter.OuterContent(sliderPositions)
+                track = { rangeSliderState ->
+                    recompositionCounter.OuterContent(rangeSliderState)
                 }
             )
         }
@@ -1270,7 +1258,7 @@ class SliderTest {
 
         rule.runOnIdle {
             Truth.assertThat(recompositionCounter.outerRecomposition).isEqualTo(1)
-            Truth.assertThat(recompositionCounter.innerRecomposition).isEqualTo(4)
+            Truth.assertThat(recompositionCounter.innerRecomposition).isEqualTo(3)
         }
     }
 
@@ -1279,7 +1267,10 @@ class SliderTest {
         val state = mutableStateOf(0f..1f)
         rule.setMaterialContentForSizeAssertions {
             Box(modifier = Modifier.requiredWidth(Int.MAX_VALUE.dp)) {
-                RangeSlider(value = state.value, onValueChange = { state.value = it })
+                RangeSlider(
+                    value = state.value,
+                    onValueChange = { range -> state.value = range }
+                )
             }
         }.assertWidthIsEqualTo(48.dp)
     }
@@ -1293,7 +1284,7 @@ class SliderTest {
                     RangeSlider(
                         modifier = Modifier.weight(1f),
                         value = state.value,
-                        onValueChange = { state.value = it }
+                        onValueChange = { range -> state.value = range }
                     )
                 }
             }
@@ -1301,25 +1292,48 @@ class SliderTest {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Stable
 class SliderRecompositionCounter {
     var innerRecomposition = 0
     var outerRecomposition = 0
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun OuterContent(sliderPositions: SliderPositions) {
+    fun OuterContent(state: SliderState) {
         SideEffect { ++outerRecomposition }
         Column {
             Text("OuterContent")
-            InnerContent(sliderPositions)
+            InnerContent(state)
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun InnerContent(sliderPositions: SliderPositions) {
+    private fun InnerContent(state: SliderState) {
         SideEffect { ++innerRecomposition }
-        Text("InnerContent: ${sliderPositions.activeRange}")
+        Text("InnerContent: ${state.value}")
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Stable
+class RangeSliderRecompositionCounter {
+    var innerRecomposition = 0
+    var outerRecomposition = 0
+
+    @Composable
+    fun OuterContent(state: RangeSliderState) {
+        SideEffect {
+            ++outerRecomposition
+        }
+        Column {
+            Text("OuterContent")
+            InnerContent(state)
+        }
+    }
+
+    @Composable
+    private fun InnerContent(state: RangeSliderState) {
+        SideEffect { ++innerRecomposition }
+        Text("InnerContent: ${state.activeRangeStart..state.activeRangeEnd}")
     }
 }

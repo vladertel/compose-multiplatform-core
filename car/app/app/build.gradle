@@ -100,7 +100,7 @@ android {
 }
 
 androidx {
-    name = "Android for Cars App Library"
+    name = "Android for Cars App"
     type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2020"
     description = "Build navigation, parking, and charging apps for Android Auto"
@@ -143,7 +143,7 @@ class ProtocolApiTask extends DefaultTask {
         MetalavaRunnerKt.runMetalavaWithArgs(
                 metalavaClasspath,
                 standardArgs,
-                false,
+                /* k2UastEnabled= */ false,
                 workerExecutor,
         )
     }

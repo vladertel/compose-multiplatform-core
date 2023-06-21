@@ -61,14 +61,15 @@ fun SnapLayoutInfoProvider(
         }
     }
 
-    private val singleAxisItems: List<LazyGridItemInfo>
-        get() = lazyGridState.layoutInfo.visibleItemsInfo.fastFilter {
+    private fun singleAxisItems(): List<LazyGridItemInfo> {
+        return lazyGridState.layoutInfo.visibleItemsInfo.fastFilter {
             if (lazyGridState.layoutInfo.orientation == Orientation.Horizontal) {
                 it.row == 0
             } else {
                 it.column == 0
             }
         }
+    }
 
     override fun Density.calculateSnappingOffset(
         currentVelocity: Float
@@ -78,7 +79,15 @@ fun SnapLayoutInfoProvider(
 
         layoutInfo.visibleItemsInfo.fastForEach { item ->
             val distance =
-                calculateDistanceToDesiredSnapPosition(layoutInfo, item, positionInLayout)
+                calculateDistanceToDesiredSnapPosition(
+                    mainAxisViewPortSize = layoutInfo.singleAxisViewportSize,
+                    beforeContentPadding = layoutInfo.beforeContentPadding,
+                    afterContentPadding = layoutInfo.afterContentPadding,
+                    itemSize = item.sizeOnMainAxis(orientation = layoutInfo.orientation),
+                    itemOffset = item.offsetOnMainAxis(orientation = layoutInfo.orientation),
+                    itemIndex = item.index,
+                    snapPositionInLayout = positionInLayout
+                )
 
             // Find item that is closest to the center
             if (distance <= 0 && distance > distanceFromItemBeforeTarget) {
@@ -99,45 +108,28 @@ fun SnapLayoutInfoProvider(
     }
 
     override fun Density.calculateSnapStepSize(): Float {
-        return if (singleAxisItems.isNotEmpty()) {
+        val items = singleAxisItems()
+        return if (items.isNotEmpty()) {
             val size = if (layoutInfo.orientation == Orientation.Vertical) {
-                singleAxisItems.fastSumBy { it.size.height }
+                items.fastSumBy { it.size.height }
             } else {
-                singleAxisItems.fastSumBy { it.size.width }
+                items.fastSumBy { it.size.width }
             }
-            size / singleAxisItems.size.toFloat()
+            size / items.size.toFloat()
         } else {
             0f
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-internal fun Density.calculateDistanceToDesiredSnapPosition(
-    layoutInfo: LazyGridLayoutInfo,
-    item: LazyGridItemInfo,
-    positionInLayout: SnapPositionInLayout = SnapPositionInLayout.CenterToCenter
-): Float {
-
-    val containerSize =
-        with(layoutInfo) { singleAxisViewportSize - beforeContentPadding - afterContentPadding }
-
-    val desiredDistance = with(positionInLayout) {
-        position(containerSize, item.sizeOnMainAxis(layoutInfo.orientation), item.index)
-    }
-
-    val itemCurrentPosition = item.offsetOnMainAxis(layoutInfo.orientation)
-    return itemCurrentPosition - desiredDistance.toFloat()
-}
-
-private val LazyGridLayoutInfo.singleAxisViewportSize: Int
+internal val LazyGridLayoutInfo.singleAxisViewportSize: Int
     get() = if (orientation == Orientation.Vertical) {
         viewportSize.height
     } else {
         viewportSize.width
     }
 
-private fun LazyGridItemInfo.sizeOnMainAxis(orientation: Orientation): Int {
+internal fun LazyGridItemInfo.sizeOnMainAxis(orientation: Orientation): Int {
     return if (orientation == Orientation.Vertical) {
         size.height
     } else {
@@ -145,7 +137,7 @@ private fun LazyGridItemInfo.sizeOnMainAxis(orientation: Orientation): Int {
     }
 }
 
-private fun LazyGridItemInfo.offsetOnMainAxis(orientation: Orientation): Int {
+internal fun LazyGridItemInfo.offsetOnMainAxis(orientation: Orientation): Int {
     return if (orientation == Orientation.Vertical) {
         offset.y
     } else {
