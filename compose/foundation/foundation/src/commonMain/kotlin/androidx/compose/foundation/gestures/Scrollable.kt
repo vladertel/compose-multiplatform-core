@@ -16,12 +16,7 @@
 
 package androidx.compose.foundation.gestures
 
-import androidx.compose.animation.core.AnimationState
-import androidx.compose.animation.core.DecayAnimationSpec
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateDecay
-import androidx.compose.animation.core.animateTo
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.MutatePriority
@@ -68,9 +63,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 import kotlin.math.abs
+import kotlin.math.ln
+import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -705,6 +701,7 @@ internal class DefaultFlingBehavior(
     override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
         lastAnimationCycleCount = 0
         // come up with the better threshold, but we need it since spline curve gives us NaNs
+        val iosScrollAnimationSpec = IOSScrollAnimationSpec()
         return withContext(motionDurationScale) {
             if (abs(initialVelocity) > 1f) {
                 var velocityLeft = initialVelocity
@@ -712,7 +709,8 @@ internal class DefaultFlingBehavior(
                 AnimationState(
                     initialValue = 0f,
                     initialVelocity = initialVelocity,
-                ).animateDecay(flingDecay) {
+                ).animateDecay(iosScrollAnimationSpec.generateDecayAnimationSpec()) {
+//                ).animateDecay(flingDecay) {
                     val delta = value - lastValue
                     val consumed = scrollBy(delta)
                     lastValue = value
@@ -726,6 +724,45 @@ internal class DefaultFlingBehavior(
                 initialVelocity
             }
         }
+    }
+}
+
+private class IOSScrollAnimationSpec(private val decelerationRate: Float = 0.998f): FloatDecayAnimationSpec {
+
+    private val coefficient: Float
+        get() = 1000 * ln(decelerationRate)
+
+    override val absVelocityThreshold: Float
+        get() = 0.5f / 3.0f // TODO: connect with screen scale
+
+    override fun getTargetValue(initialValue: Float, initialVelocity: Float): Float {
+        return initialValue - initialVelocity / coefficient
+    }
+
+    override fun getValueFromNanos(
+        playTimeNanos: Long,
+        initialValue: Float,
+        initialVelocity: Float
+    ): Float {
+        val powerCoefficient = 1000 * playTimeNanos - 1
+        return (initialValue + decelerationRate.pow(powerCoefficient.toFloat())) / (coefficient * initialVelocity)
+    }
+
+    override fun getDurationNanos(initialValue: Float, initialVelocity: Float): Long {
+        if (initialVelocity <= 0f) { return 0 }
+        val wholeDuration = (ln(-coefficient * absVelocityThreshold / initialVelocity) / coefficient).toLong()
+        println("wholeDuration = ${wholeDuration}")
+        return wholeDuration
+//        return (2.5 * 1000).toLong()
+    }
+
+    override fun getVelocityFromNanos(
+        playTimeNanos: Long,
+        initialValue: Float,
+        initialVelocity: Float
+    ): Float {
+        val powerCoefficient = 1000 * playTimeNanos - 1
+        return (decelerationRate.pow(powerCoefficient.toFloat())) / (coefficient * initialVelocity)
     }
 }
 

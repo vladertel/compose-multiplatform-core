@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 
 val MainScreen = Screen.Selection(
     "Demo",
+    Screen.Example("Scroll Physics") { ScrollPhysicsPlayground() },
     Screen.Example("Example1") { Example1() },
     Screen.Example("ImageViewer") { ImageViewer() },
     Screen.Example("RoundedCornerCrashOnJS") { RoundedCornerCrashOnJS() },
