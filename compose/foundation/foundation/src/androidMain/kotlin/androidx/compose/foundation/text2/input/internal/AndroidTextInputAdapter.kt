@@ -119,15 +119,14 @@ internal class AndroidTextInputAdapter constructor(
      *
      * @param state Text editing state
      * @param imeOptions How to configure the IME when creating new [InputConnection]s
-     * @param initialFilter The initial [TextEditFilter]. The filter can be changed after the
-     * session is started by calling [TextInputSession.setFilter].
+     * @param filter The [TextEditFilter].
      * @param onImeActionPerformed A callback to pass received editor action from IME.
      * @return A handle to manage active session between Adapter and platform APIs.
      */
     fun startInputSession(
         state: TextFieldState,
         imeOptions: ImeOptions,
-        initialFilter: TextEditFilter?,
+        filter: TextEditFilter?,
         onImeActionPerformed: (ImeAction) -> Unit
     ): TextInputSession {
         if (!isMainThread()) {
@@ -140,7 +139,7 @@ internal class AndroidTextInputAdapter constructor(
         val nextSession = createEditableTextInputSession(
             state = state,
             imeOptions = imeOptions,
-            initialFilter = initialFilter,
+            filter = filter,
             onImeActionPerformed = onImeActionPerformed
         )
         currentTextInputSession = nextSession
@@ -150,7 +149,7 @@ internal class AndroidTextInputAdapter constructor(
     private fun createEditableTextInputSession(
         state: TextFieldState,
         imeOptions: ImeOptions,
-        initialFilter: TextEditFilter?,
+        filter: TextEditFilter?,
         onImeActionPerformed: (ImeAction) -> Unit
     ) = object : EditableTextInputSession {
 
@@ -163,18 +162,6 @@ internal class AndroidTextInputAdapter constructor(
         override val isOpen: Boolean
             get() = currentTextInputSession == this
 
-        override fun showSoftwareKeyboard() {
-            if (isOpen) {
-                textInputCommandExecutor.send(TextInputCommand.ShowKeyboard)
-            }
-        }
-
-        override fun hideSoftwareKeyboard() {
-            if (isOpen) {
-                textInputCommandExecutor.send(TextInputCommand.HideKeyboard)
-            }
-        }
-
         override fun dispose() {
             state.editProcessor.removeResetListener(resetListener)
             stopInputSession(this)
@@ -184,12 +171,6 @@ internal class AndroidTextInputAdapter constructor(
         // region EditableTextInputSession
         override val value: TextFieldCharSequence
             get() = state.text
-
-        private var filter: TextEditFilter? = initialFilter
-
-        override fun setFilter(filter: TextEditFilter?) {
-            this.filter = filter
-        }
 
         override fun requestEdits(editCommands: List<EditCommand>) {
             state.editProcessor.update(editCommands, filter)
@@ -349,6 +330,7 @@ internal class TextInputCommandExecutor(
             command.applyToState()
             logDebug { "command: $command applied to state" }
         }
+        textInputCommandQueue.clear()
 
         logDebug { "commands are applied. startInput = $startInput, showKeyboard = $showKeyboard" }
 

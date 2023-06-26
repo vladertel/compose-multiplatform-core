@@ -27,6 +27,7 @@ import androidx.benchmark.BenchmarkResult
 import androidx.benchmark.ConfigurationError
 import androidx.benchmark.DeviceInfo
 import androidx.benchmark.InstrumentationResults
+import androidx.benchmark.Profiler
 import androidx.benchmark.ResultWriter
 import androidx.benchmark.Shell
 import androidx.benchmark.UserspaceTracing
@@ -217,6 +218,7 @@ private fun macrobenchmark(
     // output, and give it different (test-wide) lifecycle
     val perfettoCollector = PerfettoCaptureWrapper()
     val tracePaths = mutableListOf<String>()
+    val resultFiles = mutableListOf<Profiler.ResultFile>()
     try {
         metrics.forEach {
             it.configure(packageName)
@@ -273,7 +275,12 @@ private fun macrobenchmark(
                                 it.stop()
                             }
                             if (launchWithMethodTracing) {
-                                scope.stopMethodTracing()
+                                val (label, tracePath) = scope.stopMethodTracing()
+                                val resultFile = Profiler.ResultFile(
+                                    label = label,
+                                    absolutePath = tracePath
+                                )
+                                resultFiles += resultFile
                             }
                         }
                     }
@@ -328,13 +335,14 @@ private fun macrobenchmark(
             """.trimIndent()
         }
         InstrumentationResults.instrumentationReport {
-            val (summaryV1, summaryV2) = ideSummaryStrings(
-                warningMessage,
-                uniqueName,
-                measurements,
-                tracePaths
+            reportSummaryToIde(
+                warningMessage = warningMessage,
+                testName = uniqueName,
+                measurements = measurements,
+                iterationTracePaths = tracePaths,
+                profilerResults = resultFiles
             )
-            ideSummaryRecord(summaryV1 = summaryV1, summaryV2 = summaryV2)
+
             warningMessage = "" // warning only printed once
             measurements.singleMetrics.forEach {
                 it.putInBundle(bundle, suppressionState?.prefix ?: "")

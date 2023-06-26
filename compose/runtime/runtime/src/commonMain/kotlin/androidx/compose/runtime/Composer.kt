@@ -1207,6 +1207,7 @@ fun sourceInformationMarkerEnd(composer: Composer) {
 /**
  * Implementation of a composer for a mutable tree.
  */
+@OptIn(ExperimentalComposeRuntimeApi::class)
 internal class ComposerImpl(
     /**
      * An adapter that applies changes to the tree using the Applier abstraction.
@@ -1431,6 +1432,8 @@ internal class ComposerImpl(
         providersInvalidStack.push(providersInvalid.asInt())
         providersInvalid = changed(parentProvider)
         providerCache = null
+
+        // Inform observer if one is defined
         if (!forceRecomposeScopes) {
             forceRecomposeScopes = parentContext.collectingParameterInformation
         }
@@ -1850,6 +1853,11 @@ internal class ComposerImpl(
         return result as T
     }
 
+    private fun updateSlot(value: Any?) {
+        nextSlot()
+        updateValue(value)
+    }
+
     /**
      * Schedule the current value in the slot table to be updated to [value].
      *
@@ -1949,8 +1957,8 @@ internal class ComposerImpl(
     ): PersistentCompositionLocalMap {
         val providerScope = parentScope.mutate { it.putAll(currentProviders) }
         startGroup(providerMapsKey, providerMaps)
-        changed(providerScope)
-        changed(currentProviders)
+        updateSlot(providerScope)
+        updateSlot(currentProviders)
         endGroup()
         return providerScope
     }
@@ -1981,7 +1989,7 @@ internal class ComposerImpl(
             val oldValues = reader.groupGet(1) as PersistentCompositionLocalMap
 
             // skipping is true iff parentScope has not changed.
-            if (!skipping || oldValues != currentProviders) {
+            if (!skipping || reusing || oldValues != currentProviders) {
                 providers = updateProviderMapGroup(parentScope, currentProviders)
 
                 // Compare against the old scope as currentProviders might have modified the scope
@@ -1990,7 +1998,7 @@ internal class ComposerImpl(
                 // currentProviders for that key. If the scope has not changed, because these
                 // providers obscure a change in the parent as described above, re-enable skipping
                 // for the child region.
-                invalid = providers != oldScope
+                invalid = reusing || providers != oldScope
             } else {
                 // Nothing has changed
                 skipGroup()
@@ -2032,7 +2040,8 @@ internal class ComposerImpl(
             holder = CompositionContextHolder(
                 CompositionContextImpl(
                     compoundKeyHash,
-                    forceRecomposeScopes
+                    forceRecomposeScopes,
+                    (composition as? CompositionImpl)?.observerHolder
                 )
             )
             updateValue(holder)
@@ -2549,7 +2558,7 @@ internal class ComposerImpl(
         // An early out if the group and anchor are the same
         if (anchorGroup == group) return index
 
-        // Walk down from the anc ghor group counting nodes of siblings in front of this group
+        // Walk down from the anchor group counting nodes of siblings in front of this group
         var current = anchorGroup
         val nodeIndexLimit = index + (updatedNodeCount(anchorGroup) - reader.nodeCount(group))
         loop@ while (index < nodeIndexLimit) {
@@ -2841,7 +2850,7 @@ internal class ComposerImpl(
     ) {
         // Start the movable content group
         startMovableGroup(movableContentKey, content)
-        changed(parameter)
+        updateSlot(parameter)
 
         // All movable content has a compound hash value rooted at the content itself so the hash
         // value doesn't change as the content moves in the tree.
@@ -3414,9 +3423,11 @@ internal class ComposerImpl(
         }
     }
 
+    @OptIn(ExperimentalComposeRuntimeApi::class)
     private inner class CompositionContextImpl(
         override val compoundHashKey: Int,
-        override val collectingParameterInformation: Boolean
+        override val collectingParameterInformation: Boolean,
+        override val observerHolder: CompositionObserverHolder?
     ) : CompositionContext() {
         var inspectionTables: MutableSet<MutableSet<CompositionData>>? = null
         val composers = mutableSetOf<ComposerImpl>()
