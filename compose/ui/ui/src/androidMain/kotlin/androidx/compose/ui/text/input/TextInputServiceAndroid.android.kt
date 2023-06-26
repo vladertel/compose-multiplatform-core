@@ -311,6 +311,7 @@ internal class TextInputServiceAndroid(
                 )
             }
         }
+        textInputCommandQueue.clear()
 
         // Now that we've calculated what operations we need to perform on the actual input
         // manager, perform them.
@@ -407,6 +408,7 @@ internal class TextInputServiceAndroid(
 
     override fun updateTextLayoutResult(
         textFieldValue: TextFieldValue,
+        offsetMapping: OffsetMapping,
         textLayoutResult: TextLayoutResult,
         textLayoutPositionInWindow: Offset,
         innerTextFieldBounds: Rect,
@@ -414,6 +416,7 @@ internal class TextInputServiceAndroid(
     ) {
         cursorAnchorInfoController.updateTextLayoutResult(
             textFieldValue,
+            offsetMapping,
             textLayoutResult,
             textLayoutPositionInWindow,
             innerTextFieldBounds,

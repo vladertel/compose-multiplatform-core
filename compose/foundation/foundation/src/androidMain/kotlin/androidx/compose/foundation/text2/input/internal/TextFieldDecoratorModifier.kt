@@ -21,13 +21,11 @@ import androidx.compose.foundation.gestures.detectTapAndPress
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.isPrecisePointer
 import androidx.compose.foundation.text2.BasicTextField2
 import androidx.compose.foundation.text2.input.TextEditFilter
 import androidx.compose.foundation.text2.input.TextFieldCharSequence
 import androidx.compose.foundation.text2.input.TextFieldState
 import androidx.compose.foundation.text2.input.deselect
-import androidx.compose.foundation.text2.input.selectCharsIn
 import androidx.compose.foundation.text2.selection.TextFieldSelectionState
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusEventModifierNode
@@ -50,6 +48,8 @@ import androidx.compose.ui.node.SemanticsModifierNode
 import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.editableText
@@ -66,7 +66,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -145,34 +148,23 @@ internal class TextFieldDecoratorModifierNode(
     CompositionLocalConsumerModifierNode {
 
     private val pointerInputNode = delegate(SuspendingPointerInputModifierNode {
-        coroutineScope.launch {
-            awaitPointerEventScope {
-                while (true) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                    textFieldSelectionState.isInTouchMode = !event.isPrecisePointer
-                }
+        coroutineScope {
+            launch(start = CoroutineStart.UNDISPATCHED) {
+                with(textFieldSelectionState) { detectTouchMode() }
+            }
+            launch(start = CoroutineStart.UNDISPATCHED) {
+                detectTapAndPress(onTap = { offset ->
+                    if (!isFocused) {
+                        requestFocus()
+                    }
+
+                    if (enabled && !readOnly && isFocused) {
+                        requireKeyboardController().show()
+                        textFieldSelectionState.onTapTextField(offset)
+                    }
+                })
             }
         }
-        detectTapAndPress(onTap = { offset ->
-            if (!isFocused) {
-                requestFocus()
-            }
-
-            if (enabled && !readOnly && isFocused) {
-                textInputSession?.showSoftwareKeyboard()
-
-                if (textFieldState.text.isNotEmpty()) {
-                    textFieldSelectionState.showHandles = true
-                }
-
-                // find the cursor position
-                val cursorIndex = textLayoutState.getOffsetForPosition(offset)
-                // update the state
-                if (cursorIndex >= 0) {
-                    textFieldState.edit { selectCharsIn(TextRange(cursorIndex)) }
-                }
-            }
-        })
     })
 
     var keyboardOptions: KeyboardOptions = keyboardOptions.withDefaultsFrom(filter?.keyboardOptions)
@@ -202,7 +194,7 @@ internal class TextFieldDecoratorModifierNode(
                     focusManager.moveFocus(FocusDirection.Previous)
                 }
                 ImeAction.Done -> {
-                    textInputSession?.hideSoftwareKeyboard()
+                    requireKeyboardController().hide()
                 }
                 ImeAction.Go, ImeAction.Search, ImeAction.Send,
                 ImeAction.Default, ImeAction.None -> Unit
@@ -226,10 +218,10 @@ internal class TextFieldDecoratorModifierNode(
     }
 
     /**
-     * A coroutine job that observes only text changes to hide selection and cursor handles when
-     * content changes.
+     * A coroutine job that observes text and layout changes in selection state to react to those
+     * changes.
      */
-    private var textChangesObserverJob: Job? = null
+    private var inputSessionJob: Job? = null
 
     /**
      * Updates all the related properties and invalidates internal state based on the changes.
@@ -252,6 +244,7 @@ internal class TextFieldDecoratorModifierNode(
         val previousTextFieldState = this.textFieldState
         val previousKeyboardOptions = this.keyboardOptions
         val previousTextFieldSelectionState = this.textFieldSelectionState
+        val previousFilter = this.filter
 
         // Apply the diff.
         this.textFieldState = textFieldState
@@ -266,27 +259,21 @@ internal class TextFieldDecoratorModifierNode(
         this.singleLine = singleLine
 
         // React to diff.
-        // If made writable while focused, or we got a completely new state instance,
-        // start a new input session.
+        // Something about the session changed, restart the session.
         if (writeable != previousWriteable ||
             textFieldState != previousTextFieldState ||
-            keyboardOptions != previousKeyboardOptions
+            keyboardOptions != previousKeyboardOptions ||
+            filter != previousFilter
         ) {
             if (writeable && isFocused) {
                 // The old session will be implicitly disposed.
-                textInputSession = textInputAdapter?.startInputSession(
-                    textFieldState,
-                    this.keyboardOptions.toImeOptions(singleLine),
-                    filter,
-                    onImeActionPerformed
-                )
+                startInputSession()
             } else if (!writeable) {
                 // We were made read-only or disabled, hide the keyboard.
                 disposeInputSession()
             }
         }
 
-        textInputSession?.setFilter(filter)
         textFieldKeyEventHandler.setFilter(filter)
 
         if (textFieldSelectionState != previousTextFieldSelectionState) {
@@ -376,21 +363,10 @@ internal class TextFieldDecoratorModifierNode(
         isFocused = focusState.isFocused
 
         if (focusState.isFocused) {
-            textInputSession = textInputAdapter?.startInputSession(
-                textFieldState,
-                keyboardOptions.toImeOptions(singleLine),
-                filter,
-                onImeActionPerformed
-            )
-
-            textChangesObserverJob?.cancel()
-            textChangesObserverJob = coroutineScope.launch {
-                textFieldSelectionState.observeTextChanges()
-            }
+            startInputSession()
             // TODO(halilibo): bringIntoView
         } else {
-            textChangesObserverJob?.cancel()
-            textChangesObserverJob = null
+            disposeInputSession()
             textFieldState.deselect()
         }
     }
@@ -433,10 +409,34 @@ internal class TextFieldDecoratorModifierNode(
         )
     }
 
+    private fun startInputSession() {
+        textInputSession = textInputAdapter?.startInputSession(
+            textFieldState,
+            keyboardOptions.toImeOptions(singleLine),
+            filter,
+            onImeActionPerformed
+        )
+
+        // Re-start observing changes in case our TextFieldState instance changed.
+        val previousInputSessionJob = inputSessionJob
+        inputSessionJob = coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            previousInputSessionJob?.cancelAndJoin()
+            launch(start = CoroutineStart.UNDISPATCHED) {
+                textFieldSelectionState.observeChanges()
+            }
+        }
+    }
+
     private fun disposeInputSession() {
+        inputSessionJob?.cancel()
+        inputSessionJob = null
         textInputSession?.dispose()
         textInputSession = null
     }
+
+    private fun requireKeyboardController(): SoftwareKeyboardController =
+        currentValueOf(LocalSoftwareKeyboardController)
+            ?: error("No software keyboard controller")
 }
 
 /**

@@ -79,12 +79,12 @@ import org.gradle.api.tasks.testing.AbstractTestTask
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.KotlinClosure1
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.extra
 import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.getByType
-import org.gradle.kotlin.dsl.register
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
@@ -295,8 +295,11 @@ class AndroidXImplPlugin @Inject constructor(
         extension: AndroidXExtension,
         plugin: KotlinBasePluginWrapper
     ) {
+        project.configureKtfmt()
+
         project.afterEvaluate {
             project.tasks.withType(KotlinCompile::class.java).configureEach { task ->
+
                 if (extension.type == LibraryType.COMPILER_PLUGIN) {
                     task.kotlinOptions.jvmTarget = "11"
                 } else if (extension.type.compilationTarget == CompilationTarget.HOST &&
@@ -312,6 +315,20 @@ class AndroidXImplPlugin @Inject constructor(
                 // TODO (b/259578592): enable -Xjvm-default=all for camera-camera2-pipe projects
                 if (!project.name.contains("camera-camera2-pipe")) {
                     kotlinCompilerArgs += "-Xjvm-default=all"
+                }
+                if (!extension.targetsJavaConsumers) {
+                    // The Kotlin Compiler adds intrinsic assertions which are only relevant
+                    // when the code is consumed by Java users. Therefore we can turn this off
+                    // when code is being consumed by Kotlin users.
+
+                    // Additional Context:
+                    // https://github.com/JetBrains/kotlin/blob/master/compiler/cli/cli-common/src/org/jetbrains/kotlin/cli/common/arguments/K2JVMCompilerArguments.kt#L239
+                    // b/280633711
+                    kotlinCompilerArgs += listOf(
+                        "-Xno-param-assertions",
+                        "-Xno-call-assertions",
+                        "-Xno-receiver-assertions"
+                    )
                 }
                 task.kotlinOptions.freeCompilerArgs += kotlinCompilerArgs
             }
@@ -339,6 +356,19 @@ class AndroidXImplPlugin @Inject constructor(
             project.configureKmpTests()
             project.configureSourceJarForMultiplatform()
             project.configureLintForMultiplatform(extension)
+
+            // Disable any source JAR task(s) added by KotlinMultiplatformPlugin.
+            // https://youtrack.jetbrains.com/issue/KT-55881
+            project.tasks.withType(Jar::class.java).configureEach { jarTask ->
+                if (jarTask.name == "jvmSourcesJar") {
+                    // We can't set duplicatesStrategy directly on the Jar task since it will get
+                    // overridden when the KotlinMultiplatformPlugin creates child specs, but we
+                    // can set it on a per-file basis.
+                    jarTask.eachFile { fileCopyDetails ->
+                        fileCopyDetails.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+                    }
+                }
+            }
         }
     }
 
@@ -623,6 +653,9 @@ class AndroidXImplPlugin @Inject constructor(
         defaultConfig.targetSdk = TARGET_SDK_VERSION
         ndkVersion = SupportConfig.NDK_VERSION
 
+        // Suppress output of android:compileSdkVersion and related attributes (b/277836549).
+        aaptOptions.additionalParameters += "--no-compile-sdk-metadata"
+
         defaultConfig.testInstrumentationRunner = INSTRUMENTATION_RUNNER
 
         testOptions.animationsDisabled = true
@@ -746,6 +779,18 @@ class AndroidXImplPlugin @Inject constructor(
         project.afterEvaluate {
             if (androidXExtension.shouldRelease()) {
                 project.extra.set("publish", true)
+            }
+            if (project.hasBenchmarkPlugin()) {
+                // Inject AOT compilation - see b/287358254 for context, b/288167775 for AGP support
+
+                // NOTE: we assume here that all benchmarks have package name $namespace.test
+                val aotCompile = "cmd package compile -m speed -f $namespace.test"
+
+                // only run aotCompile on N+, where it's supported
+                val inject = "if [ `getprop ro.build.version.sdk` -ge 24 ]; then $aotCompile; fi"
+                val options =
+                    "/data/local/tmp/${project.name}-$testBuildType-androidTest.apk && $inject #"
+                adbOptions.setInstallOptions(*options.split(" ").toTypedArray())
             }
         }
     }
@@ -964,7 +1009,6 @@ class AndroidXImplPlugin @Inject constructor(
         const val CREATE_LIBRARY_BUILD_INFO_FILES_TASK = "createLibraryBuildInfoFiles"
         const val GENERATE_TEST_CONFIGURATION_TASK = "GenerateTestConfiguration"
         const val ZIP_TEST_CONFIGS_WITH_APKS_TASK = "zipTestConfigsWithApks"
-        const val ZIP_CONSTRAINED_TEST_CONFIGS_WITH_APKS_TASK = "zipConstrainedTestConfigsWithApks"
 
         const val TASK_GROUP_API = "API"
 

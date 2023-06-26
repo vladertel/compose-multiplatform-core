@@ -29,6 +29,7 @@ import androidx.appactions.interaction.capabilities.core.impl.converters.TypeCon
 import androidx.appactions.interaction.capabilities.core.impl.converters.TypeConverters.MESSAGE_TYPE_SPEC
 import androidx.appactions.interaction.capabilities.core.impl.converters.TypeConverters.RECIPIENT_TYPE_SPEC
 import androidx.appactions.interaction.capabilities.core.impl.spec.ActionSpecBuilder
+import androidx.appactions.interaction.capabilities.core.impl.spec.ActionSpecRegistry
 import androidx.appactions.interaction.capabilities.core.properties.Property
 import androidx.appactions.interaction.capabilities.core.properties.StringValue
 import androidx.appactions.interaction.proto.ParamValue
@@ -94,8 +95,8 @@ class CreateMessage private constructor() {
                 this.recipientList = recipientList
             }
 
-            fun setMessageText(messageTextList: String): Builder = apply {
-                this.messageText = messageTextList
+            fun setMessageText(messageText: String): Builder = apply {
+                this.messageText = messageText
             }
 
             fun build(): Arguments = Arguments(recipientList, messageText)
@@ -203,5 +204,8 @@ class CreateMessage private constructor() {
                     ExecutionStatus::toParamValue
                 )
                 .build()
+        init {
+            ActionSpecRegistry.registerActionSpec(Arguments::class, Output::class, ACTION_SPEC)
+        }
     }
 }
