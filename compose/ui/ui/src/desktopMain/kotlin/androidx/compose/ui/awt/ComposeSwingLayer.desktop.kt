@@ -30,7 +30,6 @@ import org.jetbrains.skiko.ExperimentalSkikoApi
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayerAnalytics
 import org.jetbrains.skiko.swing.SkiaSwingLayer
-import org.jetbrains.skiko.swing.SkiaSwingLayerComponent
 
 /**
  * Provides [component] that can be used as a Swing component.
@@ -44,7 +43,9 @@ internal class ComposeSwingLayer(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
 ) : ComposeLayer() {
     private val _component = ComposeSwingSkiaLayer()
-    override val component: SkiaSwingLayerComponent get() = _component
+
+    @OptIn(ExperimentalSkikoApi::class)
+    override val component: SkiaSwingLayer get() = _component
 
     override val renderApi: GraphicsApi
         get() = _component.renderApi
