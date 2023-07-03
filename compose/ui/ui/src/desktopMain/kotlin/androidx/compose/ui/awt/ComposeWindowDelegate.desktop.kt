@@ -49,7 +49,7 @@ internal class ComposeWindowDelegate(
     // (see https://github.com/JetBrains/compose-jb/issues/1688),
     // so we nullify layer on dispose, to prevent keeping
     // big objects in memory (like the whole LayoutNode tree of the window)
-    private var _layer: ComposeWindowLayer? = ComposeWindowLayer(skiaLayerAnalytics)
+    private var _layer: WindowComposeBridge? = WindowComposeBridge(skiaLayerAnalytics)
     private val layer
         get() = requireNotNull(_layer) {
             "ComposeLayer is disposed"

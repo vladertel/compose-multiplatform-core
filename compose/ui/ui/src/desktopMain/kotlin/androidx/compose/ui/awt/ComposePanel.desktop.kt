@@ -23,7 +23,6 @@ import androidx.compose.ui.window.WindowExceptionHandler
 import java.awt.*
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
-import javax.swing.JComponent
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities.isEventDispatchThread
 import org.jetbrains.skiko.ClipComponent
@@ -74,7 +73,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     private val _focusListeners = mutableSetOf<FocusListener?>()
     private var _isFocusable = true
     private var _isRequestFocusEnabled = false
-    private var layer: ComposeLayer? = null
+    private var layer: ComposeBridge? = null
     private val clipMap = mutableMapOf<Component, ClipComponent>()
     private var content: (@Composable () -> Unit)? = null
 
@@ -151,12 +150,12 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     @OptIn(ExperimentalComposeUiApi::class)
-    private fun createComposeLayer(): ComposeLayer {
+    private fun createComposeLayer(): ComposeBridge {
         val renderOnGraphics = System.getProperty("compose.swing.render.on.graphics").toBoolean()
-        val layer: ComposeLayer = if (renderOnGraphics) {
-            ComposeSwingLayer(skiaLayerAnalytics)
+        val layer: ComposeBridge = if (renderOnGraphics) {
+            SwingComposeBridge(skiaLayerAnalytics)
         } else {
-            ComposeWindowLayer(skiaLayerAnalytics)
+            WindowComposeBridge(skiaLayerAnalytics)
         }
         return layer.apply {
             scene.releaseFocus()

@@ -29,12 +29,50 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
 /**
  * Provides a heavyweight AWT [component] used to render content (from [setContent]) on-screen with Skia.
  *
- * If smooth interop with Swing is needed, consider using [androidx.compose.ui.awt.ComposeWindowLayer]
+ * If smooth interop with Swing is needed, consider using [androidx.compose.ui.awt.SwingComposeBridge]
  */
-internal class ComposeWindowLayer(
+internal class WindowComposeBridge(
     private val skiaLayerAnalytics: SkiaLayerAnalytics
-) : ComposeLayer() {
-    private val _component = ComposeWindowSkiaLayer()
+) : ComposeBridge() {
+    /**
+     * See also backend layer for swing interop in [androidx.compose.ui.awt.SwingComposeBridge]
+     */
+    private val _component =
+        object : SkiaLayer(
+            externalAccessibleFactory = { sceneAccessible },
+            analytics = skiaLayerAnalytics
+        ), Accessible {
+
+            override fun addNotify() {
+                super.addNotify()
+                resetSceneDensity()
+                initContent()
+                updateSceneSize()
+                setParentWindow(SwingUtilities.getWindowAncestor(this))
+            }
+
+            override fun removeNotify() {
+                setParentWindow(null)
+                super.removeNotify()
+            }
+
+            override fun paint(g: Graphics) {
+                resetSceneDensity()
+                super.paint(g)
+            }
+
+            override fun getInputMethodRequests() = currentInputMethodRequests
+
+            override fun doLayout() {
+                super.doLayout()
+                updateSceneSize()
+            }
+
+            override fun getPreferredSize(): Dimension {
+                return if (isPreferredSizeSet) super.getPreferredSize() else sceneDimension
+            }
+        }
+
     override val component: SkiaLayer get() = _component
 
     override val renderApi: GraphicsApi
@@ -61,45 +99,5 @@ internal class ComposeWindowLayer(
 
     override fun disposeComponentLayer() {
         _component.dispose()
-    }
-
-    /**
-     * See also backend layer for swing interop: [androidx.compose.ui.awt.ComposeSwingLayer.ComposeSwingSkiaLayer]
-     */
-    private inner class ComposeWindowSkiaLayer :
-        SkiaLayer(
-            externalAccessibleFactory = { sceneAccessible },
-            analytics = skiaLayerAnalytics
-        ),
-        Accessible {
-
-        override fun addNotify() {
-            super.addNotify()
-            resetSceneDensity()
-            initContent()
-            updateSceneSize()
-            setParentWindow(SwingUtilities.getWindowAncestor(this))
-        }
-
-        override fun removeNotify() {
-            setParentWindow(null)
-            super.removeNotify()
-        }
-
-        override fun paint(g: Graphics) {
-            resetSceneDensity()
-            super.paint(g)
-        }
-
-        override fun getInputMethodRequests() = currentInputMethodRequests
-
-        override fun doLayout() {
-            super.doLayout()
-            updateSceneSize()
-        }
-
-        override fun getPreferredSize(): Dimension {
-            return if (isPreferredSizeSet) super.getPreferredSize() else sceneDimension
-        }
     }
 }

@@ -56,7 +56,7 @@ import org.jetbrains.skiko.*
  *
  * Inheritors should call [attachComposeToComponent], so events that came to [component] will be transferred to [ComposeScene]
  */
-internal abstract class ComposeLayer {
+internal abstract class ComposeBridge {
     private var isDisposed = false
 
     val sceneAccessible = ComposeSceneAccessible(
