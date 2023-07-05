@@ -27,7 +27,7 @@ dependencies {
 
     implementation(libs.kotlinStdlib)
 
-    compileOnly(project(":annotation:annotation-sampled"))
+    compileOnly(projectOrArtifact(":annotation:annotation-sampled"))
 
     implementation("androidx.compose.runtime:runtime:1.2.1")
     implementation(project(":compose:ui:ui"))

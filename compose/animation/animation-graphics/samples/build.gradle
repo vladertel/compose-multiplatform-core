@@ -27,7 +27,7 @@ dependencies {
 
     implementation(libs.kotlinStdlib)
 
-    compileOnly(project(":annotation:annotation-sampled"))
+    compileOnly(projectOrArtifact(":annotation:annotation-sampled"))
 
     implementation(project(":compose:animation:animation"))
     implementation(project(":compose:animation:animation-graphics"))

@@ -236,12 +236,13 @@ class BaselineProfilesConsumerPlugin : Plugin<Project> {
                     // can be committed with srcs, if `false` they're stored in the generated build
                     // files.
                     if (baselineProfilesExtension.onDemandGeneration) {
-                        variant.sources.baselineProfiles?.apply {
-                            addGeneratedSourceDirectory(
-                                genBaselineProfilesTaskProvider,
-                                GenerateBaselineProfileTask::baselineProfileDir
-                            )
-                        }
+                        // isn't available in AGP 7.4.0
+//                        variant.sources.baselineProfiles?.apply {
+//                            addGeneratedSourceDirectory(
+//                                genBaselineProfilesTaskProvider,
+//                                GenerateBaselineProfileTask::baselineProfileDir
+//                            )
+//                        }
                     } else {
                         val baselineProfileSourcesFile = baselineProfilesExtension
                             .baselineProfileOutputDir(
@@ -255,9 +256,10 @@ class BaselineProfilesConsumerPlugin : Plugin<Project> {
                         // If the folder does not exist it means that the profile has not been generated
                         // so we don't need to add to sources.
                         if (baselineProfileSourcesFile.exists()) {
-                            variant.sources.baselineProfiles?.addStaticSourceDirectory(
-                                baselineProfileSourcesFile.absolutePath
-                            )
+                            // isn't available in AGP 7.4.0
+//                            variant.sources.baselineProfiles?.addStaticSourceDirectory(
+//                                baselineProfileSourcesFile.absolutePath
+//                            )
                         }
                     }
 

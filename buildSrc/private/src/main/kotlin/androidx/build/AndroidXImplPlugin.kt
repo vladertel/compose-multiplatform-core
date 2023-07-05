@@ -162,7 +162,8 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
     private fun Project.registerProjectOrArtifact() {
         // Add a method for each sub project where they can declare an optional
         // dependency on a project or its latest snapshot artifact.
-        if (!ProjectLayoutType.isPlayground(this)) {
+        val isJBFork = true
+        if (!isJBFork) {
             // In AndroidX build, this is always enforced to the project
             extra.set(
                 PROJECT_OR_ARTIFACT_EXT_NAME,

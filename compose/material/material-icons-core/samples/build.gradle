@@ -28,7 +28,7 @@ dependencies {
 
     implementation(libs.kotlinStdlib)
 
-    compileOnly(project(":annotation:annotation-sampled"))
+    compileOnly(projectOrArtifact(":annotation:annotation-sampled"))
 
     implementation(project(":compose:material:material"))
     implementation(project(":compose:material:material-icons-core"))
