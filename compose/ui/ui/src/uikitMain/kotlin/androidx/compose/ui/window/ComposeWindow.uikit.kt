@@ -201,9 +201,7 @@ internal actual class ComposeWindow : UIViewController {
             pointInside = { point, _ ->
                 !layer.hitInteropView(point, isTouchEvent = true)
             },
-            onLayout = { width, height ->
-                updateComposeLayer(width, height)
-            }
+            onMetalLayerDrawableSizeUpdate = ::onMetalLayerDrawableSizeUpdate
         ).load()
         val rootView = UIView() // rootView needs to interop with UIKit
         rootView.backgroundColor = UIColor.whiteColor
@@ -217,7 +215,7 @@ internal actual class ComposeWindow : UIViewController {
             skikoUIView.topAnchor.constraintEqualToAnchor(rootView.topAnchor),
             skikoUIView.bottomAnchor.constraintEqualToAnchor(rootView.bottomAnchor)
         ))
-        updateMetalLayerPresentationMode()
+        updateMetalRenderingSynchronizationMode()
 
         view = rootView
         val uiKitTextInputService = UIKitTextInputService(
@@ -307,23 +305,28 @@ internal actual class ComposeWindow : UIViewController {
         })
     }
 
-    private var viewIsInSizeTransition = false
+    /*
+     * Indicates, that view of this UIViewController is currently is in size change transition and
+     * hence skiko rendering must be synchronized with internal CATransactions
+     */
+    private var isViewTransitioningToNewSize = false
         set(value) {
             field = value
 
-            updateMetalLayerPresentationMode()
+            updateMetalRenderingSynchronizationMode()
         }
 
-    var hasActiveUIViewInterop = true
-        set(value) {
-            field = value
+    // TODO: UIKit rendering sync
+//    var hasActiveUIViewInterop = true
+//        set(value) {
+//            field = value
+//
+//            updateMetalRenderingSynchronizationMode()
+//        }
 
-            updateMetalLayerPresentationMode()
-        }
-
-    private fun updateMetalLayerPresentationMode() {
-        skikoUIView.metalLayer.presentsWithTransaction = viewIsInSizeTransition || hasActiveUIViewInterop
-        skikoUIView.metalLayer.setOpaque(!hasActiveUIViewInterop)
+    private fun updateMetalRenderingSynchronizationMode() {
+        // TODO: UIKit rendering sync
+        skikoUIView.synchronizesRenderingWithCATransaction = isViewTransitioningToNewSize
     }
 
     override fun viewWillTransitionToSize(
@@ -335,28 +338,30 @@ internal actual class ComposeWindow : UIViewController {
         // view for animating smooth orientation change
         val snapshotView = skikoUIView.snapshotViewAfterScreenUpdates(false)
 
-        viewIsInSizeTransition = true
+        isViewTransitioningToNewSize = true
 
         snapshotView?.let {
             it.setOpaque(false)
             it.setClipsToBounds(true)
             view.addSubview(it)
             it.setFrame(view.frame)
+        }
 
-            withTransitionCoordinator.animateAlongsideTransition(
-                animation = { _ ->
+        withTransitionCoordinator.animateAlongsideTransition(
+            animation = { _ ->
+                snapshotView?.let {
                     size.useContents {
                         it.setFrame(CGRectMake(0.0, 0.0, width, height))
                     }
                     it.alpha = 0.0
-                },
-                completion = { _ ->
-                    it.removeFromSuperview()
-
-                    viewIsInSizeTransition = false
                 }
-            )
-        }
+            },
+            completion = { _ ->
+                snapshotView?.removeFromSuperview()
+
+                isViewTransitioningToNewSize = false
+            }
+        )
     }
 
     override fun traitCollectionDidChange(previousTraitCollection: UITraitCollection?) {
@@ -375,7 +380,7 @@ internal actual class ComposeWindow : UIViewController {
     }
 
     // Update [ComposeLayer] with latest layout data
-    private fun updateComposeLayer(width: Int, height: Int) {
+    private fun onMetalLayerDrawableSizeUpdate(width: Int, height: Int) {
         currentInterfaceOrientation?.let {
             interfaceOrientationState.value = it
         }
