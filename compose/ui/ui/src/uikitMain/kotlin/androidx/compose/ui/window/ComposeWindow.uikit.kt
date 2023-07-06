@@ -198,10 +198,10 @@ internal actual class ComposeWindow : UIViewController {
         val skiaLayer = createSkiaLayer()
         skikoUIView = SkikoUIView(
             skiaLayer = skiaLayer,
+            onMetalLayerDrawableSizeUpdate = ::onMetalLayerDrawableSizeUpdate,
             pointInside = { point, _ ->
                 !layer.hitInteropView(point, isTouchEvent = true)
             },
-            onMetalLayerDrawableSizeUpdate = ::onMetalLayerDrawableSizeUpdate
         ).load()
         val rootView = UIView() // rootView needs to interop with UIKit
         rootView.backgroundColor = UIColor.whiteColor
