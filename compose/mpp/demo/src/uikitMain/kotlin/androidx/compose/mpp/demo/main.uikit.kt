@@ -16,13 +16,6 @@ fun main() {
 
 @Composable
 fun IosDemo() {
-    // You may uncomment different examples:
-    MultiplatformDemo()
-//    ApplicationLayoutExamples()
-}
-
-@Composable
-fun MultiplatformDemo() {
     val app = remember {
         App(extraScreens = listOf(
             NativeModalWithNaviationExample,

@@ -1,3 +1,21 @@
+/*
+ * Copyright 2023 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package androidx.compose.mpp.demo
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -64,7 +82,7 @@ enum class Insets {
 }
 
 @Composable
-fun ApplicationLayoutExamples() {
+fun ApplicationLayouts(back: () -> Unit) {
     val isDarkTheme = when (themeState.value) {
         Theme.SystemTheme -> isSystemInDarkTheme()
         Theme.DarkTheme -> true
@@ -72,14 +90,14 @@ fun ApplicationLayoutExamples() {
     }
     Box(Modifier.fillMaxSize()) {
         MaterialTheme(colorScheme = if (isDarkTheme) darkColorScheme() else lightColorScheme()) {
-            WithScaffold()
+            WithScaffold(back)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WithScaffold() {
+fun WithScaffold(back: () -> Unit) {
     val isScaffoldPaddingState = rememberSaveable { mutableStateOf(false) }
     val isInsetsState = rememberSaveable { mutableStateOf(false) }
     val isChatState = rememberSaveable { mutableStateOf(false) }
@@ -146,6 +164,12 @@ fun WithScaffold() {
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)
                 .padding(innerPadding)
         ) {
+            Text(
+                "Back",
+                Modifier.clickable { back() }
+                    .padding(2.dp).border(1.dp, Color.Blue).padding(2.dp)
+                    .background(Color.Gray)
+            )
             SwitchEnumState(
                 Top.values(),
                 topState,
