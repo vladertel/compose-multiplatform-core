@@ -21,7 +21,8 @@ import java.text.BreakIterator
 
 internal actual fun String.findPrecedingBreak(index: Int): Int {
     val emojiBreak =
-        getEmojiCompatIfLoaded()?.getEmojiStart(this, maxOf(0, index - 1))?.takeUnless { it == -1 }
+//        getEmojiCompatIfLoaded()?.getEmojiStart(this, maxOf(0, index - 1))?.takeUnless { it == -1 }
+        TODO()
     if (emojiBreak != null) return emojiBreak
 
     val it = BreakIterator.getCharacterInstance()
@@ -30,7 +31,8 @@ internal actual fun String.findPrecedingBreak(index: Int): Int {
 }
 
 internal actual fun String.findFollowingBreak(index: Int): Int {
-    val emojiBreak = getEmojiCompatIfLoaded()?.getEmojiEnd(this, index)?.takeUnless { it == -1 }
+//    val emojiBreak = getEmojiCompatIfLoaded()?.getEmojiEnd(this, index)?.takeUnless { it == -1 }
+    val emojiBreak = TODO()
     if (emojiBreak != null) return emojiBreak
 
     val it = BreakIterator.getCharacterInstance()

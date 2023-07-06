@@ -53,8 +53,5 @@ internal actual val KeyEvent.isPgUp: Boolean
 internal actual val KeyEvent.isPgDn: Boolean
     get() = key.nativeKeyCode == KEYCODE_PAGE_DOWN
 
-internal actual val KeyEvent.isPgDn: Boolean
-    get() = key.nativeKeyCode == KEYCODE_PAGE_DOWN
-
 internal actual val KeyEvent.isEsc: Boolean
     get() = key.nativeKeyCode == KEYCODE_ESCAPE

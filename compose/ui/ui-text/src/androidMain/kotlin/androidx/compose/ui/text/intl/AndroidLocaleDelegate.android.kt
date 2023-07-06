@@ -19,7 +19,7 @@ package androidx.compose.ui.text.intl
 import androidx.annotation.RequiresApi
 import android.os.LocaleList as AndroidLocaleList
 import java.util.Locale as JavaLocale
-import androidx.compose.ui.text.platform.createSynchronizedObject
+import androidx.compose.ui.text.SynchronizedObject
 
 /**
  * An Android implementation of Locale object
@@ -56,7 +56,7 @@ internal class AndroidLocaleDelegateAPI23 : PlatformLocaleDelegate {
 internal class AndroidLocaleDelegateAPI24 : PlatformLocaleDelegate {
     private var lastPlatformLocaleList: AndroidLocaleList? = null
     private var lastLocaleList: LocaleList? = null
-    private val lock = createSynchronizedObject()
+    private val lock = SynchronizedObject()
 
     override val current: LocaleList
         get() {
