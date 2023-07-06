@@ -325,7 +325,6 @@ internal actual class ComposeWindow : UIViewController {
 //        }
 
     private fun updateMetalRenderingSynchronizationMode() {
-        // TODO: UIKit rendering sync
         skikoUIView.synchronizesRenderingWithCATransaction = isViewTransitioningToNewSize
     }
 
