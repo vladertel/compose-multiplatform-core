@@ -69,3 +69,7 @@ androidx {
 android {
     namespace "androidx.testutils.fonts"
 }
+
+androidxCompose {
+    composeCompilerPluginEnabled = false
+}
