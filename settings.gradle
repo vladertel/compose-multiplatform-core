@@ -478,4 +478,9 @@ includeProject(":internal-testutils-fonts", "testutils/testutils-fonts", [BuildT
 includeProject(":internal-testutils-runtime", "testutils/testutils-runtime", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.MEDIA, BuildType.WEAR, BuildType.CAMERA])
 includeProject(":internal-testutils-gradle-plugin", "testutils/testutils-gradle-plugin", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.TOOLS])
 
+// Workaround for b/203825166
+// Without it there is an error appear when trying to publish to maven local:
+//   Configuration 'commonMainResolvableDependenciesMetadata' was resolved during configuration time.
+includeBuild("placeholder")
+
 includeProject(":mpp", [BuildType.COMPOSE])
