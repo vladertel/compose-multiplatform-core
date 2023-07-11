@@ -24,45 +24,15 @@ import org.jetbrains.skiko.*
 import org.jetbrains.skia.*
 
 class SkiaLayer2 : SkiaLayerInterface {
-
-    var needRedrawCallback: () -> Unit = {  }
-    var detachCallback: () -> Unit = {}
-
-    fun isShowing(): Boolean {
-        return true
-    }
-
-    fun showScreenKeyboard() {
-        view?.becomeFirstResponder()
-    }
-
-    fun hideScreenKeyboard() { view?.resignFirstResponder() }
-
-    fun isScreenKeyboardOpen(): Boolean {
-        return if (view == null) false else view!!.isFirstResponder
-    }
-
-    var renderApi: GraphicsApi
-        get() = GraphicsApi.METAL
-        set(value) { throw UnsupportedOperationException() }
+    var needRedrawCallback: () -> Unit = { }
+    var detachCallback: () -> Unit = { }
 
     val contentScale: Float
         get() = view!!.contentScaleFactor.toFloat()
 
-    var fullscreen: Boolean
-        get() = true
-        set(value) { throw UnsupportedOperationException() }
-
-    var transparency: Boolean
-        get() = false
-        set(value) { throw UnsupportedOperationException() }
-
     override fun needRedraw() {
         needRedrawCallback()
     }
-
-    val component: Any?
-        get() = this.view
 
     val width: Float
        get() = view!!.frame.useContents {
@@ -76,21 +46,16 @@ class SkiaLayer2 : SkiaLayerInterface {
 
     var view: UIView? = null
     // We need to keep reference to gesturesDetector as Objective-C will only keep weak reference here.
-    internal var gesturesDetector = SkikoGesturesDetector(this)
+    private var gesturesDetector = SkikoGesturesDetector(this)
 
-    var gesturesToListen: Array<SkikoGestureEventKind>? = null
+    private var gesturesToListen: Array<SkikoGestureEventKind>? = null
         set(value) {
             field = value
             initGestures()
         }
 
-    @InternalSkikoApi
     fun initGestures() {
         gesturesDetector.setGesturesToListen(gesturesToListen)
-    }
-
-    fun attachTo(container: Any) {
-        TODO("redundant for iOS")
     }
 
     private var isDisposed = false

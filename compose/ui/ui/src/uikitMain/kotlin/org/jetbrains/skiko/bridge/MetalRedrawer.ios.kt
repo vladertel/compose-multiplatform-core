@@ -29,8 +29,6 @@ class MetalRedrawer(
     private val device: MTLDeviceProtocol,
     private val metalLayer: CAMetalLayer,
 ) {
-    private var currentWidth = 0
-    private var currentHeight = 0
     private var context: DirectContext? = null
     private var renderTarget: BackendRenderTarget? = null
     private var surface: Surface? = null
@@ -48,7 +46,7 @@ class MetalRedrawer(
         return true
     }
 
-    fun initCanvas() {
+    private fun initCanvas() {
         disposeCanvas()
         val scale = layer.contentScale
         val (w, h) = layer.view!!.frame.useContents {
@@ -76,32 +74,19 @@ class MetalRedrawer(
         }
     }
 
-    fun flush() {
+    private fun flush() {
         // TODO: maybe make flush async as in JVM version.
         context?.flush()
         surface?.flushAndSubmit()
         finishFrame()
     }
 
-    fun disposeCanvas() {
+    private fun disposeCanvas() {
         surface?.close()
         renderTarget?.close()
     }
 
-    // throws RenderException if initialization of graphic context was not successful
-    fun drawContextHandler() {
-        if (!initContext()) {
-            throw RenderException("Cannot init graphic context")
-        }
-        initCanvas()
-        canvas?.apply {
-            clear(Color.WHITE)
-            layer.draw(this)
-        }
-        flush()
-    }
-
-    fun rendererInfo(): String {
+    private fun rendererInfo(): String {
         return "Native Metal: device ${device.name}"
     }
 
@@ -142,7 +127,7 @@ class MetalRedrawer(
             }
 
             DrawSchedulingState.SCHEDULED_ON_NEXT_FRAME -> {
-                drawIfLayerIsShowing()
+                draw()
 
                 drawSchedulingState = DrawSchedulingState.AVAILABLE_ON_NEXT_FRAME
             }
@@ -199,9 +184,9 @@ class MetalRedrawer(
             caDisplayLink.invalidate()
 
             disposeCanvas()
+
             context?.close()
 
-//            metalLayer.dispose() //TODO check need or not ?
             isDisposed = true
         }
     }
@@ -231,7 +216,7 @@ class MetalRedrawer(
             }
 
             DrawSchedulingState.AVAILABLE_ON_CURRENT_FRAME -> {
-                drawIfLayerIsShowing()
+                draw()
 
                 drawSchedulingState = DrawSchedulingState.AVAILABLE_ON_NEXT_FRAME
             }
@@ -242,17 +227,21 @@ class MetalRedrawer(
         }
     }
 
-    private fun drawIfLayerIsShowing() {
-        if (layer.isShowing()) {
-            draw()
-        }
-    }
-
     private fun draw() {
-        // TODO: maybe make flush async as in JVM version.
-        autoreleasepool { //todo measure performance without autoreleasepool
-            if (!isDisposed) {
-                drawContextHandler()
+        if (!isDisposed) {
+            autoreleasepool {
+                if (!initContext()) {
+                    throw RenderException("Cannot init graphic context")
+                }
+
+                initCanvas()
+
+                canvas?.apply {
+                    clear(Color.WHITE)
+                    layer.draw(this)
+                }
+
+                flush()
             }
         }
     }
