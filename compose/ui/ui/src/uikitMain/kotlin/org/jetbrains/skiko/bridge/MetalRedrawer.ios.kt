@@ -1,5 +1,6 @@
 package org.jetbrains.skiko.bridge
 
+import kotlin.math.roundToInt
 import kotlinx.cinterop.*
 import org.jetbrains.skia.*
 import org.jetbrains.skiko.InternalSkikoApi
@@ -48,14 +49,13 @@ class MetalRedrawer(
 
     private fun initCanvas() {
         disposeCanvas()
-        val scale = layer.contentScale
-        val (w, h) = layer.view!!.frame.useContents {
-            (size.width * scale).toInt().coerceAtLeast(0) to (size.height * scale).toInt()
-                .coerceAtLeast(0)
+
+        val (width, height) = metalLayer.drawableSize.useContents {
+            width.roundToInt() to height.roundToInt()
         }
 
-        if (w > 0 && h > 0) {
-            renderTarget = makeRenderTarget(w, h)
+        if (width > 0 && height > 0) {
+            renderTarget = makeRenderTarget(width, height)
 
             surface = Surface.makeFromBackendRenderTarget(
                 context!!,
