@@ -183,36 +183,38 @@ internal class MetalRedrawer(
     }
 
     private fun draw() {
-        if (!isDisposed) {
-            autoreleasepool {
-                dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
+        if (isDisposed) {
+            return
+        }
 
-                val info = prepareFrameRenderTarget()
+        autoreleasepool {
+            dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
 
-                info?.let {
-                    it.surface.canvas.apply {
-                        clear(Color.WHITE)
-                        layer.draw(this)
-                    }
+            val info = prepareFrameRenderTarget()
 
-                    context.flush()
-                    it.surface.flushAndSubmit()
+            info?.let {
+                it.surface.canvas.apply {
+                    clear(Color.WHITE)
+                    layer.draw(this)
+                }
 
-                    val commandBuffer = queue.commandBuffer()!!
-                    commandBuffer.label = "Present"
-                    commandBuffer.presentDrawable(it.metalDrawable)
-                    commandBuffer.addCompletedHandler {
-                        // Signal work finish, allow a new command buffer to be scheduled
-                        dispatch_semaphore_signal(inflightSemaphore)
-                    }
-                    commandBuffer.commit()
+                context.flush()
+                it.surface.flushAndSubmit()
 
-                    it.surface.close()
-                    it.renderTarget.close()
-                    // TODO manually release it.metalDrawable when K/N API arrives
-                } ?: {
+                val commandBuffer = queue.commandBuffer()!!
+                commandBuffer.label = "Present"
+                commandBuffer.presentDrawable(it.metalDrawable)
+                commandBuffer.addCompletedHandler {
+                    // Signal work finish, allow a new command buffer to be scheduled
                     dispatch_semaphore_signal(inflightSemaphore)
                 }
+                commandBuffer.commit()
+
+                it.surface.close()
+                it.renderTarget.close()
+                // TODO manually release it.metalDrawable when K/N API arrives
+            } ?: {
+                dispatch_semaphore_signal(inflightSemaphore)
             }
         }
     }
