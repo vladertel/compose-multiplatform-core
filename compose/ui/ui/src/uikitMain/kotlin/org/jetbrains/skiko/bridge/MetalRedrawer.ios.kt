@@ -25,16 +25,32 @@ private data class FrameRenderTarget(
     val metalDrawable: CAMetalDrawableProtocol
 )
 
-@InternalSkikoApi
-class MetalRedrawer(
+internal class MetalRedrawer(
     private val layer: SkiaLayer2,
     private val device: MTLDeviceProtocol,
     private val metalLayer: CAMetalLayer,
 ) {
+    /**
+     * Needs scheduling displayLink for forcing UITouch events to come at the fastest possible cadence.
+     * Otherwise, touch events can come at rate lower than actual display refresh rate.
+     */
+    var needsProactiveDisplayLink = false
+        set(value) {
+            field = value
+
+            if (value) {
+                caDisplayLink.setPaused(false)
+            }
+        }
+
+    var maximumFramesPerSecond: NSInteger
+        get() = caDisplayLink.preferredFramesPerSecond
+        set(value) {
+            caDisplayLink.preferredFramesPerSecond = value
+        }
+
     private val queue = device.newCommandQueue() ?: throw IllegalStateException("Couldn't create Metal command queue")
     private val context = DirectContext.makeMetal(device.objcPtr(), queue.objcPtr())
-
-    val renderInfo: String get() = rendererInfo()
     private var isDisposed = false
 
     // Semaphore for preventing command buffers count more than swapchain size to be scheduled/executed at the same time
@@ -48,19 +64,6 @@ class MetalRedrawer(
      * TODO: look closer to what happens after blank frames leave it in AVAILABLE_ON_CURRENT_FRAME. Touch driven events sequence negate that problem.
      */
     private var drawSchedulingState = DrawSchedulingState.AVAILABLE_ON_NEXT_FRAME
-
-    /**
-     * Needs scheduling displayLink for forcing UITouch events to come at the fastest possible cadence.
-     * Otherwise, touch events can come at rate lower than actual display refresh rate.
-     */
-    var needsProactiveDisplayLink = false
-        set(value) {
-            field = value
-
-            if (value) {
-                caDisplayLink.setPaused(false)
-            }
-        }
 
     private val frameListener: NSObject = FrameTickListener {
         when (drawSchedulingState) {
@@ -88,49 +91,6 @@ class MetalRedrawer(
         target = frameListener,
         selector = NSSelectorFromString(FrameTickListener::onDisplayLinkTick.name)
     )
-
-    var maximumFramesPerSecond: NSInteger
-        get() = caDisplayLink.preferredFramesPerSecond
-        set(value) {
-            caDisplayLink.preferredFramesPerSecond = value
-        }
-
-    private fun prepareFrameRenderTarget(): FrameRenderTarget? {
-        val (width, height) = metalLayer.drawableSize.useContents {
-            width.roundToInt() to height.roundToInt()
-        }
-
-        if (width <= 0 || height <= 0) {
-            return null
-        }
-
-        val metalDrawable = metalLayer.nextDrawable()!!
-
-        val renderTarget = BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
-
-        val surface = Surface.makeFromBackendRenderTarget(
-            context,
-            renderTarget,
-            SurfaceOrigin.TOP_LEFT,
-            SurfaceColorFormat.BGRA_8888,
-            ColorSpace.sRGB,
-            SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
-        )
-
-        return if (surface != null) {
-            FrameRenderTarget(renderTarget, surface, metalDrawable)
-        } else {
-            renderTarget.close()
-
-            // TODO manually release metalDrawable when K/N API arrives
-
-            null
-        }
-    }
-
-    private fun rendererInfo(): String {
-        return "Native Metal: device ${device.name}"
-    }
 
     init {
         caDisplayLink.setPaused(true)
@@ -186,6 +146,39 @@ class MetalRedrawer(
             DrawSchedulingState.SCHEDULED_ON_NEXT_FRAME -> {
                 // already scheduled, do nothing
             }
+        }
+    }
+
+    private fun prepareFrameRenderTarget(): FrameRenderTarget? {
+        val (width, height) = metalLayer.drawableSize.useContents {
+            width.roundToInt() to height.roundToInt()
+        }
+
+        if (width <= 0 || height <= 0) {
+            return null
+        }
+
+        val metalDrawable = metalLayer.nextDrawable()!!
+
+        val renderTarget = BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
+
+        val surface = Surface.makeFromBackendRenderTarget(
+            context,
+            renderTarget,
+            SurfaceOrigin.TOP_LEFT,
+            SurfaceColorFormat.BGRA_8888,
+            ColorSpace.sRGB,
+            SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
+        )
+
+        return if (surface != null) {
+            FrameRenderTarget(renderTarget, surface, metalDrawable)
+        } else {
+            renderTarget.close()
+
+            // TODO manually release metalDrawable when K/N API arrives
+
+            null
         }
     }
 
