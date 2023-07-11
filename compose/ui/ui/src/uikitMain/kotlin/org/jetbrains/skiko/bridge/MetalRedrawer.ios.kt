@@ -24,6 +24,12 @@ private enum class DrawSchedulingState {
     SCHEDULED_ON_NEXT_FRAME
 }
 
+private data class FrameRenderBackendInfo(
+    val renderTarget: BackendRenderTarget,
+    val surface: Surface,
+    val metalDrawable: CAMetalDrawableProtocol
+)
+
 @InternalSkikoApi
 class MetalRedrawer(
     private val layer: SkiaLayer2,
@@ -32,12 +38,9 @@ class MetalRedrawer(
 ) {
     private val queue = device.newCommandQueue() ?: throw IllegalStateException("Couldn't create Metal command queue")
     private val context = DirectContext.makeMetal(device.objcPtr(), queue.objcPtr())
-    private var renderTarget: BackendRenderTarget? = null
-    private var surface: Surface? = null
-    private var canvas: Canvas? = null
+
     val renderInfo: String get() = rendererInfo()
     private var isDisposed = false
-    private var currentDrawable: CAMetalDrawableProtocol? = null
 
     // Semaphore for preventing command buffers count more than swapchain size to be scheduled/executed at the same time
     private val inflightSemaphore = dispatch_semaphore_create(metalLayer.maximumDrawableCount.toLong())
@@ -97,42 +100,36 @@ class MetalRedrawer(
             caDisplayLink.preferredFramesPerSecond = value
         }
 
-    private fun initCanvas() {
-        disposeCanvas()
-
+    private fun prepareFrameRenderBackendInfo(): FrameRenderBackendInfo? {
         val (width, height) = metalLayer.drawableSize.useContents {
             width.roundToInt() to height.roundToInt()
         }
 
         if (width > 0 && height > 0) {
-            renderTarget = makeRenderTarget(width, height)
+            // Timeout never happens on iOS
+            val metalDrawable = metalLayer.nextDrawable()!!
 
-            surface = Surface.makeFromBackendRenderTarget(
+            val renderTarget = BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
+
+            val surface = Surface.makeFromBackendRenderTarget(
                 context,
-                renderTarget!!,
+                renderTarget,
                 SurfaceOrigin.TOP_LEFT,
                 SurfaceColorFormat.BGRA_8888,
                 ColorSpace.sRGB,
                 SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
-            ) ?: throw RenderException("Cannot create surface")
+            )
 
-            canvas = surface!!.canvas
+            return if (surface != null) {
+                FrameRenderBackendInfo(renderTarget, surface, metalDrawable)
+            } else {
+                renderTarget.close()
+
+                null
+            }
         } else {
-            renderTarget = null
-            surface = null
-            canvas = null
+            return null
         }
-    }
-
-    private fun flush() {
-        context.flush()
-        surface?.flushAndSubmit()
-        finishFrame()
-    }
-
-    private fun disposeCanvas() {
-        surface?.close()
-        renderTarget?.close()
     }
 
     private fun rendererInfo(): String {
@@ -155,19 +152,9 @@ class MetalRedrawer(
         }
     }
 
-    fun makeRenderTarget(width: Int, height: Int): BackendRenderTarget {
-        // If more than swapchain size count of command buffers are inflight
-        // wait until one finishes work
-        dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
-        currentDrawable = metalLayer.nextDrawable()!!
-        return BackendRenderTarget.makeMetal(width, height, currentDrawable!!.texture.objcPtr())
-    }
-
     fun dispose() {
         if (!isDisposed) {
             caDisplayLink.invalidate()
-
-            disposeCanvas()
 
             context.close()
 
@@ -183,11 +170,6 @@ class MetalRedrawer(
         if (drawSchedulingState == DrawSchedulingState.SCHEDULED_ON_NEXT_FRAME) {
             caDisplayLink.setPaused(false)
         }
-    }
-
-    fun redrawImmediately() {
-        check(!isDisposed) { "MetalRedrawer is disposed" }
-        draw()
     }
 
     /*
@@ -214,30 +196,33 @@ class MetalRedrawer(
     private fun draw() {
         if (!isDisposed) {
             autoreleasepool {
-                initCanvas()
+                dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
 
-                canvas?.apply {
-                    clear(Color.WHITE)
-                    layer.draw(this)
-                }
+                val info = prepareFrameRenderBackendInfo()
 
-                flush()
-            }
-        }
-    }
+                info?.let {
+                    it.surface.canvas.apply {
+                        clear(Color.WHITE)
+                        layer.draw(this)
+                    }
 
-    fun finishFrame() {
-        autoreleasepool {
-            currentDrawable?.let {
-                val commandBuffer = queue.commandBuffer()!!
-                commandBuffer.label = "Present"
-                commandBuffer.presentDrawable(it)
-                commandBuffer.addCompletedHandler {
-                    // Signal work finish, allow a new command buffer to be scheduled
+                    context.flush()
+                    it.surface.flushAndSubmit()
+
+                    val commandBuffer = queue.commandBuffer()!!
+                    commandBuffer.label = "Present"
+                    commandBuffer.presentDrawable(info.metalDrawable)
+                    commandBuffer.addCompletedHandler {
+                        // Signal work finish, allow a new command buffer to be scheduled
+                        dispatch_semaphore_signal(inflightSemaphore)
+                    }
+                    commandBuffer.commit()
+
+                    info.surface.close()
+                    info.renderTarget.close()
+                } ?: {
                     dispatch_semaphore_signal(inflightSemaphore)
                 }
-                commandBuffer.commit()
-                currentDrawable = null
             }
         }
     }
