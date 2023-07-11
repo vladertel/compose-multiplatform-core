@@ -78,7 +78,4 @@ class SkiaLayer2 : SkiaLayerInterface {
 
         skikoView?.onRender(canvas, pictureWidth.toInt(), pictureHeight.toInt(), getTimeNanos())
     }
-
-    val pixelGeometry: PixelGeometry
-        get() = PixelGeometry.UNKNOWN
 }

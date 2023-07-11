@@ -30,69 +30,13 @@ class MetalRedrawer(
     private val device: MTLDeviceProtocol,
     private val metalLayer: CAMetalLayer,
 ) {
-    private var context: DirectContext? = null
+    private val queue = device.newCommandQueue() ?: throw IllegalStateException("Couldn't create Metal command queue")
+    private val context = DirectContext.makeMetal(device.objcPtr(), queue.objcPtr())
     private var renderTarget: BackendRenderTarget? = null
     private var surface: Surface? = null
     private var canvas: Canvas? = null
-
-    fun initContext(): Boolean {
-        try {
-            if (context == null) {
-                context = makeContext()
-            }
-        } catch (e: Exception) {
-            println("${e.message}\nFailed to create Skia Metal context!")
-            return false
-        }
-        return true
-    }
-
-    private fun initCanvas() {
-        disposeCanvas()
-
-        val (width, height) = metalLayer.drawableSize.useContents {
-            width.roundToInt() to height.roundToInt()
-        }
-
-        if (width > 0 && height > 0) {
-            renderTarget = makeRenderTarget(width, height)
-
-            surface = Surface.makeFromBackendRenderTarget(
-                context!!,
-                renderTarget!!,
-                SurfaceOrigin.TOP_LEFT,
-                SurfaceColorFormat.BGRA_8888,
-                ColorSpace.sRGB,
-                SurfaceProps(pixelGeometry = layer.pixelGeometry)
-            ) ?: throw RenderException("Cannot create surface")
-
-            canvas = surface!!.canvas
-        } else {
-            renderTarget = null
-            surface = null
-            canvas = null
-        }
-    }
-
-    private fun flush() {
-        // TODO: maybe make flush async as in JVM version.
-        context?.flush()
-        surface?.flushAndSubmit()
-        finishFrame()
-    }
-
-    private fun disposeCanvas() {
-        surface?.close()
-        renderTarget?.close()
-    }
-
-    private fun rendererInfo(): String {
-        return "Native Metal: device ${device.name}"
-    }
-
     val renderInfo: String get() = rendererInfo()
     private var isDisposed = false
-    private val queue = device.newCommandQueue() ?: throw IllegalStateException("Couldn't create Metal command queue")
     private var currentDrawable: CAMetalDrawableProtocol? = null
 
     // Semaphore for preventing command buffers count more than swapchain size to be scheduled/executed at the same time
@@ -153,6 +97,48 @@ class MetalRedrawer(
             caDisplayLink.preferredFramesPerSecond = value
         }
 
+    private fun initCanvas() {
+        disposeCanvas()
+
+        val (width, height) = metalLayer.drawableSize.useContents {
+            width.roundToInt() to height.roundToInt()
+        }
+
+        if (width > 0 && height > 0) {
+            renderTarget = makeRenderTarget(width, height)
+
+            surface = Surface.makeFromBackendRenderTarget(
+                context,
+                renderTarget!!,
+                SurfaceOrigin.TOP_LEFT,
+                SurfaceColorFormat.BGRA_8888,
+                ColorSpace.sRGB,
+                SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
+            ) ?: throw RenderException("Cannot create surface")
+
+            canvas = surface!!.canvas
+        } else {
+            renderTarget = null
+            surface = null
+            canvas = null
+        }
+    }
+
+    private fun flush() {
+        context.flush()
+        surface?.flushAndSubmit()
+        finishFrame()
+    }
+
+    private fun disposeCanvas() {
+        surface?.close()
+        renderTarget?.close()
+    }
+
+    private fun rendererInfo(): String {
+        return "Native Metal: device ${device.name}"
+    }
+
     init {
         caDisplayLink.setPaused(true)
         caDisplayLink.addToRunLoop(NSRunLoop.mainRunLoop, NSRunLoop.mainRunLoop.currentMode)
@@ -169,8 +155,6 @@ class MetalRedrawer(
         }
     }
 
-    fun makeContext() = DirectContext.makeMetal(device.objcPtr(), queue.objcPtr())
-
     fun makeRenderTarget(width: Int, height: Int): BackendRenderTarget {
         // If more than swapchain size count of command buffers are inflight
         // wait until one finishes work
@@ -185,7 +169,7 @@ class MetalRedrawer(
 
             disposeCanvas()
 
-            context?.close()
+            context.close()
 
             isDisposed = true
         }
@@ -230,10 +214,6 @@ class MetalRedrawer(
     private fun draw() {
         if (!isDisposed) {
             autoreleasepool {
-                if (!initContext()) {
-                    throw RenderException("Cannot init graphic context")
-                }
-
                 initCanvas()
 
                 canvas?.apply {
