@@ -4,17 +4,9 @@ import kotlin.math.roundToInt
 import kotlinx.cinterop.*
 import org.jetbrains.skia.*
 import org.jetbrains.skiko.InternalSkikoApi
-import org.jetbrains.skiko.RenderException
-import org.jetbrains.skiko.SkiaLayer
-import platform.CoreGraphics.CGColorCreate
-import platform.CoreGraphics.CGColorSpaceCreateDeviceRGB
-import platform.CoreGraphics.CGContextRef
-import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSRunLoop
 import platform.Foundation.NSSelectorFromString
-import platform.Metal.MTLCreateSystemDefaultDevice
 import platform.Metal.MTLDeviceProtocol
-import platform.Metal.MTLPixelFormatBGRA8Unorm
 import platform.QuartzCore.*
 import platform.darwin.*
 
@@ -24,7 +16,10 @@ private enum class DrawSchedulingState {
     SCHEDULED_ON_NEXT_FRAME
 }
 
-private data class FrameRenderBackendInfo(
+/*
+ * Represents the transient information for rendering a single frame.
+ */
+private data class FrameRenderTarget(
     val renderTarget: BackendRenderTarget,
     val surface: Surface,
     val metalDrawable: CAMetalDrawableProtocol
@@ -100,35 +95,36 @@ class MetalRedrawer(
             caDisplayLink.preferredFramesPerSecond = value
         }
 
-    private fun prepareFrameRenderBackendInfo(): FrameRenderBackendInfo? {
+    private fun prepareFrameRenderTarget(): FrameRenderTarget? {
         val (width, height) = metalLayer.drawableSize.useContents {
             width.roundToInt() to height.roundToInt()
         }
 
-        if (width > 0 && height > 0) {
-            // Timeout never happens on iOS
-            val metalDrawable = metalLayer.nextDrawable()!!
-
-            val renderTarget = BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
-
-            val surface = Surface.makeFromBackendRenderTarget(
-                context,
-                renderTarget,
-                SurfaceOrigin.TOP_LEFT,
-                SurfaceColorFormat.BGRA_8888,
-                ColorSpace.sRGB,
-                SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
-            )
-
-            return if (surface != null) {
-                FrameRenderBackendInfo(renderTarget, surface, metalDrawable)
-            } else {
-                renderTarget.close()
-
-                null
-            }
-        } else {
+        if (width <= 0 || height <= 0) {
             return null
+        }
+
+        val metalDrawable = metalLayer.nextDrawable()!!
+
+        val renderTarget = BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
+
+        val surface = Surface.makeFromBackendRenderTarget(
+            context,
+            renderTarget,
+            SurfaceOrigin.TOP_LEFT,
+            SurfaceColorFormat.BGRA_8888,
+            ColorSpace.sRGB,
+            SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
+        )
+
+        return if (surface != null) {
+            FrameRenderTarget(renderTarget, surface, metalDrawable)
+        } else {
+            renderTarget.close()
+
+            // TODO manually release metalDrawable when K/N API arrives
+
+            null
         }
     }
 
@@ -198,7 +194,7 @@ class MetalRedrawer(
             autoreleasepool {
                 dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
 
-                val info = prepareFrameRenderBackendInfo()
+                val info = prepareFrameRenderTarget()
 
                 info?.let {
                     it.surface.canvas.apply {
@@ -211,15 +207,16 @@ class MetalRedrawer(
 
                     val commandBuffer = queue.commandBuffer()!!
                     commandBuffer.label = "Present"
-                    commandBuffer.presentDrawable(info.metalDrawable)
+                    commandBuffer.presentDrawable(it.metalDrawable)
                     commandBuffer.addCompletedHandler {
                         // Signal work finish, allow a new command buffer to be scheduled
                         dispatch_semaphore_signal(inflightSemaphore)
                     }
                     commandBuffer.commit()
 
-                    info.surface.close()
-                    info.renderTarget.close()
+                    it.surface.close()
+                    it.renderTarget.close()
+                    // TODO manually release it.metalDrawable when K/N API arrives
                 } ?: {
                     dispatch_semaphore_signal(inflightSemaphore)
                 }
