@@ -26,9 +26,9 @@ private data class FrameRenderTarget(
 )
 
 internal class MetalRedrawer(
-    private val layer: SkiaLayer2,
-    private val device: MTLDeviceProtocol,
+    device: MTLDeviceProtocol,
     private val metalLayer: CAMetalLayer,
+    private val drawInCanvas: Canvas.() -> Unit,
 ) {
     /**
      * Needs scheduling displayLink for forcing UITouch events to come at the fastest possible cadence.
@@ -195,7 +195,7 @@ internal class MetalRedrawer(
             info?.let {
                 it.surface.canvas.apply {
                     clear(Color.WHITE)
-                    layer.draw(this)
+                    drawInCanvas()
                 }
 
                 context.flush()

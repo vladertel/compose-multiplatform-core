@@ -49,7 +49,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
                 CGColorCreate(CGColorSpaceCreateDeviceRGB(), it.addressOf(0))
         }
         metalLayer.framebufferOnly = false
-        this.opaque = false // For UIKit interop through a "Hole"
+        opaque = false // For UIKit interop through a "Hole"
         multipleTouchEnabled = true
     }
 
@@ -142,8 +142,6 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         _currentTextMenuActions?.selectAll?.invoke()
     }
 
-    fun detach() = _skiaLayer.detach()
-
     fun load(): SkikoUIView {
         val (width, height) = UIScreen.mainScreen.bounds.useContents {
             this.size.width to this.size.height
@@ -152,9 +150,9 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         contentScaleFactor = UIScreen.mainScreen.scale
         _skiaLayer.let { layer ->
             layer.view = this
-            // TODO: maybe add observer for view.viewDidDisappear() to detach us?
-            val metalRedrawer = MetalRedrawer(layer, device, metalLayer).apply {
-                needRedraw()
+
+            val metalRedrawer = MetalRedrawer(device, metalLayer) {
+                layer.draw(this)
             }
             _redrawer = metalRedrawer
             layer.needRedrawCallback = {
