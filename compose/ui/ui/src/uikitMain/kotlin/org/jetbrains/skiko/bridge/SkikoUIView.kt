@@ -26,7 +26,6 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         override fun layerClass() = CAMetalLayer
     }
 
-    var skikoInput: SkikoInput? = null
     private val device: MTLDeviceProtocol = MTLCreateSystemDefaultDevice()
         ?: throw IllegalStateException("Metal is not supported on this system")
     private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
@@ -176,7 +175,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      * https://developer.apple.com/documentation/uikit/uikeyinput/1614457-hastext
      */
     override fun hasText(): Boolean {
-        return skikoInput?.hasText() ?: false
+        return _skiaLayer.skikoView?.input?.hasText() ?: false
     }
 
     /**
@@ -186,7 +185,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      * @param text A string object representing the character typed on the system keyboard.
      */
     override fun insertText(text: String) {
-        skikoInput?.insertText(text)
+        _skiaLayer.skikoView?.input?.insertText(text)
     }
 
     /**
@@ -195,7 +194,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      * https://developer.apple.com/documentation/uikit/uikeyinput/1614572-deletebackward
      */
     override fun deleteBackward() {
-        skikoInput?.deleteBackward()
+        _skiaLayer.skikoView?.input?.deleteBackward()
     }
 
     override fun canBecomeFirstResponder() = true
@@ -325,7 +324,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      * @return A substring of a document that falls within the specified range.
      */
     override fun textInRange(range: UITextRange): String? {
-        return skikoInput?.textInRange(range.toIntRange())
+        return _skiaLayer.skikoView?.input?.textInRange(range.toIntRange())
     }
 
     /**
@@ -335,11 +334,11 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      * @param withText A string to replace the text in range.
      */
     override fun replaceRange(range: UITextRange, withText: String) {
-        skikoInput?.replaceRange(range.toIntRange(), withText)
+        _skiaLayer.skikoView?.input?.replaceRange(range.toIntRange(), withText)
     }
 
     override fun setSelectedTextRange(selectedTextRange: UITextRange?) {
-        skikoInput?.setSelectedTextRange(selectedTextRange?.toIntRange())
+        _skiaLayer.skikoView?.input?.setSelectedTextRange(selectedTextRange?.toIntRange())
     }
 
     /**
@@ -350,7 +349,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      * https://developer.apple.com/documentation/uikit/uitextinput/1614541-selectedtextrange
      */
     override fun selectedTextRange(): UITextRange? {
-        return skikoInput?.getSelectedTextRange()?.toUITextRange()
+        return _skiaLayer.skikoView?.input?.getSelectedTextRange()?.toUITextRange()
     }
 
     /**
@@ -362,7 +361,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      * https://developer.apple.com/documentation/uikit/uitextinput/1614489-markedtextrange
      */
     override fun markedTextRange(): UITextRange? {
-        return skikoInput?.markedTextRange()?.toUITextRange()
+        return _skiaLayer.skikoView?.input?.markedTextRange()?.toUITextRange()
     }
 
     override fun setMarkedTextStyle(markedTextStyle: Map<Any?, *>?) {
@@ -387,7 +386,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
             location.toInt() to length.toInt()
         }
         val relativeTextRange = locationRelative until locationRelative + lengthRelative
-        skikoInput?.setMarkedText(markedText, relativeTextRange)
+        _skiaLayer.skikoView?.input?.setMarkedText(markedText, relativeTextRange)
     }
 
     /**
@@ -396,7 +395,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      * https://developer.apple.com/documentation/uikit/uitextinput/1614512-unmarktext
      */
     override fun unmarkText() {
-        skikoInput?.unmarkText()
+        _skiaLayer.skikoView?.input?.unmarkText()
     }
 
     override fun beginningOfDocument(): UITextPosition {
@@ -408,7 +407,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      * https://developer.apple.com/documentation/uikit/uitextinput/1614555-endofdocument
      */
     override fun endOfDocument(): UITextPosition {
-        return IntermediateTextPosition(skikoInput?.endOfDocument() ?: 0)
+        return IntermediateTextPosition(_skiaLayer.skikoView?.input?.endOfDocument() ?: 0)
     }
 
     /**
@@ -428,7 +427,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      */
     override fun positionFromPosition(position: UITextPosition, offset: NSInteger): UITextPosition? {
         val p = (position as? IntermediateTextPosition)?.position ?: return null
-        val endOfDocument = skikoInput?.endOfDocument()
+        val endOfDocument = _skiaLayer.skikoView?.input?.endOfDocument()
         return if (endOfDocument != null) {
             IntermediateTextPosition(max(min(p + offset, endOfDocument), 0))
         } else {
