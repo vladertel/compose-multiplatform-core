@@ -1,5 +1,6 @@
 package org.jetbrains.skiko.bridge
 
+import androidx.compose.ui.unit.IntSize
 import kotlin.math.roundToInt
 import kotlinx.cinterop.*
 import org.jetbrains.skia.*
@@ -28,7 +29,7 @@ private data class FrameRenderTarget(
 internal class MetalRedrawer(
     device: MTLDeviceProtocol,
     private val metalLayer: CAMetalLayer,
-    private val drawInCanvas: Canvas.() -> Unit,
+    private val drawInCanvas: Canvas.(size: IntSize) -> Unit,
 ) {
     /**
      * Needs scheduling displayLink for forcing UITouch events to come at the fastest possible cadence.
@@ -195,7 +196,8 @@ internal class MetalRedrawer(
             info?.let {
                 it.surface.canvas.apply {
                     clear(Color.WHITE)
-                    drawInCanvas()
+                    println(it.surface.size)
+                    drawInCanvas(it.surface.size)
                 }
 
                 context.flush()
@@ -219,6 +221,9 @@ internal class MetalRedrawer(
         }
     }
 }
+
+private val Surface.size: IntSize
+    get() = IntSize(width, height)
 
 private class FrameTickListener(val onFrameTick: () -> Unit) : NSObject() {
     @ObjCAction

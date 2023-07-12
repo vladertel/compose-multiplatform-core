@@ -30,11 +30,11 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         ?: throw IllegalStateException("Metal is not supported on this system")
     private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
     private lateinit var _skiaLayer: IOSSkiaLayer
-    private var _pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true }
-    private var _skikoUITextInputTraits: SkikoUITextInputTraits = object : SkikoUITextInputTraits {}
+    private lateinit var _pointInside: (Point, UIEvent?) -> Boolean
+    private lateinit var _skikoUITextInputTraits: SkikoUITextInputTraits
     private var _inputDelegate: UITextInputDelegateProtocol? = null
     private var _currentTextMenuActions: TextActions? = null
-    private var _redrawer: MetalRedrawer? = null
+    private val _redrawer: MetalRedrawer
 
     @OverrideInit
     constructor(frame: CValue<CGRect>) : super(frame)
@@ -57,17 +57,27 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         metalLayer.framebufferOnly = false
         opaque = false // For UIKit interop through a "Hole"
         multipleTouchEnabled = true
+
+        _redrawer = MetalRedrawer(device, metalLayer) {size ->
+            _skiaLayer.draw(canvas = this, size)
+        }
     }
 
     constructor(
         skiaLayer: IOSSkiaLayer,
-        frame: CValue<CGRect> = CGRectNull.readValue(),
-        pointInside: (Point, UIEvent?) -> Boolean = {_,_-> true },
-        skikoUITextInputTraits: SkikoUITextInputTraits = object : SkikoUITextInputTraits {},
-    ) : super(frame) {
+        pointInside: (Point, UIEvent?) -> Boolean,
+        skikoUITextInputTraits: SkikoUITextInputTraits,
+    ) : super(CGRectZero.readValue()) {
         _skiaLayer = skiaLayer
         _pointInside = pointInside
         _skikoUITextInputTraits = skikoUITextInputTraits
+
+        _skiaLayer.needRedrawCallback = {
+            _redrawer.needRedraw()
+        }
+        _skiaLayer.detachCallback = {
+            _redrawer.dispose()
+        }
     }
 
     override fun layoutSubviews() {
@@ -81,8 +91,10 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
     override fun didMoveToWindow() {
         super.didMoveToWindow()
-        window?.screen?.maximumFramesPerSecond?.let {
-            _redrawer?.maximumFramesPerSecond = it
+
+        window?.screen?.let { screen ->
+            _redrawer.maximumFramesPerSecond = screen.maximumFramesPerSecond
+            contentScaleFactor = screen.scale
         }
         //TODO Pay attention to removing from window. Maybe set maximumFramesPerSecond to 0 ?
     }
@@ -139,30 +151,6 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
     override fun selectAll(sender: Any?) {
         _currentTextMenuActions?.selectAll?.invoke()
-    }
-
-    fun load(): SkikoUIView {
-        val (width, height) = UIScreen.mainScreen.bounds.useContents {
-            this.size.width to this.size.height
-        }
-        setFrame(CGRectMake(0.0, 0.0, width, height))
-        contentScaleFactor = UIScreen.mainScreen.scale
-        _skiaLayer.let { layer ->
-            layer.view = this
-
-            val metalRedrawer = MetalRedrawer(device, metalLayer) {
-                layer.draw(this)
-            }
-            _redrawer = metalRedrawer
-            layer.needRedrawCallback = {
-                metalRedrawer.needRedraw()
-            }
-            layer.detachCallback = {
-                metalRedrawer.dispose()
-            }
-        }
-
-        return this
     }
 
     fun showScreenKeyboard() = becomeFirstResponder()
@@ -244,7 +232,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
             val needHighFrequencyPolling = value > 0
 
-            _redrawer?.needsProactiveDisplayLink = needHighFrequencyPolling
+            _redrawer.needsProactiveDisplayLink = needHighFrequencyPolling
         }
 
     override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {

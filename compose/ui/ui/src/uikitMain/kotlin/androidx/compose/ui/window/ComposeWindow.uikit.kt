@@ -240,7 +240,7 @@ internal actual class ComposeWindow : UIViewController {
                 !layer.hitInteropView(point, isTouchEvent = true)
             },
             skikoUITextInputTraits = DelegateSkikoUITextInputTraits { _skikoUITextInputTraits }
-        ).load()
+        )
         val rootView = UIView() // rootView needs to interop with UIKit
         rootView.backgroundColor = UIColor.whiteColor
         rootView.setClipsToBounds(true)

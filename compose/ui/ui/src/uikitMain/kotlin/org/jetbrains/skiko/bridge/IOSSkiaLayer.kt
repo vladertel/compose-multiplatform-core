@@ -16,6 +16,7 @@
 
 package org.jetbrains.skiko.bridge
 
+import androidx.compose.ui.unit.IntSize
 import kotlin.system.getTimeNanos
 import kotlinx.cinterop.useContents
 import platform.UIKit.UIView
@@ -26,24 +27,9 @@ class IOSSkiaLayer : SkiaLayerInterface {
     var needRedrawCallback: () -> Unit = { }
     var detachCallback: () -> Unit = { }
 
-    val contentScale: Float
-        get() = view!!.contentScaleFactor.toFloat()
-
     override fun needRedraw() {
         needRedrawCallback()
     }
-
-    val width: Float
-       get() = view!!.frame.useContents {
-           return@useContents size.width.toFloat()
-       }
-
-    val height: Float
-        get() = view!!.frame.useContents {
-            return@useContents size.height.toFloat()
-        }
-
-    var view: UIView? = null
 
     private var isDisposed = false
 
@@ -55,14 +41,9 @@ class IOSSkiaLayer : SkiaLayerInterface {
     }
     override var skikoView: SkikoView? = null
 
-    internal fun draw(canvas: Canvas) {
+    internal fun draw(canvas: Canvas, size: IntSize) {
         check(!isDisposed) { "SkiaLayer is disposed" }
-        val (w, h) = view!!.frame.useContents {
-            size.width to size.height
-        }
-        val pictureWidth = (w.toFloat() * contentScale).coerceAtLeast(0.0F)
-        val pictureHeight = (h.toFloat() * contentScale).coerceAtLeast(0.0F)
 
-        skikoView?.onRender(canvas, pictureWidth.toInt(), pictureHeight.toInt(), getTimeNanos())
+        skikoView?.onRender(canvas, size.width, size.height, getTimeNanos())
     }
 }
