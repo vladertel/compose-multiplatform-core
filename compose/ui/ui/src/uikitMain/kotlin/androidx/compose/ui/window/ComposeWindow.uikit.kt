@@ -273,7 +273,9 @@ internal actual class ComposeWindow : UIViewController {
             selectionWillChange = { skikoUIView.selectionWillChange() },
             selectionDidChange = { skikoUIView.selectionDidChange() },
         )
+        // TODO: interaction of text input and skikoUIView could be more elegant?
         _skikoUITextInputTraits = uiKitTextInputService.skikoUITextInputTraits
+        skikoUIView.skikoInput = uiKitTextInputService.skikoInput
         val uiKitPlatform = object : Platform by Platform.Empty {
             override val textInputService: PlatformTextInputService = uiKitTextInputService
             override val viewConfiguration =
