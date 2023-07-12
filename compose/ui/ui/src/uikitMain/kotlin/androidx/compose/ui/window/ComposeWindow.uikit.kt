@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
 import androidx.compose.ui.unit.*
-import kotlin.math.roundToInt
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.useContents
@@ -134,7 +133,7 @@ internal actual class ComposeWindow : UIViewController {
     private val density: Density
         get() = Density((view.window?.screen?.scale ?: 1.0).toFloat(), fontScale)
 
-    private lateinit var layer: ComposeLayer
+    private lateinit var composeLayer: ComposeLayer
     private lateinit var content: @Composable () -> Unit
     private var _skikoUITextInputTraits: SkikoUITextInputTraits? = null
 
@@ -157,7 +156,7 @@ internal actual class ComposeWindow : UIViewController {
             }
 
             if (configuration.onFocusBehavior == OnFocusBehavior.FocusableAboveKeyboard) {
-                val focusedRect = layer.getActiveFocusRect()
+                val focusedRect = composeLayer.getActiveFocusRect()
                 if (focusedRect != null) {
                     updateViewBounds(
                         offsetY = calcFocusedLiftingY(focusedRect, keyboardHeight)
@@ -237,7 +236,7 @@ internal actual class ComposeWindow : UIViewController {
         val skikoUIView = SkikoUIView(
             skiaLayer = skiaLayer,
             pointInside = { point, _ ->
-                !layer.hitInteropView(point, isTouchEvent = true)
+                !composeLayer.hitInteropView(point, isTouchEvent = true)
             },
             skikoUITextInputTraits = DelegateSkikoUITextInputTraits { _skikoUITextInputTraits },
             onDrawableSizeChange = ::onDrawableSizeChange
@@ -325,13 +324,13 @@ internal actual class ComposeWindow : UIViewController {
 
             override val inputModeManager = DefaultInputModeManager(InputMode.Touch)
         }
-        layer = ComposeLayer(
+        composeLayer = ComposeLayer(
             layer = skiaLayer,
             platform = uiKitPlatform,
             getTopLeftOffset = ::getTopLeftOffset,
             input = uiKitTextInputService.skikoInput,
         )
-        layer.setContent(content = {
+        composeLayer.setContent(content = {
             CompositionLocalProvider(
                 LocalLayerContainer provides rootView,
                 LocalUIViewController provides this,
@@ -355,11 +354,11 @@ internal actual class ComposeWindow : UIViewController {
 
         // This method is also invoked when traitCollection change, so a density with new fontSize
         // will be updated here
-        layer.setDensity(density)
+        composeLayer.setDensity(density)
     }
 
     private fun onDrawableSizeChange(size: IntSize) {
-        layer.setSize(size.width, size.height)
+        composeLayer.setSize(size.width, size.height)
     }
 
     override fun viewDidAppear(animated: Boolean) {
@@ -412,7 +411,7 @@ internal actual class ComposeWindow : UIViewController {
     }
 
     actual fun dispose() {
-        layer.dispose()
+        composeLayer.dispose()
     }
 
     private fun getViewFrameSize(): IntSize {
