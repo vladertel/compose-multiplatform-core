@@ -345,29 +345,16 @@ internal actual class ComposeWindow : UIViewController {
         })
     }
 
-    override fun traitCollectionDidChange(previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-
-        val newSizeCategory = traitCollection.preferredContentSizeCategory
-
-        if (newSizeCategory != null && previousTraitCollection?.preferredContentSizeCategory != newSizeCategory) {
-            // will force a view to do layout on a next main runloop tick
-            // which will cause viewWillLayoutSubviews
-            // which will assign new density to layer (which takes new fontScale into consideration)
-            // and will force recomposition, because it will change
-
-            view.setNeedsLayout()
-        }
-    }
-
     override fun viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
 
-        // UIKit possesses all required info for layout at this point
+        // Inferred interface orientation is valid at this point
         currentInterfaceOrientation?.let {
             interfaceOrientationState.value = it
         }
 
+        // This method is also invoked when traitCollection change, so a density with new fontSize
+        // will be updated here
         layer.setDensity(density)
     }
 
