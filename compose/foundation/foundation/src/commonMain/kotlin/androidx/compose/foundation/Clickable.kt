@@ -109,12 +109,6 @@ fun Modifier.clickable(
     )
 }
 
-@Composable
-internal fun focusRequesterAndModifier(): Pair<FocusRequester, Modifier> {
-    val focusRequester = remember { FocusRequester() }
-    return focusRequester to Modifier.focusRequester(focusRequester)
-}
-
 /**
  * Configure component to receive clicks via input or accessibility "click" event.
  *
@@ -160,9 +154,9 @@ fun Modifier.clickable(
     Modifier
         .indication(interactionSource, indication)
         .hoverable(enabled = enabled, interactionSource = interactionSource)
-        .focusableInNonTouchMode(enabled = enabled, interactionSource = interactionSource)
-        .then(ClickableElement(interactionSource, enabled, onClickLabel, role, onClick))
+        .focusableClickable(interactionSource, enabled, onClickLabel, role, onClick)
 }
+
 /**
  * Configure component to receive clicks, double clicks and long clicks via input or accessibility
  * "click" event.
@@ -277,8 +271,7 @@ fun Modifier.combinedClickable(
     Modifier
         .indication(interactionSource, indication)
         .hoverable(enabled = enabled, interactionSource = interactionSource)
-        .focusableInNonTouchMode(enabled = enabled, interactionSource = interactionSource)
-        .then(CombinedClickableElement(
+        .focusableCombinedClickable(
             interactionSource,
             enabled,
             onClickLabel,
@@ -287,10 +280,10 @@ fun Modifier.combinedClickable(
             onLongClickLabel,
             onLongClick,
             onDoubleClick
-        ))
+        )
 }
 
-private suspend fun PressGestureScope.handlePressInteraction(
+internal suspend fun PressGestureScope.handlePressInteraction(
     pressPoint: Offset,
     interactionSource: MutableInteractionSource,
     interactionData: AbstractClickableNode.InteractionData,
@@ -412,11 +405,12 @@ internal fun Modifier.genericClickableWithoutGesture(
             .detectPressAndClickFromKey()
             .indication(interactionSource, indication)
             .hoverable(enabled = enabled, interactionSource = interactionSource)
-            .focusableInNonTouchMode(enabled = enabled, interactionSource = interactionSource)
+            .focusable(enabled = enabled, interactionSource = interactionSource)
 }
 
-private class ClickableElement(
+internal class ClickableElement(
     private val interactionSource: MutableInteractionSource,
+    private val focusRequester: FocusRequester,
     private val enabled: Boolean,
     private val onClickLabel: String?,
     private val role: Role? = null,
@@ -424,6 +418,7 @@ private class ClickableElement(
 ) : ModifierNodeElement<ClickableNode>() {
     override fun create() = ClickableNode(
         interactionSource,
+        focusRequester,
         enabled,
         onClickLabel,
         role,
@@ -439,7 +434,7 @@ private class ClickableElement(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
 
         other as ClickableElement
 
@@ -462,8 +457,9 @@ private class ClickableElement(
     }
 }
 
-private class CombinedClickableElement(
+internal class CombinedClickableElement(
     private val interactionSource: MutableInteractionSource,
+    private val focusRequester: FocusRequester,
     private val enabled: Boolean,
     private val onClickLabel: String?,
     private val role: Role? = null,
@@ -474,6 +470,7 @@ private class CombinedClickableElement(
 ) : ModifierNodeElement<CombinedClickableNode>() {
     override fun create() = CombinedClickableNode(
         interactionSource,
+        focusRequester,
         enabled,
         onClickLabel,
         role,
@@ -501,7 +498,7 @@ private class CombinedClickableElement(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
 
         other as CombinedClickableElement
 
@@ -530,8 +527,9 @@ private class CombinedClickableElement(
     }
 }
 
-private class ClickableNode(
+internal class ClickableNode(
     interactionSource: MutableInteractionSource,
+    focusRequester: FocusRequester,
     enabled: Boolean,
     onClickLabel: String?,
     role: Role?,
@@ -553,7 +551,8 @@ private class ClickableNode(
             enabled = enabled,
             interactionSource = interactionSource,
             onClick = onClick,
-            interactionData = interactionData
+            interactionData = interactionData,
+            focusRequester = focusRequester,
         )
     )
 
@@ -581,8 +580,9 @@ private class ClickableNode(
     }
 }
 
-private class CombinedClickableNode(
+internal class CombinedClickableNode(
     interactionSource: MutableInteractionSource,
+    focusRequester: FocusRequester,
     enabled: Boolean,
     onClickLabel: String?,
     role: Role?,
@@ -606,6 +606,7 @@ private class CombinedClickableNode(
         CombinedClickablePointerInputNode(
             enabled = enabled,
             interactionSource = interactionSource,
+            focusRequester = focusRequester,
             onClick = onClick,
             interactionData = interactionData,
             onLongClick,
@@ -648,7 +649,7 @@ private class CombinedClickableNode(
     }
 }
 
-private sealed class AbstractClickableNode(
+internal sealed class AbstractClickableNode(
     private var interactionSource: MutableInteractionSource,
     private var enabled: Boolean,
     private var onClickLabel: String?,
@@ -794,7 +795,7 @@ private class ClickableSemanticsElement(
     }
 }
 
-private class ClickableSemanticsNode(
+internal class ClickableSemanticsNode(
     private var enabled: Boolean,
     private var onClickLabel: String?,
     private var role: Role?,
@@ -840,9 +841,10 @@ private class ClickableSemanticsNode(
     }
 }
 
-private sealed class AbstractClickablePointerInputNode(
+internal sealed class AbstractClickablePointerInputNode(
     protected var enabled: Boolean,
     protected var interactionSource: MutableInteractionSource?,
+    protected var focusRequester: FocusRequester,
     protected var onClick: () -> Unit,
     protected val interactionData: AbstractClickableNode.InteractionData
 ) : DelegatingNode(), ModifierLocalModifierNode, CompositionLocalConsumerModifierNode,
@@ -882,14 +884,16 @@ private sealed class AbstractClickablePointerInputNode(
     protected fun resetPointerInputHandler() = pointerInputNode.resetPointerInputHandler()
 }
 
-private class ClickablePointerInputNode(
+internal class ClickablePointerInputNode(
     enabled: Boolean,
     interactionSource: MutableInteractionSource,
+    focusRequester: FocusRequester,
     onClick: () -> Unit,
     interactionData: AbstractClickableNode.InteractionData
 ) : AbstractClickablePointerInputNode(
     enabled,
     interactionSource,
+    focusRequester,
     onClick,
     interactionData
 ) {
@@ -898,6 +902,7 @@ private class ClickablePointerInputNode(
         detectTapAndPress(
             onPress = { offset ->
                 if (enabled) {
+                    focusRequester.requestFocus()
                     handlePressInteraction(offset)
                 }
             },
@@ -918,9 +923,10 @@ private class ClickablePointerInputNode(
     }
 }
 
-private class CombinedClickablePointerInputNode(
+internal class CombinedClickablePointerInputNode(
     enabled: Boolean,
     interactionSource: MutableInteractionSource,
+    focusRequester: FocusRequester,
     onClick: () -> Unit,
     interactionData: AbstractClickableNode.InteractionData,
     private var onLongClick: (() -> Unit)?,
@@ -928,6 +934,7 @@ private class CombinedClickablePointerInputNode(
 ) : AbstractClickablePointerInputNode(
     enabled,
     interactionSource,
+    focusRequester,
     onClick,
     interactionData
 ) {
@@ -935,13 +942,20 @@ private class CombinedClickablePointerInputNode(
         interactionData.centreOffset = size.center.toOffset()
         detectTapGestures(
             onDoubleTap = if (enabled && onDoubleClick != null) {
-                { onDoubleClick?.invoke() }
+                {
+                    focusRequester.requestFocus()
+                    onDoubleClick?.invoke()
+                }
             } else null,
             onLongPress = if (enabled && onLongClick != null) {
-                { onLongClick?.invoke() }
+                {
+                    focusRequester.requestFocus()
+                    onLongClick?.invoke()
+                }
             } else null,
             onPress = { offset ->
                 if (enabled) {
+                    focusRequester.requestFocus()
                     handlePressInteraction(offset)
                 }
             },
