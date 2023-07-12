@@ -131,7 +131,7 @@ internal actual class ComposeWindow : UIViewController {
         }
 
     private val density: Density
-        get() = Density((view.window?.screen?.scale ?: 1.0).toFloat(), fontScale)
+        get() = Density(density = view.window?.screen?.scale?.toFloat() ?: 1.0f, fontScale)
 
     private lateinit var composeLayer: ComposeLayer
     private lateinit var content: @Composable () -> Unit
