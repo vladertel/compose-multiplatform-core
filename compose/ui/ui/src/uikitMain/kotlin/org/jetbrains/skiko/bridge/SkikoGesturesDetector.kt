@@ -24,7 +24,7 @@ import platform.UIKit.*
 import org.jetbrains.skiko.*
 
 internal class SkikoGesturesDetector(
-    private val layer: SkiaLayer2
+    private val layer: IOSSkiaLayer
 ) : NSObject() {
 
     val view: UIView?

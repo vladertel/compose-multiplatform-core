@@ -30,7 +30,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     private val device: MTLDeviceProtocol = MTLCreateSystemDefaultDevice()
         ?: throw IllegalStateException("Metal is not supported on this system")
     private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
-    private lateinit var _skiaLayer: SkiaLayer2
+    private lateinit var _skiaLayer: IOSSkiaLayer
     private var _pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true }
     private var _skikoUITextInputTraits: SkikoUITextInputTraits = object : SkikoUITextInputTraits {}
     private var _inputDelegate: UITextInputDelegateProtocol? = null
@@ -61,7 +61,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     }
 
     constructor(
-        skiaLayer: SkiaLayer2,
+        skiaLayer: IOSSkiaLayer,
         frame: CValue<CGRect> = CGRectNull.readValue(),
         pointInside: (Point, UIEvent?) -> Boolean = {_,_-> true },
         skikoUITextInputTraits: SkikoUITextInputTraits = object : SkikoUITextInputTraits {},

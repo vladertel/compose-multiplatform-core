@@ -36,7 +36,7 @@ import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.useContents
 import org.jetbrains.skiko.bridge.SkikoUIView
 import org.jetbrains.skiko.TextActions
-import org.jetbrains.skiko.bridge.SkiaLayer2
+import org.jetbrains.skiko.bridge.IOSSkiaLayer
 import org.jetbrains.skiko.ios.SkikoUITextInputTraits
 import platform.CoreGraphics.CGPointMake
 import platform.CoreGraphics.CGRectMake
@@ -233,7 +233,7 @@ internal actual class ComposeWindow : UIViewController {
     }
 
     override fun loadView() {
-        val skiaLayer = SkiaLayer2()
+        val skiaLayer = IOSSkiaLayer()
         val skikoUIView = SkikoUIView(
             skiaLayer = skiaLayer,
             pointInside = { point, _ ->

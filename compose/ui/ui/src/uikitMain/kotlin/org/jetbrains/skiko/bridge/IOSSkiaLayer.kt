@@ -18,12 +18,11 @@ package org.jetbrains.skiko.bridge
 
 import kotlin.system.getTimeNanos
 import kotlinx.cinterop.useContents
-import org.jetbrains.skiko.GraphicsApi
 import platform.UIKit.UIView
 import org.jetbrains.skiko.*
 import org.jetbrains.skia.*
 
-class SkiaLayer2 : SkiaLayerInterface {
+class IOSSkiaLayer : SkiaLayerInterface {
     var needRedrawCallback: () -> Unit = { }
     var detachCallback: () -> Unit = { }
 
