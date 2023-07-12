@@ -160,7 +160,6 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
             layer.detachCallback = {
                 metalRedrawer.dispose()
             }
-            layer.initGestures()
         }
 
         return this

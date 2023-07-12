@@ -44,18 +44,6 @@ class IOSSkiaLayer : SkiaLayerInterface {
         }
 
     var view: UIView? = null
-    // We need to keep reference to gesturesDetector as Objective-C will only keep weak reference here.
-    private var gesturesDetector = SkikoGesturesDetector(this)
-
-    private var gesturesToListen: Array<SkikoGestureEventKind>? = null
-        set(value) {
-            field = value
-            initGestures()
-        }
-
-    fun initGestures() {
-        gesturesDetector.setGesturesToListen(gesturesToListen)
-    }
 
     private var isDisposed = false
 
