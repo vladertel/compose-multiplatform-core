@@ -46,13 +46,9 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     constructor(coder: NSCoder) : super(coder)
 
     init {
-        metalLayer.setNeedsDisplayOnBoundsChange(true)
-        metalLayer.removeAllAnimations()
         // TODO: looks like a bug in K/N interop.
-
         metalLayer.device = device as objcnames.protocols.MTLDeviceProtocol?
         metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm
-        metalLayer.contentsGravity = kCAGravityTopLeft
         doubleArrayOf(0.0, 0.0, 0.0, 0.0).usePinned {
             metalLayer.backgroundColor =
                 CGColorCreate(CGColorSpaceCreateDeviceRGB(), it.addressOf(0))

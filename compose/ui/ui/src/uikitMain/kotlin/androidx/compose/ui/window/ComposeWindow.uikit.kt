@@ -352,7 +352,7 @@ internal actual class ComposeWindow : UIViewController {
             interfaceOrientationState.value = it
         }
 
-        // This method is also invoked when traitCollection change, so a density with new fontSize
+        // This method is also invoked when traitCollection changes, so a density with new fontSize
         // will be updated here
         composeLayer.setDensity(density)
     }
