@@ -29,6 +29,12 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     private val device: MTLDeviceProtocol = MTLCreateSystemDefaultDevice()
         ?: throw IllegalStateException("Metal is not supported on this system")
     private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
+    private lateinit var _skiaLayer: SkiaLayer2
+    private var _pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true }
+    private var _skikoUITextInputTraits: SkikoUITextInputTraits = object : SkikoUITextInputTraits {}
+    private var _inputDelegate: UITextInputDelegateProtocol? = null
+    private var _currentTextMenuActions: TextActions? = null
+    private var _redrawer: MetalRedrawer? = null
 
     @OverrideInit
     constructor(frame: CValue<CGRect>) : super(frame)
@@ -52,13 +58,6 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         opaque = false // For UIKit interop through a "Hole"
         multipleTouchEnabled = true
     }
-
-    private lateinit var _skiaLayer: SkiaLayer2
-    private var _pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true }
-    private var _skikoUITextInputTraits: SkikoUITextInputTraits = object : SkikoUITextInputTraits {}
-    private var _inputDelegate: UITextInputDelegateProtocol? = null
-    private var _currentTextMenuActions: TextActions? = null
-    private var _redrawer: MetalRedrawer? = null
 
     constructor(
         skiaLayer: SkiaLayer2,
