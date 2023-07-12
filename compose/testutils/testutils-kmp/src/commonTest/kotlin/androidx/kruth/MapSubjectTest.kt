@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import androidx.build.LibraryType
+package androidx.kruth
 
-plugins {
-    id("AndroidXPlugin")
-    id("kotlin")
-}
+import kotlin.test.Test
+import kotlin.test.assertFailsWith
 
-dependencies {
-    api(libs.kotlinStdlib)
-    implementation(project(":paging:paging-common"))
-    implementation(libs.kotlinTest)
-}
+class MapSubjectTest {
 
-androidx {
-    type = LibraryType.INTERNAL_TEST_LIBRARY
+    @Test
+    fun isEmpty() {
+        assertThat(mapOf<Any, Any>()).isEmpty()
+    }
+
+    @Test
+    fun isEmptyWithFailure() {
+        assertFailsWith<AssertionError> {
+            assertThat(mapOf(1 to 5)).isEmpty()
+        }
+    }
 }

@@ -16,8 +16,9 @@
 
 package androidx.testutils
 
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Runnable
 
 object DirectDispatcher : CoroutineDispatcher() {
     override fun dispatch(context: CoroutineContext, block: Runnable) {

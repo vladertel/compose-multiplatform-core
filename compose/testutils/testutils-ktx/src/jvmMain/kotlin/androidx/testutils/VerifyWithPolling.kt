@@ -16,8 +16,10 @@
 
 package androidx.testutils
 
+import java.lang.SuppressWarnings
 import org.junit.Assert
 
+@SuppressWarnings("BanThreadSleep")
 fun verifyWithPolling(
     message: String,
     periodMs: Long,

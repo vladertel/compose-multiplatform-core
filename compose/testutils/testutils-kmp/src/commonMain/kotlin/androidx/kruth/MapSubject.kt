@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import androidx.build.LibraryType
+package androidx.kruth
 
-plugins {
-    id("AndroidXPlugin")
-    id("kotlin")
-}
+import kotlin.test.fail
 
-dependencies {
-    api(libs.kotlinStdlib)
-    implementation(project(":paging:paging-common"))
-    implementation(libs.kotlinTest)
-}
+class MapSubject<K, V>(actual: Map<K, V>?) : Subject<Map<K, V>>(actual) {
 
-androidx {
-    type = LibraryType.INTERNAL_TEST_LIBRARY
+    /** Fails if the map is not empty. */
+    fun isEmpty() {
+        requireNonNull(actual) { "Expected to be empty, but was null" }
+
+        if (actual.isNotEmpty()) {
+            fail("Expected to be empty, but was $actual")
+        }
+    }
 }
