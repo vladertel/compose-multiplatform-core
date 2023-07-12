@@ -196,7 +196,6 @@ internal class MetalRedrawer(
             info?.let {
                 it.surface.canvas.apply {
                     clear(Color.WHITE)
-                    println(it.surface.size)
                     drawInCanvas(it.surface.size)
                 }
 
