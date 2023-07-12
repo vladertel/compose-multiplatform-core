@@ -1,5 +1,6 @@
 package org.jetbrains.skiko.bridge
 
+import androidx.compose.ui.unit.IntSize
 import kotlinx.cinterop.*
 import org.jetbrains.skia.Point
 import org.jetbrains.skia.Rect
@@ -10,6 +11,7 @@ import platform.UIKit.*
 import platform.darwin.NSInteger
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import org.jetbrains.skiko.*
 import platform.Metal.MTLCreateSystemDefaultDevice
 import platform.Metal.MTLDeviceProtocol
@@ -32,6 +34,7 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     private lateinit var _skiaLayer: IOSSkiaLayer
     private lateinit var _pointInside: (Point, UIEvent?) -> Boolean
     private lateinit var _skikoUITextInputTraits: SkikoUITextInputTraits
+    private lateinit var _onDrawableSizeChange: (IntSize) -> Unit
     private var _inputDelegate: UITextInputDelegateProtocol? = null
     private var _currentTextMenuActions: TextActions? = null
     private val _redrawer: MetalRedrawer
@@ -67,10 +70,12 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         skiaLayer: IOSSkiaLayer,
         pointInside: (Point, UIEvent?) -> Boolean,
         skikoUITextInputTraits: SkikoUITextInputTraits,
+        onDrawableSizeChange: (IntSize) -> Unit
     ) : super(CGRectZero.readValue()) {
         _skiaLayer = skiaLayer
         _pointInside = pointInside
         _skikoUITextInputTraits = skikoUITextInputTraits
+        _onDrawableSizeChange = onDrawableSizeChange
 
         _skiaLayer.needRedrawCallback = {
             _redrawer.needRedraw()
@@ -86,7 +91,12 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         val scaledSize = bounds.useContents {
             CGSizeMake(size.width * scale, size.height * scale)
         }
+
         metalLayer.drawableSize = scaledSize
+
+        _onDrawableSizeChange(scaledSize.useContents {
+            IntSize(width.roundToInt(), height.roundToInt())
+        })
     }
 
     override fun didMoveToWindow() {

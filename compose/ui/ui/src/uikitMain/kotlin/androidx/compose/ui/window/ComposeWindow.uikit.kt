@@ -239,7 +239,8 @@ internal actual class ComposeWindow : UIViewController {
             pointInside = { point, _ ->
                 !layer.hitInteropView(point, isTouchEvent = true)
             },
-            skikoUITextInputTraits = DelegateSkikoUITextInputTraits { _skikoUITextInputTraits }
+            skikoUITextInputTraits = DelegateSkikoUITextInputTraits { _skikoUITextInputTraits },
+            onDrawableSizeChange = ::onDrawableSizeChange
         )
         val rootView = UIView() // rootView needs to interop with UIKit
         rootView.backgroundColor = UIColor.whiteColor
@@ -367,10 +368,11 @@ internal actual class ComposeWindow : UIViewController {
             interfaceOrientationState.value = it
         }
 
-        val (width, height) = getViewFrameSize()
         layer.setDensity(density)
-        val scale = density.density
-        layer.setSize((width * scale).roundToInt(), (height * scale).roundToInt())
+    }
+
+    private fun onDrawableSizeChange(size: IntSize) {
+        layer.setSize(size.width, size.height)
     }
 
     override fun viewDidAppear(animated: Boolean) {
