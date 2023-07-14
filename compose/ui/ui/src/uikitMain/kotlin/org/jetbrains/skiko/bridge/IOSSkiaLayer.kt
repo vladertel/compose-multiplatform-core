@@ -23,6 +23,7 @@ import platform.UIKit.UIView
 import org.jetbrains.skiko.*
 import org.jetbrains.skia.*
 
+// TODO: this class feels like a gimmick, candidate for removal
 class IOSSkiaLayer : SkiaLayerInterface {
     var needRedrawCallback: () -> Unit = { }
     var detachCallback: () -> Unit = { }
