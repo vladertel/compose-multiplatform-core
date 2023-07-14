@@ -29,19 +29,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.isEqualTo
 import androidx.compose.ui.platform.LocalPointerIconService
 import androidx.compose.ui.platform.Platform
-import androidx.compose.ui.runTestInUiThread
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
-import kotlin.coroutines.coroutineContext
 import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.jetbrains.skia.Surface
+import org.jetbrains.skiko.FrameDispatcher
 
-@OptIn(ExperimentalComposeUiApi::class)
 class PointerIconTest {
     private val iconService = object : PointerIconService {
         private var current: PointerIcon = PointerIcon.Default
@@ -200,13 +198,16 @@ class PointerIconTest {
 
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun whenHoveredShouldCommitWithoutMoveWhenIconChanges() = runTest(UnconfinedTestDispatcher()) {
+    fun whenHoveredShouldCommitWithoutMoveWhenIconChanges() = runTest(StandardTestDispatcher()) {
         val component = IconPlatform()
         val surface = Surface.makeRasterN32Premul(100, 100)
-        var scene: ComposeScene? = null
+        lateinit var scene: ComposeScene
 
+        val frameDispatcher = FrameDispatcher(coroutineContext) {
+            scene.render(surface.canvas, 1)
+        }
         scene = ComposeScene(platform = component, invalidate = {
-            scene?.render(surface.canvas, 1)
+            frameDispatcher.scheduleFrame()
         }, coroutineContext = coroutineContext)
 
         val iconState = mutableStateOf(PointerIcon.Text)
@@ -231,18 +232,22 @@ class PointerIconTest {
             assertThat(component._pointerIcon).isEqualTo(PointerIcon.Crosshair)
         } finally {
             scene.close()
+            frameDispatcher.cancel()
         }
     }
 
-    // TODO(https://github.com/JetBrains/compose-multiplatform/issues/3352) fix race between the main thread and return to `runTest(UnconfinedTestDispatcher())`
     @Test
-    fun whenNotHoveredShouldNeverCommit() = runTestInUiThread {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun whenNotHoveredShouldNeverCommit() = runTest(StandardTestDispatcher()) {
         val component = IconPlatform()
         val surface = Surface.makeRasterN32Premul(100, 100)
-        var scene: ComposeScene? = null
+        lateinit var scene: ComposeScene
 
+        val frameDispatcher = FrameDispatcher(coroutineContext) {
+            scene.render(surface.canvas, 1)
+        }
         scene = ComposeScene(platform = component, invalidate = {
-            scene?.render(surface.canvas, 1)
+            frameDispatcher.scheduleFrame()
         }, coroutineContext = coroutineContext)
 
         val iconState = mutableStateOf(PointerIcon.Text)
@@ -273,9 +278,8 @@ class PointerIconTest {
             scene.sendPointerEvent(PointerEventType.Move, Offset(90f, 95f))
             assertThat(component._pointerIcon).isEqualTo(PointerIcon.Default)
         } finally {
-            val toClose = scene
-            scene = null // otherwise, invalidate (scene?.render...) crashes
-            toClose.close()
+            scene.close()
+            frameDispatcher.cancel()
         }
     }
 
