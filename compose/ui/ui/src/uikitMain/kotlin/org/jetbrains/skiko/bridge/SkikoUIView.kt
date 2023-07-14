@@ -23,7 +23,7 @@ import platform.QuartzCore.kCAGravityTopLeft
 @Suppress("CONFLICTING_OVERLOADS")
 @ExportObjCClass
 @OptIn(InternalSkikoApi::class)
-class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
+internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
     companion object : UIViewMeta() {
         override fun layerClass() = CAMetalLayer
