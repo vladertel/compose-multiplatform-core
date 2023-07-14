@@ -36,6 +36,8 @@ import java.awt.image.MultiResolutionImage
 import java.text.AttributedString
 import javax.swing.Icon
 import javax.swing.ImageIcon
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 
 fun testImage(color: Color): Painter = run {
@@ -206,3 +208,9 @@ suspend fun awaitEDT() {
 fun Dimension.toDpSize() = DpSize(width.dp, height.dp)
 
 fun Point.toWindowPosition() = WindowPosition(x.dp, y.dp)
+
+actual fun runTestInUiThread(body: suspend () -> Unit) {
+    runBlocking(Dispatchers.Main) {
+        body()
+    }
+}

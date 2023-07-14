@@ -29,9 +29,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.isEqualTo
 import androidx.compose.ui.platform.LocalPointerIconService
 import androidx.compose.ui.platform.Platform
+import androidx.compose.ui.runTestInUiThread
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
+import kotlin.coroutines.coroutineContext
 import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -232,9 +234,9 @@ class PointerIconTest {
         }
     }
 
+    // TODO(https://github.com/JetBrains/compose-multiplatform/issues/3352) fix race between the main thread and return to `runTest(UnconfinedTestDispatcher())`
     @Test
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun whenNotHoveredShouldNeverCommit() = runTest(UnconfinedTestDispatcher()) {
+    fun whenNotHoveredShouldNeverCommit() = runTestInUiThread {
         val component = IconPlatform()
         val surface = Surface.makeRasterN32Premul(100, 100)
         var scene: ComposeScene? = null
