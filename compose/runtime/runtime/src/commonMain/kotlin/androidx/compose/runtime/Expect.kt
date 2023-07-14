@@ -59,7 +59,8 @@ internal expect class SnapshotThreadLocal<T>() {
  * if (identityHashCode(midVal) < identityHashCode(leftVal)) ...
  * ```
  */
-internal expect fun identityHashCode(instance: Any?): Int
+@InternalComposeApi
+expect fun identityHashCode(instance: Any?): Int
 
 @PublishedApi
 internal expect inline fun <R> synchronized(lock: Any, block: () -> R): R

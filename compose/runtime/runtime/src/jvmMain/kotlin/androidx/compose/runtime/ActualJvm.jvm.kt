@@ -63,7 +63,8 @@ internal actual class SnapshotThreadLocal<T> {
     }
 }
 
-internal actual fun identityHashCode(instance: Any?): Int = System.identityHashCode(instance)
+@InternalComposeApi
+actual fun identityHashCode(instance: Any?): Int = System.identityHashCode(instance)
 
 @PublishedApi
 internal actual inline fun <R> synchronized(lock: Any, block: () -> R): R {
