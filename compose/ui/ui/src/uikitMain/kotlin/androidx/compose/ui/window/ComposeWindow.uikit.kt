@@ -232,6 +232,7 @@ internal actual class ComposeWindow : UIViewController {
     }
 
     override fun loadView() {
+        // TODO: IOSSkiaLayer is never disposed
         val skiaLayer = IOSSkiaLayer()
         val skikoUIView = SkikoUIView(
             skiaLayer = skiaLayer,

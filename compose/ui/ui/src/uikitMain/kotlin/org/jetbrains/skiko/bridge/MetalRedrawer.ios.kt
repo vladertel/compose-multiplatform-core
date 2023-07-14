@@ -27,9 +27,8 @@ private data class FrameRenderTarget(
 )
 
 internal class MetalRedrawer(
-    device: MTLDeviceProtocol,
     private val metalLayer: CAMetalLayer,
-    private val drawInCanvas: Canvas.(size: IntSize) -> Unit,
+    private val drawInCanvas: (canvas: Canvas, size: IntSize) -> Unit,
 ) {
     /**
      * Needs scheduling displayLink for forcing UITouch events to come at the fastest possible cadence.
@@ -50,7 +49,8 @@ internal class MetalRedrawer(
             caDisplayLink.preferredFramesPerSecond = value
         }
 
-    private val queue = device.newCommandQueue() ?: throw IllegalStateException("Couldn't create Metal command queue")
+    private val device: MTLDeviceProtocol = metalLayer.device ?: throw IllegalStateException("CAMetalLayer.device is nil")
+    private val queue = device.newCommandQueue() ?: throw IllegalStateException("Couldn't create MTLCommandQueue")
     private val context = DirectContext.makeMetal(device.objcPtr(), queue.objcPtr())
     private var isDisposed = false
 
@@ -194,9 +194,9 @@ internal class MetalRedrawer(
             val info = prepareFrameRenderTarget()
 
             info?.let {
-                it.surface.canvas.apply {
-                    clear(Color.WHITE)
-                    drawInCanvas(it.surface.size)
+                it.surface.canvas.also { canvas ->
+                    canvas.clear(Color.WHITE)
+                    drawInCanvas(canvas, it.surface.size)
                 }
 
                 context.flush()

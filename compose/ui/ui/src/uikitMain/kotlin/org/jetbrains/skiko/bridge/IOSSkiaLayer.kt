@@ -41,10 +41,4 @@ class IOSSkiaLayer : SkiaLayerInterface {
         }
     }
     override var skikoView: SkikoView? = null
-
-    internal fun draw(canvas: Canvas, size: IntSize) {
-        check(!isDisposed) { "SkiaLayer is disposed" }
-
-        skikoView?.onRender(canvas, size.width, size.height, getTimeNanos())
-    }
 }

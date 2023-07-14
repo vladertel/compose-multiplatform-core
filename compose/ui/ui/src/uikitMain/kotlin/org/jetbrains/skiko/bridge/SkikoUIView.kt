@@ -12,6 +12,7 @@ import platform.darwin.NSInteger
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.system.getTimeNanos
 import org.jetbrains.skiko.*
 import platform.Metal.MTLCreateSystemDefaultDevice
 import platform.Metal.MTLDeviceProtocol
@@ -57,8 +58,8 @@ class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         opaque = false // For UIKit interop through a "Hole"
         multipleTouchEnabled = true
 
-        _redrawer = MetalRedrawer(device, metalLayer) {size ->
-            _skiaLayer.draw(canvas = this, size)
+        _redrawer = MetalRedrawer(metalLayer) { canvas, size ->
+            _skiaLayer.skikoView?.onRender(canvas, size.width, size.height, getTimeNanos())
         }
     }
 
