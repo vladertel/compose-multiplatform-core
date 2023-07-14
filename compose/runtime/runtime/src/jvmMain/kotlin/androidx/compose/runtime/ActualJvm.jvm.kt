@@ -66,6 +66,7 @@ internal actual class SnapshotThreadLocal<T> {
 @InternalComposeApi
 actual fun identityHashCode(instance: Any?): Int = System.identityHashCode(instance)
 
+actual typealias TestOnly = org.jetbrains.annotations.TestOnly
 @PublishedApi
 internal actual inline fun <R> synchronized(lock: Any, block: () -> R): R {
     return kotlin.synchronized(lock, block)
