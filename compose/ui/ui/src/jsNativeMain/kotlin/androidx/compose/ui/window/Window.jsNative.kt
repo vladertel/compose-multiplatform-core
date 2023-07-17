@@ -25,14 +25,13 @@ fun Window(
     content: @Composable () -> Unit = { }
 
 ) {
-    ComposeWindow().apply {
+    createComposeWindow().apply {
         setContent(content)
     }
 }
 
-internal expect class ComposeWindow() {
-    fun setContent(
-        content: @Composable () -> Unit
-    )
-    fun dispose()
+internal interface ComposeWindowInterface {
+    fun setContent(content: @Composable () -> Unit)
 }
+
+internal expect fun createComposeWindow(): ComposeWindowInterface

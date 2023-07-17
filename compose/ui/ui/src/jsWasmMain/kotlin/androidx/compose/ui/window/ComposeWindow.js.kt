@@ -38,9 +38,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.delay
 
-internal actual class ComposeWindow(val canvasId: String)  {
-
-    actual constructor(): this(defaultCanvasElementId)
+internal class ComposeWindow(val canvasId: String): ComposeWindowInterface {
+    constructor(): this(defaultCanvasElementId)
 
     private val density: Density = Density(
         density = window.devicePixelRatio.toFloat(),
@@ -93,7 +92,7 @@ internal actual class ComposeWindow(val canvasId: String)  {
      *
      * @param content Composable content of the ComposeWindow.
      */
-    actual fun setContent(
+    override fun setContent(
         content: @Composable () -> Unit
     ) {
         layer.setDensity(density)
@@ -103,7 +102,7 @@ internal actual class ComposeWindow(val canvasId: String)  {
     }
 
     // TODO: need to call .dispose() on window close.
-    actual fun dispose() {
+    fun dispose() {
         layer.dispose()
     }
 }

@@ -27,7 +27,7 @@ import platform.AppKit.*
 import platform.Foundation.*
 import kotlinx.cinterop.*
 
-internal actual class ComposeWindow actual constructor() {
+internal class ComposeWindow: ComposeWindowInterface {
     private val macosTextInputService = MacosTextInputService()
     val platform: Platform = object : Platform by Platform.Empty {
         override val textInputService = macosTextInputService
@@ -69,7 +69,7 @@ internal actual class ComposeWindow actual constructor() {
      *
      * @param content Composable content of the ComposeWindow.
      */
-    actual fun setContent(
+    override fun setContent(
         content: @Composable () -> Unit
     ) {
         layer.setContent(
@@ -78,7 +78,7 @@ internal actual class ComposeWindow actual constructor() {
     }
 
     // TODO: need to call .dispose() on window close.
-    actual fun dispose() {
+    fun dispose() {
         layer.dispose()
     }
 }

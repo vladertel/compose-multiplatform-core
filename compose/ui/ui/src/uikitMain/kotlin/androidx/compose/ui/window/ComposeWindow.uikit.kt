@@ -68,7 +68,7 @@ fun ComposeUIViewController(
     configure: ComposeUIViewControllerConfiguration.() -> Unit = {},
     content: @Composable () -> Unit
 ): UIViewController =
-    ComposeWindow().apply {
+    ComposeUIViewController().apply {
         configuration = ComposeUIViewControllerConfiguration()
             .apply(configure)
         setContent(content)
@@ -76,7 +76,7 @@ fun ComposeUIViewController(
 
 @OptIn(InternalComposeApi::class)
 @ExportObjCClass
-internal actual class ComposeWindow : UIViewController {
+internal class ComposeUIViewController : UIViewController, ComposeWindowInterface {
 
     internal lateinit var configuration: ComposeUIViewControllerConfiguration
     private val keyboardOverlapHeightState = mutableStateOf(0f)
@@ -117,7 +117,7 @@ internal actual class ComposeWindow : UIViewController {
         }
 
     @OverrideInit
-    actual constructor() : super(nibName = null, bundle = null)
+    constructor() : super(nibName = null, bundle = null)
 
     @OverrideInit
     constructor(coder: NSCoder) : super(coder)
@@ -405,14 +405,10 @@ internal actual class ComposeWindow : UIViewController {
         super.didReceiveMemoryWarning()
     }
 
-    actual fun setContent(
+    override fun setContent(
         content: @Composable () -> Unit
     ) {
         this.content = content
-    }
-
-    actual fun dispose() {
-        composeLayer.dispose()
     }
 
     private fun getViewFrameSize(): IntSize {
