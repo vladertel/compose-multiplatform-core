@@ -1560,7 +1560,7 @@ internal fun numberContentDescription(
         Strings.TimePickerHourSuffix
     }
 
-    return getString(id, number)
+    return getString(id).format(number)
 }
 
 private fun valuesForAnimation(current: Float, new: Float): Pair<Float, Float> {

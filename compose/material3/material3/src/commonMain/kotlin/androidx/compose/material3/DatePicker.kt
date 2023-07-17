@@ -545,19 +545,44 @@ object DatePickerDefaults {
         dateFormatter: DatePickerFormatter,
         modifier: Modifier = Modifier
     ) {
-        val defaultLocale = defaultLocale()
-        val formattedDate = dateFormatter.formatDate(
-            dateMillis = selectedDateMillis,
-            locale = defaultLocale
-        )
-        val verboseDateDescription = dateFormatter.formatDate(
-            dateMillis = selectedDateMillis,
-            locale = defaultLocale,
-            forContentDescription = true
-        ) ?: when (displayMode) {
-            DisplayMode.Picker -> getString(Strings.DatePickerNoSelectionDescription)
-            DisplayMode.Input -> getString(Strings.DateInputNoInputDescription)
-            else -> ""
+        with(state.stateData) {
+            val defaultLocale = defaultLocale()
+            val formattedDate = dateFormatter.formatDate(
+                date = selectedStartDate.value,
+                calendarModel = calendarModel,
+                locale = defaultLocale
+            )
+            val verboseDateDescription = dateFormatter.formatDate(
+                date = selectedStartDate.value,
+                calendarModel = calendarModel,
+                locale = defaultLocale,
+                forContentDescription = true
+            ) ?: when (displayMode.value) {
+                DisplayMode.Picker -> getString(Strings.DatePickerNoSelectionDescription)
+                DisplayMode.Input -> getString(Strings.DateInputNoInputDescription)
+                else -> ""
+            }
+
+            val headlineText = formattedDate ?: when (displayMode.value) {
+                DisplayMode.Picker -> getString(Strings.DatePickerHeadline)
+                DisplayMode.Input -> getString(Strings.DateInputHeadline)
+                else -> ""
+            }
+
+            val headlineDescription = when (displayMode.value) {
+                DisplayMode.Picker -> getString(Strings.DatePickerHeadlineDescription).format(verboseDateDescription)
+                DisplayMode.Input -> getString(Strings.DateInputHeadlineDescription).format(verboseDateDescription)
+                else -> ""
+            }
+
+            Text(
+                text = headlineText,
+                modifier = modifier.semantics {
+                    liveRegion = LiveRegionMode.Polite
+                    contentDescription = headlineDescription
+                },
+                maxLines = 1
+            )
         }
 
         val headlineText = formattedDate ?: when (displayMode) {
