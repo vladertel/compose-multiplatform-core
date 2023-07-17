@@ -143,7 +143,7 @@ import kotlinx.coroutines.launch
  * @param colors [DatePickerColors] that will be used to resolve the colors used for this date
  * picker in different states. See [DatePickerDefaults.colors].
  */
-@ExperimentalMaterial3Api
+@ExperimentalMaterial3Api // don't remove ExperimentalMaterial3Api until org.jetbrains.kotlinx:kotlinx-datetime is stabilized
 @Composable
 fun DatePicker(
     state: DatePickerState,
@@ -237,7 +237,7 @@ fun rememberDatePickerState(
  *
  * The state's [selectedDateMillis] will provide a timestamp that represents the _start_ of the day.
  */
-@ExperimentalMaterial3Api
+@ExperimentalMaterial3Api  // don't remove ExperimentalMaterial3Api until org.jetbrains.kotlinx:kotlinx-datetime is stabilized
 @Stable
 class DatePickerState private constructor(internal val stateData: StateData) {
 

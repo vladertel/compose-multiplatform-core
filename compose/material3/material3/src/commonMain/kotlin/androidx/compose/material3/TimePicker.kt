@@ -184,7 +184,7 @@ import kotlinx.coroutines.launch
  * it will change the position and sizing of different components of the timepicker.
  */
 @Composable
-@ExperimentalMaterial3Api
+@ExperimentalMaterial3Api  // don't remove ExperimentalMaterial3Api until org.jetbrains.kotlinx:kotlinx-datetime is stabilized
 fun TimePicker(
     state: TimePickerState,
     modifier: Modifier = Modifier,
@@ -487,7 +487,7 @@ value class TimePickerLayoutType internal constructor(internal val value: Int) {
  *  or `true` for 24 hour format without toggle.
  */
 @Stable
-@ExperimentalMaterial3Api
+@ExperimentalMaterial3Api  // don't remove ExperimentalMaterial3Api until org.jetbrains.kotlinx:kotlinx-datetime is stabilized
 class TimePickerState(
     initialHour: Int,
     initialMinute: Int,
