@@ -131,8 +131,7 @@ public class BenchmarkRule internal constructor(
     internal // synthetic access
     var applied = false
 
-    /** @suppress */
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @get:RestrictTo(RestrictTo.Scope.LIBRARY)
     public val scope: Scope = Scope()
 
     /**
@@ -217,7 +216,8 @@ public class BenchmarkRule internal constructor(
                     appTagPackages = packages,
                     useStackSamplingConfig = false
                 ),
-                userspaceTracingPackage = null,
+                // TODO(290918736): add support for Perfetto SDK Tracing in Microbenchmark
+                perfettoSdkConfig = null,
 
                 // optimize throughput in dryRunMode, since trace isn't useful, and extremely
                 // expensive on some emulators. Could alternately use UserspaceTracing if desired

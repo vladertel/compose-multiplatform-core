@@ -1,35 +1,47 @@
 // Signature format: 4.0
 package androidx.compose.material3.adaptive {
 
-  @androidx.compose.runtime.Immutable public final class AdaptiveLayoutDirective {
-    ctor public AdaptiveLayoutDirective(int maxHorizontalPartitions, androidx.compose.material3.adaptive.GutterSizes gutterSizes, optional int maxVerticalPartitions);
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public interface AdaptStrategy {
+    method public String adapt();
+    field public static final androidx.compose.material3.adaptive.AdaptStrategy.Companion Companion;
+  }
+
+  public static final class AdaptStrategy.Companion {
+    method public androidx.compose.material3.adaptive.AdaptStrategy getHide();
+    property public final androidx.compose.material3.adaptive.AdaptStrategy Hide;
+  }
+
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class AdaptiveLayoutDirective {
+    ctor public AdaptiveLayoutDirective(int maxHorizontalPartitions, androidx.compose.material3.adaptive.GutterSizes gutterSizes, optional int maxVerticalPartitions, optional java.util.List<androidx.compose.ui.geometry.Rect> excludedBounds);
+    method public java.util.List<androidx.compose.ui.geometry.Rect> getExcludedBounds();
     method public androidx.compose.material3.adaptive.GutterSizes getGutterSizes();
     method public int getMaxHorizontalPartitions();
     method public int getMaxVerticalPartitions();
+    property public final java.util.List<androidx.compose.ui.geometry.Rect> excludedBounds;
     property public final androidx.compose.material3.adaptive.GutterSizes gutterSizes;
     property public final int maxHorizontalPartitions;
     property public final int maxVerticalPartitions;
   }
 
   public final class AdaptiveLayoutDirectiveKt {
-    method @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public static androidx.compose.material3.adaptive.AdaptiveLayoutDirective calculateDenseAdaptiveLayoutDirective(androidx.compose.material3.adaptive.WindowAdaptiveInfo windowAdaptiveInfo);
-    method @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public static androidx.compose.material3.adaptive.AdaptiveLayoutDirective calculateStandardAdaptiveLayoutDirective(androidx.compose.material3.adaptive.WindowAdaptiveInfo windowAdaptiveInfo);
+    method @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public static androidx.compose.material3.adaptive.AdaptiveLayoutDirective calculateDenseAdaptiveLayoutDirective(androidx.compose.material3.adaptive.WindowAdaptiveInfo windowAdaptiveInfo);
+    method @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public static androidx.compose.material3.adaptive.AdaptiveLayoutDirective calculateStandardAdaptiveLayoutDirective(androidx.compose.material3.adaptive.WindowAdaptiveInfo windowAdaptiveInfo);
   }
 
   public final class AndroidPosture_androidKt {
-    method @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public static androidx.compose.material3.adaptive.Posture calculatePosture(java.util.List<? extends androidx.window.layout.FoldingFeature> foldingFeatures);
+    method @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public static androidx.compose.material3.adaptive.Posture calculatePosture(java.util.List<? extends androidx.window.layout.FoldingFeature> foldingFeatures);
   }
 
   public final class AndroidWindowInfo_androidKt {
-    method @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Composable public static androidx.compose.material3.adaptive.WindowAdaptiveInfo calculateWindowAdaptiveInfo(optional @UiContext android.content.Context context);
-    method @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Composable public static androidx.compose.runtime.State<java.util.List<androidx.window.layout.FoldingFeature>> foldingFeaturesAsState(optional @UiContext android.content.Context context);
-    method @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Composable public static androidx.compose.runtime.State<androidx.compose.ui.unit.IntSize> windowSizeAsState(optional @UiContext android.content.Context context);
+    method @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Composable public static androidx.compose.material3.adaptive.WindowAdaptiveInfo calculateWindowAdaptiveInfo(optional @UiContext android.content.Context context);
+    method @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Composable public static androidx.compose.runtime.State<java.util.List<androidx.window.layout.FoldingFeature>> foldingFeaturesAsState(optional @UiContext android.content.Context context);
+    method @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Composable public static androidx.compose.runtime.State<androidx.compose.ui.unit.IntSize> windowSizeAsState(optional @UiContext android.content.Context context);
   }
 
-  @kotlin.RequiresOptIn(message="This material3-adaptive API is experimental and is likely to change or to be" + "removed in the future.") @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) public @interface ExperimentalMaterial3AdaptiveApi {
+  @SuppressCompatibility @kotlin.RequiresOptIn(message="This material3-adaptive API is experimental and is likely to change or to be" + "removed in the future.") @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) public @interface ExperimentalMaterial3AdaptiveApi {
   }
 
-  @androidx.compose.runtime.Immutable public final class GutterSizes {
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class GutterSizes {
     ctor public GutterSizes(float outerVertical, float innerVertical, optional float outerHorizontal, optional float innerHorizontal);
     method public float getInnerHorizontal();
     method public float getInnerVertical();
@@ -41,7 +53,7 @@ package androidx.compose.material3.adaptive {
     property public final float outerVertical;
   }
 
-  @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @kotlin.jvm.JvmInline public final value class PaneAdaptedValue {
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @kotlin.jvm.JvmInline public final value class PaneAdaptedValue {
     field public static final androidx.compose.material3.adaptive.PaneAdaptedValue.Companion Companion;
   }
 
@@ -52,11 +64,11 @@ package androidx.compose.material3.adaptive {
     property public final String Hidden;
   }
 
-  @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public interface PaneScaffoldScope {
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public interface PaneScaffoldScope {
     method public androidx.compose.ui.Modifier preferredWidth(androidx.compose.ui.Modifier, float width);
   }
 
-  @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class Posture {
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class Posture {
     ctor public Posture(optional boolean hasVerticalHinge, optional boolean isTabletop, optional boolean hasSeparatingHinge);
     method public boolean getHasSeparatingHinge();
     method public boolean getHasVerticalHinge();
@@ -66,7 +78,12 @@ package androidx.compose.material3.adaptive {
     property public final boolean isTabletop;
   }
 
-  @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class ThreePaneScaffoldArrangement {
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public final class ThreePaneScaffoldAdaptStrategies {
+    ctor public ThreePaneScaffoldAdaptStrategies(androidx.compose.material3.adaptive.AdaptStrategy primaryPaneAdaptStrategy, androidx.compose.material3.adaptive.AdaptStrategy secondaryPaneAdaptStrategy, androidx.compose.material3.adaptive.AdaptStrategy tertiaryPaneAdaptStrategy);
+    method public operator androidx.compose.material3.adaptive.AdaptStrategy get(androidx.compose.material3.adaptive.ThreePaneScaffoldRole role);
+  }
+
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class ThreePaneScaffoldArrangement {
     ctor public ThreePaneScaffoldArrangement(androidx.compose.material3.adaptive.ThreePaneScaffoldRole firstPane, androidx.compose.material3.adaptive.ThreePaneScaffoldRole secondPane, androidx.compose.material3.adaptive.ThreePaneScaffoldRole thirdPane);
     method public androidx.compose.material3.adaptive.ThreePaneScaffoldRole getFirstPane();
     method public androidx.compose.material3.adaptive.ThreePaneScaffoldRole getSecondPane();
@@ -76,7 +93,18 @@ package androidx.compose.material3.adaptive {
     property public final androidx.compose.material3.adaptive.ThreePaneScaffoldRole thirdPane;
   }
 
-  @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public enum ThreePaneScaffoldRole {
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public final class ThreePaneScaffoldDefaults {
+    method public androidx.compose.material3.adaptive.ThreePaneScaffoldArrangement getListDetailLayoutArrangement();
+    method public androidx.compose.material3.adaptive.ThreePaneScaffoldAdaptStrategies threePaneScaffoldAdaptStrategies(optional androidx.compose.material3.adaptive.AdaptStrategy primaryPaneAdaptStrategy, optional androidx.compose.material3.adaptive.AdaptStrategy secondaryPaneAdaptStrategy, optional androidx.compose.material3.adaptive.AdaptStrategy tertiaryPaneAdaptStrategy);
+    property public final androidx.compose.material3.adaptive.ThreePaneScaffoldArrangement ListDetailLayoutArrangement;
+    field public static final androidx.compose.material3.adaptive.ThreePaneScaffoldDefaults INSTANCE;
+  }
+
+  public final class ThreePaneScaffoldKt {
+    method @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Composable public static void ThreePaneScaffold(androidx.compose.ui.Modifier modifier, androidx.compose.material3.adaptive.AdaptiveLayoutDirective layoutDirective, androidx.compose.material3.adaptive.ThreePaneScaffoldValue scaffoldValue, androidx.compose.material3.adaptive.ThreePaneScaffoldArrangement arrangement, kotlin.jvm.functions.Function2<? super androidx.compose.material3.adaptive.ThreePaneScaffoldScope,? super androidx.compose.material3.adaptive.PaneAdaptedValue,kotlin.Unit> secondaryPane, optional kotlin.jvm.functions.Function2<? super androidx.compose.material3.adaptive.ThreePaneScaffoldScope,? super androidx.compose.material3.adaptive.PaneAdaptedValue,kotlin.Unit>? tertiaryPane, kotlin.jvm.functions.Function2<? super androidx.compose.material3.adaptive.ThreePaneScaffoldScope,? super androidx.compose.material3.adaptive.PaneAdaptedValue,kotlin.Unit> primaryPane);
+  }
+
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public enum ThreePaneScaffoldRole {
     method public static androidx.compose.material3.adaptive.ThreePaneScaffoldRole valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
     method public static androidx.compose.material3.adaptive.ThreePaneScaffoldRole[] values();
     enum_constant public static final androidx.compose.material3.adaptive.ThreePaneScaffoldRole Primary;
@@ -84,8 +112,12 @@ package androidx.compose.material3.adaptive {
     enum_constant public static final androidx.compose.material3.adaptive.ThreePaneScaffoldRole Tertiary;
   }
 
-  @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class ThreePaneScaffoldValue {
+  public interface ThreePaneScaffoldScope extends androidx.compose.material3.adaptive.PaneScaffoldScope {
+  }
+
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class ThreePaneScaffoldValue {
     ctor public ThreePaneScaffoldValue(String primary, String secondary, String tertiary);
+    method public operator String get(androidx.compose.material3.adaptive.ThreePaneScaffoldRole role);
     method public String getPrimary();
     method public String getSecondary();
     method public String getTertiary();
@@ -94,7 +126,11 @@ package androidx.compose.material3.adaptive {
     property public final String tertiary;
   }
 
-  @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class WindowAdaptiveInfo {
+  public final class ThreePaneScaffoldValueKt {
+    method @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi public static androidx.compose.material3.adaptive.ThreePaneScaffoldValue calculateThreePaneScaffoldValue(int maxHorizontalPartitions, optional androidx.compose.material3.adaptive.ThreePaneScaffoldAdaptStrategies adaptStrategies, optional androidx.compose.material3.adaptive.ThreePaneScaffoldRole? currentFocus);
+  }
+
+  @SuppressCompatibility @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi @androidx.compose.runtime.Immutable public final class WindowAdaptiveInfo {
     ctor public WindowAdaptiveInfo(androidx.compose.material3.windowsizeclass.WindowSizeClass windowSizeClass, androidx.compose.material3.adaptive.Posture posture);
     method public androidx.compose.material3.adaptive.Posture getPosture();
     method public androidx.compose.material3.windowsizeclass.WindowSizeClass getWindowSizeClass();

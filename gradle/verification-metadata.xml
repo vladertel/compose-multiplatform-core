@@ -8,9 +8,6 @@
          <key-server uri="https://keyserver.ubuntu.com"/>
       </key-servers>
       <trusted-artifacts>
-         <trust group="ch.qos.logback" name="logback-classic" version="1.2.11" reason="b/234161459"/>
-         <trust group="ch.qos.logback" name="logback-core" version="1.2.11" reason="b/234161459"/>
-         <trust group="ch.qos.logback" name="logback-parent" version="1.2.11" reason="b/234161459"/>
          <trust group="com.google.android.datatransport" reason="b/215442095"/>
          <trust group="com.google.android.gms" reason="b/215442095"/>
          <trust group="com.google.android.material" reason="b/216192082"/>
@@ -19,12 +16,7 @@
          <trust group="com.google.firebase" reason="b/223907608"/>
          <trust group="com.google.mlkit" reason="b/223907608"/>
          <trust group="com.google.testing.platform" reason="b/215430394"/>
-         <trust group="com.pinterest" name="ktlint" version="0.46.0-20220520.192227-74" reason="b/234161459"/>
-         <trust group="com.pinterest.ktlint" version="0.46.0-20220520.192227-74" reason="b/234161459"/>
          <trust group="gradle" name="gradle"/>
-         <trust group="info.picocli" name="picocli" version="4.6.3" reason="b/234161459"/>
-         <trust group="org.slf4j" name="slf4j-api" version="1.7.32" reason="b/234161459"/>
-         <trust group="org.slf4j" name="slf4j-parent" version="1.7.32" reason="b/234161459"/>
          <trust file=".*-javadoc[.]jar" regex="true"/>
          <trust file=".*-sources[.]jar" regex="true"/>
          <trust file=".*kotlin-native-prebuilt-macos-.*" regex="true" reason="b/228184608"/>
@@ -34,6 +26,7 @@
       <trusted-keys>
          <trusted-key id="00089ee8c3afa95a854d0f1df800dd0933ecf7f7" group="com.google.guava"/>
          <trusted-key id="019082bc00e0324e2aef4cf00d3b328562a119a7" group="org.openjdk.jmh"/>
+         <trusted-key id="03c123038c20aae9e286c857479d601f3a7b5c1a" group="com.github.ajalt.clikt" name="clikt-jvm" version="3.5.3"/>
          <trusted-key id="042b29e928995b9db963c636c7ca19b7b620d787" group="org.apache.maven"/>
          <trusted-key id="04543577d6a9cc626239c50c7ecbd740ff06aeb5">
             <trusting group="com.sun.activation"/>
@@ -193,6 +186,10 @@
          <trusted-key id="5dceb296690bd5101756f2441f8cf885d537a431" group="com.nhaarman.mockitokotlin2"/>
          <trusted-key id="5fa41c402006eac55d72aafd99ce9d9f22dc5c99" group="org.json"/>
          <trusted-key id="600ea202b1ec682f4a788e5aac7a514bc9f9bb70" group="io.opencensus"/>
+         <trusted-key id="60200ac4ae761f1614d6c46766d68daa073be985">
+            <trusting group="ch.qos.logback"/>
+            <trusting group="org.slf4j"/>
+         </trusted-key>
          <trusted-key id="6214760097dc5cfad0175ac2c9fbaa83a8753994">
             <trusting group="com.fasterxml"/>
             <trusting group="com.fasterxml.jackson"/>
@@ -344,6 +341,7 @@
             <trusting group="io.grpc"/>
          </trusted-key>
          <trusted-key id="b252e5789636134a311e4463971b04f56669b805" group="com.google.jsilver"/>
+         <trusted-key id="b2f967b67dadc1f07172dbdade453e55dc86fc9b" group="co.touchlab"/>
          <trusted-key id="b41089a2da79b0fa5810252872385ff0af338d52" group="org.threeten"/>
          <trusted-key id="b46dc71e03feeb7f89d1f2491f7a8f87b9d8f501" group="org.jetbrains.trove4j"/>
          <trusted-key id="b47034c19c9b1f3dc3702f8d476634a4694e716a" group="com.googlecode.java-diff-utils"/>
@@ -461,19 +459,19 @@
       </trusted-keys>
    </configuration>
    <components>
-      <component group="" name="kotlin-native-prebuilt-linux-x86_64" version="1.8.22">
-         <artifact name="kotlin-native-prebuilt-linux-x86_64-1.8.22.tar.gz">
-            <sha256 value="43106db0ad8fb292facae924c97591529de15b69a0426d0474ac3811820a05b5" origin="Hand-built using sha256sum kotlin-native-prebuilt-linux-x86_64-1.8.22.tar.gz" reason="Artifact is not signed"/>
+      <component group="" name="kotlin-native-prebuilt-linux-x86_64" version="1.9.0">
+         <artifact name="kotlin-native-prebuilt-linux-x86_64-1.9.0.tar.gz">
+            <sha256 value="31737a9739fc37208e1f532b7472c3fbbf0d753f3621c9dfc1d72a69d5bc35c0" origin="Hand-built using sha256sum kotlin-native-prebuilt-linux-x86_64-1.9.0.tar.gz" reason="Artifact is not signed"/>
          </artifact>
       </component>
-      <component group="" name="kotlin-native-prebuilt-macos-aarch64" version="1.8.22">
-         <artifact name="kotlin-native-prebuilt-macos-aarch64-1.8.22.tar.gz">
-            <sha256 value="d693f7c70e491ee9fa1e9d7392192934fb1d504fab2a9c7e8dbe877af3228c7c" origin="Hand-built using sha256sum kotlin-native-prebuilt-macos-aarch64-1.8.22.tar.gz"/>
+      <component group="" name="kotlin-native-prebuilt-macos-aarch64" version="1.9.0">
+         <artifact name="kotlin-native-prebuilt-macos-aarch64-1.9.0.tar.gz">
+            <sha256 value="cbb700baef01980b9b9a6d499da7adff5c611dc61ed247efdf649a073c4dbb3c" origin="Hand-built using sha256sum kotlin-native-prebuilt-macos-aarch64-1.9.0.tar.gz"/>
          </artifact>
       </component>
-      <component group="" name="kotlin-native-prebuilt-macos-x86_64" version="1.8.22">
-         <artifact name="kotlin-native-prebuilt-macos-x86_64-1.8.22.tar.gz">
-            <sha256 value="5d924f4278028352cb2bdbaa4b3fab967ab81c3fbea845bdb91cd583af5c9bcc" origin="Hand-built using sha256sum kotlin-native-prebuilt-macos-x86_64-1.8.22.tar.gz"/>
+      <component group="" name="kotlin-native-prebuilt-macos-x86_64" version="1.9.0">
+         <artifact name="kotlin-native-prebuilt-macos-x86_64-1.9.0.tar.gz">
+            <sha256 value="ab02e67bc82d986875941036e147179e2812502bd2d6a8d8b3c511a93a8dbd1d" origin="Hand-built using sha256sum kotlin-native-prebuilt-macos-x86_64-1.9.0.tar.gz"/>
          </artifact>
       </component>
       <component group="aopalliance" name="aopalliance" version="1.0">
@@ -985,6 +983,7 @@
       <component group="org.sonatype.oss" name="oss-parent" version="9">
          <artifact name="oss-parent-9.pom">
             <pgp value="44fbdbbc1a00fe414f1c1873586654072ead6677"/>
+            <sha256 value="fb40265f982548212ff82e362e59732b2187ec6f0d80182885c14ef1f982827a" origin="Generated by Gradle"/>
          </artifact>
       </component>
       <component group="org.tensorflow" name="tensorflow-lite-metadata" version="0.1.0-rc2">

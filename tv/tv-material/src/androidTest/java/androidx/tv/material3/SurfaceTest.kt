@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.nativeKeyCode
 import androidx.compose.ui.platform.LocalFocusManager
@@ -77,6 +79,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performKeyPress
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -217,7 +220,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .assertHasClickAction()
             .assertIsEnabled()
             // since we merge descendants we should have text on the same node
@@ -241,7 +244,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .assertHasClickAction()
             .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
             .assertIsEnabled()
@@ -266,7 +269,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .assertHasClickAction()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
             .assertIsEnabled()
@@ -290,7 +293,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performKeyInput { pressKey(Key.DirectionCenter) }
         Truth.assertThat(count.value).isEqualTo(1)
 
@@ -315,7 +318,7 @@ class SurfaceTest {
         }
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performLongKeyPress(rule, Key.DirectionCenter, 1)
         Truth.assertThat(count.value).isEqualTo(1)
 
@@ -341,7 +344,7 @@ class SurfaceTest {
         }
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performKeyInput { pressKey(Key.DirectionCenter) }
             .performLongKeyPress(rule, Key.DirectionCenter, 1)
         Truth.assertThat(count1.value).isEqualTo(1)
@@ -354,7 +357,7 @@ class SurfaceTest {
         Truth.assertThat(count2.value).isEqualTo(1)
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performLongKeyPress(rule, Key.DirectionCenter, 1, 2)
         Truth.assertThat(count1.value).isEqualTo(3)
         Truth.assertThat(count2.value).isEqualTo(3)
@@ -376,7 +379,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .assertIsEnabled()
             .performKeyInput { pressKey(Key.DirectionCenter) }
 
@@ -421,7 +424,7 @@ class SurfaceTest {
         }
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performKeyInput { keyDown(Key.DirectionCenter) }
 
         rule.runOnIdle {
@@ -540,7 +543,7 @@ class SurfaceTest {
             .assertContainsColor(Color.Magenta)
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
 
         rule.onNodeWithTag("surface")
             .captureToImage()
@@ -568,7 +571,7 @@ class SurfaceTest {
         }
         rule.onRoot().captureToImage().assertContainsColor(Color.Blue)
 
-        rule.onNodeWithTag("surface").performSemanticsAction(SemanticsActions.RequestFocus)
+        rule.onNodeWithTag("surface").requestFocus()
 
         rule.onRoot().captureToImage().assertDoesNotContainColor(Color.Blue)
     }
@@ -598,7 +601,7 @@ class SurfaceTest {
 
         surface.captureToImage().assertDoesNotContainColor(Color.Magenta)
 
-        surface.performSemanticsAction(SemanticsActions.RequestFocus)
+        surface.requestFocus()
 
         surface.captureToImage().assertContainsColor(Color.Magenta)
     }
@@ -618,7 +621,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .assertHasClickAction()
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
             .assertIsEnabled()
@@ -644,7 +647,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .assertHasClickAction()
             .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
             .assertIsEnabled()
@@ -670,7 +673,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .assertHasClickAction()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
             .assertIsEnabled()
@@ -695,7 +698,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performKeyInput { pressKey(Key.DirectionCenter) }
         Truth.assertThat(isChecked).isTrue()
 
@@ -720,7 +723,7 @@ class SurfaceTest {
         }
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performLongKeyPress(rule, Key.DirectionCenter, 1)
         Truth.assertThat(count.value).isEqualTo(1)
 
@@ -747,7 +750,7 @@ class SurfaceTest {
         }
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performKeyInput { pressKey(Key.DirectionCenter) }
             .performLongKeyPress(rule, Key.DirectionCenter, 1)
         Truth.assertThat(count1.value).isEqualTo(1)
@@ -760,7 +763,7 @@ class SurfaceTest {
         Truth.assertThat(count2.value).isEqualTo(1)
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performLongKeyPress(rule, Key.DirectionCenter, 1, 2)
         Truth.assertThat(count1.value).isEqualTo(3)
         Truth.assertThat(count2.value).isEqualTo(3)
@@ -783,7 +786,7 @@ class SurfaceTest {
             }
         }
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .assertIsEnabled()
             .performKeyInput { pressKey(Key.DirectionCenter) }
 
@@ -828,7 +831,7 @@ class SurfaceTest {
         }
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performKeyInput { keyDown(Key.DirectionCenter) }
 
         rule.runOnIdle {
@@ -953,7 +956,7 @@ class SurfaceTest {
             .assertContainsColor(Color.Magenta)
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performKeyInput { pressKey(Key.DirectionCenter) }
 
         // Remove focused state to reveal selected state
@@ -990,7 +993,7 @@ class SurfaceTest {
         rule.onRoot().captureToImage().assertContainsColor(Color.Blue)
 
         rule.onNodeWithTag("surface")
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performKeyInput { pressKey(Key.DirectionCenter) }
 
         // Remove focused state to reveal selected state
@@ -1029,7 +1032,7 @@ class SurfaceTest {
         surface.captureToImage().assertDoesNotContainColor(Color.Magenta)
 
         surface
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
             .performKeyInput { pressKey(Key.DirectionCenter) }
 
         // Remove focused state to reveal selected state
@@ -1138,7 +1141,7 @@ class SurfaceTest {
 
         rule
             .onNodeWithTag(clickableItemTag)
-            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .requestFocus()
         rule.waitForIdle()
 
         // blue border shouldn't be visible
@@ -1160,6 +1163,65 @@ class SurfaceTest {
 
         // blue border shouldn't be visible
         rootEl.captureToImage().assertDoesNotContainColor(Color.Blue)
+    }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
+    fun surfaceBorderShapeShouldDefaultToElementShape() {
+        val containerTag = "container"
+        val surfaceTag = "surface"
+
+        rule.setContent {
+            val border = Border(
+                border = BorderStroke(
+                    width = 5.dp,
+                    color = Color.Red,
+                )
+            )
+
+            Box(modifier = Modifier.background(Color.White).testTag(containerTag)) {
+                Surface(
+                    onClick = { },
+                    modifier = Modifier
+                        .size(200.dp, 100.dp)
+                        .testTag(surfaceTag),
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = Color.Blue,
+                        focusedContainerColor = Color.Blue,
+                    ),
+                    shape = ClickableSurfaceDefaults.shape(
+                        shape = RoundedCornerShape(50),
+                        focusedShape = RectangleShape,
+                    ),
+                    scale = ClickableSurfaceScale.None,
+                    border = ClickableSurfaceDefaults.border(
+                        border = border,
+                        focusedBorder = border,
+                    )
+                ) {}
+            }
+        }
+
+        // The shape is rounded so the border should not be there on the top left corner
+        assert(
+            rule
+                .onNodeWithTag(containerTag)
+                .captureToImage()
+                .toPixelMap(0, 0, 1, 1)
+                .get(0, 0) == Color.White
+        )
+
+        rule.onNodeWithTag(surfaceTag).requestFocus()
+        rule.waitForIdle()
+
+        // The shape is rectangle so the border should be there on the top left corner
+        assert(
+            rule
+                .onNodeWithTag(containerTag)
+                .captureToImage()
+                .toPixelMap(0, 0, 1, 1)
+                .get(0, 0) == Color.Red
+        )
     }
 }
 

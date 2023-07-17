@@ -52,7 +52,13 @@ val WearMaterial3Demos = DemoCategory(
                 },
                 ComposableDemo("Child Button") {
                     ChildButtonDemo()
-                }
+                },
+                ComposableDemo("Multiline Button") {
+                    MultilineButtonDemo()
+                },
+                ComposableDemo("Avatar Button") {
+                    AvatarButtonDemo()
+                },
             )
         ),
         DemoCategory(
@@ -100,6 +106,21 @@ val WearMaterial3Demos = DemoCategory(
                 )
             )
         ),
+        DemoCategory(
+            "Slider",
+            SliderDemos
+        ),
+        ComposableDemo("List Headers") {
+            Centralize {
+                ListHeaderDemo()
+            }
+        },
+        ComposableDemo("Text Toggle Button") {
+            TextToggleButtonDemo()
+        },
+        ComposableDemo("Icon Toggle Button") {
+            IconToggleButtonDemo()
+        },
         ComposableDemo(
             title = "Fixed Font Size"
         ) {

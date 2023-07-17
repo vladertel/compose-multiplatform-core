@@ -16,6 +16,8 @@
 
 package androidx.room.compiler.processing.ksp
 
+import androidx.kruth.assertThat
+import androidx.kruth.assertWithMessage
 import androidx.room.compiler.processing.XExecutableElement
 import androidx.room.compiler.processing.XMethodElement
 import androidx.room.compiler.processing.util.CompilationTestCapabilities
@@ -24,8 +26,6 @@ import androidx.room.compiler.processing.util.XTestInvocation
 import androidx.room.compiler.processing.util.compileFiles
 import androidx.room.compiler.processing.util.runKaptTest
 import androidx.room.compiler.processing.util.runKspTest
-import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth.assertWithMessage
 import com.squareup.javapoet.TypeName
 import org.junit.Test
 
@@ -185,6 +185,8 @@ class KspTypeNamesGoldenTest {
                 typealias JSW = JvmSuppressWildcards
                 typealias JW = JvmWildcard
                 typealias MyLambdaTypeAlias = (@JvmWildcard MyType) -> @JvmWildcard MyType
+                typealias MyMapAlias<T> = Map<Int, @JvmSuppressWildcards MyGeneric<@JvmSuppressWildcards T>>
+                typealias MyMapAliasWithJSW<T> = Map<Int, @JSW MyGeneric<@JSW T>>
                 @JvmInline value class MyInlineType(val value: MyType)
                 enum class MyEnum {
                     VAL1,
@@ -592,6 +594,18 @@ class KspTypeNamesGoldenTest {
                     @JSW fun suspendLambda6WithJSW(param: MySuspendLambdaAlias6): MySuspendLambdaAlias6 = TODO()
                     @JSW fun suspendLambda7WithJSW(param: MySuspendLambdaAlias7): MySuspendLambdaAlias7 = TODO()
                     @JSW fun suspendLambda8WithJSW(param: MySuspendLambdaAlias8): MySuspendLambdaAlias8 = TODO()
+                    fun mapTypeAlias1(param: MyMapAlias<R>): MyMapAlias<R> = TODO()
+                    fun mapTypeAlias2(param: MyMapAlias<MyInterface>): MyMapAlias<MyInterface> = TODO()
+                    fun mapTypeAlias3(param: MyGeneric<MyMapAlias<R>>): MyGeneric<MyMapAlias<R>> = TODO()
+                    fun mapTypeAlias4(param: MyGeneric<MyMapAlias<MyInterface>>): MyGeneric<MyMapAlias<MyInterface>> = TODO()
+                    fun mapTypeAlias5(param: MyGeneric<MyMapAlias<MyGeneric<R>>>): MyGeneric<MyMapAlias<MyGeneric<R>>> = TODO()
+                    fun mapTypeAlias6(param: MyGeneric<MyMapAlias<MyGeneric<MyInterface>>>): MyGeneric<MyMapAlias<MyGeneric<MyInterface>>> = TODO()
+                    fun mapTypeAlias7(param: MyMapAliasWithJSW<R>): MyMapAliasWithJSW<R> = TODO()
+                    fun mapTypeAlias8(param: MyMapAliasWithJSW<MyInterface>): MyMapAliasWithJSW<MyInterface> = TODO()
+                    fun mapTypeAlias9(param: MyGeneric<MyMapAliasWithJSW<R>>): MyGeneric<MyMapAliasWithJSW<R>> = TODO()
+                    fun mapTypeAlias10(param: MyGeneric<MyMapAliasWithJSW<MyInterface>>): MyGeneric<MyMapAliasWithJSW<MyInterface>> = TODO()
+                    fun mapTypeAlias11(param: MyGeneric<MyMapAliasWithJSW<MyGeneric<R>>>): MyGeneric<MyMapAliasWithJSW<MyGeneric<R>>> = TODO()
+                    fun mapTypeAlias12(param: MyGeneric<MyMapAliasWithJSW<MyGeneric<MyInterface>>>): MyGeneric<MyMapAliasWithJSW<MyGeneric<MyInterface>>> = TODO()
                 }
                 """.trimIndent()
             ), listOf(className)

@@ -15,6 +15,7 @@
  */
 package androidx.appsearch.compiler;
 
+import static androidx.appsearch.compiler.IntrospectionHelper.BUILDER_PRODUCER_CLASS;
 import static androidx.appsearch.compiler.IntrospectionHelper.DOCUMENT_ANNOTATION_CLASS;
 import static androidx.appsearch.compiler.IntrospectionHelper.generateClassHierarchy;
 import static androidx.appsearch.compiler.IntrospectionHelper.getDocumentAnnotation;
@@ -46,7 +47,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
@@ -76,11 +76,14 @@ class DocumentModel {
     // The name of the original class annotated with @Document
     private final String mQualifiedDocumentClassName;
     private String mSchemaName;
-    private Set<TypeElement> mParentTypes = new LinkedHashSet<>();
+    private final Set<TypeElement> mParentTypes = new LinkedHashSet<>();
+    // All methods in the current @Document annotated class/interface, or in the generated class
+    // for AutoValue document.
     // Warning: if you change this to a HashSet, we may choose different getters or setters from
     // run to run, causing the generated code to bounce.
     private final Set<ExecutableElement> mAllMethods = new LinkedHashSet<>();
-    private final boolean mIsAutoValueDocument;
+    // All methods in the builder class, if a builder producer is provided.
+    private final Set<ExecutableElement> mAllBuilderMethods = new LinkedHashSet<>();
     // Key: Name of the element which is accessed through the getter method.
     // Value: ExecutableElement of the getter method.
     private final Map<String, ExecutableElement> mGetterMethods = new HashMap<>();
@@ -105,6 +108,8 @@ class DocumentModel {
             new HashMap<>();
     private ExecutableElement mChosenCreationMethod = null;
     private List<String> mChosenCreationMethodParams = null;
+    private TypeElement mBuilderClass = null;
+    private ExecutableElement mBuilderProducer = null;
 
     private DocumentModel(
             @NonNull ProcessingEnvironment env,
@@ -119,37 +124,80 @@ class DocumentModel {
         mClass = clazz;
         mTypeUtil = env.getTypeUtils();
         mElementUtil = env.getElementUtils();
+        mQualifiedDocumentClassName = generatedAutoValueElement != null
+                ? generatedAutoValueElement.getQualifiedName().toString()
+                : clazz.getQualifiedName().toString();
 
-        if (generatedAutoValueElement != null) {
-            mIsAutoValueDocument = true;
-            // Scan factory methods from AutoValue class.
-            Set<ExecutableElement> creationMethods = new LinkedHashSet<>();
-            for (Element child : ElementFilter.methodsIn(mClass.getEnclosedElements())) {
-                ExecutableElement method = (ExecutableElement) child;
-                if (isFactoryMethod(method)) {
-                    creationMethods.add(method);
+        // Scan methods and constructors. We will need this info when processing fields to
+        // make sure the fields can be get and set.
+        Set<ExecutableElement> potentialCreationMethods = extractCreationMethods(clazz);
+        addAllMethods(mClass, mAllMethods);
+        if (mBuilderClass != null) {
+            addAllMethods(mBuilderClass, mAllBuilderMethods);
+        }
+        scanFields(mClass);
+        chooseCreationMethod(potentialCreationMethods);
+    }
+
+    /**
+     * Scans all the elements in typeElement to find a builder producer. If found, set
+     * mBuilderProducer and mBuilderClass to the builder producer and the return type
+     * respectively.
+     *
+     * @throws ProcessingException if there are more than one elements annotated with
+     * {@code @Document.BuilderProducer}, or if the builder producer element is not a visible static
+     * method.
+     */
+    // TODO(b/285149515): Other than using a static method, we should support builder constructor
+    //  as well to create builder instances, as this is the right pattern compliant with Android
+    //  API guidelines.
+    //  go/android-api-guidelines#builder-constructor
+    private void extractBuilderProducer(TypeElement typeElement)
+            throws ProcessingException {
+        for (Element child : typeElement.getEnclosedElements()) {
+            boolean isAnnotated = false;
+            for (AnnotationMirror annotation : child.getAnnotationMirrors()) {
+                if (annotation.getAnnotationType().toString().equals(
+                        IntrospectionHelper.BUILDER_PRODUCER_CLASS)) {
+                    isAnnotated = true;
+                    break;
                 }
             }
-            mAllMethods.addAll(
-                    ElementFilter.methodsIn(generatedAutoValueElement.getEnclosedElements()));
+            if (!isAnnotated) {
+                continue;
+            }
+            if (child.getKind() != ElementKind.METHOD) {
+                // Since @Document.BuilderProducer is configured with @Target(ElementType.METHOD),
+                // it's not possible to reach here.
+                throw new ProcessingException("Builder producer must be a method", child);
+            }
+            ExecutableElement method = (ExecutableElement) child;
+            Set<Modifier> methodModifiers = method.getModifiers();
+            if (!methodModifiers.contains(Modifier.STATIC)) {
+                throw new ProcessingException("Builder producer must be static", method);
+            }
+            if (methodModifiers.contains(Modifier.PRIVATE)) {
+                throw new ProcessingException("Builder producer cannot be private", method);
+            }
 
-            mQualifiedDocumentClassName = generatedAutoValueElement.getQualifiedName().toString();
-            scanFields(generatedAutoValueElement);
-            scanCreationMethods(creationMethods);
-        } else {
-            mIsAutoValueDocument = false;
-            // Scan methods and constructors. We will need this info when processing fields to
-            // make sure the fields can be get and set.
-            Set<ExecutableElement> creationMethods = extractCreationMethods(mClass);
-            addAllMethods(mClass, mAllMethods);
-
-            mQualifiedDocumentClassName = clazz.getQualifiedName().toString();
-            scanFields(mClass);
-            scanCreationMethods(creationMethods);
+            if (mBuilderProducer == null) {
+                mBuilderProducer = method;
+                mBuilderClass = (TypeElement) mTypeUtil.asElement(mBuilderProducer.getReturnType());
+            } else {
+                throw new ProcessingException("Found duplicated builder producer", method);
+            }
         }
     }
 
-    private Set<ExecutableElement> extractCreationMethods(TypeElement typeElement) {
+    private Set<ExecutableElement> extractCreationMethods(TypeElement typeElement)
+            throws ProcessingException {
+        extractBuilderProducer(typeElement);
+        // If a builder producer is provided, then only the builder can be used as a creation
+        // method.
+        if (mBuilderProducer != null) {
+            return Collections.singleton(mBuilderProducer);
+        }
+
         Set<ExecutableElement> creationMethods = new LinkedHashSet<>();
         for (Element child : typeElement.getEnclosedElements()) {
             if (child.getKind() == ElementKind.CONSTRUCTOR) {
@@ -161,7 +209,7 @@ class DocumentModel {
                 }
             }
         }
-        return creationMethods;
+        return Collections.unmodifiableSet(creationMethods);
     }
 
     private void addAllMethods(TypeElement typeElement, Set<ExecutableElement> allMethods) {
@@ -298,9 +346,6 @@ class DocumentModel {
     public AnnotationMirror getPropertyAnnotation(@NonNull Element element)
             throws ProcessingException {
         Objects.requireNonNull(element);
-        if (mIsAutoValueDocument) {
-            element = getGetterForElement(element.getSimpleName().toString());
-        }
         Set<String> propertyClassPaths = new HashSet<>();
         for (PropertyClass propertyClass : PropertyClass.values()) {
             propertyClassPaths.add(propertyClass.getClassFullPath());
@@ -324,6 +369,11 @@ class DocumentModel {
         return Collections.unmodifiableList(mChosenCreationMethodParams);
     }
 
+    @Nullable
+    public TypeElement getBuilderClass() {
+        return mBuilderClass;
+    }
+
     private boolean isFactoryMethod(ExecutableElement method) {
         Set<Modifier> methodModifiers = method.getModifiers();
         return methodModifiers.contains(Modifier.STATIC)
@@ -334,12 +384,9 @@ class DocumentModel {
     /**
      * Scan the annotations of a field to determine the fields type and handle it accordingly
      *
-     * @param classElements all the field elements of a class, annotated and non-annotated
      * @param childElement the member of class elements currently being scanned
-     * @throws ProcessingException
      */
-    private void scanAnnotatedField(@NonNull List<? extends Element> classElements,
-            @NonNull Element childElement) throws ProcessingException {
+    private void scanAnnotatedField(@NonNull Element childElement) throws ProcessingException {
         String fieldName = childElement.getSimpleName().toString();
 
         // a property field shouldn't be able to override a special field
@@ -352,25 +399,20 @@ class DocumentModel {
         // no annotation mirrors -> non-indexable field
         for (AnnotationMirror annotation : childElement.getAnnotationMirrors()) {
             String annotationFq = annotation.getAnnotationType().toString();
-            if (!annotationFq.startsWith(DOCUMENT_ANNOTATION_CLASS)) {
+            if (!annotationFq.startsWith(DOCUMENT_ANNOTATION_CLASS) || annotationFq.equals(
+                    BUILDER_PRODUCER_CLASS)) {
                 continue;
             }
-            Element child;
-            if (mIsAutoValueDocument) {
-                child = findFieldForFunctionWithSameName(classElements, childElement);
-            } else {
-                if (childElement.getKind() == ElementKind.CLASS) {
-                    continue;
-                } else {
-                    child = childElement;
-                }
+            if (childElement.getKind() == ElementKind.CLASS) {
+                continue;
             }
 
             switch (annotationFq) {
                 case IntrospectionHelper.ID_CLASS:
                     if (mSpecialFieldNames.containsKey(SpecialField.ID)) {
                         throw new ProcessingException(
-                                "Class hierarchy contains multiple fields annotated @Id", child);
+                                "Class hierarchy contains multiple fields annotated @Id",
+                                childElement);
                     }
                     mSpecialFieldNames.put(SpecialField.ID, fieldName);
                     break;
@@ -378,14 +420,14 @@ class DocumentModel {
                     if (mSpecialFieldNames.containsKey(SpecialField.NAMESPACE)) {
                         throw new ProcessingException(
                                 "Class hierarchy contains multiple fields annotated @Namespace",
-                                child);
+                                childElement);
                     }
                     mSpecialFieldNames.put(SpecialField.NAMESPACE, fieldName);
                     break;
                 case IntrospectionHelper.CREATION_TIMESTAMP_MILLIS_CLASS:
                     if (mSpecialFieldNames.containsKey(SpecialField.CREATION_TIMESTAMP_MILLIS)) {
                         throw new ProcessingException("Class hierarchy contains multiple fields "
-                                + "annotated @CreationTimestampMillis", child);
+                                + "annotated @CreationTimestampMillis", childElement);
                     }
                     mSpecialFieldNames.put(
                             SpecialField.CREATION_TIMESTAMP_MILLIS, fieldName);
@@ -394,14 +436,15 @@ class DocumentModel {
                     if (mSpecialFieldNames.containsKey(SpecialField.TTL_MILLIS)) {
                         throw new ProcessingException(
                                 "Class hierarchy contains multiple fields annotated @TtlMillis",
-                                child);
+                                childElement);
                     }
                     mSpecialFieldNames.put(SpecialField.TTL_MILLIS, fieldName);
                     break;
                 case IntrospectionHelper.SCORE_CLASS:
                     if (mSpecialFieldNames.containsKey(SpecialField.SCORE)) {
                         throw new ProcessingException(
-                                "Class hierarchy contains multiple fields annotated @Score", child);
+                                "Class hierarchy contains multiple fields annotated @Score",
+                                childElement);
                     }
                     mSpecialFieldNames.put(SpecialField.SCORE, fieldName);
                     break;
@@ -412,7 +455,7 @@ class DocumentModel {
                         //   1. be unique
                         //   2. override a property from the Java parent while maintaining the same
                         //      AppSearch property name
-                        checkFieldTypeForPropertyAnnotation(child, propertyClass);
+                        checkFieldTypeForPropertyAnnotation(childElement, propertyClass);
                         // It's assumed that parent types, in the context of Java's type system,
                         // are always visited before child types, so existingProperty must come
                         // from the parent type. To make this assumption valid, the result
@@ -420,20 +463,24 @@ class DocumentModel {
                         // types.
                         Element existingProperty = mPropertyElements.get(fieldName);
                         if (existingProperty != null) {
-                            if (!mTypeUtil.isSameType(existingProperty.asType(), child.asType())) {
+                            if (!mTypeUtil.isSameType(
+                                    existingProperty.asType(), childElement.asType())) {
                                 throw new ProcessingException(
-                                        "Cannot override a property with a different type", child);
+                                        "Cannot override a property with a different type",
+                                        childElement);
                             }
-                            if (!getPropertyName(existingProperty).equals(getPropertyName(child))) {
+                            if (!getPropertyName(existingProperty).equals(getPropertyName(
+                                    childElement))) {
                                 throw new ProcessingException(
-                                        "Cannot override a property with a different name", child);
+                                        "Cannot override a property with a different name",
+                                        childElement);
                             }
                         }
-                        mPropertyElements.put(fieldName, child);
+                        mPropertyElements.put(fieldName, childElement);
                     }
             }
 
-            mAllAppSearchElements.put(fieldName, child);
+            mAllAppSearchElements.put(fieldName, childElement);
         }
     }
 
@@ -463,20 +510,12 @@ class DocumentModel {
             }
         }
 
-        List<TypeElement> hierarchy = generateClassHierarchy(element, mIsAutoValueDocument);
+        List<TypeElement> hierarchy = generateClassHierarchy(element);
 
         for (TypeElement clazz : hierarchy) {
             List<? extends Element> enclosedElements = clazz.getEnclosedElements();
-            for (int i = 0; i < enclosedElements.size(); i++) {
-                Element childElement = enclosedElements.get(i);
-
-                // The only fields relevant to @Document in an AutoValue class are the abstract
-                // accessor methods
-                if (mIsAutoValueDocument && childElement.getKind() != ElementKind.METHOD) {
-                    continue;
-                }
-
-                scanAnnotatedField(enclosedElements, childElement);
+            for (Element childElement : enclosedElements) {
+                scanAnnotatedField(childElement);
             }
         }
 
@@ -499,21 +538,6 @@ class DocumentModel {
         for (Element appSearchField : mAllAppSearchElements.values()) {
             chooseAccessKinds(appSearchField);
         }
-    }
-
-    @NonNull
-    private Element findFieldForFunctionWithSameName(
-            @NonNull List<? extends Element> elements,
-            @NonNull Element functionElement) throws ProcessingException {
-        String fieldName = functionElement.getSimpleName().toString();
-        for (Element field : ElementFilter.fieldsIn(elements)) {
-            if (fieldName.equals(field.getSimpleName().toString())) {
-                return field;
-            }
-        }
-        throw new ProcessingException(
-                "Cannot find the corresponding field for the annotated function",
-                functionElement);
     }
 
     /**
@@ -608,7 +632,8 @@ class DocumentModel {
 
         // Choose set access
         if (modifiers.contains(Modifier.PRIVATE) || modifiers.contains(Modifier.FINAL)
-                || modifiers.contains(Modifier.STATIC) || field.getKind() == ElementKind.METHOD) {
+                || modifiers.contains(Modifier.STATIC) || field.getKind() == ElementKind.METHOD
+                || mBuilderClass != null) {
             // Try to find a setter. If we can't find one, mark the WriteKind as {@code
             // CREATION_METHOD}. We don't know if this is true yet, the creation methods will be
             // inspected in a subsequent pass.
@@ -627,7 +652,7 @@ class DocumentModel {
         }
     }
 
-    private void scanCreationMethods(Set<ExecutableElement> creationMethods)
+    private void chooseCreationMethod(Set<ExecutableElement> creationMethods)
             throws ProcessingException {
         // Maps field name to Element.
         // If this is changed to a HashSet, we might report errors to the developer in a different
@@ -784,7 +809,9 @@ class DocumentModel {
         // We can't report setter failure until we've searched the creation methods, so this
         // message is anticipatory and should be buffered by the caller.
         String error;
-        if (element.getKind() == ElementKind.METHOD) {
+        if (mBuilderClass != null) {
+            error = "Element cannot be written directly because a builder producer is provided";
+        } else if (element.getKind() == ElementKind.METHOD) {
             error = "Element cannot be written directly because it is an annotated getter";
         } else {
             error = "Field cannot be written directly because it is private, final, or static";
@@ -794,7 +821,14 @@ class DocumentModel {
         ProcessingException e = new ProcessingException(error,
                 mAllAppSearchElements.get(elementName));
 
-        for (ExecutableElement method : mAllMethods) {
+        // When using the builder pattern, setters can only come from the builder.
+        Set<ExecutableElement> methods;
+        if (mBuilderClass != null) {
+            methods = mAllBuilderMethods;
+        } else {
+            methods = mAllMethods;
+        }
+        for (ExecutableElement method : methods) {
             String methodName = method.getSimpleName().toString();
             String normalizedElementName = getNormalizedElementName(element);
             if (methodName.equals(normalizedElementName)

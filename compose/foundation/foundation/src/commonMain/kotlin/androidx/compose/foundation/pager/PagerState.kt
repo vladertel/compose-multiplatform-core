@@ -170,7 +170,8 @@ abstract class PagerState(
 ) : ScrollableState {
 
     /**
-     * The total amount of pages present in this pager
+     * The total amount of pages present in this pager. The source of this data should be
+     * observable.
      */
     abstract val pageCount: Int
 
@@ -229,7 +230,7 @@ abstract class PagerState(
      */
     private var wasScrollingForward = false
 
-    /** Backing state for PagerLayoutInfo **/
+    /** Backing state for PagerLayoutInfo */
     private var pagerLayoutInfoState = mutableStateOf(EmptyLayoutInfo)
 
     internal val layoutInfo: PagerLayoutInfo get() = pagerLayoutInfoState.value

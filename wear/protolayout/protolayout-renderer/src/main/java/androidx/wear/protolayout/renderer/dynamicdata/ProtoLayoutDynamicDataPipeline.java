@@ -37,7 +37,7 @@ import androidx.annotation.UiThread;
 import androidx.annotation.VisibleForTesting;
 import androidx.collection.ArrayMap;
 import androidx.collection.ArraySet;
-import androidx.vectordrawable.graphics.drawable.SeekableAnimatedVectorDrawable;
+import androidx.wear.protolayout.renderer.common.SeekableAnimatedVectorDrawable;
 import androidx.wear.protolayout.expression.PlatformDataKey;
 import androidx.wear.protolayout.expression.pipeline.BoundDynamicType;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeBindingRequest;
@@ -85,7 +85,7 @@ public class ProtoLayoutDynamicDataPipeline {
 
     @NonNull
     private static final QuotaManager DISABLED_ANIMATIONS_QUOTA_MANAGER =
-            new FixedQuotaManagerImpl(/* quotaCap= */ 0);
+            new FixedQuotaManagerImpl(/* quotaCap= */ 0, "disabled animations");
 
     @NonNull final PositionIdTree<NodeInfo> mPositionIdTree = new PositionIdTree<>();
     @NonNull final List<QuotaAwareAnimationSet> mEnterAnimations = new ArrayList<>();

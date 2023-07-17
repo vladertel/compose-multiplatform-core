@@ -30,10 +30,14 @@ import androidx.credentials.CreatePasswordRequest
 import androidx.credentials.CreatePasswordResponse
 import androidx.credentials.CredentialManagerCallback
 import androidx.credentials.exceptions.CreateCredentialException
+import androidx.credentials.exceptions.CreateCredentialUnknownException
 import androidx.credentials.playservices.CredentialProviderPlayServicesImpl
+import androidx.credentials.playservices.GmsCoreUtils
 import androidx.credentials.playservices.HiddenActivity
 import androidx.credentials.playservices.controllers.CredentialProviderBaseController
 import androidx.credentials.playservices.controllers.CredentialProviderController
+import androidx.fragment.app.FragmentActivity
+import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.identity.SavePasswordRequest
 import com.google.android.gms.auth.api.identity.SignInPassword
 import java.util.concurrent.Executor
@@ -99,10 +103,30 @@ internal class CredentialProviderCreatePasswordController(private val context: C
         }
 
         val convertedRequest: SavePasswordRequest = this.convertRequestToPlayServices(request)
+
+        // If we were passed a fragment activity use that instead of a hidden one.
+        if (context is FragmentActivity) {
+            try {
+                GmsCoreUtils.handleCreatePassword(
+                    Identity.getCredentialSavingClient(context),
+                    resultReceiver, convertedRequest, GmsCoreUtils.DEFAULT_REQUEST_CODE,
+                    context)
+                return
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to use fragment flow", e)
+            }
+        }
+
         val hiddenIntent = Intent(context, HiddenActivity::class.java)
         hiddenIntent.putExtra(REQUEST_TAG, convertedRequest)
         generateHiddenActivityIntent(resultReceiver, hiddenIntent, CREATE_PASSWORD_TAG)
-        context.startActivity(hiddenIntent)
+        try {
+            context.startActivity(hiddenIntent)
+        } catch (e: Exception) {
+            cancelOrCallbackExceptionOrResult(cancellationSignal) { this.executor.execute {
+                this.callback.onError(
+                    CreateCredentialUnknownException(ERROR_MESSAGE_START_ACTIVITY_FAILED)) } }
+        }
     }
 
     internal fun handleResponse(uniqueRequestCode: Int, resultCode: Int) {

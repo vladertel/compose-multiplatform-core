@@ -615,8 +615,8 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
     private final int mMaxFlingVelocity;
 
     // This value is used when handling rotary encoder generic motion events.
-    private float mScaledHorizontalScrollFactor = Float.MIN_VALUE;
-    private float mScaledVerticalScrollFactor = Float.MIN_VALUE;
+    float mScaledHorizontalScrollFactor = Float.MIN_VALUE;
+    float mScaledVerticalScrollFactor = Float.MIN_VALUE;
 
     private boolean mPreserveFocusAfterLayout = true;
 
@@ -749,6 +749,50 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
                 }
             };
 
+    private final DifferentialMotionFlingHelper.DifferentialMotionFlingTarget
+            mDifferentialMotionFlingTarget =
+            new DifferentialMotionFlingHelper.DifferentialMotionFlingTarget() {
+                @Override
+                public boolean startDifferentialMotionFling(float velocity) {
+                    int vx = 0;
+                    int vy = 0;
+                    if (mLayout.canScrollVertically()) {
+                        vy = (int) velocity;
+                    } else if (mLayout.canScrollHorizontally()) {
+                        vx = (int) velocity;
+                    }
+
+                    if (vx == 0 && vy == 0) {
+                        return false;
+                    }
+
+                    stopScroll();
+                    // Fling with no threshold check, since the DifferentialMotionFlingHelper should
+                    //  have handled this already.
+                    return flingNoThresholdCheck(vx, vy);
+                }
+
+                @Override
+                public void stopDifferentialMotionFling() {
+                    stopScroll();
+                }
+
+                @Override
+                public float getScaledScrollFactor() {
+                    if (mLayout.canScrollVertically()) {
+                        return -mScaledVerticalScrollFactor;
+                    }
+                    if (mLayout.canScrollHorizontally()) {
+                        return -mScaledHorizontalScrollFactor;
+                    }
+                    return 0;
+                }
+
+            };
+
+    @VisibleForTesting
+    DifferentialMotionFlingHelper mDifferentialMotionFlingHelper =
+            new DifferentialMotionFlingHelper(getContext(), mDifferentialMotionFlingTarget);
     public RecyclerView(@NonNull Context context) {
         this(context, null);
     }
@@ -2819,6 +2863,16 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
      * @see LayoutManager#canScrollHorizontally()
      */
     public boolean fling(int velocityX, int velocityY) {
+        return fling(velocityX, velocityY, mMinFlingVelocity, mMaxFlingVelocity);
+    }
+
+    /** Flings without checking fling velocity thresholds. */
+    boolean flingNoThresholdCheck(int velocityX, int velocityY) {
+        return fling(velocityX, velocityY, 0, Integer.MAX_VALUE);
+    }
+
+    private boolean fling(int velocityX, int velocityY, int minFlingVelocity,
+            int maxFlingVelocity) {
         if (mLayout == null) {
             Log.e(TAG, "Cannot fling without a LayoutManager set. "
                     + "Call setLayoutManager with a non-null argument.");
@@ -2831,10 +2885,10 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
         final boolean canScrollHorizontal = mLayout.canScrollHorizontally();
         final boolean canScrollVertical = mLayout.canScrollVertically();
 
-        if (!canScrollHorizontal || Math.abs(velocityX) < mMinFlingVelocity) {
+        if (!canScrollHorizontal || Math.abs(velocityX) < minFlingVelocity) {
             velocityX = 0;
         }
-        if (!canScrollVertical || Math.abs(velocityY) < mMinFlingVelocity) {
+        if (!canScrollVertical || Math.abs(velocityY) < minFlingVelocity) {
             velocityY = 0;
         }
         if (velocityX == 0 && velocityY == 0) {
@@ -2881,8 +2935,9 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
             }
         }
         if (flingX != 0 || flingY != 0) {
-            flingX = Math.max(-mMaxFlingVelocity, Math.min(flingX, mMaxFlingVelocity));
-            flingY = Math.max(-mMaxFlingVelocity, Math.min(flingY, mMaxFlingVelocity));
+            flingX = Math.max(-maxFlingVelocity, Math.min(flingX, maxFlingVelocity));
+            flingY = Math.max(-maxFlingVelocity, Math.min(flingY, maxFlingVelocity));
+            startNestedScrollForType(TYPE_NON_TOUCH);
             mViewFlinger.fling(flingX, flingY);
         }
         if (velocityX == 0 && velocityY == 0) {
@@ -2898,22 +2953,27 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
             }
 
             if (canScroll) {
-                int nestedScrollAxis = ViewCompat.SCROLL_AXIS_NONE;
-                if (canScrollHorizontal) {
-                    nestedScrollAxis |= ViewCompat.SCROLL_AXIS_HORIZONTAL;
-                }
-                if (canScrollVertical) {
-                    nestedScrollAxis |= ViewCompat.SCROLL_AXIS_VERTICAL;
-                }
-                startNestedScroll(nestedScrollAxis, TYPE_NON_TOUCH);
-
-                velocityX = Math.max(-mMaxFlingVelocity, Math.min(velocityX, mMaxFlingVelocity));
-                velocityY = Math.max(-mMaxFlingVelocity, Math.min(velocityY, mMaxFlingVelocity));
+                startNestedScrollForType(TYPE_NON_TOUCH);
+                velocityX = Math.max(-maxFlingVelocity, Math.min(velocityX, maxFlingVelocity));
+                velocityY = Math.max(-maxFlingVelocity, Math.min(velocityY, maxFlingVelocity));
                 mViewFlinger.fling(velocityX, velocityY);
                 return true;
             }
         }
         return false;
+    }
+
+    private void startNestedScrollForType(int type) {
+        final boolean canScrollHorizontal = mLayout.canScrollHorizontally();
+        final boolean canScrollVertical = mLayout.canScrollVertically();
+        int nestedScrollAxis = ViewCompat.SCROLL_AXIS_NONE;
+        if (canScrollHorizontal) {
+            nestedScrollAxis |= ViewCompat.SCROLL_AXIS_HORIZONTAL;
+        }
+        if (canScrollVertical) {
+            nestedScrollAxis |= ViewCompat.SCROLL_AXIS_VERTICAL;
+        }
+        startNestedScroll(nestedScrollAxis, type);
     }
 
     /**
@@ -3730,14 +3790,7 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
                 // Clear the nested offsets
                 mNestedOffsets[0] = mNestedOffsets[1] = 0;
 
-                int nestedScrollAxis = ViewCompat.SCROLL_AXIS_NONE;
-                if (canScrollHorizontally) {
-                    nestedScrollAxis |= ViewCompat.SCROLL_AXIS_HORIZONTAL;
-                }
-                if (canScrollVertically) {
-                    nestedScrollAxis |= ViewCompat.SCROLL_AXIS_VERTICAL;
-                }
-                startNestedScroll(nestedScrollAxis, TYPE_TOUCH);
+                startNestedScrollForType(TYPE_TOUCH);
                 break;
 
             case MotionEvent.ACTION_POINTER_DOWN:
@@ -3876,14 +3929,7 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
                 mInitialTouchX = mLastTouchX = (int) (e.getX() + 0.5f);
                 mInitialTouchY = mLastTouchY = (int) (e.getY() + 0.5f);
 
-                int nestedScrollAxis = ViewCompat.SCROLL_AXIS_NONE;
-                if (canScrollHorizontally) {
-                    nestedScrollAxis |= ViewCompat.SCROLL_AXIS_HORIZONTAL;
-                }
-                if (canScrollVertically) {
-                    nestedScrollAxis |= ViewCompat.SCROLL_AXIS_VERTICAL;
-                }
-                startNestedScroll(nestedScrollAxis, TYPE_TOUCH);
+                startNestedScrollForType(TYPE_TOUCH);
             }
             break;
 
@@ -4037,6 +4083,7 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
             return false;
         }
 
+        int flingAxis = 0;
         boolean useSmoothScroll = false;
         if (event.getAction() == MotionEvent.ACTION_SCROLL) {
             final float vScroll, hScroll;
@@ -4070,6 +4117,8 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
                 // Use smooth scrolling for low resolution rotary encoders to avoid the visible
                 // pixel jumps that would be caused by doing regular scrolling.
                 useSmoothScroll = mLowResRotaryEncoderFeature;
+                // Support fling for rotary encoders.
+                flingAxis = MotionEventCompat.AXIS_SCROLL;
             } else {
                 vScroll = 0f;
                 hScroll = 0f;
@@ -4086,6 +4135,10 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
                         UNDEFINED_DURATION, /* withNestedScrolling= */ true);
             } else {
                 nestedScrollByInternal(scaledHScroll, scaledVScroll, event, TYPE_NON_TOUCH);
+            }
+
+            if (flingAxis != 0 && !useSmoothScroll) {
+                mDifferentialMotionFlingHelper.onMotionEvent(event, flingAxis);
             }
         }
         return false;

@@ -49,9 +49,7 @@ function run() {
   if eval "$*"; then
     return 0
   else
-    echo >&2
     echo "Gradle command failed:" >&2
-    echo >&2
     # Echo the Gradle command formatted for ease of reading.
     # Put each argument on its own line because some arguments may be long.
     # Also put "\" at the end of non-final lines so the command can be copy-pasted
@@ -107,6 +105,7 @@ if run ./gradlew --ci "$@"; then
   echo build passed
 else
   if grep "has several compatible actual declarations in modules" "$DIST_DIR/logs/gradle.log" >/dev/null 2>/dev/null; then
+    run ./gradlew --stop || true
     # try to copy the OUT_DIR into DIST where we can find it
     cd "$OUT_DIR"
     echo "zipping out into $DIST_DIR/out.zip"

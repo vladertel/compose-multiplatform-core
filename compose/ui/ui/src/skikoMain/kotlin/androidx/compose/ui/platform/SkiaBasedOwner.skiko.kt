@@ -73,10 +73,7 @@ import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.semantics.EmptySemanticsElement
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.ExperimentalTextApi
-import androidx.compose.ui.text.InternalTextApi
 import androidx.compose.ui.text.font.createFontFamilyResolver
-import androidx.compose.ui.text.input.PlatformTextInputPluginRegistry
-import androidx.compose.ui.text.input.PlatformTextInputPluginRegistryImpl
 import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.text.platform.FontLoader
 import androidx.compose.ui.unit.Constraints
@@ -202,7 +199,9 @@ internal class SkiaBasedOwner(
     init {
         snapshotObserver.startObserving()
         root.attach(this)
-        focusOwner.takeFocus()
+        focusOwner.focusTransactionManager.withNewTransaction {
+            focusOwner.takeFocus()
+        }
     }
 
     fun dispose() {
@@ -211,13 +210,6 @@ internal class SkiaBasedOwner(
     }
 
     override val textInputService = TextInputService(platformInputService)
-
-    @Suppress("UNUSED_ANONYMOUS_PARAMETER")
-    @OptIn(InternalTextApi::class)
-    override val platformTextInputPluginRegistry: PlatformTextInputPluginRegistry
-        get() = PlatformTextInputPluginRegistryImpl { factory, platformTextInput ->
-            TODO("See https://issuetracker.google.com/267235947")
-        }
 
     @Deprecated(
         "fontLoader is deprecated, use fontFamilyResolver",
@@ -505,6 +497,12 @@ internal class SkiaBasedOwner(
     override fun registerOnLayoutCompletedListener(listener: Owner.OnLayoutCompletedListener) {
         measureAndLayoutDelegate.registerOnLayoutCompletedListener(listener)
         requestLayout()
+    }
+
+    override suspend fun textInputSession(
+        session: suspend PlatformTextInputSessionScope.() -> Nothing
+    ): Nothing {
+        component.textInputSession(session)
     }
 
     // A Stub for the PointerIconService required in Owner.kt

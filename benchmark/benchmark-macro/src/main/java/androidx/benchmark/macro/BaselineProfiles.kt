@@ -28,13 +28,11 @@ import androidx.benchmark.InstrumentationResults
 import androidx.benchmark.Outputs
 import androidx.benchmark.Shell
 import androidx.benchmark.userspaceTrace
-import androidx.core.os.BuildCompat
 import java.io.File
 
 /**
  * Collects baseline profiles using a given [profileBlock], while additionally
  * waiting until they are stable.
- * @suppress
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @RequiresApi(28)
@@ -237,7 +235,6 @@ private fun reportResults(
  * Does not require root.
  */
 @RequiresApi(33)
-@androidx.annotation.OptIn(BuildCompat.PrereleaseSdkCheck::class)
 private fun extractProfile(packageName: String): String {
 
     val dumpCommand = "pm dump-profiles --dump-classes-and-methods $packageName"
