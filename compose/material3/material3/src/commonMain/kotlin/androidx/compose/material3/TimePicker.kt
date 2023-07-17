@@ -455,7 +455,7 @@ fun rememberTimePickerState(
  * Represents the different configurations for the layout of the Time Picker
  */
 @Immutable
-@JvmInline
+@kotlin.jvm.JvmInline
 @ExperimentalMaterial3Api
 value class TimePickerLayoutType internal constructor(internal val value: Int) {
 
@@ -1599,7 +1599,7 @@ internal expect val defaultTimePickerLayoutType: TimePickerLayoutType
     @Composable
     @ReadOnlyComposable get
 
-@JvmInline
+@kotlin.jvm.JvmInline
 internal value class Selection private constructor(val value: Int) {
     companion object {
         val Hour = Selection(0)

@@ -1091,6 +1091,221 @@ private class DatePickerFormatterImpl constructor(
 }
 
 /**
+ * Represents the different modes that a date picker can be at.
+ */
+@Immutable
+@kotlin.jvm.JvmInline
+@ExperimentalMaterial3Api
+value class DisplayMode internal constructor(internal val value: Int) {
+
+    companion object {
+        /** Date picker mode */
+        val Picker = DisplayMode(0)
+
+        /** Date text input mode */
+        val Input = DisplayMode(1)
+    }
+
+    override fun toString() = when (this) {
+        Picker -> "Picker"
+        Input -> "Input"
+        else -> "Unknown"
+    }
+}
+
+/**
+ * Holds the state's data for the date picker.
+ *
+ * Note that the internal representation is capable of holding a start and end date. However, the
+ * the [DatePickerState] and the [DateRangePickerState] that use this class will only expose
+ * publicly the relevant functionality for their purpose.
+ *
+ * @param initialSelectedStartDateMillis timestamp in _UTC_ milliseconds from the epoch that
+ * represents an initial selection of a start date. Provide a `null` to indicate no selection.
+ * @param initialSelectedEndDateMillis timestamp in _UTC_ milliseconds from the epoch that
+ * represents an initial selection of an end date. Provide a `null` to indicate no selection. This
+ * value will be ignored in case it's smaller or equals to the initial start value.
+ * @param initialDisplayedMonthMillis timestamp in _UTC_ milliseconds from the epoch that represents
+ * an initial selection of a month to be displayed to the user. In case `null` is provided, the
+ * displayed month would be the current one.
+ * @param yearRange an [IntRange] that holds the year range that the date picker will be limited to
+ * @param initialDisplayMode an initial [DisplayMode] that this state will hold
+ * @see rememberDatePickerState
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Stable
+internal class StateData constructor(
+    initialSelectedStartDateMillis: Long?,
+    initialSelectedEndDateMillis: Long?,
+    initialDisplayedMonthMillis: Long?,
+    val yearRange: IntRange,
+    initialDisplayMode: DisplayMode,
+) {
+
+    val calendarModel: CalendarModel = CalendarModel()
+
+    /**
+     * A mutable state of [CalendarDate] that represents the start date for a selection.
+     */
+    var selectedStartDate = mutableStateOf<CalendarDate?>(null)
+
+    /**
+     * A mutable state of [CalendarDate] that represents the end date for a selection.
+     *
+     * Single date selection states that use this [StateData] should always have this as `null`.
+     */
+    var selectedEndDate = mutableStateOf<CalendarDate?>(null)
+
+    /**
+     * Initialize the state with the provided initial selections.
+     */
+    init {
+        setSelection(
+            startDateMillis = initialSelectedStartDateMillis,
+            endDateMillis = initialSelectedEndDateMillis
+        )
+    }
+
+    /**
+     * A mutable state for the month that is displayed to the user. In case an initial month was not
+     * provided, the current month will be the one to be displayed.
+     */
+    var displayedMonth by mutableStateOf(
+        if (initialDisplayedMonthMillis != null) {
+            val month = calendarModel.getMonth(initialDisplayedMonthMillis)
+            require(yearRange.contains(month.year)) {
+                "The initial display month's year (${month.year}) is out of the years range of " +
+                    "$yearRange."
+            }
+            month
+        } else {
+            currentMonth
+        }
+    )
+
+    /**
+     * The current [CalendarMonth] that represents the present's day month.
+     */
+    val currentMonth: CalendarMonth
+        get() = calendarModel.getMonth(calendarModel.today)
+
+    /**
+     * A mutable state of [DisplayMode] that represents the current display mode of the UI
+     * (i.e. picker or input).
+     */
+    var displayMode = mutableStateOf(initialDisplayMode)
+
+    /**
+     * The displayed month index within the total months at the defined years range.
+     *
+     * @see [displayedMonth]
+     * @see [yearRange]
+     */
+    val displayedMonthIndex: Int
+        get() = displayedMonth.indexIn(yearRange)
+
+    /**
+     * The total month count for the defined years range.
+     *
+     * @see [yearRange]
+     */
+    val totalMonthsInRange: Int
+        get() = (yearRange.last - yearRange.first + 1) * 12
+
+    /**
+     * Sets a start and end selection dates.
+     *
+     * The function expects the dates to be within the state's year-range, and for the start date to
+     * appear before, or be equal, the end date. Also, if an end date is provided (e.g. not `null`),
+     * a start date is also expected to be provided. In any other case, an
+     * [IllegalArgumentException] is thrown.
+     *
+     * @param startDateMillis timestamp in _UTC_ milliseconds from the epoch that represents the
+     * start date selection. Provide a `null` to indicate no selection.
+     * @param endDateMillis timestamp in _UTC_ milliseconds from the epoch that represents the
+     * end date selection. Provide a `null` to indicate no selection.
+     * @throws IllegalArgumentException in case the given timestamps do not comply with the expected
+     * values specified above.
+     */
+    fun setSelection(startDateMillis: Long?, endDateMillis: Long?) {
+        val startDate = if (startDateMillis != null) {
+            calendarModel.getCanonicalDate(startDateMillis)
+        } else {
+            null
+        }
+        val endDate = if (endDateMillis != null) {
+            calendarModel.getCanonicalDate(endDateMillis)
+        } else {
+            null
+        }
+        // Validate that both dates are within the valid years range.
+        startDate?.let {
+            require(yearRange.contains(it.year)) {
+                "The provided start date year (${it.year}) is out of the years range of $yearRange."
+            }
+        }
+        endDate?.let {
+            require(yearRange.contains(it.year)) {
+                "The provided end date year (${it.year}) is out of the years range of $yearRange."
+            }
+        }
+        // Validate that an end date cannot be set without a start date.
+        if (endDate != null) {
+            requireNotNull(startDate) {
+                "An end date was provided without a start date."
+            }
+            // Validate that the end date appears on or after the start date.
+            require(startDate.utcTimeMillis <= endDate.utcTimeMillis) {
+                "The provided end date appears before the start date."
+            }
+        }
+        selectedStartDate.value = startDate
+        selectedEndDate.value = endDate
+    }
+
+    fun switchDisplayMode(displayMode: DisplayMode) {
+        // Update the displayed month, if needed, and change the mode to a  date-picker.
+        selectedStartDate.value?.let {
+            displayedMonth = calendarModel.getMonth(it)
+        }
+        // When toggling back from an input mode, it's possible that the user input an invalid
+        // start date and a valid end date. If this is the case, and the start date is null, ensure
+        // that the end date is also null.
+        if (selectedStartDate.value == null && selectedEndDate.value != null) {
+            selectedEndDate.value = null
+        }
+        this.displayMode.value = displayMode
+    }
+
+    companion object {
+        /**
+         * A [Saver] implementation for [StateData].
+         */
+        fun Saver(): Saver<StateData, Any> = listSaver(
+            save = {
+                listOf(
+                    it.selectedStartDate.value?.utcTimeMillis,
+                    it.selectedEndDate.value?.utcTimeMillis,
+                    it.displayedMonth.startUtcTimeMillis,
+                    it.yearRange.first,
+                    it.yearRange.last,
+                    it.displayMode.value.value
+                )
+            },
+            restore = { value ->
+                StateData(
+                    initialSelectedStartDateMillis = value[0] as Long?,
+                    initialSelectedEndDateMillis = value[1] as Long?,
+                    initialDisplayedMonthMillis = value[2] as Long?,
+                    yearRange = IntRange(value[3] as Int, value[4] as Int),
+                    initialDisplayMode = DisplayMode(value[5] as Int)
+                )
+            }
+        )
+    }
+}
+
+/**
  * A base container for the date picker and the date input. This container composes the top common
  * area of the UI, and accepts [content] for the actual calendar picker or text field input.
  */
