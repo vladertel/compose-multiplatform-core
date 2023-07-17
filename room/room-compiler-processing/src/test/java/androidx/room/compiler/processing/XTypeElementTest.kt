@@ -16,6 +16,8 @@
 
 package androidx.room.compiler.processing
 
+import androidx.kruth.assertThat
+import androidx.kruth.assertWithMessage
 import androidx.room.compiler.codegen.XClassName
 import androidx.room.compiler.codegen.XTypeName
 import androidx.room.compiler.codegen.asClassName
@@ -31,8 +33,6 @@ import androidx.room.compiler.processing.util.getDeclaredField
 import androidx.room.compiler.processing.util.getField
 import androidx.room.compiler.processing.util.getMethodByJvmName
 import androidx.room.compiler.processing.util.runProcessorTest
-import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth.assertWithMessage
 import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.javapoet.JClassName
@@ -41,6 +41,7 @@ import com.squareup.kotlinpoet.javapoet.JTypeName
 import com.squareup.kotlinpoet.javapoet.JTypeVariableName
 import com.squareup.kotlinpoet.javapoet.KClassName
 import com.squareup.kotlinpoet.javapoet.KTypeVariableName
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -1488,6 +1489,83 @@ class XTypeElementTest(
     }
 
     @Test
+    fun constructorsWithOverloads() {
+        val src = Source.kotlin(
+            "Subject.kt",
+            """
+            class DefaultArgs @JvmOverloads constructor(x:Int = 1, y: Double, z: Long = 1) {}
+            class NoDefaultArgs @JvmOverloads constructor(x:Int, y: Double, z: Long) {}
+            class AllDefaultArgs @JvmOverloads constructor(x:Int = 1, y: Double = 0.0, z: Long = 1) {}
+            """.trimIndent()
+        )
+        runTest(sources = listOf(src)) { invocation ->
+            val defaultArgsConstructors =
+                invocation.processingEnv.requireTypeElement("DefaultArgs")
+                    .getConstructorSignatures()
+            val noDefaultArgsConstructors =
+                invocation.processingEnv.requireTypeElement("NoDefaultArgs")
+                    .getConstructorSignatures()
+            val allDefaultArgsConstructors =
+                invocation.processingEnv.requireTypeElement("AllDefaultArgs")
+                    .getConstructorSignatures()
+
+            if (isPreCompiled) {
+                assertThat(defaultArgsConstructors)
+                    .containsExactly(
+                        "DefaultArgs(int,double,long)",
+                        "DefaultArgs(int,double)",
+                        "DefaultArgs(double)"
+                    ).inOrder()
+                assertThat(noDefaultArgsConstructors)
+                    .containsExactly(
+                        "NoDefaultArgs(int,double,long)"
+                    ).inOrder()
+                assertThat(allDefaultArgsConstructors)
+                    .containsExactly(
+                        "AllDefaultArgs(int,double,long)",
+                        "AllDefaultArgs(int,double)",
+                        "AllDefaultArgs(int)",
+                        "AllDefaultArgs()"
+                    ).inOrder()
+            } else {
+                assertThat(defaultArgsConstructors)
+                    .containsExactly(
+                        "DefaultArgs(int,double,long)",
+                        "DefaultArgs(double)",
+                        "DefaultArgs(int,double)"
+                    ).inOrder()
+                assertThat(noDefaultArgsConstructors)
+                    .containsExactly(
+                        "NoDefaultArgs(int,double,long)"
+                    ).inOrder()
+                assertThat(allDefaultArgsConstructors)
+                    .containsExactly(
+                        "AllDefaultArgs(int,double,long)",
+                        "AllDefaultArgs()",
+                        "AllDefaultArgs(int)",
+                        "AllDefaultArgs(int,double)"
+                    ).inOrder()
+            }
+
+            val subjects = listOf("DefaultArgs", "NoDefaultArgs", "AllDefaultArgs")
+            if (invocation.isKsp) {
+                val syntheticConstructorCounts = subjects.map {
+                    it to invocation.processingEnv.requireTypeElement(it)
+                        .getConstructors()
+                        .filter { it.isSyntheticConstructorForJvmOverloads() }
+                        .size
+                }
+                assertThat(syntheticConstructorCounts)
+                    .containsExactly(
+                        "DefaultArgs" to 2,
+                        "NoDefaultArgs" to 0,
+                        "AllDefaultArgs" to 3,
+                    )
+            }
+        }
+    }
+
+    @Test
     fun constructorsWithDefaultValues() {
         val src = Source.kotlin(
             "Subject.kt",
@@ -1554,6 +1632,7 @@ class XTypeElementTest(
         }
     }
 
+    @Ignore("b/284452502")
     @Test
     fun jvmDefault() {
         val src = Source.kotlin(
@@ -2242,6 +2321,17 @@ class XTypeElementTest(
     private fun List<XMethodElement>.jvmNames() = map {
         it.jvmName
     }.toList()
+
+    private fun XTypeElement.getConstructorSignatures(): List<String> =
+        getConstructors().map { it.signature() }
+
+    private fun XConstructorElement.signature(): String {
+        val params = executableType.parameterTypes.joinToString(",") {
+            it.asTypeName().java.toString()
+        }
+        val enclosingName = enclosingElement.name
+        return "$enclosingName($params)"
+    }
 
     private fun XMethodElement.signature(owner: XType): String {
         val methodType = this.asMemberOf(owner)

@@ -1599,7 +1599,7 @@ class CompositionTests {
     }
 
     @Test
-    fun testRemember_Forget_NoForgetOnRemember() = compositionTest {
+    fun testRemember_Forget_ForgetOnRemember() = compositionTest {
         var expectedRemember = true
         var expectedForget = true
         val rememberObject = object : RememberObserver {
@@ -1714,8 +1714,8 @@ class CompositionTests {
             "Object should have only been notified once"
         )
 
-        expectedRemember = false
-        expectedForget = false
+        expectedRemember = true
+        expectedForget = true
         a = false
         b = true
         c = false
@@ -1730,8 +1730,8 @@ class CompositionTests {
         }
         assertEquals(1, rememberObject.count, "No enter or leaves")
 
-        expectedRemember = false
-        expectedForget = false
+        expectedRemember = true
+        expectedForget = true
         a = false
         b = false
         c = true
@@ -1746,8 +1746,8 @@ class CompositionTests {
         }
         assertEquals(1, rememberObject.count, "No enter or leaves")
 
-        expectedRemember = false
-        expectedForget = false
+        expectedRemember = true
+        expectedForget = true
         a = true
         b = false
         c = false
@@ -3829,6 +3829,39 @@ class CompositionTests {
         validate {
             Text("false")
             Text("after")
+        }
+    }
+
+    // Regression test for b/288717411
+    @Test
+    fun test_forgottenValue_isFreedFromSlotTable() = compositionTest {
+        val value = Any()
+        var rememberValue by mutableStateOf(false)
+        val composers = mutableSetOf<Composer>()
+        compose {
+            composers += currentComposer
+            if (rememberValue) {
+                remember { value }
+            }
+        }
+
+        validate {
+            assertFalse(value in composition!!.getSlots())
+        }
+
+        rememberValue = true
+        expectChanges()
+
+        validate {
+            assertTrue(value in composition!!.getSlots())
+        }
+
+        rememberValue = false
+        expectChanges()
+
+        validate {
+            assertFalse(value in composition!!.getSlots())
+            assertFalse(composers.any { value in it.getInsertTableSlots() })
         }
     }
 

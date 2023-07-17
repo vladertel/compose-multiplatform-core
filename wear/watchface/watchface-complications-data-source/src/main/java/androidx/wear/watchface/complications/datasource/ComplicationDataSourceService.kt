@@ -185,14 +185,21 @@ public annotation class IsForSafeWatchFace
  * - The manifest declaration of this service must include an intent filter for
  *   android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST.
  * - A ComplicationDataSourceService must include a `meta-data` tag with
- *   android.support.wearable.complications.SUPPORTED_TYPES in its manifest entry. The value of this
- *   tag should be a comma separated list of types supported by the data source, from this table: |
- *   Androidx class | Tag name | |--------------------------------------|-------------------| |
- *   [GoalProgressComplicationData] | GOAL_PROGRESS | | [LongTextComplicationData] | LONG_TEXT | |
- *   [MonochromaticImageComplicationData] | ICON | | [PhotoImageComplicationData] | LARGE_IMAGE | |
- *   [RangedValueComplicationData] | RANGED_TEXT | | [ShortTextComplicationData] | SHORT_TEXT | |
- *   [SmallImageComplicationData] | SMALL_IMAGE | | [WeightedElementsComplicationData] |
- *   WEIGHTED_ELEMENTS |
+ *   android.support.wearable.complications.SUPPORTED_TYPES in its manifest entry.
+ *
+ * The value of android.support.wearable.complications.SUPPORTED_TYPES should be a comma separated
+ * list of types supported by the data source, from this table:
+ *
+ * | Androidx class                       | Tag name          |
+ * |--------------------------------------|-------------------|
+ * | [GoalProgressComplicationData]       | GOAL_PROGRESS     |
+ * | [LongTextComplicationData]           | LONG_TEXT         |
+ * | [MonochromaticImageComplicationData] | ICON              |
+ * | [PhotoImageComplicationData]         | LARGE_IMAGE       |
+ * | [RangedValueComplicationData]        | RANGED_TEXT       |
+ * | [ShortTextComplicationData]          | SHORT_TEXT        |
+ * | [SmallImageComplicationData]         | SMALL_IMAGE       |
+ * | [WeightedElementsComplicationData]   | WEIGHTED_ELEMENTS |
  *
  * The order in which types are listed has no significance. In the case where a watch face supports
  * multiple types in a single complication slot, the watch face will determine which types it
@@ -230,33 +237,25 @@ public annotation class IsForSafeWatchFace
  * isForSafeWatchFace are gated behind the privileged permission
  * `com.google.wear.permission.GET_IS_FOR_SAFE_WATCH_FACE`.
  * - A ComplicationDataSourceService should include a `meta-data` tag with
- *   android.support.wearable.complications.UPDATE_PERIOD_SECONDS its manifest entry. The value of
+ *   `android.support.wearable.complications.UPDATE_PERIOD_SECONDS` its manifest entry. The value of
  *   this tag is the number of seconds the complication data source would like to elapse between
  *   update requests.
  *
- * Note that update requests are not guaranteed to be sent with this frequency.
+ * **Note that update requests are not guaranteed to be sent with this frequency.** For
+ * complications with frequent updates they can also register a separate
+ * [METADATA_KEY_IMMEDIATE_UPDATE_PERIOD_MILLISECONDS] meta data tag which supports sampling at up
+ * to 1Hz when the watch face is visible and non-ambient, however this also requires the
+ * DataSourceService to have the privileged permission
+ * `com.google.android.wearable.permission.USE_IMMEDIATE_COMPLICATION_UPDATE`.
  *
  * If a complication data source never needs to receive update requests beyond the one sent when a
  * complication is activated, the value of this tag should be 0.
  *
- * For example, a complication data source that would like to update every ten minutes should
+ * For example, a complication data source that would like to update at most every hour should
  * include the following in its manifest entry:
  * ```
  * <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
- * android:value="600"/>
- * ```
- *
- * There is a lower limit for android.support.wearable.complications.UPDATE_PERIOD_SECONDS imposed
- * by the system to prevent excessive power drain. For complications with frequent updates they can
- * also register a separate [METADATA_KEY_IMMEDIATE_UPDATE_PERIOD_MILLISECONDS] meta data tag which
- * supports sampling at up to 1Hz when the watch face is visible and non-ambient, however this also
- * requires the DataSourceService to have the privileged permission
- * `com.google.android.wearable.permission.USE_IMMEDIATE_COMPLICATION_UPDATE`.
- *
- * ```
- *   <meta-data android:name=
- *      "androidx.wear.watchface.complications.data.source.IMMEDIATE_UPDATE_PERIOD_MILLISECONDS"
- *   android:value="1000"/>
+ * android:value="3600"/>
  * ```
  * - A ComplicationDataSourceService can include a `meta-data` tag with
  *   android.support.wearable.complications.PROVIDER_CONFIG_ACTION its manifest entry to cause a

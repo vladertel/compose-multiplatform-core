@@ -139,7 +139,6 @@ internal class PublicKeyCredentialControllerUtility {
         fun toCreatePasskeyResponseJson(cred: PublicKeyCredential): String {
             val json = JSONObject()
             val authenticatorResponse = cred.response
-            // TODO(b/262924507) : Look for FIDO changes in conditional mediation available
             if (authenticatorResponse is AuthenticatorAttestationResponse) {
                 val responseJson = JSONObject()
                 responseJson.put(
@@ -260,7 +259,6 @@ internal class PublicKeyCredentialControllerUtility {
                     JSON_KEY_USER_HANDLE, b64Encode(authenticatorResponse.userHandle!!)
                 )
             }
-            // TODO(b/262924507) : attestation object missing in fido impl
             json.put(JSON_KEY_RESPONSE, responseJson)
             json.put(JSON_KEY_ID, publicKeyCred.id)
             json.put(JSON_KEY_RAW_ID, b64Encode(publicKeyCred.rawId))
@@ -294,7 +292,8 @@ internal class PublicKeyCredentialControllerUtility {
             val json = JSONObject(option.requestJson)
             val rpId = json.optString(JSON_KEY_RPID, "")
             if (rpId.isEmpty()) {
-                throw JSONException("GetPublicKeyCredentialOption - rpId not specified in the " +
+                throw JSONException(
+                    "GetPublicKeyCredentialOption - rpId not specified in the " +
                     "request or is unexpectedly empty")
             }
             val challenge = getChallenge(json)
@@ -308,7 +307,8 @@ internal class PublicKeyCredentialControllerUtility {
         private fun getChallenge(json: JSONObject): ByteArray {
             val challengeB64 = json.optString(JSON_KEY_CHALLENGE, "")
             if (challengeB64.isEmpty()) {
-                throw JSONException("Challenge not found in request or is unexpectedly empty")
+                throw JSONException(
+                    "Challenge not found in request or is unexpectedly empty")
             }
             return b64Decode(challengeB64)
         }
@@ -436,7 +436,6 @@ internal class PublicKeyCredentialControllerUtility {
                         )
                     )
                 }
-                // TODO(b/262924507) : Fido implementation lacks userVerification in current impl
                 builder.setAuthenticatorSelection(
                     authSelectionBuilder.build()
                 )
@@ -464,8 +463,14 @@ internal class PublicKeyCredentialControllerUtility {
                     val descriptorJSON = pubKeyDescriptorJSONs.getJSONObject(i)
                     val descriptorId = b64Decode(descriptorJSON.getString(JSON_KEY_ID))
                     val descriptorType = descriptorJSON.getString(JSON_KEY_TYPE)
-                    if (descriptorId.isEmpty() || descriptorType.isEmpty()) {
-                        throw JSONException("PublicKeyCredentialDescriptor id or type value not " +
+                    if (descriptorType.isEmpty()) {
+                        throw JSONException(
+                            "PublicKeyCredentialDescriptor type value is not " +
+                            "found or unexpectedly empty")
+                    }
+                    if (descriptorId.isEmpty()) {
+                        throw JSONException(
+                            "PublicKeyCredentialDescriptor id value is not " +
                             "found or unexpectedly empty")
                     }
                     var transports: MutableList<Transport>? = null
@@ -489,8 +494,7 @@ internal class PublicKeyCredentialControllerUtility {
                             descriptorType,
                             descriptorId, transports
                         )
-                    ) // TODO(b/262924507) : Ensure spec changes (i.e. int algorithm) in current
-                    // fido impl stays that way - edit if fido modifies
+                    )
                 }
             }
             builder.setExcludeList(excludeCredentialsList)
@@ -511,13 +515,18 @@ internal class PublicKeyCredentialControllerUtility {
             val rp = json.getJSONObject(JSON_KEY_RP)
             val rpId = rp.getString(JSON_KEY_ID)
             val rpName = rp.optString(JSON_KEY_NAME, "")
-            // TODO(b/262924507) : Fido and spec differ; always keep re-checking if aligns
             var rpIcon: String? = rp.optString(JSON_KEY_ICON, "")
             if (rpIcon!!.isEmpty()) {
                 rpIcon = null
             }
-            if (rpName.isEmpty() || rpId.isEmpty()) {
-                throw JSONException("PublicKeyCredentialCreationOptions rp ID or rp name are " +
+            if (rpName.isEmpty()) {
+                throw JSONException(
+                    "PublicKeyCredentialCreationOptions rp name is " +
+                    "missing or unexpectedly empty")
+            }
+            if (rpId.isEmpty()) {
+                throw JSONException(
+                    "PublicKeyCredentialCreationOptions rp ID is " +
                     "missing or unexpectedly empty")
             }
             builder.setRp(
@@ -535,7 +544,8 @@ internal class PublicKeyCredentialControllerUtility {
                 val paramAlg = param.getLong(JSON_KEY_ALG).toInt()
                 val typeParam = param.optString(JSON_KEY_TYPE, "")
                 if (typeParam.isEmpty()) {
-                    throw JSONException("PublicKeyCredentialCreationOptions " +
+                    throw JSONException(
+                        "PublicKeyCredentialCreationOptions " +
                         "PublicKeyCredentialParameter type missing or unexpectedly empty")
                 }
                 if (checkAlgSupported(paramAlg)) {
@@ -558,9 +568,20 @@ internal class PublicKeyCredentialControllerUtility {
             val userName = user.getString(JSON_KEY_NAME)
             val displayName = user.getString(JSON_KEY_DISPLAY_NAME)
             val userIcon = user.optString(JSON_KEY_ICON, "")
-            if (displayName.isEmpty() || userId.isEmpty() || userName.isEmpty()) {
-                throw JSONException("PublicKeyCredentialCreationOptions UserEntity missing one " +
-                    "or more of displayName, userId or userName, or they are unexpectedly empty")
+            if (displayName.isEmpty()) {
+                throw JSONException(
+                    "PublicKeyCredentialCreationOptions UserEntity missing " +
+                    "displayName or they are unexpectedly empty")
+            }
+            if (userId.isEmpty()) {
+                throw JSONException(
+                    "PublicKeyCredentialCreationOptions UserEntity missing " +
+                    "user id or they are unexpectedly empty")
+            }
+            if (userName.isEmpty()) {
+                throw JSONException(
+                    "PublicKeyCredentialCreationOptions UserEntity missing " +
+                    "user name or they are unexpectedly empty")
             }
             builder.setUser(
                 PublicKeyCredentialUserEntity(

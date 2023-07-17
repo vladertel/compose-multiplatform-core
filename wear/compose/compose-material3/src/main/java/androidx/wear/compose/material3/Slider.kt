@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.ripple.rememberRipple
@@ -122,7 +123,7 @@ fun InlineSlider(
                 value, enabled, onValueChange, valueRange, steps
             )
             .height(InlineSliderDefaults.SliderHeight)
-            .clip(MaterialTheme.shapes.full)
+            .clip(CircleShape) // TODO(b/290625297) Replace with tokens
     ) {
         val visibleSegments = if (segmented) steps + 1 else 1
 
@@ -172,7 +173,7 @@ fun InlineSlider(
                     modifier = Modifier
                         .height(InlineSliderDefaults.BarHeight)
                         .weight(1f)
-                        .clip(MaterialTheme.shapes.full)
+                        .clip(CircleShape) // TODO(b/290625297) Replace with token
                         .drawProgressBar(
                             selectedBarColor = selectedBarColor,
                             unselectedBarColor = unselectedBarColor,
@@ -355,19 +356,36 @@ object InlineSliderDefaults {
     val Increase = Icons.Filled.Add
 }
 
-/** Represents the background and content colors used in [InlineSlider] in different states. */
+/**
+ * Represents the background and content colors used in [InlineSlider] in different states.
+ *
+ * @constructor create an instance with arbitrary colors.
+ * See [InlineSliderDefaults.colors] for the default implementation that follows Material
+ * specifications.
+ *
+ * @param containerColor The background color of this [InlineSlider] when enabled.
+ * @param buttonIconColor The color of the icon of buttons when enabled.
+ * @param selectedBarColor The color of the progress bar when enabled.
+ * @param unselectedBarColor The background color of the progress bar when enabled.
+ * @param barSeparatorColor The color of separator between visible segments when enabled.
+ * @param disabledContainerColor The background color of this [InlineSlider] when disabled.
+ * @param disabledButtonIconColor The color of the icon of buttons when disabled.
+ * @param disabledSelectedBarColor The color of the progress bar when disabled.
+ * @param disabledUnselectedBarColor The background color of the progress bar when disabled.
+ * @param disabledBarSeparatorColor The color of separator between visible segments when disabled.
+ */
 @Immutable
-class InlineSliderColors internal constructor(
-    private val containerColor: Color,
-    private val buttonIconColor: Color,
-    private val selectedBarColor: Color,
-    private val unselectedBarColor: Color,
-    private val barSeparatorColor: Color,
-    private val disabledContainerColor: Color,
-    private val disabledButtonIconColor: Color,
-    private val disabledSelectedBarColor: Color,
-    private val disabledUnselectedBarColor: Color,
-    private val disabledBarSeparatorColor: Color
+class InlineSliderColors constructor(
+    val containerColor: Color,
+    val buttonIconColor: Color,
+    val selectedBarColor: Color,
+    val unselectedBarColor: Color,
+    val barSeparatorColor: Color,
+    val disabledContainerColor: Color,
+    val disabledButtonIconColor: Color,
+    val disabledSelectedBarColor: Color,
+    val disabledUnselectedBarColor: Color,
+    val disabledBarSeparatorColor: Color
 ) {
     @Composable
     internal fun containerColor(enabled: Boolean): State<Color> =

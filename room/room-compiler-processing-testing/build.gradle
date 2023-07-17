@@ -15,6 +15,7 @@
  */
 
 import androidx.build.LibraryType
+import androidx.build.KotlinTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -29,6 +30,7 @@ dependencies {
     implementation(libs.kotlinStdlibJdk8) // KSP defines older version as dependency, force update.
     implementation(libs.ksp)
     implementation(libs.googleCompileTesting)
+    implementation(project(":kruth:kruth"))
     // specify these to match the kotlin compiler version in AndroidX rather than what KSP or KCT
     // uses
     implementation(libs.kotlinCompilerEmbeddable)
@@ -74,6 +76,7 @@ tasks.named("compileTestKotlin", KotlinCompile.class).configure {
 androidx {
     name = "Room XProcessor Testing"
     type = LibraryType.ANNOTATION_PROCESSOR_UTILS
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
     inceptionYear = "2020"
     description = "Testing helpers for Room XProcessing APIs"
 }

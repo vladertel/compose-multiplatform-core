@@ -875,11 +875,11 @@ package androidx.core.app {
   public final class PendingIntentCompat {
     method public static android.app.PendingIntent getActivities(android.content.Context, int, android.content.Intent![], int, android.os.Bundle?, boolean);
     method public static android.app.PendingIntent getActivities(android.content.Context, int, android.content.Intent![], int, boolean);
-    method public static android.app.PendingIntent getActivity(android.content.Context, int, android.content.Intent, int, android.os.Bundle?, boolean);
-    method public static android.app.PendingIntent getActivity(android.content.Context, int, android.content.Intent, int, boolean);
+    method public static android.app.PendingIntent? getActivity(android.content.Context, int, android.content.Intent, int, android.os.Bundle?, boolean);
+    method public static android.app.PendingIntent? getActivity(android.content.Context, int, android.content.Intent, int, boolean);
     method public static android.app.PendingIntent? getBroadcast(android.content.Context, int, android.content.Intent, int, boolean);
     method @RequiresApi(26) public static android.app.PendingIntent getForegroundService(android.content.Context, int, android.content.Intent, int, boolean);
-    method public static android.app.PendingIntent getService(android.content.Context, int, android.content.Intent, int, boolean);
+    method public static android.app.PendingIntent? getService(android.content.Context, int, android.content.Intent, int, boolean);
     method public static void send(android.app.PendingIntent, android.content.Context, int, android.content.Intent, android.app.PendingIntent.OnFinished?, android.os.Handler?) throws android.app.PendingIntent.CanceledException;
     method public static void send(android.app.PendingIntent, android.content.Context, int, android.content.Intent, android.app.PendingIntent.OnFinished?, android.os.Handler?, String?, android.os.Bundle?) throws android.app.PendingIntent.CanceledException;
     method public static void send(android.app.PendingIntent, int, android.app.PendingIntent.OnFinished?, android.os.Handler?) throws android.app.PendingIntent.CanceledException;
@@ -1849,7 +1849,7 @@ package androidx.core.net {
 
 package androidx.core.os {
 
-  public class BuildCompat {
+  public final class BuildCompat {
     method @Deprecated @ChecksSdkIntAtLeast(api=android.os.Build.VERSION_CODES.N) public static boolean isAtLeastN();
     method @Deprecated @ChecksSdkIntAtLeast(api=android.os.Build.VERSION_CODES.N_MR1) public static boolean isAtLeastNMR1();
     method @Deprecated @ChecksSdkIntAtLeast(api=android.os.Build.VERSION_CODES.O) public static boolean isAtLeastO();
@@ -1858,17 +1858,18 @@ package androidx.core.os {
     method @Deprecated @ChecksSdkIntAtLeast(api=android.os.Build.VERSION_CODES.Q) public static boolean isAtLeastQ();
     method @Deprecated @ChecksSdkIntAtLeast(api=android.os.Build.VERSION_CODES.R) public static boolean isAtLeastR();
     method @Deprecated @ChecksSdkIntAtLeast(api=31, codename="S") public static boolean isAtLeastS();
-    method @Deprecated @ChecksSdkIntAtLeast(api=32, codename="Sv2") @androidx.core.os.BuildCompat.PrereleaseSdkCheck public static boolean isAtLeastSv2();
-    method @Deprecated @ChecksSdkIntAtLeast(api=33, codename="Tiramisu") @androidx.core.os.BuildCompat.PrereleaseSdkCheck public static boolean isAtLeastT();
-    method @ChecksSdkIntAtLeast(api=34, codename="UpsideDownCake") @androidx.core.os.BuildCompat.PrereleaseSdkCheck public static boolean isAtLeastU();
-    method @ChecksSdkIntAtLeast(codename="VanillaIceCream") @androidx.core.os.BuildCompat.PrereleaseSdkCheck public static boolean isAtLeastV();
+    method @Deprecated @ChecksSdkIntAtLeast(api=32, codename="Sv2") public static boolean isAtLeastSv2();
+    method @Deprecated @ChecksSdkIntAtLeast(api=33, codename="Tiramisu") public static boolean isAtLeastT();
+    method @Deprecated @ChecksSdkIntAtLeast(api=34, codename="UpsideDownCake") public static boolean isAtLeastU();
+    method @SuppressCompatibility @ChecksSdkIntAtLeast(codename="VanillaIceCream") @androidx.core.os.BuildCompat.PrereleaseSdkCheck public static boolean isAtLeastV();
     field @ChecksSdkIntAtLeast(extension=android.os.ext.SdkExtensions.AD_SERVICES) public static final int AD_SERVICES_EXTENSION_INT;
+    field public static final androidx.core.os.BuildCompat INSTANCE;
     field @ChecksSdkIntAtLeast(extension=android.os.Build.VERSION_CODES.R) public static final int R_EXTENSION_INT;
     field @ChecksSdkIntAtLeast(extension=android.os.Build.VERSION_CODES.S) public static final int S_EXTENSION_INT;
     field @ChecksSdkIntAtLeast(extension=android.os.Build.VERSION_CODES.TIRAMISU) public static final int T_EXTENSION_INT;
   }
 
-  @RequiresOptIn @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS) public static @interface BuildCompat.PrereleaseSdkCheck {
+  @SuppressCompatibility @kotlin.RequiresOptIn @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) public static @interface BuildCompat.PrereleaseSdkCheck {
   }
 
   public final class BundleCompat {
@@ -3385,13 +3386,18 @@ package androidx.core.view.accessibility {
     method public static int getMovementGranularity(android.view.accessibility.AccessibilityEvent);
     method @Deprecated public static androidx.core.view.accessibility.AccessibilityRecordCompat! getRecord(android.view.accessibility.AccessibilityEvent!, int);
     method @Deprecated public static int getRecordCount(android.view.accessibility.AccessibilityEvent!);
+    method public static boolean isAccessibilityDataSensitive(android.view.accessibility.AccessibilityEvent);
+    method public static void setAccessibilityDataSensitive(android.view.accessibility.AccessibilityEvent, boolean);
     method public static void setAction(android.view.accessibility.AccessibilityEvent, int);
     method public static void setContentChangeTypes(android.view.accessibility.AccessibilityEvent, int);
     method public static void setMovementGranularity(android.view.accessibility.AccessibilityEvent, int);
     field public static final int CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION = 4; // 0x4
+    field public static final int CONTENT_CHANGE_TYPE_CONTENT_INVALID = 1024; // 0x400
     field public static final int CONTENT_CHANGE_TYPE_DRAG_CANCELLED = 512; // 0x200
     field public static final int CONTENT_CHANGE_TYPE_DRAG_DROPPED = 256; // 0x100
     field public static final int CONTENT_CHANGE_TYPE_DRAG_STARTED = 128; // 0x80
+    field public static final int CONTENT_CHANGE_TYPE_ENABLED = 4096; // 0x1000
+    field public static final int CONTENT_CHANGE_TYPE_ERROR = 2048; // 0x800
     field public static final int CONTENT_CHANGE_TYPE_PANE_APPEARED = 16; // 0x10
     field public static final int CONTENT_CHANGE_TYPE_PANE_DISAPPEARED = 32; // 0x20
     field public static final int CONTENT_CHANGE_TYPE_PANE_TITLE = 8; // 0x8
@@ -3426,6 +3432,7 @@ package androidx.core.view.accessibility {
     method public static boolean addTouchExplorationStateChangeListener(android.view.accessibility.AccessibilityManager, androidx.core.view.accessibility.AccessibilityManagerCompat.TouchExplorationStateChangeListener);
     method @Deprecated public static java.util.List<android.accessibilityservice.AccessibilityServiceInfo!>! getEnabledAccessibilityServiceList(android.view.accessibility.AccessibilityManager!, int);
     method @Deprecated public static java.util.List<android.accessibilityservice.AccessibilityServiceInfo!>! getInstalledAccessibilityServiceList(android.view.accessibility.AccessibilityManager!);
+    method public static boolean isRequestFromAccessibilityTool(android.view.accessibility.AccessibilityManager);
     method @Deprecated public static boolean isTouchExplorationEnabled(android.view.accessibility.AccessibilityManager!);
     method @Deprecated public static boolean removeAccessibilityStateChangeListener(android.view.accessibility.AccessibilityManager!, androidx.core.view.accessibility.AccessibilityManagerCompat.AccessibilityStateChangeListener!);
     method public static boolean removeTouchExplorationStateChangeListener(android.view.accessibility.AccessibilityManager, androidx.core.view.accessibility.AccessibilityManagerCompat.TouchExplorationStateChangeListener);
@@ -3459,11 +3466,14 @@ package androidx.core.view.accessibility {
     method public java.util.List<java.lang.String!> getAvailableExtraData();
     method @Deprecated public void getBoundsInParent(android.graphics.Rect!);
     method public void getBoundsInScreen(android.graphics.Rect!);
+    method public void getBoundsInWindow(android.graphics.Rect);
     method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat! getChild(int);
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat? getChild(int, int);
     method public int getChildCount();
     method public CharSequence! getClassName();
     method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionInfoCompat! getCollectionInfo();
     method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat! getCollectionItemInfo();
+    method public CharSequence? getContainerTitle();
     method public CharSequence! getContentDescription();
     method public int getDrawingOrder();
     method public CharSequence! getError();
@@ -3481,6 +3491,7 @@ package androidx.core.view.accessibility {
     method public CharSequence! getPackageName();
     method public CharSequence? getPaneTitle();
     method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat! getParent();
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat? getParent(int);
     method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.RangeInfoCompat! getRangeInfo();
     method public CharSequence? getRoleDescription();
     method public CharSequence? getStateDescription();
@@ -3496,6 +3507,7 @@ package androidx.core.view.accessibility {
     method public androidx.core.view.accessibility.AccessibilityWindowInfoCompat! getWindow();
     method public int getWindowId();
     method public boolean hasRequestInitialAccessibilityFocus();
+    method public boolean isAccessibilityDataSensitive();
     method public boolean isAccessibilityFocused();
     method public boolean isCheckable();
     method public boolean isChecked();
@@ -3531,10 +3543,12 @@ package androidx.core.view.accessibility {
     method public boolean removeAction(androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat!);
     method public boolean removeChild(android.view.View!);
     method public boolean removeChild(android.view.View!, int);
+    method public void setAccessibilityDataSensitive(boolean);
     method public void setAccessibilityFocused(boolean);
     method public void setAvailableExtraData(java.util.List<java.lang.String!>);
     method @Deprecated public void setBoundsInParent(android.graphics.Rect!);
     method public void setBoundsInScreen(android.graphics.Rect!);
+    method public void setBoundsInWindow(android.graphics.Rect);
     method public void setCanOpenPopup(boolean);
     method public void setCheckable(boolean);
     method public void setChecked(boolean);
@@ -3542,6 +3556,7 @@ package androidx.core.view.accessibility {
     method public void setClickable(boolean);
     method public void setCollectionInfo(Object!);
     method public void setCollectionItemInfo(Object!);
+    method public void setContainerTitle(CharSequence?);
     method public void setContentDescription(CharSequence!);
     method public void setContentInvalid(boolean);
     method public void setContextClickable(boolean);
@@ -3572,6 +3587,7 @@ package androidx.core.view.accessibility {
     method public void setParent(android.view.View!);
     method public void setParent(android.view.View!, int);
     method public void setPassword(boolean);
+    method public void setQueryFromAppProcessEnabled(android.view.View, boolean);
     method public void setRangeInfo(androidx.core.view.accessibility.AccessibilityNodeInfoCompat.RangeInfoCompat!);
     method public void setRequestInitialAccessibilityFocus(boolean);
     method public void setRoleDescription(CharSequence?);
@@ -3637,8 +3653,15 @@ package androidx.core.view.accessibility {
     field public static final int EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_MAX_LENGTH = 20000; // 0x4e20
     field public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX = "android.core.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX";
     field public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY = "android.core.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_KEY";
+    field public static final int FLAG_PREFETCH_ANCESTORS = 1; // 0x1
+    field public static final int FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST = 16; // 0x10
+    field public static final int FLAG_PREFETCH_DESCENDANTS_DEPTH_FIRST = 8; // 0x8
+    field public static final int FLAG_PREFETCH_DESCENDANTS_HYBRID = 4; // 0x4
+    field public static final int FLAG_PREFETCH_SIBLINGS = 2; // 0x2
+    field public static final int FLAG_PREFETCH_UNINTERRUPTIBLE = 32; // 0x20
     field public static final int FOCUS_ACCESSIBILITY = 2; // 0x2
     field public static final int FOCUS_INPUT = 1; // 0x1
+    field public static final int MAX_NUMBER_OF_PREFETCHED_NODES = 50; // 0x32
     field public static final int MOVEMENT_GRANULARITY_CHARACTER = 1; // 0x1
     field public static final int MOVEMENT_GRANULARITY_LINE = 4; // 0x4
     field public static final int MOVEMENT_GRANULARITY_PAGE = 16; // 0x10
@@ -3711,15 +3734,31 @@ package androidx.core.view.accessibility {
   public static class AccessibilityNodeInfoCompat.CollectionItemInfoCompat {
     method public int getColumnIndex();
     method public int getColumnSpan();
+    method public String? getColumnTitle();
     method public int getRowIndex();
     method public int getRowSpan();
+    method public String? getRowTitle();
     method @Deprecated public boolean isHeading();
     method public boolean isSelected();
     method public static androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat! obtain(int, int, int, int, boolean);
     method public static androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat! obtain(int, int, int, int, boolean, boolean);
   }
 
+  public static final class AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder {
+    ctor public AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder();
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat build();
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder setColumnIndex(int);
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder setColumnSpan(int);
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder setColumnTitle(String?);
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder setHeading(boolean);
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder setRowIndex(int);
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder setRowSpan(int);
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder setRowTitle(String?);
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CollectionItemInfoCompat.Builder setSelected(boolean);
+  }
+
   public static class AccessibilityNodeInfoCompat.RangeInfoCompat {
+    ctor public AccessibilityNodeInfoCompat.RangeInfoCompat(int, float, float, float);
     method public float getCurrent();
     method public float getMax();
     method public float getMin();
@@ -3863,10 +3902,13 @@ package androidx.core.view.accessibility {
     method public int getDisplayId();
     method public int getId();
     method public int getLayer();
+    method public androidx.core.os.LocaleListCompat getLocales();
     method public androidx.core.view.accessibility.AccessibilityWindowInfoCompat? getParent();
     method public void getRegionInScreen(android.graphics.Region);
     method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat? getRoot();
+    method public androidx.core.view.accessibility.AccessibilityNodeInfoCompat? getRoot(int);
     method public CharSequence? getTitle();
+    method public long getTransitionTimeMillis();
     method public int getType();
     method public boolean isAccessibilityFocused();
     method public boolean isActive();
@@ -3879,6 +3921,7 @@ package androidx.core.view.accessibility {
     field public static final int TYPE_ACCESSIBILITY_OVERLAY = 4; // 0x4
     field public static final int TYPE_APPLICATION = 1; // 0x1
     field public static final int TYPE_INPUT_METHOD = 2; // 0x2
+    field public static final int TYPE_MAGNIFICATION_OVERLAY = 6; // 0x6
     field public static final int TYPE_SPLIT_SCREEN_DIVIDER = 5; // 0x5
     field public static final int TYPE_SYSTEM = 3; // 0x3
   }

@@ -16,21 +16,24 @@
 
 package androidx.wear.compose.material3.demos
 
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.ChildButton
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.samples.ButtonSample
@@ -49,10 +52,9 @@ fun ButtonDemo() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         item {
-            Text(
-                text = "1 slot button",
-                modifier = Modifier.semantics { heading() }
-            )
+            ListHeader {
+                Text("1 slot button")
+            }
         }
         item {
             SimpleButtonSample()
@@ -65,10 +67,9 @@ fun ButtonDemo() {
             )
         }
         item {
-            Text(
-                text = "3 slot button",
-                modifier = Modifier.semantics { heading() }
-            )
+            ListHeader {
+                Text("3 slot button")
+            }
         }
         item {
             ButtonSample()
@@ -98,10 +99,9 @@ fun FilledTonalButtonDemo() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         item {
-            Text(
-                text = "1 slot button",
-                modifier = Modifier.semantics { heading() }
-            )
+            ListHeader {
+                Text("1 slot button")
+            }
         }
         item {
             SimpleFilledTonalButtonSample()
@@ -114,10 +114,9 @@ fun FilledTonalButtonDemo() {
             )
         }
         item {
-            Text(
-                text = "3 slot button",
-                modifier = Modifier.semantics { heading() }
-            )
+            ListHeader {
+                Text("3 slot button")
+            }
         }
         item {
             FilledTonalButtonSample()
@@ -147,10 +146,9 @@ fun OutlinedButtonDemo() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         item {
-            Text(
-                text = "1 slot button",
-                modifier = Modifier.semantics { heading() }
-            )
+            ListHeader {
+                Text("1 slot button")
+            }
         }
         item {
             SimpleOutlinedButtonSample()
@@ -163,10 +161,9 @@ fun OutlinedButtonDemo() {
             )
         }
         item {
-            Text(
-                text = "3 slot button",
-                modifier = Modifier.semantics { heading() }
-            )
+            ListHeader {
+                Text("3 slot button")
+            }
         }
         item {
             OutlinedButtonSample()
@@ -196,10 +193,9 @@ fun ChildButtonDemo() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         item {
-            Text(
-                text = "1 slot button",
-                modifier = Modifier.semantics { heading() }
-            )
+            ListHeader {
+                Text("1 slot button")
+            }
         }
         item {
             SimpleChildButtonSample()
@@ -212,10 +208,9 @@ fun ChildButtonDemo() {
             )
         }
         item {
-            Text(
-                text = "3 slot button",
-                modifier = Modifier.semantics { heading() }
-            )
+            ListHeader {
+                Text("3 slot button")
+            }
         }
         item {
             ChildButtonSample()
@@ -236,4 +231,159 @@ fun ChildButtonDemo() {
             )
         }
     }
+}
+
+@Composable
+fun MultilineButtonDemo() {
+    ScalingLazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        item {
+            ListHeader {
+                Text("3 line label")
+            }
+        }
+        item {
+            MultilineButton(enabled = true)
+        }
+        item {
+            MultilineButton(enabled = false)
+        }
+        item {
+            MultilineButton(enabled = true, icon = { StandardIcon() })
+        }
+        item {
+            MultilineButton(enabled = false, icon = { StandardIcon() })
+        }
+        item {
+            ListHeader {
+                Text("5 line button")
+            }
+        }
+        item {
+            Multiline3SlotButton(enabled = true)
+        }
+        item {
+            Multiline3SlotButton(enabled = false)
+        }
+        item {
+            Multiline3SlotButton(enabled = true, icon = { StandardIcon() })
+        }
+        item {
+            Multiline3SlotButton(enabled = false, icon = { StandardIcon() })
+        }
+    }
+}
+
+@Composable
+fun AvatarButtonDemo() {
+    ScalingLazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        item {
+            ListHeader {
+                Text("Label + Avatar")
+            }
+        }
+        item {
+            AvatarButton(enabled = true)
+        }
+        item {
+            AvatarButton(enabled = false)
+        }
+        item {
+            ListHeader {
+                Text("Primary/Secondary + Avatar")
+            }
+        }
+        item {
+            Avatar3SlotButton(enabled = true)
+        }
+        item {
+            Avatar3SlotButton(enabled = false)
+        }
+    }
+}
+
+@Composable
+private fun AvatarButton(enabled: Boolean) =
+    MultilineButton(
+        enabled = enabled, icon = { AvatarIcon() }, label = { Text("Primary text") }
+    )
+
+@Composable
+private fun Avatar3SlotButton(enabled: Boolean) =
+    Multiline3SlotButton(
+        enabled = enabled,
+        icon = { AvatarIcon() },
+        label = { Text("Primary text") },
+        secondaryLabel = { Text("Secondary label") }
+    )
+
+@Composable
+private fun MultilineButton(
+    enabled: Boolean,
+    icon: (@Composable BoxScope.() -> Unit)? = null,
+    label: @Composable RowScope.() -> Unit = {
+        Text(
+            text = "Multiline label that include a lot of text and stretches to third line",
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+    },
+) {
+    Button(
+        onClick = { /* Do something */ },
+        icon = icon,
+        label = label,
+        enabled = enabled
+    )
+}
+
+@Composable
+private fun Multiline3SlotButton(
+    enabled: Boolean,
+    icon: (@Composable BoxScope.() -> Unit)? = null,
+    label: @Composable RowScope.() -> Unit = {
+        Text(
+            text = "Multiline label that include a lot of text and stretches to third line",
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+    },
+    secondaryLabel: @Composable RowScope.() -> Unit = {
+        Text(
+            text = "Secondary label over two lines",
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    },
+) {
+    Button(
+        onClick = { /* Do something */ },
+        icon = icon,
+        label = label,
+        secondaryLabel = secondaryLabel,
+        enabled = enabled
+    )
+}
+
+@Composable
+private fun StandardIcon() {
+    Icon(
+        Icons.Filled.Favorite,
+        contentDescription = "Favorite icon",
+        modifier = Modifier.size(ButtonDefaults.IconSize)
+    )
+}
+
+@Composable
+private fun AvatarIcon() {
+    Icon(
+        Icons.Filled.AccountCircle,
+        contentDescription = "Account",
+        modifier = Modifier.size(ButtonDefaults.LargeIconSize)
+    )
 }

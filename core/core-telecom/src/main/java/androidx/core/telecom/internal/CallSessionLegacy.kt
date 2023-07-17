@@ -20,7 +20,9 @@ import android.bluetooth.BluetoothDevice
 import android.os.Build
 import android.os.Build.VERSION_CODES
 import android.os.ParcelUuid
+import android.telecom.Call
 import android.telecom.CallAudioState
+import android.telecom.Connection
 import android.telecom.DisconnectCause
 import android.util.Log
 import androidx.annotation.DoNotInline
@@ -130,8 +132,14 @@ internal class CallSessionLegacy(
     }
 
     fun setConnectionInactive(): Boolean {
-        setOnHold()
-        return true
+        return if (this.connectionCapabilities.and(CAPABILITY_SUPPORT_HOLD)
+            == CAPABILITY_SUPPORT_HOLD
+        ) {
+            setOnHold()
+            true
+        } else {
+            false
+        }
     }
 
     fun setConnectionDisconnect(cause: DisconnectCause): Boolean {
@@ -261,6 +269,39 @@ internal class CallSessionLegacy(
         }
     }
 
+    override fun onReject(rejectReason: Int) {
+        CoroutineScope(coroutineContext).launch {
+            if (state == Call.STATE_RINGING) {
+                mClientInterface!!.onDisconnect(
+                    DisconnectCause(DisconnectCause.REJECTED)
+                )
+                setDisconnected(DisconnectCause(DisconnectCause.REJECTED))
+            }
+        }
+    }
+
+    override fun onReject(rejectMessage: String) {
+        CoroutineScope(coroutineContext).launch {
+            if (state == Call.STATE_RINGING) {
+                mClientInterface!!.onDisconnect(
+                    DisconnectCause(DisconnectCause.REJECTED)
+                )
+                setDisconnected(DisconnectCause(DisconnectCause.REJECTED))
+            }
+        }
+    }
+
+    override fun onReject() {
+        CoroutineScope(coroutineContext).launch {
+            if (state == Call.STATE_RINGING) {
+                mClientInterface!!.onDisconnect(
+                    DisconnectCause(DisconnectCause.REJECTED)
+                )
+                setDisconnected(DisconnectCause(DisconnectCause.REJECTED))
+            }
+        }
+    }
+
     /**
      * =========================================================================================
      *  Simple implementation of [CallControlScope] with a [CallSessionLegacy] as the session.
@@ -268,7 +309,8 @@ internal class CallSessionLegacy(
      */
     class CallControlScopeImpl(
         private val session: CallSessionLegacy,
-        callChannels: CallChannels
+        callChannels: CallChannels,
+        override val coroutineContext: CoroutineContext
     ) : CallControlScope {
         //  handle actionable/handshake events that originate in the platform
         //  and require a response from the client
@@ -320,6 +362,8 @@ internal class CallSessionLegacy(
 
         private fun verifySessionCallbacks() {
             if (!session.hasClientSetCallbacks()) {
+                // Always send disconnect signal so that we don't end up with stuck calls.
+                session.setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
                 throw CallException(CallException.ERROR_CALLBACKS_CODE)
             }
         }
