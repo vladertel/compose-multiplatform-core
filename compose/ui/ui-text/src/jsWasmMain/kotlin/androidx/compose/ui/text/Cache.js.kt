@@ -21,50 +21,42 @@ internal actual typealias WeakKeysCache<K, V> = WeakHashMap<K, V>
 internal class WeakHashMap<K : Any, V> : Cache<K, V> {
     private val cache = HashMap<Key<K>, V>()
 
+    // Based on https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/FinalizationRegistry
+    // It should eventually clean up all entries with unreachable keys
+    private val cleaner = newWeakHashMapCleaner { handle ->
+        cache.remove(handle)
+    }
+
     override fun get(key: K, loader: (K) -> V): V {
-        clean()
-        return cache.getOrPut(Key(key)) {
-            println("Load - ${key.hashCode()}")
+        val wrappedKey = Key(key)
+        return cache.getOrPut(wrappedKey) {
+            cleaner.register(key, wrappedKey)
             loader(key)
         }
     }
-
-    private fun clean() {
-        cache.keys
-            .filter { !it.isAvailable }
-            .forEach {
-                cache.remove(it)
-            }
-    }
-
-    private class Key<K : Any>(key: K) {
-        @OptIn(InternalTextApi::class)
-        private val ref = newWeakRef(key.toJsReferenceType())
-        private val hash: Int = key.hashCode()
-
-        val isAvailable get() = ref.deref() != null
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            other as Key<*>
-            return ref.deref() == other.ref.deref()
-        }
-
-        override fun hashCode(): Int = hash
-    }
 }
 
-
-@InternalTextApi
-expect class JsReferenceType
-
-private external interface WeakRef {
-    fun deref(): Any?
+internal interface WeakHashMapCleaner {
+    fun register(obj: Any, handle: Key<*>)
 }
 
-@OptIn(InternalTextApi::class)
-@Suppress("UnsafeCastFromDynamic")
-private fun newWeakRef(obj: JsReferenceType): WeakRef = js("new WeakRef(obj)")
-@OptIn(InternalTextApi::class)
-internal expect fun Any.toJsReferenceType(): JsReferenceType
+internal expect fun newWeakHashMapCleaner(cleanKey: (Key<*>) -> Unit): WeakHashMapCleaner
 
+internal interface InternalWeakRef {
+    fun get(): Any?
+}
+
+internal expect fun newWeakRef(obj: Any): InternalWeakRef
+
+internal class Key<K : Any>(key: K) {
+    private val ref = newWeakRef(key)
+    private val hash: Int = key.hashCode()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        other as Key<*>
+        return ref.get() == other.ref.get()
+    }
+
+    override fun hashCode(): Int = hash
+}

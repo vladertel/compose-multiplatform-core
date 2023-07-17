@@ -16,6 +16,30 @@
 
 package androidx.compose.ui.text
 
-actual typealias JsReferenceType = Any
+internal external interface WeakRef {
+    fun deref(): Any?
+}
 
-internal actual fun Any.toJsReferenceType(): JsReferenceType = this
+@Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
+internal actual fun newWeakRef(obj: Any): InternalWeakRef = object : InternalWeakRef {
+    val jsWeakRef = js("new WeakRef(obj)") as WeakRef
+
+    override fun get(): Any? {
+        return jsWeakRef.deref()
+    }
+}
+
+internal actual fun newWeakHashMapCleaner(cleanKey: (Key<*>) -> Unit): WeakHashMapCleaner =
+    object : WeakHashMapCleaner {
+        val registry = FinalizationRegistry {
+            cleanKey(it)
+        }
+
+        override fun register(obj: Any, handle: Key<*>) {
+            registry.register(obj, handle)
+        }
+    }
+
+internal external class FinalizationRegistry(cleanup: (Key<*>) -> Unit) {
+    fun register(obj: Any, handle: Key<*>)
+}

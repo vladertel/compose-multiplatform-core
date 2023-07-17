@@ -40,8 +40,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 import org.jetbrains.skia.FontFeature
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.paragraph.*
@@ -313,7 +311,6 @@ internal class ParagraphBuilder(
             drawStyle = drawStyle
         )
         defaultStyle = ComputedStyle(density, initialStyle, brushSize, blendMode)
-        println("defaultStyle hc = ${defaultStyle.hashCode()}")
         ops = makeOps(
             spanStyles,
             placeholders
@@ -546,16 +543,9 @@ internal class ParagraphBuilder(
         return pStyle
     }
 
-    @OptIn(ExperimentalTime::class)
     private fun makeSkTextStyle(style: ComputedStyle): SkTextStyle {
-        return measureTimedValue {
-            skTextStylesCache.get(style) {
-                println("Load = ${style.hashCode()}")
-                it.toSkTextStyle(fontFamilyResolver)
-            }
-        }.let {
-            println("Time = ${it.duration.inWholeNanoseconds}ns")
-            it.value
+        return skTextStylesCache.get(style) {
+            it.toSkTextStyle(fontFamilyResolver)
         }
     }
 
