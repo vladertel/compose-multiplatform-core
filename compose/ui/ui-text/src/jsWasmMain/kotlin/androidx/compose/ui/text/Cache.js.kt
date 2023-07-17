@@ -16,9 +16,55 @@
 
 package androidx.compose.ui.text
 
-// TODO Use WeakMap once available https://youtrack.jetbrains.com/issue/KT-44309
-internal actual typealias WeakKeysCache<K, V> = NoCache<K, V>
+internal actual typealias WeakKeysCache<K, V> = WeakHashMap<K, V>
 
-internal class NoCache<K : Any, V> : Cache<K, V> {
-    override fun get(key: K, loader: (K) -> V): V = loader(key)
+internal class WeakHashMap<K : Any, V> : Cache<K, V> {
+    private val cache = HashMap<Key<K>, V>()
+
+    override fun get(key: K, loader: (K) -> V): V {
+        clean()
+        return cache.getOrPut(Key(key)) {
+            println("Load - ${key.hashCode()}")
+            loader(key)
+        }
+    }
+
+    private fun clean() {
+        cache.keys
+            .filter { !it.isAvailable }
+            .forEach {
+                cache.remove(it)
+            }
+    }
+
+    private class Key<K : Any>(key: K) {
+        @OptIn(InternalTextApi::class)
+        private val ref = newWeakRef(key.toJsReferenceType())
+        private val hash: Int = key.hashCode()
+
+        val isAvailable get() = ref.deref() != null
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            other as Key<*>
+            return ref.deref() == other.ref.deref()
+        }
+
+        override fun hashCode(): Int = hash
+    }
 }
+
+
+@InternalTextApi
+expect class JsReferenceType
+
+private external interface WeakRef {
+    fun deref(): Any?
+}
+
+@OptIn(InternalTextApi::class)
+@Suppress("UnsafeCastFromDynamic")
+private fun newWeakRef(obj: JsReferenceType): WeakRef = js("new WeakRef(obj)")
+@OptIn(InternalTextApi::class)
+internal expect fun Any.toJsReferenceType(): JsReferenceType
+
