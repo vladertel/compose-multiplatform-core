@@ -209,7 +209,7 @@ private String getRequestedProjectSubsetName() {
     if (envProp.isPresent()) {
         return envProp.get().toUpperCase()
     }
-    return null
+    return "COMPOSE"
 }
 
 private String getRequestedProjectPrefix() {
