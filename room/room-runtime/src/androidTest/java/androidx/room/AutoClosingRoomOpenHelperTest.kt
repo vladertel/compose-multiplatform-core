@@ -21,6 +21,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteException
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.kruth.assertThat
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
@@ -28,13 +29,13 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.filters.FlakyTest
 import androidx.test.filters.SdkSuppress
 import androidx.testutils.assertThrows
-import com.google.common.truth.Truth.assertThat
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
+import com.google.common.truth.Truth
 import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import org.junit.Before
+import org.junit.Ignore
+import org.junit.Test
 
 class AutoClosingRoomOpenHelperTest {
 
@@ -237,7 +238,7 @@ class AutoClosingRoomOpenHelperTest {
         db.query("select * from users").useCursor {
             assertThat(it.moveToFirst()).isTrue()
             assertThat(it.getInt(0)).isEqualTo(123)
-            assertThat(it.getDouble(1)).isWithin(.01).of(1.23)
+            Truth.assertThat(it.getDouble(1)).isWithin(.01).of(1.23)
 
             assertThat(it.getBlob(2)).isEqualTo(byteArrayOf(1, 2, 3))
             assertThat(it.isNull(3)).isTrue()

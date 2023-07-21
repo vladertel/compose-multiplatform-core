@@ -33,15 +33,15 @@ internal class LazyListItemPlacementAnimator {
     private val activeKeys = mutableSetOf<Any>()
 
     // snapshot of the key to index map used for the last measuring.
-    private var keyToIndexMap: LazyLayoutKeyIndexMap = LazyLayoutKeyIndexMap.Empty
+    private var keyIndexMap: LazyLayoutKeyIndexMap = LazyLayoutKeyIndexMap.Empty
 
     // keeps the index of the first visible item index.
     private var firstVisibleIndex = 0
 
     // stored to not allocate it every pass.
     private val movingAwayKeys = LinkedHashSet<Any>()
-    private val movingInFromStartBound = mutableListOf<LazyListPositionedItem>()
-    private val movingInFromEndBound = mutableListOf<LazyListPositionedItem>()
+    private val movingInFromStartBound = mutableListOf<LazyListMeasuredItem>()
+    private val movingInFromEndBound = mutableListOf<LazyListMeasuredItem>()
     private val movingAwayToStartBound = mutableListOf<LazyListMeasuredItem>()
     private val movingAwayToEndBound = mutableListOf<LazyListMeasuredItem>()
 
@@ -54,9 +54,11 @@ internal class LazyListItemPlacementAnimator {
         consumedScroll: Int,
         layoutWidth: Int,
         layoutHeight: Int,
-        positionedItems: MutableList<LazyListPositionedItem>,
+        positionedItems: MutableList<LazyListMeasuredItem>,
         itemProvider: LazyListMeasuredItemProvider,
-        isVertical: Boolean
+        isVertical: Boolean,
+        isLookingAhead: Boolean,
+        hasLookaheadOccurred: Boolean
     ) {
         if (!positionedItems.fastAny { it.hasAnimations } && activeKeys.isEmpty()) {
             // no animations specified - no work needed
@@ -66,8 +68,9 @@ internal class LazyListItemPlacementAnimator {
 
         val previousFirstVisibleIndex = firstVisibleIndex
         firstVisibleIndex = positionedItems.firstOrNull()?.index ?: 0
-        val previousKeyToIndexMap = keyToIndexMap
-        keyToIndexMap = itemProvider.keyToIndexMap
+
+        val previousKeyToIndexMap = keyIndexMap
+        keyIndexMap = itemProvider.keyIndexMap
 
         val mainAxisLayoutSize = if (isVertical) layoutHeight else layoutWidth
 
@@ -78,6 +81,9 @@ internal class LazyListItemPlacementAnimator {
             IntOffset(consumedScroll, 0)
         }
 
+        // Only setup animations when we have access to target value in the current pass, which
+        // means lookahead pass, or regular pass when not in a lookahead scope.
+        val shouldSetupAnimation = isLookingAhead || !hasLookaheadOccurred
         // first add all items we had in the previous run
         movingAwayKeys.addAll(activeKeys)
         // iterate through the items which are visible (without animated offsets)
@@ -87,7 +93,7 @@ internal class LazyListItemPlacementAnimator {
             if (item.hasAnimations) {
                 if (!activeKeys.contains(item.key)) {
                     activeKeys += item.key
-                    val previousIndex = previousKeyToIndexMap[item.key]
+                    val previousIndex = previousKeyToIndexMap.getIndex(item.key)
                     if (previousIndex != -1 && item.index != previousIndex) {
                         if (previousIndex < previousFirstVisibleIndex) {
                             // the larger index will be in the start of the list
@@ -102,14 +108,15 @@ internal class LazyListItemPlacementAnimator {
                         )
                     }
                 } else {
-                    repeat(item.placeablesCount) { placeableIndex ->
-                        item.getParentData(placeableIndex).node?.apply {
-                            if (rawOffset != LazyLayoutAnimateItemModifierNode.NotInitialized) {
-                                rawOffset += scrollOffset
+                    if (shouldSetupAnimation) {
+                        item.forEachNode { _, node ->
+                            if (node.rawOffset != LazyLayoutAnimateItemModifierNode.NotInitialized
+                            ) {
+                                node.rawOffset += scrollOffset
                             }
                         }
+                        startAnimationsIfNeeded(item)
                     }
-                    startAnimationsIfNeeded(item)
                 }
             } else {
                 // no animation, clean up if needed
@@ -117,32 +124,34 @@ internal class LazyListItemPlacementAnimator {
             }
         }
 
-        var currentMainAxisOffset = 0
-        movingInFromStartBound.sortByDescending { previousKeyToIndexMap[it.key] }
-        movingInFromStartBound.fastForEach { item ->
-            val mainAxisOffset = 0 - currentMainAxisOffset - item.size
-            currentMainAxisOffset += item.size
-            initializeNode(item, mainAxisOffset)
-            startAnimationsIfNeeded(item)
-        }
-        currentMainAxisOffset = 0
-        movingInFromEndBound.sortBy { previousKeyToIndexMap[it.key] }
-        movingInFromEndBound.fastForEach { item ->
-            val mainAxisOffset = mainAxisLayoutSize + currentMainAxisOffset
-            currentMainAxisOffset += item.size
-            initializeNode(item, mainAxisOffset)
-            startAnimationsIfNeeded(item)
+        var accumulatedOffset = 0
+        if (shouldSetupAnimation) {
+            movingInFromStartBound.sortByDescending { previousKeyToIndexMap.getIndex(it.key) }
+            movingInFromStartBound.fastForEach { item ->
+                accumulatedOffset += item.size
+                val mainAxisOffset = 0 - accumulatedOffset
+                initializeNode(item, mainAxisOffset)
+                startAnimationsIfNeeded(item)
+            }
+            accumulatedOffset = 0
+            movingInFromEndBound.sortBy { previousKeyToIndexMap.getIndex(it.key) }
+            movingInFromEndBound.fastForEach { item ->
+                val mainAxisOffset = mainAxisLayoutSize + accumulatedOffset
+                accumulatedOffset += item.size
+                initializeNode(item, mainAxisOffset)
+                startAnimationsIfNeeded(item)
+            }
         }
 
         movingAwayKeys.forEach { key ->
             // found an item which was in our map previously but is not a part of the
             // positionedItems now
-            val newIndex = keyToIndexMap[key]
+            val newIndex = keyIndexMap.getIndex(key)
 
             if (newIndex == -1) {
                 activeKeys.remove(key)
             } else {
-                val item = itemProvider.getAndMeasure(DataIndex(newIndex))
+                val item = itemProvider.getAndMeasure(newIndex)
                 // check if we have any active placement animation on the item
                 var inProgress = false
                 repeat(item.placeablesCount) {
@@ -151,7 +160,7 @@ internal class LazyListItemPlacementAnimator {
                         return@repeat
                     }
                 }
-                if ((!inProgress && newIndex == previousKeyToIndexMap[key])) {
+                if ((!inProgress && newIndex == previousKeyToIndexMap.getIndex(key))) {
                     activeKeys.remove(key)
                 } else {
                     if (newIndex < firstVisibleIndex) {
@@ -163,26 +172,34 @@ internal class LazyListItemPlacementAnimator {
             }
         }
 
-        currentMainAxisOffset = 0
-        movingAwayToStartBound.sortByDescending { keyToIndexMap[it.key] }
+        accumulatedOffset = 0
+        movingAwayToStartBound.sortByDescending { keyIndexMap.getIndex(it.key) }
         movingAwayToStartBound.fastForEach { item ->
-            val mainAxisOffset = 0 - currentMainAxisOffset - item.size
-            currentMainAxisOffset += item.size
+            accumulatedOffset += item.size
+            val mainAxisOffset = 0 - accumulatedOffset
 
-            val positionedItem = item.position(mainAxisOffset, layoutWidth, layoutHeight)
-            positionedItems.add(positionedItem)
-            startAnimationsIfNeeded(positionedItem)
+            item.position(mainAxisOffset, layoutWidth, layoutHeight)
+            if (shouldSetupAnimation) {
+                startAnimationsIfNeeded(item)
+            }
         }
-        currentMainAxisOffset = 0
-        movingAwayToEndBound.sortBy { keyToIndexMap[it.key] }
+
+        accumulatedOffset = 0
+        movingAwayToEndBound.sortBy { keyIndexMap.getIndex(it.key) }
         movingAwayToEndBound.fastForEach { item ->
-            val mainAxisOffset = mainAxisLayoutSize + currentMainAxisOffset
-            currentMainAxisOffset += item.size
+            val mainAxisOffset = mainAxisLayoutSize + accumulatedOffset
+            accumulatedOffset += item.size
 
-            val positionedItem = item.position(mainAxisOffset, layoutWidth, layoutHeight)
-            positionedItems.add(positionedItem)
-            startAnimationsIfNeeded(positionedItem)
+            item.position(mainAxisOffset, layoutWidth, layoutHeight)
+            if (shouldSetupAnimation) {
+                startAnimationsIfNeeded(item)
+            }
         }
+
+        // This adds the new items to the list of positioned items while keeping the index of
+        // the positioned items sorted in ascending order.
+        positionedItems.addAll(0, movingAwayToStartBound.apply { reverse() })
+        positionedItems.addAll(movingAwayToEndBound)
 
         movingInFromStartBound.clear()
         movingInFromEndBound.clear()
@@ -197,12 +214,12 @@ internal class LazyListItemPlacementAnimator {
      */
     fun reset() {
         activeKeys.clear()
-        keyToIndexMap = LazyLayoutKeyIndexMap.Empty
+        keyIndexMap = LazyLayoutKeyIndexMap.Empty
         firstVisibleIndex = -1
     }
 
     private fun initializeNode(
-        item: LazyListPositionedItem,
+        item: LazyListMeasuredItem,
         mainAxisOffset: Int
     ) {
         val firstPlaceableOffset = item.getOffset(0)
@@ -214,41 +231,39 @@ internal class LazyListItemPlacementAnimator {
         }
 
         // initialize offsets
-        repeat(item.placeablesCount) { placeableIndex ->
-            val node = item.getParentData(placeableIndex).node
-            if (node != null) {
-                val diffToFirstPlaceableOffset =
-                    item.getOffset(placeableIndex) - firstPlaceableOffset
-                node.rawOffset = targetFirstPlaceableOffset + diffToFirstPlaceableOffset
-            }
+        item.forEachNode { placeableIndex, node ->
+            val diffToFirstPlaceableOffset =
+                item.getOffset(placeableIndex) - firstPlaceableOffset
+            node.rawOffset = targetFirstPlaceableOffset + diffToFirstPlaceableOffset
         }
     }
 
-    private fun startAnimationsIfNeeded(item: LazyListPositionedItem) {
-        repeat(item.placeablesCount) { placeableIndex ->
-            val node = item.getParentData(placeableIndex).node
-            if (node != null) {
-                val newTarget = item.getOffset(placeableIndex)
-                val currentTarget = node.rawOffset
-                if (currentTarget == LazyLayoutAnimateItemModifierNode.NotInitialized) {
-                    node.rawOffset = newTarget
-                } else if (currentTarget != newTarget) {
-                    node.rawOffset = newTarget
-                    node.animatePlacementDelta(newTarget - currentTarget)
-                }
+    private fun startAnimationsIfNeeded(item: LazyListMeasuredItem) {
+        item.forEachNode { placeableIndex, node ->
+            val newTarget = item.getOffset(placeableIndex)
+            val currentTarget = node.rawOffset
+            if (currentTarget != LazyLayoutAnimateItemModifierNode.NotInitialized &&
+                currentTarget != newTarget
+            ) {
+                node.animatePlacementDelta(newTarget - currentTarget)
             }
+            node.rawOffset = newTarget
         }
     }
 
     private val Any?.node get() = this as? LazyLayoutAnimateItemModifierNode
 
-    private val LazyListPositionedItem.hasAnimations: Boolean
+    private val LazyListMeasuredItem.hasAnimations: Boolean
         get() {
-            repeat(placeablesCount) { index ->
-                if (getParentData(index).node != null) {
-                    return true
-                }
-            }
+            forEachNode { _, _ -> return true }
             return false
         }
+
+    private inline fun LazyListMeasuredItem.forEachNode(
+        block: (placeableIndex: Int, node: LazyLayoutAnimateItemModifierNode) -> Unit
+    ) {
+        repeat(placeablesCount) { index ->
+            getParentData(index).node?.let { block(index, it) }
+        }
+    }
 }

@@ -21,8 +21,11 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import androidx.annotation.NonNull;
+import androidx.car.app.TestUtils;
+import androidx.car.app.model.Action;
 import androidx.car.app.model.CarIcon;
 import androidx.car.app.model.CarText;
+import androidx.test.core.app.ApplicationProvider;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,6 +65,7 @@ public class ConversationItemTest {
         );
     }
 
+    @Test
     public void build_throwsException_ifSenderNameMissing() {
         assertThrows(
                 NullPointerException.class,
@@ -73,6 +77,7 @@ public class ConversationItemTest {
         );
     }
 
+    @Test
     public void build_throwsException_ifSenderKeyMissing() {
         assertThrows(
                 NullPointerException.class,
@@ -82,6 +87,15 @@ public class ConversationItemTest {
                                 .build())
                         .build()
         );
+    }
+
+    @Test
+    public void builderConstructor_copiesAllFields() {
+        ConversationItem original = TestConversationFactory.createFullyPopulatedConversationItem();
+
+        ConversationItem result = new ConversationItem.Builder(original).build();
+
+        assertEqual(result, original);
     }
 
     // region .equals() & .hashCode()
@@ -178,6 +192,77 @@ public class ConversationItemTest {
 
         // NOTE: Conversation Callback does not affect equality
         assertEqual(fullyPopulatedItem, modifiedConversationCallback);
+    }
+
+    @Test
+    public void addAction() {
+        CarIcon icon = TestUtils.getTestCarIcon(ApplicationProvider.getApplicationContext(),
+                "ic_test_1");
+        Action customAction = new Action.Builder().setIcon(icon).build();
+        ConversationItem item =
+                TestConversationFactory
+                        .createFullyPopulatedConversationItemBuilder()
+                        .addAction(customAction)
+                        .build();
+
+        assertThat(item.getActions()).containsExactly(customAction);
+    }
+
+    @Test
+    public void addAction_appIconInvalid_throws() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> TestConversationFactory
+                        .createFullyPopulatedConversationItemBuilder()
+                        .addAction(Action.APP_ICON)
+                        .build());
+    }
+
+    @Test
+    public void addAction_backInvalid_throws() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> TestConversationFactory
+                        .createFullyPopulatedConversationItemBuilder()
+                        .addAction(Action.BACK)
+                        .build());
+    }
+
+    @Test
+    public void addAction_panInvalid_throws() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> TestConversationFactory
+                        .createFullyPopulatedConversationItemBuilder()
+                        .addAction(Action.PAN)
+                        .build());
+    }
+
+    @Test
+    public void addAction_manyActions_throws() {
+        CarIcon icon = TestUtils.getTestCarIcon(ApplicationProvider.getApplicationContext(),
+                "ic_test_1");
+        Action customAction = new Action.Builder().setIcon(icon).build();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> TestConversationFactory
+                        .createFullyPopulatedConversationItemBuilder()
+                        .addAction(customAction)
+                        .addAction(customAction)
+                        .build());
+    }
+
+    @Test
+    public void addAction_invalidActionNullIcon_throws() {
+        Action customAction = TestUtils.createAction("Title", /* icon= */ null);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> TestConversationFactory
+                        .createFullyPopulatedConversationItemBuilder()
+                        .addAction(customAction)
+                        .build());
     }
 
     private void assertEqual(ConversationItem item1, ConversationItem item2) {

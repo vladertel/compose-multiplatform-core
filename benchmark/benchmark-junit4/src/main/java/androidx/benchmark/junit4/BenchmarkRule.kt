@@ -21,8 +21,10 @@ import android.util.Log
 import androidx.annotation.RestrictTo
 import androidx.benchmark.Arguments
 import androidx.benchmark.BenchmarkState
+import androidx.benchmark.DeviceInfo
 import androidx.benchmark.UserspaceTracing
 import androidx.benchmark.perfetto.PerfettoCaptureWrapper
+import androidx.benchmark.perfetto.PerfettoConfig
 import androidx.benchmark.perfetto.UiState
 import androidx.benchmark.perfetto.appendUiState
 import androidx.test.platform.app.InstrumentationRegistry
@@ -130,8 +132,7 @@ public class BenchmarkRule internal constructor(
     internal // synthetic access
     var applied = false
 
-    /** @suppress */
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @get:RestrictTo(RestrictTo.Scope.LIBRARY)
     public val scope: Scope = Scope()
 
     /**
@@ -212,8 +213,17 @@ public class BenchmarkRule internal constructor(
 
             val tracePath = PerfettoCaptureWrapper().record(
                 fileLabel = uniqueName,
-                appTagPackages = packages,
-                userspaceTracingPackage = null
+                config = PerfettoConfig.Benchmark(
+                    appTagPackages = packages,
+                    useStackSamplingConfig = false
+                ),
+                // TODO(290918736): add support for Perfetto SDK Tracing in Microbenchmark
+                perfettoSdkConfig = null,
+
+                // Optimize throughput in dryRunMode, since trace isn't useful, and extremely
+                //   expensive on some emulators. Could alternately use UserspaceTracing if desired
+                // Additionally, skip on misconfigured devices to still enable benchmarking.
+                enableTracing = !Arguments.dryRunMode && !DeviceInfo.misconfiguredForTracing
             ) {
                 UserspaceTracing.commitToTrace() // clear buffer
 

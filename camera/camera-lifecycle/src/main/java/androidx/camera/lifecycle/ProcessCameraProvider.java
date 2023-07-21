@@ -36,6 +36,7 @@ import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraEffect;
@@ -280,13 +281,19 @@ public final class ProcessCameraProvider implements LifecycleCameraProvider {
      *
      * @return A {@link ListenableFuture} representing the shutdown status. Cancellation of this
      * future is a no-op.
-     * @hide
      */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @VisibleForTesting
     @NonNull
     public ListenableFuture<Void> shutdown() {
-        runOnMainSync(this::unbindAll);
-        mLifecycleCameraRepository.clear();
+        runOnMainSync(() -> {
+            unbindAll();
+            mLifecycleCameraRepository.clear();
+        });
+
+        if (mCameraX != null) {
+            mCameraX.getCameraFactory().getCameraCoordinator().shutdown();
+        }
 
         ListenableFuture<Void> shutdownFuture = mCameraX != null ? mCameraX.shutdown() :
                 Futures.immediateFuture(null);

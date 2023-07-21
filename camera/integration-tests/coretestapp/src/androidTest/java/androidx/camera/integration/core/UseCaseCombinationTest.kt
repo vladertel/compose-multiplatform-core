@@ -44,12 +44,14 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assume
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -140,6 +142,7 @@ class UseCaseCombinationTest(
     }
 
     /** Test Combination: Preview (no surface provider) + ImageCapture */
+    @Ignore("b/283959238")
     @Test
     fun previewCombinesImageCapture_withNoSurfaceProvider(): Unit = runBlocking {
         // Arrange.
@@ -397,7 +400,8 @@ class UseCaseCombinationTest(
         withContext(Dispatchers.Main) {
             cameraProvider.unbind(preview)
         }
-        previewMonitor.waitForStreamIdle()
+        delay(1000) // Unbind and stop the output stream should be done within 1 sec.
+        previewMonitor.waitForStreamIdle(count = 1, timeMillis = TimeUnit.SECONDS.toMillis(2))
 
         // Assert
         imageCapture.waitForCapturing()

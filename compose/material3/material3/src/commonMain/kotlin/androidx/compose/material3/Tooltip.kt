@@ -56,6 +56,8 @@ import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationExceptio
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.debugInspectorInfo
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
@@ -85,6 +87,11 @@ import kotlinx.coroutines.withTimeout
  *
  * @param tooltip the composable that will be used to populate the tooltip's content.
  * @param modifier the [Modifier] to be applied to the tooltip.
+ * @param focusable [Boolean] that determines if the tooltip is focusable. When true,
+ * the tooltip will consume touch events while it's shown and will have accessibility
+ * focus move to the first element of the component. When false, the tooltip
+ * won't consume touch events while it's shown but assistive-tech users will need
+ * to swipe or drag to get to the first element of the component.
  * @param tooltipState handles the state of the tooltip's visibility.
  * @param shape the [Shape] that should be applied to the tooltip container.
  * @param containerColor [Color] that will be applied to the tooltip's container.
@@ -96,6 +103,7 @@ import kotlinx.coroutines.withTimeout
 fun PlainTooltipBox(
     tooltip: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    focusable: Boolean = true,
     tooltipState: PlainTooltipState = rememberPlainTooltipState(),
     shape: Shape = TooltipDefaults.plainTooltipContainerShape,
     containerColor: Color = TooltipDefaults.plainTooltipContainerColor,
@@ -113,6 +121,7 @@ fun PlainTooltipBox(
             )
         },
         modifier = modifier,
+        focusable = focusable,
         tooltipState = tooltipState,
         shape = shape,
         containerColor = containerColor,
@@ -138,6 +147,11 @@ fun PlainTooltipBox(
  *
  * @param text the message to be displayed in the center of the tooltip.
  * @param modifier the [Modifier] to be applied to the tooltip.
+ * @param focusable [Boolean] that determines if the tooltip is focusable. When true,
+ * the tooltip will consume touch events while it's shown and will have accessibility
+ * focus move to the first element of the component. When false, the tooltip
+ * won't consume touch events while it's shown but assistive-tech users will need
+ * to swipe or drag to get to the first element of the component.
  * @param tooltipState handles the state of the tooltip's visibility.
  * @param title An optional title for the tooltip.
  * @param action An optional action for the tooltip.
@@ -150,6 +164,7 @@ fun PlainTooltipBox(
 fun RichTooltipBox(
     text: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    focusable: Boolean = true,
     title: (@Composable () -> Unit)? = null,
     action: (@Composable () -> Unit)? = null,
     tooltipState: RichTooltipState = rememberRichTooltipState(action != null),
@@ -176,6 +191,7 @@ fun RichTooltipBox(
         elevation = RichTooltipTokens.ContainerElevation,
         maxWidth = RichTooltipMaxWidth,
         modifier = modifier,
+        focusable = focusable,
         content = content
     )
 }
@@ -189,6 +205,7 @@ private fun TooltipBox(
     tooltipContent: @Composable () -> Unit,
     tooltipPositionProvider: PopupPositionProvider,
     modifier: Modifier,
+    focusable: Boolean,
     shape: Shape,
     tooltipState: TooltipState,
     containerColor: Color,
@@ -252,7 +269,8 @@ private fun TooltipBox(
                     if (tooltipState.isVisible) {
                         coroutineScope.launch { tooltipState.dismiss() }
                     }
-                }
+                },
+                focusable = focusable
             ) {
                 Surface(
                     modifier = modifier
@@ -262,7 +280,10 @@ private fun TooltipBox(
                             minHeight = TooltipMinHeight
                         )
                         .animateTooltip(transition)
-                        .semantics { paneTitle = tooltipPaneDescription },
+                        .semantics {
+                            liveRegion = LiveRegionMode.Assertive
+                            paneTitle = tooltipPaneDescription
+                        },
                     shape = shape,
                     color = containerColor,
                     shadowElevation = elevation,
@@ -362,25 +383,25 @@ object TooltipDefaults {
      * The default [Shape] for a [PlainTooltipBox]'s container.
      */
     val plainTooltipContainerShape: Shape
-        @Composable get() = PlainTooltipTokens.ContainerShape.toShape()
+        @Composable get() = PlainTooltipTokens.ContainerShape.value
 
     /**
      * The default [Color] for a [PlainTooltipBox]'s container.
      */
     val plainTooltipContainerColor: Color
-        @Composable get() = PlainTooltipTokens.ContainerColor.toColor()
+        @Composable get() = PlainTooltipTokens.ContainerColor.value
 
     /**
-     * The default [color] for the content within the [PlainTooltipBox].
+     * The default [Color] for the content within the [PlainTooltipBox].
      */
     val plainTooltipContentColor: Color
-        @Composable get() = PlainTooltipTokens.SupportingTextColor.toColor()
+        @Composable get() = PlainTooltipTokens.SupportingTextColor.value
 
     /**
      * The default [Shape] for a [RichTooltipBox]'s container.
      */
     val richTooltipContainerShape: Shape @Composable get() =
-        RichTooltipTokens.ContainerShape.toShape()
+        RichTooltipTokens.ContainerShape.value
 
     /**
      * Method to create a [RichTooltipColors] for [RichTooltipBox]
@@ -388,10 +409,10 @@ object TooltipDefaults {
      */
     @Composable
     fun richTooltipColors(
-        containerColor: Color = RichTooltipTokens.ContainerColor.toColor(),
-        contentColor: Color = RichTooltipTokens.SupportingTextColor.toColor(),
-        titleContentColor: Color = RichTooltipTokens.SubheadColor.toColor(),
-        actionContentColor: Color = RichTooltipTokens.ActionLabelTextColor.toColor(),
+        containerColor: Color = RichTooltipTokens.ContainerColor.value,
+        contentColor: Color = RichTooltipTokens.SupportingTextColor.value,
+        titleContentColor: Color = RichTooltipTokens.SubheadColor.value,
+        actionContentColor: Color = RichTooltipTokens.ActionLabelTextColor.value,
     ): RichTooltipColors =
         RichTooltipColors(
             containerColor = containerColor,
@@ -780,9 +801,12 @@ private fun Modifier.animateTooltip(
     )
 }
 
+@Composable
+@ExperimentalMaterial3Api
 internal expect fun TooltipPopup(
     popupPositionProvider: PopupPositionProvider,
     onDismissRequest: () -> Unit,
+    focusable: Boolean,
     content: @Composable () -> Unit
 )
 

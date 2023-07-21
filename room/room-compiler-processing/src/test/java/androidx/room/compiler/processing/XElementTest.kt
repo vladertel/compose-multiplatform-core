@@ -28,7 +28,6 @@ import androidx.room.compiler.processing.util.Source
 import androidx.room.compiler.processing.util.XTestInvocation
 import androidx.room.compiler.processing.util.asJClassName
 import androidx.room.compiler.processing.util.compileFiles
-import androidx.room.compiler.processing.util.createXTypeVariableName
 import androidx.room.compiler.processing.util.getField
 import androidx.room.compiler.processing.util.getMethodByJvmName
 import androidx.room.compiler.processing.util.getParameter
@@ -243,24 +242,24 @@ class XElementTest {
 
             validateMethodElement(
                 element = it.processingEnv.requireTypeElement("foo.bar.Base"),
-                tTypeName = createXTypeVariableName("T"),
-                rTypeName = createXTypeVariableName("R")
+                tTypeName = XTypeName.getTypeVariableName("T", listOf(XTypeName.ANY_OBJECT)),
+                rTypeName = XTypeName.getTypeVariableName("R", listOf(XTypeName.ANY_OBJECT))
             )
             validateMethodElement(
                 element = it.processingEnv.requireTypeElement("foo.bar.Child"),
-                tTypeName = createXTypeVariableName("T"),
-                rTypeName = createXTypeVariableName("R")
+                tTypeName = XTypeName.getTypeVariableName("T", listOf(XTypeName.ANY_OBJECT)),
+                rTypeName = XTypeName.getTypeVariableName("R", listOf(XTypeName.ANY_OBJECT))
             )
 
             validateMethodTypeAsMemberOf(
                 element = it.processingEnv.requireTypeElement("foo.bar.Base"),
-                tTypeName = createXTypeVariableName("T"),
-                rTypeName = createXTypeVariableName("R")
+                tTypeName = XTypeName.getTypeVariableName("T", listOf(XTypeName.ANY_OBJECT)),
+                rTypeName = XTypeName.getTypeVariableName("R", listOf(XTypeName.ANY_OBJECT))
             )
             validateMethodTypeAsMemberOf(
                 element = it.processingEnv.requireTypeElement("foo.bar.Child"),
                 tTypeName = String::class.asClassName(),
-                rTypeName = createXTypeVariableName("R")
+                rTypeName = XTypeName.getTypeVariableName("R", listOf(XTypeName.ANY_OBJECT))
             )
         }
     }
@@ -806,8 +805,25 @@ class XElementTest {
     //  classpath.
     @Test
     fun enclosingElementKotlinCompanion() {
-        runProcessorTestHelper(listOf(enclosingElementKotlinSourceCompanion)) {
-                invocation, precompiled ->
+        runProcessorTestHelper(listOf(Source.kotlin(
+            "Test.kt",
+            """
+            package foo.bar
+            class KotlinClass(val property: String) {
+                companion object {
+                    val companionObjectProperty: String = "hello"
+                    @JvmStatic
+                    val companionObjectPropertyJvmStatic: String = "hello"
+                    @JvmField val companionObjectPropertyJvmField: String = "hello"
+                    lateinit var companionObjectPropertyLateinit: String
+                    const val companionObjectPropertyConst: String = "hello"
+                    fun companionObjectFunction(companionFunctionParam: String) {}
+                    @JvmStatic
+                    fun companionObjectFunctionJvmStatic(companionFunctionParam: String) {}
+                }
+            }
+            """.trimIndent()
+        ))) { invocation, precompiled ->
             val enclosingElement =
                 invocation.processingEnv.requireTypeElement("foo.bar.KotlinClass")
             val companionObj = enclosingElement.getEnclosedTypeElements().first {
@@ -854,11 +870,7 @@ class XElementTest {
                     "companionObjectFunctionJvmStatic"
                 )
                 methods.forEach {
-                    if (invocation.isKsp && it.name.lowercase().contains("companion")) {
-                        assertThat(it.enclosingElement).isEqualTo(companionObj)
-                    } else {
-                        assertThat(it.enclosingElement).isEqualTo(enclosingElement)
-                    }
+                    assertThat(it.enclosingElement).isEqualTo(enclosingElement)
                 }
             }
 
@@ -883,37 +895,27 @@ class XElementTest {
                 methods.forEach {
                     assertThat(it.enclosingElement).isEqualTo(companionObj)
                 }
-
-                if (invocation.isKsp) {
+                if (invocation.isKsp || precompiled) {
                     assertThat(methods.map { it.name }).containsExactly(
                         "getCompanionObjectProperty",
                         "getCompanionObjectPropertyJvmStatic",
                         "getCompanionObjectPropertyLateinit",
                         "setCompanionObjectPropertyLateinit",
                         "companionObjectFunction",
-                        "companionObjectFunctionJvmStatic",
-                    )
+                        "companionObjectFunctionJvmStatic"
+                    ).inOrder()
                 } else {
-                    if (precompiled) {
-                        assertThat(methods.map { it.name }).containsExactly(
-                            "getCompanionObjectProperty",
-                            "getCompanionObjectPropertyJvmStatic",
-                            "getCompanionObjectPropertyLateinit",
-                            "setCompanionObjectPropertyLateinit",
-                            "companionObjectFunction",
-                            "companionObjectFunctionJvmStatic"
-                        )
-                    } else {
-                        assertThat(methods.map { it.name }).containsExactly(
-                            "getCompanionObjectProperty",
-                            "getCompanionObjectPropertyJvmStatic",
-                            "getCompanionObjectPropertyJvmStatic\$annotations",
-                            "getCompanionObjectPropertyLateinit",
-                            "setCompanionObjectPropertyLateinit",
-                            "companionObjectFunction",
-                            "companionObjectFunctionJvmStatic"
-                        )
-                    }
+                    // TODO(b/290800523): Remove the synthetic annotations method from the list
+                    //  of declared methods so that KAPT matches KSP.
+                    assertThat(methods.map { it.name }).containsExactly(
+                        "getCompanionObjectProperty",
+                        "getCompanionObjectPropertyJvmStatic",
+                        "getCompanionObjectPropertyJvmStatic\$annotations",
+                        "getCompanionObjectPropertyLateinit",
+                        "setCompanionObjectPropertyLateinit",
+                        "companionObjectFunction",
+                        "companionObjectFunctionJvmStatic"
+                    ).inOrder()
                 }
             }
         }
@@ -1100,26 +1102,6 @@ class XElementTest {
         object KotlinObject {
             val objectProperty: String = "hello"
             fun objectFunction(objectFunctionParam: String) {}
-        }
-        """.trimIndent()
-    )
-
-    private val enclosingElementKotlinSourceCompanion = Source.kotlin(
-        "Test.kt",
-        """
-        package foo.bar
-        class KotlinClass(val property: String) {
-            companion object {
-                val companionObjectProperty: String = "hello"
-                @JvmStatic
-                val companionObjectPropertyJvmStatic: String = "hello"
-                @JvmField val companionObjectPropertyJvmField: String = "hello"
-                lateinit var companionObjectPropertyLateinit: String
-                const val companionObjectPropertyConst: String = "hello"
-                fun companionObjectFunction(companionFunctionParam: String) {}
-                @JvmStatic
-                fun companionObjectFunctionJvmStatic(companionFunctionParam: String) {}
-            }
         }
         """.trimIndent()
     )

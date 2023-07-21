@@ -104,6 +104,11 @@ public annotation class ComplicationDisplayPolicy
  *   requires the watchface to be built with a compatible library to work.
  * @property displayPolicy The [ComplicationDisplayPolicy] for this complication. This requires the
  *   watchface to be built with a compatible library to work.
+ * @property dynamicValueInvalidationFallback Used in case any dynamic value has been invalidated.
+ *
+ *   IMPORTANT: This is only used when the system supports dynamic values. See each dynamic field's
+ *   fallback companion field for the situation where the system does not support dynamic values at
+ *   all.
  */
 public sealed class ComplicationData
 constructor(
@@ -114,8 +119,11 @@ constructor(
     public val dataSource: ComponentName?,
     @ComplicationPersistencePolicy public val persistencePolicy: Int,
     @ComplicationDisplayPolicy public val displayPolicy: Int,
-    private val fallback: ComplicationData?,
+    public val dynamicValueInvalidationFallback: ComplicationData?,
 ) {
+    /** Throws [IllegalArgumentException] if the [ComplicationData] is invalid. */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) open fun validate() {}
+
     /**
      * [tapAction] which is a [PendingIntent] unfortunately can't be serialized. This property is
      * 'true' if tapAction has been lost due to serialization (typically because it has been cached
@@ -151,11 +159,12 @@ constructor(
         builder.setDataSource(dataSource)
         builder.setPersistencePolicy(persistencePolicy)
         builder.setDisplayPolicy(displayPolicy)
-        if (fallback == null) {
+        if (dynamicValueInvalidationFallback == null) {
             builder.setPlaceholder(null)
         } else {
-            val placeholderBuilder = fallback.createWireComplicationDataBuilder()
-            fallback.fillWireComplicationDataBuilder(placeholderBuilder)
+            val placeholderBuilder =
+                dynamicValueInvalidationFallback.createWireComplicationDataBuilder()
+            dynamicValueInvalidationFallback.fillWireComplicationDataBuilder(placeholderBuilder)
             builder.setPlaceholder(placeholderBuilder.build())
         }
     }
@@ -181,11 +190,8 @@ constructor(
     override fun equals(other: Any?): Boolean =
         other is ComplicationData && asWireComplicationData() == other.asWireComplicationData()
 
-    /**
-     * Similar to [equals], but avoids comparing evaluated fields (if expressions exist).
-     *
-     * @hide
-     */
+    /** Similar to [equals], but avoids comparing evaluated fields (if dynamic values exist). */
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     infix fun equalsUnevaluated(other: ComplicationData): Boolean =
         asWireComplicationData() equalsUnevaluated other.asWireComplicationData()
 
@@ -198,7 +204,7 @@ constructor(
         internal var dataSource: ComponentName? = null
         internal var persistencePolicy = ComplicationPersistencePolicies.CACHING_ALLOWED
         internal var displayPolicy = ComplicationDisplayPolicies.ALWAYS_DISPLAY
-        internal var fallback: BuiltT? = null
+        internal var dynamicValueInvalidationFallback: BuiltT? = null
 
         /**
          * Sets the [ComponentName] of the ComplicationDataSourceService that provided this
@@ -239,12 +245,17 @@ constructor(
             return this as BuilderT
         }
 
-        /** Sets the complication's fallback, use in case any expression has been invalidated. */
-        // TODO(b/269414040): Unhide complication expression APIs.
+        /**
+         * Sets the complication's fallback, used in case any dynamic value cannot be evaluated,
+         * e.g. when a data source is not available.
+         *
+         * IMPORTANT: This is only used when the system supports dynamic values. See each dynamic
+         * value field's fallback companion field for the situation where the system does not
+         * support dynamic values at all.
+         */
         @Suppress("UNCHECKED_CAST", "SetterReturnsThis")
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-        public fun setFallback(fallback: BuiltT?): BuilderT {
-            this.fallback = fallback
+        public fun setDynamicValueInvalidationFallback(fallback: BuiltT?): BuilderT {
+            this.dynamicValueInvalidationFallback = fallback
             return this as BuilderT
         }
 
@@ -284,7 +295,7 @@ internal constructor(
         persistencePolicy = placeholder?.persistencePolicy
                 ?: ComplicationPersistencePolicies.CACHING_ALLOWED,
         displayPolicy = placeholder?.displayPolicy ?: ComplicationDisplayPolicies.ALWAYS_DISPLAY,
-        fallback = placeholder,
+        dynamicValueInvalidationFallback = placeholder,
     ) {
 
     /** Constructs a NoDataComplicationData without a [placeholder]. */
@@ -318,7 +329,6 @@ internal constructor(
             "persistencePolicy=$persistencePolicy, displayPolicy=$displayPolicy)"
     }
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.NO_DATA
@@ -338,7 +348,7 @@ public class EmptyComplicationData :
         dataSource = null,
         persistencePolicy = ComplicationPersistencePolicies.CACHING_ALLOWED,
         displayPolicy = ComplicationDisplayPolicies.ALWAYS_DISPLAY,
-        fallback = null,
+        dynamicValueInvalidationFallback = null,
     ) {
     // Always empty.
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {}
@@ -347,7 +357,6 @@ public class EmptyComplicationData :
         return "EmptyComplicationData()"
     }
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.EMPTY
@@ -368,7 +377,7 @@ public class NotConfiguredComplicationData :
         dataSource = null,
         persistencePolicy = ComplicationPersistencePolicies.CACHING_ALLOWED,
         displayPolicy = ComplicationDisplayPolicies.ALWAYS_DISPLAY,
-        fallback = null,
+        dynamicValueInvalidationFallback = null,
     ) {
     // Always empty.
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {}
@@ -377,7 +386,6 @@ public class NotConfiguredComplicationData :
         return "NotConfiguredComplicationData()"
     }
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.NOT_CONFIGURED
@@ -431,7 +439,6 @@ public class NotConfiguredComplicationData :
  *   be rendered as a light grey box.
  * @property contentDescription The content description field for accessibility. Please do not
  *   include the word 'complication' in the description.
- * @property fallback Used in case any expression has been invalidated.
  */
 public class ShortTextComplicationData
 internal constructor(
@@ -446,8 +453,7 @@ internal constructor(
     dataSource: ComponentName?,
     @ComplicationPersistencePolicy persistencePolicy: Int,
     @ComplicationDisplayPolicy displayPolicy: Int,
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) public val fallback: ShortTextComplicationData?,
+    dynamicValueInvalidationFallback: ShortTextComplicationData?,
 ) :
     ComplicationData(
         TYPE,
@@ -457,7 +463,7 @@ internal constructor(
         dataSource = dataSource,
         persistencePolicy = persistencePolicy,
         displayPolicy = displayPolicy,
-        fallback = fallback,
+        dynamicValueInvalidationFallback = dynamicValueInvalidationFallback,
     ) {
     /**
      * Builder for [ShortTextComplicationData].
@@ -518,7 +524,7 @@ internal constructor(
                 dataSource,
                 persistencePolicy,
                 displayPolicy,
-                fallback,
+                dynamicValueInvalidationFallback,
             )
     }
 
@@ -546,7 +552,7 @@ internal constructor(
             "tapActionLostDueToSerialization=$tapActionLostDueToSerialization, " +
             "tapAction=$tapAction, validTimeRange=$validTimeRange, dataSource=$dataSource, " +
             "persistencePolicy=$persistencePolicy, displayPolicy=$displayPolicy, " +
-            "fallback=$fallback)"
+            "dynamicValueInvalidationFallback=$dynamicValueInvalidationFallback)"
     }
 
     override fun hasPlaceholderFields() =
@@ -569,7 +575,6 @@ internal constructor(
         }
     }
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.SHORT_TEXT
@@ -616,7 +621,6 @@ internal constructor(
  *   be rendered as a light grey box.
  * @property contentDescription The content description field for accessibility. Please do not
  *   include the word 'complication' in the description.
- * @property fallback Used in case any expression has been invalidated.
  */
 public class LongTextComplicationData
 internal constructor(
@@ -631,8 +635,7 @@ internal constructor(
     dataSource: ComponentName?,
     @ComplicationPersistencePolicy persistencePolicy: Int,
     @ComplicationDisplayPolicy displayPolicy: Int,
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) public val fallback: LongTextComplicationData?,
+    dynamicValueInvalidationFallback: LongTextComplicationData?,
 ) :
     ComplicationData(
         TYPE,
@@ -642,7 +645,7 @@ internal constructor(
         dataSource = dataSource,
         persistencePolicy = persistencePolicy,
         displayPolicy = displayPolicy,
-        fallback = fallback,
+        dynamicValueInvalidationFallback = dynamicValueInvalidationFallback,
     ) {
     /**
      * Builder for [LongTextComplicationData].
@@ -704,7 +707,7 @@ internal constructor(
                 dataSource,
                 persistencePolicy,
                 displayPolicy,
-                fallback,
+                dynamicValueInvalidationFallback,
             )
     }
 
@@ -732,7 +735,7 @@ internal constructor(
             "tapActionLostDueToSerialization=$tapActionLostDueToSerialization, " +
             "tapAction=$tapAction, validTimeRange=$validTimeRange, dataSource=$dataSource, " +
             "persistencePolicy=$persistencePolicy, displayPolicy=$displayPolicy, " +
-            "fallback=$fallback)"
+            "dynamicValueInvalidationFallback=$dynamicValueInvalidationFallback)"
     }
 
     override fun hasPlaceholderFields() =
@@ -755,7 +758,6 @@ internal constructor(
         }
     }
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.LONG_TEXT
@@ -785,7 +787,8 @@ public class ColorRamp(
     @ColorInt val colors: IntArray,
     @get:JvmName("isInterpolated") val interpolated: Boolean
 ) {
-    init {
+    /** Throws [IllegalArgumentException] if the [ColorRamp] is invalid. */
+    internal fun validate() {
         require(colors.size <= 7) { "colors can have no more than seven entries" }
     }
 
@@ -817,7 +820,7 @@ public class ColorRamp(
  * value may be accompanied by an icon and/or short text and title.
  *
  * The [min] and [max] fields are required for this type, as well as one of [value] or
- * [valueExpression]. The value within the range is expected to always be displayed.
+ * [dynamicValue]. The value within the range is expected to always be displayed.
  *
  * The icon, title, and text fields are optional and the watch face may choose which of these fields
  * to display, if any.
@@ -839,6 +842,9 @@ public class ColorRamp(
  *   [PLACEHOLDER]. If it's equal to [PLACEHOLDER] the renderer must treat it as a placeholder
  *   rather than rendering normally, its suggested to be drawn as a grey arc with a percentage value
  *   selected by the renderer. The semantic meaning of value is described by [valueType].
+ * @property dynamicValue The [DynamicFloat] optionally set by the data source. If present the
+ *   system will dynamically evaluate this and store the result in [value]. Watch faces can
+ *   typically ignore this field.
  * @property min The minimum [Float] value for this complication.
  * @property max The maximum [Float] value for this complication.
  * @property monochromaticImage A simple [MonochromaticImage] image that can be tinted by the watch
@@ -872,12 +878,11 @@ public class ColorRamp(
  * @property valueType The semantic meaning of [value]. The complication renderer may choose to
  *   visually differentiate between the different types, for example rendering a dot on a line/arc
  *   to indicate the value for a [TYPE_RATING].
- * @property fallback Used in case any expression has been invalidated.
  */
 public class RangedValueComplicationData
 internal constructor(
     public val value: Float,
-    @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET") valueExpression: DynamicFloat?,
+    @get:RequiresApi(Build.VERSION_CODES.TIRAMISU) public val dynamicValue: DynamicFloat?,
     public val min: Float,
     public val max: Float,
     public val monochromaticImage: MonochromaticImage?,
@@ -893,9 +898,7 @@ internal constructor(
     @RangedValueType public val valueType: Int,
     @ComplicationPersistencePolicy persistencePolicy: Int,
     @ComplicationDisplayPolicy displayPolicy: Int,
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val fallback: RangedValueComplicationData?,
+    dynamicValueInvalidationFallback: RangedValueComplicationData?,
 ) :
     ComplicationData(
         TYPE,
@@ -905,15 +908,23 @@ internal constructor(
         dataSource = dataSource,
         persistencePolicy = persistencePolicy,
         displayPolicy = displayPolicy,
-        fallback = fallback,
+        dynamicValueInvalidationFallback = dynamicValueInvalidationFallback,
     ) {
-    /**
-     * The [DynamicFloat] optionally set by the data source. If present the system will dynamically
-     * evaluate this and store the result in [value]. Watch faces can typically ignore this field.
-     */
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val valueExpression: DynamicFloat? = valueExpression
+
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    override fun validate() {
+        super.validate()
+        require(min <= max) { "min must be lower than or equal to max" }
+        require(value == PLACEHOLDER || value in min..max) { "value must be between min and max" }
+        require(max != Float.MAX_VALUE) { "Float.MAX_VALUE is reserved and can't be used for max" }
+        require(monochromaticImage != null || smallImage != null || text != null || title != null) {
+            "At least one of monochromaticImage, smallImage, text or title must be set"
+        }
+        if (valueType == TYPE_PERCENTAGE) {
+            require(min == 0f) { "min must be 0 for TYPE_PERCENTAGE" }
+            require(max == 100f) { "max must be 100 for TYPE_PERCENTAGE" }
+        }
+    }
 
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @IntDef(value = [TYPE_UNDEFINED, TYPE_RATING, TYPE_PERCENTAGE])
@@ -923,14 +934,14 @@ internal constructor(
      * Builder for [RangedValueComplicationData].
      *
      * You must at a minimum set the [min], [max] and [contentDescription] fields, at least one of
-     * [value] or [valueExpression], and at least one of [monochromaticImage], [smallImage], [text]
-     * or [title].
+     * [value] or [dynamicValue], and at least one of [monochromaticImage], [smallImage], [text] or
+     * [title].
      */
     public class Builder
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public constructor(
         private val value: Float,
-        private val valueExpression: DynamicFloat?,
+        private val dynamicValue: DynamicFloat?,
         private val min: Float,
         private val max: Float,
         private var contentDescription: ComplicationText
@@ -953,14 +964,22 @@ internal constructor(
             min: Float,
             max: Float,
             contentDescription: ComplicationText
-        ) : this(value, valueExpression = null, min, max, contentDescription)
+        ) : this(value, dynamicValue = null, min, max, contentDescription)
 
         /**
          * Creates a [Builder] for a [RangedValueComplicationData] with a [DynamicFloat] value.
          *
-         * @param valueExpression The [DynamicFloat] of the ranged complication which will be
-         *   evaluated into a value dynamically, and should be in the range [[min]] .. [[max]]. The
+         * @param dynamicValue The [DynamicFloat] of the ranged complication which will be evaluated
+         *   into a value dynamically, and should be in the range [[min]] .. [[max]]. The semantic
+         *   meaning of value can be specified via [setValueType].
+         * @param fallbackValue The fallback value of the ranged complication used on systems that
+         *   don't support dynamic values, which should be in the range [[min]] .. [[max]]. The
          *   semantic meaning of value can be specified via [setValueType].
+         *
+         *   IMPORTANT: This is only used when the system does not support dynamic values _at all_.
+         *   See [setDynamicValueInvalidationFallback] for the situation where the dynamic value
+         *   cannot be evaluated, e.g. when a data source is not available.
+         *
          * @param min The minimum value. For [TYPE_PERCENTAGE] this must be 0f.
          * @param max The maximum value. This must be less than [Float.MAX_VALUE]. For
          *   [TYPE_PERCENTAGE] this must be 0f.
@@ -969,14 +988,14 @@ internal constructor(
          *   complications do not have textual representation this attribute can be used for
          *   providing such. Please do not include the word 'complication' in the description.
          */
-        // TODO(b/269414040): Unhide complication expression APIs.
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public constructor(
-            valueExpression: DynamicFloat,
+            dynamicValue: DynamicFloat,
+            fallbackValue: Float,
             min: Float,
             max: Float,
             contentDescription: ComplicationText
-        ) : this(value = min /* sensible default */, valueExpression, min, max, contentDescription)
+        ) : this(fallbackValue, dynamicValue, min, max, contentDescription)
 
         private var tapAction: PendingIntent? = null
         private var validTimeRange: TimeRange? = null
@@ -987,16 +1006,6 @@ internal constructor(
         private var colorRamp: ColorRamp? = null
 
         @RangedValueType private var valueType: Int = TYPE_UNDEFINED
-
-        init {
-            require(min <= max) { "min must be lower than or equal to max" }
-            require(value == PLACEHOLDER || value in min..max) {
-                "value must be between min and max"
-            }
-            require(max != Float.MAX_VALUE) {
-                "Float.MAX_VALUE is reserved and can't be used for max"
-            }
-        }
 
         /** Sets optional pending intent to be invoked when the complication is tapped. */
         public fun setTapAction(tapAction: PendingIntent?): Builder = apply {
@@ -1043,19 +1052,10 @@ internal constructor(
         }
 
         /** Builds the [RangedValueComplicationData]. */
-        public override fun build(): RangedValueComplicationData {
-            require(
-                monochromaticImage != null || smallImage != null || text != null || title != null
-            ) {
-                "At least one of monochromaticImage, smallImage, text or title must be set"
-            }
-            if (valueType == TYPE_PERCENTAGE) {
-                require(min == 0f)
-                require(max == 100f)
-            }
-            return RangedValueComplicationData(
+        public override fun build() =
+            RangedValueComplicationData(
                 value,
-                valueExpression,
+                dynamicValue,
                 min,
                 max,
                 monochromaticImage,
@@ -1071,15 +1071,14 @@ internal constructor(
                 valueType,
                 persistencePolicy,
                 displayPolicy,
-                fallback,
+                dynamicValueInvalidationFallback,
             )
-        }
     }
 
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
         super.fillWireComplicationDataBuilder(builder)
         builder.setRangedValue(value)
-        builder.setRangedValueExpression(valueExpression)
+        builder.setRangedDynamicValue(dynamicValue)
         builder.setRangedMinValue(min)
         builder.setRangedMaxValue(max)
         monochromaticImage?.addToWireComplicationData(builder)
@@ -1109,20 +1108,21 @@ internal constructor(
             } else {
                 value.toString()
             }
-        val valueExpressionString =
+        val dynamicValueString =
             if (WireComplicationData.shouldRedact()) {
                 "REDACTED"
             } else {
-                valueExpression.toString()
+                dynamicValue.toString()
             }
         return "RangedValueComplicationData(value=$valueString, " +
-            "valueExpression=$valueExpressionString, valueType=$valueType, min=$min, " +
+            "dynamicValue=$dynamicValueString, valueType=$valueType, min=$min, " +
             "max=$max, monochromaticImage=$monochromaticImage, smallImage=$smallImage, " +
             "title=$title, text=$text, contentDescription=$contentDescription), " +
             "tapActionLostDueToSerialization=$tapActionLostDueToSerialization, " +
             "tapAction=$tapAction, validTimeRange=$validTimeRange, dataSource=$dataSource, " +
             "colorRamp=$colorRamp, persistencePolicy=$persistencePolicy, " +
-            "displayPolicy=$displayPolicy, fallback=$fallback)"
+            "displayPolicy=$displayPolicy, " +
+            "dynamicValueInvalidationFallback=$dynamicValueInvalidationFallback)"
     }
 
     override fun hasPlaceholderFields() =
@@ -1142,7 +1142,6 @@ internal constructor(
         }
     }
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.RANGED_VALUE
@@ -1182,8 +1181,8 @@ internal constructor(
  * color to indicate progress past the goal). The value may be accompanied by an icon and/or short
  * text and title.
  *
- * The [targetValue] field is required for this type, as well as one of [value] or
- * [valueExpression]. The progress is expected to always be displayed.
+ * The [targetValue] field is required for this type, as well as one of [value] or [dynamicValue].
+ * The progress is expected to always be displayed.
  *
  * The icon, title, and text fields are optional and the watch face may choose which of these fields
  * to display, if any.
@@ -1210,6 +1209,9 @@ internal constructor(
  *   than [targetValue]. If it's equal to [PLACEHOLDER] the renderer must treat it as a placeholder
  *   rather than rendering normally, its suggested to be drawn as a grey arc with a percentage value
  *   selected by the renderer.
+ * @property dynamicValue The [DynamicFloat] optionally set by the data source. If present the
+ *   system will dynamically evaluate this and store the result in [value]. Watch faces can
+ *   typically ignore this field.
  * @property targetValue The target [Float] value for this complication.
  * @property monochromaticImage A simple [MonochromaticImage] image that can be tinted by the watch
  *   face. If the monochromaticImage is equal to [MonochromaticImage.PLACEHOLDER] the renderer must
@@ -1239,13 +1241,12 @@ internal constructor(
  *   include the word 'complication' in the description.
  * @property colorRamp Optional hint to render the progress bar representing [value] with the
  *   specified [ColorRamp].
- * @property fallback Used in case any expression has been invalidated.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class GoalProgressComplicationData
 internal constructor(
     public val value: Float,
-    @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET") valueExpression: DynamicFloat?,
+    @get:RequiresApi(Build.VERSION_CODES.TIRAMISU) public val dynamicValue: DynamicFloat?,
     public val targetValue: Float,
     public val monochromaticImage: MonochromaticImage?,
     public val smallImage: SmallImage?,
@@ -1259,9 +1260,7 @@ internal constructor(
     public val colorRamp: ColorRamp?,
     @ComplicationPersistencePolicy persistencePolicy: Int,
     @ComplicationDisplayPolicy displayPolicy: Int,
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val fallback: GoalProgressComplicationData?,
+    dynamicValueInvalidationFallback: GoalProgressComplicationData?,
 ) :
     ComplicationData(
         TYPE,
@@ -1271,29 +1270,33 @@ internal constructor(
         dataSource = dataSource,
         persistencePolicy = persistencePolicy,
         displayPolicy = displayPolicy,
-        fallback = fallback,
+        dynamicValueInvalidationFallback = dynamicValueInvalidationFallback,
     ) {
-    /**
-     * The [DynamicFloat] optionally set by the data source. If present the system will dynamically
-     * evaluate this and store the result in [value]. Watch faces can typically ignore this field.
-     */
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val valueExpression: DynamicFloat? = valueExpression
+
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    override fun validate() {
+        super.validate()
+        require(targetValue != Float.MAX_VALUE) {
+            "Float.MAX_VALUE is reserved and can't be used for target"
+        }
+        require(monochromaticImage != null || smallImage != null || text != null || title != null) {
+            "At least one of monochromaticImage, smallImage, text or title must be set"
+        }
+        colorRamp?.validate()
+    }
 
     /**
      * Builder for [GoalProgressComplicationData].
      *
      * You must at a minimum set the [targetValue] and [contentDescription] fields, one of [value]
-     * or [valueExpression], and at least one of [monochromaticImage], [smallImage], [text] or
-     * [title].
+     * or [dynamicValue], and at least one of [monochromaticImage], [smallImage], [text] or [title].
      */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public class Builder
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public constructor(
         private val value: Float,
-        private val valueExpression: DynamicFloat?,
+        private val dynamicValue: DynamicFloat?,
         private val targetValue: Float,
         private var contentDescription: ComplicationText
     ) : BaseBuilder<Builder, GoalProgressComplicationData>() {
@@ -1311,31 +1314,33 @@ internal constructor(
             value: Float,
             targetValue: Float,
             contentDescription: ComplicationText
-        ) : this(value, valueExpression = null, targetValue, contentDescription)
+        ) : this(value, dynamicValue = null, targetValue, contentDescription)
 
         /**
          * Creates a [Builder] for a [GoalProgressComplicationData] with a [DynamicFloat] value.
          *
-         * @param valueExpression The [DynamicFloat] of the goal complication which will be
-         *   evaluated into a value dynamically, and should be >= 0.
+         * @param dynamicValue The [DynamicFloat] of the goal complication which will be evaluated
+         *   into a value dynamically, and should be >= 0.
+         * @param fallbackValue The fallback value of the goal complication which will be used on
+         *   systems that don't support dynamic values, and should be >= 0.
+         *
+         *   IMPORTANT: This is only used when the system does not support dynamic values _at all_.
+         *   See [setDynamicValueInvalidationFallback] for the situation where the dynamic value
+         *   cannot be evaluated, e.g. when a data source is not available.
+         *
          * @param targetValue The target value. This must be less than [Float.MAX_VALUE].
          * @param contentDescription Defines localized text that briefly describes content of the
          *   complication. This property is used primarily for accessibility. Since some
          *   complications do not have textual representation this attribute can be used for
          *   providing such. Please do not include the word 'complication' in the description.
          */
-        // TODO(b/269414040): Unhide complication expression APIs.
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public constructor(
-            valueExpression: DynamicFloat,
+            dynamicValue: DynamicFloat,
+            fallbackValue: Float,
             targetValue: Float,
             contentDescription: ComplicationText
-        ) : this(
-            value = 0f /* sensible default */,
-            valueExpression,
-            targetValue,
-            contentDescription
-        )
+        ) : this(fallbackValue, dynamicValue, targetValue, contentDescription)
 
         private var tapAction: PendingIntent? = null
         private var validTimeRange: TimeRange? = null
@@ -1344,12 +1349,6 @@ internal constructor(
         private var title: ComplicationText? = null
         private var text: ComplicationText? = null
         private var colorRamp: ColorRamp? = null
-
-        init {
-            require(targetValue != Float.MAX_VALUE) {
-                "Float.MAX_VALUE is reserved and can't be used for target"
-            }
-        }
 
         /** Sets optional pending intent to be invoked when the complication is tapped. */
         public fun setTapAction(tapAction: PendingIntent?): Builder = apply {
@@ -1387,15 +1386,10 @@ internal constructor(
         }
 
         /** Builds the [GoalProgressComplicationData]. */
-        public override fun build(): GoalProgressComplicationData {
-            require(
-                monochromaticImage != null || smallImage != null || text != null || title != null
-            ) {
-                "At least one of monochromaticImage, smallImage, text or title must be set"
-            }
-            return GoalProgressComplicationData(
+        public override fun build() =
+            GoalProgressComplicationData(
                 value,
-                valueExpression,
+                dynamicValue,
                 targetValue,
                 monochromaticImage,
                 smallImage,
@@ -1409,15 +1403,14 @@ internal constructor(
                 colorRamp,
                 persistencePolicy,
                 displayPolicy,
-                fallback = fallback,
+                dynamicValueInvalidationFallback,
             )
-        }
     }
 
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
         super.fillWireComplicationDataBuilder(builder)
         builder.setRangedValue(value)
-        builder.setRangedValueExpression(valueExpression)
+        builder.setRangedDynamicValue(dynamicValue)
         builder.setTargetValue(targetValue)
         monochromaticImage?.addToWireComplicationData(builder)
         smallImage?.addToWireComplicationData(builder)
@@ -1445,20 +1438,21 @@ internal constructor(
             } else {
                 value.toString()
             }
-        val valueExpressionString =
+        val dynamicValueString =
             if (WireComplicationData.shouldRedact()) {
                 "REDACTED"
             } else {
-                valueExpression.toString()
+                dynamicValue.toString()
             }
         return "GoalProgressComplicationData(value=$valueString, " +
-            "valueExpression=$valueExpressionString, targetValue=$targetValue, " +
+            "dynamicValue=$dynamicValueString, targetValue=$targetValue, " +
             "monochromaticImage=$monochromaticImage, smallImage=$smallImage, title=$title, " +
             "text=$text, contentDescription=$contentDescription), " +
             "tapActionLostDueToSerialization=$tapActionLostDueToSerialization, " +
             "tapAction=$tapAction, validTimeRange=$validTimeRange, dataSource=$dataSource, " +
             "colorRamp=$colorRamp, persistencePolicy=$persistencePolicy, " +
-            "displayPolicy=$displayPolicy, fallback=$fallback)"
+            "displayPolicy=$displayPolicy, " +
+            "dynamicValueInvalidationFallback=$dynamicValueInvalidationFallback)"
     }
 
     override fun hasPlaceholderFields() =
@@ -1478,7 +1472,6 @@ internal constructor(
         }
     }
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.GOAL_PROGRESS
@@ -1553,7 +1546,6 @@ internal constructor(
  *   grey box.
  * @property contentDescription The content description field for accessibility. Please do not
  *   include the word 'complication' in the description.
- * @property fallback Used in case any expression has been invalidated.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 public class WeightedElementsComplicationData
@@ -1571,9 +1563,7 @@ internal constructor(
     dataSource: ComponentName?,
     @ComplicationPersistencePolicy persistencePolicy: Int,
     @ComplicationDisplayPolicy displayPolicy: Int,
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val fallback: WeightedElementsComplicationData?,
+    dynamicValueInvalidationFallback: WeightedElementsComplicationData?,
 ) :
     ComplicationData(
         TYPE,
@@ -1583,8 +1573,19 @@ internal constructor(
         dataSource = dataSource,
         persistencePolicy = persistencePolicy,
         displayPolicy = displayPolicy,
-        fallback = fallback,
+        dynamicValueInvalidationFallback = dynamicValueInvalidationFallback,
     ) {
+
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    override fun validate() {
+        super.validate()
+        require(monochromaticImage != null || smallImage != null || text != null || title != null) {
+            "At least one of monochromaticImage, smallImage, text or title must be set"
+        }
+        for (element in elements) {
+            element.validate()
+        }
+    }
     /**
      * Describes a single value within a [WeightedElementsComplicationData].
      *
@@ -1601,7 +1602,8 @@ internal constructor(
         @FloatRange(from = 0.0, fromInclusive = false) val weight: Float,
         @ColorInt val color: Int
     ) {
-        init {
+        /** Throws [IllegalArgumentException] if the [Element] is invalid. */
+        internal fun validate() {
             require(weight > 0) { "The weight must be > 0" }
         }
 
@@ -1710,13 +1712,8 @@ internal constructor(
         public fun setText(text: ComplicationText?): Builder = apply { this.text = text }
 
         /** Builds the [GoalProgressComplicationData]. */
-        public override fun build(): WeightedElementsComplicationData {
-            require(
-                monochromaticImage != null || smallImage != null || text != null || title != null
-            ) {
-                "At least one of monochromaticImage, smallImage, text or title must be set"
-            }
-            return WeightedElementsComplicationData(
+        public override fun build() =
+            WeightedElementsComplicationData(
                 elements,
                 elementBackgroundColor,
                 monochromaticImage,
@@ -1730,9 +1727,8 @@ internal constructor(
                 dataSource,
                 persistencePolicy,
                 displayPolicy,
-                fallback,
+                dynamicValueInvalidationFallback,
             )
-        }
     }
 
     override fun fillWireComplicationDataBuilder(builder: WireComplicationDataBuilder) {
@@ -1779,7 +1775,7 @@ internal constructor(
             "tapActionLostDueToSerialization=$tapActionLostDueToSerialization, " +
             "tapAction=$tapAction, validTimeRange=$validTimeRange, dataSource=$dataSource, " +
             "persistencePolicy=$persistencePolicy, displayPolicy=$displayPolicy, " +
-            "fallback=$fallback)"
+            "dynamicValueInvalidationFallback=$dynamicValueInvalidationFallback)"
     }
 
     override fun hasPlaceholderFields() =
@@ -1833,7 +1829,6 @@ internal constructor(
  *   any information to the user, then provide an empty content description. If no content
  *   description is provided, a generic content description will be used instead. Please do not
  *   include the word 'complication' in the description.
- * @property fallback Used in case any expression has been invalidated.
  */
 public class MonochromaticImageComplicationData
 internal constructor(
@@ -1845,9 +1840,7 @@ internal constructor(
     dataSource: ComponentName?,
     @ComplicationPersistencePolicy persistencePolicy: Int,
     @ComplicationDisplayPolicy displayPolicy: Int,
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val fallback: MonochromaticImageComplicationData?,
+    dynamicValueInvalidationFallback: MonochromaticImageComplicationData?,
 ) :
     ComplicationData(
         TYPE,
@@ -1857,7 +1850,7 @@ internal constructor(
         dataSource = dataSource,
         persistencePolicy = persistencePolicy,
         displayPolicy = displayPolicy,
-        fallback = fallback,
+        dynamicValueInvalidationFallback = dynamicValueInvalidationFallback,
     ) {
     /**
      * Builder for [MonochromaticImageComplicationData].
@@ -1899,7 +1892,7 @@ internal constructor(
                 dataSource,
                 persistencePolicy,
                 displayPolicy,
-                fallback,
+                dynamicValueInvalidationFallback,
             )
     }
 
@@ -1925,10 +1918,9 @@ internal constructor(
             "tapActionLostDueToSerialization=$tapActionLostDueToSerialization, " +
             "tapAction=$tapAction, validTimeRange=$validTimeRange, dataSource=$dataSource, " +
             "persistencePolicy=$persistencePolicy, displayPolicy=$displayPolicy, " +
-            "fallback=$fallback)"
+            "dynamicValueInvalidationFallback=$dynamicValueInvalidationFallback)"
     }
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.MONOCHROMATIC_IMAGE
@@ -1956,7 +1948,6 @@ internal constructor(
  *   any information to the user, then provide an empty content description. If no content
  *   description is provided, a generic content description will be used instead. Please do not
  *   include the word 'complication' in the description.
- * @property fallback Used in case any expression has been invalidated.
  */
 public class SmallImageComplicationData
 internal constructor(
@@ -1968,9 +1959,7 @@ internal constructor(
     dataSource: ComponentName?,
     @ComplicationPersistencePolicy persistencePolicy: Int,
     @ComplicationDisplayPolicy displayPolicy: Int,
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val fallback: SmallImageComplicationData?,
+    dynamicValueInvalidationFallback: SmallImageComplicationData?,
 ) :
     ComplicationData(
         TYPE,
@@ -1980,7 +1969,7 @@ internal constructor(
         dataSource = dataSource,
         persistencePolicy = persistencePolicy,
         displayPolicy = displayPolicy,
-        fallback = fallback,
+        dynamicValueInvalidationFallback = dynamicValueInvalidationFallback,
     ) {
     /**
      * Builder for [SmallImageComplicationData].
@@ -2022,7 +2011,7 @@ internal constructor(
                 dataSource,
                 persistencePolicy,
                 displayPolicy,
-                fallback,
+                dynamicValueInvalidationFallback,
             )
     }
 
@@ -2046,12 +2035,11 @@ internal constructor(
             "tapActionLostDueToSerialization=$tapActionLostDueToSerialization, " +
             "tapAction=$tapAction, validTimeRange=$validTimeRange, dataSource=$dataSource, " +
             "persistencePolicy=$persistencePolicy, displayPolicy=$displayPolicy, " +
-            "fallback=$fallback)"
+            "dynamicValueInvalidationFallback=$dynamicValueInvalidationFallback)"
     }
 
     override fun hasPlaceholderFields() = smallImage.isPlaceholder()
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.SMALL_IMAGE
@@ -2084,7 +2072,6 @@ internal constructor(
  *   any information to the user, then provide an empty content description. If no content
  *   description is provided, a generic content description will be used instead. Please do not
  *   include the word 'complication' in the description.
- * @property fallback Used in case any expression has been invalidated.
  */
 public class PhotoImageComplicationData
 internal constructor(
@@ -2096,9 +2083,7 @@ internal constructor(
     dataSource: ComponentName?,
     @ComplicationPersistencePolicy persistencePolicy: Int,
     @ComplicationDisplayPolicy displayPolicy: Int,
-    // TODO(b/269414040): Unhide complication expression APIs.
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val fallback: PhotoImageComplicationData?,
+    dynamicValueInvalidationFallback: PhotoImageComplicationData?,
 ) :
     ComplicationData(
         TYPE,
@@ -2108,7 +2093,7 @@ internal constructor(
         dataSource = dataSource,
         persistencePolicy = persistencePolicy,
         displayPolicy = displayPolicy,
-        fallback = fallback,
+        dynamicValueInvalidationFallback = dynamicValueInvalidationFallback,
     ) {
     /**
      * Builder for [PhotoImageComplicationData].
@@ -2151,7 +2136,7 @@ internal constructor(
                 dataSource,
                 persistencePolicy,
                 displayPolicy,
-                fallback,
+                dynamicValueInvalidationFallback,
             )
     }
 
@@ -2175,12 +2160,11 @@ internal constructor(
             "tapActionLostDueToSerialization=$tapActionLostDueToSerialization, " +
             "tapAction=$tapAction, validTimeRange=$validTimeRange, dataSource=$dataSource, " +
             "persistencePolicy=$persistencePolicy, displayPolicy=$displayPolicy, " +
-            "fallback=$fallback)"
+            "dynamicValueInvalidationFallback=$dynamicValueInvalidationFallback)"
     }
 
     override fun hasPlaceholderFields() = photoImage.isPlaceholder()
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.PHOTO_IMAGE
@@ -2242,7 +2226,7 @@ internal constructor(
         dataSource = dataSource,
         persistencePolicy = persistencePolicy,
         displayPolicy = displayPolicy,
-        fallback = null,
+        dynamicValueInvalidationFallback = null,
     ) {
     /** Builder for [NoPermissionComplicationData]. */
     public class Builder : BaseBuilder<Builder, NoPermissionComplicationData>() {
@@ -2307,7 +2291,6 @@ internal constructor(
         }
     }
 
-    /** @hide */
     public companion object {
         /** The [ComplicationType] corresponding to objects of this type. */
         @JvmField public val TYPE: ComplicationType = ComplicationType.NO_PERMISSION
@@ -2354,7 +2337,7 @@ private fun WireComplicationData.toApiComplicationData(
                     dataSource = dataSource,
                     persistencePolicy = persistencePolicy,
                     displayPolicy = displayPolicy,
-                    fallback = placeholder?.toTypedApiComplicationData(),
+                    dynamicValueInvalidationFallback = placeholder?.toTypedApiComplicationData(),
                 )
             LongTextComplicationData.TYPE.toWireComplicationType() ->
                 LongTextComplicationData(
@@ -2370,12 +2353,12 @@ private fun WireComplicationData.toApiComplicationData(
                     dataSource = dataSource,
                     persistencePolicy = persistencePolicy,
                     displayPolicy = displayPolicy,
-                    fallback = placeholder?.toTypedApiComplicationData(),
+                    dynamicValueInvalidationFallback = placeholder?.toTypedApiComplicationData(),
                 )
             RangedValueComplicationData.TYPE.toWireComplicationType() ->
                 RangedValueComplicationData(
                     value = rangedValue,
-                    valueExpression = rangedValueExpression,
+                    dynamicValue = rangedDynamicValue,
                     min = rangedMinValue,
                     max = rangedMaxValue,
                     monochromaticImage = parseIcon(placeholderAware),
@@ -2392,7 +2375,7 @@ private fun WireComplicationData.toApiComplicationData(
                     valueType = rangedValueType,
                     persistencePolicy = persistencePolicy,
                     displayPolicy = displayPolicy,
-                    fallback = placeholder?.toTypedApiComplicationData(),
+                    dynamicValueInvalidationFallback = placeholder?.toTypedApiComplicationData(),
                 )
             MonochromaticImageComplicationData.TYPE.toWireComplicationType() ->
                 MonochromaticImageComplicationData(
@@ -2405,7 +2388,7 @@ private fun WireComplicationData.toApiComplicationData(
                     dataSource = dataSource,
                     persistencePolicy = persistencePolicy,
                     displayPolicy = displayPolicy,
-                    fallback = placeholder?.toTypedApiComplicationData(),
+                    dynamicValueInvalidationFallback = placeholder?.toTypedApiComplicationData(),
                 )
             SmallImageComplicationData.TYPE.toWireComplicationType() ->
                 SmallImageComplicationData(
@@ -2418,7 +2401,7 @@ private fun WireComplicationData.toApiComplicationData(
                     dataSource = dataSource,
                     persistencePolicy = persistencePolicy,
                     displayPolicy = displayPolicy,
-                    fallback = placeholder?.toTypedApiComplicationData(),
+                    dynamicValueInvalidationFallback = placeholder?.toTypedApiComplicationData(),
                 )
             PhotoImageComplicationData.TYPE.toWireComplicationType() ->
                 PhotoImageComplicationData(
@@ -2431,7 +2414,7 @@ private fun WireComplicationData.toApiComplicationData(
                     dataSource = dataSource,
                     persistencePolicy = persistencePolicy,
                     displayPolicy = displayPolicy,
-                    fallback = placeholder?.toTypedApiComplicationData(),
+                    dynamicValueInvalidationFallback = placeholder?.toTypedApiComplicationData(),
                 )
             NoPermissionComplicationData.TYPE.toWireComplicationType() ->
                 NoPermissionComplicationData(
@@ -2447,7 +2430,7 @@ private fun WireComplicationData.toApiComplicationData(
             GoalProgressComplicationData.TYPE.toWireComplicationType() ->
                 GoalProgressComplicationData(
                     value = rangedValue,
-                    valueExpression = rangedValueExpression,
+                    dynamicValue = rangedDynamicValue,
                     targetValue = targetValue,
                     monochromaticImage = parseIcon(placeholderAware),
                     smallImage = parseSmallImage(placeholderAware),
@@ -2462,7 +2445,7 @@ private fun WireComplicationData.toApiComplicationData(
                     colorRamp = colorRamp?.let { ColorRamp(it, isColorRampInterpolated!!) },
                     persistencePolicy = persistencePolicy,
                     displayPolicy = displayPolicy,
-                    fallback = placeholder?.toTypedApiComplicationData(),
+                    dynamicValueInvalidationFallback = placeholder?.toTypedApiComplicationData(),
                 )
             WeightedElementsComplicationData.TYPE.toWireComplicationType() ->
                 WeightedElementsComplicationData(
@@ -2472,15 +2455,17 @@ private fun WireComplicationData.toApiComplicationData(
                         } else {
                             val elementWeights = this.elementWeights!!
                             val elementColors = this.elementColors!!
-                            require(elementWeights.size == elementColors.size) {
-                                "elementWeights and elementColors must have the same size"
+                            if (elementWeights.size != elementColors.size) {
+                                Log.e(
+                                    TAG,
+                                    "elementWeights and elementColors must have the same size"
+                                )
                             }
                             elementWeights
-                                .mapIndexed { index, weight ->
-                                    WeightedElementsComplicationData.Element(
-                                        weight,
-                                        elementColors[index]
-                                    )
+                                .asSequence()
+                                .zip(elementColors.asSequence())
+                                .map { (weight, color) ->
+                                    WeightedElementsComplicationData.Element(weight, color)
                                 }
                                 .toList()
                         },
@@ -2497,7 +2482,7 @@ private fun WireComplicationData.toApiComplicationData(
                     dataSource = dataSource,
                     persistencePolicy = persistencePolicy,
                     displayPolicy = displayPolicy,
-                    fallback = placeholder?.toTypedApiComplicationData(),
+                    dynamicValueInvalidationFallback = placeholder?.toTypedApiComplicationData(),
                 )
             else -> NoDataComplicationData()
         }

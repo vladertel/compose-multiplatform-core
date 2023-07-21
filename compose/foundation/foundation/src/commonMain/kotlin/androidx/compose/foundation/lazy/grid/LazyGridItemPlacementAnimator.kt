@@ -34,15 +34,15 @@ internal class LazyGridItemPlacementAnimator {
     private val keyToItemInfoMap = mutableMapOf<Any, ItemInfo>()
 
     // snapshot of the key to index map used for the last measuring.
-    private var keyToIndexMap: LazyLayoutKeyIndexMap = LazyLayoutKeyIndexMap.Empty
+    private var keyIndexMap: LazyLayoutKeyIndexMap = LazyLayoutKeyIndexMap.Empty
 
     // keeps the index of the first visible item index.
     private var firstVisibleIndex = 0
 
     // stored to not allocate it every pass.
     private val movingAwayKeys = LinkedHashSet<Any>()
-    private val movingInFromStartBound = mutableListOf<LazyGridPositionedItem>()
-    private val movingInFromEndBound = mutableListOf<LazyGridPositionedItem>()
+    private val movingInFromStartBound = mutableListOf<LazyGridMeasuredItem>()
+    private val movingInFromEndBound = mutableListOf<LazyGridMeasuredItem>()
     private val movingAwayToStartBound = mutableListOf<LazyGridMeasuredItem>()
     private val movingAwayToEndBound = mutableListOf<LazyGridMeasuredItem>()
 
@@ -55,7 +55,7 @@ internal class LazyGridItemPlacementAnimator {
         consumedScroll: Int,
         layoutWidth: Int,
         layoutHeight: Int,
-        positionedItems: MutableList<LazyGridPositionedItem>,
+        positionedItems: MutableList<LazyGridMeasuredItem>,
         itemProvider: LazyGridMeasuredItemProvider,
         spanLayoutProvider: LazyGridSpanLayoutProvider,
         isVertical: Boolean
@@ -68,8 +68,8 @@ internal class LazyGridItemPlacementAnimator {
 
         val previousFirstVisibleIndex = firstVisibleIndex
         firstVisibleIndex = positionedItems.firstOrNull()?.index ?: 0
-        val previousKeyToIndexMap = keyToIndexMap
-        keyToIndexMap = itemProvider.keyToIndexMap
+        val previousKeyToIndexMap = keyIndexMap
+        keyIndexMap = itemProvider.keyIndexMap
 
         val mainAxisLayoutSize = if (isVertical) layoutHeight else layoutWidth
 
@@ -91,8 +91,8 @@ internal class LazyGridItemPlacementAnimator {
                 // there is no state associated with this item yet
                 if (itemInfo == null) {
                     keyToItemInfoMap[item.key] =
-                        ItemInfo(item.getCrossAxisSize(), item.getCrossAxisOffset())
-                    val previousIndex = previousKeyToIndexMap[item.key]
+                        ItemInfo(item.crossAxisSize, item.crossAxisOffset)
+                    val previousIndex = previousKeyToIndexMap.getIndex(item.key)
                     if (previousIndex != -1 && item.index != previousIndex) {
                         if (previousIndex < previousFirstVisibleIndex) {
                             // the larger index will be in the start of the list
@@ -107,15 +107,13 @@ internal class LazyGridItemPlacementAnimator {
                         )
                     }
                 } else {
-                    repeat(item.placeablesCount) { placeableIndex ->
-                        item.getParentData(placeableIndex).node?.apply {
-                            if (rawOffset != LazyLayoutAnimateItemModifierNode.NotInitialized) {
-                                rawOffset += scrollOffset
-                            }
+                    item.forEachNode {
+                        if (it.rawOffset != LazyLayoutAnimateItemModifierNode.NotInitialized) {
+                            it.rawOffset += scrollOffset
                         }
                     }
-                    itemInfo.crossAxisSize = item.getCrossAxisSize()
-                    itemInfo.crossAxisOffset = item.getCrossAxisOffset()
+                    itemInfo.crossAxisSize = item.crossAxisSize
+                    itemInfo.crossAxisOffset = item.crossAxisOffset
                     startAnimationsIfNeeded(item)
                 }
             } else {
@@ -124,37 +122,37 @@ internal class LazyGridItemPlacementAnimator {
             }
         }
 
-        var currentMainAxisOffset = 0
+        var accumulatedOffset = 0
         var previousLine = -1
         var previousLineMainAxisSize = 0
-        movingInFromStartBound.sortByDescending { previousKeyToIndexMap[it.key] }
+        movingInFromStartBound.sortByDescending { previousKeyToIndexMap.getIndex(it.key) }
         movingInFromStartBound.fastForEach { item ->
             val line = if (isVertical) item.row else item.column
             if (line != -1 && line == previousLine) {
-                previousLineMainAxisSize = maxOf(previousLineMainAxisSize, item.getMainAxisSize())
+                previousLineMainAxisSize = maxOf(previousLineMainAxisSize, item.mainAxisSize)
             } else {
-                currentMainAxisOffset += previousLineMainAxisSize
-                previousLineMainAxisSize = item.getMainAxisSize()
+                accumulatedOffset += previousLineMainAxisSize
+                previousLineMainAxisSize = item.mainAxisSize
                 previousLine = line
             }
-            val mainAxisOffset = 0 - currentMainAxisOffset - item.getMainAxisSize()
+            val mainAxisOffset = 0 - accumulatedOffset - item.mainAxisSize
             initializeNode(item, mainAxisOffset)
             startAnimationsIfNeeded(item)
         }
-        currentMainAxisOffset = 0
+        accumulatedOffset = 0
         previousLine = -1
         previousLineMainAxisSize = 0
-        movingInFromEndBound.sortBy { previousKeyToIndexMap[it.key] }
+        movingInFromEndBound.sortBy { previousKeyToIndexMap.getIndex(it.key) }
         movingInFromEndBound.fastForEach { item ->
             val line = if (isVertical) item.row else item.column
             if (line != -1 && line == previousLine) {
-                previousLineMainAxisSize = maxOf(previousLineMainAxisSize, item.getMainAxisSize())
+                previousLineMainAxisSize = maxOf(previousLineMainAxisSize, item.mainAxisSize)
             } else {
-                currentMainAxisOffset += previousLineMainAxisSize
-                previousLineMainAxisSize = item.getMainAxisSize()
+                accumulatedOffset += previousLineMainAxisSize
+                previousLineMainAxisSize = item.mainAxisSize
                 previousLine = line
             }
-            val mainAxisOffset = mainAxisLayoutSize + currentMainAxisOffset
+            val mainAxisOffset = mainAxisLayoutSize + accumulatedOffset
             initializeNode(item, mainAxisOffset)
             startAnimationsIfNeeded(item)
         }
@@ -163,13 +161,13 @@ internal class LazyGridItemPlacementAnimator {
             // found an item which was in our map previously but is not a part of the
             // positionedItems now
             val itemInfo = keyToItemInfoMap.getValue(key)
-            val newIndex = keyToIndexMap[key]
+            val newIndex = keyIndexMap.getIndex(key)
 
             if (newIndex == -1) {
                 keyToItemInfoMap.remove(key)
             } else {
                 val item = itemProvider.getAndMeasure(
-                    ItemIndex(newIndex),
+                    newIndex,
                     constraints = if (isVertical) {
                         Constraints.fixedWidth(itemInfo.crossAxisSize)
                     } else {
@@ -184,7 +182,7 @@ internal class LazyGridItemPlacementAnimator {
                         return@repeat
                     }
                 }
-                if ((!inProgress && newIndex == previousKeyToIndexMap[key])) {
+                if ((!inProgress && newIndex == previousKeyToIndexMap.getIndex(key))) {
                     keyToItemInfoMap.remove(key)
                 } else {
                     if (newIndex < firstVisibleIndex) {
@@ -196,61 +194,57 @@ internal class LazyGridItemPlacementAnimator {
             }
         }
 
-        currentMainAxisOffset = 0
+        accumulatedOffset = 0
         previousLine = -1
         previousLineMainAxisSize = 0
-        movingAwayToStartBound.sortByDescending { keyToIndexMap[it.key] }
+        movingAwayToStartBound.sortByDescending { keyIndexMap.getIndex(it.key) }
         movingAwayToStartBound.fastForEach { item ->
-            val line = spanLayoutProvider.getLineIndexOfItem(item.index.value).value
+            val line = spanLayoutProvider.getLineIndexOfItem(item.index)
             if (line != -1 && line == previousLine) {
                 previousLineMainAxisSize = maxOf(previousLineMainAxisSize, item.mainAxisSize)
             } else {
-                currentMainAxisOffset += previousLineMainAxisSize
+                accumulatedOffset += previousLineMainAxisSize
                 previousLineMainAxisSize = item.mainAxisSize
                 previousLine = line
             }
-            val mainAxisOffset = 0 - currentMainAxisOffset - item.mainAxisSize
+            val mainAxisOffset = 0 - accumulatedOffset - item.mainAxisSize
 
             val itemInfo = keyToItemInfoMap.getValue(item.key)
 
-            val positionedItem = item.position(
-                mainAxisOffset,
-                itemInfo.crossAxisOffset,
-                layoutWidth,
-                layoutHeight,
-                LazyGridItemInfo.UnknownRow,
-                LazyGridItemInfo.UnknownColumn
+            item.position(
+                mainAxisOffset = mainAxisOffset,
+                crossAxisOffset = itemInfo.crossAxisOffset,
+                layoutWidth = layoutWidth,
+                layoutHeight = layoutHeight
             )
-            positionedItems.add(positionedItem)
-            startAnimationsIfNeeded(positionedItem)
+            positionedItems.add(item)
+            startAnimationsIfNeeded(item)
         }
-        currentMainAxisOffset = 0
+        accumulatedOffset = 0
         previousLine = -1
         previousLineMainAxisSize = 0
-        movingAwayToEndBound.sortBy { keyToIndexMap[it.key] }
+        movingAwayToEndBound.sortBy { keyIndexMap.getIndex(it.key) }
         movingAwayToEndBound.fastForEach { item ->
-            val line = spanLayoutProvider.getLineIndexOfItem(item.index.value).value
+            val line = spanLayoutProvider.getLineIndexOfItem(item.index)
             if (line != -1 && line == previousLine) {
                 previousLineMainAxisSize = maxOf(previousLineMainAxisSize, item.mainAxisSize)
             } else {
-                currentMainAxisOffset += previousLineMainAxisSize
+                accumulatedOffset += previousLineMainAxisSize
                 previousLineMainAxisSize = item.mainAxisSize
                 previousLine = line
             }
-            val mainAxisOffset = mainAxisLayoutSize + currentMainAxisOffset
+            val mainAxisOffset = mainAxisLayoutSize + accumulatedOffset
 
             val itemInfo = keyToItemInfoMap.getValue(item.key)
-            val positionedItem = item.position(
-                mainAxisOffset,
-                itemInfo.crossAxisOffset,
-                layoutWidth,
-                layoutHeight,
-                LazyGridItemInfo.UnknownRow,
-                LazyGridItemInfo.UnknownColumn
+            item.position(
+                mainAxisOffset = mainAxisOffset,
+                crossAxisOffset = itemInfo.crossAxisOffset,
+                layoutWidth = layoutWidth,
+                layoutHeight = layoutHeight,
             )
 
-            positionedItems.add(positionedItem)
-            startAnimationsIfNeeded(positionedItem)
+            positionedItems.add(item)
+            startAnimationsIfNeeded(item)
         }
 
         movingInFromStartBound.clear()
@@ -266,12 +260,12 @@ internal class LazyGridItemPlacementAnimator {
      */
     fun reset() {
         keyToItemInfoMap.clear()
-        keyToIndexMap = LazyLayoutKeyIndexMap.Empty
+        keyIndexMap = LazyLayoutKeyIndexMap.Empty
         firstVisibleIndex = -1
     }
 
     private fun initializeNode(
-        item: LazyGridPositionedItem,
+        item: LazyGridMeasuredItem,
         mainAxisOffset: Int
     ) {
         val firstPlaceableOffset = item.offset
@@ -283,43 +277,41 @@ internal class LazyGridItemPlacementAnimator {
         }
 
         // initialize offsets
-        repeat(item.placeablesCount) { placeableIndex ->
-            val node = item.getParentData(placeableIndex).node
-            if (node != null) {
-                val diffToFirstPlaceableOffset =
-                    item.offset - firstPlaceableOffset
-                node.rawOffset = targetFirstPlaceableOffset + diffToFirstPlaceableOffset
-            }
+        item.forEachNode { node ->
+            val diffToFirstPlaceableOffset =
+                item.offset - firstPlaceableOffset
+            node.rawOffset = targetFirstPlaceableOffset + diffToFirstPlaceableOffset
         }
     }
 
-    private fun startAnimationsIfNeeded(item: LazyGridPositionedItem) {
-        repeat(item.placeablesCount) { placeableIndex ->
-            val node = item.getParentData(placeableIndex).node
-            if (node != null) {
-                val newTarget = item.offset
-                val currentTarget = node.rawOffset
-                if (currentTarget == LazyLayoutAnimateItemModifierNode.NotInitialized) {
-                    node.rawOffset = item.offset
-                } else if (currentTarget != newTarget) {
-                    node.rawOffset = newTarget
-                    node.animatePlacementDelta(item.offset - currentTarget)
-                }
+    private fun startAnimationsIfNeeded(item: LazyGridMeasuredItem) {
+        item.forEachNode { node ->
+            val newTarget = item.offset
+            val currentTarget = node.rawOffset
+            if (currentTarget != LazyLayoutAnimateItemModifierNode.NotInitialized &&
+                currentTarget != newTarget
+            ) {
+                node.animatePlacementDelta(newTarget - currentTarget)
             }
+            node.rawOffset = newTarget
         }
     }
 
     private val Any?.node get() = this as? LazyLayoutAnimateItemModifierNode
 
-    private val LazyGridPositionedItem.hasAnimations: Boolean
+    private val LazyGridMeasuredItem.hasAnimations: Boolean
         get() {
-            repeat(placeablesCount) { index ->
-                if (getParentData(index).node != null) {
-                    return true
-                }
-            }
+            forEachNode { return true }
             return false
         }
+
+    private inline fun LazyGridMeasuredItem.forEachNode(
+        block: (LazyLayoutAnimateItemModifierNode) -> Unit
+    ) {
+        repeat(placeablesCount) { index ->
+            getParentData(index).node?.let(block)
+        }
+    }
 }
 
 private class ItemInfo(

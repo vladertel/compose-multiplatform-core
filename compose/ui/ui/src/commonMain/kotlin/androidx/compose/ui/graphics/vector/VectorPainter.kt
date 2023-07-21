@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composition
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCompositionContext
@@ -34,10 +35,10 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 
 /**
  * Default identifier for the root group if a Vector graphic
@@ -190,7 +191,9 @@ class VectorPainter internal constructor() : Painter() {
 
     private val vector = VectorComponent().apply {
         invalidateCallback = {
-            isDirty = true
+            if (drawCount == invalidateCount) {
+                invalidateCount++
+            }
         }
     }
 
@@ -216,7 +219,8 @@ class VectorPainter internal constructor() : Painter() {
         return next
     }
 
-    private var isDirty by mutableStateOf(true)
+    // TODO replace with mutableStateOf(Unit, neverEqualPolicy()) after b/291647821 is addressed
+    private var invalidateCount by mutableIntStateOf(0)
 
     @Composable
     internal fun RenderVector(
@@ -248,6 +252,8 @@ class VectorPainter internal constructor() : Painter() {
     override val intrinsicSize: Size
         get() = size
 
+    private var drawCount = -1
+
     override fun DrawScope.onDraw() {
         with(vector) {
             val filter = currentColorFilter ?: intrinsicColorFilter
@@ -259,11 +265,9 @@ class VectorPainter internal constructor() : Painter() {
                 draw(currentAlpha, filter)
             }
         }
-        // This conditional is necessary to obtain invalidation callbacks as the state is
+        // This assignment is necessary to obtain invalidation callbacks as the state is
         // being read here which adds this callback to the snapshot observation
-        if (isDirty) {
-            isDirty = false
-        }
+        drawCount = invalidateCount
     }
 
     override fun applyAlpha(alpha: Float): Boolean {

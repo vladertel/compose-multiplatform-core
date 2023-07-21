@@ -37,16 +37,18 @@ import androidx.annotation.UiThread;
 import androidx.annotation.VisibleForTesting;
 import androidx.collection.ArrayMap;
 import androidx.collection.ArraySet;
-import androidx.vectordrawable.graphics.drawable.SeekableAnimatedVectorDrawable;
+import androidx.wear.protolayout.renderer.common.SeekableAnimatedVectorDrawable;
+import androidx.wear.protolayout.expression.PlatformDataKey;
 import androidx.wear.protolayout.expression.pipeline.BoundDynamicType;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeBindingRequest;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeEvaluator;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeEvaluator.EvaluationException;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeValueReceiver;
 import androidx.wear.protolayout.expression.pipeline.FixedQuotaManagerImpl;
+import androidx.wear.protolayout.expression.pipeline.PlatformDataProvider;
+import androidx.wear.protolayout.expression.pipeline.PlatformTimeUpdateNotifierImpl;
 import androidx.wear.protolayout.expression.pipeline.QuotaManager;
 import androidx.wear.protolayout.expression.pipeline.StateStore;
-import androidx.wear.protolayout.expression.pipeline.sensor.SensorGateway;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DynamicBool;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DynamicColor;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DynamicFloat;
@@ -83,7 +85,7 @@ public class ProtoLayoutDynamicDataPipeline {
 
     @NonNull
     private static final QuotaManager DISABLED_ANIMATIONS_QUOTA_MANAGER =
-            new FixedQuotaManagerImpl(/* quotaCap= */ 0);
+            new FixedQuotaManagerImpl(/* quotaCap= */ 0, "disabled animations");
 
     @NonNull final PositionIdTree<NodeInfo> mPositionIdTree = new PositionIdTree<>();
     @NonNull final List<QuotaAwareAnimationSet> mEnterAnimations = new ArrayList<>();
@@ -92,17 +94,16 @@ public class ProtoLayoutDynamicDataPipeline {
     boolean mFullyVisible;
     @NonNull final QuotaManager mAnimationQuotaManager;
     @NonNull private final DynamicTypeEvaluator mEvaluator;
+    @NonNull private final PlatformTimeUpdateNotifierImpl mTimeNotifier;
 
     /** Creates a {@link ProtoLayoutDynamicDataPipeline} without animation support. */
     @RestrictTo(Scope.LIBRARY_GROUP)
     public ProtoLayoutDynamicDataPipeline(
-            boolean canUpdateGateways,
-            @Nullable SensorGateway sensorGateway,
+            @NonNull Map<PlatformDataProvider, Set<PlatformDataKey<?>>> platformDataProviders,
             @NonNull StateStore stateStore) {
         // Build pipeline with quota that doesn't allow any animations.
         this(
-                canUpdateGateways,
-                sensorGateway,
+                platformDataProviders,
                 stateStore,
                 /* enableAnimations= */ false,
                 DISABLED_ANIMATIONS_QUOTA_MANAGER,
@@ -115,14 +116,12 @@ public class ProtoLayoutDynamicDataPipeline {
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     public ProtoLayoutDynamicDataPipeline(
-            boolean canUpdateGateways,
-            @Nullable SensorGateway sensorGateway,
+            @NonNull Map<PlatformDataProvider, Set<PlatformDataKey<?>>> platformDataProviders,
             @NonNull StateStore stateStore,
             @NonNull QuotaManager animationQuotaManager,
             @NonNull QuotaManager dynamicNodesQuotaManager) {
         this(
-                canUpdateGateways,
-                sensorGateway,
+                platformDataProviders,
                 stateStore,
                 /* enableAnimations= */ true,
                 animationQuotaManager,
@@ -131,8 +130,7 @@ public class ProtoLayoutDynamicDataPipeline {
 
     /** Creates a {@link ProtoLayoutDynamicDataPipeline}. */
     private ProtoLayoutDynamicDataPipeline(
-            boolean canUpdateGateways,
-            @Nullable SensorGateway sensorGateway,
+            @NonNull Map<PlatformDataProvider, Set<PlatformDataKey<?>>> platformDataProviders,
             @NonNull StateStore stateStore,
             boolean enableAnimations,
             @NonNull QuotaManager animationQuotaManager,
@@ -140,12 +138,14 @@ public class ProtoLayoutDynamicDataPipeline {
         this.mEnableAnimations = enableAnimations;
         this.mAnimationQuotaManager = animationQuotaManager;
         DynamicTypeEvaluator.Config.Builder evaluatorConfigBuilder =
-                new DynamicTypeEvaluator.Config.Builder()
-                        .setPlatformDataSourcesInitiallyEnabled(canUpdateGateways)
-                        .setStateStore(stateStore);
+                new DynamicTypeEvaluator.Config.Builder().setStateStore(stateStore);
         evaluatorConfigBuilder.setDynamicTypesQuotaManager(dynamicNodeQuotaManager);
-        if (sensorGateway != null) {
-            evaluatorConfigBuilder.setSensorGateway(sensorGateway);
+        this.mTimeNotifier = new PlatformTimeUpdateNotifierImpl();
+        evaluatorConfigBuilder.setPlatformTimeUpdateNotifier(this.mTimeNotifier);
+        for (Map.Entry<PlatformDataProvider, Set<PlatformDataKey<?>>> providerEntry :
+                platformDataProviders.entrySet()) {
+            evaluatorConfigBuilder.addPlatformDataProvider(
+                    providerEntry.getKey(), providerEntry.getValue());
         }
         if (enableAnimations) {
             evaluatorConfigBuilder.setAnimationQuotaManager(animationQuotaManager);
@@ -199,18 +199,15 @@ public class ProtoLayoutDynamicDataPipeline {
     @SuppressWarnings("RestrictTo")
     @RestrictTo(Scope.LIBRARY_GROUP)
     public void setUpdatesEnabled(boolean canUpdate) {
-        if (canUpdate) {
-            mEvaluator.enablePlatformDataSources();
-        } else {
-            mEvaluator.disablePlatformDataSources();
-        }
+        mTimeNotifier.setUpdatesEnabled(canUpdate);
     }
 
     /** Closes existing gateways. */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @SuppressWarnings("RestrictTo")
     public void close() {
-        mEvaluator.close();
+        mPositionIdTree.clear();
+        mTimeNotifier.setUpdatesEnabled(false);
     }
 
     /**
@@ -389,11 +386,17 @@ public class ProtoLayoutDynamicDataPipeline {
                 // Skip content transition animations.
                 mChangedNodes.clear();
             }
-            parentView.post(
+
+            Runnable runnable =
                     () -> {
                         mPipeline.initNewLayout();
                         playEnterAnimations(parentView, isReattaching);
-                    });
+                    };
+            if (parentView.isInEditMode()) {
+                runnable.run();
+            } else {
+                parentView.post(runnable);
+            }
         }
 
         @UiThread
@@ -640,8 +643,8 @@ public class ProtoLayoutDynamicDataPipeline {
                 @NonNull String posId,
                 @NonNull DynamicTypeValueReceiver<Float> consumer) {
             DynamicTypeBindingRequest bindingRequest =
-                    DynamicTypeBindingRequest.forDynamicFloatInternal(dpProp.getDynamicValue(),
-                            consumer);
+                    DynamicTypeBindingRequest.forDynamicFloatInternal(
+                            dpProp.getDynamicValue(), consumer);
             tryBindRequest(posId, bindingRequest, consumer::onInvalidated);
             return this;
         }
@@ -951,7 +954,7 @@ public class ProtoLayoutDynamicDataPipeline {
 
     /** Play the animation with the given trigger type. */
     @RestrictTo(Scope.LIBRARY_GROUP)
-    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    @VisibleForTesting
     public void playAvdAnimations(@NonNull Trigger.InnerCase triggerCase) {
         mPositionIdTree.forEach(info -> info.playAvdAnimations(triggerCase));
     }
@@ -962,23 +965,17 @@ public class ProtoLayoutDynamicDataPipeline {
         mPositionIdTree.forEach(info -> info.setVisibility(visible));
     }
 
-    /**
-     * Reset the avd animations with the given trigger type.
-     *
-     */
+    /** Reset the avd animations with the given trigger type. */
     @UiThread
-    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    @VisibleForTesting
     @RestrictTo(Scope.LIBRARY_GROUP)
     public void resetAvdAnimations(@NonNull Trigger.InnerCase triggerCase) {
         mPositionIdTree.forEach(info -> info.resetAvdAnimations(triggerCase));
     }
 
-    /**
-     * Stops running avd animations and releases their quota.
-     *
-     */
+    /** Stops running avd animations and releases their quota. */
     @UiThread
-    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    @VisibleForTesting
     @RestrictTo(Scope.LIBRARY_GROUP)
     public void stopAvdAnimations(@NonNull Trigger.InnerCase triggerCase) {
         mPositionIdTree.forEach(info -> info.stopAvdAnimations(triggerCase));

@@ -23,7 +23,6 @@ import androidx.room.compiler.processing.util.Source
 import androidx.room.compiler.processing.util.UNIT_JCLASS_NAME
 import androidx.room.compiler.processing.util.className
 import androidx.room.compiler.processing.util.compileFiles
-import androidx.room.compiler.processing.util.createXTypeVariableName
 import androidx.room.compiler.processing.util.getDeclaredMethodByJvmName
 import androidx.room.compiler.processing.util.getMethodByJvmName
 import androidx.room.compiler.processing.util.getParameter
@@ -31,6 +30,8 @@ import androidx.room.compiler.processing.util.runProcessorTest
 import androidx.room.compiler.processing.util.typeName
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import com.google.testing.junit.testparameterinjector.TestParameter
+import com.google.testing.junit.testparameterinjector.TestParameterInjector
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
@@ -47,9 +48,8 @@ import java.io.File
 import java.io.IOException
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
 
-@RunWith(JUnit4::class)
+@RunWith(TestParameterInjector::class)
 class XExecutableElementTest {
     @Test
     fun basic() {
@@ -126,7 +126,9 @@ class XExecutableElementTest {
             """
             interface Subject {
                 fun method(vararg inputs: String)
-                suspend fun suspendMethod(vararg inputs: String);
+                suspend fun suspendMethod(vararg inputs: String)
+                fun method2(vararg inputs: String, arg: Int)
+                fun String.extFun(vararg inputs: String)
             }
             """.trimIndent()
         )
@@ -134,11 +136,34 @@ class XExecutableElementTest {
             sources = listOf(subject)
         ) {
             val element = it.processingEnv.requireTypeElement("Subject")
-            assertThat(element.getMethodByJvmName("method").isVarArgs()).isTrue()
-            if (it.isKsp) {
-                assertThat(element.getMethodByJvmName("suspendMethod").isVarArgs()).isTrue()
-            } else {
-                assertThat(element.getMethodByJvmName("suspendMethod").isVarArgs()).isFalse()
+
+            element.getMethodByJvmName("method").let { method ->
+                assertThat(method.isVarArgs()).isTrue()
+                assertThat(method.parameters).hasSize(1)
+                assertThat(method.parameters.single().isVarArgs()).isTrue()
+            }
+
+            element.getMethodByJvmName("suspendMethod").let { suspendMethod ->
+                assertThat(suspendMethod.isVarArgs()).isFalse()
+                assertThat(suspendMethod.parameters).hasSize(2)
+                assertThat(
+                    suspendMethod.parameters.first { it.name == "inputs" }.isVarArgs()
+                ).isTrue()
+            }
+
+            element.getMethodByJvmName("extFun").let { extFun ->
+                assertThat(extFun.isVarArgs()).isTrue()
+                assertThat(extFun.parameters).hasSize(2)
+                // kapt messed with parameter names, sometimes the synthetic parameter can use the
+                // second parameter's name.
+                assertThat(extFun.parameters.get(1).isVarArgs()).isTrue()
+            }
+
+            element.getMethodByJvmName("method2").let { method2 ->
+                assertThat(method2.isVarArgs()).isFalse()
+                assertThat(method2.parameters).hasSize(2)
+                assertThat(method2.parameters.first { it.name == "inputs" }.isVarArgs())
+                    .isTrue()
             }
         }
     }
@@ -1022,7 +1047,7 @@ class XExecutableElementTest {
                 }
                 element.getDeclaredMethodByJvmName("ext5").let { method ->
                     assertThat(method.parameters[0].type.asTypeName())
-                        .isEqualTo(createXTypeVariableName("T"))
+                        .isEqualTo(XTypeName.getTypeVariableName("T"))
                 }
                 element.getDeclaredMethodByJvmName("ext6").let { method ->
                     assertThat(method.isSuspendFunction()).isTrue()
@@ -1043,7 +1068,7 @@ class XExecutableElementTest {
                     assertThat(method.isAbstract()).isTrue()
                     assertThat(method.isExtensionFunction()).isTrue()
                     assertThat(method.parameters[0].type.asTypeName())
-                        .isEqualTo(createXTypeVariableName("T"))
+                        .isEqualTo(XTypeName.getTypeVariableName("T"))
 
                     val fooImpl = it.processingEnv.requireTypeElement("$pkg.FooImpl")
                     assertThat(method.parameters[0].asMemberOf(fooImpl.type).asTypeName())
@@ -1286,6 +1311,122 @@ class XExecutableElementTest {
                 myTypeAlias(MyType<java.lang.Integer>):MyType<java.lang.Long>
                 """.trimIndent()
             )
+        }
+    }
+
+    @Test
+    fun testMethodWithParameterizedSyntheticReceiver() {
+        runProcessorTest(
+            sources = listOf(
+                Source.kotlin(
+                    "Usage.kt",
+                    """
+                    class Usage {
+                      fun <T> Foo<T>.method(param: Foo<String>): Foo<T> = this
+                    }
+                    class Foo<T>
+                    """.trimIndent()
+                ),
+            )
+        ) { invocation ->
+            val usage = invocation.processingEnv.requireTypeElement("Usage")
+            val method = usage.getDeclaredMethodByJvmName("method")
+            assertThat(method.parameters).hasSize(2)
+            method.parameters[0].apply {
+                assertThat(name).isEqualTo("\$this\$method")
+                assertThat(type.asTypeName().java.toString()).isEqualTo("Foo<T>")
+                if (invocation.isKsp) {
+                    assertThat(type.asTypeName().kotlin.toString()).isEqualTo("Foo<T>")
+                }
+            }
+            method.parameters[1].apply {
+                assertThat(name).isEqualTo("param")
+                assertThat(type.asTypeName().java.toString()).isEqualTo("Foo<java.lang.String>")
+                if (invocation.isKsp) {
+                    assertThat(type.asTypeName().kotlin.toString()).isEqualTo("Foo<kotlin.String>")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun parameterNames(
+        @TestParameter isJava: Boolean,
+        @TestParameter isPrecompiled: Boolean,
+        @TestParameter hasParametersFlag: Boolean,
+        @TestParameter hasDebugFlag: Boolean
+    ) {
+        val javaSource = Source.java(
+            "foo.bar.Baz",
+            """
+            package foo.bar;
+            public class Baz {
+                private Baz(String param1) {}
+            }
+            """.trimIndent())
+        val kotlinSource = Source.kotlin(
+            "foo.bar.Baz.kt",
+            """
+            package foo.bar
+            class Baz private constructor(param1: String)
+            """.trimIndent())
+
+        val sources: List<Source> =
+            if (isPrecompiled) {
+                emptyList()
+            } else {
+                if (isJava) {
+                    listOf(javaSource)
+                } else {
+                    listOf(kotlinSource)
+                }
+            }
+        val javacArgs = buildList {
+            if (hasParametersFlag) {
+                // This is used to generate `MethodParameters` in class files
+                add("-parameters")
+            }
+            if (hasDebugFlag) {
+                // This is used to generate `LocalVariableTable` in class files
+                add("-g:vars")
+            }
+        }
+        val classes: List<File> =
+            if (isPrecompiled) {
+                if (isJava) {
+                    compileFiles(listOf(javaSource), javacArguments = javacArgs)
+                } else {
+                    compileFiles(listOf(kotlinSource), javacArguments = javacArgs)
+                }
+            } else {
+                emptyList()
+            }
+        runProcessorTest(sources = sources, classpath = classes) {
+            val element = it.processingEnv.requireTypeElement("foo.bar.Baz")
+            assertThat(element.getConstructors().single().parameters.single().name)
+                .isEqualTo(
+                    if (isJava) {
+                        if (isPrecompiled) {
+                            if (hasParametersFlag) {
+                                "param1"
+                            } else {
+                                if (it.isKsp) {
+                                    "p0"
+                                } else { // Javac/KAPT
+                                    if (hasDebugFlag) {
+                                        "param1"
+                                    } else {
+                                        "arg0"
+                                    }
+                                }
+                            }
+                        } else { // Java sources
+                            "param1"
+                        }
+                    } else { // Kotlin sources or classes
+                        "param1"
+                    }
+                )
         }
     }
 }

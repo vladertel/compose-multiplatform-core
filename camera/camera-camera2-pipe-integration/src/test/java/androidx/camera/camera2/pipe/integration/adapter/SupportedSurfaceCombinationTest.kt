@@ -32,6 +32,7 @@ import android.os.Build
 import android.util.Range
 import android.util.Size
 import android.view.WindowManager
+import androidx.camera.camera2.pipe.CameraBackendId
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.camera2.pipe.integration.adapter.GuaranteedConfigurationsUtil.getConcurrentSupportedCombinationList
@@ -1572,7 +1573,7 @@ class SupportedSurfaceCombinationTest {
             CameraMode.DEFAULT,
             attachedSurfaceInfoList,
             useCaseConfigToOutputSizesMap
-        )
+        ).first
 
         useCasesExpectedResultMap.keys.forEach {
             val resultSize = suggestedStreamSpecs[useCaseConfigMap[it]]!!.resolution
@@ -1865,9 +1866,12 @@ class SupportedSurfaceCombinationTest {
             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP to mockMap,
         ).also { characteristicsMap ->
             mockMaximumResolutionMap?.let {
-                characteristicsMap[
-                    CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION] =
+                if (Build.VERSION.SDK_INT >= 31) {
+                    characteristicsMap[
+                        CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION
+                    ] =
                     mockMaximumResolutionMap
+                }
             }
         }
 
@@ -1898,7 +1902,10 @@ class SupportedSurfaceCombinationTest {
         ).thenReturn(supportedSizes)
         // This is setup for high resolution output sizes
         highResolutionSupportedSizes?.let {
-            whenever(mockMap.getHighResolutionOutputSizes(ArgumentMatchers.anyInt())).thenReturn(it)
+            if (Build.VERSION.SDK_INT >= 23) {
+                whenever(mockMap.getHighResolutionOutputSizes(ArgumentMatchers.anyInt()))
+                    .thenReturn(it)
+            }
         }
         shadowCharacteristics.set(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP, mockMap)
         mockMaximumResolutionMap?.let {
@@ -1906,17 +1913,21 @@ class SupportedSurfaceCombinationTest {
                 .thenReturn(maximumResolutionSupportedSizes)
             whenever(mockMaximumResolutionMap.getOutputSizes(SurfaceTexture::class.java))
                 .thenReturn(maximumResolutionSupportedSizes)
-            whenever(
-                mockMaximumResolutionMap.getHighResolutionOutputSizes(
-                    ArgumentMatchers.anyInt()
+            if (Build.VERSION.SDK_INT >= 23) {
+                whenever(
+                    mockMaximumResolutionMap.getHighResolutionOutputSizes(
+                        ArgumentMatchers.anyInt()
+                    )
+                ).thenReturn(
+                    maximumResolutionHighResolutionSupportedSizes
                 )
-            ).thenReturn(
-                maximumResolutionHighResolutionSupportedSizes
-            )
-            shadowCharacteristics.set(
-                CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION,
-                mockMaximumResolutionMap
-            )
+            }
+            if (Build.VERSION.SDK_INT >= 31) {
+                shadowCharacteristics.set(
+                    CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION,
+                    mockMaximumResolutionMap
+                )
+            }
         }
         @LensFacing val lensFacingEnum = CameraUtil.getLensFacingEnumFromInt(
             CameraCharacteristics.LENS_FACING_BACK
@@ -1939,6 +1950,10 @@ class SupportedSurfaceCombinationTest {
         val fakeCameraDevices =
             FakeCameraDevices(
                 defaultCameraBackendId = FakeCameraBackend.FAKE_CAMERA_BACKEND_ID,
+                concurrentCameraBackendIds = setOf(
+                    setOf(CameraBackendId("0"), CameraBackendId("1")),
+                    setOf(CameraBackendId("0"), CameraBackendId("2"))
+                ),
                 cameraMetadataMap =
                 mapOf(FakeCameraBackend.FAKE_CAMERA_BACKEND_ID to listOf(fakeCameraMetadata))
             )

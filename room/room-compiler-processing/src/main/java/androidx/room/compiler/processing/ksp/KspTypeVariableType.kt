@@ -16,9 +16,9 @@
 
 package androidx.room.compiler.processing.ksp
 
-import androidx.room.compiler.processing.XNullability
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeVariableType
+import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeParameter
 import com.squareup.kotlinpoet.javapoet.JTypeName
@@ -27,8 +27,9 @@ import com.squareup.kotlinpoet.javapoet.KTypeName
 internal class KspTypeVariableType(
     env: KspProcessingEnv,
     ksType: KSType,
-    scope: KSTypeVarianceResolverScope?
-) : KspType(env, ksType, scope), XTypeVariableType {
+    originalKSAnnotations: Sequence<KSAnnotation> = ksType.annotations,
+    scope: KSTypeVarianceResolverScope? = null,
+) : KspType(env, ksType, originalKSAnnotations, scope, null), XTypeVariableType {
     private val typeVariable: KSTypeParameter by lazy {
         // Note: This is a workaround for a bug in KSP where we may get ERROR_TYPE in the bounds
         // (https://github.com/google/ksp/issues/1250). To work around it we get the matching
@@ -52,19 +53,11 @@ internal class KspTypeVariableType(
         return this
     }
 
-    override fun copyWithNullability(nullability: XNullability): KspTypeVariableType {
-        return KspTypeVariableType(
-            env = env,
-            ksType = ksType,
-            scope = scope
-        )
-    }
-
-    override fun copyWithScope(scope: KSTypeVarianceResolverScope): KspType {
-        return KspTypeVariableType(
-            env = env,
-            ksType = ksType,
-            scope = scope
-        )
-    }
+    override fun copy(
+        env: KspProcessingEnv,
+        ksType: KSType,
+        originalKSAnnotations: Sequence<KSAnnotation>,
+        scope: KSTypeVarianceResolverScope?,
+        typeAlias: KSType?
+    ) = KspTypeVariableType(env, ksType, originalKSAnnotations, scope)
 }

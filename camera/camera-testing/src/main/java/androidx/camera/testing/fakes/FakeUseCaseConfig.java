@@ -62,6 +62,12 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
                 INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE);
     }
 
+    @NonNull
+    @Override
+    public CaptureType getCaptureType() {
+        return retrieveOption(OPTION_CAPTURE_TYPE);
+    }
+
     /** Builder for an empty Config */
     @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
     public static final class Builder implements
@@ -69,7 +75,6 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
             ImageOutputConfig.Builder<FakeUseCaseConfig.Builder> {
 
         private final MutableOptionsBundle mOptionsBundle;
-        private final CaptureType mCaptureType;
 
         public Builder() {
             this(MutableOptionsBundle.create(), CaptureType.PREVIEW);
@@ -91,7 +96,7 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
         public Builder(@NonNull Config config, @NonNull CaptureType captureType) {
             mOptionsBundle = MutableOptionsBundle.from(config);
             setTargetClass(FakeUseCase.class);
-            mCaptureType = captureType;
+            mOptionsBundle.insertOption(OPTION_CAPTURE_TYPE, captureType);
         }
 
         @Override
@@ -109,7 +114,7 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
         @Override
         @NonNull
         public FakeUseCase build() {
-            return new FakeUseCase(getUseCaseConfig(), mCaptureType);
+            return new FakeUseCase(getUseCaseConfig());
         }
 
         // Implementations of TargetConfig.Builder default methods
@@ -272,6 +277,13 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
         @Override
         public Builder setHighResolutionDisabled(boolean disabled) {
             getMutableConfig().insertOption(OPTION_HIGH_RESOLUTION_DISABLED, disabled);
+            return this;
+        }
+
+        @NonNull
+        @Override
+        public Builder setCaptureType(@NonNull CaptureType captureType) {
+            getMutableConfig().insertOption(OPTION_CAPTURE_TYPE, captureType);
             return this;
         }
     }

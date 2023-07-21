@@ -26,7 +26,6 @@ import androidx.room.compiler.processing.ksp.KspAnnotated
 import androidx.room.compiler.processing.ksp.KspMethodElement
 import androidx.room.compiler.processing.ksp.KspProcessingEnv
 import androidx.room.compiler.processing.ksp.KspType
-import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeReference
 
 internal class KspSyntheticReceiverParameterElement(
@@ -47,6 +46,8 @@ internal class KspSyntheticReceiverParameterElement(
 
     override fun isKotlinPropertyParam() = false
 
+    override fun isVarArgs() = false
+
     override val name: String by lazy {
         // KAPT uses `$this$<functionName>`
         "$" + "this" + "$" + enclosingElement.name
@@ -60,7 +61,7 @@ internal class KspSyntheticReceiverParameterElement(
         get() = false
 
     override val type: KspType by lazy {
-        asMemberOf(enclosingElement.enclosingElement.type?.ksType)
+        createAsMemberOf(closestMemberContainer.type)
     }
 
     override val fallbackLocationText: String
@@ -74,19 +75,20 @@ internal class KspSyntheticReceiverParameterElement(
     }
 
     override fun asMemberOf(other: XType): KspType {
-        if (closestMemberContainer.type?.isSameType(other) != false) {
-            return type
+        return if (closestMemberContainer.type?.isSameType(other) != false) {
+            type
+        } else {
+            createAsMemberOf(other)
         }
-        check(other is KspType)
-        return asMemberOf(other.ksType)
     }
 
-    private fun asMemberOf(ksType: KSType?): KspType {
+    private fun createAsMemberOf(container: XType?): KspType {
+        check(container is KspType?)
         val asMemberReceiverType = receiverType.resolve().let {
-            if (ksType == null || it.isError) {
+            if (container?.ksType == null || it.isError) {
                 return@let it
             }
-            val asMember = enclosingElement.declaration.asMemberOf(ksType)
+            val asMember = enclosingElement.declaration.asMemberOf(container?.ksType)
             checkNotNull(asMember.extensionReceiverType)
         }
         return env.wrap(
@@ -97,7 +99,8 @@ internal class KspSyntheticReceiverParameterElement(
                 kspExecutableElement = enclosingElement,
                 parameterIndex = 0, // Receiver param is the 1st one
                 annotated = enclosingElement.declaration,
-                container = ksType?.declaration
+                container = container?.ksType?.declaration,
+                asMemberOf = container
             )
         )
     }
@@ -112,6 +115,10 @@ internal class KspSyntheticReceiverParameterElement(
 
     override fun equals(other: Any?): Boolean {
         return XEquality.equals(this, other)
+    }
+
+    override fun toString(): String {
+        return name
     }
 
     override fun hashCode(): Int {

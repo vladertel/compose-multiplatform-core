@@ -22,10 +22,11 @@ import static androidx.car.app.model.Action.FLAG_PRIMARY;
 
 import static java.util.Objects.requireNonNull;
 
+import android.annotation.SuppressLint;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
-import androidx.car.app.annotations.ExperimentalCarApi;
 import androidx.car.app.annotations.RequiresCarApi;
 import androidx.car.app.model.Action;
 import androidx.car.app.model.Action.ActionType;
@@ -40,7 +41,6 @@ import java.util.Set;
 /**
  * Encapsulates the constraints to apply when rendering a list of {@link Action}s on a template.
  *
- * @hide
  */
 @RestrictTo(Scope.LIBRARY)
 public final class ActionsConstraints {
@@ -145,15 +145,30 @@ public final class ActionsConstraints {
                     .build();
 
     /**
+     * Constraints for additional ConversationItem actions. Only allows custom actions.
+     */
+    @NonNull
+    public static final ActionsConstraints ACTIONS_CONSTRAINTS_CONVERSATION_ITEM =
+            new ActionsConstraints.Builder()
+                    .setMaxActions(1)
+                    .setMaxCustomTitles(1)
+                    .addAllowedActionType(Action.TYPE_CUSTOM)
+                    .setRequireActionIcons(true)
+                    .setOnClickListenerAllowed(true)
+                    .build();
+
+    /**
      * Constraints for floating action buttons.
      *
      * <p>Only buttons with icons and background color are allowed.
      */
+    @SuppressLint("UnsafeOptInUsageError")
     @NonNull
     public static final ActionsConstraints ACTIONS_CONSTRAINTS_FAB =
             new ActionsConstraints.Builder()
                     .setMaxActions(1)
                     .addAllowedActionType(Action.TYPE_CUSTOM)
+                    .addAllowedActionType(Action.TYPE_COMPOSE_MESSAGE)
                     .setRequireActionIcons(true)
                     .setRequireActionBackgroundColor(true)
                     .setOnClickListenerAllowed(true)
@@ -161,7 +176,6 @@ public final class ActionsConstraints {
 
     /** Constraints for TabTemplate. */
     @NonNull
-    @ExperimentalCarApi
     @RequiresCarApi(6)
     public static final ActionsConstraints ACTIONS_CONSTRAINTS_TABS =
             new ActionsConstraints.Builder(ACTIONS_CONSTRAINTS_HEADER)
