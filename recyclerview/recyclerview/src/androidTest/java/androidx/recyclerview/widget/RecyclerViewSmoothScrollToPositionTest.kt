@@ -22,14 +22,14 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.hamcrest.CoreMatchers.`is`
-import org.junit.Assert
 import org.hamcrest.MatcherAssert.assertThat
+import org.junit.Assert
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
@@ -159,7 +159,9 @@ class RecyclerViewSmoothScrollToPositionTest {
             calledOnStop.await(30, TimeUnit.SECONDS)
         )
         Assert.assertNotNull(
-            "smoothScrollToPosition should succeed",
+            "smoothScrollToPosition should succeed " +
+                "(first visible item: " + layoutManager.findFirstVisibleItemPosition() +
+                ", last visible item: " + layoutManager.findLastVisibleItemPosition() + ")",
             recyclerView.findViewHolderForLayoutPosition(targetPosition)
         )
     }

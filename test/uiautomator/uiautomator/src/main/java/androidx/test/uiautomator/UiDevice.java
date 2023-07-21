@@ -44,10 +44,14 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
+import androidx.annotation.Discouraged;
 import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.Px;
 import androidx.annotation.RequiresApi;
+import androidx.test.uiautomator.util.Traces;
+import androidx.test.uiautomator.util.Traces.Section;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -71,12 +75,15 @@ import java.util.concurrent.TimeoutException;
  * such as pressing the d-pad or pressing the Home and Menu buttons.
  */
 public class UiDevice implements Searchable {
-    private static final String TAG = UiDevice.class.getSimpleName();
+
+    static final String TAG = UiDevice.class.getSimpleName();
 
     // Use a short timeout after HOME or BACK key presses, as no events might be generated if
     // already on the home page or if there is nothing to go back to.
     private static final long KEY_PRESS_EVENT_TIMEOUT = 1_000; // ms
-    private static final long ROTATION_TIMEOUT = 1_000; // ms
+    private static final long ROTATION_TIMEOUT = 2_000; // ms
+    private static final int MAX_UIAUTOMATION_RETRY = 3;
+    private static final int UIAUTOMATION_RETRY_INTERVAL = 500;
 
     // Singleton instance.
     private static UiDevice sInstance;
@@ -126,6 +133,7 @@ public class UiDevice implements Searchable {
     /** Returns whether there is a match for the given {@code selector} criteria. */
     @Override
     public boolean hasObject(@NonNull BySelector selector) {
+        Log.d(TAG, String.format("Searching for node with selector: %s.", selector));
         AccessibilityNodeInfo node = ByMatcher.findMatch(this, selector, getWindowRoots());
         if (node != null) {
             node.recycle();
@@ -141,26 +149,42 @@ public class UiDevice implements Searchable {
     @Override
     @SuppressLint("UnknownNullness") // Avoid unnecessary null checks from nullable testing APIs.
     public UiObject2 findObject(@NonNull BySelector selector) {
+        Log.d(TAG, String.format("Retrieving node with selector: %s.", selector));
         AccessibilityNodeInfo node = ByMatcher.findMatch(this, selector, getWindowRoots());
         if (node == null) {
             Log.d(TAG, String.format("Node not found with selector: %s.", selector));
             return null;
         }
-        return new UiObject2(this, selector, node);
+        return UiObject2.create(this, selector, node);
     }
 
     /** Returns all objects that match the {@code selector} criteria. */
     @Override
     @NonNull
     public List<UiObject2> findObjects(@NonNull BySelector selector) {
+        Log.d(TAG, String.format("Retrieving nodes with selector: %s.", selector));
         List<UiObject2> ret = new ArrayList<>();
         for (AccessibilityNodeInfo node : ByMatcher.findMatches(this, selector, getWindowRoots())) {
-            ret.add(new UiObject2(this, selector, node));
+            UiObject2 object = UiObject2.create(this, selector, node);
+            if (object != null) {
+                ret.add(object);
+            }
         }
-
         return ret;
     }
 
+
+    /**
+     * Waits for given the {@code condition} to be met.
+     *
+     * @param condition The {@link SearchCondition} to evaluate.
+     * @param timeout Maximum amount of time to wait in milliseconds.
+     * @return The final result returned by the {@code condition}, or null if the {@code condition}
+     * was not met before the {@code timeout}.
+     */
+    public <U> U wait(@NonNull SearchCondition<U> condition, long timeout) {
+        return wait((Condition<? super UiDevice, U>) condition, timeout);
+    }
 
     /**
      * Waits for given the {@code condition} to be met.
@@ -171,8 +195,10 @@ public class UiDevice implements Searchable {
      * was not met before the {@code timeout}.
      */
     public <U> U wait(@NonNull Condition<? super UiDevice, U> condition, long timeout) {
-        Log.d(TAG, String.format("Waiting %dms for %s.", timeout, condition));
-        return mWaitMixin.wait(condition, timeout);
+        try (Section ignored = Traces.trace("UiDevice#wait")) {
+            Log.d(TAG, String.format("Waiting %dms for %s.", timeout, condition));
+            return mWaitMixin.wait(condition, timeout);
+        }
     }
 
     /**
@@ -185,22 +211,24 @@ public class UiDevice implements Searchable {
      */
     public <U> U performActionAndWait(@NonNull Runnable action,
             @NonNull EventCondition<U> condition, long timeout) {
-        AccessibilityEvent event = null;
-        Log.d(TAG, String.format("Performing action %s and waiting %dms for %s.", action, timeout,
-                condition));
-        try {
-            event = getUiAutomation().executeAndWaitForEvent(
-                    action, condition, timeout);
-        } catch (TimeoutException e) {
-            // Ignore
-            Log.w(TAG, String.format("Timed out waiting %dms on the condition.", timeout), e);
-        }
+        try (Section ignored = Traces.trace("UiDevice#performActionAndWait")) {
+            AccessibilityEvent event = null;
+            Log.d(TAG, String.format("Performing action %s and waiting %dms for %s.", action,
+                    timeout, condition));
+            try {
+                event = getUiAutomation().executeAndWaitForEvent(
+                        action, condition, timeout);
+            } catch (TimeoutException e) {
+                // Ignore
+                Log.w(TAG, String.format("Timed out waiting %dms on the condition.", timeout), e);
+            }
 
-        if (event != null) {
-            event.recycle();
-        }
+            if (event != null) {
+                event.recycle();
+            }
 
-        return condition.getResult();
+            return condition.getResult();
+        }
     }
 
     /**
@@ -265,25 +293,20 @@ public class UiDevice implements Searchable {
     }
 
     /**
-     * Returns the display size in dp (device-independent pixel)
+     * Returns the default display size in dp (device-independent pixel).
+     * <p>The returned display size is adjusted per screen rotation. Also this will return the
+     * actual size of the screen, rather than adjusted per system decorations (like status bar).
      *
-     * The returned display size is adjusted per screen rotation. Also this will return the actual
-     * size of the screen, rather than adjusted per system decorations (like status bar).
-     *
+     * @see DisplayMetrics#density
      * @return a Point containing the display size in dp
      */
     @NonNull
     public Point getDisplaySizeDp() {
-        Display display = getDefaultDisplay();
-        Point p = new Point();
-        display.getRealSize(p);
-        DisplayMetrics metrics = new DisplayMetrics();
-        display.getRealMetrics(metrics);
-        float dpx = p.x / metrics.density;
-        float dpy = p.y / metrics.density;
-        p.x = Math.round(dpx);
-        p.y = Math.round(dpy);
-        return p;
+        Point p = getDisplaySize(Display.DEFAULT_DISPLAY);
+        Context context = getUiContext(Display.DEFAULT_DISPLAY);
+        int densityDpi = context.getResources().getConfiguration().densityDpi;
+        float density = (float) densityDpi / DisplayMetrics.DENSITY_DEFAULT;
+        return new Point(Math.round(p.x / density), Math.round(p.y / density));
     }
 
     /**
@@ -521,27 +544,45 @@ public class UiDevice implements Searchable {
     }
 
     /**
-     * Gets the width of the display, in pixels. The width and height details
-     * are reported based on the current orientation of the display.
-     * @return width in pixels or zero on failure
+     * Gets the width of the default display, in pixels. The size is adjusted based on the
+     * current orientation of the display.
+     *
+     * @return width in pixels
      */
-    public int getDisplayWidth() {
-        Display display = getDefaultDisplay();
-        Point p = new Point();
-        display.getRealSize(p);
-        return p.x;
+    public @Px int getDisplayWidth() {
+        return getDisplayWidth(Display.DEFAULT_DISPLAY);
     }
 
     /**
-     * Gets the height of the display, in pixels. The size is adjusted based
-     * on the current orientation of the display.
-     * @return height in pixels or zero on failure
+     * Gets the width of the display with {@code displayId}, in pixels. The size is adjusted
+     * based on the current orientation of the display.
+     *
+     * @param displayId the display ID. Use {@link Display#getDisplayId()} to get the ID.
+     * @return width in pixels
      */
-    public int getDisplayHeight() {
-        Display display = getDefaultDisplay();
-        Point p = new Point();
-        display.getRealSize(p);
-        return p.y;
+    public @Px int getDisplayWidth(int displayId) {
+        return getDisplaySize(displayId).x;
+    }
+
+    /**
+     * Gets the height of the default display, in pixels. The size is adjusted based on the
+     * current orientation of the display.
+     *
+     * @return height in pixels
+     */
+    public @Px int getDisplayHeight() {
+        return getDisplayHeight(Display.DEFAULT_DISPLAY);
+    }
+
+    /**
+     * Gets the height of the display with {@code displayId}, in pixels. The size is adjusted
+     * based on the current orientation of the display.
+     *
+     * @param displayId the display ID. Use {@link Display#getDisplayId()} to get the ID.
+     * @return height in pixels
+     */
+    public @Px int getDisplayHeight(int displayId) {
+        return getDisplaySize(displayId).y;
     }
 
     /**
@@ -620,7 +661,9 @@ public class UiDevice implements Searchable {
      * Default wait timeout is 10 seconds
      */
     public void waitForIdle() {
-        getQueryController().waitForIdle();
+        try (Section ignored = Traces.trace("UiDevice#waitForIdle")) {
+            getQueryController().waitForIdle();
+        }
     }
 
     /**
@@ -628,7 +671,9 @@ public class UiDevice implements Searchable {
      * @param timeout in milliseconds
      */
     public void waitForIdle(long timeout) {
-        getQueryController().waitForIdle(timeout);
+        try (Section ignored = Traces.trace("UiDevice#waitForIdle")) {
+            getQueryController().waitForIdle(timeout);
+        }
     }
 
     /**
@@ -765,7 +810,7 @@ public class UiDevice implements Searchable {
      */
     public int getDisplayRotation() {
         waitForIdle();
-        return getDefaultDisplay().getRotation();
+        return getDisplayById(Display.DEFAULT_DISPLAY).getRotation();
     }
 
     /**
@@ -973,33 +1018,36 @@ public class UiDevice implements Searchable {
      *         window does not have the specified package name
      */
     public boolean waitForWindowUpdate(@Nullable String packageName, long timeout) {
-        if (packageName != null) {
-            if (!packageName.equals(getCurrentPackageName())) {
-                Log.w(TAG, String.format("Skipping wait as package %s does not match current "
-                        + "window %s.", packageName, getCurrentPackageName()));
+        try (Section ignored = Traces.trace("UiDevice#waitForWindowUpdate")) {
+            if (packageName != null) {
+                if (!packageName.equals(getCurrentPackageName())) {
+                    Log.w(TAG, String.format("Skipping wait as package %s does not match current "
+                            + "window %s.", packageName, getCurrentPackageName()));
+                    return false;
+                }
+            }
+            Runnable emptyRunnable = () -> {
+            };
+            AccessibilityEventFilter checkWindowUpdate = t -> {
+                if (t.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+                    return packageName == null || (t.getPackageName() != null
+                            && packageName.contentEquals(t.getPackageName()));
+                }
+                return false;
+            };
+            Log.d(TAG, String.format("Waiting %dms for window update of package %s.", timeout,
+                    packageName));
+            try {
+                getUiAutomation().executeAndWaitForEvent(emptyRunnable, checkWindowUpdate, timeout);
+            } catch (TimeoutException e) {
+                Log.w(TAG, String.format("Timed out waiting %dms on window update.", timeout), e);
+                return false;
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to wait for window update.", e);
                 return false;
             }
+            return true;
         }
-        Runnable emptyRunnable = () -> {};
-        AccessibilityEventFilter checkWindowUpdate = t -> {
-            if (t.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-                return packageName == null || (t.getPackageName() != null
-                        && packageName.contentEquals(t.getPackageName()));
-            }
-            return false;
-        };
-        Log.d(TAG, String.format("Waiting %dms for window update of package %s.", timeout,
-                packageName));
-        try {
-            getUiAutomation().executeAndWaitForEvent(emptyRunnable, checkWindowUpdate, timeout);
-        } catch (TimeoutException e) {
-            Log.w(TAG, String.format("Timed out waiting %dms on window update.", timeout), e);
-            return false;
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to wait for window update.", e);
-            return false;
-        }
-        return true;
     }
 
     /**
@@ -1078,12 +1126,14 @@ public class UiDevice implements Searchable {
      * <p>
      * Calling function with large amount of output will have memory impacts, and the function call
      * will block if the command executed is blocking.
-     * <p>Note: calling this function requires API level 21 or above
+     *
      * @param cmd the command to run
      * @return the standard output of the command
-     * @throws IOException
-     * @hide
+     * @throws IOException if an I/O error occurs while reading output
      */
+    @Discouraged(message = "Can be useful for simple commands, but lacks support for proper error"
+            + " handling, input data, or complex commands (quotes, pipes) that can be obtained "
+            + "from UiAutomation#executeShellCommandRwe or similar utilities.")
     @RequiresApi(21)
     @NonNull
     public String executeShellCommand(@NonNull String cmd) throws IOException {
@@ -1100,8 +1150,21 @@ public class UiDevice implements Searchable {
         }
     }
 
-    private Display getDefaultDisplay() {
-        return mDisplayManager.getDisplay(Display.DEFAULT_DISPLAY);
+    Display getDisplayById(int displayId) {
+        return mDisplayManager.getDisplay(displayId);
+    }
+
+    /**
+     * Gets the size of the display with {@code displayId}, in pixels. The size is adjusted based
+     * on the current orientation of the display.
+     *
+     * @see Display#getRealSize(Point)
+     */
+    Point getDisplaySize(int displayId) {
+        Point p = new Point();
+        Display display = getDisplayById(displayId);
+        display.getRealSize(p);
+        return p;
     }
 
     @RequiresApi(21)
@@ -1155,8 +1218,14 @@ public class UiDevice implements Searchable {
         Context context = mUiContexts.get(displayId);
         if (context == null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                Display display = mDisplayManager.getDisplay(displayId);
-                context = Api31Impl.createWindowContext(mInstrumentation.getContext(), display);
+                final Display display = getDisplayById(displayId);
+                if (display != null) {
+                    context = Api31Impl.createWindowContext(mInstrumentation.getContext(), display);
+                } else {
+                    // The display may be null because it may be private display, for example. In
+                    // such a case, use the instrumentation's context instead.
+                    context = mInstrumentation.getContext();
+                }
             } else {
                 context = mInstrumentation.getContext();
             }
@@ -1169,7 +1238,7 @@ public class UiDevice implements Searchable {
         UiAutomation uiAutomation;
         int flags = Configurator.getInstance().getUiAutomationFlags();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            uiAutomation = Api24Impl.getUiAutomation(getInstrumentation(), flags);
+            uiAutomation = Api24Impl.getUiAutomationWithRetry(getInstrumentation(), flags);
         } else {
             if (flags != Configurator.DEFAULT_UIAUTOMATION_FLAGS) {
                 Log.w(TAG, "UiAutomation flags not supported prior to API 24");
@@ -1177,6 +1246,9 @@ public class UiDevice implements Searchable {
             uiAutomation = getInstrumentation().getUiAutomation();
         }
 
+        if (uiAutomation == null) {
+            throw new NullPointerException("Got null UiAutomation from instrumentation.");
+        }
         // Verify and update the accessibility service flags if necessary. These might get reset
         // if the underlying UiAutomationConnection is recreated.
         AccessibilityServiceInfo serviceInfo = uiAutomation.getServiceInfo();
@@ -1238,8 +1310,19 @@ public class UiDevice implements Searchable {
         }
 
         @DoNotInline
-        static UiAutomation getUiAutomation(Instrumentation instrumentation, int flags) {
-            return instrumentation.getUiAutomation(flags);
+        static UiAutomation getUiAutomationWithRetry(Instrumentation instrumentation, int flags) {
+            UiAutomation uiAutomation = null;
+            for (int i = 0; i < MAX_UIAUTOMATION_RETRY; i++) {
+                uiAutomation = instrumentation.getUiAutomation(flags);
+                if (uiAutomation != null) {
+                    break;
+                }
+                if (i < MAX_UIAUTOMATION_RETRY - 1) {
+                    Log.e(TAG, "Got null UiAutomation from instrumentation - Retrying...");
+                    SystemClock.sleep(UIAUTOMATION_RETRY_INTERVAL);
+                }
+            }
+            return uiAutomation;
         }
     }
 

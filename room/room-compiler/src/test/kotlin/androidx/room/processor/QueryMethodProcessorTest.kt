@@ -335,7 +335,7 @@ class QueryMethodProcessorTest(private val enableVerification: Boolean) {
                 """
         ) { parsedQuery, invocation ->
             val expected = MUTABLE_LIST.parametrizedBy(
-                XClassName.get("", "T")
+                XTypeName.getTypeVariableName("T", listOf(XTypeName.ANY_OBJECT))
             )
             assertThat(parsedQuery.returnType.asTypeName(), `is`(expected))
             invocation.assertCompilationResult {
@@ -1406,7 +1406,7 @@ class QueryMethodProcessorTest(private val enableVerification: Boolean) {
         ) { _, invocation ->
             invocation.assertCompilationResult {
                 hasErrorCount(2)
-                hasErrorContaining("Multimap 'value' collection type must be a List or Set.")
+                hasErrorContaining("Multimap 'value' collection type must be a List, Set or Map.")
                 hasErrorContaining("Not sure how to convert a Cursor to this method's return type")
             }
         }

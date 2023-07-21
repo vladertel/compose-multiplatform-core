@@ -28,6 +28,7 @@ import android.hardware.display.DisplayManager
 import android.media.CamcorderProfile
 import android.media.MediaRecorder
 import android.os.Build
+import android.util.Pair
 import android.util.Rational
 import android.util.Size
 import android.view.Display
@@ -130,7 +131,9 @@ class SupportedSurfaceCombination(
         // TODO(b/262772650): camera-pipe support for concurrent camera
         val targetSurfaceCombinations = getSurfaceCombinationsByCameraMode(cameraMode)
         for (surfaceCombination in targetSurfaceCombinations) {
-            if (surfaceCombination.isSupported(surfaceConfigList)) {
+            if (surfaceCombination
+                    .getOrderedSupportedSurfaceConfigList(surfaceConfigList) != null
+            ) {
                 return true
             }
         }
@@ -197,7 +200,7 @@ class SupportedSurfaceCombination(
         cameraMode: Int,
         existingSurfaces: List<AttachedSurfaceInfo>,
         newUseCaseConfigsSupportedSizeMap: Map<UseCaseConfig<*>, List<Size>>
-    ): Map<UseCaseConfig<*>, StreamSpec> {
+    ): Pair<Map<UseCaseConfig<*>, StreamSpec>, Map<AttachedSurfaceInfo, StreamSpec>> {
         refreshPreviewSize()
         val surfaceConfigs: MutableList<SurfaceConfig> = ArrayList()
         for (scc in existingSurfaces) {
@@ -293,7 +296,7 @@ class SupportedSurfaceCombination(
                     " New configs: " + newUseCaseConfigs
             )
         }
-        return suggestedStreamSpecMap
+        return Pair.create(suggestedStreamSpecMap, mapOf<AttachedSurfaceInfo, StreamSpec>())
     }
 
     /**
@@ -538,7 +541,7 @@ class SupportedSurfaceCombination(
      * CamcorderProfile.
      */
     private fun getRecordSize(): Size {
-        val cameraId: Int = try {
+        try {
             this.cameraId.toInt()
         } catch (e: NumberFormatException) {
             // The camera Id is not an integer because the camera may be a removable device. Use
@@ -546,8 +549,8 @@ class SupportedSurfaceCombination(
             return getRecordSizeFromStreamConfigurationMapCompat()
         }
         var profiles: EncoderProfilesProxy? = null
-        if (encoderProfilesProviderAdapter.hasProfile(cameraId)) {
-            profiles = encoderProfilesProviderAdapter.getAll(cameraId)
+        if (encoderProfilesProviderAdapter.hasProfile(CamcorderProfile.QUALITY_HIGH)) {
+            profiles = encoderProfilesProviderAdapter.getAll(CamcorderProfile.QUALITY_HIGH)
         }
         return if (profiles != null && profiles.videoProfiles.isNotEmpty()) {
             Size(profiles.videoProfiles[0].width, profiles.videoProfiles[0].height)

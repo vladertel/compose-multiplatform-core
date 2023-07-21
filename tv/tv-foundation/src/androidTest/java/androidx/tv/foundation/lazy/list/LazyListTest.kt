@@ -69,6 +69,7 @@ import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -1489,15 +1490,24 @@ class LazyListTest(orientation: Orientation) : BaseLazyListTestWithOrientation(o
                 userScrollEnabled = false,
             ) {
                 items(5) {
-                    Spacer(Modifier.size(itemSize).testTag("$it"))
+                    Box(
+                        modifier = Modifier
+                            .size(itemSize)
+                            .border(2.dp, Color.Blue)
+                            .testTag("$it")
+                            .focusable()
+                    ) {
+                        BasicText("$it")
+                    }
                 }
             }
         }
 
-        rule.keyPress(1)
+        rule.onNodeWithTag("2").requestFocus()
+        rule.keyPress(2)
 
-        rule.onNodeWithTag("1")
-            .assertStartPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1").assertIsDisplayed()
+        rule.onNodeWithTag("3").assertIsNotDisplayed()
     }
 
     @Test

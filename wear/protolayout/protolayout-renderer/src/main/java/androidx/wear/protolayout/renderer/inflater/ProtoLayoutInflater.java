@@ -86,7 +86,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.AccessibilityDelegateCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
-import androidx.vectordrawable.graphics.drawable.SeekableAnimatedVectorDrawable;
+import androidx.wear.protolayout.renderer.common.SeekableAnimatedVectorDrawable;
 import androidx.wear.protolayout.expression.pipeline.AnimationsHelper;
 import androidx.wear.protolayout.expression.proto.AnimationParameterProto.AnimationSpec;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DynamicFloat;
@@ -116,7 +116,6 @@ import androidx.wear.protolayout.proto.DimensionProto.SpProp;
 import androidx.wear.protolayout.proto.DimensionProto.SpacerDimension;
 import androidx.wear.protolayout.proto.DimensionProto.WrappedDimensionProp;
 import androidx.wear.protolayout.proto.FingerprintProto.NodeFingerprint;
-import androidx.wear.protolayout.proto.LayoutElementProto.ExtensionLayoutElement;
 import androidx.wear.protolayout.proto.LayoutElementProto.Arc;
 import androidx.wear.protolayout.proto.LayoutElementProto.ArcLayoutElement;
 import androidx.wear.protolayout.proto.LayoutElementProto.ArcLine;
@@ -125,6 +124,7 @@ import androidx.wear.protolayout.proto.LayoutElementProto.ArcText;
 import androidx.wear.protolayout.proto.LayoutElementProto.Box;
 import androidx.wear.protolayout.proto.LayoutElementProto.Column;
 import androidx.wear.protolayout.proto.LayoutElementProto.ContentScaleMode;
+import androidx.wear.protolayout.proto.LayoutElementProto.ExtensionLayoutElement;
 import androidx.wear.protolayout.proto.LayoutElementProto.FontStyle;
 import androidx.wear.protolayout.proto.LayoutElementProto.Image;
 import androidx.wear.protolayout.proto.LayoutElementProto.Layout;
@@ -1180,8 +1180,7 @@ public final class ProtoLayoutInflater {
                                                                         clickable
                                                                                 .getOnClick()
                                                                                 .getLoadAction(),
-                                                                        clickable
-                                                                                .getId()))));
+                                                                        clickable.getId()))));
                 break;
             case VALUE_NOT_SET:
                 break;
@@ -1584,8 +1583,8 @@ public final class ProtoLayoutInflater {
     }
 
     @Nullable
-    private static TruncateAt textTruncationToEllipsize(TextOverflowProp type) {
-        switch (type.getValue()) {
+    private static TruncateAt textTruncationToEllipsize(TextOverflow overflowValue) {
+        switch (overflowValue) {
             case TEXT_OVERFLOW_TRUNCATE:
                 // A null TruncateAt disables adding an ellipsis.
                 return null;
@@ -2108,11 +2107,15 @@ public final class ProtoLayoutInflater {
                         .applyPendingChildLayoutParams(layoutParams));
     }
 
-    private static void applyTextOverflow(
+    private void applyTextOverflow(
             TextView textView, TextOverflowProp overflow, MarqueeParameters marqueeParameters) {
-        textView.setEllipsize(textTruncationToEllipsize(overflow));
-        if (overflow.getValue() == TextOverflow.TEXT_OVERFLOW_MARQUEE
-                && textView.getMaxLines() == 1) {
+        TextOverflow overflowValue = overflow.getValue();
+        if (!mAnimationEnabled && overflowValue == TextOverflow.TEXT_OVERFLOW_MARQUEE) {
+            overflowValue = TextOverflow.TEXT_OVERFLOW_UNDEFINED;
+        }
+
+        textView.setEllipsize(textTruncationToEllipsize(overflowValue));
+        if (overflowValue == TextOverflow.TEXT_OVERFLOW_MARQUEE && textView.getMaxLines() == 1) {
             int marqueeIterations =
                     marqueeParameters.hasIterations()
                             ? marqueeParameters.getIterations()
@@ -2446,7 +2449,7 @@ public final class ProtoLayoutInflater {
                         pipelineMaker
                                 .get()
                                 .addResolvedAnimatedImageWithBoolTrigger(
-                                        avd, trigger, posId, conditionTrigger.getTrigger());
+                                        avd, trigger, posId, conditionTrigger.getCondition());
                     } else {
                         // Use default trigger if it's not set.
                         if (trigger == null
@@ -3177,9 +3180,7 @@ public final class ProtoLayoutInflater {
                 break;
             case EXTENSION:
                 try {
-                    inflatedView =
-                            inflateExtension(
-                                    parentViewWrapper, element.getExtension());
+                    inflatedView = inflateExtension(parentViewWrapper, element.getExtension());
                 } catch (IllegalStateException ex) {
                     Log.w(TAG, "Error inflating Extension.", ex);
                 }
@@ -3963,11 +3964,10 @@ public final class ProtoLayoutInflater {
                         break;
                     }
                     mLoadActionExecutor.execute(
-                                    () ->
-                                        mLoadActionListener.onClick(
-                                                buildState(
-                                                        action.getLoadAction(),
-                                                        mClickable.getId())));
+                            () ->
+                                    mLoadActionListener.onClick(
+                                            buildState(
+                                                    action.getLoadAction(), mClickable.getId())));
                     break;
                 case VALUE_NOT_SET:
                     break;

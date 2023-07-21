@@ -41,6 +41,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -196,7 +197,7 @@ class ContentTransform(
      * to 0f. Content with higher zIndex will be drawn over lower `zIndex`ed content. Among
      * content with the same index, the target content will be placed on top.
      */
-    var targetContentZIndex by mutableStateOf(targetContentZIndex)
+    var targetContentZIndex by mutableFloatStateOf(targetContentZIndex)
 
     /**
      * [sizeTransform] manages the expanding and shrinking of the container if there is any size
@@ -379,6 +380,21 @@ sealed interface AnimatedContentTransitionScope<S> : Transition.Segment<S> {
         ),
         targetOffset: (offsetForFullSlide: Int) -> Int = { it }
     ): ExitTransition
+
+    /**
+     * [ExitTransition.Hold] defers the disposal of the exiting content till both enter and
+     * exit animations have finished. It can be combined with other [ExitTransition]s using
+     * [+][ExitTransition.plus].
+     *
+     * **Important**: [ExitTransition.Hold] works the best when the
+     * [zIndex][ContentTransform.targetContentZIndex] for the incoming and outgoing content are
+     * specified. Otherwise, if the content gets interrupted from entering and switching to exiting
+     * using [ExitTransition.Hold], the holding pattern may render exiting content on top of the
+     * entering content, unless the z-order is specified.
+     *
+     * @sample androidx.compose.animation.samples.SlideIntoContainerSample
+     */
+    val ExitTransition.Companion.Hold: ExitTransition get() = Hold
 }
 
 internal class AnimatedContentTransitionScopeImpl<S> internal constructor(
@@ -753,7 +769,8 @@ fun <S> Transition<S>.AnimatedContent(
                 }
                 // TODO: Will need a custom impl of this to: 1) get the signal for when
                 // the animation is finished, 2) get the target size properly
-                AnimatedVisibility(
+                AnimatedEnterExitImpl(
+                    this,
                     { it == stateForContent },
                     enter = specOnEnter.targetContentEnter,
                     exit = exit,
@@ -764,7 +781,12 @@ fun <S> Transition<S>.AnimatedContent(
                                 placeable.place(0, 0, zIndex = specOnEnter.targetContentZIndex)
                             }
                         }
-                        .then(childData.apply { isTarget = stateForContent == targetState })
+                        .then(childData.apply { isTarget = stateForContent == targetState }),
+                    shouldDisposeBlock = { currentState, targetState ->
+                        currentState == EnterExitState.PostExit &&
+                            targetState == EnterExitState.PostExit &&
+                            !exit.data.hold
+                    }
                 ) {
                     // TODO: Should Transition.AnimatedVisibility have an end listener?
                     DisposableEffect(this) {

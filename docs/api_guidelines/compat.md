@@ -56,7 +56,13 @@ private object Api29Impl {
 ```
 
 When developing against pre-release SDKs where the `SDK_INT` has not been
-finalized, SDK checks **must** use `BuildCompat.isAtLeastX()` methods.
+finalized, SDK checks **must** use `BuildCompat.isAtLeastX()` methods and
+**must** use a tip-of-tree `project` dependency to ensure that the
+implementation of `BuildCompat` stays up-to-date when the SDK is finalized.
+
+**Do not** assume that the next SDK release's `SDK_INT` will be N+1. The value
+is not finalized until SDK finalization happens, at which point the `isAtLeast`
+check will be updated. **Never** write your own check for a pre-release SDK.
 
 ```java {.good}
 @NonNull
@@ -65,6 +71,12 @@ public static List<Window> getAllWindows() {
     return ApiRImpl.getAllWindows();
   }
   return Collections.emptyList();
+}
+```
+
+```kotlin {.good}
+dependencies {
+  api(project(":core:core"))
 }
 ```
 
@@ -234,6 +246,20 @@ adb logcat | grep 'dex2oat'
 ... I dex2oat : Soft verification failures in
 ```
 
+#### View constructors {#compat-view-constructors}
+
+The four-arg View constructor -- `View(Context, AttributeSet, int, int)` -- was
+added in SDK 21 and allows a developer to pass in an explicit default style
+resource rather than relying on a theme attribute to resolve the default style
+resource. Because this API was added in SDK 21, care must be taken to ensure
+that it is not called through any < SDK 21 code path.
+
+Views *may* implement a four-arg constructor in one of the following ways:
+
+1.  Do not implement.
+1.  Implement and annotate with `@RequiresApi(21)`. This means the three-arg
+    constructor **must not** call into the four-arg constructor.
+
 #### Device-specific issues {#compat-oem}
 
 Library code may work around device- or manufacturer-specific issues -- issues
@@ -260,15 +286,26 @@ Libraries do not have control over the app's `targetSdkVersion` and -- in rare
 cases -- may need to handle variations in platform behavior. Refer to the
 following pages for version-specific behavior changes:
 
-*   [API level 33](https://developer.android.com/about/versions/13/behavior-changes-13)
-*   [API level 31](https://developer.android.com/about/versions/12/behavior-changes-12)
-*   [API level 30](https://developer.android.com/about/versions/11/behavior-changes-11)
-*   [API level 29](https://developer.android.com/about/versions/10/behavior-changes-10)
-*   [API level 28](https://developer.android.com/about/versions/pie/android-9.0-changes-28)
-*   [API level 26](https://developer.android.com/about/versions/oreo/android-8.0-changes)
-*   [API level 24](https://developer.android.com/about/versions/nougat/android-7.0-changes)
-*   [API level 21](https://developer.android.com/about/versions/lollipop/android-5.0-changes)
-*   [API level 19](https://developer.android.com/about/versions/kitkat/android-4.4#Behaviors)
+*   Android 14,
+    [API level 34](https://developer.android.com/about/versions/14/behavior-changes-14)
+*   Android 13,
+    [API level 33](https://developer.android.com/about/versions/13/behavior-changes-13)
+*   Android 12,
+    [API level 31](https://developer.android.com/about/versions/12/behavior-changes-12)
+*   Android 11,
+    [API level 30](https://developer.android.com/about/versions/11/behavior-changes-11)
+*   Android 10,
+    [API level 29](https://developer.android.com/about/versions/10/behavior-changes-10)
+*   Android Pie (9.0),
+    [API level 28](https://developer.android.com/about/versions/pie/android-9.0-changes-28)
+*   Android Oreo (8.0),
+    [API level 26](https://developer.android.com/about/versions/oreo/android-8.0-changes)
+*   Android Nougat(7.0),
+    [API level 24](https://developer.android.com/about/versions/nougat/android-7.0-changes)
+*   Android Lollipop (5.0),
+    [API level 21](https://developer.android.com/about/versions/lollipop/android-5.0-changes)
+*   Android KitKat (4.4),
+    [API level 19](https://developer.android.com/about/versions/kitkat/android-4.4#Behaviors)
 
 #### Working around Lint issues {#compat-lint}
 
@@ -278,6 +315,22 @@ Both of these annotations are strongly discouraged and may only be used
 temporarily. They **must never** be used in a stable release. Any usage of these
 annotation **must** be associated with an active bug, and the usage must be
 removed when the bug is resolved.
+
+#### Java 8+ APIs and core library desugaring {#compat-desugar}
+
+While the DEX compiler (D8) supports
+[API desugaring](https://developer.android.com/studio/write/java8-support-table)
+to enable usage of Java 8+ APIs on a broader range of platform API levels, there
+is currently no way for a library to express the toolchain requirements
+necessary for desugaring to work as intended.
+
+As of 2023-05-11, there is still a
+[pending feature request](https://issuetracker.google.com/203113147) to allow
+Android libraries to express these requirements.
+
+Libraries **must not** rely on `coreLibraryDesugaring` to access Java language
+APIs on earlier platform API levels. For example, `java.time.*` may only be used
+in code paths targeting API level 26 and above.
 
 ### Delegating to API-specific implementations {#delegating-to-api-specific-implementations}
 

@@ -63,10 +63,10 @@ internal fun LazyStaggeredGrid(
 ) {
     val overscrollEffect = ScrollableDefaults.overscrollEffect()
 
-    val itemProvider = rememberStaggeredGridItemProvider(state, content)
+    val itemProviderLambda = rememberStaggeredGridItemProviderLambda(state, content)
     val measurePolicy = rememberStaggeredGridMeasurePolicy(
         state,
-        itemProvider,
+        itemProviderLambda,
         contentPadding,
         reverseLayout,
         orientation,
@@ -76,13 +76,14 @@ internal fun LazyStaggeredGrid(
     )
     val semanticState = rememberLazyStaggeredGridSemanticState(state, reverseLayout)
 
-    ScrollPositionUpdater(itemProvider, state)
+    ScrollPositionUpdater(itemProviderLambda, state)
 
     LazyLayout(
         modifier = modifier
             .then(state.remeasurementModifier)
+            .then(state.awaitLayoutModifier)
             .lazyLayoutSemantics(
-                itemProvider = itemProvider,
+                itemProviderLambda = itemProviderLambda,
                 state = semanticState,
                 orientation = orientation,
                 userScrollEnabled = userScrollEnabled,
@@ -109,7 +110,7 @@ internal fun LazyStaggeredGrid(
                 enabled = userScrollEnabled
             ),
         prefetchState = state.prefetchState,
-        itemProvider = itemProvider,
+        itemProvider = itemProviderLambda,
         measurePolicy = measurePolicy
     )
 }
@@ -118,15 +119,16 @@ internal fun LazyStaggeredGrid(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ScrollPositionUpdater(
-    itemProvider: LazyLayoutItemProvider,
+    itemProviderLambda: () -> LazyLayoutItemProvider,
     state: LazyStaggeredGridState
 ) {
+    val itemProvider = itemProviderLambda()
     if (itemProvider.itemCount > 0) {
         state.updateScrollPositionIfTheFirstItemWasMoved(itemProvider)
     }
 }
 
-/** Slot configuration of staggered grid **/
+/** Slot configuration of staggered grid */
 internal class LazyStaggeredGridSlots(
     val positions: IntArray,
     val sizes: IntArray

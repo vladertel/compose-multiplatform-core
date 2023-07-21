@@ -16,34 +16,36 @@
 
 package androidx.privacysandbox.ui.integration.testapp
 
-import android.app.sdksandbox.LoadSdkException
-import android.app.sdksandbox.SandboxedSdk
-import android.app.sdksandbox.SdkSandboxManager
-import android.content.res.Configuration
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.OutcomeReceiver
 import android.os.ext.SdkExtensions
 import android.util.Log
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.RequiresExtension
+import androidx.appcompat.app.AppCompatActivity
+import androidx.privacysandbox.sdkruntime.client.SdkSandboxManagerCompat
+import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException
+import androidx.privacysandbox.sdkruntime.core.SandboxedSdkCompat
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionStateChangedListener
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.integration.testaidl.ISdkApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var mSdkSandboxManager: SdkSandboxManager
-
-    private lateinit var mSandboxedSdk: SandboxedSdk
+    private lateinit var mSdkSandboxManager: SdkSandboxManagerCompat
 
     private var mSdkLoaded = false
 
     private lateinit var mSandboxedSdkView1: SandboxedSdkView
     private lateinit var mSandboxedSdkView2: SandboxedSdkView
+    private lateinit var mSandboxedSdkView3: SandboxedSdkView
+    private lateinit var mNewAdButton: Button
 
     // TODO(b/257429573): Remove this line once fixed.
     @RequiresExtension(extension = SdkExtensions.AD_SERVICES, version = 5)
@@ -51,52 +53,51 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mSdkSandboxManager = applicationContext.getSystemService(
-            SdkSandboxManager::class.java
-        )
+        mSdkSandboxManager = SdkSandboxManagerCompat.from(applicationContext)
 
         if (!mSdkLoaded) {
             Log.i(TAG, "Loading SDK")
-            mSdkSandboxManager.loadSdk(
-                SDK_NAME, Bundle(), { obj: Runnable -> obj.run() }, LoadSdkCallbackImpl()
-            )
+            CoroutineScope(Dispatchers.Default).launch {
+                try {
+                    val loadedSdk = mSdkSandboxManager.loadSdk(SDK_NAME, Bundle())
+                    onLoadedSdk(loadedSdk)
+                } catch (e: LoadSdkCompatException) {
+                    Log.i(TAG, "loadSdk failed with errorCode: " + e.loadSdkErrorCode +
+                        " and errorMsg: " + e.message)
+                }
+            }
         }
     }
+    private fun onLoadedSdk(sandboxedSdk: SandboxedSdkCompat) {
+        Log.i(TAG, "Loaded successfully")
+        mSdkLoaded = true
+        val sdkApi = ISdkApi.Stub.asInterface(sandboxedSdk.getInterface())
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-    }
+        mSandboxedSdkView1 = findViewById(R.id.rendered_view)
+        mSandboxedSdkView1.addStateChangedListener(StateChangeListener(mSandboxedSdkView1))
+        mSandboxedSdkView1.setAdapter(SandboxedUiAdapterFactory.createFromCoreLibInfo(
+            sdkApi.loadAd(/*isWebView=*/ true, "")
+        ))
 
-    // TODO(b/257429573): Remove this line once fixed.
-    @RequiresExtension(extension = SdkExtensions.AD_SERVICES, version = 5)
-    private inner class LoadSdkCallbackImpl() : OutcomeReceiver<SandboxedSdk, LoadSdkException> {
-
-        override fun onResult(sandboxedSdk: SandboxedSdk) {
-            Log.i(TAG, "Loaded successfully")
-            mSandboxedSdk = sandboxedSdk
-            mSdkLoaded = true
-            val sdkApi = ISdkApi.Stub.asInterface(mSandboxedSdk.getInterface())
-
-            mSandboxedSdkView1 = findViewById<SandboxedSdkView>(R.id.rendered_view)
-            mSandboxedSdkView1.addStateChangedListener(StateChangeListener(mSandboxedSdkView1))
-            mSandboxedSdkView1.setAdapter(SandboxedUiAdapterFactory.createFromCoreLibInfo(
-                sdkApi.loadAd(/*isWebView=*/ true)
-            ))
-
-            mSandboxedSdkView2 = SandboxedSdkView(this@MainActivity)
-            mSandboxedSdkView2.addStateChangedListener(StateChangeListener(mSandboxedSdkView2))
-            mSandboxedSdkView2.layoutParams = ViewGroup.LayoutParams(200, 200)
-            runOnUiThread(Runnable {
-                findViewById<LinearLayout>(R.id.ad_layout).addView(mSandboxedSdkView2)
-            })
-            mSandboxedSdkView2.setAdapter(SandboxedUiAdapterFactory.createFromCoreLibInfo(
-                sdkApi.loadAd(/*isWebView=*/ false)
-            ))
+        mSandboxedSdkView2 = SandboxedSdkView(this@MainActivity)
+        mSandboxedSdkView2.addStateChangedListener(StateChangeListener(mSandboxedSdkView2))
+        mSandboxedSdkView2.layoutParams = ViewGroup.LayoutParams(400, 400)
+        runOnUiThread {
+            findViewById<LinearLayout>(R.id.ad_layout).addView(mSandboxedSdkView2)
         }
+        mSandboxedSdkView2.setAdapter(SandboxedUiAdapterFactory.createFromCoreLibInfo(
+            sdkApi.loadAd(/*isWebView=*/ false, "Hey!")
+        ))
 
-        override fun onError(error: LoadSdkException) {
-            Log.i(TAG, "onLoadSdkFailure(" + error.getLoadSdkErrorCode().toString() + "): " +
-                error.message)
+        mSandboxedSdkView3 = findViewById(R.id.new_ad_view)
+        mSandboxedSdkView3.addStateChangedListener(StateChangeListener(mSandboxedSdkView3))
+
+        mNewAdButton = findViewById(R.id.new_ad_button)
+        var count = 1
+        mNewAdButton.setOnClickListener {
+            mSandboxedSdkView3.setAdapter(SandboxedUiAdapterFactory.createFromCoreLibInfo(
+                sdkApi.loadAd(/*isWebView=*/ false, "Hey #$count")))
+            count++
         }
     }
 
@@ -109,12 +110,12 @@ class MainActivity : AppCompatActivity() {
                 val parent = view.parent as ViewGroup
                 val index = parent.indexOfChild(view)
                 val textView = TextView(this@MainActivity)
-                textView.setText(state.throwable.message)
+                textView.text = state.throwable.message
 
-                runOnUiThread(Runnable {
+                runOnUiThread {
                     parent.removeView(view)
                     parent.addView(textView, index)
-                })
+                }
             }
         }
     }

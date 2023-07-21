@@ -30,7 +30,6 @@ import androidx.room.compiler.processing.ksp.KspType
 import androidx.room.compiler.processing.ksp.requireContinuationClass
 import androidx.room.compiler.processing.ksp.returnTypeAsMemberOf
 import androidx.room.compiler.processing.ksp.swapResolvedType
-import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.Variance
 
 /**
@@ -52,6 +51,8 @@ internal class KspSyntheticContinuationParameterElement(
     override fun isReceiverParam() = false
 
     override fun isKotlinPropertyParam() = false
+
+    override fun isVarArgs() = false
 
     override val name: String by lazy {
         // KAPT uses `$completion` but it doesn't check for conflicts, we do. Be aware that before
@@ -75,7 +76,7 @@ internal class KspSyntheticContinuationParameterElement(
         get() = false
 
     override val type: KspType by lazy {
-        asMemberOf(enclosingElement.enclosingElement.type?.ksType)
+        createAsMemberOf(closestMemberContainer.type)
     }
 
     override val fallbackLocationText: String
@@ -89,17 +90,18 @@ internal class KspSyntheticContinuationParameterElement(
     }
 
     override fun asMemberOf(other: XType): KspType {
-        if (enclosingElement.enclosingElement.type?.isSameType(other) != false) {
-            return type
+        return if (closestMemberContainer.type?.isSameType(other) != false) {
+            type
+        } else {
+            createAsMemberOf(other)
         }
-        check(other is KspType)
-        return asMemberOf(other.ksType)
     }
 
-    private fun asMemberOf(ksType: KSType?): KspType {
+    private fun createAsMemberOf(container: XType?): KspType {
+        check(container is KspType?)
         val continuation = env.resolver.requireContinuationClass()
         val asMember = enclosingElement.declaration.returnTypeAsMemberOf(
-            ksType = ksType
+            ksType = container?.ksType
         )
         val returnTypeRef = checkNotNull(enclosingElement.declaration.returnType) {
             "cannot find return type reference for $this"
@@ -119,7 +121,8 @@ internal class KspSyntheticContinuationParameterElement(
                 kspExecutableElement = enclosingElement,
                 parameterIndex = enclosingElement.parameters.size - 1,
                 annotated = enclosingElement.declaration,
-                container = ksType?.declaration
+                container = container?.ksType?.declaration,
+                asMemberOf = container
             )
         )
     }
@@ -138,6 +141,10 @@ internal class KspSyntheticContinuationParameterElement(
 
     override fun hashCode(): Int {
         return XEquality.hashCode(equalityItems)
+    }
+
+    override fun toString(): String {
+        return name
     }
 
     companion object {
