@@ -30,7 +30,21 @@ internal class ImmutableListAdapter<E>(private val impl: List<E>) : ImmutableLis
 }
 
 
-internal class ImmutableSetAdapter<E>(impl: Set<E>) : ImmutableSet<E>, ImmutableCollectionAdapter<E>(impl)
+// K2: some weird adjustments
+internal class ImmutableSetAdapter<E>(val impl: Set<E>) : ImmutableSet<E> {//, ImmutableCollectionAdapter<E>(impl) {
+
+
+    override val size: Int
+        get() = impl.size
+
+    override fun contains(element: E): Boolean = impl.contains(element)
+
+    override fun containsAll(elements: Collection<E>): Boolean = impl.containsAll(impl)
+
+    override fun isEmpty(): Boolean = impl.isEmpty()
+
+    override fun iterator(): Iterator<E> = impl.iterator()
+}
 
 
 internal class ImmutableMapAdapter<K, out V>(private val impl: Map<K, V>) : ImmutableMap<K, V>, Map<K, V> by impl {

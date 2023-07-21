@@ -238,7 +238,7 @@ class ComposeComponentRegistrar :
                     val msgCollector = configuration.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY)
                     val suppressKotlinVersionCheck = configuration.get(
                         ComposeConfiguration.SUPPRESS_KOTLIN_VERSION_COMPATIBILITY_CHECK
-                    )
+                    ) ?: "true"
                     if (
                         suppressKotlinVersionCheck != null &&
                         suppressKotlinVersionCheck != version

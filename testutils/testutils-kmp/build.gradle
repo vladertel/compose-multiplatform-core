@@ -25,6 +25,9 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
+    js {
+        browser()
+    }
 
     sourceSets {
         commonMain {

@@ -219,6 +219,9 @@ private String getRequestedProjectPrefix() {
 }
 
 boolean isAllProjects() {
+    if (requestedProjectSubsetName != "COMPOSE") {
+        throw new Exception("requestedProjectSubsetName = " + requestedProjectSubsetName)
+    }
     return requestedProjectSubsetName == null || requestedProjectSubsetName == "ALL"
 }
 
