@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+
 package androidx.compose.material3
 
 // TODO(https://github.com/JetBrains/compose-multiplatform/issues/3359) Support CalendarModel

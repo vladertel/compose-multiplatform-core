@@ -1588,8 +1588,9 @@ private enum class LayoutId {
 
 @OptIn(ExperimentalMaterial3Api::class)
 internal expect val defaultTimePickerLayoutType: TimePickerLayoutType
-    @Composable
-    @ReadOnlyComposable get
+//    @Composable
+//    @ReadOnlyComposable
+//    get
 
 @kotlin.jvm.JvmInline
 internal value class Selection private constructor(val value: Int) {

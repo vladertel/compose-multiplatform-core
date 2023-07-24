@@ -19,6 +19,7 @@ package androidx.compose.ui.text
 // TODO Use WeakMap once available https://youtrack.jetbrains.com/issue/KT-44309
 internal actual typealias WeakKeysCache<K, V> = NoCache<K, V>
 
+@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 internal class NoCache<K : Any, V> : Cache<K, V> {
     override fun get(key: K, loader: (K) -> V): V = loader(key)
 }

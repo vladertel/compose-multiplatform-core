@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+
 package androidx.compose.ui.text.intl
 
 internal class JsLocale(val locale: IntlLocale) : PlatformLocale {

@@ -171,7 +171,7 @@ class ResourceFont internal constructor(
     override val style: FontStyle = FontStyle.Normal,
     @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
     @ExperimentalTextApi
-    @get:ExperimentalTextApi
+//    @get:ExperimentalTextApi
     val variationSettings: FontVariation.Settings = FontVariation.Settings(weight, style),
     loadingStrategy: FontLoadingStrategy = FontLoadingStrategy.Async
 ) : Font {

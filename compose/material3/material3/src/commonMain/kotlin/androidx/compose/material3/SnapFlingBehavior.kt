@@ -73,7 +73,11 @@ internal class SnapFlingBehavior(
             0f
         }
 
-    private val velocityThreshold = with(density) { MinFlingVelocityDp.toPx() }
+    private val velocityThreshold = with(density) {
+//        TODO()
+        10
+//        MinFlingVelocityDp.toPx()
+    }
     private var motionScaleDuration = object : MotionDurationScale {
         override val scaleFactor: Float
             get() = DefaultScrollMotionDurationScaleFactor
