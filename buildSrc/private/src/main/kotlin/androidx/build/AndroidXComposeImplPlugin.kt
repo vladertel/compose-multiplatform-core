@@ -139,7 +139,8 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
             project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
                 compile.kotlinOptions.freeCompilerArgs += listOf(
-                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true"
+//                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true"
+                    "-Xklib-enable-signature-clash-checks=false",
                 )
             }
         }
@@ -359,17 +360,19 @@ private fun configureComposeCompilerPlugin(
         val configuration = project.configurations.create(COMPILER_PLUGIN_CONFIGURATION)
         // Add Compose compiler plugin to kotlinPlugin configuration, making sure it works
         // for Playground builds as well
-        project.dependencies.add(
-            COMPILER_PLUGIN_CONFIGURATION,
-            if (ProjectLayoutType.isPlayground(project)) {
-                AndroidXPlaygroundRootImplPlugin.projectOrArtifact(
-                    project.rootProject,
-                    ":compose:compiler:compiler"
-                )
-            } else {
-                project.rootProject.resolveProject(":compose:compiler:compiler")
-            }
-        )
+        project.dependencies.add(COMPILER_PLUGIN_CONFIGURATION, "org.jetbrains.compose.compiler:compiler:0.0.0-1.9.20-dev-6336")
+//        project.dependencies.add(COMPILER_PLUGIN_CONFIGURATION, "org.jetbrains.compose.compiler:compiler:1.5.0")
+//        project.dependencies.add(
+//            COMPILER_PLUGIN_CONFIGURATION,
+//            if (ProjectLayoutType.isPlayground(project)) {
+//                AndroidXPlaygroundRootImplPlugin.projectOrArtifact(
+//                    project.rootProject,
+//                    ":compose:compiler:compiler"
+//                )
+//            } else {
+//                project.rootProject.resolveProject(":compose:compiler:compiler")
+//            }
+//        )
         val kotlinPlugin = configuration.incoming.artifactView { view ->
             view.attributes { attributes ->
                 attributes.attribute(
