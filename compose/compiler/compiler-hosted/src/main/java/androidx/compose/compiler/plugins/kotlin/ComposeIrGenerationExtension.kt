@@ -46,6 +46,7 @@ import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerIr
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.platform.isJs
+import org.jetbrains.kotlin.platform.isWasm
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.platform.konan.isNative
 
@@ -134,11 +135,16 @@ class ComposeIrGenerationExtension(
 
         val mangler = when {
             pluginContext.platform.isJs() -> JsManglerIr
+            pluginContext.platform.isWasm() -> JsManglerIr
             else -> null
         }
 
         val idSignatureBuilder = when {
             pluginContext.platform.isJs() -> IdSignatureSerializer(
+                PublicIdSignatureComputer(mangler!!),
+                DeclarationTable(JsGlobalDeclarationTable(pluginContext.irBuiltIns))
+            )
+            pluginContext.platform.isWasm() -> IdSignatureSerializer(
                 PublicIdSignatureComputer(mangler!!),
                 DeclarationTable(JsGlobalDeclarationTable(pluginContext.irBuiltIns))
             )
@@ -214,7 +220,7 @@ class ComposeIrGenerationExtension(
             ).lower(moduleFragment)
         }
 
-        if (pluginContext.platform.isJs()) {
+        if (pluginContext.platform.isWasm() || pluginContext.platform.isJs()) {
             WrapJsComposableLambdaLowering(
                 pluginContext,
                 symbolRemapper,
